@@ -205,8 +205,8 @@ void FindTotalAngMom(struct SCType *S);
 double FindTotalKineticEnergy(struct SCType *S);
 void UpdateScBoundingBox(struct SCType *S);
 void FindUnshadedAreas(struct SCType *S, double DirVecN[3]);
-void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies, 
-      float *ElectronEnergy, float *ProtonEnergy, double **Flux); 
+void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies,
+      float *ElectronEnergy, float *ProtonEnergy, double **Flux);
 void FindAlbedo(struct SCType *S, struct CssType *CSS);
 void JointFrcTrq(struct JointType *G, struct SCType *S);
 void InitActuatedJoint(struct JointType *G, struct SCType *S);
@@ -240,7 +240,7 @@ void SendStatesToSpirent(void);
 
 void NOS3Time(long *year, long *day_of_year, long *month, long *day,
               long *hour, long *minute, double *second);
-                   
+
 void InterProcessComm(void);
 void InitInterProcessComm(void);
 
@@ -251,8 +251,3 @@ void InitInterProcessComm(void);
 ** }
 ** #endif
 */
-
-
-
-
-

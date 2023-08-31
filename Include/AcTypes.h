@@ -97,7 +97,7 @@ struct AcJointType {
    double Pos[3];
    double PosRate[3];
    double COI[3][3];
-   
+
    /*~ Structures ~*/
    struct CmdType Cmd;
 };
@@ -257,7 +257,7 @@ struct AcAdHocCtrlType {
 struct AcSpinnerCtrlType {
    /*~ Parameters ~*/
    double Ispin;
-   double Itrans; 
+   double Itrans;
    double SpinRate;
    double Knute;
    double Kprec;
@@ -282,11 +282,11 @@ struct AcThreeAxisCtrlType {
    double Kr[3];
    double Kp[3];
    double Kunl;
-   
+
    /*~ Internal Variables ~*/
    long Init;
    double Tcmd[3];
-   double Hwcmd[3]; 
+   double Hwcmd[3];
 };
 
 struct AcIssCtrlType {
@@ -305,7 +305,7 @@ struct AcCmgCtrlType {
    /*~ Parameters ~*/
    double Kr[3];
    double Kp[3];
-   
+
    /*~ Internal Variables ~*/
    long Init;
    double therr[3],werr[3];
@@ -329,7 +329,7 @@ struct AcCfsCtrlType {
    double Kr[3];
    double Kp[3];
    double Kunl;
-   
+
    /*~ Internal Variables ~*/
    long Init;
    double therr[3];
@@ -361,14 +361,14 @@ struct AcType {
    long Nmtb;
    long Nthr;
    long Ncmg;
-   long Ngyro; 
+   long Ngyro;
    long Nmag;
    long Ncss;
    long Nfss;
    long Nst;
    long Ngps;
    long Nacc;
-   
+
    double Pi;
    double TwoPi;
 
@@ -376,7 +376,7 @@ struct AcType {
    double mass;
    double cm[3];
    double MOI[3][3];
-   
+
    /*~ Inputs ~*/
    double Time; /* Time since J2000 [[sec]] */
    long Mode;
@@ -396,17 +396,17 @@ struct AcType {
    long MagValid;
    long EphValid;
    long StValid;
-   
+
    /*~ Outputs ~*/
    long ReqMode;
 
    double Tcmd[3];
    double Mcmd[3];
    double Fcmd[3];
-   
+
    double IdealTrq[3];
    double IdealFrc[3];
-   
+
    /*~ Internal Variables ~*/
    long Init;
    double qrn[4];
@@ -419,7 +419,7 @@ struct AcType {
    /* Dynamics */
    struct AcBodyType *B;   /* [*Nb*] */
    struct AcJointType *G;  /* [*Ng*] */
-   
+
    /* Sensors */
    struct AcGyroType *Gyro;        /* [*Ngyro*] */
    struct AcMagnetometerType *MAG; /* [*Nmag*] */
@@ -429,12 +429,12 @@ struct AcType {
    struct AcGpsType *GPS;          /* [*Ngps*] */
    struct AcAccelType *Accel;      /* [*Nacc*] */
    struct AcEarthSensorType ES;
-   
+
    /* Actuators */
    struct AcWhlType *Whl; /* [*Nwhl*] */
    struct AcMtbType *MTB; /* [*Nmtb*] */
    struct AcThrType *Thr; /* [*Nthr*] */
-   
+
    /* Control Modes */
    struct AcPrototypeCtrlType PrototypeCtrl;
    struct AcAdHocCtrlType AdHocCtrl;
@@ -446,7 +446,7 @@ struct AcType {
    struct AcThrCtrlType ThrCtrl;
    struct AcCfsCtrlType CfsCtrl;
    struct AcThrSteerCtrlType ThrSteerCtrl;
-   
+
    struct CmdType Cmd;
 };
 

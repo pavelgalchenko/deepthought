@@ -1715,7 +1715,7 @@ double CubicSpline(double x, double X[4], double Y[4])
       Det = (u3-1.0)*(u0-1.0)*(u3-u0)*u0*u3;
       if (fabs(Det) < 1.0E-9) {
          printf("Matrix is close to singular in CubicSpline.\n");
-         //exit(1);
+         exit(1);
       }
       a = Y[1];
       b = (-z3*u32*DY0 + (u3-u0)*u02*u32*DY2 + z0*u02*DY3)/Det;

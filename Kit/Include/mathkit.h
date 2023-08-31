@@ -114,8 +114,8 @@ long ProjectPointOntoPoly(double Point[3], double DirVec[3],
 long ProjectPointOntoTriangle(double A[3], double B[3], double C[3],
       double DirVec[3], double Pt[3], double ProjPt[3], double Bary[4]);
 double CubicSpline(double x, double X[4], double Y[4]);
-void ChebyPolys(double u, long n, double T[20], double U[20]); 
-void ChebyInterp(double T[20], double U[20], double Coef[20], long n, 
+void ChebyPolys(double u, long n, double T[20], double U[20]);
+void ChebyInterp(double T[20], double U[20], double Coef[20], long n,
    double *P, double *dPdu);
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(double A[3], double *lng, double *lat);

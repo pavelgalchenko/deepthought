@@ -45,7 +45,7 @@ STANDALONEFLAG =
 GMSECFLAG =
 #GMSECFLAG = -D _ENABLE_GMSEC_
 
-RBTFLAG = 
+RBTFLAG =
 #RBTFLAG = -D _ENABLE_RBT_
 
 ifeq ($(strip $(GMSECFLAG)),)
@@ -251,7 +251,7 @@ CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC)
 
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 	$(CC) $(LFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
-	
+
 42kit : $(LIBKITOBJ)
 	$(CC) $(LFLAGS) -shared -o $(KITDIR)42kit.so $(LIBKITOBJ)
 

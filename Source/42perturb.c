@@ -143,7 +143,7 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
       /* Put list of edges in sequence */
       for(Ie=0;Ie<SilNe-1;Ie++) {
          for(Je=Ie+1;Je<SilNe;Je++) {
-            if (SilEdge[Je].Body == SilEdge[Ie].Body 
+            if (SilEdge[Je].Body == SilEdge[Ie].Body
              && SilEdge[Je].Iv1 == SilEdge[Ie].Iv2) {
                memcpy(&SwapEdge,&SilEdge[Je],sizeof(struct SilEdgeType));
                memcpy(&SilEdge[Je],&SilEdge[Ie+1],sizeof(struct SilEdgeType));
@@ -326,7 +326,7 @@ void GravGradFrcTrq(struct SCType *S)
       double FrcN[3],FrcB[3];
 
       O = &Orb[S->RefOrb];
-      
+
       if ((O->Regime == ORB_ZERO || O->Regime == ORB_FLIGHT) &&
            O->PolyhedronGravityEnabled) {
          W = &World[O->World];
@@ -360,7 +360,7 @@ void GravGradFrcTrq(struct SCType *S)
                }
             }
          }
-         
+
       }
       else {
          r = CopyUnitV(S->PosN,rhat);
@@ -906,7 +906,7 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody,
          Bb->FrcB[i] += FrcB[i];
          Bb->Trq[i] -= TrqB[i];
       }
-      
+
 }
 /**********************************************************************/
 void ContactFrcTrq(struct SCType *S)
@@ -1044,7 +1044,7 @@ void Perturbations(struct SCType *S)
 
 /* .. Solar Radiation Pressure Forces and Torques */
       if (SolPressActive) SolPressFrcTrq(S);
-      
+
 /* .. Embedded Magnetic Dipole Torque */
       if (ResidualDipoleActive) ResidualDipoleTrq(S);
 

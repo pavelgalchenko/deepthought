@@ -763,11 +763,11 @@ void InitAC(struct SCType *S)
       AC->Init = 1;
 
       AC->ID = S->ID;
-      
+
       /* Fundamental Constants */
       AC->Pi = Pi;
       AC->TwoPi = TwoPi;
-      
+
       /* Time, Mass */
       AC->DT = S->FswSampleTime;
       AC->mass = S->mass;
@@ -1064,13 +1064,13 @@ void MapCmdsToActuators(struct SCType *S)
          }
          for(It=0;It<AC->Nthr;It++) {
             T = &S->Thr[It];
-            if (T->Mode == THR_PULSED) 
+            if (T->Mode == THR_PULSED)
                T->PulseWidthCmd = Delay(T->Delay,S->LoopGain*AC->Thr[It].PulseWidthCmd);
             else
                T->ThrustLevelCmd = Delay(T->Delay,S->LoopGain*AC->Thr[It].ThrustLevelCmd);
-         }         
+         }
       }
-      else if (S->FswSampleCounter == 0) {      
+      else if (S->FswSampleCounter == 0) {
          for(i=0;i<3;i++) {
             S->IdealAct[i].Fcmd = AC->IdealFrc[i];
             S->IdealAct[i].Tcmd = AC->IdealTrq[i];
@@ -1083,10 +1083,10 @@ void MapCmdsToActuators(struct SCType *S)
             S->MTB[Im].Mcmd = AC->MTB[Im].Mcmd;
          }
          for(It=0;It<AC->Nthr;It++) {
-            if (S->Thr[It].Mode == THR_PULSED) 
+            if (S->Thr[It].Mode == THR_PULSED)
                S->Thr[It].PulseWidthCmd = AC->Thr[It].PulseWidthCmd;
             else
-               S->Thr[It].ThrustLevelCmd = AC->Thr[It].ThrustLevelCmd;            
+               S->Thr[It].ThrustLevelCmd = AC->Thr[It].ThrustLevelCmd;
          }
       }
 
@@ -1506,7 +1506,7 @@ void IssFSW(struct SCType *S)
 
       AC->G[14].Cmd.Ang[0] = Limit(GimCmd[0],-120.0*D2R,120.0*D2R);
       AC->G[14].Cmd.Ang[1] = Limit(GimCmd[1],-65.0*D2R,65.0*D2R);
-      
+
       for(Ig=0;Ig<AC->Ng;Ig++) {
          for(j=0;j<AC->G[Ig].RotDOF;j++) {
             AngErr = AC->G[Ig].Ang[j] - AC->G[Ig].Cmd.Ang[j];
@@ -1731,7 +1731,7 @@ void CfsFSW(struct AcType *AC)
       if (AngErr < -Pi) AngErr += TwoPi;
       G->Cmd.AngRate[0] = -G->AngGain[0]/G->AngRateGain[0]*AngErr;
       G->Cmd.AngRate[0] = Limit(G->Cmd.AngRate[0],-G->MaxAngRate[0],G->MaxAngRate[0]);
-      
+
 /* .. Actuator Processing */
       WheelProcessing(AC);
       MtbProcessing(AC);
@@ -1744,9 +1744,9 @@ void AdHocFSW(struct SCType *S)
       struct AcType *AC;
       struct AcAdHocCtrlType *C;
       double CLN[3][3],CRN[3][3],qrn[4],wln[3];
-      double CRL[3][3] = {{ 0.0, 1.0, 0.0}, 
+      double CRL[3][3] = {{ 0.0, 1.0, 0.0},
                           { 0.0, 0.0,-1.0},
-                          {-1.0, 0.0, 0.0}}; 
+                          {-1.0, 0.0, 0.0}};
       long i;
 
       AC = &S->AC;
@@ -1795,7 +1795,7 @@ void FlightSoftWare(struct SCType *S)
       struct IpcType *I;
       long Iipc;
       #endif
-            
+
       S->FswSampleCounter++;
       if (S->FswSampleCounter >= S->FswMaxCounter) {
          S->FswSampleCounter = 0;
@@ -1863,9 +1863,9 @@ void FlightSoftWare(struct SCType *S)
                   break;
             #endif
          }
-         
+
       }
-      
+
       MapCmdsToActuators(S);
 }
 
