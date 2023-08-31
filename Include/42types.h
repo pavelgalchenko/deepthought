@@ -47,7 +47,7 @@ struct FormationType {
 /* and for more general purposes (sensor, actuator positions) */
 struct NodeType {
    /*~ Internal Variables ~*/
-   char comment[80]; 
+   char comment[80];
    double NomPosB[3];
    double PosCm[3]; /* Pos wrt B's cm, expressed in B */
    double **PSI, **THETA; /* Mode shapes, 3 x B.Nf */
@@ -110,7 +110,7 @@ struct BodyType {
    double InertiaTrq[3];
    double InertiaFrc[3];
    double JointTrq[3]; /* From all joints exerting trq on this body */
-   
+
    /* For OrderN Dynamics */
    long Nd; /* Number of distal joints (i.e. for which this body is Bi) */
    long *Gd; /* Indices of distal joints (i.e. for which this body is Bi) */
@@ -119,11 +119,11 @@ struct BodyType {
    double alfn[3];
    double accn[3];
    double H[3];
-   double RemInertiaFrc[6];  
+   double RemInertiaFrc[6];
    double WhlMom[3];
    double FrcB[3]; /* Expressed in B */
    double SpatFrc[6]; /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
-   
+
    double AccU[6];
 
    /* For Flex Formulation */
@@ -150,12 +150,12 @@ struct BodyType {
    long NumNodes;  /* Number of flex "analysis" nodes on Body */
    struct NodeType *Node;
    long MfIsDiagonal;  /* Simpler EOM for One-body case if Mf is diagonal */
-   
+
 };
 
 struct JointType {
    /*~ Internal Variables ~*/
-   long Type;  /* PASSIVE_JOINT, ACTUATED_JOINT, etc */ 
+   long Type;  /* PASSIVE_JOINT, ACTUATED_JOINT, etc */
    long Init;
    long IsSpherical;      /* TRUE or FALSE */
    long RotDOF;           /* 0,1,2,3 */
@@ -234,13 +234,13 @@ struct JointType {
    double udot[6];
    double qdot[4];
    double xdot[3];
-   double RKum[6]; 
+   double RKum[6];
    double RKqm[4];
    double RKxm[3];
    double RKdu[6];
    double RKdq[4];
-   double RKdx[3];   
-   
+   double RKdx[3];
+
    /* For Flex */
    double **PSIi;         /* Translation Mode Shapes, 3 x Bi.Nf */
    double **THETAi;       /* Rotational Mode Shapes, 3 x Bi.Nf */
@@ -257,7 +257,7 @@ struct JointType {
    /* For Constraints */
    long Rotc0;
    long Trnc0;
-   
+
    char ParmFileName[40];
 };
 
@@ -292,7 +292,7 @@ struct WhlType {
    double Trq;  /* Exerted on wheel, expressed along wheel axis */
    long Node;
    struct DelayType *Delay; /* For injecting delay into control loops */
-   
+
    char DragJitterFileName[40];
 
    /* For Drag */
@@ -363,7 +363,7 @@ struct GyroType {
    double SigU; /* Bias Stability, rad/sec^1.5 */
    double SigE; /* Angle Readout Noise, rad */
    long Node;
-   
+
    double BiasStabCoef;
    double ARWCoef;
    double AngNoiseCoef;
@@ -468,7 +468,7 @@ struct GpsType {
    double VelNoise;
    double TimeNoise;
    long Node;
-   
+
    /*~ Internal Variables ~*/
    long SampleCounter;
    long Valid;
@@ -495,7 +495,7 @@ struct AccelType {
    double SigV; /* DVRW m/s/rt-sec */
    double SigU;/* Bias Stability m/s^1.5 */
    double SigE; /* DV Readout Noise, m/s  */
-   
+
    /*~ Internal Variables ~*/
    double Bias; /* m/s^2 */
    double PrevVelN[3]; /* m/s */
@@ -510,7 +510,7 @@ struct AccelType {
    /* Coef */
    double BiasStabCoef;
    double DVRWCoef;
-   double DVNoiseCoef; 
+   double DVNoiseCoef;
    double CorrCoef; /* Correlation Coef, exp(-SampleTime/BiasTime) */
 };
 
@@ -596,11 +596,11 @@ struct SCType {
 
    long Nb;   /* Number of bodies */
    long Ng;   /* Number of joints, = Nb-1 */
-   
+
    long Nw;   /* Number of wheels */
    long Nmtb; /* Number of MTB's */
    long Nthr; /* Number of thrusters */
-   
+
    long Ngyro; /* Number of Gyro axes */
    long Nmag; /* Number of magnetometer axes */
    long Ncss; /* Number of coarse sun sensors */
@@ -609,7 +609,7 @@ struct SCType {
    long Ngps; /* Number of GPS receivers */
    long Nacc; /* Number of accelerometer axes */
    long Nsh; /* Number of shakers */
-   
+
    double mass;
    double cm[3]; /* wrt B0 origin, expressed in B0 frame */
    double I[3][3]; /* Inertia matrix, wrt SC.cm, expressed in B0 frame */
@@ -659,12 +659,12 @@ struct SCType {
    struct BoundingBoxType BBox;
    /* See ReadStatesFromSocket */
    long RequestStateRefresh;
-   
+
    /* For stability analysis */
    long GainAndDelayActive;
    double LoopGain;
    double LoopDelay;
-   
+
    /*~ Structures ~*/
    struct AcType AC;
    struct DSMType DSM;
@@ -773,7 +773,7 @@ struct AtmoType {
 
 struct WorldType {
    /*~ Parameters ~*/
-   
+
    /* Relationships */
    long Exists;
    long Type; /* STAR, PLANET, MOON, ASTEROID, COMET */
@@ -820,7 +820,7 @@ struct WorldType {
    double qnh[4]; /* ~*/
 
    /*~ Internal Variables ~*/
-   
+
    double PosH[3];         /* Position in H frame [~=~] */
    double VelH[3];         /* Velocity in H frame */
    double PriMerAng; /* Angle from N1 to prime meridian */
@@ -939,7 +939,7 @@ struct OrreryPOVType {
 };
 
 struct ConstellationType {
-   char Tag[4]; 
+   char Tag[4];
    long Class;  /* MAJOR, ZODIAC, or MINOR */
    long Nstars;
    long Nlines;

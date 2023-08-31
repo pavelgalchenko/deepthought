@@ -73,7 +73,7 @@ void DrawWorldAsBackdrop(struct WorldType *W,double PosN[3],double svn[3])
       glBindTexture(GL_TEXTURE_CUBE_MAP,W->CloudGlossCubeTag);
       glActiveTexture(GL_TEXTURE3);
       glBindTexture(GL_TEXTURE_1D,W->RingTexTag);
-      
+
       glUseProgram(WorldShaderProgram);
 
       UniLoc = glGetUniformLocation(WorldShaderProgram,"HasAtmo");
@@ -134,7 +134,7 @@ void DrawWorldAsBackdrop(struct WorldType *W,double PosN[3],double svn[3])
       glUseProgram(0);
 
       glPopMatrix();
-      
+
 }
 /**********************************************************************/
 void DrawSunAsBackdrop(void)
@@ -1270,7 +1270,7 @@ void DrawFarScene(void)
          }
       }
       glEnable(GL_LIGHTING);
-      
+
 }
 /**********************************************************************/
 void DrawProxOps(void)
@@ -2672,7 +2672,7 @@ void DrawMap(void)
       float OldLng,OldLat;
       long i,k,Im,Isc;
       double rmh[3],rmn[3];
-      
+
       glClear(GL_COLOR_BUFFER_BIT);
       glMaterialfv(GL_FRONT,GL_DIFFUSE,Black);
 
@@ -4530,10 +4530,10 @@ void InitSphereWidgets(void)
          FOVsWidget.Spot[i].Visible = 1;
          FOVsWidget.Spot[i].Selected = 0;
       }
-      
+
       FOVsWidget.Spot[0].Selected = 1;
       FOVsWidget.Spot[1].Selected = 1;
-      
+
       for (i=0; i<FOVsWidget.Nspot; i++) {
 
          x = x0+3;
