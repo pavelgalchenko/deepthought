@@ -1053,7 +1053,7 @@ long GetAttitudeCmd(struct SCType *S, char AttitudeCmd[255], FILE *InpDsmFilePtr
    return(AttitudeCmdProcessed);
 }
 //----------------------- ACTUATOR CMD -----------------------------------------
-long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255]) {
+long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255], FILE *InpDsmFilePtr) {
    char DsmCmdLine[2048] = "";
    char SubCommands[2048];
    char *each_command[20];
@@ -1062,7 +1062,6 @@ long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255]) {
    int NumCommands;
    int i;
    long ActuatorCmdProcessed = FALSE;
-   FILE *InpDsmFilePtr; //Independently loading Inp_DSM.txt file to not interfere with the Interperter Loop
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
@@ -1072,7 +1071,6 @@ long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255]) {
    Cmd = &DSM->Cmd;
    AC  = &S->AC;
 
-   InpDsmFilePtr = FileOpen(InOutPath, "Inp_DSM.txt", "r");
    rewind(InpDsmFilePtr);
    strcat(ActuatorCmd, " NUM_CMD[%d] %[\040-\377]"); // First, find the number of subcommands in the appropriate line and following cmnds
 
@@ -1247,7 +1245,7 @@ void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr) {
                // Parse Actuator Commands
                else if (!strncmp(curCommand, "ActuatorCmd", 11)){
                   strcpy(ActuatorCmd, curCommand);
-                  if (GetActuatorCmd(S, ActuatorCmd) == FALSE){
+                  if (GetActuatorCmd(S, ActuatorCmd, InpDsmFilePtr) == FALSE){
                      printf("%s does not match any valid actuator command methods found in Inp_DSM.txt. Exiting...\n", ActuatorCmd);
                      exit(EXIT_FAILURE);
                   }
