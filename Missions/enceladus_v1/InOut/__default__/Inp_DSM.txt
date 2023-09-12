@@ -11,7 +11,7 @@
 
 # SWARM Demo
 
-DSM_Cmd   SC[0]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[0]   CmdTime   500.0      NUM_CMD[1]     PASSIVE_ATT
 DSM_Cmd   SC[1]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[2]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[3]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
@@ -19,8 +19,9 @@ DSM_Cmd   SC[4]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[5]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[6]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[7]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[8]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 
-DSM_Cmd   SC[6]   CmdTime   7000.0     NUM_CMD[1]     AttitudeCmd_PV[1]_SV[0]
+#DSM_Cmd   SC[6]   CmdTime   7000.0     NUM_CMD[1]     AttitudeCmd_PV[1]_SV[0]
 
 
 End_Of_File
@@ -43,8 +44,8 @@ End_Of_File
 #                        Col: 10-12 are Control Gain, Limit and Actuator Sets
 
 AttitudeCmd_PV[0]   VEC   0   0   1   L   0   0   1   Controller_[0]   Actuators_[0]
-AttitudeCmd_PV[1]   BODY   0   0   1   GroundStation_[0]   Controller_[1]   Actuators_[0]
-AttitudeCmd_PV[2]   BODY   0   0   1   GroundStation_[1]   Controller_[1]   Actuators_[0]
+#AttitudeCmd_PV[1]   BODY   0   0   1   GroundStation_[1]   Controller_[1]   Actuators_[0]
+#AttitudeCmd_PV[2]   BODY   0   0   1   GroundStation_[0]   Controller_[1]   Actuators_[0]
 
 #------------------------------Secondary Axis Cmd-------------------------------
 # Col: 1   ->  Command Interp ID Flag: "AttitudeCmd_SV[0]"
