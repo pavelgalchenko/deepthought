@@ -13,13 +13,13 @@
 
 
 #include "42.h"
+#include "42dsm.h"
 
 #ifdef _ENABLE_RBT_
    #include "../../../GSFC/RBT/Source/Rbt.h"
 #endif
 
 void AcFsw(struct AcType *AC);
-void DsmFSW(struct SCType *S);
 void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled);
 void ReadFromSocket(SOCKET Socket, long EchoEnabled);
 
