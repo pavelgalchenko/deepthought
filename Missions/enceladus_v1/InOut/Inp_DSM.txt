@@ -1,0 +1,113 @@
+<<<<<<<<<<<<<<<<<<<<<<<<  42:  DSM Command Script File  >>>>>>>>>>>>>>>>>>>>>>>>
+#-------------------------------------------------------------------------------
+#                              Spacecraft Commands
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Command Interp ID Flag (hard coded in interpreter)
+# Col: 2   ->  Spacecraft ID Number: "SC[#]"
+# Col: 3   ->  Command Sequence Flag: "FswMode" or "CmdTime"
+# Col: 4   ->  Command Sequence Parameter: FSW Mode ID or Command Execution Time
+# Col: 5   ->  Translation Control Method_Mode ("PASSIVE" for none)
+# Col: 6   ->  Attitude Control Method_Mode ("PASSIVE" for none)
+
+# SWARM Demo
+
+DSM_Cmd   SC[0]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[1]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[2]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[3]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[4]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[5]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[6]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[7]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+
+#DSM_Cmd   SC[6]   CmdTime   7000.0     NUM_CMD[1]     AttitudeCmd_PV[1]_SV[0]
+
+
+End_Of_File
+
+#-------------------------------------------------------------------------------
+#                              Attitude Command
+#-------------------------------------------------------------------------------
+#------------------------------Primary Axis Cmd---------------------------------
+# Col: 1   ->  Command Interp ID Flag: "AttitudeCmd_PV[#]"
+# Col: 2   ->  Primary Target Type: BODY, SC, VEC
+# Col: 3   ->  Primary Axis Direction 1
+# Col: 4   ->  Primary Axis Direction 2
+# Col: 5   ->  Primary Axis Direction 3
+# Col: 6   ->  Primary Target: Specify Body, SC[#] or Vec
+# Col: 7   ->  Set of Control Gains
+# Col: 8   ->  Set of Control Limits
+# Col: 9   ->  Actuator Mode
+# If Col: 2 -> VEC, then Col: 6 is the Ref. Frame of the pointing vector: "N", "F", "L", "B"
+#                        Col: 7-9 are the pointing vec for Primary axis
+#                        Col: 10-12 are Control Gain, Limit and Actuator Sets
+
+AttitudeCmd_PV[0]   VEC   0   0   1   L   0   0   1   Controller_[0]   Actuators_[0]
+#AttitudeCmd_PV[1]   BODY   0   0   1   GroundStation_[1]   Controller_[1]   Actuators_[0]
+#AttitudeCmd_PV[2]   BODY   0   0   1   GroundStation_[0]   Controller_[1]   Actuators_[0]
+
+#------------------------------Secondary Axis Cmd-------------------------------
+# Col: 1   ->  Command Interp ID Flag: "AttitudeCmd_SV[0]"
+# Col: 2   ->  Secondary Target Type: BODY, SC, VEC
+# Col: 3   ->  Secondary Axis Direction 1
+# Col: 4   ->  Secondary Axis Direction 2
+# Col: 5   ->  Secondary Axis Direction 3
+# Col: 6   ->  Secondary Target: Specify Body, SC[#] or Vec
+# If Col: 2 -> VEC, then Col: 6 is the Ref. Frame of the pointing vector: "N", "F", "L"
+#                        Col: 7-9 are the pointing vec for Secondary axis
+
+AttitudeCmd_SV[0]   BODY     0  -1   0   SUN
+
+
+#-------------------------------------------------------------------------------
+#                              Controllers
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Command Interp ID Flag: "Controller_[#]"
+# Col: 2   ->  Controller Type: "PID_CNTRL", "LYA_ATT_CNTRL", "LYA_2BODY_CNTRL"
+# Col: 3   ->  Set of Control Gains
+# Col: 4   ->  Set of Control Limits
+
+Controller_[0]   PID_CNTRL   Gains_[0]   Limits_[0]
+Controller_[1]   PID_CNTRL   Gains_[0]   Limits_[1]
+
+#-------------------------------------------------------------------------------
+#                             Control Actuators
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "Actuators_[#]"
+# Col: 2   ->  Actuators: "WHL_[#]", "MTB", "THR", "Ideal"
+# Col: 3   ->  Actuator Mode: "Translation", "Attitude", "Full"
+
+Actuators_[0]   Ideal   Attitude
+
+#-------------------------------------------------------------------------------
+#                   Translational / Attitude Control Parameters
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "Gains_[#]"
+# Col: 2   ->  Gain Mode: "PID", "PID_WN", "MomentumDump", "FC_LYA"
+# Col: 3   ->  Proportional Gain Direction 1, Kp
+# Col: 4   ->  Proportional Gain Direction 2, Kp
+# Col: 5   ->  Proportional Gain Direction 3, Kp
+# Col: 6   ->  Rate Gain Direction 1, Kr
+# Col: 7   ->  Rate Gain Direction 2, Kr
+# Col: 8   ->  Rate Gain Direction 3, Kr
+# Col: 9   ->  Integral Gain Direction 1, Ki
+# Col: 10   ->  Integral Gain Direction 2, Ki
+# Col: 11  ->  Integral Gain Direction 3, Ki
+
+Gains_[0]  PID_WN   0.24   0.7   0.0   0.0
+
+#-------------------------------------------------------------------------------
+#                   Translational / Attitude Control Limits
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "Limits_[#]"
+# Col: 2   ->  Max. Acceleration Direction 1, frc_max/trq_max [N, Nm]
+# Col: 3   ->  Max. Acceleration Direction 2, frc_max/trq_max [N, Nm]
+# Col: 4   ->  Max. Acceleration Direction 3, frc_max/trq_max [N, Nm]
+# Col: 5   ->  Max. Velocity Direction 1, vel_max/w_max [m/s, deg/s]
+# Col: 6   ->  Max. Velocity Direction 2, vel_max/w_max [m/s, deg/s]
+# Col: 7   ->  Max. Velocity Direction 3, vel_max/w_max [m/s, deg/s]
+
+Limits_[0]   0   0   0   0   0   0
+Limits_[1]   0   0   0   0.006   0.006   0.006
+
+EOF

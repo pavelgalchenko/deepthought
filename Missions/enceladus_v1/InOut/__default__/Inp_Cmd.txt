@@ -1,0 +1,82 @@
+<<<<<<<<<<<<<<<<<<<<<<<<  42:  Command Script File  >>>>>>>>>>>>>>>>>>>>>>>>
+0.0 SC[0] FswTag = DSM_FSW
+0.0 SC[1] FswTag = DSM_FSW
+0.0 SC[2] FswTag = DSM_FSW
+0.0 SC[3] FswTag = DSM_FSW
+0.0 SC[4] FswTag = DSM_FSW
+0.0 SC[5] FswTag = DSM_FSW
+0.0 SC[6] FswTag = DSM_FSW
+0.0 SC[7] FswTag = DSM_FSW
+
+1.0 POV.Host.SC 0
+1.0 ShowFOV TRUE
+1.0 ShowHUD FALSE
+1.0 ShowWatermark TRUE
+
+100.0 POV CmdRange = 20
+100.0 POV CmdSeq = 321
+100.0 POV CmdAngle = [-180 0 -170] deg
+100.0 POV CmdPermute = [1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]
+100.0 POV Frame = L
+100.0 POV TimeToGo = 250
+
+1000.0 POV.Host.SC 1
+
+2000.0 POV.Host.SC 2
+
+3000.0 POV.Host.SC 3
+
+4000.0 POV.Host.SC 4
+
+5000.0 POV.Host.SC 5
+
+6000.0 POV.Host.SC 6
+
+7000.0 POV CmdRange = 20
+7000.0 POV CmdSeq = 321
+7000.0 POV CmdAngle = [-180 -30 -170] deg
+7000.0 POV CmdPermute = [1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]
+7000.0 POV Frame = L
+7000.0 POV TimeToGo = 500
+
+7500.0 POV CmdRange = 20
+7500.0 POV CmdSeq = 321
+7500.0 POV CmdAngle = [-180 30 -170] deg
+7500.0 POV CmdPermute = [1.0 0.0 0.0; 0.0 1.0 0.0; 0.0 0.0 1.0]
+7500.0 POV Frame = L
+7500.0 POV TimeToGo = 7500
+
+
+
+#7000.0 POV.Host.SC 7
+
+
+10.0 CaptureCam FALSE
+
+EOF
+
+##############################################################
+# All lines after EOF are ignored
+# Comment lines begin with #, %, or //
+# Blank lines are permitted
+
+# GUI-related commands
+%lf POV.Host.SC %ld
+%lf CaptureCam %s
+%lf CamSnap %s
+%lf MapSnap %s
+%lf Banner = "Banner in Quotes"
+%lf GL Output Step = %lf
+%lf POV CmdRange = %lf
+%lf POV CmdSeq = %ld
+%lf POV CmdAngle = [%lf %lf %lf] deg
+%lf POV CmdPermute = [%lf %lf %lf; %lf %lf %lf; %lf %lf %lf]
+%lf POV TimeToGo = %lf
+%lf POV Frame = %c
+%lf ShowHUD %s
+%lf ShowWatermark %s
+%lf ShowShadows %s
+%lf ShowProxOps %s
+%lf ShowFOV %s
+%lf FOV[%ld].NearExists =  %s
+%lf FOV[%ld].FarExists =  %s
