@@ -439,7 +439,9 @@ void AcFsw(struct AcType *AC)
             AC->CLN[2][i] = L3[i];
          }
          C2Q(AC->CLN,AC->qln);
+         AC->wln[0] = 0.0;
          AC->wln[1] = -MAGV(AC->VelN)/MAGV(AC->PosN);
+         AC->wln[2] = 0.0;
       }
       else {
          for(i=0;i<3;i++) {
