@@ -15,15 +15,6 @@
 #ifndef __42DSM_H__
 #define __42DSM_H__
 
-#include <stdlib.h>
-#include <math.h>
-#include "fswdefines.h"
-#include "fswtypes.h"
-#include "mathkit.h"
-#include "dcmkit.h"
-#include "fswkit.h"
-#include "iokit.h"
-
 void DsmFSW(struct SCType *S);
 
 #endif /* __42DSM_H__ */
