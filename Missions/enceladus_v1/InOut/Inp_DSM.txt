@@ -11,7 +11,7 @@
 
 # SWARM Demo
 
-DSM_Cmd   SC[0]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[0]   CmdTime   500.0      NUM_CMD[1]     PASSIVE_ATT
 DSM_Cmd   SC[1]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[2]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[3]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
@@ -19,6 +19,7 @@ DSM_Cmd   SC[4]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[5]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[6]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 DSM_Cmd   SC[7]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd   SC[8]   CmdTime   500.0      NUM_CMD[1]     AttitudeCmd_PV[0]_SV[0]
 
 #DSM_Cmd   SC[6]   CmdTime   7000.0     NUM_CMD[1]     AttitudeCmd_PV[1]_SV[0]
 
