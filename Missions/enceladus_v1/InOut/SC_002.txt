@@ -2,7 +2,7 @@
 Simple generic S/C            !  Description
 "S/C"                         !  Label
 GenScSpriteAlpha.ppm          !  Sprite File Name
-PASSIVE_FSW                   !  Flight Software Identifier
+DSM_FSW                       !  Flight Software Identifier
 1.0                           !  FSW Sample Time, sec
 ************************* Orbit Parameters *****************************
 FIXED                         !  Orbit Prop FIXED, EULER_HILL, ENCKE, or COWELL

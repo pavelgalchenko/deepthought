@@ -1,12 +1,4 @@
 <<<<<<<<<<<<<<<<<<<<<<<<  42:  Command Script File  >>>>>>>>>>>>>>>>>>>>>>>>
-0.0 SC[0] FswTag = DSM_FSW
-0.0 SC[1] FswTag = DSM_FSW
-0.0 SC[2] FswTag = DSM_FSW
-0.0 SC[3] FswTag = DSM_FSW
-0.0 SC[4] FswTag = DSM_FSW
-0.0 SC[5] FswTag = DSM_FSW
-0.0 SC[6] FswTag = DSM_FSW
-0.0 SC[7] FswTag = DSM_FSW
 
 1.0 POV.Host.SC 0
 1.0 ShowFOV TRUE
