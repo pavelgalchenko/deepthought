@@ -25,25 +25,14 @@
 
 
 #include "42.h"
+#include "dsmkit.h"
 
 #define EPS_DSM 1e-12
 
 //------------------------------------------------------------------------------
 //                               FUNCTIONS
 //------------------------------------------------------------------------------
-// Include Functions from 42fsw.c:
-void RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3]);
 
-// Include Functions from AcApp.c:
-void WheelProcessing(struct AcType *AC);
-void MtbProcessing(struct AcType *AC);
-void GyroProcessing(struct AcType *AC);
-void MagnetometerProcessing(struct AcType *AC);
-void CssProcessing(struct AcType *AC);
-void FssProcessing(struct AcType *AC);
-void StarTrackerProcessing(struct AcType *AC);
-void GpsProcessing(struct AcType *AC);
-void AccelProcessing(struct AcType *AC);
 //------------------------------------------------------------------------------
 // This solution minimizes 2-norm of thruster commands, resulting in minimum
 // power solution. This solution does not know about constraints.  This is able
@@ -1288,13 +1277,13 @@ void SensorModule(struct SCType *S) {
 
    AC = &S->AC;
 
-   if (AC->Ngyro > 0) GyroProcessing(AC);
-   if (AC->Nmag > 0) MagnetometerProcessing(AC);
-   if (AC->Ncss > 0) CssProcessing(AC);
-   if (AC->Nfss > 0) FssProcessing(AC);
-   if (AC->Nst > 0) StarTrackerProcessing(AC);
-   if (AC->Ngps > 0) GpsProcessing(AC);
-   if (AC->Nst > 0) AccelProcessing(AC);
+   if (AC->Ngyro > 0) DSM_GyroProcessing(AC);
+   if (AC->Nmag > 0) DSM_MagnetometerProcessing(AC);
+   if (AC->Ncss > 0) DSM_CssProcessing(AC);
+   if (AC->Nfss > 0) DSM_FssProcessing(AC);
+   if (AC->Nst > 0) DSM_StarTrackerProcessing(AC);
+   if (AC->Ngps > 0) DSM_GpsProcessing(AC);
+   if (AC->Nst > 0) DSM_AccelProcessing(AC);
 
 }
 //------------------------------------------------------------------------------
@@ -1350,13 +1339,13 @@ void ActuatorModule(struct SCType *S) {
       }
       else if (!strcmp(Cmd->att_actuator, "WHL") && AC->Nwhl>0) {
          for(i = 0; i < 3; i++) AC->Tcmd[i] = DSM->Tcmd[i];
-         WheelProcessing(AC);
+         DSM_WheelProcessing(AC);
       }
       else if (!strcmp(Cmd->att_actuator, "MTB") && AC->Nmtb>0) {
          CopyUnitV(AC->bvb,unit_bvb);
          VxV(unit_bvb, DSM->Tcmd, DSM->Mcmd);
          for(i=0;i<3;i++) AC->Mcmd[i] = DSM->Mcmd[i] / MAGV(AC->bvb);
-         MtbProcessing(AC);
+         DSM_MtbProcessing(AC);
       }
       else if (!strcmp(Cmd->att_actuator, "Ideal")) {
          for(i = 0; i < 3; i++) AC->IdealTrq[i] = DSM->Tcmd[i];
@@ -1374,7 +1363,7 @@ void ActuatorModule(struct SCType *S) {
          CopyUnitV(AC->bvb, unit_bvb);
          VxV(unit_bvb, DSM->dTcmd, DSM->Mcmd);
          for(i = 0; i < 3; i++) AC->Mcmd[i] = DSM->Mcmd[i] / MAGV(AC->bvb);
-         MtbProcessing(AC);
+         DSM_MtbProcessing(AC);
       }
       else if (DSM->DsmCtrl.H_DumpActive == TRUE && (!strcmp(Cmd->dmp_actuator, "THR_3DOF")||!strcmp(Cmd->dmp_actuator, "THR_6DOF")) && AC->Nthr>0) {
          // maybe have thrusters just thrust at min(thrustertorquemax,SCALE*AC->Whl[i].Tmax)???
@@ -1443,7 +1432,7 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
             MxV(World[Orb[S->RefOrb].World].CNH,RelVelH,RelVelN);
          }
          CopyUnitV(RelPosN,CV->N);
-         RelMotionToAngRate(RelPosN,RelVelN,CV->wn);
+         DSM_RelMotionToAngRate(RelPosN,RelVelN,CV->wn);
          break;
       case TARGET_SC:
          if (SC[CV->TrgSC].RefOrb == S->RefOrb) {
@@ -1467,7 +1456,7 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
             MxV(World[Orb[S->RefOrb].World].CNH,RelVelH,RelVelN);
          }
          CopyUnitV(RelPosN,CV->N);
-         RelMotionToAngRate(RelPosN,RelVelN,CV->wn);
+         DSM_RelMotionToAngRate(RelPosN,RelVelN,CV->wn);
          break;
       case TARGET_BODY:
          MTxV(SC[CV->TrgSC].B[0].CN,SC[CV->TrgSC].cm,pcmn);
@@ -1502,7 +1491,7 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
             MxV(World[Orb[S->RefOrb].World].CNH,RelVelH,RelVelN);
          }
          CopyUnitV(RelPosN,CV->N);
-         RelMotionToAngRate(RelPosN,RelVelN,CV->wn);
+         DSM_RelMotionToAngRate(RelPosN,RelVelN,CV->wn);
          break;
       case TARGET_VELOCITY:
          for(i=0;i<3;i++) CV->N[i] = S->VelN[i];
