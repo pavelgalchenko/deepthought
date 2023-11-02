@@ -81,8 +81,8 @@ ifeq ($(42PLATFORM),__APPLE__)
    CINC = -I /usr/include -I /usr/local/include
    EXTERNDIR =
    # ARCHFLAG = -arch i386
-   ARCHFLAG = -arch x86_64
-   # ARCHFLAG = -arch arm64
+   # ARCHFLAG = -arch x86_64
+   ARCHFLAG = -arch arm64
    # For graphics interface, choose GLUT or GLFW GUI libraries
    # GLUT is well known, but GLFW is better for newer Mac's hires displays
    # OSX fixed their hires GLUT issue.  Keep GLFW around just in case.
