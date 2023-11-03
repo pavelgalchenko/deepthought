@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define RES 2048
+#define RES 1024
 
 unsigned char *Tex;
 unsigned char Cube[6*RES*RES*3];
