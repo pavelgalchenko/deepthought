@@ -2232,7 +2232,7 @@ void RelRV2EHRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
 
       for(i=0;i<3;i++) p[i] = Rrel[i] - OrbRadius*OrbCLN[2][i];
       magp = CopyUnitV(p,b3);
-      for(i=0;i<3;i++) b3[i] *= -1.0;
+      for(i=0;i<3;i++) b3[i] = -b3[i];
       alpha = atan2(-VoV(OrbCLN[0],b3),VoV(OrbCLN[2],b3));
       beta = asin(-VoV(b3,OrbCLN[1]));
 

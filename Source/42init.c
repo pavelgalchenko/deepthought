@@ -2602,7 +2602,7 @@ void InitSpacecraft(struct SCType *S)
                MTxV(O->CLN,S->VelEH,S->VelR);
             }
             else {
-               EHRV2RelRV(O->SMA,MAGV(O->wln),
+               EHRV2RelRV(O->SMA,O->MeanMotion,
                   O->CLN,S->PosEH,S->VelEH,S->PosR,S->VelR);
             }
          }

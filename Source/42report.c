@@ -94,21 +94,6 @@ void MagReport(void)
 
 }
 /*********************************************************************/
-void HvbReport(void)
-{
-      static FILE *hvbfile;
-      static long First = 1;
-
-      if (First) {
-         First = 0;
-         hvbfile = FileOpen(OutPath,"Hvb.42","wt");
-      }
-
-      fprintf(hvbfile,"%18.12le %18.12le %18.12le\n",
-         SC[0].Hvb[0],SC[0].Hvb[1],SC[0].Hvb[2]);
-
-}
-/*********************************************************************/
 void GyroReport(void)
 {
       static FILE *gyrofile;
@@ -436,6 +421,7 @@ void Report(void)
       static FILE *PosWfile,*VelWfile;
       static FILE *PosRfile,*VelRfile;
       static FILE *Hvnfile,*KEfile;
+      static FILE *Hvbfile;
       static FILE *svnfile,*svbfile;
       static FILE *RPYfile;
       static FILE *Hwhlfile;
@@ -445,6 +431,8 @@ void Report(void)
       static FILE *IllumFile;
       //static FILE *ProjAreaFile;
       static FILE *AccFile;
+      //static FILE *Kepfile;
+      //static FILE *EHfile;
       static char First = TRUE;
       long Isc,i;
       struct DynType *D;
@@ -453,6 +441,7 @@ void Report(void)
       double WorldAngVel[3],wxR[3],VelN[3];
       double PosW[3],VelW[3],PosR[3],VelR[3];
       double CRL[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
+      //double SMA,ecc,inc,RAAN,ArgP,anom,tp,SLR,alpha,rmin,MeanMotion,Period;
       char s[40];
       //double ZAxis[3] = {0.0,0.0,1.0};
 
@@ -485,6 +474,7 @@ void Report(void)
                }
             }
          }
+
          PosNfile = FileOpen(OutPath,"PosN.42","w");
          VelNfile = FileOpen(OutPath,"VelN.42","w");
          PosWfile = FileOpen(OutPath,"PosW.42","w");
@@ -494,6 +484,7 @@ void Report(void)
          qbnfile = FileOpen(OutPath,"qbn.42","w");
          wbnfile = FileOpen(OutPath,"wbn.42","w");
          Hvnfile = FileOpen(OutPath,"Hvn.42","w");
+         Hvbfile = FileOpen(InOutPath,"Hvb.42","w");
          svnfile = FileOpen(OutPath,"svn.42","w");
          svbfile = FileOpen(OutPath,"svb.42","w");
          KEfile = FileOpen(OutPath,"KE.42","w");
@@ -582,6 +573,8 @@ void Report(void)
                SC[0].B[0].wn[0],SC[0].B[0].wn[1],SC[0].B[0].wn[2]);
             fprintf(Hvnfile,"%18.12le %18.12le %18.12le\n",
                SC[0].Hvn[0],SC[0].Hvn[1],SC[0].Hvn[2]);
+            fprintf(Hvbfile,"%18.12le %18.12le %18.12le\n",
+               SC[0].Hvb[0],SC[0].Hvb[1],SC[0].Hvb[2]);
             fprintf(svnfile,"%18.12le %18.12le %18.12le\n",
                SC[0].svn[0],SC[0].svn[1],SC[0].svn[2]);
             fprintf(svbfile,"%18.12le %18.12le %18.12le\n",
@@ -626,8 +619,6 @@ void Report(void)
             //GyroReport();
             //OrbPropReport();
             //GmatReport();
-
-            HvbReport();
 
             if (SC[0].DSM.Init == 1) {
                DSM_AttitudeReport();
