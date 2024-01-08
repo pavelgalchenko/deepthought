@@ -16,7 +16,7 @@
 #include "42dsm.h"
 
 #ifdef _ENABLE_RBT_
-   #include "../../../GSFC/RBT/Source/Rbt.h"
+   void RbtFSW(struct SCType *S);
 #endif
 
 void AcFsw(struct AcType *AC);
