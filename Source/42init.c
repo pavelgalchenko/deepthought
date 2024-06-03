@@ -2602,7 +2602,7 @@ void InitSpacecraft(struct SCType *S)
                MTxV(O->CLN,S->VelEH,S->VelR);
             }
             else {
-               EHRV2RelRV(O->SMA,MAGV(O->wln),
+               EHRV2RelRV(O->SMA,O->MeanMotion,
                   O->CLN,S->PosEH,S->VelEH,S->PosR,S->VelR);
             }
          }
@@ -4711,7 +4711,7 @@ void InitSim(int argc, char **argv)
       UTC.JulDay = TimeToJD(CivilTime);
       UTC.doy = MD2DOY(UTC.Year,UTC.Month,UTC.Day);
 
-      JDToGpsTime(TT.JulDay,&GpsRollover,&GpsWeek,&GpsSecond);
+      GpsTimeToGpsDate(GpsTime,&GpsRollover,&GpsWeek,&GpsSecond);
 
 /* .. Load Sun and Planets */
       LoadSun();

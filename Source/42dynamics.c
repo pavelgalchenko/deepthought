@@ -3753,8 +3753,8 @@ void OrderNMultiBodyRK4(struct SCType *S)
 
       MapStateVectorToBodyStates(D->u,D->x,D->h,D->a,D->uf,D->xf,S); 
       MotionConstraints(S);
+      BodyStatesToNodeStates(S);
       SCMassProps(S);
-
       FindTotalAngMom(S);
 }
 /**********************************************************************/
