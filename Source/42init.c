@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdint.h>
+#include "SpiceUsr.h"
 
 #if defined __MINGW32__
     #include <Windows.h>
