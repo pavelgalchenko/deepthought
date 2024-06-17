@@ -16,7 +16,6 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdint.h>
-#include "SpiceUsr.h"
 
 #if defined __MINGW32__
     #include <Windows.h>
@@ -35,6 +34,7 @@
 #include <dirent.h>
 #include <errno.h>
 
+#include "SpiceUsr.h"
 
 /* #ifdef __cplusplus
 ** namespace _42 {
@@ -3194,6 +3194,7 @@ void LoadMoonsOfMars(void)
       long i,j;
       struct WorldType *M,*P;
       struct OrbitType *E;
+      struct IAU4CoeffRotModel models[Nm];
 
       P = &World[Ip];
       P->Nsat = Nm;
@@ -3202,6 +3203,9 @@ void LoadMoonsOfMars(void)
          printf("Mars P->Sat calloc returned null pointer.  Bailing out!\n");
          exit(1);
       }
+
+      // struct IAU4CoeffRotModel models[0] = {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}};
+      // struct IAU4CoeffRotModel models[1] = {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}};
 
       for(Im=0;Im<Nm;Im++) {
          Iw = PHOBOS + Im;
