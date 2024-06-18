@@ -576,7 +576,6 @@ void Ephemerides(void)
       double MagR1,MeanMotion;
 
 /* .. Locate Planets and Luna */
-      LoadSpiceEphems("./Model/spice_kernels/kernels.tm", 0.0);
       if (EphemOption == EPH_MEAN) {
          for(Ip=MERCURY;Ip<=PLUTO;Ip++){
             if(World[Ip].Exists) {

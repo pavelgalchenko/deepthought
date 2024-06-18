@@ -208,6 +208,7 @@
 #define EPH_MEAN 0
 #define EPH_DE430 1
 #define EPH_DE440 2
+#define EPH_SPICE_DE440 3
 
 #define REFPT_CM 0
 #define REFPT_JOINT 1

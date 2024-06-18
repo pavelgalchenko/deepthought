@@ -4303,7 +4303,31 @@ long LoadJplEphems(char EphemPath[80],double JD)
 }
 
 long LoadSpiceEphems(char MetaKernelPath[80], double JD){
+   double JS = JD*jyear_c(); // convert Julian days to Julian seconds
+   long Iw;
+   char MajorBodiesNames[55][15] = {'SOL', 'MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN',
+       'URANUS', 'NEPTUNE', 'PLUTO', 'LUNA', 'PHOBOS', 'DEIMOS', 'IO',
+       'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA', 'HIMALIA', 'ELARA',
+       'PASIPHAE', 'SINOPE', 'LYSITHEA', 'CARME', 'ANANKE', 'LEDA',
+       'THEBE', 'ADRASTEA', 'METIS', 'MIMAS', 'ENCELADUS', 'TETHYS',
+       'DIONE', 'RHEA', 'TITAN', 'HYPERION', 'IAPETUS', 'PHOEBE', 'JANUS',
+       'EPIMETHEUS', 'HELENE', 'TELESTO', 'CALYPSO', 'ATLAS',
+       'PROMETHEUS', 'PANDORA', 'PAN', 'ARIEL', 'UMBRIEL', 'TITANIA',
+       'OBERON', 'MIRANDA', 'TRITON', 'NEREID', 'CHARON'};
+
+   struct OrbitType *Eph;
+   struct WorldType *W;
+
    furnsh_c(MetaKernelPath);
+
+   // Read all Major Bodies
+   for (Iw=0; Iw<56; Iw++){
+      W = &World[Iw];
+      Eph = &World[Iw].eph;
+
+      //spkezr_c(MajorBodiesNames[Iw], JS, )
+   }
+   
    return(0);
 }
 /**********************************************************************/
