@@ -1,0 +1,129 @@
+{
+   // Use IntelliSense to learn about possible attributes.
+   // Hover to view descriptions of existing attributes.
+   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+   "version": "0.2.0",
+   "configurations": [
+      {
+         "name": "(lldb) Launch",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}/42",
+         "args": [
+            "-d",
+            "Missions/DSM_DEMO",
+            "-o",
+            "Missions/DSM_DEMO/blah",
+            "-g",
+            "0",
+         ],
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "externalConsole": false,
+         "MIMode": "lldb",
+         "preLaunchTask": "make project",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for lldb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-lldb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            }
+         ]
+      },
+      {
+         "name": "(lldb) Deploy",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}/42",
+         "args": [
+            "-d",
+            "Missions/DSM_DEMO",
+            "-o",
+            "Missions/DSM_DEMO/blah",
+            "-g",
+            "0",
+         ],
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "externalConsole": false,
+         "MIMode": "lldb",
+         "preLaunchTask": "make project opt",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for lldb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-lldb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            }
+         ]
+      },
+      {
+         "name": "(lldb) Profile",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}/42",
+         "args": [
+            "-d",
+            "Missions/DSM_DEMO",
+            "-o",
+            "Missions/DSM_DEMO/blah",
+            "-g",
+            "0",
+         ],
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "externalConsole": false,
+         "MIMode": "lldb",
+         "preLaunchTask": "profile build project",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for lldb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-lldb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            },
+         ],
+         "postDebugTask": "analyze project",
+      },
+      // {
+      //    "name": "(lldb) Test",
+      //    "type": "cppdbg",
+      //    "request": "launch",
+      //    "program": "${workspaceFolder}/Test",
+      //    "stopAtEntry": false,
+      //    "cwd": "${workspaceFolder}",
+      //    "environment": [],
+      //    "externalConsole": false,
+      //    "MIMode": "lldb",
+      //    "preLaunchTask": "test project",
+      //    "setupCommands": [
+      //       {
+      //          "description": "Enable pretty-printing for lldb",
+      //          "text": "-enable-pretty-printing",
+      //          "ignoreFailures": true
+      //       },
+      //       {
+      //          "description": "Set Disassembly Flavor to Intel",
+      //          "text": "-lldb-set disassembly-flavor intel",
+      //          "ignoreFailures": true
+      //       }
+      //    ]
+      // },
+   ]
+}

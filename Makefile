@@ -429,9 +429,17 @@ $(OBJ)42dsm.o       : $(SRC)42dsm.c $(INC)Ac.h $(INC)AcTypes.h $(INC)DSMTypes.h
 ########################  Miscellaneous Rules  ############################
 clean :
 ifeq ($(42PLATFORM),_WIN32)
-	del .\Object\*.o .\$(EXENAME) .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
 else ifeq ($(42PLATFORM),_WIN64)
-	del .\Object\*.o .\$(EXENAME) .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
 else
 	rm -f $(OBJ)*.o ./$(EXENAME) ./AcApp $(KITDIR)42kit.so $(INOUT)*.42 ./Standalone/*.42 ./Demo/*.42 ./Rx/*.42 ./Tx/*.42
 endif
+
+profile: CFLAGS+=-pg
+profile: LFLAGS+=-pg
+profile: 42
+
+deploy: CFLAGS+=-O3
+deploy: LFLAGS+=-O3
+deploy: 42
