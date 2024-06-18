@@ -11,7 +11,6 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 /**********************************************************************/
 /*                                                                    */
 /*                               42                                   */
@@ -34,11 +33,10 @@
 ** #endif
 */
 
-int exec(int argc,char **argv);
+int exec(int argc, char **argv);
 
-int main(int argc,char **argv)
-{
-      return(exec(argc,argv));
+int main(int argc, char **argv) {
+   return (exec(argc, argv));
 }
 
 /*
@@ -46,4 +44,3 @@ int main(int argc,char **argv)
 ** }
 ** #endif
 */
-

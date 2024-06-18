@@ -11,19 +11,17 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "42defines.h"
 #include "AcTypes.h"
-#include "mathkit.h"
-#include "fswkit.h"
 #include "dcmkit.h"
+#include "fswkit.h"
+#include "mathkit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef __DSMKIT_H__
 #define __DSMKIT_H__
-
 
 /*
 ** #ifdef __cplusplus
