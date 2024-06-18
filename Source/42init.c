@@ -3194,7 +3194,6 @@ void LoadMoonsOfMars(void)
       long i,j;
       struct WorldType *M,*P;
       struct OrbitType *E;
-      struct IAU4CoeffRotModel models[Nm];
 
       P = &World[Ip];
       P->Nsat = Nm;
@@ -4301,6 +4300,11 @@ long LoadJplEphems(char EphemPath[80],double JD)
       }
 
       return(0);
+}
+
+long LoadSpiceEphems(char MetaKernelPath[80], double JD){
+   furnsh_c(MetaKernelPath);
+   return(0);
 }
 /**********************************************************************/
 void LoadConstellations(void) {
