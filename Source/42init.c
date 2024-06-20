@@ -4304,7 +4304,10 @@ long LoadJplEphems(char EphemPath[80],double JD)
 
 long LoadSpiceEphems(char MetaKernelPath[80], double JD){
    double JS = JD*jyear_c(); // convert Julian days to Julian seconds
+   
    long Iw;
+   int i;
+
    char MajorBodiesNames[55][15] = {'SOL', 'MERCURY', 'VENUS', 'EARTH', 'MARS', 'JUPITER', 'SATURN',
        'URANUS', 'NEPTUNE', 'PLUTO', 'LUNA', 'PHOBOS', 'DEIMOS', 'IO',
        'EUROPA', 'GANYMEDE', 'CALLISTO', 'AMALTHEA', 'HIMALIA', 'ELARA',
@@ -4317,6 +4320,8 @@ long LoadSpiceEphems(char MetaKernelPath[80], double JD){
 
    struct OrbitType *Eph;
    struct WorldType *W;
+   double tmp_state[6];
+   double light_time;
 
    furnsh_c(MetaKernelPath);
 
@@ -4325,7 +4330,18 @@ long LoadSpiceEphems(char MetaKernelPath[80], double JD){
       W = &World[Iw];
       Eph = &World[Iw].eph;
 
-      //spkezr_c(MajorBodiesNames[Iw], JS, )
+      spkezr_c(MajorBodiesNames[Iw], JS, 'J2000', 'NONE', 'SUN', tmp_state, &light_time); // State of major bodies in J2000 wrt Sun center
+      for (i=0; i++; i<3) World[Iw].eph.PosN[i] = tmp_state[i]; // Assign inertial positions
+      for (i=0; i++; i<3) World[Iw].eph.VelN[i] = tmp_state[i] + 3; // Assign inertial velocity
+      RV2Eph(DynTime,Eph->mu,Eph->PosN,Eph->VelN,
+                &Eph->SMA,&Eph->ecc,&Eph->inc,
+                &Eph->RAAN,&Eph->ArgP,&Eph->anom,
+                &Eph->tp,&Eph->SLR,&Eph->alpha,&Eph->rmin,
+                &Eph->MeanMotion,&Eph->Period);
+      
+      char frame_name[25] = "IAU_";
+      strcat(frame_name, MajorBodiesNames[Iw]);      
+      pxform_c(frame_name, 'J2000', JS, &W->CWN);
    }
    
    return(0);
