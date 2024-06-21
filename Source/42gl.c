@@ -699,7 +699,7 @@ void DrawCamHUD(void) {
    glEnd();
 
    glColor4fv(ClockColor);
-   sprintf(s, "Sim Time = % 8.2f", SimTime);
+   sprintf(s, "Sim Time = % 8.2lf", SimTime);
    glRasterPos2i(10, 20);
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
 
@@ -745,9 +745,9 @@ void DrawCamHUD(void) {
    DrawBitmapString(GLUT_BITMAP_8_BY_13, "Show");
    for (i = 0; i < CAM_MENU_SIZE; i++) {
       if (CamShow[i]) {
-         sprintf(s, "x %s", CamShowLabel[i]);
+         sprintf(s, "x %.117s", CamShowLabel[i]);
       } else {
-         sprintf(s, "  %s", CamShowLabel[i]);
+         sprintf(s, "  %.117s", CamShowLabel[i]);
       }
       glRasterPos2i(W->xmin + 8, W->ymin + 30 + 15 * i);
       DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
@@ -3530,7 +3530,7 @@ void DrawSphereHUD(void) {
                           "Star Trackers"};
    char frames[3][2]   = {"B", "N", "L"};
 
-   int i, j;
+   int i, j = 0;
    struct WidgetType *W;
 
    /* .. Center Box */
@@ -4641,7 +4641,7 @@ void LoadCamLists(void) {
 /**********************************************************************/
 GLuint LoadSpectrum(const char *SpectrumName) {
    FILE *infile;
-   double *F, *R, *G, *B, f;
+   double *F = NULL, *R = NULL, *G = NULL, *B = NULL, f;
    GLubyte r, g, b, a;
    GLubyte *Tex;
    GLuint TexTag;

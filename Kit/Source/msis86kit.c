@@ -58,6 +58,24 @@ static real c_b79       = 2.f;
                             240.f, 450.f, 320.f, 450.f};
    static integer imr    = 0;
 
+   static integer first = 0;
+   static struct parm5_1_ parm5_1;
+   static struct lower5_1_ lower5_1;
+   if (first == 0) {
+      first = 1;
+      for (int i = 0; i < 1050; i++)
+         parm5_1.pd[i] = parm5_.e_1[i + 150];
+      for (int i = 0; i < 150; i++)
+         parm5_1.ps[i] = parm5_.e_1[i + 1200];
+      for (int i = 0; i < 50; i++)
+         parm5_1.pdl[i] = parm5_.e_1[i + 1350];
+
+      for (int i = 0; i < 8; i++)
+         lower5_1.ptm[i] = lower5_.e_1[i + 0];
+      for (int i = 0; i < 56; i++)
+         lower5_1.pdm[i] = lower5_.e_1[i + 8];
+   }
+
    /* System generated locals */
    real r__1;
 
@@ -585,6 +603,7 @@ doublereal denss_(real *alt, real *dlb, real *tinf, real *tlb, real *xm,
    /* Local variables */
    static real x, z__, x2, bb, cc, dd, ta, t12, tt, zg0, zg1, zg2, glb, dta,
        gamm, gamma, densa;
+   struct parmb_1_ parmb_1 = {.gsurf = parmb_86.e_1[0], .re = parmb_86.e_1[1]};
 
    /*       Calculate Temperature and Density Profiles for MSIS models */
    ret_val = 1.f;

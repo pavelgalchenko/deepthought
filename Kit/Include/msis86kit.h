@@ -255,8 +255,6 @@ struct lower5_1_ {
    real ptm[8], pdm[56] /* was [8][7] */;
 };
 
-#define lower5_1 (*(struct lower5_1_ *)&lower5_)
-
 struct parm5_1_ {
    real pt[150], pd[1050] /* was [150][7] */, ps[150], pdl[50] /*
     was [25][2] */
@@ -268,9 +266,6 @@ struct parm5_2_ {
        pe2[50], pe3[50], pf1[50], pf2[50], pf3[50], pg1[50], pg2[50], pg3[50],
        ph1[50], ph2[50], ph3[50], pi1[50];
 };
-
-#define parm5_1 (*(struct parm5_1_ *)&parm5_)
-#define parm5_2 (*(struct parm5_2_ *)&parm5_)
 
 struct csw_86Type {
    real sw[25];
@@ -285,8 +280,6 @@ EXTERN struct csw_86Type csw_86;
 struct parmb_1_ {
    real gsurf, re;
 };
-
-#define parmb_1 (*(struct parmb_1_ *)&parmb_86)
 
 struct fit_86Type {
    real taf;
