@@ -681,6 +681,9 @@ void Ephemerides(void)
          World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
          SimpRot(ZAxis,World[LUNA].PriMerAng,World[LUNA].CWN);
       }
+      else if (EphemOption == EPH_SPICE_REC){
+         LoadSpiceEphems(TT.JulDay);
+      }
       else {
          printf("Bogus Ephem Option in Ephemerides.  Bailing out.\n");
          exit(1);
