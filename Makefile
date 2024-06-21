@@ -66,6 +66,7 @@ PROJDIR = ./
 KITDIR = $(PROJDIR)Kit/
 OBJ = $(PROJDIR)Object/
 INC = $(PROJDIR)Include/
+TESTS = $(PROJDIR)Tests/
 SRC = $(PROJDIR)Source/
 KITINC = $(KITDIR)Include/
 KITSRC = $(KITDIR)Source/
@@ -241,6 +242,13 @@ ACKITOBJ = $(OBJ)dcmkit.o $(OBJ)mathkit.o $(OBJ)fswkit.o $(OBJ)iokit.o $(OBJ)tim
 ACIPCOBJ = $(OBJ)AppReadFromFile.o \
 $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
 
+TESTOBJ = $(OBJ)tests.o $(OBJ)mathkit_tests.o $(OBJ)test_lib.o\
+$(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
+$(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
+$(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
+$(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
+$(OBJ)42nos3.o $(OBJ)42dsm.o
+
 #ANSIFLAGS = -Wstrict-prototypes -pedantic -ansi -Werror
 ANSIFLAGS =
 
@@ -252,6 +260,9 @@ CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC)
 42 : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
 	$(CC) $(LFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB)
 
+Test : $(TESTOBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
+	$(CC) $(LFLAGS) $(LDFLAGS)  -o Test $(TESTOBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB)
+
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 	$(CC) $(LFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
 
@@ -260,6 +271,15 @@ AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 
 
 ####################  Rules to compile objects  ###########################
+
+$(OBJ)tests.o       : $(TESTS)tests.c $(TESTS)mathkit_tests.h
+	$(CC) $(CFLAGS) -c $(TESTS)tests.c -o $(OBJ)tests.o
+
+$(OBJ)mathkit_tests.o: $(TESTS)mathkit_tests.c $(KITINC)mathkit.h
+	$(CC) $(CFLAGS) -c $(TESTS)mathkit_tests.c -o $(OBJ)mathkit_tests.o
+
+$(OBJ)test_lib.o: $(TESTS)test_lib.c 
+	$(CC) $(CFLAGS) -c $(TESTS)test_lib.c -o $(OBJ)test_lib.o
 
 $(OBJ)42main.o      : $(SRC)42main.c
 	$(CC) $(CFLAGS) -c $(SRC)42main.c -o $(OBJ)42main.o

@@ -116,6 +116,28 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
 
+void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]);
+void AdjointT(const double C[3][3], const double A[3][3], double CACT[3][3]);
+void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m]);
+void MINVxMG(double **A, double **B, double **C, long N, long m);
+void MxMINVG(double **A, double **B, double **C, long N, long m);
+void expmso3(double theta[3], double R[3][3]);
+void logso3(double const R[3][3], double theta[3]);
+void expmTFG(double theta[3], long const n, long const m, double x[n][3],
+             double xbar[m][3], double R[3][3]);
+void expm(double **A, double **e, long const n);
+long isSignificant(int const m, int const n, double **A, double **B);
+double M1NormG(double **A, long const n, long const m);
+double M2Norm2G(double **A, long const n, long const m);
+void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);
+void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
+                         double d[n]);
+int cholDowndate(double **S, double u[], long const n);
+void chol(double **A, double **S, long const n);
+void hqrd(double **A, double **U, double **R, long const n, long const m);
+void bhqrd(double **A, double **U, double **R, long const n, long const m,
+           long const bSize);
+
 /*
 ** #ifdef __cplusplus
 ** }

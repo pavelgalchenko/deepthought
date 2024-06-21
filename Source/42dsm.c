@@ -1861,7 +1861,6 @@ void AttitudeGuidance(struct SCType *S) {
    double tgtX_b[3], tgtY_b[3], tgtZ_b[3];
    double tgtX_n[3], tgtY_n[3], tgtZ_n[3];
    double C_tb[3][3], C_tn[3][3], dC[3][3];
-   double tmag;
    double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
    double vec_cmp[3];
 
@@ -1981,15 +1980,9 @@ void AttitudeGuidance(struct SCType *S) {
 
          /* Approximation of log map from SO3 to so3 to calculate Cmd->wrn */
          MTxM(C_tn, Cmd->OldCRN, dC);
-         tmag        = acos((dC[0][0] + dC[1][1] + dC[2][2] - 1) / 2.0);
-         Cmd->wrn[0] = (dC[2][1] - dC[1][2]) / 2.0 / S->AC.DT;
-         Cmd->wrn[1] = (dC[0][2] - dC[2][0]) / 2.0 / S->AC.DT;
-         Cmd->wrn[2] = (dC[1][0] - dC[0][1]) / 2.0 / S->AC.DT;
-         if (tmag >
-             EPS_DSM) { // check if wmag large enough to avoid singularity
-            for (i = 0; i < 3; i++)
-               Cmd->wrn[i] *= tmag / sin(tmag);
-         }
+         logso3(dC, Cmd->wrn);
+         for (i = 0; i < 3; i++)
+            Cmd->wrn[i] /= S->AC.DT;
          memcpy(Cmd->OldCRN, C_tn, sizeof(Cmd->OldCRN));
 
          /* Calculate Inertial to Body Quaternion */

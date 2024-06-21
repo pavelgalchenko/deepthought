@@ -45,3 +45,10 @@ test-format:
     - apt -y install clang-format
   script:
     - clang-format --style=file --Werror --verbose -n Kit/**/*.c Source/*.c Kit/**/*.h Include/*.h
+unit-test:
+  stage: test
+  before_script:
+    - *update-dependencies
+    - make Test GUIFLAG=
+  script:
+    - ./Test

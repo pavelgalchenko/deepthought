@@ -1804,6 +1804,847 @@ double WrapTo2Pi(double n) {
    }
    return (OrbVar);
 }
+/******************************************************************************/
+// Calculate SO(3) adjoint operation: for rotation matrix C and matrix A,
+// calculate C*A*C^T
+void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]) {
+   long i, j, k, l;
+   for (i = 0; i < 3; i++)
+      for (j = 0; j < 3; j++) {
+         CACT[i][j] = 0.0;
+         for (l = 0; l < 3; l++)
+            for (k = 0; k < 3; k++)
+               CACT[i][j] += C[i][l] * A[l][k] * C[j][k];
+      }
+}
+/******************************************************************************/
+// Calculate SO(3) adjoint operation for transpose rotation: for rotation matrix
+// C and matrix A, calculate C^T*A*C
+void AdjointT(const double C[3][3], const double A[3][3], double CTAC[3][3]) {
+   long i, j, k, l;
+   for (i = 0; i < 3; i++)
+      for (j = 0; j < 3; j++) {
+         CTAC[i][j] = 0.0;
+         for (l = 0; l < 3; l++)
+            for (k = 0; k < 3; k++)
+               CTAC[i][j] += C[k][j] * A[l][k] * C[l][i];
+      }
+}
+/******************************************************************************/
+// Invert 3x3 matrix A and right multiply by 3xm matrix B, returning 3xm matrix
+// C
+void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m]) {
+   long I, J, ROW;
+   long IPIVOT = 0;
+   double M[3][3];
+   double PIVOT, K;
+
+   for (I = 0; I < 3; I++) {
+      for (J = 0; J < 3; J++)
+         M[I][J] = A[I][J];
+      for (J = 0; J < m; J++)
+         C[I][J] = B[I][J];
+   }
+
+   for (ROW = 0; ROW < 3; ROW++) {
+      PIVOT  = M[ROW][ROW];
+      IPIVOT = ROW;
+      for (I = ROW + 1; I < 3; I++) {
+         if (fabs(M[I][ROW]) >= fabs(PIVOT)) {
+            PIVOT  = M[I][ROW];
+            IPIVOT = I;
+         }
+      }
+      if (PIVOT == 0.0) {
+         printf("Matrix is singular in MINVxM3\n");
+         exit(EXIT_FAILURE);
+      }
+
+      for (J = 0; J < 3; J++) {
+         double t     = M[IPIVOT][J];
+         M[IPIVOT][J] = M[ROW][J];
+         M[ROW][J]    = t / PIVOT;
+      }
+      for (J = 0; J < m; J++) {
+         double t     = C[IPIVOT][J];
+         C[IPIVOT][J] = C[ROW][J];
+         C[ROW][J]    = t / PIVOT;
+      }
+      for (I = ROW + 1; I < 3; I++) {
+         K = M[I][ROW];
+         for (J = 3 - 1; J >= ROW; J--)
+            M[I][J] -= K * M[ROW][J];
+         for (J = 0; J < m; J++)
+            C[I][J] -= K * C[ROW][J];
+      }
+   }
+
+   /*    M is now upper triangular */
+   for (ROW = 3 - 1; ROW >= 0; ROW--) {
+      for (I = 0; I < ROW; I++) {
+         K = M[I][ROW];
+         for (J = 0; J < 3; J++)
+            M[I][J] -= K * M[ROW][J];
+         for (J = 0; J < m; J++)
+            C[I][J] -= K * C[ROW][J];
+      }
+   }
+}
+/******************************************************************************/
+// Invert NxN matrix A and right-multiply by Nxm matrix B, returning Nxm matrix
+// C
+void MINVxMG(double **A, double **B, double **C, long N, long m) {
+   long I, J, ROW;
+   long IPIVOT = 0;
+   double M[N][N];
+   double PIVOT, K;
+
+   if (N == 1) {
+      for (I = 0; I < m; I++)
+         C[0][I] = B[0][I] / A[0][0];
+   }
+
+   for (I = 0; I < N; I++) {
+      for (J = 0; J < N; J++)
+         M[I][J] = A[I][J];
+      for (J = 0; J < m; J++)
+         C[I][J] = B[I][J];
+   }
+
+   for (ROW = 0; ROW < N; ROW++) {
+      PIVOT  = M[ROW][ROW];
+      IPIVOT = ROW;
+      for (I = ROW + 1; I < N; I++) {
+         if (fabs(M[I][ROW]) >= fabs(PIVOT)) {
+            PIVOT  = M[I][ROW];
+            IPIVOT = I;
+         }
+      }
+      if (PIVOT == 0.0) {
+         printf("Matrix is singular in MINVxMG\n");
+         exit(EXIT_FAILURE);
+      }
+
+      for (J = 0; J < N; J++) {
+         double t     = M[IPIVOT][J];
+         M[IPIVOT][J] = M[ROW][J];
+         M[ROW][J]    = t / PIVOT;
+      }
+      for (J = 0; J < m; J++) {
+         double t     = C[IPIVOT][J];
+         C[IPIVOT][J] = C[ROW][J];
+         C[ROW][J]    = t / PIVOT;
+      }
+      for (I = ROW + 1; I < N; I++) {
+         K = M[I][ROW];
+         for (J = N - 1; J >= ROW; J--)
+            M[I][J] -= K * M[ROW][J];
+         for (J = 0; J < m; J++)
+            C[I][J] -= K * C[ROW][J];
+      }
+   }
+
+   /*    M is now upper triangular */
+   for (ROW = N - 1; ROW >= 0; ROW--) {
+      for (I = 0; I < ROW; I++) {
+         K = M[I][ROW];
+         for (J = 0; J < N; J++)
+            M[I][J] -= K * M[ROW][J];
+         for (J = 0; J < m; J++)
+            C[I][J] -= K * C[ROW][J];
+      }
+   }
+}
+/******************************************************************************/
+// Invert mxm matrix B and left-multiply by Nxm matrix A, returning Nxm matrix C
+// looks at the transpose of the problem and uses MINVxMG to solve
+void MxMINVG(double **A, double **B, double **C, long N, long m) {
+   // TODO: actually do this, not the transpose of the problem. Less memory
+   // overhead
+   double **AT, **BT, **CT;
+   long i, j;
+
+   AT = CreateMatrix(m, N);
+   BT = CreateMatrix(m, m);
+   CT = CreateMatrix(m, N);
+   for (i = 0; i < m; i++) {
+      for (j = 0; j < N; j++)
+         AT[i][j] = A[j][i];
+      for (j = 0; j < m; j++)
+         BT[i][j] = B[j][i];
+   }
+   MINVxMG(BT, AT, CT, m, N);
+   for (i = 0; i < m; i++)
+      for (j = 0; j < N; j++)
+         C[j][i] = CT[i][j];
+
+   DestroyMatrix(AT);
+   DestroyMatrix(BT);
+   DestroyMatrix(CT);
+}
+/******************************************************************************/
+// Matrix Exponential for Special Orthogonal Group of dimension 3 (SO(3))
+void expmso3(double theta[3], double R[3][3]) {
+   double tMag, sTMag, cTMagM1;
+   double tCross[3][3], tCrossCross[3][3];
+   long i, j;
+
+   for (i = 0; i < 3; i++) {
+      for (j = 0; j < 3; j++)
+         R[i][j] = 0.0;
+      R[i][i] = 1.0;
+   }
+   tMag = MAGV(theta);
+   if (tMag >= __DBL_EPSILON__) {
+      double thetaHat[3] = {0.0};
+      for (i = 0; i < 3; i++)
+         thetaHat[i] = theta[i] / tMag;
+      sTMag   = sin(tMag);
+      cTMagM1 = cos(tMag) - 1.0;
+
+      V2CrossM(thetaHat, tCross);
+      V2DoubleCrossM(thetaHat, tCrossCross);
+
+      for (i = 0; i < 3; i++)
+         for (j = 0; j < 3; j++)
+            R[i][j] += sTMag * tCross[i][j] - cTMagM1 * tCrossCross[i][j];
+   }
+}
+/******************************************************************************/
+// Matrix Logarithm for SO(3)
+void logso3(double const R[3][3], double theta[3]) {
+   double tMag, dSincTMag;
+
+   tMag      = acos((R[0][0] + R[1][1] + R[2][2] - 1) / 2.0);
+   dSincTMag = 2.0;
+   if (tMag > __DBL_EPSILON__)
+      dSincTMag *= sinc(tMag);
+   theta[0] = (R[2][1] - R[1][2]) / dSincTMag;
+   theta[1] = (R[0][2] - R[2][0]) / dSincTMag;
+   theta[2] = (R[1][0] - R[0][1]) / dSincTMag;
+}
+/******************************************************************************/
+// Calculate matrix exponential on two-frames-group (SO(3)xR^((n+m)x3))
+void expmTFG(double theta[3], long const n, long const m, double x[n][3],
+             double xbar[m][3], double R[3][3]) {
+   double tCross[3][3] = {{0.0}}, tCrossCross[3][3] = {{0.0}},
+          intR[3][3] = {{0.0}}, intmR[3][3] = {{0.0}};
+   double tMag, scTMag, cTMagM1;
+   long i, j;
+
+   expmso3(theta, R);
+
+   tMag = MAGV(theta);
+   if (tMag > __DBL_EPSILON__) {
+      UNITV(theta);
+      scTMag  = sinc(tMag);
+      cTMagM1 = cos(tMag) - 1.0;
+
+      V2CrossM(theta, tCross);
+      V2DoubleCrossM(theta, tCrossCross);
+
+      for (i = 0; i < 3; i++) {
+         intR[i][i] = 1.0;
+         for (j = 0; j < 3; j++) {
+            intR[i][j]  += (1.0 - scTMag) * tCrossCross[i][j];
+            intmR[i][j]  = intR[i][j] + cTMagM1 * tCross[i][j] / tMag;
+            intR[i][j]  -= cTMagM1 * tCross[i][j] / tMag;
+         }
+      }
+      double tmp3V[3] = {0.0};
+      for (j = 0; j < n; j++) {
+         MxV(intR, x[j], tmp3V);
+         for (i = 0; i < 3; i++)
+            x[j][i] = tmp3V[i];
+      }
+      for (j = 0; j < m; j++) {
+         MxV(intmR, xbar[j], tmp3V);
+         for (i = 0; i < 3; i++)
+            xbar[j][i] = tmp3V[i];
+      }
+   }
+}
+/******************************************************************************/
+// Taylor series method for Matrix Exponential, adapted from John Burkardt
+// https://people.sc.fsu.edu/~jburkardt
+void expm(double **A, double **e, long const n) {
+   int const maxIter = 25;
+   int k             = 1;
+   double **B, **C;
+   B = CreateMatrix(n, n);
+   C = CreateMatrix(n, n);
+
+   for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+         e[i][j] = 0.0;
+
+   for (int i = 0; i < n; i++)
+      B[i][i] = 1.0;
+
+   while (k <= maxIter && isSignificant(n, n, e, B)) {
+      for (int i = 0; i < n; i++)
+         for (int j = 0; j < n; j++)
+            e[i][j] += B[i][j];
+
+      MxMG(B, A, C, n, n, n);
+      SxMG(1.0 / ((double)(k)), C, B, n, n);
+      k++;
+   }
+
+   DestroyMatrix(B);
+   DestroyMatrix(C);
+}
+/******************************************************************************/
+// Test if matrix B is significant relative to matrix A, adapted from John
+// Burkardt https://people.sc.fsu.edu/~jburkardt
+long isSignificant(int const m, int const n, double **A, double **B) {
+   double t, tol;
+   long isSignificant = 0;
+
+   for (int i = 0; i < n; i++) {
+      for (int j = 0; j < m; j++) {
+         t   = A[i][j] + B[i][j];
+         tol = nextafter(fabs(A[i][j]), INFINITY) - fabs(A[i][j]);
+         if (tol < (fabs(A[i][j] - t))) {
+            isSignificant = 1;
+            break;
+         }
+      }
+   }
+
+   return (isSignificant);
+}
+/******************************************************************************/
+// Calculate the induced matrix 1-norm of nxm matrix A
+double M1NormG(double **A, long const n, long const m) {
+   double p1Norm = 0.0;
+   long i, j;
+
+   for (i = 0; i < n; i++) {
+      double colSum = 0.0;
+      for (j = 0; j < m; j++)
+         colSum += fabs(A[i][j]);
+
+      if (colSum > p1Norm)
+         p1Norm = colSum;
+   }
+   return (p1Norm);
+}
+/******************************************************************************/
+// Calculate the square of the induced matrix 2-norm of th nxm matrix A by
+// calculation of the largest eigenvalue of ATA or AAT, depending on which is
+// smaller dimension
+double M2Norm2G(double **A, long const n, long const m) {
+   double **ATA;
+   double d[n];
+   const long maxIter = 100;
+
+   long majDim = n, minDim = m;
+
+   if (m > n) {
+      majDim = m;
+      minDim = n;
+   }
+   ATA = CreateMatrix(minDim, minDim);
+
+   if (minDim == n)
+      MxMTG(A, A, ATA, minDim, majDim, minDim);
+   else
+      MTxMG(A, A, ATA, minDim, majDim, minDim);
+
+   jacobiEValue(ATA, minDim, maxIter, d);
+   DestroyMatrix(ATA);
+
+   double p2Norm2 = d[0];
+   for (int i = 0; i < minDim; i++)
+      if (d[i] > p2Norm2)
+         p2Norm2 = d[i];
+   return (p2Norm2);
+}
+/******************************************************************************/
+// Calculates eigenvalues of real symmetric matrix by Jacobi iteration,
+// adapted from John Burkardt https://people.sc.fsu.edu/~jburkardt
+// TODO: d in decreasing order?
+void jacobiEValue(double **A, int const n, int const maxIter, double d[n]) {
+   double *bw, *zw, c, g, gapq, h;
+   long i, j, k, l, m, p, q;
+   double s, t, tau, term, termp, termq, theta, thresh;
+   long iterNum = 0;
+
+   bw = calloc(n, sizeof(double));
+   zw = calloc(n, sizeof(double));
+   for (i = 0; i < n; i++) {
+      d[i]  = A[i][i];
+      bw[i] = d[i];
+      zw[i] = 0.0;
+   }
+
+   while (iterNum < maxIter) {
+      iterNum++;
+
+      /*
+      The convergence threshold is based on the size of the elements in
+      the strict upper triangle of the matrix.
+      */
+      thresh = 0.0;
+      for (j = 0; j < n; j++) {
+         for (i = 0; i < j; i++)
+            thresh += A[i][j] * A[i][j];
+      }
+
+      thresh = sqrt(thresh) / (double)(4.0 * n);
+      if (thresh < __DBL_EPSILON__)
+         break;
+
+      for (p = 0; p < n; p++) {
+         for (q = p + 1; q < n; q++) {
+            gapq  = 10.0 * fabs(A[p][q]);
+            termp = gapq + fabs(d[p]);
+            termq = gapq + fabs(d[q]);
+            /*
+            Annihilate tiny offdiagonal elements.
+            */
+            if (4 < iterNum && termp == fabs(d[p]) && termq == fabs(d[q])) {
+               A[p][q] = 0.0;
+            }
+            /*
+            Otherwise, apply a rotation.
+            */
+            else if (thresh <= fabs(A[p][q])) {
+               h    = d[q] - d[p];
+               term = fabs(h) + gapq;
+
+               if (term == fabs(h)) {
+                  t = A[p][q] / h;
+               } else {
+                  theta = 0.5 * h / A[p][q];
+                  t     = 1.0 / (fabs(theta) + sqrt(1.0 + theta * theta));
+                  if (theta < 0.0)
+                     t = -t;
+               }
+               c   = 1.0 / sqrt(1.0 + t * t);
+               s   = t * c;
+               tau = s / (1.0 + c);
+               h   = t * A[p][q];
+               /*
+               Accumulate corrections to diagonal elements.
+               */
+               zw[p] -= h;
+               zw[q] += h;
+               d[p]  -= h;
+               d[q]  += h;
+
+               A[p][q] = 0.0;
+               /*
+               Rotate, using information from the upper triangle of A only.
+               */
+               for (j = 0; j < p; j++) {
+                  g       = A[j][p];
+                  h       = A[j][q];
+                  A[j][p] = g - s * (h + g * tau);
+                  A[j][q] = h + s * (g - h * tau);
+               }
+
+               for (j = p + 1; j < q; j++) {
+                  g       = A[p][j];
+                  h       = A[j][q];
+                  A[p][j] = g - s * (h + g * tau);
+                  A[j][q] = h + s * (g - h * tau);
+               }
+
+               for (j = q + 1; j < n; j++) {
+                  g       = A[p][j];
+                  h       = A[q][j];
+                  A[p][j] = g - s * (h + g * tau);
+                  A[q][j] = h + s * (g - h * tau);
+               }
+            }
+         }
+      }
+
+      for (i = 0; i < n; i++) {
+         bw[i] = bw[i] + zw[i];
+         d[i]  = bw[i];
+         zw[i] = 0.0;
+      }
+   }
+   /*
+   Restore upper triangle of input matrix.
+   */
+   for (j = 0; j < n; j++) {
+      for (i = 0; i < j; i++) {
+         A[i][j] = A[j][i];
+      }
+   }
+   /*
+   Descending sort the eigenvalues and eigenvectors.
+   */
+   for (k = 0; k < n - 1; k++) {
+      m = k;
+      for (l = k + 1; l < n; l++) {
+         if (d[l] > d[m]) {
+            m = l;
+         }
+      }
+
+      if (m != k) {
+         t    = d[m];
+         d[m] = d[k];
+         d[k] = t;
+      }
+   }
+
+   free(bw);
+   free(zw);
+}
+/******************************************************************************/
+// Calculates eigenvalues & eigenvectors of real symmetric matrix by Jacobi
+// iteration, adapted from John Burkardt https://people.sc.fsu.edu/~jburkardt
+// TODO: d in decreasing order?
+void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
+                         double d[n]) {
+   double *bw, c, g, gapq, h;
+   long i, j, k, l, m, p, q;
+   double s, t, tau, term, termp, termq, theta, thresh, w;
+   double *zw;
+   long iterNum = 0;
+
+   bw = calloc(n, sizeof(double));
+   zw = calloc(n, sizeof(double));
+   for (i = 0; i < n; i++) {
+      for (j = 0; j < n; j++)
+         V[i][j] = 0.0;
+      V[i][i] = 1.0;
+      d[i]    = A[i][i];
+      bw[i]   = d[i];
+      zw[i]   = 0.0;
+   }
+
+   while (iterNum < maxIter) {
+      iterNum++;
+
+      /*
+      The convergence threshold is based on the size of the elements in
+      the strict upper triangle of the matrix.
+      */
+      thresh = 0.0;
+      for (j = 0; j < n; j++) {
+         for (i = 0; i < j; i++)
+            thresh += A[i][j] * A[i][j];
+      }
+
+      thresh = sqrt(thresh) / ((double)4 * n);
+      if (thresh < __DBL_EPSILON__)
+         break;
+
+      for (p = 0; p < n; p++) {
+         for (q = p + 1; q < n; q++) {
+            gapq  = 10.0 * fabs(A[p][q]);
+            termp = gapq + fabs(d[p]);
+            termq = gapq + fabs(d[q]);
+            /*
+            Annihilate tiny offdiagonal elements.
+            */
+            if (4 < iterNum && termp == fabs(d[p]) && termq == fabs(d[q])) {
+               A[p][q] = 0.0;
+            }
+            /*
+            Otherwise, apply a rotation.
+            */
+            else if (thresh <= fabs(A[p][q])) {
+               h    = d[q] - d[p];
+               term = fabs(h) + gapq;
+
+               if (term == fabs(h)) {
+                  t = A[p][q] / h;
+               } else {
+                  theta = 0.5 * h / A[p][q];
+                  t     = 1.0 / (fabs(theta) + sqrt(1.0 + theta * theta));
+                  if (theta < 0.0)
+                     t = -t;
+               }
+               c   = 1.0 / sqrt(1.0 + t * t);
+               s   = t * c;
+               tau = s / (1.0 + c);
+               h   = t * A[p][q];
+               /*
+               Accumulate corrections to diagonal elements.
+               */
+               zw[p] = zw[p] - h;
+               zw[q] = zw[q] + h;
+               d[p]  = d[p] - h;
+               d[q]  = d[q] + h;
+
+               A[p][q] = 0.0;
+               /*
+               Rotate, using information from the upper triangle of A only.
+               */
+               for (j = 0; j < p; j++) {
+                  g       = A[j][p];
+                  h       = A[j][q];
+                  A[j][p] = g - s * (h + g * tau);
+                  A[j][q] = h + s * (g - h * tau);
+               }
+
+               for (j = p + 1; j < q; j++) {
+                  g       = A[p][j];
+                  h       = A[j][q];
+                  A[p][j] = g - s * (h + g * tau);
+                  A[j][j] = h + s * (g - h * tau);
+               }
+
+               for (j = q + 1; j < n; j++) {
+                  g       = A[p][j];
+                  h       = A[q][j];
+                  A[p][j] = g - s * (h + g * tau);
+                  A[q][j] = h + s * (g - h * tau);
+               }
+               /*
+               Accumulate information in the eigenvector matrix.
+               */
+               for (j = 0; j < n; j++) {
+                  g       = V[j][p];
+                  h       = V[j][q];
+                  V[j][p] = g - s * (h + g * tau);
+                  V[j][q] = h + s * (g - h * tau);
+               }
+            }
+         }
+      }
+
+      for (i = 0; i < n; i++) {
+         bw[i] = bw[i] + zw[i];
+         d[i]  = bw[i];
+         zw[i] = 0.0;
+      }
+   }
+   /*
+   Restore upper triangle of input matrix.
+   */
+   for (j = 0; j < n; j++) {
+      for (i = 0; i < j; i++) {
+         A[i][j] = A[j][i];
+      }
+   }
+   /*
+   Ascending sort the eigenvalues and eigenvectors.
+   */
+   for (k = 0; k < n - 1; k++) {
+      m = k;
+      for (l = k + 1; l < n; l++) {
+         if (d[l] < d[m]) {
+            m = l;
+         }
+      }
+
+      if (m != k) {
+         t    = d[m];
+         d[m] = d[k];
+         d[k] = t;
+         for (i = 0; i < n; i++) {
+            w       = V[i][m];
+            V[i][m] = V[i][k];
+            V[i][k] = w;
+         }
+      }
+   }
+
+   free(bw);
+   free(zw);
+}
+/******************************************************************************/
+// Downdates the nxn, lower triangular, Cholesky matrix S by the vector u.
+// Returns 0 if failure, 1 if success
+int cholDowndate(double **S, double u[], long const n) {
+   long i, k;
+
+   for (k = 0; k < n; k++) {
+      double r = S[k][k] * S[k][k] - u[k] * u[k];
+      if (r < 0.0)
+         return 0;
+      r        = sqrt(r);
+      double c = r / S[k][k];
+      double s = u[k] / S[k][k];
+      S[k][k]  = r;
+      for (i = k + 1; i < n; i++) {
+         S[i][k] = (S[i][k] - s * u[i]) / c;
+         u[i]    = c * u[i] - s * S[i][k];
+      }
+   }
+   return 1;
+}
+/******************************************************************************/
+// Calculates the nxn, lower triangular, Cholesky matrix S from nxn, real,
+// positive definite matrix A
+void chol(double **A, double **S, long const n) {
+   long i, j, k;
+
+   for (i = 0; i < n; i++) {
+      for (j = 0; j <= i; j++) {
+         double s = 0.0;
+         for (k = 0; k < j; k++)
+            s += S[i][k] * S[j][k];
+         S[i][j] = (i == j) ? sqrt(A[i][i] - s) : ((A[i][j] - s) / S[j][j]);
+      }
+   }
+}
+/******************************************************************************/
+double houseGen(double x[], double u[], long const n) {
+   long i;
+   double nu        = 0.0;
+   double const rt2 = SQRTTWO;
+   for (i = 0; i < n; i++)
+      nu += x[i] * x[i];
+   if (nu < __DBL_EPSILON__) {
+      nu   = 0.0;
+      u[0] = rt2;
+   } else {
+      nu = sqrt(nu);
+      for (i = 0; i < n; i++)
+         u[i] = x[i] / (nu);
+      if (u[0] >= 0.0) {
+         u[0] += 1.0;
+         nu    = -nu;
+      } else {
+         u[0] -= 1.0;
+      }
+      double a = sqrt(fabs(u[0]));
+      for (i = 0; i < n; i++)
+         u[i] /= a;
+   }
+   return (nu);
+}
+/******************************************************************************/
+// QR decomposition of nxm matrix A by Householder transformations
+void hqrd(double **A, double **U, double **R, long const n, long const m) {
+   double X[n][m];
+   long k, i, j;
+
+   for (i = 0; i < n; i++) {
+      for (j = 0; j < m; j++) {
+         X[i][j] = A[i][j];
+      }
+   }
+
+   for (k = 0; k < ((n < m) ? n : m); k++) {
+      long size = n - k;
+      double x[size], u[size], v[m - k - 1];
+      for (i = 0; i < size; i++) {
+         x[i] = X[k + i][k];
+         u[i] = 0.0;
+      }
+
+      R[k][k] = houseGen(x, u, size);
+
+      for (j = k + 1; j < m; j++) {
+         v[j - k - 1] = 0.0;
+         for (i = 0; i < size; i++)
+            v[j - k - 1] += u[i] * X[k + i][j];
+      }
+      for (i = 0; i < size; i++) {
+         U[i + k][k] = u[i];
+         for (j = k + 1; j < m; j++) {
+            X[k + i][j] -= u[i] * v[j - k - 1];
+         }
+      }
+      for (j = k + 1; j < m; j++) {
+         R[k][j] = X[k][j];
+      }
+   }
+   for (i = 0; i < n; i++) {
+      for (j = 0; j < m; j++) {
+         A[i][j] = X[i][j];
+      }
+   }
+}
+/******************************************************************************/
+// Helper function for bhqrd
+void utu(double **U, double **T, long const n, long const m) {
+   long i, j, k;
+   for (k = 0; k < m; k++) {
+      T[k][k] = 1.0;
+
+      for (j = 0; j < k; j++) {
+         T[j][k] = 0.0;
+         for (i = 0; i < n; i++)
+            T[j][k] += U[i][j] * U[i][k];
+         double a = 0.0;
+         for (i = 0; i < k; i++)
+            a -= T[j][i] * T[i][k];
+         T[j][k] = a;
+      }
+   }
+}
+/******************************************************************************/
+// QR decomposition of nxm matrix A by blocked Householder transforms, using
+// blocksize bSize (WIP)
+// TODO: fix
+void bhqrd(double **A, double **U, double **R, long const n, long const m,
+           long const bSize) {
+   // long q = 0;
+   long i, j, k;
+   double **Xb = NULL, **Ub = NULL, **Rb = NULL, **Tq = NULL, **V = NULL,
+          **tmp = NULL;
+   for (k = 0; k < ((n < m) ? n : m); k += bSize) {
+      // q++;
+      long ell = ((m < (k + bSize)) ? m : (k + bSize));
+      long a = n - k, b = ell - k;
+      Xb = CreateMatrix(a, b);
+      Ub = CreateMatrix(a, b);
+      Rb = CreateMatrix(b, b);
+      Tq = CreateMatrix(b, b);
+      for (j = 0; j < b; j++) {
+         for (i = 0; i < a; i++)
+            Xb[i][j] = A[k + i][k + j];
+      }
+      hqrd(Xb, Ub, Rb, a, b);
+      for (j = 0; j < b; j++) {
+         for (i = 0; i < a; i++) {
+            A[k + i][k + j] = Xb[i][j];
+            U[k + i][k + j] = Ub[i][j];
+         }
+      }
+      for (i = 0; i < b; i++) {
+         for (j = 0; j < b; j++)
+            R[k + i][k + j] = Rb[i][j];
+      }
+      utu(Ub, Tq, a, b);
+      if (ell < m) {
+         V   = CreateMatrix(b, m - ell);
+         tmp = CreateMatrix(a, m - ell);
+         for (i = 0; i < a; i++) {
+            for (j = 0; j < (m - ell); j++)
+               tmp[i][j] = A[k + i][ell + j];
+         }
+         MTxMG(Ub, tmp, V, b, a, m - ell);
+         DestroyMatrix(tmp);
+         tmp = CreateMatrix(b, m - ell);
+         MTxMG(Tq, V, tmp, b, b, m - ell);
+         for (i = 0; i < b; i++) {
+            for (j = 0; j < m - ell; j++)
+               V[i][j] = tmp[i][j];
+         }
+         DestroyMatrix(tmp);
+         tmp = CreateMatrix(a, m - ell);
+         MxMG(Ub, V, tmp, a, b, m - ell);
+         for (i = k; i < n; i++) {
+            for (j = ell; j < m; j++)
+               A[i][j] -= tmp[i - k][j - ell];
+         }
+         for (i = k; i < ell; i++) {
+            for (j = ell; j < m; j++)
+               R[i][j] = A[i][j];
+         }
+         DestroyMatrix(V);
+         DestroyMatrix(tmp);
+      }
+
+      DestroyMatrix(Xb);
+      DestroyMatrix(Ub);
+      DestroyMatrix(Rb);
+      DestroyMatrix(Tq);
+   }
+}
 
 /* #ifdef __cplusplus
 ** }
