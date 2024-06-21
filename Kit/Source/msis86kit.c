@@ -1794,7 +1794,6 @@ double MSIS86(long Year, long DOY, long Hour, long Minute, double Second,
    integer IYD;
    real SEC, ALT, GLAT, GLONG, STL, F107A;
    real D[8], T[2];
-   double TwoPi = 6.28318530717959;
    double cth, sth, pbe[3], density;
    static integer MASS = 48; /* All species */
    static long First   = 1;
@@ -1817,8 +1816,8 @@ double MSIS86(long Year, long DOY, long Hour, long Minute, double Second,
 
    MSIS_ECEFToWGS84(pbe, &GLAT, &GLONG, &ALT);
 
-   GLAT  *= 360.0 / TwoPi;
-   GLONG *= 360.0 / TwoPi;
+   GLAT  *= 360.0 / TWOPI;
+   GLONG *= 360.0 / TWOPI;
    ALT   /= 1.0E3;
    STL    = SEC / 3600.0 + GLONG / 15.0;
 

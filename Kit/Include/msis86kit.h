@@ -238,6 +238,7 @@ typedef doublereal E_f; /* real function with -R not specified */
 #endif
 #endif
 /* End f2c.h */
+#include "42constants.h"
 #include "math.h"
 
 /* Common Block Declarations */

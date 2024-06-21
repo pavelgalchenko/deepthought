@@ -1399,12 +1399,11 @@ void KalmanFilterTimeUpdate(struct KalmanFilterType *KF) {
 /*  Control Moment Gyro Systems", JGCD, Sep-Oct 2005                  */
 double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
                     double h[4], double AngRateCmd[4]) {
-   double eps0  = 0.1;
-   double lam0  = 0.01;
-   double mu    = 10.0;
-   double w     = 1.0;
-   double dt    = 0.1;
-   double TwoPi = 6.2831853072;
+   double eps0 = 0.1;
+   double lam0 = 0.01;
+   double mu   = 10.0;
+   double w    = 1.0;
+   double dt   = 0.1;
    double A[3][4], AAt[3][3], Asharp[4][3], Gain;
    static double wt = 0.0;
    double lam, eps;
@@ -1435,7 +1434,7 @@ double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
    lam  = lam0 * exp(-mu * Gain);
    eps  = eps0 * sin(wt);
    wt  += w * dt;
-   wt   = fmod(wt, TwoPi);
+   wt   = fmod(wt, TWOPI);
 
    /* V */
    for (i = 0; i < 3; i++) {

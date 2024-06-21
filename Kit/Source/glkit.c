@@ -579,9 +579,8 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
                    -0.5, -0.866, -1.0,  -0.866, -0.5,  0.0};
    long i;
    double Apex[4] = {0.0, 0.0, 0.0, 1.0};
-   double TwoPi   = 6.28318530717959;
    double r[4];
-   double daz = TwoPi / ((double)Nv);
+   double daz = TWOPI / ((double)Nv);
    double az0 = 0.5 * daz;
    double az;
    double a, b;
@@ -601,7 +600,7 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
       glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
       glBegin(GL_TRIANGLE_FAN);
       glVertex4dv(Apex);
-      for (az = az0; az < TwoPi; az += daz) {
+      for (az = az0; az < TWOPI; az += daz) {
          r[H_Axis] = a * cos(az);
          r[V_Axis] = b * sin(az);
          glVertex4dv(r);
@@ -615,7 +614,7 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
       glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
       glBegin(GL_TRIANGLE_FAN);
       glVertex4dv(Apex);
-      for (az = az0; az < TwoPi; az += daz) {
+      for (az = az0; az < TWOPI; az += daz) {
          r[H_Axis] = a * cos(az);
          r[V_Axis] = b * sin(az);
          glVertex4dv(r);
@@ -647,7 +646,7 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
       glBegin(GL_TRIANGLE_FAN);
       glVertex4dv(Apex);
       r[BoreAxis] = 0.0;
-      for (az = az0; az < TwoPi; az += daz) {
+      for (az = az0; az < TWOPI; az += daz) {
          r[H_Axis] = cos(az);
          r[V_Axis] = sin(az);
          glVertex4dv(r);
@@ -667,9 +666,8 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
 void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
                 long H_Axis, long V_Axis, long Type, GLfloat Color[4],
                 const char Label[40], double SkyDistance) {
-   double TwoPi = 6.28318530717959;
    double r[4];
-   double daz = TwoPi / ((double)Nv);
+   double daz = TWOPI / ((double)Nv);
    double az0 = 0.5 * daz;
    double az;
    double a, b;
@@ -687,7 +685,7 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
    if (Type == 0 || Type == 1) { /* FOV_WIREFRAME or FOV_SOLID */
       glLineWidth(2.0);
       glBegin(GL_LINE_LOOP);
-      for (az = az0; az < TwoPi; az += daz) {
+      for (az = az0; az < TWOPI; az += daz) {
          r[H_Axis] = a * cos(az);
          r[V_Axis] = b * sin(az);
          glVertex4dv(r);
@@ -718,7 +716,7 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
       glLineWidth(2.0);
       r[BoreAxis] = 0.0;
       glBegin(GL_LINE_LOOP);
-      for (az = az0; az < TwoPi; az += daz) {
+      for (az = az0; az < TWOPI; az += daz) {
          r[H_Axis] = cos(az);
          r[V_Axis] = sin(az);
          glVertex4dv(r);
@@ -726,7 +724,7 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
       glEnd();
       glLineWidth(1.0);
       /* Label */
-      for (az = az0; az < TwoPi; az += daz) {
+      for (az = az0; az < TWOPI; az += daz) {
          r[H_Axis] = cos(az);
          r[V_Axis] = sin(az);
          glRasterPos4dv(r);
@@ -1481,7 +1479,7 @@ GLuint LoadMilkyWay(const char *PathName, const char *FileName,
 
    MilkyWayTexTag = PpmToTexTag(PathName, FileName, 3, GL_REPEAT);
 
-   Pi  = 4.0 * atan(1.0);
+   Pi  = PI;
    lat = Pi / 8.0;
 
    ListTag = glGenLists(1);
@@ -2348,7 +2346,7 @@ void DrawSkySphere(long Ndiv) {
 /**********************************************************************/
 void DrawUnitMercatorSphere(GLuint Nlat, GLuint Nlng) {
 
-   GLfloat Pi = 4.0 * atan(1.0);
+   GLfloat Pi = PI;
    GLfloat s1, s2, t, lng1, lng2, lat, r[3];
    GLuint i, j;
 
@@ -2744,7 +2742,6 @@ void DrawRollPitchYaw(long xc, long yc, long PixScale, double AngScale,
 /*********************************************************************/
 /* Draw a small circle on a Mercator projection in active window.    */
 void DrawSmallCircle(double lngc, double latc, double rad) {
-   double TwoPi = 6.28318530717959;
    double axis[3], norm[3], binorm[3], sigma[3], C[3][3], ang, p[3];
    double x, y, xold, yold;
 
@@ -2770,7 +2767,7 @@ void DrawSmallCircle(double lngc, double latc, double rad) {
    xold = atan2(p[1], p[0]) * R2D;
    yold = asin(p[2]) * R2D;
    glBegin(GL_LINES);
-   for (ang = 0.0; ang < TwoPi; ang += 0.005 * TwoPi) {
+   for (ang = 0.0; ang < TWOPI; ang += 0.005 * TWOPI) {
       SimpRot(axis, ang, C);
       MxV(C, sigma, p);
       x = atan2(p[1], p[0]) * R2D;
@@ -2967,7 +2964,6 @@ void DrawMercatorVector(double lng, double lat, char *label) {
 /* Draws all 6 primary axes on a Mercator projection
    CAV is the DCM from the Axis frame to the Viewing frame            */
 void DrawMercatorAxes(double CVA[3][3], char *label) {
-   double TwoPi = 6.28318530717959;
 
    double x[6] = {1, -1, 0, 0, 0, 0};
    double y[6] = {0, 0, 1, -1, 0, 0};
@@ -2996,11 +2992,11 @@ void DrawMercatorAxes(double CVA[3][3], char *label) {
       DrawMercatorVector(lng, lat, str);
 
       if (lng > 180 - 8 * strlen(label)) {
-         DrawMercatorVector(lng - TwoPi, lat, str);
+         DrawMercatorVector(lng - TWOPI, lat, str);
       }
 
       if (lng < -180 + 8 * strlen(label)) {
-         DrawMercatorVector(lng + TwoPi, lat, str);
+         DrawMercatorVector(lng + TWOPI, lat, str);
       }
    }
 }

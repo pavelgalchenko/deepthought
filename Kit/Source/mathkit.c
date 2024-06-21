@@ -1798,10 +1798,9 @@ void VecToLngLat(double A[3], double *lng, double *lat) {
 }
 /******************************************************************************/
 double WrapTo2Pi(double n) {
-   double TwoPi  = 6.28318530718;
    double OrbVar = n;
-   while (OrbVar >= TwoPi) {
-      OrbVar = OrbVar - TwoPi;
+   while (OrbVar >= TWOPI) {
+      OrbVar = OrbVar - TWOPI;
    }
    return (OrbVar);
 }
