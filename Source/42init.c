@@ -2682,7 +2682,7 @@ void InitSpacecraft(struct SCType *S) {
          fscanf(infile, "%lf %[^\n] %[\n]", &CSS->SampleTime, junk, &newline);
          CSS->MaxCounter = (long)(CSS->SampleTime / DTSIM + 0.5);
          if (CSS->SampleTime < DTSIM) {
-            printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ic);
             exit(1);
          }
          CSS->SampleCounter = CSS->MaxCounter;
@@ -2722,7 +2722,7 @@ void InitSpacecraft(struct SCType *S) {
          fscanf(infile, "%lf %[^\n] %[\n]", &FSS->SampleTime, junk, &newline);
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
-            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", Ifss);
             exit(1);
          }
          FSS->SampleCounter = FSS->MaxCounter;
@@ -2770,7 +2770,7 @@ void InitSpacecraft(struct SCType *S) {
          fscanf(infile, "%lf %[^\n] %[\n]", &ST->SampleTime, junk, &newline);
          ST->MaxCounter = (long)(ST->SampleTime / DTSIM + 0.5);
          if (ST->SampleTime < DTSIM) {
-            printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ist);
             exit(1);
          }
          ST->SampleCounter = ST->MaxCounter;
