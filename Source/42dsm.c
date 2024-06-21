@@ -152,7 +152,7 @@ void InitDSM(struct SCType *S) {
 
 //----------------------------------- GAINS -----------------------------------
 long GetGains(struct SCType *S, const char GainCmdName[255],
-              long controllerState, FILE *InpDsmFilePtr) {
+              enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long GainsProcessed = FALSE;
    int gainNum;
    char DsmCmdLine[255] = "";
@@ -164,7 +164,7 @@ long GetGains(struct SCType *S, const char GainCmdName[255],
    struct DSMCmdType *Cmd;
    struct AcType *AC;
    double kp[3], kr[3], ki[3], limit_vec[3];
-   int controller = -1;
+   enum ctrlType controller = -1;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
@@ -328,7 +328,7 @@ long GetGains(struct SCType *S, const char GainCmdName[255],
 }
 //----------------------------------- LIMITS -----------------------------------
 long GetLimits(struct SCType *S, const char LimitCmdName[255],
-               long controllerState, FILE *InpDsmFilePtr) {
+               enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long LimitsProcessed = FALSE;
    int limitNum;
    char LimitCmd[255], DsmCmdLine[255] = "";
@@ -391,7 +391,7 @@ long GetLimits(struct SCType *S, const char LimitCmdName[255],
 //----------------------------------- CONTROLLER
 //-----------------------------------
 long GetController(struct SCType *S, const char CtrlCmdName[255],
-                   long controllerState, FILE *InpDsmFilePtr) {
+                   enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long CntrlProcessed = FALSE;
    int cntrlNum;
 
@@ -401,7 +401,7 @@ long GetController(struct SCType *S, const char CtrlCmdName[255],
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
-   int controller;
+   enum ctrlType controller = -1;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
@@ -486,7 +486,7 @@ long GetController(struct SCType *S, const char CtrlCmdName[255],
 //----------------------------------- ACTUATORS
 //-----------------------------------
 long GetActuators(struct SCType *S, const char ActuatorCmdName[255],
-                  long controllerState, FILE *InpDsmFilePtr) {
+                  enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long ActuatorsProcessed = FALSE;
    int actuatorNum, H_DumpCmdMode;
    char ActuatorCmd[255], DsmCmdLine[255] = "";

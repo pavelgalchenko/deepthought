@@ -32,21 +32,21 @@
                 "make clean && make -j deploy"
             ]
         },
-        {
-            "label": "profile build project",
-            "type": "shell",
-            "group": "build",
-            "args": [
-                "make clean && make -j profile"
-            ]
-        },
-        {
-            "label": "analyze project",
-            "type": "shell",
-            "args": [
-                "gprof ./42 gmon.out > analysis.txt"
-            ]
-        },
+        // {
+        //     "label": "profile build project",
+        //     "type": "shell",
+        //     "group": "build",
+        //     "args": [
+        //         "make clean && make -j profile"
+        //     ]
+        // },
+        // {
+        //     "label": "analyze project",
+        //     "type": "shell",
+        //     "args": [
+        //         "gprof ./42 gmon.out > analysis.txt"
+        //     ]
+        // },
         // {
         //     "label": "test project",
         //     "type": "shell",

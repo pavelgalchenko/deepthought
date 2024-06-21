@@ -15,26 +15,34 @@
 #define __DSMTYPES_H__
 
 // Controller Type Definitions
-#define PID_CNTRL       0 // Translational and Rotational
-#define LYA_ATT_CNTRL   1 // Attitude
-#define LYA_2BODY_CNTRL 2 // 2 Body Relative Orbit Control
-#define H_DUMP_CNTRL    3 // Proportional only, for momentum dumping
+enum ctrlType {
+   PID_CNTRL = 0,   // Translational and Rotational
+   LYA_ATT_CNTRL,   // Attitude
+   LYA_2BODY_CNTRL, // 2 Body Relative Orbit Control
+   H_DUMP_CNTRL,    // Proportional only, for momentum dumping
+};
 
 // Controller State Definitions
-#define TRN_STATE  0 // Translational
-#define ATT_STATE  1 // Attitude
-#define FULL_STATE 2 // 6DOF controller, currently unused
-#define DMP_STATE  3 // Dumping Controller
+enum ctrlState {
+   TRN_STATE = 0, // Translational
+   ATT_STATE,     // Attitude
+   FULL_STATE,    // 6DOF controller, currently unused
+   DMP_STATE,     // Dumping Controller
+};
 
 // Manuever Type Definitions
-#define INACTIVE -1
-#define CONSTANT 0
-#define SMOOTHED 1
+enum maneuverType {
+   INACTIVE = -1,
+   CONSTANT,
+   SMOOTHED,
+};
 
 // Actuator Type Definitions
-#define WHL_TYPE 0
-#define THR_TYPE 1
-#define MTB_TYPE 2
+enum actuatorType {
+   WHL_TYPE = 0,
+   THR_TYPE,
+   MTB_TYPE,
+};
 
 /*
 ** #ifdef __cplusplus
@@ -119,7 +127,7 @@ struct DSMCmdType {
    int trn_controller;
    int att_controller;
    int dmp_controller;
-   int ManeuverMode;
+   enum maneuverType ManeuverMode;
    char AttRefScID[6];
    char H_DumpGain[20];
    char H_DumpMode[20];
@@ -128,7 +136,7 @@ struct DSMCmdType {
    double BurnTime;
    double TrgVelR[3];
    double BurnStopTime;
-   int ActTypes[100];
+   enum actuatorType ActTypes[100];
    int ActInds[100];
    int ActNumCmds;
    double ActDuties[100];
