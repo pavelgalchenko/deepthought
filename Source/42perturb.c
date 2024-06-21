@@ -69,19 +69,19 @@ long ClipEdgeAgainstPlane(double V1[3], double V2[3], double A[3], double B[3],
 }
 /*********************************************************************/
 void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
-   struct SilEdgeType *SilEdge, SwapEdge, *SE;
-   struct SilVtxType *SilVtx;
-   struct SilVtxType *InVtx = NULL;
-   struct SilVtxType *ClipVtx;
-   struct BodyType *B;
-   struct GeomType *G;
-   struct EdgeType *E;
-   struct PolyType *P;
+   struct SilEdgeType *SilEdge = NULL, SwapEdge, *SE = NULL;
+   struct SilVtxType *SilVtx  = NULL;
+   struct SilVtxType *InVtx   = NULL;
+   struct SilVtxType *ClipVtx = NULL;
+   struct BodyType *B         = NULL;
+   struct GeomType *G         = NULL;
+   struct EdgeType *E         = NULL;
+   struct PolyType *P         = NULL;
    double DirVecB[3], DoN1, DoN2;
    double Vtx[3][3], V1[3], V2[3], OutVtx[2][3];
    double ClipArea, ClipCtr[3], rA[3], ProjPtN[3], Bary[4];
    double PtA[3], PtB[3], PtC[3], dV1[3], dV2[3], V1xV2[3], dA;
-   long SilNe, SilNv, SilNc, SilNin, Nout;
+   long SilNe, SilNv, SilNc = 0, SilNin, Nout;
    long Ib, Ie, Je, Ipoly, i, Ic, Iout, Iv;
    double pn[3];
    long B1, B2;

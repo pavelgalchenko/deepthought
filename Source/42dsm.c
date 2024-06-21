@@ -164,7 +164,7 @@ long GetGains(struct SCType *S, const char GainCmdName[255],
    struct DSMCmdType *Cmd;
    struct AcType *AC;
    double kp[3], kr[3], ki[3], limit_vec[3];
-   int controller;
+   int controller = -1;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;

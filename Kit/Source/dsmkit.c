@@ -132,10 +132,10 @@ void DSM_MagnetometerProcessing(struct AcType *AC) {
 /**********************************************************************/
 void DSM_CssProcessing(struct AcType *AC) {
    struct AcCssType *Css;
-   double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Atb[3]    = {0.0, 0.0, 0.0};
-   double AtAi[3][3];
-   double A[2][3], b[2];
+   double AtA[3][3]  = {{0.0}};
+   double Atb[3]     = {0.0};
+   double AtAi[3][3] = {{0.0}};
+   double A[2][3] = {{0.0}}, b[2] = {0.0};
    long Ic, i, j;
    long Nvalid          = 0;
    double InvalidSVB[3] = {1.0, 0.0,
