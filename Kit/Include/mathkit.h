@@ -83,7 +83,7 @@ void MINVG(double **A, double **AI, long N);
 void FastMINV6(double A[6][6], double AI[6][6], long N);
 void PINVG(double **A, double **Ai, long n, long m);
 double **CreateMatrix(long n, long m);
-void DestroyMatrix(double **A, long n);
+void DestroyMatrix(double **A);
 void LINSOLVE(double **A, double *x, double *b, long n);
 void CholeskySolve(double **A, double *x, double *b, long n);
 void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,

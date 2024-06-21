@@ -1835,7 +1835,7 @@ void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
    O->Az = cwzt * rl[2] - swzt * vl[2] / LP->wz;
    O->Bz = swzt * rl[2] + cwzt * vl[2] / LP->wz;
 
-   DestroyMatrix(COEF, 8);
+   DestroyMatrix(COEF);
    free(RHS);
    free(ParmVec);
 }
@@ -1932,7 +1932,7 @@ void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
    O->Az = cwzt * rl[2] - swzt * vl[2] / LP->wz;
    O->Bz = swzt * rl[2] + cwzt * vl[2] / LP->wz;
 
-   DestroyMatrix(COEF, 4);
+   DestroyMatrix(COEF);
    free(RHS);
    free(ParmVec);
 }
@@ -2034,7 +2034,7 @@ void XYZ2LagModes(double TimeSinceEpoch, struct LagrangeSystemType *LS,
    O->Az = cwzt * O->z - swzt * O->zdot / LP->wz;
    O->Bz = swzt * O->z + cwzt * O->zdot / LP->wz;
 
-   DestroyMatrix(COEF, 8);
+   DestroyMatrix(COEF);
    free(RHS);
    free(ParmVec);
 }

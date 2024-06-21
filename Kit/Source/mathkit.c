@@ -833,7 +833,7 @@ void MINVG(double **A, double **AI, long N) {
       }
    }
 
-   DestroyMatrix(M, N);
+   DestroyMatrix(M);
    free(TA);
    free(TB);
 }
@@ -911,16 +911,16 @@ void PINVG(double **A, double **Ai, long n, long m) {
       MTxMG(A, A, AtA, m, n, m);
       MINVG(AtA, AtAi, m);
       MxMTG(AtAi, A, Ai, m, m, n);
-      DestroyMatrix(AtA, m);
-      DestroyMatrix(AtAi, m);
+      DestroyMatrix(AtA);
+      DestroyMatrix(AtAi);
    } else {
       AAt  = CreateMatrix(n, n);
       AAti = CreateMatrix(n, n);
       MxMTG(A, A, AAt, n, m, n);
       MINVG(AAt, AAti, n);
       MTxMG(A, AAti, Ai, m, n, n);
-      DestroyMatrix(AAt, n);
-      DestroyMatrix(AAti, n);
+      DestroyMatrix(AAt);
+      DestroyMatrix(AAti);
    }
 }
 /**********************************************************************/
@@ -928,26 +928,34 @@ double **CreateMatrix(long n, long m) {
    double **A;
    long i;
 
-   A = (double **)calloc(n, sizeof(double *));
+   // Throw warning??
+   // this will happen sometimes with the graphics
+   if (n == 0 || m == 0)
+      return NULL;
+
+   // Guarantee the allocation for A is a contiguous block
+   A = (double **)malloc(sizeof(double *) * n);
    if (A == NULL) {
+      printf("malloc failed in CreateMatrix.  Bailing out.\n");
+      exit(1);
+   }
+   A[0] = (double *)calloc(n * m, sizeof(double));
+   if (A[0] == NULL) {
       printf("calloc failed in CreateMatrix.  Bailing out.\n");
       exit(1);
    }
-   for (i = 0; i < n; i++) {
-      A[i] = (double *)calloc(m, sizeof(double));
-      if (A[i] == NULL) {
-         printf("calloc failed in CreateMatrix.  Bailing out.\n");
-         exit(1);
-      }
-   }
+   for (i = 1; i < n; i++)
+      A[i] = A[0] + m * i;
+
    return (A);
 }
 /**********************************************************************/
-void DestroyMatrix(double **A, long n) {
-   long i;
-   for (i = 0; i < n; i++)
-      free(A[i]);
+void DestroyMatrix(double **A) {
+   if (A == NULL)
+      return;
+   free(A[0]);
    free(A);
+   A = NULL;
 }
 /**********************************************************************/
 /*   Solution of NxN system      A * x = b                            */
@@ -1061,8 +1069,8 @@ void CholeskySolve(double **A, double *x, double *b, long n) {
          x[i] -= L[k][i] * x[k];
    }
 
-   DestroyMatrix(L, n);
-   DestroyMatrix(LD, n);
+   DestroyMatrix(L);
+   DestroyMatrix(LD);
    free(D);
    free(y);
 }
@@ -1764,7 +1772,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]) {
    for (i = Nc; i < 20; i++)
       Coef[i] = 0.0;
 
-   DestroyMatrix(AtA, Nc);
+   DestroyMatrix(AtA);
    free(x);
    free(Atb);
 }

@@ -397,8 +397,8 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
    qmr[3] = gamma / mag;
 
    free(a);
-   DestroyMatrix(W, n);
-   DestroyMatrix(V, n);
+   DestroyMatrix(W);
+   DestroyMatrix(V);
 }
 /**********************************************************************/
 /* Find the Euler Angles to point a given boresight vector fixed in   */
@@ -882,7 +882,7 @@ double ThrusterSelection(double **A, double *f, double *t, double tmax, long m,
       }
    }
    Cost = InterpretTableau(T, tmax, t, m, n, OffPulse);
-   DestroyMatrix(T, m + 2);
+   DestroyMatrix(T);
    return (Cost);
 }
 
@@ -1110,7 +1110,7 @@ void UDTimeUpdate(double *x, double **U, double **phi, double **gam, double *y,
       }
    }
 
-   DestroyMatrix(Uaug, Naug);
+   DestroyMatrix(Uaug);
    free(D);
    free(v);
    free(a);

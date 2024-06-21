@@ -990,8 +990,8 @@ void InitAC(struct SCType *S) {
             }
          }
       }
-      DestroyMatrix(A, 3);
-      DestroyMatrix(Aplus, AC->Nwhl);
+      DestroyMatrix(A);
+      DestroyMatrix(Aplus);
       for (i = 0; i < S->Nw; i++) {
          AC->Whl[i].J    = S->Whl[i].J;
          AC->Whl[i].Tmax = S->Whl[i].Tmax;
@@ -1022,8 +1022,8 @@ void InitAC(struct SCType *S) {
             }
          }
       }
-      DestroyMatrix(A, 3);
-      DestroyMatrix(Aplus, AC->Nmtb);
+      DestroyMatrix(A);
+      DestroyMatrix(Aplus);
       for (i = 0; i < S->Nmtb; i++) {
          AC->MTB[i].Mmax = S->MTB[i].Mmax;
       }

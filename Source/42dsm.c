@@ -117,8 +117,8 @@ void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState) {
          }
       }
    }
-   DestroyMatrix(A, DOF);
-   DestroyMatrix(APlus, AC->Nthr);
+   DestroyMatrix(A);
+   DestroyMatrix(APlus);
 }
 //------------------------------------------------------------------------------
 //                           Initialize DSM Structure

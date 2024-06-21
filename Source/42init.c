@@ -1749,7 +1749,7 @@ void InitFlexModes(struct SCType *S) {
             B->Rf[IDX3(2, i, 1, B->Nf, 3)] = L[1][2][i];
          }
          for (i = 0; i < 3; i++)
-            DestroyMatrix(L[i], 3);
+            DestroyMatrix(L[i]);
          free(L);
 
          /* Non-zero Elements of Angular Modal Integral, N, 3 x 3 x Nf x Nf*/
@@ -1799,7 +1799,7 @@ void InitFlexModes(struct SCType *S) {
          }
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
-               DestroyMatrix(N[i][j], B->Nf);
+               DestroyMatrix(N[i][j]);
             free(N[i]);
          }
          free(N);

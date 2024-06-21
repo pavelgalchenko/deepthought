@@ -223,7 +223,7 @@ void SurfaceForceProps(struct GeomType *G) {
       P->UnshadedCtr[1] = P->Centroid[1];
       P->UnshadedCtr[2] = P->Centroid[2];
 
-      DestroyMatrix(uv, P->Nv + 1);
+      DestroyMatrix(uv);
    }
 }
 /*********************************************************************/
