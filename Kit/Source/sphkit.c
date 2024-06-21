@@ -17,8 +17,6 @@
 extern "C" {
 #endif
 
-#define Pi (3.141592654)
-
 /**********************************************************************/
 #if 0
 GLuint KernelToTexTag(void)
@@ -76,10 +74,10 @@ double CubicKernel(double r, double h, long Ndim) {
          K = 1.0 / (6.0 * h);
          break;
       case 2:
-         K = 5.0 / (14.0 * Pi * h * h);
+         K = 5.0 / (14.0 * PI * h * h);
          break;
       case 3:
-         K = 1.0 / (4.0 * Pi * h * h * h);
+         K = 1.0 / (4.0 * PI * h * h * h);
          break;
       default:
          printf("Bad Ndim = %ld in CubicGradKernel\n", Ndim);
@@ -107,10 +105,10 @@ double CubicGradKernel(double r, double h, long Ndim) {
          K = -3.0 / (6.0 * h);
          break;
       case 2:
-         K = -15.0 / (14.0 * Pi * h * h);
+         K = -15.0 / (14.0 * PI * h * h);
          break;
       case 3:
-         K = -3.0 / (4.0 * Pi * h * h * h);
+         K = -3.0 / (4.0 * PI * h * h * h);
          break;
       default:
          printf("Bad Ndim = %ld in CubicGradKernel\n", Ndim);
@@ -138,7 +136,7 @@ double Poly6Kernel(double r, double h, long Ndim) {
          K = 35.0 / (4096.0 * h);
          break;
       case 2:
-         K = 1.0 / (64.0 * Pi * h * h);
+         K = 1.0 / (64.0 * PI * h * h);
          break;
       case 3:
          K = 315.0 / (32768.0 * h * h * h);
@@ -165,7 +163,7 @@ double Poly6GradKernel(double r, double h, long Ndim) {
          K = -6.0 * 35.0 / (4096.0 * h);
          break;
       case 2:
-         K = -6.0 / (64.0 * Pi * h * h);
+         K = -6.0 / (64.0 * PI * h * h);
          break;
       case 3:
          K = -6.0 * 315.0 / (32768.0 * h * h * h);
@@ -192,10 +190,10 @@ double SpikyKernel(double r, double h, long Ndim) {
          K = 1.0 / (8.0 * h);
          break;
       case 2:
-         K = 5.0 / (16.0 * Pi * h * h);
+         K = 5.0 / (16.0 * PI * h * h);
          break;
       case 3:
-         K = 15.0 / (64.0 * Pi * h * h * h);
+         K = 15.0 / (64.0 * PI * h * h * h);
          break;
       default:
          printf("Bad Ndim = %ld in SpikyKernel\n", Ndim);
@@ -218,10 +216,10 @@ double SpikyGradKernel(double r, double h, long Ndim) {
          K = -3.0 / (8.0 * h);
          break;
       case 2:
-         K = -15.0 / (16.0 * Pi * h * h);
+         K = -15.0 / (16.0 * PI * h * h);
          break;
       case 3:
-         K = -45.0 / (64.0 * Pi * h * h * h);
+         K = -45.0 / (64.0 * PI * h * h * h);
          break;
       default:
          printf("Bad Ndim = %ld in SpikyGradKernel\n", Ndim);

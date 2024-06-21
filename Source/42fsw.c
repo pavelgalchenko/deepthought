@@ -836,8 +836,8 @@ void InitAC(struct SCType *S) {
    AC->ID = S->ID;
 
    /* Fundamental Constants */
-   AC->Pi    = Pi;
-   AC->TwoPi = TwoPi;
+   AC->Pi    = PI;
+   AC->TwoPi = TWOPI;
 
    /* Time, Mass */
    AC->DT   = S->FswSampleTime;

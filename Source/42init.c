@@ -4716,14 +4716,12 @@ void InitSim(int argc, char **argv) {
        {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
    double CJ2000H[3][3];
 
-   Pi          = 4.0 * atan(1.0);
-   TwoPi       = 2.0 * Pi;
-   HalfPi      = 0.5 * Pi;
-   SqrtTwo     = sqrt(2.0);
-   SqrtHalf    = sqrt(0.5);
-   R2D         = 180.0 / Pi;
-   D2R         = Pi / 180.0;
-   GoldenRatio = (1.0 + sqrt(5.0)) / 2.0;
+   Pi          = PI;
+   TwoPi       = TWOPI;
+   HalfPi      = HALFPI;
+   SqrtTwo     = SQRTTWO;
+   SqrtHalf    = SQRTHALF;
+   GoldenRatio = GOLDENRATIO;
 
    qJ2000H[0] = -0.203123038887;
    qJ2000H[1] = 0.0;

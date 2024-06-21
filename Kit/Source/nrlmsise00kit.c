@@ -2613,7 +2613,6 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 /* This wrapper function maps to/from 42, calls gtd7 to find density  */
 double NRLMSISE00(long Year, long DOY, long Hour, long Minute, double Second,
                   double PosW[3], double F10p7, double AP) {
-#define R2D (57.2957795130823)
    static long First = 1;
    double Lat, Lng, Alt;
    long i;
@@ -2651,5 +2650,4 @@ double NRLMSISE00(long Year, long DOY, long Hour, long Minute, double Second,
 
    /* Extract atmospheric density */
    return (1.0E3 * Output.d[5]);
-#undef R2D
 }

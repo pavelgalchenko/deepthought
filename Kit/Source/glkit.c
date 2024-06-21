@@ -361,7 +361,6 @@ void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], double C[3][3],
 /**********************************************************************/
 void LoadSkyGrid(double MajGrid, double MinGrid, double SkyDistance,
                  GLuint *MajList, GLuint *MinList) {
-#define D2R (0.0174532925199433)
 
    double p[4];
    double LatMax, Lat1, Lat2, Lng1, Lng2, Gap;
@@ -544,8 +543,6 @@ void LoadSkyGrid(double MajGrid, double MinGrid, double SkyDistance,
    DrawString8x11("-90");
 
    glEndList();
-
-#undef D2R
 }
 /*********************************************************************/
 void DrawArrowhead(double v[3], double scale) {
@@ -1619,7 +1616,6 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
                       long BuckyNeighbor[32][6], GLuint EgretSourceList[32],
                       double SkyDistance) {
 #define Nsource 262
-#define D2R     (0.0174532925199433)
 
    struct GammaSourceType {
       double r[4];
@@ -1714,7 +1710,6 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
    }
    glPointSize(2.0);
 #undef Nsource
-#undef D2R
 }
 /**********************************************************************/
 /* Fermi Source Catalog 1FGL                                          */
@@ -1722,7 +1717,6 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
               long BuckyNeighbor[32][6], GLuint FermiSourceList[32],
               double SkyDistance) {
 #define Nsource 1452
-#define D2R     (0.0174532925199433)
 
 #define CLASS_unc 0
 #define CLASS_bzb 1
@@ -1974,14 +1968,12 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
 #undef CLASS_MQO
 
 #undef Nsource
-#undef D2R
 }
 /**********************************************************************/
 void LoadPulsars(const char *FileName, double BuckyPf[32][3],
                  long BuckyNeighbor[32][6], GLuint PulsarList[32],
                  double SkyDistance) {
 #define Npul 250
-#define D2R  (0.0174532925199433)
 
    GLubyte PulsarGlyph[32] = {0x01, 0x80, 0x01, 0x80, 0x31, 0x8c, 0x39,
                               0x9c, 0x1d, 0xb8, 0x0f, 0xf0, 0x07, 0xe0,
@@ -2061,7 +2053,6 @@ void LoadPulsars(const char *FileName, double BuckyPf[32][3],
    }
 
 #undef Npul
-#undef D2R
 }
 /**********************************************************************/
 void DrawUnitCubeSphere(long Ndiv) {
@@ -2525,7 +2516,6 @@ void DrawRollPitchYaw(long xc, long yc, long PixScale, double AngScale,
                       double RollRate, double PitchRate, double YawRate,
                       double RollCmd, double PitchCmd, double YawCmd,
                       GLfloat GaugeColor[4], GLfloat BarColor[4]) {
-#define D2R (0.0174532925199433)
 
    long xmin, ymin, xmax, ymax;
    long Rmin, Rmax, x, y;
@@ -2750,13 +2740,11 @@ void DrawRollPitchYaw(long xc, long yc, long PixScale, double AngScale,
       }
    }
    glEnd();
-#undef D2R
 }
 /*********************************************************************/
 /* Draw a small circle on a Mercator projection in active window.    */
 void DrawSmallCircle(double lngc, double latc, double rad) {
    double TwoPi = 6.28318530717959;
-   double R2D   = 57.2957795130823;
    double axis[3], norm[3], binorm[3], sigma[3], C[3][3], ang, p[3];
    double x, y, xold, yold;
 
@@ -2813,8 +2801,6 @@ void DrawMercatorGrid(double CVA[3][3]) {
    long min = 30; /* Degrees between each minor gridline */
    long maj = 90; /* Degrees between each major gridline */
 
-   double D2R = 0.0174532925199433;
-
    double norm[3];
    double x[3] = {1, 0, 0};
    double z[3] = {0, 0, 1};
@@ -2868,7 +2854,6 @@ void DrawMercatorGrid(double CVA[3][3]) {
 /* Draws a great circle arc between two points (angular distance must
    be less than 180 degrees)                                         */
 void DrawMercatorLine(double lngA, double latA, double lngB, double latB) {
-   double R2D = 57.2957795130823;
    double A[3], B[3], norm[3], C[3][3], ang, totalang, p[3];
    double x, y, xold, yold;
 
@@ -2962,7 +2947,6 @@ void DrawMercatorSquare(double CVS[3][3], double FOV[2]) {
 /* Draws a small X at the lat/lng point of a vector, as well as label;
    lat and lng are in radians                                         */
 void DrawMercatorVector(double lng, double lat, char *label) {
-   double R2D = 57.2957795130823;
 
    glLineWidth(1);
 
@@ -3062,7 +3046,6 @@ void CheckOpenGLProperties(void) {
 /*  -2*SqrtTwo < x < +2*SqrtTwo                                       */
 /*  -SqrtTwo < y < +SqrtTwo                                           */
 void HammerProjection(double Lng, double Lat, double *x, double *y) {
-   double SQRTTWO = 1.41421356237310;
 
    double CosLat, SinLat, CosHalfLng, SinHalfLng, Den;
 

@@ -14,6 +14,7 @@
 #ifndef __ORBKIT_H__
 #define __ORBKIT_H__
 
+#include "42constants.h"
 #include "iokit.h"
 #include "mathkit.h"
 #include "timekit.h"

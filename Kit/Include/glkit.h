@@ -14,6 +14,7 @@
 #ifndef __GLKIT_H__
 #define __GLKIT_H__
 
+#include "42constants.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

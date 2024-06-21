@@ -14,6 +14,7 @@
 #ifndef __SPHKIT_H__
 #define __SPHKIT_H__
 
+#include "42constants.h"
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>

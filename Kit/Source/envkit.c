@@ -18,9 +18,6 @@
 ** #endif
 */
 
-#define D2R   1.74532925199E-2
-#define PI    3.14159265358979323846
-#define TWOPI 6.28318530718
 /**********************************************************************/
 /*  Earth Gravity Model 96, published by NIMA as part of the WGS84    */
 void EGM96(const char *ModelPath, long N, long M, double mass, double pbn[3],

@@ -14,6 +14,7 @@
 #ifndef __GEOMKIT_H__
 #define __GEOMKIT_H__
 
+#include "42constants.h"
 #include "dcmkit.h"
 #include "iokit.h"
 #include "mathkit.h"

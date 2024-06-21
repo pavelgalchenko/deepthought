@@ -55,9 +55,7 @@ double MeanAnomToTrueAnom(double MeanAnom, double ecc) {
 }
 /**********************************************************************/
 double TrueAnomaly(double mu, double p, double e, double t) {
-#define EPS   (1.0E-12)
-#define PI    (3.141592653589793)
-#define TWOPI (6.283185307179586)
+#define EPS (1.0E-12)
 
    double p3, B, x, f, fp, e1, N, H, M, a;
    double Ne, dx, dH, Anom;
@@ -104,8 +102,6 @@ double TrueAnomaly(double mu, double p, double e, double t) {
 
    return (Anom);
 #undef EPS
-#undef PI
-#undef TWOPI
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -265,9 +261,7 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
             double *e, double *i, double *RAAN, double *ArgP, double *th,
             double *tp, double *SLR, double *alpha, double *rmin,
             double *MeanMotion, double *Period) {
-#define EPS   (1.0E-12)
-#define PI    (3.141592653589793)
-#define TWOPI (6.283185307179586)
+#define EPS (1.0E-12)
 
    double xh[3], xe[3], rhat[3], r, v, vxh[3], cth, hxe[3];
    double rohxe, h, dt;
@@ -385,15 +379,11 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
    dt  = TimeSincePeriapsis(mu, *SLR, *e, *th);
    *tp = time - dt;
 #undef EPS
-#undef PI
-#undef TWOPI
 }
 /**********************************************************************/
 void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
                  double LeapSec, struct OrbitType *O) {
-#define EPS   (1.0E-12)
-#define TWOPI (6.283185307179586)
-#define D2R   (1.74532925199E-2)
+#define EPS (1.0E-12)
 
    char YearString[3];
    char DOYstring[13];
@@ -493,9 +483,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
       /* 10.122 */
       O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
    }
-
-#undef TWOPI
-#undef D2R
+#undef EPS
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
@@ -663,7 +651,6 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *ArgP, double *tp,
                        double *anom, double *SLR, double *alpha, double *rmin,
                        double *MeanMotion, double *Period) {
-#define TWOPI (6.283185307179586)
 
    double La0[10] = {0.0,       252.250906, 181.979801, 100.466457, 355.433,
                      34.351519, 50.077444,  314.055005, 304.348665, 238.92881};
@@ -721,7 +708,6 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                      -4.464E-6, 4.928E-6, 4.34E-7,   2.0E-8,  0.0};
    double T, L, Pi, M, dt, SecSinceJ2000;
 
-   double D2R  = atan(1.0) / 45.0;
    double AU2m = 149597870000.0;
 
    /* .. Time since J2000, in Julian centuries */
@@ -764,8 +750,6 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 
    *MeanMotion = sqrt(mu / (*SMA) / (*SMA) / (*SMA));
    *Period     = TWOPI / (*MeanMotion);
-
-#undef TWOPI
 }
 /*********************************************************************/
 /*  This function gives the location of Luna, with respect to the    */
@@ -775,7 +759,6 @@ void LunaPosition(double JD, double r[3]) {
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
-   double D2R = atan(1.0) / 45.0;
 
    T = (JD - 2451545.0) / 36525.0;
 
@@ -1108,7 +1091,6 @@ void LunaPosition(double JD, double r[3]) {
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
 void LunaInertialFrame(double JulDay, double CNJ[3][3]) {
-#define D2R (1.74532925199E-2)
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
@@ -1179,13 +1161,11 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3]) {
       CNJ[1][i] = YVec[i];
       CNJ[2][i] = PoleVec[i];
    }
-#undef D2R
 }
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 double LunaPriMerAng(double JulDay) {
-#define D2R (1.74532925199E-2)
    double D;
    double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
    double SinE1, SinE2, SinE3, SinE4, SinE5, SinE6, SinE7;
@@ -1229,7 +1209,6 @@ double LunaPriMerAng(double JulDay) {
                0.0040 * SinE11 + 0.0019 * SinE12 - 0.0044 * SinE13;
 
    return (PriMerAng * D2R);
-#undef D2R
 }
 /**********************************************************************/
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]) {
@@ -2102,7 +2081,6 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
 void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
                 double vtn[10][3]) {
-#define D2R (1.74532925199E-2)
 
    double Lng[10] = {-49.0,  0.0,    -275.0, -46.0, -171.4,
                      -173.7, -150.0, -271.0, -62.4, -40.9}; /* deg */
@@ -2146,14 +2124,12 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
       Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, time, ptn[j], vtn[j],
              &anom);
    }
-#undef D2R
 }
 /**********************************************************************/
 /* Find coordinate transformation from True Equator True Equinox      */
 /* (TETE) frame to J2000 frame.  Ref "The Astronomical Almanac",      */
 /* QB8.U5, 2003, p. B18,B20.                                          */
 void TETE2J2000(double JD, double CTJ[3][3]) {
-#define D2R (1.74532925199E-2)
 
    double d, arg1, arg2, dpsi, deps, eps, CTM[3][3];
    double T, z, theta, zeta, CMJ[3][3];
@@ -2218,8 +2194,6 @@ void TETE2J2000(double JD, double CTJ[3][3]) {
        CTM[2][0] * CMJ[0][1] + CTM[2][1] * CMJ[1][1] + CTM[2][2] * CMJ[2][1];
    CTJ[2][2] =
        CTM[2][0] * CMJ[0][2] + CTM[2][1] * CMJ[1][2] + CTM[2][2] * CMJ[2][2];
-
-#undef D2R
 }
 /**********************************************************************/
 /*  See Battin                                                        */
@@ -2583,7 +2557,6 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
                          double FuturePos[3]) {
-#define SPEED_OF_LIGHT 299792458.0
    double Vel[3], anom;
    double RelPos[3], dt;
    long i;
@@ -2614,7 +2587,6 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
           Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
 
-#undef SPEED_OF_LIGHT
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
@@ -2622,7 +2594,6 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
 /* Use this function to initialize mean eph at sim start              */
 void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
                      struct OrbitType *O) {
-#define TWOPI (6.283185307179586)
    double e, e2, sin2i, sinw, sin2w, cosnu, g, E;
    double a, p, p2, Coef;
 
@@ -2660,8 +2631,6 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    E = atan2(sqrt(1.0 - O->ecc * O->ecc) * sin(O->anom), O->ecc + cos(O->anom));
    O->MeanAnom  = E - O->ecc * sin(E);
    O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
-
-#undef TWOPI
 }
 /* #ifdef __cplusplus
 ** }

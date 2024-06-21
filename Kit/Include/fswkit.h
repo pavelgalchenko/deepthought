@@ -11,6 +11,7 @@
 
 /*    All Other Rights Reserved.                                      */
 
+#include "42constants.h"
 #include "dcmkit.h"
 #include "mathkit.h"
 #include <math.h>

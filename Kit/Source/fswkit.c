@@ -406,8 +406,6 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
 /* the joint's inner body (tvi).                                      */
 void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
                          double tvi[3], double bvo[3], double GimAngCmd[3]) {
-#define PI    (3.141592653589793)
-#define TWOPI (6.283185307179586)
 
    double *a1, *a2;
    double a3[3];
@@ -508,8 +506,6 @@ void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
 
    /* Always */
    GimAngCmd[2] = 0.0;
-#undef PI
-#undef TWOPI
 }
 /**********************************************************************/
 /*   Find control acceleration to seek goal at xg while staying at    */
