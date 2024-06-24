@@ -1,0 +1,26 @@
+%YAML 1.2
+---
+SOF: "**************************** Fields of View ****************************"
+FOVs: |
+  -------------------------------FOV Configuration-------------------------------
+  ((Sequence; one element for unique FOV Definition))
+    - FOV:
+        Label:  [[FOV Label]]
+        Sides:
+          Number:   [[Number of Sides]]     [[]]
+          Length:   [[Length of each side]] [[m]]
+        Width:  [[width of fov]]          [[deg]]
+        Height: [[height of fov]]         [[deg]]
+        Color:
+          RGB:      [[RGB]]                 [[(0,1), (0,1), (0,1)]]
+          Alpha:    [[Alpha channel]]       [[(0,1)]]
+        Type: [[FOV type]]                [[WIREFRAME/SOLID/VECTOR/PLANE]]
+        Near Field: [[draw near field]]   [[true/false]]
+        Far Field: [[draw far field]]     [[true/false]]
+        SC: [[SC Index]]
+        Body: [[Body Index]]
+        Position: [[x,y,z]] [[m]]
+        Euler Angles:
+          Angles:   [[angle_1, angle_2, angle_3]]       [[deg]]
+          Sequence: [[Sequence]]
+        Boresight:  [[Boresight Axis]]  [[X_AXIS/Y_AXIS/Z_AXIS]]

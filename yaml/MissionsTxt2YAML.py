@@ -23,15 +23,13 @@
 
 # %%
 import numbers
-import numpy as np
 import sys
 import os
 import re
-from ruamel.yaml import YAML
 import ruamel.yaml
+from ruamel.yaml import YAML
 from parse import parse
 import ruamel.yaml.comments
-import ruamel.yaml.scalarstring
 
 
 # %%
@@ -558,7 +556,7 @@ def convertSC(missionDir, yaml, fileName, commentDict=None):
             offset += secLength
             scDict["Accelerometers"].append(newItem)
 
-    scDict = convertToYamlObjects(scDict)
+    scDict = convertToYamlAndComment(scDict, commentDict)
 
     for body in scDict["Bodies"]:
         body["Body"].yaml_set_anchor("Body_%0d" % body["Body"]["Index"])
@@ -582,12 +580,6 @@ def convertSC(missionDir, yaml, fileName, commentDict=None):
                 thr["Thruster"]["Body"] = Body["Body"]
                 break
 
-    for key in commentDict.keys():
-        if key == "SOF":
-            scDict.yaml_set_start_comment(commentDict["SOF"])
-        else:
-            scDict.yaml_set_comment_before_after_key(key, after=commentDict[key])
-
     scDict["Wheel Params"].fa.set_flow_style()
 
     return scDict
@@ -598,7 +590,9 @@ def convertOrb(missionDir, yaml, fileName, commentDict=None):
     orbName = fileName[4:-4]
 
     orbDict = dict()
-    orbDict["Name"] = orbName
+    confDict = orbDict["Configuration"] = dict()
+    orbitDict = orbDict["Orbit"] = dict()
+    confDict["Name"] = orbName
 
     with open(missionDir + "/InOut/" + fileName, "r") as f:
         lines = f.readlines()
@@ -608,114 +602,118 @@ def convertOrb(missionDir, yaml, fileName, commentDict=None):
         strData = lineData.split()
         match (lineNum):
             case 1:
-                orbDict["Description"] = lineData.strip('"')
+                confDict["Description"] = lineData.strip('"')
             case 2:
-                orbDict["Type"] = lineData
+                orbitDict["Type"] = lineData
 
-    match (orbDict["Type"].lower()):
+    match (orbitDict["Type"].lower()):
         case "zero":
             for lineNum, line in enumerate(lines[3:6]):
                 lineData = line.split("!")[0].strip()
                 match (lineNum):
                     case 1:
-                        orbDict["World"] = lineData
+                        orbitDict["World"] = lineData
                     case 2:
-                        orbDict["Polyhedron Grav"] = lineData.lower() == "true"
+                        orbitDict["Polyhedron Grav"] = lineData.lower() == "true"
         case "flight":
             for lineNum, line in enumerate(lines[6:9]):
                 lineData = line.split("!")[0].strip()
                 match (lineNum):
                     case 1:
-                        orbDict["Region"] = int(lineData)
+                        orbitDict["Region"] = int(lineData)
                     case 2:
-                        orbDict["Polyhedron Grav"] = lineData.lower() == "true"
+                        orbitDict["Polyhedron Grav"] = lineData.lower() == "true"
         case "central":
             for lineNum, line in enumerate(lines[9:13]):
                 lineData = line.split("!")[0].strip()
                 match (lineNum):
                     case 1:
-                        orbDict["World"] = lineData
+                        orbitDict["World"] = lineData
                     case 2:
-                        orbDict["J2 Secular Drift"] = lineData.lower() == "true"
+                        orbitDict["J2 Secular Drift"] = lineData.lower() == "true"
                     case 3:
-                        orbDict["Init Method"] = lineData
-            match orbDict["Init Method"].lower():
+                        initDict = orbitDict["Init"] = dict()
+                        initDict["Method"] = lineData
+            match initDict["Method"].lower():
                 case "kep":
                     kepType = lines[13].split("!")[0].strip()
-                    orbDict["SMA Parameterization"] = kepType
+                    initDict["SMA Parameterization"] = kepType
                     match kepType.lower():
                         case "pa":
                             data = lines[14].split("!")[0].strip()
-                            orbDict["Periapsis"] = float(data.split()[0])
-                            orbDict["Apoapsis"] = float(data.split()[1])
+                            initDict["Periapsis"] = float(data.split()[0])
+                            initDict["Apoapsis"] = float(data.split()[1])
                         case "ae":
                             data = lines[15].split("!")[0].strip()
-                            orbDict["Minimum Altitude"] = float(data.split()[0])
-                            orbDict["Eccentricity"] = float(data.split()[1])
-                    orbDict["Inclination"] = float(lines[16].split("!")[0].strip())
-                    orbDict["RAAN"] = float(lines[17].split("!")[0].strip())
-                    orbDict["Arg of Periapsis"] = float(lines[18].split("!")[0].strip())
-                    orbDict["True Anomaly"] = float(lines[19].split("!")[0].strip())
+                            initDict["Minimum Altitude"] = float(data.split()[0])
+                            initDict["Eccentricity"] = float(data.split()[1])
+                    initDict["Inclination"] = float(lines[16].split("!")[0].strip())
+                    initDict["RAAN"] = float(lines[17].split("!")[0].strip())
+                    initDict["Arg of Periapsis"] = float(
+                        lines[18].split("!")[0].strip()
+                    )
+                    initDict["True Anomaly"] = float(lines[19].split("!")[0].strip())
                 case "rv":
                     data = lines[20].split("!")[0].strip().split()
-                    orbDict["Position"] = [float(string) for string in data]
+                    initDict["Position"] = [float(string) for string in data]
                     data = lines[21].split("!")[0].strip().split()
-                    orbDict["Velocity"] = [float(string) for string in data]
+                    initDict["Velocity"] = [float(string) for string in data]
                 case "file":
-                    orbDict["File Type"] = lines[22].split("!")[0].strip()
-                    orbDict["File Name"] = lines[23].split("!")[0].strip(' "')
-                    orbDict["Label in File"] = lines[24].split("!")[0].strip(' "')
+                    initDict["File Type"] = lines[22].split("!")[0].strip()
+                    initDict["File Name"] = lines[23].split("!")[0].strip(' "')
+                    initDict["Label in File"] = lines[24].split("!")[0].strip(' "')
         case "three_body":
             for lineNum, line in enumerate(lines[25:29]):
                 lineData = line.split("!")[0].strip()
                 match (lineNum):
                     case 1:
-                        orbDict["Lagrange System"] = lineData
+                        orbitDict["Lagrange System"] = lineData
                     case 2:
-                        orbDict["Propagation Method"] = lineData
+                        orbitDict["Propagation Method"] = lineData
                     case 3:
-                        orbDict["Init Method"] = lineData
-            match orbDict["Init Method"].lower():
+                        initDict = orbitDict["Init"] = dict()
+                        initDict["Method"] = lineData
+            match initDict["Method"].lower():
                 case "modes":
                     for lineNum, line in enumerate(lines[29:33] + lines[36:38]):
                         lineData = line.split("!")[0].strip()
                         match (lineNum):
                             case 0:
-                                orbDict["Lagrange Point"] = lineData
+                                initDict["Lagrange Point"] = lineData
                             case 1:
-                                orbDict["XY SMA"] = float(lineData)
+                                initDict["XY SMA"] = float(lineData)
                             case 2:
-                                orbDict["XY Phase"] = float(lineData)
+                                initDict["XY Phase"] = float(lineData)
                             case 3:
-                                orbDict["Sense"] = lineData
+                                initDict["Sense"] = lineData
                             case 4:
-                                orbDict["Z SMA"] = float(lineData)
+                                initDict["Z SMA"] = float(lineData)
                             case 8:
-                                orbDict["Z Phase"] = float(lineData)
+                                initDict["Z Phase"] = float(lineData)
                     if (
-                        orbDict["Lagrange Point"] == "L4"
-                        or orbDict["Lagrange Point"] == "L5"
+                        orbitDict["Lagrange Point"] == "L4"
+                        or orbitDict["Lagrange Point"] == "L5"
                     ):
                         for lineNum, line in enumerate(lines[33:36]):
                             lineData = line.split("!")[0].strip()
                             match lineNum:
                                 case 0:
-                                    orbDict["XY 2nd SMA"] = float(lineData)
+                                    initDict["XY 2nd SMA"] = float(lineData)
                                 case 1:
-                                    orbDict["XY 2nd Phase"] = float(lineData)
+                                    initDict["XY 2nd Phase"] = float(lineData)
                                 case 2:
-                                    orbDict["2nd Sense"] = lineData
+                                    initDict["2nd Sense"] = lineData
                 case "xyz":
                     for lineNum, line in enumerate(lines[38:40]):
                         lineData = line.split("!")[0].strip()
                         strData = lineData.split()
                         match lineNum:
                             case 1:
-                                orbDict["Position"] = [
+                                initDict["Position"] = [
                                     float(string) for string in strData
                                 ]
                             case 2:
-                                orbDict["Velocity"] = [
+                                initDict["Velocity"] = [
                                     float(string) for string in strData
                                 ]
                 case "file":
@@ -724,10 +722,10 @@ def convertOrb(missionDir, yaml, fileName, commentDict=None):
                         strData = lineData.split()
                         match lineNum:
                             case 1:
-                                orbDict["File Type"] = strData[0]
-                                orbDict["File Name"] = strData[1]('"')
+                                initDict["File Type"] = strData[0]
+                                initDict["File Name"] = strData[1]('"')
                             case 2:
-                                orbDict["Label in File"] = lineData.strip('"')
+                                initDict["Label in File"] = lineData.strip('"')
 
     formDict = orbDict["Formation"] = dict()
     for lineNum, line in enumerate(lines[42:47]):
@@ -747,43 +745,50 @@ def convertOrb(missionDir, yaml, fileName, commentDict=None):
             case 4:
                 formDict["Position"] = [float(string) for string in strData]
 
+    orbDict = convertToYamlAndComment(orbDict, commentDict)
     return orbDict
 
 
 # %%
 def convertNodes(missionDir, yaml, fileName, commentDict=None):
     nodeDict = dict()
-    nodeDict["Name"] = fileName
+    confDict = nodeDict["Configuration"] = dict()
+    confDict["Name"] = fileName
 
     with open(missionDir + "/InOut/" + fileName, "r") as f:
         lines = f.readlines()
 
-    nodeDict["Description"] = lines[1].split("!")[0].strip()
+    confDict["Description"] = lines[1].split("!")[0].strip()
     nNodes = int(lines[2].split("!")[0].strip())
     nodeDict["Nodes"] = list()
     for nodeNum, line in enumerate(lines[4 : 4 + nNodes]):
         lineData = line.split('"')
         location = lineData[0].strip().split()
         newDict = dict()
+        newItem = {"Node": newDict}
         newDict["Index"] = nodeNum
         newDict["Location"] = [float(string) for string in location]
         newDict["Comment"] = lineData[1].strip()
-        nodeDict["Nodes"].append(newDict)
+        nodeDict["Nodes"].append(newItem)
+
+    nodeDict = convertToYamlAndComment(nodeDict, commentDict)
 
     return nodeDict
 
 
 # %%
 def convertFOV(missionDir, yaml, fovFileName="Inp_FOV.txt", commentDict=None):
-    fovs = list()
+    fovDict = dict()
+    fovDict["FOVs"] = fovs = list()
     with open(missionDir + "/InOut/" + fovFileName, "r") as f:
         lines = f.readlines()
     nFOV = int(lines[1].split("!")[0].strip())
     if nFOV > 0:
         offset = 2
         secLength = 11
-        for i in range(nFOV):
+        for _ in range(nFOV):
             newDict = dict()
+            newItem = {"FOV": newDict}
             for lineNum, line in enumerate(lines[offset : offset + secLength]):
                 lineData = line.split("!")[0].strip()
                 strData = lineData.split()
@@ -822,9 +827,11 @@ def convertFOV(missionDir, yaml, fovFileName="Inp_FOV.txt", commentDict=None):
                     case 10:
                         newDict["Boresight"] = lineData
             offset += secLength
-            fovs.append(newDict)
+            fovs.append(newItem)
 
-    return fovs
+    fovDict = convertToYamlAndComment(fovDict, commentDict)
+
+    return fovDict
 
 
 # %%
@@ -832,7 +839,8 @@ def convertGraphics(
     missionDir, yaml, graphicsFileName="Inp_Graphics.txt", commentDict=None
 ):
     graphicsDict = dict()
-    graphicsDict["Name"] = graphicsFileName
+    graphicsDict["Configuration"] = configDict = dict()
+    configDict["Name"] = graphicsFileName
 
     with open(missionDir + "/InOut/" + graphicsFileName, "r") as f:
         lines = f.readlines()
@@ -842,17 +850,17 @@ def convertGraphics(
         strData = lineData.split()
         match lineNum:
             case 1:
-                graphicsDict["Output Interval"] = float(lineData)
+                configDict["Output Interval"] = float(lineData)
             case 2:
-                graphicsDict["Star Catalog File"] = lineData
+                configDict["Star Catalog File"] = lineData
             case 3:
-                graphicsDict["Map Exists"] = lineData.lower() == "true"
+                configDict["Map Exists"] = lineData.lower() == "true"
             case 4:
-                graphicsDict["Orrery Exists"] = lineData.lower() == "true"
+                configDict["Orrery Exists"] = lineData.lower() == "true"
             case 5:
-                graphicsDict["Unit Sphere Exists"] = lineData.lower() == "true"
+                configDict["Unit Sphere Exists"] = lineData.lower() == "true"
             case 7:
-                graphicsDict["Pause on Startup"] = lineData.lower() == "true"
+                configDict["Pause on Startup"] = lineData.lower() == "true"
             case 8:
                 povDict = graphicsDict["POV"] = dict()
                 povDict["Mode"] = lineData
@@ -911,7 +919,7 @@ def convertGraphics(
         "Milky Way",
         "Fermi Sky",
     ]
-    showDict = graphicsDict["Cam Show"] = dict()
+    showDict = camDict["Cam Show"] = dict()
     for lineNum, line in enumerate(lines[25:43]):
         lineData = line.split("!")[0].strip()
         strData = lineData.split()
@@ -919,18 +927,18 @@ def convertGraphics(
         showDict[showLabels[lineNum]]["Show"] = strData[0].lower() == "true"
         showDict[showLabels[lineNum]]["Label"] = " ".join(strData[1:]).strip('"')
 
-    for lineNum, line in enumerate(lines[44:46]):
+    mapDict = graphicsDict["Map"] = dict()
+    for lineNum, line in enumerate(lines[43:46]):
         lineData = line.split("!")[0].strip()
         strData = lineData.split()
         match lineNum:
             case 1:
-                mapDict = graphicsDict["Map"] = dict()
                 mapDict["Title"] = lineData.strip('"')
             case 2:
                 mapDict["Dimensions"] = [int(string) for string in strData]
 
     showLabels = ["Clock", "Tlm Clock", "Credits", "Night"]
-    showDict = graphicsDict["Map Show"] = dict()
+    showDict = mapDict["Map Show"] = dict()
     for lineNum, line in enumerate(lines[47:51]):
         lineData = line.split("!")[0].strip()
         strData = lineData.split()
@@ -946,12 +954,15 @@ def convertGraphics(
         showDict[showLabels[lineNum]] = dict()
         showDict[showLabels[lineNum]]["Show"] = strData[0].lower() == "true"
 
+    graphicsDict = convertToYamlAndComment(graphicsDict, commentDict)
+
     return graphicsDict
 
 
 # %%
 def convertIPC(missionDir, yaml, ipcFileName="Inp_IPC.txt", commentDict=None):
-    ipcs = list()
+    ipcDict = dict()
+    ipcDict["IPCs"] = ipcs = list()
     with open(missionDir + "/InOut/" + ipcFileName, "r") as f:
         lines = f.readlines()
 
@@ -959,8 +970,9 @@ def convertIPC(missionDir, yaml, ipcFileName="Inp_IPC.txt", commentDict=None):
     if nIPC > 0:
         offset = 2
         secLength = 9
-        for ipc in range(nIPC):
+        for _ in range(nIPC):
             newDict = dict()
+            newItem = {"IPC": newDict}
             for lineNum, line in enumerate(lines[offset : offset + secLength]):
                 lineData = line.split("!")[0].strip()
                 strData = lineData.split()
@@ -994,14 +1006,17 @@ def convertIPC(missionDir, yaml, ipcFileName="Inp_IPC.txt", commentDict=None):
                                 )
                                 newDict["Prefixes"].append(lineData)
             offset += secLength + nPrefixes
-            ipcs.append(newDict)
+            ipcs.append(newItem)
 
-    return ipcs
+    ipcDict = convertToYamlAndComment(ipcDict, commentDict)
+
+    return ipcDict
 
 
 # %%
 def convertRegion(missionDir, yaml, regionFileName="Inp_Region.txt", commentDict=None):
-    regions = list()
+    regDict = dict()
+    regDict["Regions"] = regions = list()
     with open(missionDir + "/InOut/" + regionFileName, "r") as f:
         lines = f.readlines()
 
@@ -1009,8 +1024,9 @@ def convertRegion(missionDir, yaml, regionFileName="Inp_Region.txt", commentDict
     if nRegions > 0:
         offset = 2
         secLength = 9
-        for region in range(nRegions):
+        for _ in range(nRegions):
             newDict = dict()
+            newItem = {"Region": newDict}
             for lineNum, line in enumerate(lines[offset : offset + secLength]):
                 lineData = line.split("!")[0].strip()
                 strData = lineData.split()
@@ -1042,14 +1058,17 @@ def convertRegion(missionDir, yaml, regionFileName="Inp_Region.txt", commentDict
                     case 8:
                         newDict["Geometry File Name"] = lineData.strip('"')
             offset += secLength
-            regions.append(newDict)
+            regions.append(newItem)
 
-    return regions
+    regDict = convertToYamlAndComment(regDict, commentDict)
+
+    return regDict
 
 
 # %%
 def convertTDRS(missionDir, yaml, tdrsFileName="Inp_TDRS.txt", commentDict=None):
     tdrs = dict()
+    tdrsList = tdrs["TDRSs"] = list()
     with open(missionDir + "/InOut/" + tdrsFileName, "r") as f:
         lines = f.readlines()
 
@@ -1057,23 +1076,31 @@ def convertTDRS(missionDir, yaml, tdrsFileName="Inp_TDRS.txt", commentDict=None)
     for lineNum, line in enumerate(lines[1 : 1 + nTDRS]):
         lineData = line.split("!")[0].strip()
         strData = lineData.split()
-        newDict = tdrs["TDRS-%i" % (lineNum + 1)] = dict()
+        newDict = dict()
+        newItem = {"TDRS": newDict}
+        newDict["Number"] = lineNum + 1
         newDict["Exists"] = strData[0].lower() == "true"
         newDict["Label"] = " ".join(strData[1:]).strip('"')
+        tdrsList.append(newItem)
+
+    tdrs = convertToYamlAndComment(tdrs, commentDict)
 
     return tdrs
 
 
 # %%
 def convertNOS3(missionDir, yaml, nos3FileName="Inp_NOS3.txt", commentDict=None):
-    nos3 = dict()
+    outDict = dict()
+    nos3 = outDict["Configuration"] = dict()
     with open(missionDir + "/InOut/" + nos3FileName, "r") as f:
         lines = f.readlines()
 
     nos3["Bus"] = lines[1].split("!")[0].strip()
     nos3["Connection String"] = lines[2].split("!")[0].strip()
 
-    return nos3
+    outDict = convertToYamlAndComment(outDict, commentDict)
+
+    return outDict
 
 
 # %%
@@ -1347,7 +1374,7 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
 
                 dsm[typeName + " Configurations"].append(newItem)
 
-    dsm = convertToYamlObjects(dsm)
+    dsm = convertToYamlAndComment(dsm, commentDict)
     for key in dsm.keys():
         if not key == "DSM Commands":
             # for sc in dsm[key]:
@@ -1405,9 +1432,6 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
     for lim in dsm["Limits Configurations"]:
         del lim["Limits"]["Index"]
 
-    for key in commentDict.keys():
-        dsm.yaml_set_comment_before_after_key(key, after=commentDict[key])
-    dsm.yaml_set_start_comment(commentDict["SOF"])
     return dsm
 
 
@@ -1417,19 +1441,19 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
     with open(missionDir + "/InOut/" + simFileName, "r") as f:
         lines = f.readlines()
 
-    confDict = sim["Configuration"] = dict()
-    timeDict = sim["Time Configuration"] = dict()
+    confDict = sim["Simulation Control"] = dict()
+    timeDict = sim["Time"] = dict()
     for lineNum, line in enumerate(lines[:8]):
         lineData = line.split("!")[0].strip()
         strData = lineData.split()
         match lineNum:
             case 2:
-                timeDict["Mode"] = lineData
+                confDict["Mode"] = lineData
             case 3:
-                timeDict["Duration"] = float(strData[0])
-                timeDict["Step Size"] = float(strData[1])
+                confDict["Duration"] = float(strData[0])
+                confDict["Step Size"] = float(strData[1])
             case 4:
-                timeDict["File Interval"] = float(lineData)
+                confDict["File Interval"] = float(lineData)
             case 5:
                 confDict["RNG Seed"] = int(lineData)
             case 6:
@@ -1480,66 +1504,72 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
                     timeDict["Leap Seconds"] = float(lineData)
                 case 4:
                     pertDict = sim["Perturbation Models"] = dict()
-                    atmoList = pertDict["Atmosphere"] = list()
-                    atmoDict = dict()
-                    atmoList.append(atmoDict)
-                    atmoDict["World"] = "Earth"
-                    atmoDict["Method"] = lineData
+                    atmoDict = pertDict["Atmosphere"] = dict()
+                    atmoDict["Enabled"] = "false"
+                    atmoDict["Shadows"] = "false"
+                    atmoList = atmoDict["Models"] = list()
+                    tmpDict = dict()
+                    atmoList.append(tmpDict)
+                    tmpDict["World"] = "EARTH"
+                    tmpDict["Method"] = lineData
                 case 5:
-                    atmoDict["F10.7"] = float(lineData)
+                    tmpDict["F10.7"] = float(lineData)
                 case 6:
-                    atmoDict["Ap"] = float(lineData)
+                    tmpDict["Ap"] = float(lineData)
                 case 7:
-                    magList = pertDict["Magnetic"] = list()
-                    magDict = dict()
-                    magList.append(magDict)
-                    magDict["World"] = "Earth"
-                    magDict["Method"] = lineData
+                    magDict = pertDict["Magnetic"] = dict()
+                    magDict["Residual Mag Moment"] = "false"
+                    magList = magDict["Models"] = list()
+                    tmpDict = dict()
+                    magList.append(tmpDict)
+                    tmpDict["World"] = "EARTH"
+                    tmpDict["Method"] = lineData
                 case 8:
-                    magDict["Degree"] = int(strData[0])
-                    magDict["Order"] = int(strData[1])
+                    tmpDict["Degree"] = int(strData[0])
+                    tmpDict["Order"] = int(strData[1])
                 case 9:
-                    gravPertList = pertDict["Gravitation"] = list()
-                    gravDict = dict()
-                    gravPertList.append(gravDict)
-                    gravDict["World"] = "Earth"
-                    gravDict["Degree"] = int(strData[0])
-                    gravDict["Order"] = int(strData[1])
+                    gravDict = pertDict["Gravitation"] = dict()
+                    gravDict["Enabled"] = "false"
+                    gravDict["Gravity Gradient"] = "false"
+                    gravPertList = gravDict["Models"] = list()
+                    tmpDict = dict()
+                    gravPertList.append(tmpDict)
+                    tmpDict["World"] = "EARTH"
+                    tmpDict["Degree"] = int(strData[0])
+                    tmpDict["Order"] = int(strData[1])
                 case 10:
-                    gravDict = dict()
-                    gravPertList.append(gravDict)
-                    gravDict["World"] = "Mars"
-                    gravDict["Degree"] = int(strData[0])
-                    gravDict["Order"] = int(strData[1])
+                    tmpDict = dict()
+                    gravPertList.append(tmpDict)
+                    tmpDict["World"] = "MARS"
+                    tmpDict["Degree"] = int(strData[0])
+                    tmpDict["Order"] = int(strData[1])
                 case 11:
-                    gravDict = dict()
-                    gravPertList.append(gravDict)
-                    gravDict["World"] = "Luna"
-                    gravDict["Degree"] = int(strData[0])
-                    gravDict["Order"] = int(strData[1])
+                    tmpDict = dict()
+                    gravPertList.append(tmpDict)
+                    tmpDict["World"] = "LUNA"
+                    tmpDict["Degree"] = int(strData[0])
+                    tmpDict["Order"] = int(strData[1])
                 case 12:
-                    pertEnDict = pertDict["Enabled"] = dict()
-                    atmoEnDict = pertEnDict["Atmosphere"] = dict()
-                    atmoEnDict["Forces"] = strData[0].lower() == "true"
-                    atmoEnDict["Shadows"] = strData[1].lower() == "true"
+                    atmoDict["Enabled"] = strData[0].lower() == "true"
+                    atmoDict["Shadows"] = strData[1].lower() == "true"
                 case 13:
-                    pertEnDict["Gravity Gradient"] = lineData.lower() == "true"
+                    gravDict["Gravity Gradient"] = lineData.lower() == "true"
                 case 14:
-                    srpEnDict = pertEnDict["SRP"] = dict()
-                    srpEnDict["Forces"] = strData[0].lower() == "true"
+                    srpEnDict = pertDict["SRP"] = dict()
+                    srpEnDict["Enabled"] = strData[0].lower() == "true"
                     srpEnDict["Shadows"] = strData[1].lower() == "true"
                 case 15:
-                    pertEnDict["Residual Mag Moment"] = lineData.lower() == "true"
+                    magDict["Residual Mag Moment"] = lineData.lower() == "true"
                 case 16:
-                    pertEnDict["Gravitation"] = lineData.lower() == "true"
+                    gravDict["Enabled"] = lineData.lower() == "true"
                 case 17:
-                    pertEnDict["Thruster Plume"] = lineData.lower() == "true"
+                    pertDict["Thruster Plume"] = lineData.lower() == "true"
                 case 18:
-                    pertEnDict["Contact"] = lineData.lower() == "true"
+                    pertDict["Contact"] = lineData.lower() == "true"
                 case 19:
-                    pertEnDict["CFD Slosh"] = lineData.lower() == "true"
+                    pertDict["CFD Slosh"] = lineData.lower() == "true"
                 case 20:
-                    pertEnDict["Albedo on CSS"] = lineData.lower() == "true"
+                    pertDict["Albedo on CSS"] = lineData.lower() == "true"
                 case 21:
                     pertDict["Output Env Torques to File"] = lineData.lower() == "true"
 
@@ -1559,17 +1589,17 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
                 case 4:
                     celDict["Earth and Luna"] = lineData.lower() == "true"
                 case 5:
-                    celDict["Mars and its Moons"] = lineData.lower() == "true"
+                    celDict["Mars and its moons"] = lineData.lower() == "true"
                 case 6:
-                    celDict["Jupiter and its Moons"] = lineData.lower() == "true"
+                    celDict["Jupiter and its moons"] = lineData.lower() == "true"
                 case 7:
-                    celDict["Saturn and its Moons"] = lineData.lower() == "true"
+                    celDict["Saturn and its moons"] = lineData.lower() == "true"
                 case 8:
-                    celDict["Uranus and its Moons"] = lineData.lower() == "true"
+                    celDict["Uranus and its moons"] = lineData.lower() == "true"
                 case 9:
-                    celDict["Neptune and its Moons"] = lineData.lower() == "true"
+                    celDict["Neptune and its moons"] = lineData.lower() == "true"
                 case 10:
-                    celDict["Pluto and its Moons"] = lineData.lower() == "true"
+                    celDict["Pluto and its moons"] = lineData.lower() == "true"
                 case 11:
                     celDict["Asteroids and Comets"] = lineData.lower() == "true"
 
@@ -1593,14 +1623,18 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
         if nGS > 0:
             for line in lines[offset + 2 : offset + 2 + nGS]:
                 newDict = dict()
+                newItem = {"Ground Station": newDict}
                 lineData = line.split("!")[0].strip()
                 strData = lineData.split()
+                newDict["Index"] = len(gss)
                 newDict["Enabled"] = strData[0].lower() == "true"
                 newDict["World"] = strData[1]
                 newDict["Longitude"] = float(strData[2])
                 newDict["Latitude"] = float(strData[3])
                 newDict["Label"] = strData[4].strip('"')
-                gss.append(newDict)
+                gss.append(newItem)
+
+    sim = convertToYamlAndComment(sim, commentDict)
 
     return sim
 
@@ -1624,6 +1658,15 @@ def traverseAndSetNumericArray(data):
     return data
 
 
+def convertToYamlAndComment(data, commentDict):
+    data = convertToYamlObjects(data)
+    if commentDict is not None:
+        for key in commentDict.keys():
+            data.yaml_set_comment_before_after_key(key, after=commentDict[key])
+        data.yaml_set_start_comment(commentDict["SOF"])
+    return data
+
+
 def convertToYamlObjects(data):
     if data:
         match data:
@@ -1640,17 +1683,17 @@ def convertToYamlObjects(data):
 
 
 comment_file_dict = {
-    "SC_": "yaml/yamlComments/SC_comments.yaml",
-    "Orb_": None,
-    "Nodes_": None,
-    "Inp_DSM": "yaml/yamlComments/InpDSM_comments.yaml",
-    "Inp_FOV": None,
-    "Inp_Graphics": None,
-    "Inp_IPC": None,
-    "Inp_NOS3": None,
-    "Inp_Region": None,
-    "Inp_Sim": None,
-    "Inp_TDRS": None,
+    "SC_": "SC_comments.yaml",
+    "Orb_": "Orb_comments.yaml",
+    "Nodes_": "Nodes_comments.yaml",
+    "Inp_DSM": "InpDSM_comments.yaml",
+    "Inp_FOV": "InpFOV_comments.yaml",
+    "Inp_Graphics": "InpGraphics_comments.yaml",
+    "Inp_IPC": "InpIPC_comments.yaml",
+    "Inp_NOS3": "InpNOS3_comments.yaml",
+    "Inp_Region": "InpRegion_comments.yaml",
+    "Inp_Sim": "InpSim_comments.yaml",
+    "Inp_TDRS": "InpTDRS_comments.yaml",
 }
 convert_func_dict = {
     "SC_": convertSC,
@@ -1688,6 +1731,8 @@ startswith_type = {
 if __name__ == "__main__":
     yaml_file = sys.argv[1]
     missionDir = sys.argv[2]
+
+    comment_dir = "yaml/yamlComments/"
     yaml = YAML()
     yaml.version = (1, 2)
     yaml.indent(
@@ -1709,7 +1754,7 @@ if __name__ == "__main__":
                 if f_type in startswith_type and name.startswith(f_type):
                     comment_file_name = comment_file_dict[f_type]
                     if comment_file_name is not None:
-                        with open(comment_file_name) as comm_file:
+                        with open(comment_dir + comment_file_name) as comm_file:
                             yaml_comments = yaml.load(comm_file)
                     else:
                         yaml_comments = None
@@ -1719,7 +1764,7 @@ if __name__ == "__main__":
                 elif f_type == name:
                     comment_file_name = comment_file_dict[f_type]
                     if comment_file_name is not None:
-                        with open(comment_file_name) as comm_file:
+                        with open(comment_dir + comment_file_name) as comm_file:
                             yaml_comments = yaml.load(comm_file)
                     else:
                         yaml_comments = None

@@ -1,10 +1,33 @@
 %YAML 1.2
 ---
-Configuration:
+# <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
+Simulation Control:
+  # -------------------------------Simulation Control------------------------------
+  #   Mode: [[FAST/REAL/EXTERNAL/NOS3]]
+  #   Duration: [[sec]]
+  #   Step Size: [[sec]]
+  #   File Interval: [[sec]]
+  #   RNG Seed: 
+  #   Enable Graphics: [[true/false]]
+  #   Command File:
+  Mode: FAST
+  Duration: 2400.0
+  Step Size: 0.1
+  File Interval: 0.1
   RNG Seed: 0
   Enable Graphics: true
   Command File: Inp_Cmd.txt
-Time Configuration:
+Time:
+  # -------------------------------Time Configuration------------------------------
+  #   Date:
+  #     Month:  [[]]
+  #     Day:    [[]]
+  #     Year:   [[]]
+  #   Time:
+  #     Hour:   [[]]
+  #     Minute: [[]]
+  #     Second: [[]]
+  #   Leap Seconds:   [[]]
   Date:
     Month: 10
     Day: 18
@@ -14,14 +37,17 @@ Time Configuration:
     Minute: 30
     Second: 0.0
   Leap Seconds: 37.0
-  Mode: FAST
-  Duration: 2400.0
-  Step Size: 0.1
-  File Interval: 0.1
 Orbits:
+  # ------------------------------Orbit Configurations-----------------------------
+  #   - Name: 
+  #     Enabled: [[true/false]]
   - Name: Orb_SWARM
     Enabled: true
 SCs:
+  # ------------------------------SC Configurations-----------------------------
+  #   - Name: 
+  #     Orbit:
+  #     Enabled: [[true/false]]
   - Name: SC_SWARM_3U_0
     Orbit: Orb_SWARM
     Enabled: true
@@ -38,60 +64,120 @@ SCs:
     Orbit: Orb_SWARM
     Enabled: true
 Perturbation Models:
+  # ---------------------------Perturbation Configuration--------------------------
+  #   Atmosphere:
+  #     Enabled: [[true/false]]
+  #     Shadows: [[true/false]]
+  #     Models:
+  #     ((Sequence; one element for unique Atmospere Model Definition))
+  #       - World: [[EARTH]]
+  #         Method: [[USER/NOMINAL/TWOSIGMA]]
+  #         F10.7: (Only used if USER)
+  #         Ap: (Only used if USER)
+  #   Magnetic:
+  #     Residual Mag Moment: [[true/false]]
+  #     Models:
+  #     ((Sequence; one element for unique Magnetic Model Definition))
+  #       - World: [[EARTH]]
+  #         Method: [[NONE/IGRF/DIPOLE]]
+  #         Degree: [[0-10]] (Only used if IGRF)
+  #         Order: [[0-Degree]] (Only used if IGRF)
+  #   Gravitation:
+  #     Enabled: [[true/false]]
+  #     Gravity Gradient: [[true/false]]
+  #     ((Sequence; one element for unique Gravitation Model Definition))
+  #       - World: [[EARTH/MARS/LUNA]]
+  #         Degree: [[0-18]]
+  #         Order: [[0-Degree]]
+  #   SRP:
+  #     Enabled: [[true/false]]
+  #     Shadows: [[true/false]]
+  #   Thruster Plume: [[true/false]]
+  #   Contact: [[true/false]]
+  #   CFD Slosh: [[true/false]]
+  #   Albedo on CSS: [[true/false]]
+  #   Output Env Torques to File: [[true/false]]
   Atmosphere:
-    - World: Earth
-      Method: USER
-      F10.7: 230.0
-      Ap: 100.0
+    Enabled: true
+    Shadows: false
+    Models:
+      - World: EARTH
+        Method: USER
+        F10.7: 230.0
+        Ap: 100.0
   Magnetic:
-    - World: Earth
-      Method: IGRF
-      Degree: 8
-      Order: 8
-  Gravitation:
-    - World: Earth
-      Degree: 8
-      Order: 8
-    - World: Mars
-      Degree: 2
-      Order: 0
-    - World: Luna
-      Degree: 2
-      Order: 0
-  Enabled:
-    Atmosphere:
-      Forces: true
-      Shadows: false
-    Gravity Gradient: false
-    SRP:
-      Forces: true
-      Shadows: false
     Residual Mag Moment: true
-    Gravitation: false
-    Thruster Plume: false
-    Contact: false
-    CFD Slosh: false
-    Albedo on CSS: false
+    Models:
+      - World: EARTH
+        Method: IGRF
+        Degree: 8
+        Order: 8
+  Gravitation:
+    Enabled: false
+    Gravity Gradient: false
+    Models:
+      - World: EARTH
+        Degree: 8
+        Order: 8
+      - World: MARS
+        Degree: 2
+        Order: 0
+      - World: LUNA
+        Degree: 2
+        Order: 0
+  SRP:
+    Enabled: true
+    Shadows: false
+  Thruster Plume: false
+  Contact: false
+  CFD Slosh: false
+  Albedo on CSS: false
   Output Env Torques to File: false
 Ephem Type: MEAN
 Celestial Bodies:
+  # --------------------------Celestial Body Configuration-------------------------
+  #   Mercury: [[true/false]]
+  #   Venus: [[true/false]]
+  #   Earth and Luna: [[true/false]]
+  #   Mars and its moons: [[true/false]]
+  #   Jupiter and its moons: [[true/false]]
+  #   Saturn and its moons: [[true/false]]
+  #   Uranus and its moons: [[true/false]]
+  #   Neptune and its moons: [[true/false]]
+  #   Pluto and its moons: [[true/false]]
+  #   Asteroids and Comets: [[true/false]]
   Mercury: true
   Venus: true
   Earth and Luna: true
-  Mars and its Moons: true
-  Jupiter and its Moons: true
-  Saturn and its Moons: true
-  Uranus and its Moons: true
-  Neptune and its Moons: true
-  Pluto and its Moons: true
+  Mars and its moons: true
+  Jupiter and its moons: true
+  Saturn and its moons: true
+  Uranus and its moons: true
+  Neptune and its moons: true
+  Pluto and its moons: true
   Asteroids and Comets: false
 Lagrange Systems:
+  # -------------------------Lagrange System Configuration-------------------------
+  #   Earth-Moon: [[true/false]]
+  #   Sun-Earth: [[true/false]]
+  #   Sun-Jupiter: [[true/false]]
   Earth-Moon: false
   Sun-Earth: false
   Sun-Jupiter: false
 Ground Stations:
-  - Enabled: true
-    World: EARTH
-    Longitude: -77.0
-    Latitude: 37.0
-    Label: ''
+  # --------------------------Ground Station Configuration-------------------------
+  # ((Sequence; one element for unique Ground Station Definition))
+  #   - Ground Station:
+  #       Index:
+  #       Enabled: [[true/false]]
+  #       World: 
+  #       Longitude:
+  #       Latitude: 
+  #       Label:
+  - Ground Station:
+      Index: 0
+      Enabled: true
+      World: EARTH
+      Longitude: -77.0
+      Latitude: 37.0
+      Label: ''
