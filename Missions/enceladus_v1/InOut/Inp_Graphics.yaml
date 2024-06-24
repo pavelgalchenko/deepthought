@@ -1,0 +1,221 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<<<<<<  42 Graphics Configuration File  >>>>>>>>>>>>>>>>>>>
+Configuration:
+  # -----------------------------Graphics Configuration----------------------------
+  #   Name: [[]]
+  #   Output Interval:
+  #   Star Catalog File: 
+  #   Map Exists: [[true/false]]
+  #   Orrery Exists: [[true/false]]
+  #   Unit Sphere Exists: [[true/false]]
+  #   Pause on Startup: [[true/false]]
+  Name: Inp_Graphics.txt
+  Output Interval: 10.0
+  Star Catalog File: Skymap09.txt
+  Map Exists: true
+  Orrery Exists: true
+  Unit Sphere Exists: true
+  Pause on Startup: false
+POV:
+  # -------------------------------POV Configuration-------------------------------
+  #   Mode: [[]]
+  #   Host:
+  #     Type: [[]]
+  #     SC: [[]]
+  #     Body: [[]]
+  #     Frame: [[]]
+  #   Target:
+  #     Type: [[]]
+  #     SC: [[]]
+  #     Body: [[]]
+  #     Frame: [[]]
+  #   Boresight Axis: [[]]
+  #   Up Axis: [[]]
+  #   POV Range: [[]]
+  #   POV Vertical Angle: [[]]
+  #   POV Host Position: [[x, y, z]]
+  #   POV View: [[]]
+  Mode: TRACK_HOST
+  Host:
+    Type: SC
+    SC: 0
+    Body: 0
+    Frame: L
+  Target:
+    Type: SC
+    SC: 0
+    Body: 0
+    Frame: L
+  Boresight Axis: POS_X
+  Up Axis: NEG_Z
+  POV Range: 40.0
+  POV Vertical Angle: 30.0
+  POV Host Position: [0.0, 0.0, 0.0]
+  POV View: FRONT
+Cam:
+  # -----------------------------Camera Configuration------------------------------
+  #   Title: [[]]
+  #   Dimensions: [[width, height]]  [[pixels]]
+  #   Mouse Scale Factor: [[]]
+  #   Gamma Exponent: [[]]
+  #   Cam Show:
+  #     N Axes:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     L Axes:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     F Axes:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     B Axes:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     N Grid:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     L Grid:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     F Grid:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     B Grid:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     G Grid:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Fields of View:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Prox Ops:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     TDRS Satellites:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Shadows:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Astro Labels:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Truth Vectors:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     FSW Vectors:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Milky Way:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Fermi Sky:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  Title: 42 Cam
+  Dimensions: [800, 800]
+  Mouse Scale Factor: 5e-05
+  Gamma Exponent: 1.8
+  Cam Show:
+    N Axes:
+      Show: true
+      Label: N Axes
+    L Axes:
+      Show: true
+      Label: L Axes
+    F Axes:
+      Show: false
+      Label: F Axes
+    B Axes:
+      Show: true
+      Label: B Axes
+    N Grid:
+      Show: false
+      Label: N Grid
+    L Grid:
+      Show: false
+      Label: L Grid
+    F Grid:
+      Show: false
+      Label: F Grid
+    B Grid:
+      Show: false
+      Label: B Grid
+    G Grid:
+      Show: false
+      Label: Gal Grid
+    Fields of View:
+      Show: false
+      Label: FOVs
+    Prox Ops:
+      Show: false
+      Label: Prox Ops
+    TDRS Satellites:
+      Show: false
+      Label: TDRS
+    Shadows:
+      Show: true
+      Label: Shadows
+    Astro Labels:
+      Show: false
+      Label: Astro Labels
+    Truth Vectors:
+      Show: true
+      Label: Truth Vectors
+    FSW Vectors:
+      Show: false
+      Label: FSW Vectors
+    Milky Way:
+      Show: true
+      Label: Milky Way
+    Fermi Sky:
+      Show: false
+      Label: Fermi Sky
+Map:
+  # -------------------------------Map Configuration-------------------------------
+  #   Title: [[]]
+  #   Dimensions: [[width, height]]  [[pixels]]
+  #   Map Show:
+  #     Clock:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Tlm Clock:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Credits:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  #     Night:
+  #       Show: [[true/false]]
+  #       Label: [[]]
+  Title: 42 Map
+  Dimensions: [512, 256]
+  Map Show:
+    Clock:
+      Show: true
+      Label: Clock
+    Tlm Clock:
+      Show: true
+      Label: Tlm Clock
+    Credits:
+      Show: false
+      Label: Credits
+    Night:
+      Show: true
+      Label: Night
+Constellations Show:
+  # -----------------------Constellations Show Configuration-----------------------
+  #   Major:
+  #     Show: [[true/false]]
+  #   Zodiac:
+  #     Show: [[true/false]]
+  #   Minor:
+  #     Show: [[true/false]]
+  Major:
+    Show: true
+  Zodiac:
+    Show: true
+  Minor:
+    Show: false

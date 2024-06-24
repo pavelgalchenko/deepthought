@@ -1,0 +1,218 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
+Simulation Control:
+  # -------------------------------Simulation Control------------------------------
+  #   Mode: [[FAST/REAL/EXTERNAL/NOS3]]
+  #   Duration: [[sec]]
+  #   Step Size: [[sec]]
+  #   File Interval: [[sec]]
+  #   RNG Seed: 
+  #   Enable Graphics: [[true/false]]
+  #   Command File:
+  Mode: FAST
+  Duration: 777600.0
+  Step Size: 1.0
+  File Interval: 60.0
+  RNG Seed: 0
+  Enable Graphics: true
+  Command File: Inp_Cmd.txt
+Time:
+  # -------------------------------Time Configuration------------------------------
+  #   Date:
+  #     Month:  [[]]
+  #     Day:    [[]]
+  #     Year:   [[]]
+  #   Time:
+  #     Hour:   [[]]
+  #     Minute: [[]]
+  #     Second: [[]]
+  #   Leap Seconds:   [[]]
+  Date:
+    Month: 1
+    Day: 1
+    Year: 2028
+  Time:
+    Hour: 3
+    Minute: 0
+    Second: 0.0
+  Leap Seconds: 37.0
+Orbits:
+  # ------------------------------Orbit Configurations-----------------------------
+  #   - Name: 
+  #     Enabled: [[true/false]]
+  - Name: Orb_000
+    Enabled: true
+  - Name: Orb_001
+    Enabled: true
+  - Name: Orb_002
+    Enabled: true
+  - Name: Orb_003
+    Enabled: true
+  - Name: Orb_004
+    Enabled: true
+  - Name: Orb_005
+    Enabled: true
+  - Name: Orb_006
+    Enabled: true
+  - Name: Orb_007
+    Enabled: true
+  - Name: Orb_008
+    Enabled: true
+SCs:
+  # ------------------------------SC Configurations-----------------------------
+  #   - Name: 
+  #     Orbit:
+  #     Enabled: [[true/false]]
+  - Name: SC_000
+    Orbit: Orb_000
+    Enabled: true
+  - Name: SC_001
+    Orbit: Orb_001
+    Enabled: true
+  - Name: SC_002
+    Orbit: Orb_002
+    Enabled: true
+  - Name: SC_003
+    Orbit: Orb_003
+    Enabled: true
+  - Name: SC_004
+    Orbit: Orb_004
+    Enabled: true
+  - Name: SC_005
+    Orbit: Orb_005
+    Enabled: true
+  - Name: SC_006
+    Orbit: Orb_006
+    Enabled: true
+  - Name: SC_007
+    Orbit: Orb_007
+    Enabled: true
+  - Name: SC_008
+    Orbit: Orb_008
+    Enabled: true
+Perturbation Models:
+  # ---------------------------Perturbation Configuration--------------------------
+  #   Atmosphere:
+  #     Enabled: [[true/false]]
+  #     Shadows: [[true/false]]
+  #     Models:
+  #     ((Sequence; one element for unique Atmospere Model Definition))
+  #       - World: [[EARTH]]
+  #         Method: [[USER/NOMINAL/TWOSIGMA]]
+  #         F10.7: (Only used if USER)
+  #         Ap: (Only used if USER)
+  #   Magnetic:
+  #     Residual Mag Moment: [[true/false]]
+  #     Models:
+  #     ((Sequence; one element for unique Magnetic Model Definition))
+  #       - World: [[EARTH]]
+  #         Method: [[NONE/IGRF/DIPOLE]]
+  #         Degree: [[0-10]] (Only used if IGRF)
+  #         Order: [[0-Degree]] (Only used if IGRF)
+  #   Gravitation:
+  #     Enabled: [[true/false]]
+  #     Gravity Gradient: [[true/false]]
+  #     ((Sequence; one element for unique Gravitation Model Definition))
+  #       - World: [[EARTH/MARS/LUNA]]
+  #         Degree: [[0-18]]
+  #         Order: [[0-Degree]]
+  #   SRP:
+  #     Enabled: [[true/false]]
+  #     Shadows: [[true/false]]
+  #   Thruster Plume: [[true/false]]
+  #   Contact: [[true/false]]
+  #   CFD Slosh: [[true/false]]
+  #   Albedo on CSS: [[true/false]]
+  #   Output Env Torques to File: [[true/false]]
+  Atmosphere:
+    Enabled: false
+    Shadows: false
+    Models:
+      - World: EARTH
+        Method: USER
+        F10.7: 230.0
+        Ap: 100.0
+  Magnetic:
+    Residual Mag Moment: false
+    Models:
+      - World: EARTH
+        Method: NONE
+        Degree: 8
+        Order: 8
+  Gravitation:
+    Enabled: false
+    Gravity Gradient: false
+    Models:
+      - World: EARTH
+        Degree: 8
+        Order: 8
+      - World: MARS
+        Degree: 2
+        Order: 0
+      - World: LUNA
+        Degree: 2
+        Order: 0
+  SRP:
+    Enabled: false
+    Shadows: false
+  Thruster Plume: false
+  Contact: false
+  CFD Slosh: false
+  Albedo on CSS: false
+  Output Env Torques to File: false
+Ephem Type: MEAN
+Celestial Bodies:
+  # --------------------------Celestial Body Configuration-------------------------
+  #   Mercury: [[true/false]]
+  #   Venus: [[true/false]]
+  #   Earth and Luna: [[true/false]]
+  #   Mars and its moons: [[true/false]]
+  #   Jupiter and its moons: [[true/false]]
+  #   Saturn and its moons: [[true/false]]
+  #   Uranus and its moons: [[true/false]]
+  #   Neptune and its moons: [[true/false]]
+  #   Pluto and its moons: [[true/false]]
+  #   Asteroids and Comets: [[true/false]]
+  Mercury: false
+  Venus: false
+  Earth and Luna: false
+  Mars and its moons: false
+  Jupiter and its moons: false
+  Saturn and its moons: true
+  Uranus and its moons: false
+  Neptune and its moons: false
+  Pluto and its moons: false
+  Asteroids and Comets: false
+Lagrange Systems:
+  # -------------------------Lagrange System Configuration-------------------------
+  #   Earth-Moon: [[true/false]]
+  #   Sun-Earth: [[true/false]]
+  #   Sun-Jupiter: [[true/false]]
+  Earth-Moon: false
+  Sun-Earth: false
+  Sun-Jupiter: false
+Ground Stations:
+  # --------------------------Ground Station Configuration-------------------------
+  # ((Sequence; one element for unique Ground Station Definition))
+  #   - Ground Station:
+  #       Index:
+  #       Enabled: [[true/false]]
+  #       World: 
+  #       Longitude:
+  #       Latitude: 
+  #       Label:
+  - Ground Station:
+      Index: 0
+      Enabled: true
+      World: ENCELADUS
+      Longitude: 50.0
+      Latitude: -53.0
+      Label: Baghdad
+  - Ground Station:
+      Index: 1
+      Enabled: true
+      World: ENCELADUS
+      Longitude: 330.0
+      Latitude: -87.0
+      Label: South

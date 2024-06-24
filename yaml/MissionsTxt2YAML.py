@@ -691,8 +691,8 @@ def convertOrb(missionDir, yaml, fileName, commentDict=None):
                             case 8:
                                 initDict["Z Phase"] = float(lineData)
                     if (
-                        orbitDict["Lagrange Point"] == "L4"
-                        or orbitDict["Lagrange Point"] == "L5"
+                        initDict["Lagrange Point"] == "L4"
+                        or initDict["Lagrange Point"] == "L5"
                     ):
                         for lineNum, line in enumerate(lines[33:36]):
                             lineData = line.split("!")[0].strip()
