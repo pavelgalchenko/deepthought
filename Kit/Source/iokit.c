@@ -19,6 +19,78 @@
 */
 
 /**********************************************************************/
+struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path) {
+   return (fy_node_by_path(node, path, -1, FYNWF_PTR_YAML));
+}
+/**********************************************************************/
+long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
+                             double dest[]) {
+   long i                   = 0;
+   struct fy_node *iterNode = NULL;
+   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+      fy_node_scanf(iterNode, "/ %lf", &dest[i]);
+      if (!fy_node_scanf(iterNode, "/ %lf", &dest[i])) {
+         char *parentAddress = fy_node_get_parent_address(yamlSequence);
+         printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
+                "in %s on line %d. "
+                "Exiting...\n",
+                parentAddress, __FILE__, __LINE__);
+         exit(EXIT_FAILURE);
+      }
+      i++;
+      if (i == n)
+         break;
+   }
+   return (i);
+}
+/**********************************************************************/
+long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
+                           long dest[]) {
+   long i                   = 0;
+   struct fy_node *iterNode = NULL;
+   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+      if (!fy_node_scanf(iterNode, "/ %ld", &dest[i])) {
+         char *parentAddress = fy_node_get_parent_address(yamlSequence);
+         printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
+                "in %s on line %d. Exiting...\n",
+                parentAddress, __FILE__, __LINE__);
+         exit(EXIT_FAILURE);
+      }
+      i++;
+      if (i == n)
+         break;
+   }
+   return (i);
+}
+/**********************************************************************/
+long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
+                           long dest[]) {
+   long i                   = 0;
+   struct fy_node *iterNode = NULL;
+   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+      dest[i] = fy_node_compare_text(iterNode, "true", -1);
+      i++;
+      if (i == n)
+         break;
+   }
+   return (i);
+}
+/**********************************************************************/
+long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3],
+                        long *seq) {
+   long i = 0;
+   i      = assignYAMLToDoubleArray(
+       3, fy_node_by_path(yamlEuler, "/Angles", -1, FYNWF_PTR_YAML), angles);
+   i += fy_node_scanf(yamlEuler, "/Sequence %ld", seq);
+   if (i != 4) {
+      printf("Problem reading Euler Angles in getYAMLEulerAngles in %s on line "
+             "%d. Exiting...\n",
+             __FILE__, __LINE__);
+      exit(EXIT_FAILURE);
+   }
+   return (i);
+}
+/**********************************************************************/
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode) {
    FILE *FilePtr;
    char FileName[1024];

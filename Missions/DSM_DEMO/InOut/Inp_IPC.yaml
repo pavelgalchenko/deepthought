@@ -1,0 +1,46 @@
+%YAML 1.2
+---
+  - Mode: OFF
+    AC ID: 0
+    File Name: State00.42
+    Socket:
+      Role: CLIENT
+      Host:
+        Name: localhost
+        Port: 10001
+      Blocking: true
+    Echo to stdout: true
+    Prefixes: [SC, Orb, World]
+  - Mode: OFF
+    AC ID: 0
+    File Name: State01.42
+    Socket:
+      Role: CLIENT
+      Host:
+        Name: localhost
+        Port: 10002
+      Blocking: true
+    Echo to stdout: false
+    Prefixes: ['SC[0].AC']
+  - Mode: OFF
+    AC ID: 1
+    File Name: State02.42
+    Socket:
+      Role: CLIENT
+      Host:
+        Name: localhost
+        Port: 10003
+      Blocking: true
+    Echo to stdout: false
+    Prefixes: ['SC[1].AC']
+  - Mode: OFF
+    AC ID: 0
+    File Name: State03.42
+    Socket:
+      Role: CLIENT
+      Host:
+        Name: localhost
+        Port: 10004
+      Blocking: true
+    Echo to stdout: false
+    Prefixes: ['SC[0].Tach[0]']

@@ -1,0 +1,4 @@
+%YAML 1.2
+---
+Bus: command
+Connection String: tcp://127.0.0.1:12001

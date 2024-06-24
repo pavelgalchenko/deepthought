@@ -20,6 +20,7 @@
 ** #endif
 */
 
+#include "libfyaml.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -39,6 +40,18 @@
 #define SOCKET int
 #endif
 /* #include <sys/un.h> */
+
+#define STR2(x) #x
+#define STR(X)  STR2(X)
+
+struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path);
+long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
+                             double dest[]);
+long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
+                           long dest[]);
+long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
+                           long dest[]);
+long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq);
 
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode);
 void ByteSwapDouble(double *A);

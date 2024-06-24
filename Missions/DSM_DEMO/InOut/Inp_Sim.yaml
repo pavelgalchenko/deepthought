@@ -1,0 +1,97 @@
+%YAML 1.2
+---
+Configuration:
+  RNG Seed: 0
+  Enable Graphics: true
+  Command File: Inp_Cmd.txt
+Time Configuration:
+  Date:
+    Month: 10
+    Day: 18
+    Year: 2025
+  Time:
+    Hour: 8
+    Minute: 30
+    Second: 0.0
+  Leap Seconds: 37.0
+  Mode: FAST
+  Duration: 2400.0
+  Step Size: 0.1
+  File Interval: 0.1
+Orbits:
+  - Name: Orb_SWARM
+    Enabled: true
+SCs:
+  - Name: SC_SWARM_3U_0
+    Orbit: Orb_SWARM
+    Enabled: true
+  - Name: SC_SWARM_3U_1
+    Orbit: Orb_SWARM
+    Enabled: true
+  - Name: SC_SWARM_3U_2
+    Orbit: Orb_SWARM
+    Enabled: true
+  - Name: SC_SWARM_3U_3
+    Orbit: Orb_SWARM
+    Enabled: true
+  - Name: SC_SWARM_6U
+    Orbit: Orb_SWARM
+    Enabled: true
+Perturbation Models:
+  Atmosphere:
+    - World: Earth
+      Method: USER
+      F10.7: 230.0
+      Ap: 100.0
+  Magnetic:
+    - World: Earth
+      Method: IGRF
+      Degree: 8
+      Order: 8
+  Gravitation:
+    - World: Earth
+      Degree: 8
+      Order: 8
+    - World: Mars
+      Degree: 2
+      Order: 0
+    - World: Luna
+      Degree: 2
+      Order: 0
+  Enabled:
+    Atmosphere:
+      Forces: true
+      Shadows: false
+    Gravity Gradient: false
+    SRP:
+      Forces: true
+      Shadows: false
+    Residual Mag Moment: true
+    Gravitation: false
+    Thruster Plume: false
+    Contact: false
+    CFD Slosh: false
+    Albedo on CSS: false
+  Output Env Torques to File: false
+Ephem Type: MEAN
+Celestial Bodies:
+  Mercury: true
+  Venus: true
+  Earth and Luna: true
+  Mars and its Moons: true
+  Jupiter and its Moons: true
+  Saturn and its Moons: true
+  Uranus and its Moons: true
+  Neptune and its Moons: true
+  Pluto and its Moons: true
+  Asteroids and Comets: false
+Lagrange Systems:
+  Earth-Moon: false
+  Sun-Earth: false
+  Sun-Jupiter: false
+Ground Stations:
+  - Enabled: true
+    World: EARTH
+    Longitude: -77.0
+    Latitude: 37.0
+    Label: ''

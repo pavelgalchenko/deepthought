@@ -1,0 +1,152 @@
+%YAML 1.2
+---
+Name: Nodes_Simple.txt
+Description: Simple Nodes
+Nodes:
+  - Index: 0
+    Location: [0.0, 0.0, 0.0]
+    Comment: Default central node
+  - Index: 1
+    Location: [-0.05, 0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 2
+    Location: [-0.05, 0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 3
+    Location: [-0.05, 0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 4
+    Location: [-0.05, -0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 5
+    Location: [-0.05, -0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 6
+    Location: [-0.05, -0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 7
+    Location: [0.05, -0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 8
+    Location: [0.05, -0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 9
+    Location: [0.05, -0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 10
+    Location: [0.05, 0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 11
+    Location: [0.05, 0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 12
+    Location: [0.05, 0.05, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 13
+    Location: [-0.05, 0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 14
+    Location: [-0.05, 0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 15
+    Location: [-0.05, 0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 16
+    Location: [-0.05, -0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 17
+    Location: [-0.05, -0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 18
+    Location: [-0.05, -0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 19
+    Location: [0.05, -0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 20
+    Location: [0.05, -0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 21
+    Location: [0.05, -0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 22
+    Location: [0.05, 0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 23
+    Location: [0.05, 0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 24
+    Location: [0.05, 0.05, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 25
+    Location: [-0.05, 0.1, -0.15]
+    Comment: Start of 6U Thrusters
+  - Index: 26
+    Location: [-0.05, 0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 27
+    Location: [-0.05, 0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 28
+    Location: [-0.05, -0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 29
+    Location: [-0.05, -0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 30
+    Location: [-0.05, -0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 31
+    Location: [0.05, -0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 32
+    Location: [0.05, -0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 33
+    Location: [0.05, -0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 34
+    Location: [0.05, 0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 35
+    Location: [0.05, 0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 36
+    Location: [0.05, 0.1, -0.15]
+    Comment: Thruster Location in Body
+  - Index: 37
+    Location: [-0.05, 0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 38
+    Location: [-0.05, 0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 39
+    Location: [-0.05, 0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 40
+    Location: [-0.05, -0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 41
+    Location: [-0.05, -0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 42
+    Location: [-0.05, -0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 43
+    Location: [0.05, -0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 44
+    Location: [0.05, -0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 45
+    Location: [0.05, -0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 46
+    Location: [0.05, 0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 47
+    Location: [0.05, 0.1, 0.15]
+    Comment: Thruster Location in Body
+  - Index: 48
+    Location: [0.05, 0.1, 0.15]
+    Comment: Thruster Location in Body

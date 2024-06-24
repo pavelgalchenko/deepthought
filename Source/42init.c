@@ -2118,166 +2118,135 @@ void InitOrderNDynamics(struct SCType *S) {
 }
 /**********************************************************************/
 void InitSpacecraft(struct SCType *S) {
-   FILE *infile;
-   char junk[120], newline, response[120];
-   char response1[120], response2[120], response3[120];
-   double CBL[3][3], CBF[3][3];
-   long i, j, k, Ia, Ib, Ig, Iw, Im, It, Bi, Bo, Ic, Ist, Ifss;
-   char RateFrame, AttFrame, AttParm;
-   double wlnb[3];
-   double wbn[3], CBN[3][3], qbn[4];
-   double Ang1, Ang2, Ang3;
-   double pIn[3], pOut[3];
-   double psn[3], vsn[3], psl[3], vsl[3], pfl[3], pcmn[3], pcml[3];
-   double PosVec[3], VelVec[3], wxr[3], wxrn[3], wxrl[3];
-   double rh[3], vh[3];
-   double BiasTime;
-   long Seq;
-   long i1, i2, i3;
-   long UseCM;
-   long SomeJointsLocked;
-   struct JointType *G;
-   struct BodyType *B;
-   struct WhlType *W;
-   struct OrbitType *O;
-   struct FormationType *Fr;
-   struct DynType *D;
-   struct GyroType *Gyro;
-   struct MagnetometerType *MAG;
-   struct CssType *CSS;
-   struct FssType *FSS;
-   struct StarTrackerType *ST;
-   struct GpsType *GPS;
-   struct AccelType *Accel;
-   long OldNgeom;
+   long i, j, k;
 
-   infile = FileOpen(InOutPath, S->FileName, "r");
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", S->Label, junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", S->SpriteFileName, junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->FswTag = DecodeString(response);
-   fscanf(infile, "%lf %[^\n] %[\n]", &S->FswSampleTime, junk, &newline);
+   char fileName[50];
+   strcpy(fileName, S->FileName);
+   char *typeStr = strstr(fileName, ".txt");
+   strcpy(typeStr, ".yaml");
+
+   FILE *infile            = FileOpen(InOutPath, fileName, "r");
+   struct fy_document *fyd = fy_document_build_from_fp(NULL, infile);
+   fclose(infile);
+   if (fy_document_resolve(fyd)) {
+      printf("Unable to resolve links in %50s. Exiting...\n", fileName);
+      exit(EXIT_FAILURE);
+   }
+
+   if (!fyd) {
+      printf("Failed to build yaml from %50s. Exiting...\n", fileName);
+      fy_document_destroy(fyd);
+      exit(EXIT_FAILURE);
+   }
+
+   struct fy_node *root = fy_document_root(fyd);
+   struct fy_node *node = NULL, *iterNode = NULL;
+   node           = fy_node_by_path_def(root, "/Configuration");
+   char dummy[50] = {0};
+   fy_node_scanf(node,
+                 "/Label %41s "
+                 "/Sprite File %41s "
+                 "/FSW Identifier %51s "
+                 "/FSW Sample Time %lf",
+                 S->Label, S->SpriteFileName, dummy, &S->FswSampleTime);
+   S->FswTag        = DecodeString(dummy);
    S->FswMaxCounter = (long)(S->FswSampleTime / DTSIM + 0.5);
    if (S->FswSampleTime < DTSIM) {
       printf("Error:  FswSampleTime smaller than DTSIM.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    S->FswSampleCounter = S->FswMaxCounter;
    S->InitAC           = 1;
    S->InitDSM          = 1;
 
-   /* .. Orbit Parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Orbit Parameter section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->OrbDOF = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   UseCM = DecodeString(response);
-   fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &PosVec[0], &PosVec[1],
-          &PosVec[2], junk, &newline);
-   fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &VelVec[0], &VelVec[1],
-          &VelVec[2], junk, &newline);
+   node = fy_node_by_path_def(root, "/Orbit");
+   fy_node_scanf(node, "/Prop Type %51s", dummy);
+   S->OrbDOF = DecodeString(dummy);
+   fy_node_scanf(node, "/Pos Specifier %51s", dummy);
+   long useCM = DecodeString(dummy);
+   double posVec[3], velVec[3];
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Pos wrt F"), posVec);
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Vel wrt F"), velVec);
 
-   /* .. Initial Attitude */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Initial Attitude section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   RateFrame = response[0];
-   AttParm   = response[1];
-   AttFrame  = response[2];
-   fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &wbn[0], &wbn[1], &wbn[2], junk,
-          &newline);
-   wbn[0] *= D2R;
-   wbn[1] *= D2R;
-   wbn[2] *= D2R;
-   if (AttParm == 'Q') {
-      fscanf(infile, "%lf %lf %lf %lf %[^\n] %[\n]", &qbn[0], &qbn[1], &qbn[2],
-             &qbn[3], junk, &newline);
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+   node = fy_node_by_path_def(root, "/Attitude");
+   char rateFrame, attParm, attFrame;
+   double wbn[3], ang[3], qbn[4], CBN[3][3];
+   long seq;
+   fy_node_scanf(node,
+                 "Ang Vel Frame %c "
+                 "Att Representation %c "
+                 "Att Frame %c",
+                 &rateFrame, &attParm, &attFrame);
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Ang Vel"), wbn);
+   for (i = 0; i < 3; i++)
+      wbn[i] *= D2R;
+   if (attParm == 'Q') {
+      assignYAMLToDoubleArray(4, fy_node_by_path_def(node, "/Quaternion"), qbn);
       Q2C(qbn, CBN);
    } else {
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3, &Seq,
-             junk, &newline);
-      A2C(Seq, Ang1 * D2R, Ang2 * D2R, Ang3 * D2R, CBN);
+      getYAMLEulerAngles(fy_node_by_path_def(node, "/Euler Angles"), ang, &seq);
+      A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, CBN);
       C2Q(CBN, qbn);
    }
-   if (AttFrame == 'L') {
-      /* Adjust CBN */
-      for (j = 0; j < 3; j++) {
-         for (k = 0; k < 3; k++)
-            CBL[j][k] = CBN[j][k];
-      }
-      MxM(CBL, Orb[S->RefOrb].CLN, CBN);
-      C2Q(CBN, qbn);
-   } else if (AttFrame == 'F') {
-      /* Adjust CBN */
-      for (j = 0; j < 3; j++) {
-         for (k = 0; k < 3; k++)
-            CBF[j][k] = CBN[j][k];
-      }
-      MxM(CBF, Frm[S->RefOrb].CN, CBN);
-      C2Q(CBN, qbn);
+   switch (attFrame) {
+      case 'L': {
+         double CBL[3][3];
+         /* Adjust CBN */
+         for (j = 0; j < 3; j++) {
+            for (k = 0; k < 3; k++)
+               CBL[j][k] = CBN[j][k];
+         }
+         MxM(CBL, Orb[S->RefOrb].CLN, CBN);
+         C2Q(CBN, qbn);
+      } break;
+      case 'F': {
+         double CBF[3][3];
+         /* Adjust CBN */
+         for (j = 0; j < 3; j++) {
+            for (k = 0; k < 3; k++)
+               CBF[j][k] = CBN[j][k];
+         }
+         MxM(CBF, Frm[S->RefOrb].CN, CBN);
+         C2Q(CBN, qbn);
+      } break;
    }
-   if (RateFrame == 'L') {
+   if (rateFrame == 'L') {
       /* Add LVLH rate to wn */
+      double wlnb[3];
       MxV(CBN, Orb[S->RefOrb].wln, wlnb);
       for (j = 0; j < 3; j++)
          wbn[j] += wlnb[j];
    }
-
    MxMT(CBN, Frm[S->RefOrb].CN, S->CF);
 
-   /* .. Dynamics Flags */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Dynamics Flags section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->DynMethod = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->ConstraintsRequested = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->RefPt = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->FlexActive = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->IncludeSecondOrderFlexTerms = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", S->ShakerFileName, junk, &newline);
-   fscanf(infile, "%lf %[^\n] %[\n]", &S->DragCoef, junk, &newline);
+   node = fy_node_by_path_def(root, "/Dynamics Flags");
+   fy_node_scanf(node, "/Method %51s", dummy);
+   S->DynMethod = DecodeString(dummy);
+   fy_node_scanf(node, "/Mass Reference %51s", dummy);
+   S->RefPt = DecodeString(dummy);
+   fy_node_scanf(node,
+                 "/Drag Coefficient %lf "
+                 "/Shaker File Name %41s",
+                 &S->DragCoef, S->ShakerFileName);
 
-   /* .. Body parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Body Parameters section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nb, junk, &newline);
+   S->ConstraintsRequested = fy_node_compare_text(
+       fy_node_by_path_def(node, "/Compute Constraints"), "true", -1);
+   S->FlexActive = fy_node_compare_text(
+       fy_node_by_path_def(node, "/Flex Active"), "true", -1);
+   S->IncludeSecondOrderFlexTerms = fy_node_compare_text(
+       fy_node_by_path_def(node, "/2nd Order Flex"), "true", -1);
+   node  = fy_node_by_path_def(root, "/Bodies");
+   S->Nb = fy_node_sequence_item_count(node);
    S->Ng = S->Nb - 1;
    S->B  = (struct BodyType *)calloc(S->Nb, sizeof(struct BodyType));
    if (S->B == NULL) {
       printf("S->B calloc returned null pointer.  Bailing out!\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    S->G = (struct JointType *)calloc(S->Ng, sizeof(struct JointType));
    if (S->G == NULL) {
       printf("S->G calloc returned null pointer.  Bailing out!\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    /* Load B[0] initial attitude */
@@ -2290,29 +2259,38 @@ void InitSpacecraft(struct SCType *S) {
       S->B[0].qn[j] = qbn[j];
 
    /* .. Body Ib */
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%lf %[^\n] %[\n]", &B->mass, junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &B->I[0][0], &B->I[1][1],
-             &B->I[2][2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &B->I[0][1], &B->I[0][2],
-             &B->I[1][2], junk, &newline);
-      B->I[0][1] *= -1.0;
-      B->I[0][2] *= -1.0;
-      B->I[1][2] *= -1.0;
-      B->I[1][0]  = B->I[0][1];
-      B->I[2][0]  = B->I[0][2];
-      B->I[2][1]  = B->I[1][2];
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &B->cm[0], &B->cm[1],
-             &B->cm[2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &B->EmbeddedMom[0],
-             &B->EmbeddedMom[1], &B->EmbeddedMom[2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &B->EmbeddedDipole[0],
-             &B->EmbeddedDipole[1], &B->EmbeddedDipole[2], junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", B->GeomFileName, junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", B->NodeFileName, junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", B->FlexFileName, junk, &newline);
+   iterNode = NULL;
+   while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      long Ib;
+      struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Body");
+      fy_node_scanf(seqNode, "/Index %ld", &Ib);
+      struct BodyType *B = &S->B[Ib];
+      double moi[3], poi[3];
+      fy_node_scanf(seqNode,
+                    "/Mass %lf "
+                    "/Geometry File Name %41s "
+                    "/Node File Name %41s "
+                    "/Flex File Name %41s",
+                    &B->mass, B->GeomFileName, B->NodeFileName,
+                    B->FlexFileName);
+      assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/MOI"), moi);
+      assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/POI"), poi);
+      for (i = 0; i < 3; i++)
+         B->I[i][i] = moi[i];
+      B->I[0][1] = -poi[0];
+      B->I[0][2] = -poi[1];
+      B->I[1][2] = -poi[2];
+      B->I[1][0] = B->I[0][1];
+      B->I[2][0] = B->I[0][2];
+      B->I[2][1] = B->I[1][2];
+      assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Pos of CM"),
+                              B->cm);
+      assignYAMLToDoubleArray(
+          3, fy_node_by_path_def(seqNode, "/Constant Momentum"),
+          B->EmbeddedMom);
+      assignYAMLToDoubleArray(3,
+                              fy_node_by_path_def(seqNode, "/Constant Dipole"),
+                              B->EmbeddedDipole);
       if (S->RefPt == REFPT_JOINT)
          for (i = 0; i < 3; i++)
             B->c[i] = B->mass * B->cm[i];
@@ -2324,101 +2302,60 @@ void InitSpacecraft(struct SCType *S) {
    }
 
    /* .. Joint Parameters */
-   SomeJointsLocked = FALSE;
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Joint Parameters section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (S->Ng == 0) { /* Read and discard template */
-      for (i = 0; i < 16; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ig = 0; Ig < S->Ng; Ig++) {
-         G = &S->G[Ig];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-         G->Type = DecodeString(response);
-         fscanf(infile, "%ld %ld %[^\n] %[\n]", &G->Bin, &G->Bout, junk,
-                &newline);
+   long SomeJointsLocked = FALSE;
+   if (S->Ng > 0) {
+      node     = fy_node_by_path_def(root, "/Joints");
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Ig;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Joint");
+         fy_node_scanf(seqNode, "/Index %ld", &Ig);
+         struct JointType *G = &S->G[Ig];
+
+         fy_node_scanf(seqNode, "/Joint Type %51s ", dummy);
+         G->Type          = DecodeString(dummy);
+         long bodyInds[2] = {0};
+         assignYAMLToLongArray(
+             2, fy_node_by_path_def(seqNode, "/Body Indicies"), bodyInds);
+         G->Bin  = bodyInds[0];
+         G->Bout = bodyInds[1];
          if (G->Bin > G->Bout) {
             printf("Yo!  SC[%ld].G[%ld] inner body index (%ld) is greater than "
-                   "outer body index (%ld)\n",
+                   "outer body index "
+                   "(%ld)\n",
                    S->ID, Ig, G->Bin, G->Bout);
             printf("You must define inner bodies before outer bodies!\n");
-            exit(1);
+            exit(EXIT_FAILURE);
          }
-         Bi           = G->Bin;
-         Bo           = G->Bout;
-         S->B[Bo].Gin = Ig;
+         S->B[G->Bout].Gin = Ig;
 
-         fscanf(infile, "%ld %ld %s %[^\n] %[\n]", &G->RotDOF, &G->RotSeq,
-                response, junk, &newline);
-         G->IsSpherical = DecodeString(response);
-         if (G->IsSpherical && G->RotDOF < 3) {
-            printf("SC[%ld].G[%ld].RotDOF = %ld is inconsistent with SPHERICAL "
-                   "option.  Reconcile and try again.\n",
-                   S->ID, Ig, G->RotDOF);
-            exit(1);
-         }
-         if (G->RotSeq < 100) {
-            printf("Invalid RotSeq %ld for SC[%ld].G[%ld].  All three axes "
-                   "required.\n",
-                   G->RotSeq, S->ID, Ig);
-            exit(1);
-         }
-         i3 = G->RotSeq % 10;         /* Pick off third digit */
-         i2 = (G->RotSeq % 100) / 10; /* Extract second digit */
-         i1 = G->RotSeq / 100;        /* Pick off first digit */
+         fy_node_scanf(seqNode,
+                       "/Rot DOF %ld "
+                       "/Rot Sequence %ld "
+                       "/Rot Type %51s",
+                       &G->RotDOF, &G->RotSeq, dummy);
+         long i3 = G->RotSeq % 10;         /* Pick off third digit */
+         long i2 = (G->RotSeq % 100) / 10; /* Extract second digit */
+         long i1 = G->RotSeq / 100;        /* Pick off first digit */
          if (i1 == i2 || i1 == i3 || i2 == i3) {
             printf("Invalid RotSeq %ld for SC[%ld].G[%ld].  Repeated indices "
                    "are not allowed.\n",
                    G->RotSeq, S->ID, Ig);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
 
-         fscanf(infile, "%ld %ld %[^\n] %[\n]", &G->TrnDOF, &G->TrnSeq, junk,
-                &newline);
-         if (G->TrnSeq < 100) {
-            printf("Invalid TrnSeq %ld for SC[%ld].G[%ld].  All three axes "
-                   "required.\n",
-                   G->TrnSeq, S->ID, Ig);
-            exit(1);
-         }
-         i3 = G->TrnSeq % 10;         /* Pick off third digit */
-         i2 = (G->TrnSeq % 100) / 10; /* Extract second digit */
-         i1 = G->TrnSeq / 100;        /* Pick off first digit */
-         if (i1 == i2 || i1 == i3 || i2 == i3) {
-            printf("Invalid TrnSeq %ld for SC[%ld].G[%ld].  Repeated indices "
-                   "are not allowed.\n",
-                   G->TrnSeq, S->ID, Ig);
-            exit(1);
-         }
-         fscanf(infile, "%s %s %s %[^\n] %[\n]", response1, response2,
-                response3, junk, &newline);
-         G->RotLocked[0] = DecodeString(response1);
-         G->RotLocked[1] = DecodeString(response2);
-         G->RotLocked[2] = DecodeString(response3);
-         fscanf(infile, "%s %s %s %[^\n] %[\n]", response1, response2,
-                response3, junk, &newline);
-         G->TrnLocked[0] = DecodeString(response1);
-         G->TrnLocked[1] = DecodeString(response2);
-         G->TrnLocked[2] = DecodeString(response3);
-
-         for (i = 0; i < 3; i++) {
-            if (G->RotLocked[i] || G->TrnLocked[i])
-               SomeJointsLocked = TRUE;
-         }
+         assignYAMLToBoolArray(
+             3, fy_node_by_path_def(seqNode, "/Rot DOF Locked"), G->RotLocked);
+         assignYAMLToBoolArray(
+             3, fy_node_by_path_def(seqNode, "/Trn DOF Locked"), G->TrnLocked);
+         for (i = 0; i < 3; i++)
+            SomeJointsLocked = G->RotLocked[i] || G->TrnLocked[i];
 
          /* Load in initial angles and angular rates */
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->Ang[0], &G->Ang[1],
-                &G->Ang[2], junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->AngRate[0],
-                &G->AngRate[1], &G->AngRate[2], junk, &newline);
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Init Angles"), G->Ang);
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Init Angle Rates"), G->AngRate);
          for (k = 0; k < 3; k++) {
             G->Ang[k]     *= D2R;
             G->AngRate[k] *= D2R;
@@ -2429,27 +2366,29 @@ void InitSpacecraft(struct SCType *S) {
             G->AngRate[k] = 0.0;
          }
          /* Load in initial displacements and rates */
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->Pos[0], &G->Pos[1],
-                &G->Pos[2], junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->PosRate[0],
-                &G->PosRate[1], &G->PosRate[2], junk, &newline);
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Init Displacement"), G->Pos);
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Init Displacement Rates"),
+             G->PosRate);
          /* Protect against more inputs than TrnDOF */
          for (k = G->TrnDOF; k < 3; k++) {
             G->Pos[k]     = 0.0;
             G->PosRate[k] = 0.0;
          }
 
-         fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3,
-                &Seq, junk, &newline);
-         A2C(Seq, Ang1 * D2R, Ang2 * D2R, Ang3 * D2R, G->CGiBi);
-         fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3,
-                &Seq, junk, &newline);
-         A2C(Seq, Ang1 * D2R, Ang2 * D2R, Ang3 * D2R, G->CBoGo);
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Bi-Gi Angles"), ang,
+                            &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, G->CGiBi);
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Bo-Go Angles"), ang,
+                            &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, G->CBoGo);
 
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &pIn[0], &pIn[1], &pIn[2],
-                junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &pOut[0], &pOut[1],
-                &pOut[2], junk, &newline);
+         double pIn[3], pOut[3];
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Pos wrt Inner Body"), pIn);
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Pos wrt Outer Body"), pOut);
 
          if (S->RefPt == REFPT_JOINT) {
             for (j = 0; j < 3; j++) {
@@ -2458,11 +2397,11 @@ void InitSpacecraft(struct SCType *S) {
             }
          } else {
             for (j = 0; j < 3; j++) {
-               G->RigidRin[j]  = pIn[j] - S->B[Bi].cm[j];
-               G->RigidRout[j] = pOut[j] - S->B[Bo].cm[j];
+               G->RigidRin[j]  = pIn[j] - S->B[G->Bin].cm[j];
+               G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
             }
          }
-         fscanf(infile, "%s %[^\n] %[\n]", G->ParmFileName, junk, &newline);
+         fy_node_scanf(seqNode, "/Parm File Name %41s", G->ParmFileName);
 
          if (G->Type == PASSIVE_JOINT)
             InitPassiveJoint(G, S);
@@ -2472,433 +2411,437 @@ void InitSpacecraft(struct SCType *S) {
    }
 
    /* .. Wheel parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Wheel Parameters section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->WhlDragActive = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   S->WhlJitterActive = DecodeString(response);
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nw, junk, &newline);
+   fy_node_scanf(root,
+                 "/Wheel Params/Drag %ld "
+                 "/Wheel Params/Jitter %ld",
+                 &S->WhlDragActive, &S->WhlJitterActive);
+
+   node   = fy_node_by_path_def(root, "/Wheels");
+   S->Nw  = fy_node_sequence_item_count(node);
    S->Whl = (struct WhlType *)calloc(S->Nw, sizeof(struct WhlType));
-   if (S->Nw == 0) {
-      for (i = 0; i < 8; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Iw = 0; Iw < S->Nw; Iw++) {
-         W = &S->Whl[Iw];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &W->H, junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &W->A[0], &W->A[1],
-                &W->A[2], junk, &newline);
+   if (S->Nw > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Iw                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Wheel");
+         fy_node_scanf(seqNode, "/Index %ld", &Iw);
+         struct WhlType *W = &S->Whl[Iw];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 W->A);
          UNITV(W->A);
          PerpBasis(W->A, W->Uaxis, W->Vaxis);
-         fscanf(infile, "%lf %lf %[^\n] %[\n]", &W->Tmax, &W->Hmax, junk,
-                &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &W->J, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &W->Body, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &W->Node, junk, &newline);
+         fy_node_scanf(seqNode,
+                       "/Initial Momentum %lf "
+                       "/Max Torque %lf "
+                       "/Max Momentum %lf "
+                       "/Rotor Inertia %lf "
+                       "/Body/Index %ld "
+                       "/Node %ld "
+                       "/Drag-Jitter File Name %41s",
+                       &W->H, &W->Tmax, &W->Hmax, &W->J, &W->Body, &W->Node,
+                       W->DragJitterFileName);
          if (W->Node >= S->B[W->Body].NumNodes) {
             printf("SC[%ld].Whl[%ld] Node out of range\n", S->ID, Iw);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
-         fscanf(infile, "%s %[^\n] %[\n]", W->DragJitterFileName, junk,
-                &newline);
          InitWhlDragAndJitter(W);
       }
    }
 
    /* .. MTB parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before MTB Parameters section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nmtb, junk, &newline);
-   S->MTB = (struct MTBType *)calloc(S->Nmtb, sizeof(struct MTBType));
-   if (S->Nmtb == 0) {
-      for (i = 0; i < 4; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Im = 0; Im < S->Nmtb; Im++) {
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf  %[^\n] %[\n]", &S->MTB[Im].Mmax, junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &S->MTB[Im].A[0],
-                &S->MTB[Im].A[1], &S->MTB[Im].A[2], junk, &newline);
-         UNITV(S->MTB[Im].A);
-         fscanf(infile, "%ld %[^\n] %[\n]", &S->MTB[Im].Node, junk, &newline);
-         if (S->MTB[Im].Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].MTB[%ld] Node out of range\n", S->ID, Im);
-            exit(1);
+   node    = fy_node_by_path_def(root, "/MTBs");
+   S->Nmtb = fy_node_sequence_item_count(node);
+   S->MTB  = (struct MTBType *)calloc(S->Nmtb, sizeof(struct MTBType));
+   if (S->Nmtb > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Im                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/MTB");
+         fy_node_scanf(seqNode, "/Index %ld", &Im);
+         struct MTBType *MTB = &S->MTB[Im];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 MTB->A);
+         UNITV(MTB->A);
+         fy_node_scanf(seqNode,
+                       "/Saturation %lf "
+                       "/Node %ld ",
+                       &MTB->Mmax, &MTB->Node);
+         if (MTB->Node >= S->B[0].NumNodes) {
+            printf("SC[%ld].Whl[%ld] Node out of range\n", S->ID, Im);
+            exit(EXIT_FAILURE);
          }
       }
    }
 
    /* .. Thruster parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before Thruster Parameters "
-             "section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nthr, junk, &newline);
-   S->Thr = (struct ThrType *)calloc(S->Nthr, sizeof(struct ThrType));
-   if (S->Nthr == 0) {
-      for (i = 0; i < 6; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (It = 0; It < S->Nthr; It++) {
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-         S->Thr[It].Mode = DecodeString(response);
-         fscanf(infile, "%lf %[^\n] %[\n]", &S->Thr[It].Fmax, junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &S->Thr[It].A[0],
-                &S->Thr[It].A[1], &S->Thr[It].A[2], junk, &newline);
-         UNITV(S->Thr[It].A);
-         fscanf(infile, "%ld %[^\n] %[\n]", &S->Thr[It].Body, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &S->Thr[It].Node, junk, &newline);
-         if (S->Thr[It].Node >= S->B[S->Thr[It].Body].NumNodes) {
+   node    = fy_node_by_path_def(root, "/Thrusters");
+   S->Nthr = fy_node_sequence_item_count(node);
+   S->Thr  = (struct ThrType *)calloc(S->Nthr, sizeof(struct ThrType));
+   if (S->Nthr > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long It                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Thruster");
+         fy_node_scanf(seqNode, "/Index %ld", &It);
+         struct ThrType *T = &S->Thr[It];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 T->A);
+         UNITV(T->A);
+         fy_node_scanf(seqNode,
+                       "/Mode %51s "
+                       "/Force %lf "
+                       "/Body/Index %ld "
+                       "/Node %ld",
+                       dummy, &T->Fmax, &T->Body, &T->Node);
+         T->Mode = DecodeString(dummy);
+         if (T->Node >= S->B[T->Body].NumNodes) {
             printf("SC[%ld].Thr[%ld] Node out of range\n", S->ID, It);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
       }
    }
 
-   /* .. Gyro Parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before Gyro section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Ngyro, junk, &newline);
-   S->Gyro = (struct GyroType *)calloc(S->Ngyro, sizeof(struct GyroType));
-   if (S->Ngyro == 0) {
-      for (i = 0; i < 11; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ig = 0; Ig < S->Ngyro; Ig++) {
-         Gyro = &S->Gyro[Ig];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->SampleTime, junk, &newline);
+   /* .. Gyro parameters */
+   node     = fy_node_by_path_def(root, "/Gyros");
+   S->Ngyro = fy_node_sequence_item_count(node);
+   S->Gyro  = (struct GyroType *)calloc(S->Ngyro, sizeof(struct GyroType));
+   if (S->Ngyro > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Ig                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Gyro");
+         fy_node_scanf(seqNode, "/Index %ld", &Ig);
+         struct GyroType *Gyro = &S->Gyro[Ig];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 Gyro->Axis);
+         UNITV(Gyro->Axis);
+         double biasTime;
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Max Rate %lf "
+                       "/Scale Factor %lf "
+                       "/Quantization %lf "
+                       "/Angle Random Walk %lf "
+                       "/Bias Stability %lf "
+                       "/Bias Stability Timespan %lf "
+                       "/Angle Noise %lf "
+                       "/Initial Bias %lf "
+                       "/Node %ld",
+                       &Gyro->SampleTime, &Gyro->MaxRate, &Gyro->Scale,
+                       &Gyro->Quant, &Gyro->SigV, &Gyro->SigU, &biasTime,
+                       &Gyro->SigE, &Gyro->Bias, &Gyro->Node);
+
          Gyro->MaxCounter = (long)(Gyro->SampleTime / DTSIM + 0.5);
          if (Gyro->SampleTime < DTSIM) {
             printf("Error:  Gyro[%ld].SampleTime smaller than DTSIM.\n", Ig);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
-         Gyro->SampleCounter = Gyro->MaxCounter;
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &Gyro->Axis[0],
-                &Gyro->Axis[1], &Gyro->Axis[2], junk, &newline);
-         UNITV(Gyro->Axis);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->MaxRate, junk, &newline);
-         Gyro->MaxRate *= D2R;
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->Scale, junk, &newline);
-         Gyro->Scale = 1.0 + 1.0E-6 * Gyro->Scale;
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->Quant, junk, &newline);
-         Gyro->Quant *= D2R / 3600.0;
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->SigV, junk, &newline);
-         Gyro->SigV *= D2R / 60.0; /* from deg/rt-hr to rad/rt-sec */
-         fscanf(infile, "%lf %lf %[^\n] %[\n]", &Gyro->SigU, &BiasTime, junk,
-                &newline);
-         Gyro->SigU *= D2R / 3600.0 / sqrt(BiasTime * 3600.0);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->SigE, junk, &newline);
-         Gyro->SigE *= D2R / 3600.0;
-         fscanf(infile, "%lf %[^\n] %[\n]", &Gyro->Bias, junk, &newline);
-         Gyro->Bias *= D2R / 3600.0;
-         fscanf(infile, "%ld %[^\n] %[\n]", &Gyro->Node, junk, &newline);
+         Gyro->SampleCounter  = Gyro->MaxCounter;
+         Gyro->MaxRate       *= D2R;
+         Gyro->Scale          = 1.0 + 1.0E-6 * Gyro->Scale;
+         Gyro->Quant         *= D2R / 3600.0;
+         Gyro->SigV          *= D2R / 60.0; /* from deg/rt-hr to rad/rt-sec */
+         Gyro->SigU          *= D2R / 3600.0 / sqrt(biasTime * 3600.0);
+         Gyro->SigE          *= D2R / 3600.0;
+         Gyro->Bias          *= D2R / 3600.0;
          if (Gyro->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].Gyro Node out of range\n", S->ID);
-            exit(1);
+            printf("SC[%ld].Gyro[%ld] Node out of range\n", S->ID, Ig);
+            exit(EXIT_FAILURE);
          }
-
          Gyro->BiasStabCoef = Gyro->SigU * sqrt(Gyro->SampleTime);
          Gyro->ARWCoef =
              sqrt(Gyro->SigV * Gyro->SigV / Gyro->SampleTime +
                   Gyro->SigU * Gyro->SigU * Gyro->SampleTime / 12.0);
          Gyro->AngNoiseCoef = Gyro->SigE / sqrt(Gyro->SampleTime);
-         Gyro->CorrCoef     = 1.0 - Gyro->SampleTime / (BiasTime * 3600.0);
+         Gyro->CorrCoef     = 1.0 - Gyro->SampleTime / (biasTime * 3600.0);
          Gyro->Angle        = 0.0;
       }
    }
 
-   /* .. Magnetometer Parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before Magnetometer section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nmag, junk, &newline);
-   S->MAG = (struct MagnetometerType *)calloc(S->Nmag,
-                                              sizeof(struct MagnetometerType));
-   if (S->Nmag == 0) {
-      for (i = 0; i < 8; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Im = 0; Im < S->Nmag; Im++) {
-         MAG = &S->MAG[Im];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &MAG->SampleTime, junk, &newline);
+   /* .. Magnetometer parameters */
+   node    = fy_node_by_path_def(root, "/Magnetometers");
+   S->Nmag = fy_node_sequence_item_count(node);
+   S->MAG  = (struct MagnetometerType *)calloc(S->Nmag,
+                                               sizeof(struct MagnetometerType));
+   if (S->Nmag > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Im = 0;
+         struct fy_node *seqNode =
+             fy_node_by_path_def(iterNode, "/Magnetometer");
+         fy_node_scanf(seqNode, "/Index %ld", &Im);
+         struct MagnetometerType *MAG = &S->MAG[Im];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 MAG->Axis);
+         UNITV(MAG->Axis);
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Saturation %lf "
+                       "/Scale Factor %lf "
+                       "/Quantization %lf "
+                       "/Noise %lf "
+                       "/Node %ld",
+                       &MAG->SampleTime, &MAG->Saturation, &MAG->Scale,
+                       &MAG->Quant, &MAG->Noise, &MAG->Node);
+
          MAG->MaxCounter = (long)(MAG->SampleTime / DTSIM + 0.5);
          if (MAG->SampleTime < DTSIM) {
             printf("Error:  MAG[%ld].SampleTime smaller than DTSIM.\n", Im);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
          MAG->SampleCounter = MAG->MaxCounter;
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &MAG->Axis[0],
-                &MAG->Axis[1], &MAG->Axis[2], junk, &newline);
-         UNITV(MAG->Axis);
-         fscanf(infile, "%lf %[^\n] %[\n]", &MAG->Saturation, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &MAG->Scale, junk, &newline);
-         MAG->Scale = 1.0 + 1.0E-6 * MAG->Scale;
-         fscanf(infile, "%lf %[^\n] %[\n]", &MAG->Quant, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &MAG->Noise, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &MAG->Node, junk, &newline);
          if (MAG->Node >= S->B[0].NumNodes) {
             printf("SC[%ld].MAG[%ld] Node out of range\n", S->ID, Im);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
+         MAG->Scale = 1.0 + 1.0E-6 * MAG->Scale;
       }
    }
 
-   /* .. Coarse Sun Sensors */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before Coarse Sun Sensor "
-             "section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Ncss, junk, &newline);
-   S->CSS = (struct CssType *)calloc(S->Ncss, sizeof(struct CssType));
-   if (S->Ncss == 0) {
-      for (i = 0; i < 8; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ic = 0; Ic < S->Ncss; Ic++) {
-         CSS = &S->CSS[Ic];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &CSS->SampleTime, junk, &newline);
+   /* .. Coarse Sun Sensor parameters */
+   node    = fy_node_by_path_def(root, "/CSSs");
+   S->Ncss = fy_node_sequence_item_count(node);
+   S->CSS  = (struct CssType *)calloc(S->Ncss, sizeof(struct CssType));
+   if (S->Ncss > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Ic                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/CSS");
+         fy_node_scanf(seqNode, "/Index %ld", &Ic);
+         struct CssType *CSS = &S->CSS[Ic];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 CSS->Axis);
+         UNITV(CSS->Axis);
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Half Cone Angle %lf "
+                       "/Scale Factor %lf "
+                       "/Quantization %lf "
+                       "/Body/Index %ld "
+                       "/Node %ld",
+                       &CSS->SampleTime, &CSS->FovHalfAng, &CSS->Scale,
+                       &CSS->Quant, &CSS->Body, &CSS->Node);
+
          CSS->MaxCounter = (long)(CSS->SampleTime / DTSIM + 0.5);
          if (CSS->SampleTime < DTSIM) {
             printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ic);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
-         CSS->SampleCounter = CSS->MaxCounter;
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &CSS->Axis[0],
-                &CSS->Axis[1], &CSS->Axis[2], junk, &newline);
-         UNITV(CSS->Axis);
-         fscanf(infile, "%lf %[^\n] %[\n]", &CSS->FovHalfAng, junk, &newline);
-         CSS->FovHalfAng *= D2R;
-         CSS->CosFov      = cos(CSS->FovHalfAng);
-         fscanf(infile, "%lf %[^\n] %[\n]", &CSS->Scale, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &CSS->Quant, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &CSS->Body, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &CSS->Node, junk, &newline);
          if (CSS->Node >= S->B[CSS->Body].NumNodes) {
             printf("SC[%ld].CSS[%ld] Node out of range\n", S->ID, Ic);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
+         CSS->Scale       = 1.0 + 1.0E-6 * CSS->Scale;
+         CSS->FovHalfAng *= D2R;
+         CSS->CosFov      = cos(CSS->FovHalfAng);
       }
    }
 
-   /* .. Fine Sun Sensors */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf(
-          "Error:  Malformed SC input file before Fine Sun Sensor section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nfss, junk, &newline);
-   S->FSS = (struct FssType *)calloc(S->Nfss, sizeof(struct FssType));
-   if (S->Nfss == 0) {
-      for (i = 0; i < 8; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ifss = 0; Ifss < S->Nfss; Ifss++) {
-         FSS = &S->FSS[Ifss];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &FSS->SampleTime, junk, &newline);
+   /* .. Fine Sun Sensor parameters */
+   node    = fy_node_by_path_def(root, "/FSSs");
+   S->Nfss = fy_node_sequence_item_count(node);
+   S->FSS  = (struct FssType *)calloc(S->Nfss, sizeof(struct FssType));
+   if (S->Nfss > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long If                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FSS");
+         fy_node_scanf(seqNode, "/Index %ld", &If);
+         struct FssType *FSS = &S->FSS[If];
+
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
+                            ang, &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FSS->CB);
+         C2Q(FSS->CB, FSS->qb);
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/FOV Size"),
+                                 FSS->FovHalfAng);
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Boresight Axis %ld "
+                       "/Noise Equivalent Angle %lf "
+                       "/Quantization %lf "
+                       "/Node %ld",
+                       &FSS->SampleTime, &FSS->BoreAxis, &FSS->NEA, &FSS->Quant,
+                       &FSS->Node);
+
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
-            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", Ifss);
-            exit(1);
+            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", If);
+            exit(EXIT_FAILURE);
          }
          FSS->SampleCounter = FSS->MaxCounter;
-         fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3,
-                &Seq, junk, &newline);
-         A2C(Seq, Ang1 * D2R, Ang2 * D2R, Ang3 * D2R, FSS->CB);
-         C2Q(FSS->CB, FSS->qb);
-         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-         FSS->BoreAxis = DecodeString(response);
-         FSS->H_Axis   = (FSS->BoreAxis + 1) % 3;
-         FSS->V_Axis   = (FSS->BoreAxis + 2) % 3;
-         fscanf(infile, "%lf %lf %[^\n] %[\n]", &FSS->FovHalfAng[0],
-                &FSS->FovHalfAng[1], junk, &newline);
-         for (i = 0; i < 2; i++) {
-            FSS->FovHalfAng[i] *= 0.5 * D2R;
-         }
-         fscanf(infile, "%lf %[^\n] %[\n]", &FSS->NEA, junk, &newline);
-         FSS->NEA *= D2R;
-         fscanf(infile, "%lf %[^\n] %[\n]", &FSS->Quant, junk, &newline);
-         FSS->Quant *= D2R;
-         fscanf(infile, "%ld %[^\n] %[\n]", &FSS->Node, junk, &newline);
+         FSS->H_Axis        = (FSS->BoreAxis + 1) % 3;
+         FSS->V_Axis        = (FSS->BoreAxis + 2) % 3;
          if (FSS->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].FSS[%ld] Node out of range\n", S->ID, Ifss);
-            exit(1);
+            printf("SC[%ld].FSS[%ld] Node out of range\n", S->ID, If);
+            exit(EXIT_FAILURE);
          }
+         for (i = 0; i < 2; i++)
+            FSS->FovHalfAng[i] *= 0.5 * D2R;
+         FSS->NEA   *= D2R;
+         FSS->Quant *= D2R;
       }
    }
 
-   /* .. Star Trackers */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before Star Tracker section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nst, junk, &newline);
+   /* .. Star Tracker parameters */
+   node   = fy_node_by_path_def(root, "/STs");
+   S->Nst = fy_node_sequence_item_count(node);
    S->ST =
        (struct StarTrackerType *)calloc(S->Nst, sizeof(struct StarTrackerType));
-   if (S->Nst == 0) {
-      for (i = 0; i < 8; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ist = 0; Ist < S->Nst; Ist++) {
-         ST = &S->ST[Ist];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &ST->SampleTime, junk, &newline);
+   if (S->Nst > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Ist                = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/ST");
+         fy_node_scanf(seqNode, "/Index %ld", &Ist);
+         struct StarTrackerType *ST = &S->ST[Ist];
+
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
+                            ang, &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, ST->CB);
+         C2Q(ST->CB, ST->qb);
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
+                                 ST->FovHalfAng);
+         assignYAMLToDoubleArray(
+             3, fy_node_by_path_def(seqNode, "/Noise Equivalent Angle"),
+             ST->NEA);
+         struct fy_node *excAng =
+             fy_node_by_path_def(seqNode, "/Exclusion Angles");
+         fy_node_scanf(excAng,
+                       "/Sun %lf "
+                       "/Earth %lf "
+                       "/Luna %lf",
+                       &ST->SunExclAng, &ST->EarthExclAng, &ST->MoonExclAng);
+
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Boresight Axis %ld "
+                       "/Node %ld",
+                       &ST->SampleTime, &ST->BoreAxis, &ST->Node);
+
          ST->MaxCounter = (long)(ST->SampleTime / DTSIM + 0.5);
          if (ST->SampleTime < DTSIM) {
             printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ist);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
          ST->SampleCounter = ST->MaxCounter;
-         fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3,
-                &Seq, junk, &newline);
-         A2C(Seq, Ang1 * D2R, Ang2 * D2R, Ang3 * D2R, ST->CB);
-         C2Q(ST->CB, ST->qb);
-         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-         ST->BoreAxis = DecodeString(response);
-         ST->H_Axis   = (ST->BoreAxis + 1) % 3;
-         ST->V_Axis   = (ST->BoreAxis + 2) % 3;
-         fscanf(infile, "%lf %lf %[^\n] %[\n]", &ST->FovHalfAng[0],
-                &ST->FovHalfAng[1], junk, &newline);
+         ST->H_Axis        = (ST->BoreAxis + 1) % 3;
+         ST->V_Axis        = (ST->BoreAxis + 2) % 3;
+         if (ST->Node >= S->B[0].NumNodes) {
+            printf("SC[%ld].ST[%ld] Node out of range\n", S->ID, Ist);
+            exit(EXIT_FAILURE);
+         }
          for (i = 0; i < 2; i++) {
             ST->FovHalfAng[i] *= 0.5 * D2R;
             ST->CosFov[i]      = cos(ST->FovHalfAng[i]);
          }
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &ST->SunExclAng,
-                &ST->EarthExclAng, &ST->MoonExclAng, junk, &newline);
          ST->SunExclAng      *= D2R;
          ST->EarthExclAng    *= D2R;
          ST->MoonExclAng     *= D2R;
          ST->CosSunExclAng    = cos(ST->SunExclAng);
          ST->CosEarthExclAng  = cos(ST->EarthExclAng);
          ST->CosMoonExclAng   = cos(ST->MoonExclAng);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &ST->NEA[0], &ST->NEA[1],
-                &ST->NEA[2], junk, &newline);
          for (i = 0; i < 3; i++)
             ST->NEA[i] *= D2R / 3600.0;
-         fscanf(infile, "%ld %[^\n] %[\n]", &ST->Node, junk, &newline);
-         if (ST->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].ST[%ld] Node out of range\n", S->ID, Ist);
-            exit(1);
-         }
       }
    }
 
-   /* .. GPS Sensors */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before GPS section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Ngps, junk, &newline);
-   S->GPS = (struct GpsType *)calloc(S->Ngps, sizeof(struct GpsType));
-   if (S->Ngps == 0) {
-      for (i = 0; i < 6; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ig = 0; Ig < S->Ngps; Ig++) {
-         GPS = &S->GPS[Ig];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &GPS->SampleTime, junk, &newline);
+   /* .. GPS parameters */
+   node    = fy_node_by_path_def(root, "/GPSs");
+   S->Ngps = fy_node_sequence_item_count(node);
+   S->GPS  = (struct GpsType *)calloc(S->Ngps, sizeof(struct GpsType));
+   if (S->Ngps > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Ig                 = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/GPS");
+         fy_node_scanf(seqNode, "/Index %ld", &Ig);
+         struct GpsType *GPS = &S->GPS[Ig];
+
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Position Noise %lf "
+                       "/Velocity Noise %lf "
+                       "/Time Noise %lf "
+                       "/Node %ld",
+                       &GPS->SampleTime, &GPS->PosNoise, &GPS->VelNoise,
+                       &GPS->TimeNoise, &GPS->Node);
+
          GPS->MaxCounter = (long)(GPS->SampleTime / DTSIM + 0.5);
          if (GPS->SampleTime < DTSIM) {
             printf("Error:  GPS[%ld].SampleTime smaller than DTSIM.\n", Ig);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
          GPS->SampleCounter = GPS->MaxCounter;
-         fscanf(infile, "%lf %[^\n] %[\n]", &GPS->PosNoise, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &GPS->VelNoise, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &GPS->TimeNoise, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &GPS->Node, junk, &newline);
          if (GPS->Node >= S->B[0].NumNodes) {
             printf("SC[%ld].GPS[%ld] Node out of range\n", S->ID, Ig);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
       }
    }
 
-   /* .. Accelerometers */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   if (junk[0] != '*') {
-      printf("Error:  Malformed SC input file before Accelerometer section\n.");
-      exit(1);
-   }
-   fscanf(infile, "%ld %[^\n] %[\n]", &S->Nacc, junk, &newline);
+   /* .. Accelerometer parameters */
+   node     = fy_node_by_path_def(root, "/Accelerometers");
+   S->Nacc  = fy_node_sequence_item_count(node);
    S->Accel = (struct AccelType *)calloc(S->Nacc, sizeof(struct AccelType));
-   if (S->Nacc == 0) {
-      for (i = 0; i < 10; i++)
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
-      for (Ia = 0; Ia < S->Nacc; Ia++) {
-         Accel = &S->Accel[Ia];
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->SampleTime, junk, &newline);
+   if (S->Nacc > 0) {
+      iterNode = NULL;
+      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+         long Ia = 0;
+         struct fy_node *seqNode =
+             fy_node_by_path_def(iterNode, "/Accelerometer");
+         fy_node_scanf(seqNode, "/Index %ld", &Ia);
+         struct AccelType *Accel = &S->Accel[Ia];
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
+                                 Accel->Axis);
+         UNITV(Accel->Axis);
+         double biasTime;
+         fy_node_scanf(seqNode,
+                       "/Sample Time %lf "
+                       "/Max Acceleration %lf "
+                       "/Scale Factor %lf "
+                       "/Quantization %lf "
+                       "/DV Random Walk %lf "
+                       "/Bias Stability %lf "
+                       "/Bias Stability TimeSpan %lf "
+                       "/DV Noise %lf "
+                       "/Initial Bias %lf "
+                       "/Node %ld",
+                       &Accel->SampleTime, &Accel->MaxAcc, &Accel->Scale,
+                       &Accel->Quant, &Accel->SigV, &Accel->SigU, &biasTime,
+                       &Accel->SigE, &Accel->Bias, &Accel->Node);
+
          Accel->MaxCounter = (long)(Accel->SampleTime / DTSIM + 0.5);
          if (Accel->SampleTime < DTSIM) {
             printf("Error:  Accel[%ld].SampleTime smaller than DTSIM.\n", Ia);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
          Accel->SampleCounter = Accel->MaxCounter;
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &Accel->Axis[0],
-                &Accel->Axis[1], &Accel->Axis[2], junk, &newline);
-         UNITV(Accel->Axis);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->MaxAcc, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->Scale, junk, &newline);
-         Accel->Scale = 1.0 + 1.0E-6 * Accel->Scale;
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->Quant, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->SigV, junk, &newline);
-         Accel->SigV /= 60.0; /* from m/s/rt-hr to m/s/rt-sec */
-         fscanf(infile, "%lf %lf %[^\n] %[\n]", &Accel->SigU, &BiasTime, junk,
-                &newline);
-         Accel->SigU /= sqrt(BiasTime * 3600.0);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->SigE, junk, &newline);
-         fscanf(infile, "%lf %[^\n] %[\n]", &Accel->Bias, junk, &newline);
-         fscanf(infile, "%ld %[^\n] %[\n]", &Accel->Node, junk, &newline);
          if (Accel->Node >= S->B[0].NumNodes) {
             printf("SC[%ld].Accel[%ld] Node out of range\n", S->ID, Ia);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
-         Accel->BiasStabCoef = Accel->SigU * sqrt(Accel->SampleTime);
+         Accel->Scale         = 1.0 + 1.0E-6 * Accel->Scale;
+         Accel->SigV         /= 60.0; /* from m/s/rt-hr to m/s/rt-sec */
+         Accel->SigU         /= sqrt(biasTime * 3600.0);
+         Accel->BiasStabCoef  = Accel->SigU * sqrt(Accel->SampleTime);
          Accel->DVRWCoef =
              sqrt(Accel->SigV * Accel->SigV / Accel->SampleTime +
                   Accel->SigU * Accel->SigU * Accel->SampleTime / 12.0);
          Accel->DVNoiseCoef = Accel->SigE / sqrt(Accel->SampleTime);
-         Accel->CorrCoef    = 1.0 - Accel->SampleTime / (BiasTime * 3600.0);
+         Accel->CorrCoef    = 1.0 - Accel->SampleTime / (biasTime * 3600.0);
          Accel->DV          = 0.0;
       }
    }
 
    /* .. Initialize some Orbit and Formation variables */
-   O  = &Orb[S->RefOrb];
-   Fr = &Frm[S->RefOrb];
-   if (UseCM) {
+   struct OrbitType *O      = &Orb[S->RefOrb];
+   struct FormationType *Fr = &Frm[S->RefOrb];
+   double pcmn[3], wxr[3], wxrn[3], psn[3], vsn[3], rh[3], vh[3];
+   if (useCM) {
       if (Fr->FixedInFrame == 'L') {
-         MTxV(Fr->CL, PosVec, S->PosEH);
-         MTxV(Fr->CL, VelVec, S->VelEH);
+         MTxV(Fr->CL, posVec, S->PosEH);
+         MTxV(Fr->CL, velVec, S->VelEH);
          if (O->Regime == ORB_ZERO) {
             for (i = 0; i < 3; i++) {
                S->PosR[i] = S->PosEH[i];
@@ -2912,8 +2855,8 @@ void InitSpacecraft(struct SCType *S) {
                        S->PosR, S->VelR);
          }
       } else {
-         MTxV(Fr->CN, PosVec, S->PosR);
-         MTxV(Fr->CN, VelVec, S->VelR);
+         MTxV(Fr->CN, posVec, S->PosR);
+         MTxV(Fr->CN, velVec, S->VelR);
          if (O->Regime == ORB_ZERO) {
             for (i = 0; i < 3; i++) {
                S->PosEH[i] = S->PosR[i];
@@ -2927,6 +2870,7 @@ void InitSpacecraft(struct SCType *S) {
                        S->VelEH);
          }
       }
+
       MTxV(S->B[0].CN, S->cm, pcmn);
       for (j = 0; j < 3; j++) {
          psn[j] = S->PosR[j] - Fr->PosR[j] - pcmn[j];
@@ -2940,9 +2884,10 @@ void InitSpacecraft(struct SCType *S) {
       MxV(Fr->CN, vsn, S->VelF);
    } else {
       for (j = 0; j < 3; j++) {
-         S->PosF[j] = PosVec[j];
-         S->VelF[j] = VelVec[j];
+         S->PosF[j] = posVec[j];
+         S->VelF[j] = velVec[j];
       }
+      double psl[3], vsl[3], pfl[3], pcml[3], wxrl[3];
       MTxV(S->B[0].CN, S->cm, pcmn);
       VxV(S->B[0].wn, S->cm, wxr);
       MTxV(S->B[0].CN, wxr, wxrn);
@@ -3007,18 +2952,17 @@ void InitSpacecraft(struct SCType *S) {
       FindCLN(S->PosN, S->VelN, S->CLN, S->wln);
    }
 
-   fclose(infile);
-
    if (S->DynMethod == DYN_ORDER_N) {
       if (SomeJointsLocked || S->FlexActive || S->ConstraintsRequested) {
          printf("Order-N dynamics doesn't (yet) support flex modes, constraint "
-                "computation, or locking joints.\n");
+                "computation, or "
+                "locking joints.\n");
          printf("Switching over to Gaussian Elimination.\n");
          S->DynMethod = DYN_GAUSS_ELIM;
       }
    }
 
-   D = &S->Dyn;
+   struct DynType *D = &S->Dyn;
    InitRigidDyn(S);
    InitFlexModes(S);
    InitOrderNDynamics(S);
@@ -3037,7 +2981,7 @@ void InitSpacecraft(struct SCType *S) {
 
    /* .. Load geometry */
    for (j = 0; j < S->Nb; j++) {
-      OldNgeom = Ngeom;
+      long OldNgeom = Ngeom;
       Geom = LoadWingsObjFile(SCModelPath, S->B[j].GeomFileName, &Matl, &Nmatl,
                               Geom, &Ngeom, &S->B[j].GeomTag,
                               AeroShadowsActive || SolPressShadowsActive);
@@ -3068,15 +3012,16 @@ void InitSpacecraft(struct SCType *S) {
       S->IdealAct[i].FrcDelay = NULL;
       S->IdealAct[i].TrqDelay = NULL;
    }
-   for (Iw = 0; Iw < S->Nw; Iw++) {
+   for (long Iw = 0; Iw < S->Nw; Iw++) {
       S->Whl[Iw].Delay = NULL;
    }
-   for (Im = 0; Im < S->Nmtb; Im++) {
+   for (long Im = 0; Im < S->Nmtb; Im++) {
       S->MTB[Im].Delay = NULL;
    }
-   for (It = 0; It < S->Nthr; It++) {
+   for (long It = 0; It < S->Nthr; It++) {
       S->Thr[It].Delay = NULL;
    }
+   fy_document_destroy(fyd);
 }
 /*********************************************************************/
 void LoadTdrs(void) {
