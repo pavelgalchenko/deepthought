@@ -4318,9 +4318,6 @@ long LoadSpiceEphems(double JD){
    long Iw;
    int i;
 
-   // However, some smaller moons do not have valid orientation data. 
-   // We replace these with the orientation of
-
    char MajorBodiesNamesState[55][15] = {"SUN", "MERCURY", "VENUS", "EARTH", "MARS", "JUPITER", "SATURN",
        "URANUS", "NEPTUNE", "PLUTO", "MOON", "PHOBOS", "DEIMOS", "IO",
        "EUROPA", "GANYMEDE", "CALLISTO", "AMALTHEA", "HIMALIA", "ELARA",
@@ -4329,9 +4326,9 @@ long LoadSpiceEphems(double JD){
        "DIONE", "RHEA", "TITAN", "HYPERION", "IAPETUS", "PHOEBE", "JANUS",
        "EPIMETHEUS", "HELENE", "TELESTO", "CALYPSO", "ATLAS",
        "PROMETHEUS", "PANDORA", "PAN", "ARIEL", "UMBRIEL", "TITANIA",
-       "OBERON", "MIRANDA", "TRITON", "NEREID", "CHARON"}; // should likely be moved out of function
+       "OBERON", "MIRANDA", "TRITON", "NEREID", "CHARON"}; // names of "major" bodies
 
-   // However, some smaller moons do not have valid orientation data. 
+   // Some smaller moons do not have valid orientation data. 
    // We replace these with the orientation of their planet
 
    char MajorBodiesNamesOrientation[55][15] = {"SUN", "MERCURY", "VENUS", "EARTH", "MARS", "JUPITER", "SATURN", // TO-DO: ITRF93 hifi for Earth
@@ -4351,7 +4348,7 @@ long LoadSpiceEphems(double JD){
    double light_time;
    double twist, dec, ra;
 
-   double CHW[3][3], CWH[3][3];
+   double CWH[3][3];
    double ang[3];
 
    // Read all Major Bodies
@@ -4378,7 +4375,7 @@ long LoadSpiceEphems(double JD){
       ra = ang[0] - halfpi_c();
 
       eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
-      eul2m_c(-halfpi_c() - twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
+      eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
    }
 
    // TO-DO: Read all Minor Bodies 

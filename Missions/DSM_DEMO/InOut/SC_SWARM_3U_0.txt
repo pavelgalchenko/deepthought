@@ -70,7 +70,7 @@ FALSE                         !  Wheel Jitter Active
 NONE                          !  Drag/Jitter Input File Name
 =============================  Wheel 1  ================================
 0.0                           !  Initial Momentum, N-m-sec
-1.0  0.0  0.0                 !  Wheel Axis Components, [X, Y, Z]
+0.0  1.0  0.0                 !  Wheel Axis Components, [X, Y, Z]
 0.004  0.020                  !  Max Torque (N-m), Momentum (N-m-sec)
 0.012                         !  Wheel Rotor Inertia, kg-m^2
 0                             !  Body
@@ -78,7 +78,7 @@ NONE                          !  Drag/Jitter Input File Name
 NONE                          !  Drag/Jitter Input File Name
 =============================  Wheel 2  ================================
 0.0                           !  Initial Momentum, N-m-sec
-1.0  0.0  0.0                 !  Wheel Axis Components, [X, Y, Z]
+0.0  0.0  1.0                 !  Wheel Axis Components, [X, Y, Z]
 0.004  0.020                  !  Max Torque (N-m), Momentum (N-m-sec)
 0.012                         !  Wheel Rotor Inertia, kg-m^2
 0                             !  Body
@@ -92,11 +92,11 @@ NONE                          !  Drag/Jitter Input File Name
 0                             !  Node
 ==============================  MTB 1  =================================
 0.4                           !  Saturation (A-m^2)
-1.0  0.0  0.0                 !  MTB Axis Components, [X, Y, Z]
+0.0  1.0  0.0                 !  MTB Axis Components, [X, Y, Z]
 0                             !  Node
 ==============================  MTB 2  =================================
 0.4                           !  Saturation (A-m^2)
-1.0  0.0  0.0                 !  MTB Axis Components, [X, Y, Z]
+0.0  0.0  1.0                 !  MTB Axis Components, [X, Y, Z]
 0                             !  Node
 ************************* Thruster Parameters **************************
 24                            !  Number of Thrusters
@@ -109,141 +109,141 @@ PULSED                        !  Mode (PULSED or PROPORTIONAL)
 ==============================  Thr 1  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  1.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+2                             !  Node
 ==============================  Thr 2  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  -1.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+3                             !  Node
 ==============================  Thr 3  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
 1.0  0.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+4                             !  Node
 ==============================  Thr 4  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  1.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+5                             !  Node
 ==============================  Thr 5  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  1.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+6                             !  Node
 ==============================  Thr 6  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+-1.0  0.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+7                             !  Node
 ==============================  Thr 7  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  1.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+8                             !  Node
 ==============================  Thr 8  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  1.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+9                             !  Node
 ==============================  Thr 9  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+-1.0  0.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+10                            !  Node
 ==============================  Thr 10  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  1.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+11                            !  Node
 ==============================  Thr 11  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  -1.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+12                            !  Node
 ==============================  Thr 12  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
 1.0  0.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+13                            !  Node
 ==============================  Thr 13  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  -1.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+14                            !  Node
 ==============================  Thr 14  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  -1.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+15                            !  Node
 ==============================  Thr 15  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
 1.0  0.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+16                            !  Node
 ==============================  Thr 16  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  -1.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+17                            !  Node
 ==============================  Thr 17  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  1.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+18                            !  Node
 ==============================  Thr 18  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+-1.0  0.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+19                            !  Node
 ==============================  Thr 19  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  -1.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+20                            !  Node
 ==============================  Thr 20  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  1.0  0.0                 !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+21                            !  Node
 ==============================  Thr 21  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+-1.0  0.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+22                            !  Node
 ==============================  Thr 22  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  0.0  -1.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+23                            !  Node
 ==============================  Thr 23  =================================
 PULSED                        !  Mode (PULSED or PROPORTIONAL)
 0.01                          !  Thrust Force (N)
-1.0  0.0  0.0                 !  Thrust Axis 
+0.0  -1.0  0.0                !  Thrust Axis 
 0                             !  Body
-1                             !  Node
+24                            !  Node
 ******************************* Gyro ***********************************
 0                             !  Number of Gyro Axes
 ============================== Axis 0 ==================================
