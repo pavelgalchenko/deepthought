@@ -29,6 +29,24 @@
 ** #endif
 */
 
+enum orbitRegime {
+   ORB_ZERO = 0,
+   ORB_FLIGHT,
+   ORB_CENTRAL,
+   ORB_THREE_BODY,
+};
+
+enum orbitInputType {
+   INP_KEPLER = 0,
+   INP_POSVEL,
+   INP_FILE,
+   INP_TLE,
+   INP_TRV,
+   INP_MODES,
+   INP_XYZ,
+   INP_SPLINE,
+};
+
 struct LagrangePointType {
    /*~ Internal Variables ~*/
    double PosN[3]; /* Pos wrt N frame of Body 1 (larger grav center), [[m]] */
@@ -106,7 +124,7 @@ struct OrbitType {
    long Exists;
    double
        Epoch; /* Sec since J2000 epoch at which orbit elements are referenced */
-   long Regime; /* ZERO, FLIGHT, CENTRAL (Two-body) or THREE_BODY */
+   enum orbitRegime Regime; /* ZERO, FLIGHT, CENTRAL (Two-body) or THREE_BODY */
    long PolyhedronGravityEnabled;
    long World;
    long Region;

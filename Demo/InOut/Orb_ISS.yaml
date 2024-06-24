@@ -44,7 +44,7 @@ Orbit:
   #     File Name: 
   #     Label in File: 
   #   ((Type: THREE_BODY))
-  #   World: [[SUNEARTH]]
+  #   Lagrange System: [[EARTHMOON/SUNEARTH/SUNJUPITER]]
   #   Propagation Method: [[LAGDOF_MODES/LAGDOF_COWELL/LAGDOF_SPLINE]]
   #   Init: 
   #     Method: [[MODES/XYZ/FILE]] 
