@@ -4313,6 +4313,7 @@ long LoadSpiceKernels(char ModelPath[80]){
 
 long LoadSpiceEphems(double JD){
    double JS = (JD - j2000_c())*spd_c(); // convert Julian days to seconds past J2000
+   double ZAxis[3] = {0.0,0.0,1.0};
    
    long Iw;
    int i;
@@ -4333,7 +4334,7 @@ long LoadSpiceEphems(double JD){
    // However, some smaller moons do not have valid orientation data. 
    // We replace these with the orientation of their planet
 
-   char MajorBodiesNamesOrientation[55][15] = {"SUN", "MERCURY", "VENUS", "EARTH", "MARS", "JUPITER", "SATURN",
+   char MajorBodiesNamesOrientation[55][15] = {"SUN", "MERCURY", "VENUS", "EARTH", "MARS", "JUPITER", "SATURN", // TO-DO: ITRF93 hifi for Earth
        "URANUS", "NEPTUNE", "PLUTO", "MOON", "PHOBOS", "DEIMOS", "IO",
        "EUROPA", "GANYMEDE", "CALLISTO", "AMALTHEA", "JUPITER", "JUPITER", // HIMALIA, ELARA -> JUPITER
        "JUPITER", "JUPITER", "JUPITER", "JUPITER", "JUPITER", "JUPITER", // PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA -> JUPITER
@@ -4348,13 +4349,17 @@ long LoadSpiceEphems(double JD){
    struct WorldType *W;
    double tmp_state[6];
    double light_time;
+   double twist, dec, ra;
+
+   double CHW[3][3], CWH[3][3];
+   double ang[3];
 
    // Read all Major Bodies
    for (Iw=0; Iw<55; Iw++){
       W = &World[Iw];
       Eph = &World[Iw].eph;
 
-      spkezr_c(MajorBodiesNamesState[Iw], JS, "J2000", "NONE", "SUN", &tmp_state, &light_time); // State of major bodies in J2000 wrt Sun center
+      spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN", &tmp_state, &light_time); // State of major bodies in J2000 wrt Sun center
       for (i=0; i++; i<3) World[Iw].eph.PosN[i] = tmp_state[i]; // Assign inertial positions
       for (i=0; i++; i<3) World[Iw].eph.VelN[i] = tmp_state[i] + 3; // Assign inertial velocity
       RV2Eph(DynTime,Eph->mu,Eph->PosN,Eph->VelN,
@@ -4365,7 +4370,15 @@ long LoadSpiceEphems(double JD){
       
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);      
-      pxform_c(frame_name, "J2000", JS, World[Iw].CWN);
+      pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
+
+      m2eul_c(CWH, 3, 1, 3, &ang[0], &ang[1], &ang[2]);
+      twist = ang[2];
+      dec = halfpi_c() + ang[1];
+      ra = ang[0] - halfpi_c();
+
+      eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
+      eul2m_c(-halfpi_c() - twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
    }
 
    // TO-DO: Read all Minor Bodies 
