@@ -39,13 +39,13 @@ Time:
   Leap Seconds: 37.0
 Orbits:
   # ------------------------------Orbit Configurations-----------------------------
-  #   - Name: 
+  #   - Name:
   #     Enabled: [[true/false]]
   - Name: Orb_SWARM
     Enabled: true
 SCs:
   # ------------------------------SC Configurations-----------------------------
-  #   - Name: 
+  #   - Name:
   #     Orbit:
   #     Enabled: [[true/false]]
   - Name: SC_SWARM_3U_0
@@ -170,9 +170,9 @@ Ground Stations:
   #   - Ground Station:
   #       Index:
   #       Enabled: [[true/false]]
-  #       World: 
+  #       World:
   #       Longitude:
-  #       Latitude: 
+  #       Latitude:
   #       Label:
   - Ground Station:
       Index: 0

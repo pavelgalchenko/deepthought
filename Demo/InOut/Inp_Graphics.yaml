@@ -24,7 +24,7 @@ POV:
   #     Type: [[]]
   #     SC: [[]]
   #     Body: [[]]
-  #     Frame: [[]]
+  #     Frame: [[]]   ((Unused))
   #   Target:
   #     Type: [[]]
   #     SC: [[]]
@@ -56,66 +56,70 @@ POV:
 Cam:
   # -----------------------------Camera Configuration------------------------------
   #   Title: [[]]
-  #   Dimensions: [[width, height]]  [[pixels]]
+  #   Dimensions: 
+  #     Width: [[pixels]]
+  #     Height [[pixels]]
   #   Mouse Scale Factor: [[]]
   #   Gamma Exponent: [[]]
   #   Cam Show:
   #     N Axes:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     L Axes:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     F Axes:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     B Axes:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     N Grid:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     L Grid:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     F Grid:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     B Grid:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     G Grid:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Fields of View:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Prox Ops:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     TDRS Satellites:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Shadows:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Astro Labels:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Truth Vectors:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     FSW Vectors:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Milky Way:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   #     Fermi Sky:
   #       Show: [[true/false]]
-  #       Label: [[]]
+  #       Label: [[]]   ((Unused))
   Title: 42 Cam
-  Dimensions: [800, 800]
+  Dimensions:
+    Width: 800
+    Height: 800
   Mouse Scale Factor: 5e-05
   Gamma Exponent: 4.0
   Cam Show:
@@ -176,7 +180,9 @@ Cam:
 Map:
   # -------------------------------Map Configuration-------------------------------
   #   Title: [[]]
-  #   Dimensions: [[width, height]]  [[pixels]]
+  #   Dimensions: 
+  #     Width: [[pixels]]
+  #     Height [[pixels]]
   #   Map Show:
   #     Clock:
   #       Show: [[true/false]]
@@ -191,7 +197,9 @@ Map:
   #       Show: [[true/false]]
   #       Label: [[]]
   Title: 42 Map
-  Dimensions: [512, 256]
+  Dimensions:
+    Width: 512
+    Height: 256
   Map Show:
     Clock:
       Show: true

@@ -23,11 +23,11 @@ Time: | #TODO: Julday?; Month by name?
     Leap Seconds:   [[]]
 Orbits: |
   ------------------------------Orbit Configurations-----------------------------
-    - Name: 
+    - Name:
       Enabled: [[true/false]]
 SCs: |
   ------------------------------SC Configurations-----------------------------
-    - Name: 
+    - Name:
       Orbit:
       Enabled: [[true/false]]
 Perturbation Models:
@@ -91,7 +91,7 @@ Ground Stations: |
     - Ground Station:
         Index:
         Enabled: [[true/false]]
-        World: 
+        World:
         Longitude:
-        Latitude: 
+        Latitude:
         Label:

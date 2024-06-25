@@ -673,22 +673,11 @@ void InitOrbit(struct OrbitType *O) {
    strcpy(fileName, O->FileName);
    // Replace ".txt" with ".yaml"
    char *typeStr = strstr(fileName, ".txt");
-   strcpy(typeStr, ".yaml");
+   if (typeStr != NULL)
+      strcpy(typeStr, ".yaml");
 
-   FILE *infile            = FileOpen(InOutPath, fileName, "r");
-   struct fy_document *fyd = fy_document_build_from_fp(NULL, infile);
-   fclose(infile);
-
-   if (fy_document_resolve(fyd)) {
-      printf("Unable to resolve links in %50s. Exiting...\n", fileName);
-      exit(EXIT_FAILURE);
-   }
-
-   if (!fyd) {
-      printf("Failed to build yaml from %50s. Exiting...\n", fileName);
-      fy_document_destroy(fyd);
-      exit(EXIT_FAILURE);
-   }
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, fileName);
    struct fy_node *root = fy_document_root(fyd);
    struct fy_node *node = NULL;
    node                 = fy_node_by_path_def(root, "/Orbit");
@@ -713,8 +702,8 @@ void InitOrbit(struct OrbitType *O) {
             O->CLN[j][j] = 1.0;
             O->wln[j]    = 0.0;
          }
-         O->PolyhedronGravityEnabled = fy_node_compare_text(
-             fy_node_by_path_def(node, "/Polyhedron Grav"), "true", -1);
+         O->PolyhedronGravityEnabled =
+             getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
       case ORB_FLIGHT: {
          long Ir = 0;
@@ -737,8 +726,8 @@ void InitOrbit(struct OrbitType *O) {
             O->wln[1] = 0.0;
             O->wln[2] = World[O->World].w;
          }
-         O->PolyhedronGravityEnabled = fy_node_compare_text(
-             fy_node_by_path_def(node, "/Polyhedron Grav"), "true", -1);
+         O->PolyhedronGravityEnabled =
+             getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
       case ORB_CENTRAL: {
          fy_node_scanf(node, "/World %49s", response);
@@ -748,8 +737,8 @@ void InitOrbit(struct OrbitType *O) {
                    O->Tag);
             exit(EXIT_FAILURE);
          }
-         O->J2DriftEnabled = fy_node_compare_text(
-             fy_node_by_path_def(node, "/J2 Secular Drift"), "true", -1);
+         O->J2DriftEnabled =
+             getYAMLBool(fy_node_by_path_def(node, "/J2 Secular Drift"));
          O->mu      = World[O->World].mu;
          double rad = World[O->World].rad;
          double J2  = World[O->World].J2;
@@ -1098,6 +1087,7 @@ void InitOrbit(struct OrbitType *O) {
          p[j] = F->PosR[j];
       MTxV(O->CLN, p, F->PosR);
    }
+   fy_document_destroy(fyd);
 }
 /**********************************************************************/
 void InitRigidDyn(struct SCType *S) {
@@ -1858,29 +1848,37 @@ void InitFlexModes(struct SCType *S) {
 }
 /**********************************************************************/
 void InitNodes(struct BodyType *B) {
-   struct NodeType *N;
-   FILE *infile;
-   char junk[80], newline;
-   long In, i;
-
    if (strcmp(B->NodeFileName, "NONE")) {
-      infile = FileOpen(InOutPath, B->NodeFileName, "r");
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%ld %[^\n] %[\n]", &B->NumNodes, junk, &newline);
+      char fileName[40] = {0};
+      strcpy(fileName, B->NodeFileName);
+      // Replace ".txt" with ".yaml"
+      char *typeStr = strstr(fileName, ".txt");
+      if (typeStr != NULL)
+         strcpy(typeStr, ".yaml");
+
+      struct fy_document *fyd =
+          fy_document_build_and_check(NULL, InOutPath, fileName);
+      struct fy_node *root = fy_document_root(fyd);
+      struct fy_node *node = fy_node_by_path_def(root, "/Nodes");
+      B->NumNodes          = fy_node_sequence_item_count(node);
       B->Node = (struct NodeType *)calloc(B->NumNodes, sizeof(struct NodeType));
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      for (In = 0; In < B->NumNodes; In++) {
-         N = &B->Node[In];
-         fscanf(infile, "%lf %lf %lf \"%[^\"]\" %[\n]", &N->NomPosB[0],
-                &N->NomPosB[1], &N->NomPosB[2], N->comment, &newline);
+
+      struct fy_node *iterNode = NULL;
+      WHILE_FY_ITER(node, iterNode) {
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Node");
+         long In                 = 0;
+         fy_node_scanf(seqNode, "/Index %ld", &In);
+         struct NodeType *N = &B->Node[In];
+         fy_node_scanf(seqNode, "/Comment %79[^\n]s", N->comment);
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Location"),
+                                 N->NomPosB);
       }
-      fclose(infile);
+      fy_document_destroy(fyd);
    } else {
       /* Default to one node at B.cm */
       B->NumNodes = 1;
       B->Node     = (struct NodeType *)calloc(1, sizeof(struct NodeType));
-      for (i = 0; i < 3; i++)
+      for (int i = 0; i < 3; i++)
          B->Node[0].PosB[i] = B->cm[i];
       strcpy(B->Node[0].comment, "Mass Center");
    }
@@ -2140,21 +2138,11 @@ void InitSpacecraft(struct SCType *S) {
    strcpy(fileName, S->FileName);
    // Replace ".txt" with ".yaml"
    char *typeStr = strstr(fileName, ".txt");
-   strcpy(typeStr, ".yaml");
+   if (typeStr != NULL)
+      strcpy(typeStr, ".yaml");
 
-   FILE *infile            = FileOpen(InOutPath, fileName, "r");
-   struct fy_document *fyd = fy_document_build_from_fp(NULL, infile);
-   fclose(infile);
-   if (fy_document_resolve(fyd)) {
-      printf("Unable to resolve links in %50s. Exiting...\n", fileName);
-      exit(EXIT_FAILURE);
-   }
-
-   if (!fyd) {
-      printf("Failed to build yaml from %50s. Exiting...\n", fileName);
-      fy_document_destroy(fyd);
-      exit(EXIT_FAILURE);
-   }
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, fileName);
 
    struct fy_node *root = fy_document_root(fyd);
    struct fy_node *node = NULL, *iterNode = NULL;
@@ -2246,12 +2234,11 @@ void InitSpacecraft(struct SCType *S) {
                  "/Shaker File Name %41s",
                  &S->DragCoef, S->ShakerFileName);
 
-   S->ConstraintsRequested = fy_node_compare_text(
-       fy_node_by_path_def(node, "/Compute Constraints"), "true", -1);
-   S->FlexActive = fy_node_compare_text(
-       fy_node_by_path_def(node, "/Flex Active"), "true", -1);
-   S->IncludeSecondOrderFlexTerms = fy_node_compare_text(
-       fy_node_by_path_def(node, "/2nd Order Flex"), "true", -1);
+   S->ConstraintsRequested =
+       getYAMLBool(fy_node_by_path_def(node, "/Compute Constraints"));
+   S->FlexActive = getYAMLBool(fy_node_by_path_def(node, "/Flex Active"));
+   S->IncludeSecondOrderFlexTerms =
+       getYAMLBool(fy_node_by_path_def(node, "/2nd Order Flex"));
    node  = fy_node_by_path_def(root, "/Bodies");
    S->Nb = fy_node_sequence_item_count(node);
    S->Ng = S->Nb - 1;
@@ -2277,7 +2264,7 @@ void InitSpacecraft(struct SCType *S) {
 
    /* .. Body Ib */
    iterNode = NULL;
-   while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(node, iterNode) {
       long Ib;
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Body");
       fy_node_scanf(seqNode, "/Index %ld", &Ib);
@@ -2323,7 +2310,7 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Ng > 0) {
       node     = fy_node_by_path_def(root, "/Joints");
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Ig;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Joint");
          fy_node_scanf(seqNode, "/Index %ld", &Ig);
@@ -2418,7 +2405,7 @@ void InitSpacecraft(struct SCType *S) {
                G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
             }
          }
-         fy_node_scanf(seqNode, "/Parm File Name %41s", G->ParmFileName);
+         fy_node_scanf(seqNode, "/Parm File Name %41[^\n]s", G->ParmFileName);
 
          if (G->Type == PASSIVE_JOINT)
             InitPassiveJoint(G, S);
@@ -2438,7 +2425,7 @@ void InitSpacecraft(struct SCType *S) {
    S->Whl = (struct WhlType *)calloc(S->Nw, sizeof(struct WhlType));
    if (S->Nw > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Iw                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Wheel");
          fy_node_scanf(seqNode, "/Index %ld", &Iw);
@@ -2471,7 +2458,7 @@ void InitSpacecraft(struct SCType *S) {
    S->MTB  = (struct MTBType *)calloc(S->Nmtb, sizeof(struct MTBType));
    if (S->Nmtb > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Im                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/MTB");
          fy_node_scanf(seqNode, "/Index %ld", &Im);
@@ -2496,7 +2483,7 @@ void InitSpacecraft(struct SCType *S) {
    S->Thr  = (struct ThrType *)calloc(S->Nthr, sizeof(struct ThrType));
    if (S->Nthr > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long It                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Thruster");
          fy_node_scanf(seqNode, "/Index %ld", &It);
@@ -2524,7 +2511,7 @@ void InitSpacecraft(struct SCType *S) {
    S->Gyro  = (struct GyroType *)calloc(S->Ngyro, sizeof(struct GyroType));
    if (S->Ngyro > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Gyro");
          fy_node_scanf(seqNode, "/Index %ld", &Ig);
@@ -2582,7 +2569,7 @@ void InitSpacecraft(struct SCType *S) {
                                                sizeof(struct MagnetometerType));
    if (S->Nmag > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Im = 0;
          struct fy_node *seqNode =
              fy_node_by_path_def(iterNode, "/Magnetometer");
@@ -2621,7 +2608,7 @@ void InitSpacecraft(struct SCType *S) {
    S->CSS  = (struct CssType *)calloc(S->Ncss, sizeof(struct CssType));
    if (S->Ncss > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Ic                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/CSS");
          fy_node_scanf(seqNode, "/Index %ld", &Ic);
@@ -2660,7 +2647,7 @@ void InitSpacecraft(struct SCType *S) {
    S->FSS  = (struct FssType *)calloc(S->Nfss, sizeof(struct FssType));
    if (S->Nfss > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long If                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FSS");
          fy_node_scanf(seqNode, "/Index %ld", &If);
@@ -2707,7 +2694,7 @@ void InitSpacecraft(struct SCType *S) {
        (struct StarTrackerType *)calloc(S->Nst, sizeof(struct StarTrackerType));
    if (S->Nst > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Ist                = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/ST");
          fy_node_scanf(seqNode, "/Index %ld", &Ist);
@@ -2769,7 +2756,7 @@ void InitSpacecraft(struct SCType *S) {
    S->GPS  = (struct GpsType *)calloc(S->Ngps, sizeof(struct GpsType));
    if (S->Ngps > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/GPS");
          fy_node_scanf(seqNode, "/Index %ld", &Ig);
@@ -2803,7 +2790,7 @@ void InitSpacecraft(struct SCType *S) {
    S->Accel = (struct AccelType *)calloc(S->Nacc, sizeof(struct AccelType));
    if (S->Nacc > 0) {
       iterNode = NULL;
-      while (fy_node_sequence_iterate(node, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(node, iterNode) {
          long Ia = 0;
          struct fy_node *seqNode =
              fy_node_by_path_def(iterNode, "/Accelerometer");
@@ -3042,23 +3029,26 @@ void InitSpacecraft(struct SCType *S) {
 }
 /*********************************************************************/
 void LoadTdrs(void) {
-   FILE *infile;
-   char junk[120], newline;
-   char response[120];
-   long i;
+   // TODO: configurable constellation TDRS
 
    /* .. Initialize TDRS */
-   infile = FileOpen(InOutPath, "Inp_TDRS.txt", "r");
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, "Inp_TDRS.yaml");
+   struct fy_node *root = fy_document_root(fyd);
+   struct fy_node *node = fy_node_by_path_def(root, "/TDRSs");
    /* .. 42 TDRS Configuration File */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+   struct fy_node *iterNode = NULL;
+   WHILE_FY_ITER(node, iterNode) {
+      struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/TDRS");
+      long i                  = 0;
+      fy_node_scanf(seqNode, "/Index %ld", &i);
+      if (i >= 10)
+         continue;
 
-   for (i = 0; i < 10; i++) {
-      fscanf(infile, "%s \"%[^\"]\" %[^\n] %[\n]", response,
-             Tdrs[i].Designation, junk, &newline);
-      Tdrs[i].Exists = DecodeString(response);
+      fy_node_scanf(seqNode, "/Label %39[^\n]s", Tdrs[i].Designation);
+      Tdrs[i].Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
    }
-
-   fclose(infile);
+   fy_document_destroy(fyd);
 }
 /*********************************************************************/
 void LoadSun(void) {
@@ -4112,52 +4102,55 @@ void LoadMinorBodies(void) {
 }
 /**********************************************************************/
 void LoadRegions(void) {
-   FILE *infile;
-   long Ir;
-   char Exists[20], WorldID[20], IsPosW[120], junk[120], newline;
-   struct WorldType *W;
-   struct RegionType *R;
-   double MagR;
-
-   infile = FileOpen(InOutPath, "Inp_Region.txt", "rt");
-
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%ld %[^\n] %[\n]", &Nrgn, junk, &newline);
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, "Inp_Region.yaml");
+   struct fy_node *root = fy_document_root(fyd);
+   struct fy_node *node = fy_node_by_path_def(root, "/Regions");
+   Nrgn                 = fy_node_sequence_item_count(node);
    Rgn = (struct RegionType *)calloc(Nrgn, sizeof(struct RegionType));
-   for (Ir = 0; Ir < Nrgn; Ir++) {
-      R = &Rgn[Ir];
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", Exists, junk, &newline);
-      R->Exists = DecodeString(Exists);
-      fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", R->Name, junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", WorldID, junk, &newline);
+   struct fy_node *iterNode = NULL;
+   long Ir                  = 0;
+
+   WHILE_FY_ITER(node, iterNode) {
+      struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Region");
+      struct RegionType *R    = &Rgn[Ir];
+      char IsPosW[120] = {0}, WorldID[20] = {0};
+      R->Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
+      fy_node_scanf(seqNode,
+                    "/Name %19s "
+                    "/World %19s "
+                    "/Location/Type %119s "
+                    "/Coefficients/Elasticity %lf "
+                    "/Coefficients/Damping %lf "
+                    "/Coefficients/Friction %lf "
+                    "/Geometry File Name %39s",
+                    R->Name, WorldID, IsPosW, &R->ElastCoef, &R->DampCoef,
+                    &R->FricCoef, R->GeomFileName);
+
       R->World = DecodeString(WorldID);
       if (R->World < 0 || R->World > NWORLD) {
          printf(
              "Region's World is out of range in LoadRegions.  Bailing out.\n");
          exit(EXIT_FAILURE);
       }
-      W = &World[R->World];
-      fscanf(infile, "%s %[^\n] %[\n]", IsPosW, junk, &newline);
+      struct WorldType *W = &World[R->World];
+
+      assignYAMLToDoubleArray(
+          3, fy_node_by_path_def(seqNode, "/Location/Position"), R->PosW);
       if (DecodeString(IsPosW)) {
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &R->PosW[0], &R->PosW[1],
-                &R->PosW[2], junk, &newline);
-         R->Lng = atan2(R->PosW[1], R->PosW[0]);
-         MagR   = MAGV(R->PosW);
-         R->Lat = asin(R->PosW[2] / MagR);
-         R->Alt = MagR - W->rad;
+         R->Lng      = atan2(R->PosW[1], R->PosW[0]);
+         double MagR = MAGV(R->PosW);
+         R->Lat      = asin(R->PosW[2] / MagR);
+         R->Alt      = MagR - W->rad;
          A2C(312, R->Lng + HalfPi, HalfPi - R->Lat, 0.0, R->CW);
          /* for(i=0;i<3;i++) R->CRW[i][i] = 1.0; */
          MTxV(W->CWN, R->PosW, R->PosN);
          MxM(R->CW, W->CWN, R->CN);
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       } else {
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &R->Lng, &R->Lat, &R->Alt,
-                junk, &newline);
-         R->Lng     *= D2R;
-         R->Lat     *= D2R;
-         MagR        = W->rad + R->Alt;
+         R->Lng      = R->PosW[0] * D2R;
+         R->Lat      = R->PosW[1] * D2R;
+         R->Alt      = R->PosW[2];
+         double MagR = W->rad + R->Alt;
          R->PosW[0]  = MagR * cos(R->Lng) * cos(R->Lat);
          R->PosW[1]  = MagR * sin(R->Lng) * cos(R->Lat);
          R->PosW[2]  = MagR * sin(R->Lat);
@@ -4171,13 +4164,11 @@ void LoadRegions(void) {
       R->wn[0]   = 0.0;
       R->wn[1]   = W->w * cos(R->Lat);
       R->wn[2]   = W->w * sin(R->Lat);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &R->ElastCoef, &R->DampCoef,
-             &R->FricCoef, junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", R->GeomFileName, junk, &newline);
       Geom = LoadWingsObjFile(ModelPath, R->GeomFileName, &Matl, &Nmatl, Geom,
                               &Ngeom, &R->GeomTag, TRUE);
+
+      Ir++;
    }
-   fclose(infile);
 }
 /**********************************************************************/
 void InitLagrangePoints(void) {
@@ -4663,9 +4654,7 @@ void LoadSchatten(void) {
 }
 /**********************************************************************/
 void InitSim(int argc, char **argv) {
-   FILE *infile;
    struct OrbitType *Eph;
-   char junk[120], newline;
    char response[120], response1[120], response2[120];
    double r1[3], rh[3], vh[3];
    double Zaxis[3] = {0.0, 0.0, 1.0};
@@ -4813,22 +4802,28 @@ void InitSim(int argc, char **argv) {
    printf("SC Model Path: %s \n \n", SCModelPath);
 
    /* .. Read from file Inp_Sim.txt */
-   infile = FileOpen(InOutPath, "Inp_Sim.txt", "r");
 
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, "Inp_Sim.yaml");
+
+   struct fy_node *root = fy_document_root(fyd);
+   struct fy_node *node = fy_node_by_path_def(root, "/Simulation Control");
+
    /* .. Time Mode */
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   TimeMode = DecodeString(response);
    /* .. Duration, Step size */
-   fscanf(infile, "%lf %lf %[^\n] %[\n]", &STOPTIME, &DTSIM, junk, &newline);
    /* .. File output interval */
-   fscanf(infile, "%lf %[^\n] %[\n]", &DTOUT, junk, &newline);
    /* .. RNG Seed */
-   fscanf(infile, "%ld %[^\n] %[\n]", &RngSeed, junk, &newline);
    /* .. Graphics Front End? */
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   GLEnable = DecodeString(response);
+   /* .. Cmd Script File Name */
+   fy_node_scanf(node,
+                 "/Mode %119s "
+                 "/Duration %lf "
+                 "/Step Size %lf "
+                 "/File Interval %lf "
+                 "/RNG Seed %ld "
+                 "/Command File %999s",
+                 response, &STOPTIME, &DTSIM, &DTOUT, &RngSeed, CmdFileName);
+   GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
    if (CLI_ARGS.graphics != NULL) {
       printf("\n!!!!!! Graphics Overriden !!!!! \n");
@@ -4850,14 +4845,11 @@ void InitSim(int argc, char **argv) {
 
    printf("Graphics = %s \n\n", GLEnable ? "TRUE" : "FALSE");
 
-   /* .. Cmd Script File Name */
-   fscanf(infile, "%s %[^\n] %[\n]", CmdFileName, junk, &newline);
-
    /* .. Reference Orbits */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%ld %[^\n] %[\n]", &Norb, junk, &newline);
-   Orb = NULL;
-   Orb = (struct OrbitType *)calloc(Norb, sizeof(struct OrbitType));
+   node = fy_node_by_path_def(root, "/Orbits");
+   Norb = fy_node_sequence_item_count(node);
+   Orb  = NULL;
+   Orb  = (struct OrbitType *)calloc(Norb, sizeof(struct OrbitType));
    if (Orb == NULL) {
       printf("Orb calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
@@ -4868,26 +4860,49 @@ void InitSim(int argc, char **argv) {
       printf("Frm calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
-   for (Iorb = 0; Iorb < Norb; Iorb++) {
-      fscanf(infile, "%s %s %[^\n] %[\n]", response, Orb[Iorb].FileName, junk,
-             &newline);
-      Orb[Iorb].Exists = DecodeString(response);
-      Orb[Iorb].Tag    = Iorb;
+
+   struct fy_node *iterNode = NULL;
+   Iorb                     = 0;
+   WHILE_FY_ITER(node, iterNode) {
+      fy_node_scanf(iterNode, "/Name %19[^\n]s", Orb[Iorb].FileName);
+      strcat(Orb[Iorb].FileName, ".yaml");
+      Orb[Iorb].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
+      Iorb++;
    }
 
    /* .. Spacecraft */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%ld %[^\n] %[\n]", &Nsc, junk, &newline);
-   SC = NULL;
-   SC = (struct SCType *)calloc(Nsc, sizeof(struct SCType));
+   node = fy_node_by_path_def(root, "/SCs");
+   Nsc  = fy_node_sequence_item_count(node);
+   SC   = NULL;
+   SC   = (struct SCType *)calloc(Nsc, sizeof(struct SCType));
    if (SC == NULL) {
       printf("SC calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      fscanf(infile, "%s  %ld %s %[^\n] %[\n]", response, &SC[Isc].RefOrb,
-             SC[Isc].FileName, junk, &newline);
-      SC[Isc].Exists = DecodeString(response);
+
+   iterNode = NULL;
+   Isc      = 0;
+   WHILE_FY_ITER(node, iterNode) {
+      fy_node_scanf(iterNode,
+                    "/Name %49s "
+                    "/Orbit %19s",
+                    SC[Isc].FileName, response);
+      strcat(SC[Isc].FileName, ".yaml");
+      strcat(response, ".yaml");
+      SC[Isc].RefOrb = -1;
+      for (Iorb = 0; Iorb < Norb; Iorb++) {
+         if (!strcmp(response, Orb[Iorb].FileName)) {
+            SC[Isc].RefOrb = Iorb;
+            break;
+         }
+      }
+      if (SC[Isc].RefOrb == -1) {
+         printf("SC[%ld] named %49s is assigned to invalid orbit %19s. "
+                "Exiting...\n",
+                Isc, SC[Isc].FileName, response);
+         exit(EXIT_FAILURE);
+      }
+      SC[Isc].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
       SC[Isc].ID     = Isc;
       if ((SC[Isc].Exists && !Orb[SC[Isc].RefOrb].Exists) ||
           (SC[Isc].RefOrb > Norb)) {
@@ -4895,89 +4910,207 @@ void InitSim(int argc, char **argv) {
                 SC[Isc].RefOrb);
          exit(EXIT_FAILURE);
       }
+      Isc++;
    }
+
    /* .. Environment */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
    /* .. Date and time (UTC) */
-   fscanf(infile, "%ld %ld %ld %[^\n] %[\n]", &UTC.Month, &UTC.Day, &UTC.Year,
-          junk, &newline);
-   fscanf(infile, "%ld %ld %lf %[^\n] %[\n]", &UTC.Hour, &UTC.Minute,
-          &UTC.Second, junk, &newline);
-   fscanf(infile, "%lf %[^\n] %[\n]", &LeapSec, junk, &newline);
+   node = fy_node_by_path_def(root, "/Time");
+   fy_node_scanf(node,
+                 "/Date/Year %ld "
+                 "/Date/Month %ld "
+                 "/Date/Day %ld "
+                 "/Time/Hour %ld "
+                 "/Time/Minute %ld "
+                 "/Time/Second %lf "
+                 "/Leap Seconds %lf",
+                 &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
+                 &UTC.Second, &LeapSec);
+
    /* .. Choices for Modeling Solar Activity */
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   AtmoOption = DecodeString(response);
-   fscanf(infile, "%lf %[^\n] %[\n]", &Flux10p7, junk, &newline);
-   fscanf(infile, "%lf %[^\n] %[\n]", &GeomagIndex, junk, &newline);
-   /* .. Magnetic Field Model */
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   MagModel.Type = DecodeString(response);
-   fscanf(infile, "%ld %ld %[^\n] %[\n]", &MagModel.N, &MagModel.M, junk,
-          &newline);
-   /* .. Earth Gravity Model */
-   fscanf(infile, "%ld %ld %[^\n] %[\n]", &EarthGravModel.N, &EarthGravModel.M,
-          junk, &newline);
-   /* .. Mars Gravity Model */
-   fscanf(infile, "%ld %ld %[^\n] %[\n]", &MarsGravModel.N, &MarsGravModel.M,
-          junk, &newline);
-   /* .. Luna Gravity Model */
-   fscanf(infile, "%ld %ld %[^\n] %[\n]", &LunaGravModel.N, &LunaGravModel.M,
-          junk, &newline);
-   /* .. Toggle on/off various environmental effects */
-   fscanf(infile, "%s  %s %[^\n] %[\n]", response1, response2, junk, &newline);
-   AeroActive        = DecodeString(response1);
-   AeroShadowsActive = DecodeString(response2);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   GGActive = DecodeString(response);
-   fscanf(infile, "%s %s %[^\n] %[\n]", response1, response2, junk, &newline);
-   SolPressActive        = DecodeString(response1);
-   SolPressShadowsActive = DecodeString(response2);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   ResidualDipoleActive = DecodeString(response);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   GravPertActive = DecodeString(response);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   ThrusterPlumesActive = DecodeString(response);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   ContactActive = DecodeString(response);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   SloshActive = DecodeString(response);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   AlbedoActive = DecodeString(response);
-   fscanf(infile, "%s  %[^\n] %[\n]", response, junk, &newline);
-   ComputeEnvTrq = DecodeString(response);
-   /* .. Celestial Bodies */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   EphemOption = DecodeString(response);
-   for (i = MERCURY; i <= PLUTO; i++) {
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-      World[i].Exists = DecodeString(response);
+   // TODO: add atmo model properties to world and use this to configure
+   // properties
+   node     = fy_node_by_path_def(root, "/Perturbation Models");
+   iterNode = NULL;
+   WHILE_FY_ITER(fy_node_by_path_def(node, "/Atmosphere/Models"), iterNode) {
+      fy_node_scanf(iterNode,
+                    "/World %119s "
+                    "/Method %119s",
+                    response1, response2);
+      Iw            = DecodeString(response1);
+      long atmoType = DecodeString(response2);
+      double f10p7 = 0.0, geomag = 0.0;
+      if (atmoType == USER_ATMO)
+         fy_node_scanf(iterNode, "/F10.7 %lf /Ap %lf", &f10p7, &geomag);
+      switch (Iw) {
+         case EARTH:
+            AtmoOption  = atmoType;
+            Flux10p7    = f10p7;
+            GeomagIndex = geomag;
+            break;
+         default:
+            printf("World %119s does not have a configured atmospheric model. "
+                   "Exiting...\n",
+                   response1);
+            exit(EXIT_FAILURE);
+            break;
+      }
    }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   MinorBodiesExist = DecodeString(response);
+
+   /* .. Magnetic Field Model */
+   // TODO: make magfield a property of worlds, so each world can have a
+   // configurable magnetic field
+   // TODO: make magfield coefficent files a field for models?
+   iterNode = NULL;
+   WHILE_FY_ITER(fy_node_by_path_def(node, "/Magnetic/Models"), iterNode) {
+      fy_node_scanf(iterNode,
+                    "/World %119s "
+                    "/Method %119s",
+                    response1, response2);
+      Iw           = DecodeString(response1);
+      long magType = DecodeString(response2);
+      switch (Iw) {
+         case EARTH:
+            MagModel.Type = magType;
+            break;
+         default:
+            printf("World %119s does not have a configured magnetic field "
+                   "model. Exiting...\n",
+                   response1);
+            exit(EXIT_FAILURE);
+            break;
+      }
+      if (magType == IGRF) {
+         long N = 0, M = 0;
+         fy_node_scanf(iterNode,
+                       "/Degree %ld "
+                       "/Order %ld",
+                       &N, &M);
+         switch (Iw) {
+            case EARTH:
+               MagModel.N = N;
+               MagModel.M = M;
+               break;
+            default:
+               printf("World %119s does not have a configured spherical "
+                      "harmonic magnetic field model. Exiting...\n",
+                      response1);
+               exit(EXIT_FAILURE);
+               break;
+         }
+      }
+   }
+
+   /* .. Earth, Mars, Luna Gravity Models */
+   // TODO: make gravfield a property of worlds, so each world can have a
+   // configurable gravitational
+   // TODO: make gravfield coefficent files a field for models?
+   iterNode = NULL;
+   WHILE_FY_ITER(fy_node_by_path_def(node, "/Gravitation/Models"), iterNode) {
+      long N = 0, M = 0;
+      fy_node_scanf(iterNode,
+                    "/World %119s "
+                    "/Degree %ld "
+                    "/Order %ld",
+                    response, &N, &M);
+      Iw = DecodeString(response);
+      switch (Iw) {
+         case EARTH:
+            EarthGravModel.N = N;
+            EarthGravModel.M = M;
+            break;
+         case MARS:
+            MarsGravModel.N = N;
+            MarsGravModel.M = M;
+            break;
+         case LUNA:
+            LunaGravModel.N = N;
+            LunaGravModel.M = M;
+            break;
+         default:
+            printf("World %119s does not have a configured spherical harmonic "
+                   "gravity model. Exiting...\n",
+                   response);
+            exit(EXIT_FAILURE);
+            break;
+      }
+   }
+
+   /* .. Toggle on/off various environmental effects */
+   AeroActive = getYAMLBool(fy_node_by_path_def(node, "/Atmosphere/Enabled"));
+   AeroShadowsActive =
+       getYAMLBool(fy_node_by_path_def(node, "/Atmosphere/Shadows"));
+   GGActive =
+       getYAMLBool(fy_node_by_path_def(node, "/Gravitation/Gravity Gradient"));
+   SolPressActive = getYAMLBool(fy_node_by_path_def(node, "/SRP/Enabled"));
+   SolPressShadowsActive =
+       getYAMLBool(fy_node_by_path_def(node, "/SRP/Shadows"));
+   ResidualDipoleActive =
+       getYAMLBool(fy_node_by_path_def(node, "/Magnetic/Residual Mag Moment"));
+   GravPertActive =
+       getYAMLBool(fy_node_by_path_def(node, "/Gravitation/Enabled"));
+   ThrusterPlumesActive =
+       getYAMLBool(fy_node_by_path_def(node, "/Thruster Plume"));
+   ContactActive = getYAMLBool(fy_node_by_path_def(node, "/Contact"));
+   SloshActive   = getYAMLBool(fy_node_by_path_def(node, "/CFD Slosh"));
+   AlbedoActive  = getYAMLBool(fy_node_by_path_def(node, "/Albedo on CSS"));
+   ComputeEnvTrq =
+       getYAMLBool(fy_node_by_path_def(node, "/Output Env Torques to File"));
+
+   /* .. Celestial Bodies */
+   fy_node_scanf(root, "/Ephem Type %119s", response);
+   EphemOption = DecodeString(response);
+   node        = fy_node_by_path_def(root, "/Celestial Bodies");
+   // I wish this was more programmatic, but it doesn't really need to be I
+   // guess
+   World[MERCURY].Exists = getYAMLBool(fy_node_by_path_def(node, "/Mercury"));
+   World[VENUS].Exists   = getYAMLBool(fy_node_by_path_def(node, "/Venus"));
+   World[EARTH].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Earth and Luna"));
+   World[MARS].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Mars and its moons"));
+   World[JUPITER].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Jupiter and its moons"));
+   World[SATURN].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Saturn and its moons"));
+   World[URANUS].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Uranus and its moons"));
+   World[NEPTUNE].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Neptune and its moons"));
+   World[PLUTO].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Pluto and its moons"));
+   MinorBodiesExist =
+       getYAMLBool(fy_node_by_path_def(node, "/Asteroids and Comets"));
 
    /* .. Lagrange Point Systems */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   for (i = 0; i < 3; i++) {
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-      LagSys[i].Exists = DecodeString(response);
-   }
+   node = fy_node_by_path_def(root, "/Lagrange Systems");
+   LagSys[EARTHMOON].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Earth-Moon"));
+   LagSys[SUNEARTH].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Sun-Earth"));
+   LagSys[SUNJUPITER].Exists =
+       getYAMLBool(fy_node_by_path_def(node, "/Sun-Jupiter"));
 
    /* .. Ground Stations */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%ld %[^\n] %[\n]", &Ngnd, junk, &newline);
+   node          = fy_node_by_path_def(root, "/Ground Stations");
+   Ngnd          = fy_node_sequence_item_count(node);
    GroundStation = (struct GroundStationType *)calloc(
        Ngnd, sizeof(struct GroundStationType));
-   for (i = 0; i < Ngnd; i++) {
-      fscanf(infile, "%s %s %lf %lf \"%[^\"]\" %[^\n] %[\n]", response1,
-             response2, &GroundStation[i].lng, &GroundStation[i].lat,
-             GroundStation[i].Label, junk, &newline);
-      GroundStation[i].Exists = DecodeString(response1);
-      GroundStation[i].World  = DecodeString(response2);
+   iterNode = NULL;
+   WHILE_FY_ITER(node, iterNode) {
+      long Ignd = 0;
+      fy_node_scanf(iterNode, "/Index %ld", &Ignd);
+      fy_node_scanf(iterNode,
+                    "/Ground Station/World %119s "
+                    "/Ground Station/Longitude %lf "
+                    "/Ground Station/Latitude %lf "
+                    "/Ground Station/Label %39s",
+                    response, &GroundStation[Ignd].lng,
+                    &GroundStation[Ignd].lat, GroundStation[Ignd].Label);
+      GroundStation[Ignd].World = DecodeString(response);
+      GroundStation[Ignd].Exists =
+          getYAMLBool(fy_node_by_path_def(iterNode, "/Ground Station/Enabled"));
    }
-
-   fclose(infile);
 
    /* .. Load Materials */
    Nmatl = 0;

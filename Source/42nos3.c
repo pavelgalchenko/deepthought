@@ -89,25 +89,16 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
 #if defined(__linux__)
 static void ReadNos3InpFile(void) {
    static long First = 1;
-   char junk[120], newline, response[120];
-   char *File = "Inp_NOS3.txt";
-   char *FileName;
-   FILE *infile;
-   unsigned int tempu;
    if (First) {
       First = 0;
-      FileName =
-          (char *)calloc(strlen(InOutPath) + strlen(File) + 1, sizeof(char));
-      strcpy(FileName, InOutPath);
-      strcat(FileName, File);
-      infile = fopen(FileName, "r");
-      if (infile != NULL) {
-         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         fscanf(infile, "%s %[^\n] %[\n]", BusName, junk, &newline);
-         fscanf(infile, "%s %[^\n] %[\n]", ConnectionString, junk, &newline);
-         fclose(infile);
-      }
-      free(FileName);
+      struct fy_document *fyd =
+          fy_document_build_and_check(NULL, InOutPath, "Inp_NOS3.yaml");
+      struct fy_node *root = fy_document_root(fyd);
+      fy_node_scanf(root,
+                    "/Configuration/Bus %119[^\n]s "
+                    "/Configuration/Connection String %119[^\n]s",
+                    BusName, ConnectionString);
+      fy_document_destroy(fyd);
    }
 }
 

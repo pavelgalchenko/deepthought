@@ -870,7 +870,7 @@ def convertGraphics(
             case 10:
                 hostDict["SC"] = int(strData[0])
                 hostDict["Body"] = int(strData[1])
-                hostDict["Frame"] = strData[2]
+                hostDict["Frame"] = strData[2]  # Does nothing
             case 11:
                 TargetDict = povDict["Target"] = dict()
                 TargetDict["Type"] = lineData
@@ -894,7 +894,9 @@ def convertGraphics(
                 camDict = graphicsDict["Cam"] = dict()
                 camDict["Title"] = lineData.strip('"')
             case 21:
-                camDict["Dimensions"] = [int(string) for string in strData]
+                dimDict = camDict["Dimensions"] = dict()
+                dimDict["Width"] = int(strData[0])
+                dimDict["Height"] = int(strData[1])
             case 22:
                 camDict["Mouse Scale Factor"] = float(lineData)
             case 23:
@@ -935,7 +937,9 @@ def convertGraphics(
             case 1:
                 mapDict["Title"] = lineData.strip('"')
             case 2:
-                mapDict["Dimensions"] = [int(string) for string in strData]
+                dimDict = mapDict["Dimensions"] = dict()
+                dimDict["Width"] = int(strData[0])
+                dimDict["Height"] = int(strData[1])
 
     showLabels = ["Clock", "Tlm Clock", "Credits", "Night"]
     showDict = mapDict["Map Show"] = dict()

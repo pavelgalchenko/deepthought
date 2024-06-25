@@ -11,9 +11,9 @@
          "program": "${workspaceFolder}/42",
          "args": [
             "-d",
-            "Missions/enceladus_v1",
+            "Missions/DSM_DEMO",
             "-o",
-            "Missions/enceladus_v1/blah",
+            "Missions/DSM_DEMO/blah",
             "-g",
             "0",
          ],

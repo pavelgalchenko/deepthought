@@ -17,10 +17,33 @@
 ** namespace Kit {
 ** #endif
 */
+/**********************************************************************/
+struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
+                                                char *path, char *fileName) {
+   FILE *f                 = FileOpen(path, fileName, "r");
+   struct fy_document *fyd = fy_document_build_from_fp(NULL, f);
+   fclose(f);
+   if (fy_document_resolve(fyd)) {
+      printf("Unable to resolve links in %127s. Exiting...\n", fileName);
+      exit(EXIT_FAILURE);
+   }
 
+   if (!fyd) {
+      printf("Failed to build yaml from %127s. Exiting...\n", fileName);
+      fy_document_destroy(fyd);
+      exit(EXIT_FAILURE);
+   }
+   return fyd;
+}
 /**********************************************************************/
 struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path) {
    return (fy_node_by_path(node, path, -1, FYNWF_PTR_YAML));
+}
+/**********************************************************************/
+long getYAMLBool(struct fy_node *node) {
+   size_t strLen    = 0;
+   const char *data = fy_node_get_scalar(node, &strLen);
+   return !strncasecmp(data, "true", strLen);
 }
 /**********************************************************************/
 long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
@@ -28,10 +51,29 @@ long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
    long i                   = 0;
    struct fy_node *iterNode = NULL;
    while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
-      fy_node_scanf(iterNode, "/ %lf", &dest[i]);
       if (!fy_node_scanf(iterNode, "/ %lf", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
          printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
+                "in %s on line %d. "
+                "Exiting...\n",
+                parentAddress, __FILE__, __LINE__);
+         exit(EXIT_FAILURE);
+      }
+      i++;
+      if (i == n)
+         break;
+   }
+   return (i);
+}
+/**********************************************************************/
+long assignYAMLToFloatArray(const long n, struct fy_node *yamlSequence,
+                            float dest[]) {
+   long i                   = 0;
+   struct fy_node *iterNode = NULL;
+   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+      if (!fy_node_scanf(iterNode, "/ %f", &dest[i])) {
+         char *parentAddress = fy_node_get_parent_address(yamlSequence);
+         printf("Problem reading YAML sequence %s in assignYAMLTofloatArray "
                 "in %s on line %d. "
                 "Exiting...\n",
                 parentAddress, __FILE__, __LINE__);
@@ -68,7 +110,7 @@ long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
    long i                   = 0;
    struct fy_node *iterNode = NULL;
    while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
-      dest[i] = fy_node_compare_text(iterNode, "true", -1);
+      dest[i] = getYAMLBool(iterNode);
       i++;
       if (i == n)
          break;
