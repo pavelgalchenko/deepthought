@@ -85,13 +85,16 @@ void AccelerometerModel(struct SCType *S) {
          AvgAcc     = A->DV / A->SampleTime;
          A->TrueAcc = AvgAcc + AccGG;
 
-         PrevBias    = A->CorrCoef * A->Bias;
-         A->Bias     = PrevBias + A->BiasStabCoef * GaussianRandom(RNG);
-         A->AccError = 0.5 * (A->Bias + PrevBias) + A->DVRWCoef * GaussianRandom(RNG);
+         PrevBias = A->CorrCoef * A->Bias;
+         A->Bias  = PrevBias + A->BiasStabCoef * GaussianRandom(RNG);
+         A->AccError =
+             0.5 * (A->Bias + PrevBias) + A->DVRWCoef * GaussianRandom(RNG);
 
-         A->MeasAcc = Limit(A->Scale * A->TrueAcc + A->AccError, -A->MaxAcc, A->MaxAcc);
+         A->MeasAcc =
+             Limit(A->Scale * A->TrueAcc + A->AccError, -A->MaxAcc, A->MaxAcc);
 
-         A->DV = A->MeasAcc * A->SampleTime + A->DVNoiseCoef * GaussianRandom(RNG);
+         A->DV =
+             A->MeasAcc * A->SampleTime + A->DVNoiseCoef * GaussianRandom(RNG);
 
          A->Counts = (long)(A->DV / A->SampleTime / A->Quant + 0.5);
 
@@ -124,19 +127,23 @@ void GyroModel(struct SCType *S) {
          QTxV(N->qb, G->Axis, Axis);
          G->TrueRate = VoV(N->AngVelB, Axis);
 
-         PrevBias  = G->CorrCoef * G->Bias;
-         G->Bias   = PrevBias + G->BiasStabCoef * GaussianRandom(RNG);
-         RateError = 0.5 * (G->Bias + PrevBias) + G->ARWCoef * GaussianRandom(RNG);
+         PrevBias = G->CorrCoef * G->Bias;
+         G->Bias  = PrevBias + G->BiasStabCoef * GaussianRandom(RNG);
+         RateError =
+             0.5 * (G->Bias + PrevBias) + G->ARWCoef * GaussianRandom(RNG);
 
-         G->MeasRate = Limit(G->Scale * G->TrueRate + RateError, -G->MaxRate, G->MaxRate);
+         G->MeasRate =
+             Limit(G->Scale * G->TrueRate + RateError, -G->MaxRate, G->MaxRate);
 
          PrevAngle = G->Angle;
-         G->Angle = PrevAngle + G->MeasRate * G->SampleTime + G->AngNoiseCoef * GaussianRandom(RNG);
+         G->Angle  = PrevAngle + G->MeasRate * G->SampleTime +
+                    G->AngNoiseCoef * GaussianRandom(RNG);
 
          PrevCounts = (long)(PrevAngle / G->Quant + 0.5);
          Counts     = (long)(G->Angle / G->Quant + 0.5);
 
-         G->MeasRate = ((double)(Counts - PrevCounts)) * G->Quant / G->SampleTime;
+         G->MeasRate =
+             ((double)(Counts - PrevCounts)) * G->Quant / G->SampleTime;
 
          S->AC.Gyro[Ig].Rate  = G->MeasRate;
          S->AC.Gyro[Ig].Valid = TRUE;
@@ -157,7 +164,8 @@ void MagnetometerModel(struct SCType *S) {
       if (MAG->SampleCounter >= MAG->MaxCounter) {
          MAG->SampleCounter = 0;
 
-         Signal     = MAG->Scale * VoV(S->bvb, MAG->Axis) + MAG->Noise * GaussianRandom(RNG);
+         Signal = MAG->Scale * VoV(S->bvb, MAG->Axis) +
+                  MAG->Noise * GaussianRandom(RNG);
          Signal     = Limit(Signal, -MAG->Saturation, MAG->Saturation);
          Counts     = (long)(Signal / MAG->Quant + 0.5);
          MAG->Field = ((double)Counts) * MAG->Quant;
@@ -249,7 +257,8 @@ void FssModel(struct SCType *S) {
             MxV(FSS->CB, S->svb, svs);
             SunAng[0] = atan2(svs[FSS->H_Axis], svs[FSS->BoreAxis]);
             SunAng[1] = atan2(svs[FSS->V_Axis], svs[FSS->BoreAxis]);
-            if (fabs(SunAng[0]) < FSS->FovHalfAng[0] && fabs(SunAng[1]) < FSS->FovHalfAng[1] &&
+            if (fabs(SunAng[0]) < FSS->FovHalfAng[0] &&
+                fabs(SunAng[1]) < FSS->FovHalfAng[1] &&
                 svs[FSS->BoreAxis] > 0.0) {
                FSS->Valid = TRUE;
             } else {
@@ -316,7 +325,8 @@ void StarTrackerModel(struct SCType *S) {
          BoN = VoV(ST->CB[ST->BoreAxis], NadirVecB);
          if (BoN > cos(LimbAng + ST->EarthExclAng))
             ST->Valid = FALSE;
-         /* Moon Occultation? (Only worked out if orbiting Earth.  Customize as needed)*/
+         /* Moon Occultation? (Only worked out if orbiting Earth.  Customize as
+          * needed)*/
          if ((ST->Valid == TRUE) && (Orb[S->RefOrb].World == EARTH)) {
             for (i = 0; i < 3; i++)
                mvn[i] = World[LUNA].eph.PosN[i] - S->PosN[i];
@@ -356,10 +366,11 @@ void GpsModel(struct SCType *S) {
    static long First = 1;
 
    if (First) {
-      S->AC.Time = DynTime; // TODO: AC->Time needs to be initialized before DsmSensorModule() is
-                            // called, but not here if possible
-      First    = 0;
-      GpsNoise = CreateRandomProcess(2);
+      // TODO: AC->Time needs to be initialized before DsmSensorModule() is
+      // called, but not here if possible
+      S->AC.Time = DynTime;
+      First      = 0;
+      GpsNoise   = CreateRandomProcess(2);
    }
 
    if (Orb[S->RefOrb].World == EARTH) {
@@ -374,11 +385,13 @@ void GpsModel(struct SCType *S) {
 
             GPS->Rollover = GpsRollover;
             GPS->Week     = GpsWeek;
-            GPS->Sec      = GpsSecond + GPS->TimeNoise * GaussianRandom(GpsNoise);
+            GPS->Sec = GpsSecond + GPS->TimeNoise * GaussianRandom(GpsNoise);
 
             for (i = 0; i < 3; i++) {
-               GPS->PosN[i] = S->PosN[i] + GPS->PosNoise * GaussianRandom(GpsNoise);
-               GPS->VelN[i] = S->VelN[i] + GPS->VelNoise * GaussianRandom(GpsNoise);
+               GPS->PosN[i] =
+                   S->PosN[i] + GPS->PosNoise * GaussianRandom(GpsNoise);
+               GPS->VelN[i] =
+                   S->VelN[i] + GPS->VelNoise * GaussianRandom(GpsNoise);
             }
             MxV(World[EARTH].CWN, S->PosN, PosW);
             MxV(World[EARTH].CWN, GPS->PosN, GPS->PosW);
