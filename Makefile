@@ -232,7 +232,7 @@ $(OBJ)42nos3.o $(OBJ)42dsm.o
 KITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
 $(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o $(OBJ)msis86kit.o \
 $(OBJ)orbkit.o $(OBJ)radbeltkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o \
-$(OBJ)docoptkit.o $(OBJ)dsmkit.o
+$(OBJ)docoptkit.o $(OBJ)dsmkit.o $(OBJ)navkit.o
 
 LIBKITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
 $(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)orbkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o
@@ -349,6 +349,9 @@ $(OBJ)fswkit.o      : $(KITSRC)fswkit.c
 
 $(OBJ)dsmkit.o      : $(KITSRC)dsmkit.c
 	$(CC) $(CFLAGS) -c $(KITSRC)dsmkit.c -o $(OBJ)dsmkit.o
+
+$(OBJ)navkit.o      : $(KITSRC)navkit.c
+	$(CC) $(CFLAGS) -c $(KITSRC)navkit.c -o $(OBJ)navkit.o
 
 $(OBJ)glkit.o      : $(KITSRC)glkit.c $(KITINC)glkit.h
 	$(CC) $(CFLAGS) -c $(KITSRC)glkit.c -o $(OBJ)glkit.o

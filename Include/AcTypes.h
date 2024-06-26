@@ -107,6 +107,7 @@ struct AcGyroType {
    double Axis[3];
 
    /*~ Internal Variables ~*/
+   long Valid;
    double Rate; /* [[rad/sec]] [~>~] */
 };
 
@@ -115,6 +116,7 @@ struct AcMagnetometerType {
    double Axis[3];
 
    /*~ Internal Variables ~*/
+   long Valid;
    double Field; /* [[Tesla]] [~>~] */
 };
 
@@ -176,6 +178,7 @@ struct AcAccelType {
    double Axis[3];
 
    /*~ Internal Variables ~*/
+   long Valid;
    double Acc; /* [[m/s^2]] [~>~] */
 };
 

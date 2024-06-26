@@ -23,11 +23,41 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#include "42.h"
-#include "dsmkit.h"
+#include "42dsm.h"
 
 #define EPS_DSM 1e-12
 
+//------------------------------------------------------------------------------
+//                                NAV FUNCTIONS
+//------------------------------------------------------------------------------
+// Assigns the Jacobian and update functions as needed. Also initializes the
+// the default measurement data
+void AssignNavFunctions(struct SCType *const S, const enum navType navType) {
+   struct DSMType *DSM;
+   struct DSMNavType *Nav;
+
+   DSM = &S->DSM;
+   Nav = &DSM->DsmNav;
+
+   switch (navType) {
+      case RIEKF_NAV:
+         Nav->EOMJacobianFun = &eomRIEKFJacobianFun;
+         Nav->updateLaw      = &RIEKFUpdateLaw;
+         break;
+      case LIEKF_NAV:
+         Nav->EOMJacobianFun = &eomLIEKFJacobianFun;
+         Nav->updateLaw      = &LIEKFUpdateLaw;
+         break;
+      case MEKF_NAV:
+         Nav->EOMJacobianFun = &eomMEKFJacobianFun;
+         Nav->updateLaw      = &MEKFUpdateLaw;
+         break;
+      default:
+         printf("Undefined Navigation filter type. Exiting...\n");
+         exit(EXIT_FAILURE);
+         break;
+   }
+}
 //------------------------------------------------------------------------------
 //                               FUNCTIONS
 //------------------------------------------------------------------------------
@@ -127,9 +157,11 @@ void InitDSM(struct SCType *S) {
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
+   struct DSMNavType *Nav;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
+   Nav = &DSM->DsmNav;
 
    S->InitDSM   = 0;
    DSM->Init    = 1;
@@ -145,12 +177,62 @@ void InitDSM(struct SCType *S) {
    Cmd->H_DumpActive          = FALSE;
    strcpy(Cmd->dmp_actuator, "");
    Cmd->ActNumCmds = 0;
+
+   Nav->type             = IDEAL_NAV;
+   Nav->batching         = NONE_BATCH;
+   Nav->refFrame         = FRAME_N;
+   Nav->NavigationActive = FALSE;
+   Nav->DT               = S->AC.DT;
+   // Nav->Time             = 0.0;
+   // Nav->step         = 0;
+   Nav->subStep      = 0;
+   Nav->Date0.JulDay = 0;
+   Nav->Date0.Year   = 0;
+   Nav->Date0.Month  = 0;
+   Nav->Date0.Day    = 0;
+   Nav->Date0.doy    = 0;
+   Nav->Date0.Hour   = 0;
+   Nav->Date0.Minute = 0;
+   Nav->Date0.Second = 0;
+   Nav->Date         = Nav->Date0;
+
+   for (enum navState i = INIT_STATE; i <= FIN_STATE; i++)
+      Nav->stateActive[i] = FALSE;
+   for (enum sensorType i = INIT_SENSOR; i <= FIN_SENSOR; i++) {
+      Nav->sensorActive[i] = FALSE;
+      Nav->measTypes[i]    = NULL;
+      Nav->residuals[i]    = NULL;
+   }
+   InitMeasList(&Nav->measList);
+   /* Initialize pointers to NULL */
+   Nav->sqrQ     = NULL;
+   Nav->M        = NULL;
+   Nav->P        = NULL;
+   Nav->delta    = NULL;
+   Nav->jacobian = NULL;
+   Nav->STM      = NULL;
+   Nav->NxN      = NULL;
+   Nav->NxN2     = NULL;
+   Nav->whlH     = NULL;
+   for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++)
+         Nav->oldRefCRN[i][j] = 0.0;
+      Nav->oldRefCRN[i][i]   = 1.0;
+      Nav->oldRefPos[i]      = 0.0;
+      Nav->oldRefVel[i]      = 0.0;
+      Nav->oldRefOmega[i]    = 0.0;
+      Nav->oldRefOmegaDot[i] = 0.0;
+      Nav->forceB[i]         = 0.0;
+      Nav->torqueB[i]        = 0.0;
+   }
+   Nav->ballisticCoef    = 0.0;
+   Nav->reportConfigured = FALSE;
 }
 //------------------------------------------------------------------------------
 //                           COMMAND INTERPRETER
 //------------------------------------------------------------------------------
 
-//----------------------------------- GAINS -----------------------------------
+//------------------------------------ GAINS -----------------------------------
 long GetGains(struct SCType *S, const char GainCmdName[255],
               enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long GainsProcessed = FALSE;
@@ -388,8 +470,7 @@ long GetLimits(struct SCType *S, const char LimitCmdName[255],
 
    return (LimitsProcessed);
 }
-//----------------------------------- CONTROLLER
-//-----------------------------------
+//--------------------------------- CONTROLLER ---------------------------------
 long GetController(struct SCType *S, const char CtrlCmdName[255],
                    enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long CntrlProcessed = FALSE;
@@ -483,8 +564,7 @@ long GetController(struct SCType *S, const char CtrlCmdName[255],
 
    return (CntrlProcessed);
 }
-//----------------------------------- ACTUATORS
-//-----------------------------------
+//---------------------------------- ACTUATORS ---------------------------------
 long GetActuators(struct SCType *S, const char ActuatorCmdName[255],
                   enum ctrlState controllerState, FILE *InpDsmFilePtr) {
    long ActuatorsProcessed = FALSE;
@@ -1149,7 +1229,7 @@ long GetAttitudeCmd(struct SCType *S, char AttitudeCmd[255],
 
    return (AttitudeCmdProcessed);
 }
-//----------------------- ACTUATOR CMD -----------------------------------------
+//-------------------------------- ACTUATOR CMD --------------------------------
 long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255],
                     FILE *InpDsmFilePtr) {
    char DsmCmdLine[2048] = "";
@@ -1245,6 +1325,876 @@ long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255],
    return (ActuatorCmdProcessed);
 }
 
+//--------------------------------- STATE NAMES --------------------------------
+enum navState GetStateValue(const char *string) {
+   if (!strcmp(string, "Attitude"))
+      return ATTITUDE_STATE;
+   else if (!strcmp(string, "Time"))
+      return TIME_STATE;
+   else if (!strcmp(string, "RotMat"))
+      return ROTMAT_STATE;
+   else if (!strcmp(string, "Quat"))
+      return QUAT_STATE;
+   else if (!strncmp(string, "Pos", 3))
+      return POS_STATE;
+   else if (!strncmp(string, "Vel", 3))
+      return VEL_STATE;
+   else if (!strcmp(string, "Omega"))
+      return OMEGA_STATE;
+   else
+      return NULL_STATE;
+}
+
+//-------------------------------- SENSOR NAMES --------------------------------
+enum sensorType GetSensorValue(const char *string) {
+   if (!strcmp(string, "STARTRACK"))
+      return STARTRACK_SENSOR;
+   else if (!strcmp(string, "GPS"))
+      return GPS_SENSOR;
+   else if (!strcmp(string, "FSS"))
+      return FSS_SENSOR;
+   else if (!strcmp(string, "CSS"))
+      return CSS_SENSOR;
+   else if (!strcmp(string, "GYRO"))
+      return GYRO_SENSOR;
+   else if (!strcmp(string, "MAG"))
+      return MAG_SENSOR;
+   else if (!strcmp(string, "ACCEL"))
+      return ACCEL_SENSOR;
+   else
+      return NULL_SENSOR;
+}
+
+//------------------------------- NAVIGATION DATA ------------------------------
+void ConfigureMeas(struct DSMMeasType *meas, enum sensorType sensor) {
+   switch (sensor) {
+      case GPS_SENSOR:
+         meas->dim             = 6;
+         meas->errDim          = 6;
+         meas->measJacobianFun = &gpsJacobianFun;
+         meas->measFun         = &gpsFun;
+         break;
+      case STARTRACK_SENSOR:
+         meas->dim             = 4;
+         meas->errDim          = 3;
+         meas->measJacobianFun = &startrackJacobianFun;
+         meas->measFun         = &startrackFun;
+         break;
+      case FSS_SENSOR:
+         meas->dim             = 2;
+         meas->errDim          = 2;
+         meas->measJacobianFun = &fssJacobianFun;
+         meas->measFun         = &fssFun;
+         break;
+      case CSS_SENSOR:
+         meas->dim             = 1;
+         meas->errDim          = 1;
+         meas->measJacobianFun = &cssJacobianFun;
+         meas->measFun         = &cssFun;
+         break;
+      case GYRO_SENSOR:
+         meas->dim             = 1;
+         meas->errDim          = 1;
+         meas->measJacobianFun = &gyroJacobianFun;
+         meas->measFun         = &gyroFun;
+         break;
+      case MAG_SENSOR:
+         meas->dim             = 1;
+         meas->errDim          = 1;
+         meas->measJacobianFun = &magJacobianFun;
+         meas->measFun         = &magFun;
+         break;
+      case ACCEL_SENSOR:
+         meas->dim             = 1;
+         meas->errDim          = 1;
+         meas->measJacobianFun = &accelJacobianFun;
+         meas->measFun         = &accelFun;
+         break;
+      default:
+         break;
+   }
+   meas->type = sensor;
+   meas->R    = calloc(meas->errDim, sizeof(double));
+   meas->N    = CreateMatrix(meas->errDim, meas->errDim);
+   // TODO: might move this out later
+   for (int i = 0; i < meas->errDim; i++)
+      meas->N[i][i] = 1.0;
+}
+
+long ConfigureNavigationSensors(struct SCType *const S, char SensorSetName[255],
+                                FILE *InpDsmFilePtr) {
+   long DataProcessed = FALSE, numSensors[FIN_SENSOR + 1] = {0.0};
+   enum sensorType sensor;
+   char sensorSet[255], sensorData[255], sensorType[255], junk[255];
+   char DsmCmdLine[1024] = "";
+   char SensorSetDef[1024];
+   char *token;
+   int setNum, sensorItemNum, sensorNum, junkInt;
+   long i, j;
+   double sensorUnderWeight, sensorProbGate;
+
+   struct DSMType *DSM;
+   struct DSMNavType *Nav;
+
+   DSM = &S->DSM;
+   Nav = &DSM->DsmNav;
+
+   for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
+      long nSensor;
+      Nav->sensorActive[sensor] = FALSE;
+      switch (sensor) {
+         case STARTRACK_SENSOR:
+            nSensor = S->Nst;
+            break;
+         case GPS_SENSOR:
+            nSensor = S->Ngps;
+            break;
+         case FSS_SENSOR:
+            nSensor = S->Nfss;
+            break;
+         case CSS_SENSOR:
+            nSensor = S->Ncss;
+            break;
+         case GYRO_SENSOR:
+            nSensor = S->Ngyro;
+            break;
+         case MAG_SENSOR:
+            nSensor = S->Nmag;
+            break;
+         case ACCEL_SENSOR:
+            nSensor = S->Nacc;
+            break;
+         default:
+            nSensor = 0;
+            break;
+      }
+      if (Nav->measTypes[sensor] != NULL) {
+         for (i = 0; i < nSensor; i++) {
+            free(Nav->measTypes[sensor][i].R);
+            free(Nav->residuals[i]);
+            DestroyMatrix(Nav->measTypes[sensor][i].N);
+         }
+         free(Nav->measTypes[sensor]);
+         free(Nav->residuals[sensor]);
+      }
+      Nav->nSensor[sensor] = nSensor;
+      if (nSensor > 0) {
+         Nav->measTypes[sensor] = calloc(nSensor, sizeof(struct DSMMeasType));
+         Nav->residuals[sensor] = calloc(nSensor, sizeof(double *));
+      } else {
+         Nav->measTypes[sensor] = NULL;
+         Nav->residuals[sensor] = NULL;
+      }
+   }
+
+   strcpy(sensorSet, SensorSetName);
+   if (sscanf(sensorSet, "SensorSet_[%d]", &setNum) != 1) {
+      return (DataProcessed);
+   }
+
+   strcat(sensorSet, " %[\040-\377]");
+   rewind(InpDsmFilePtr);
+   while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
+      if (sscanf(DsmCmdLine, sensorSet, &SensorSetDef) == 1) {
+         DataProcessed = TRUE;
+         token         = strtok(SensorSetDef, " ");
+         while (token != NULL) {
+            struct DSMMeasType *meas = NULL;
+            if (sscanf(token, "Sensor_[%d]", &sensorItemNum)) {
+               strcpy(sensorData, token);
+               strcat(sensorData, " %s %d");
+               rewind(InpDsmFilePtr);
+               while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
+                  if (sscanf(DsmCmdLine, sensorData, &sensorType, &sensorNum) ==
+                      2) {
+                     sensor = GetSensorValue(sensorType);
+                     meas   = &Nav->measTypes[sensor][sensorNum];
+                     ConfigureMeas(meas, sensor);
+                     switch (sensor) {
+                        case STARTRACK_SENSOR: {
+                           double sensorNoise[3] = {0.0};
+                           if (sensorNum >= S->Nst) {
+                              printf("Sensor Set %s has requested more "
+                                     "startrackers than "
+                                     "spacecraft SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, " %lf %lf %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise[0], &sensorNoise[1],
+                                      &sensorNoise[2], &sensorUnderWeight,
+                                      &sensorProbGate) != 7) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           for (j = 0; j < meas->errDim; j++) {
+                              meas->N[j][j] = 1.0;
+                              meas->R[j]    = sensorNoise[j] / 3600.0 * D2R;
+                           }
+                        } break;
+                        case GPS_SENSOR: {
+                           double sensorNoise[2] = {0.0};
+                           if (sensorNum >= S->Ngps) {
+                              printf("Sensor Set %s has requested more GPS "
+                                     "sensors than spacecraft "
+                                     "SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, "  %lf %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise[0], &sensorNoise[1],
+                                      &sensorUnderWeight,
+                                      &sensorProbGate) != 6) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           for (j = 0; j < meas->errDim; j++) {
+                              meas->N[j][j] = 1.0;
+                              if (j < 3)
+                                 meas->R[j] = sensorNoise[0];
+                              else
+                                 meas->R[j] = sensorNoise[1];
+                           }
+                        } break;
+                        case FSS_SENSOR: {
+                           double sensorNoise;
+                           if (sensorNum >= S->Nfss) {
+                              printf("Sensor Set %s has requested more fine "
+                                     "Sun sensors than "
+                                     "spacecraft SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, "  %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise, &sensorUnderWeight,
+                                      &sensorProbGate) != 5) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           meas->R = calloc(meas->errDim, sizeof(double));
+                           meas->N = CreateMatrix(meas->errDim, meas->errDim);
+                           for (j = 0; j < meas->errDim; j++) {
+                              meas->N[j][j] = 1.0;
+                              meas->R[j]    = sensorNoise * D2R;
+                           }
+                        } break;
+                        case CSS_SENSOR: {
+                           double sensorNoise;
+                           if (sensorNum >= S->Ncss) {
+                              printf("Sensor Set %s has requested more coarse "
+                                     "Sun sensors than "
+                                     "spacecraft SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, "  %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise, &sensorUnderWeight,
+                                      &sensorProbGate) != 5) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           meas->N[0][0] = 1.0;
+                           meas->R[0]    = sensorNoise;
+                        } break;
+                        case GYRO_SENSOR: {
+                           double sensorNoise;
+                           if (sensorNum >= S->Ngyro) {
+                              printf("Sensor Set %s has requested more "
+                                     "gyroscope sensors than "
+                                     "spacecraft SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, "  %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise, &sensorUnderWeight,
+                                      &sensorProbGate) != 5) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           meas->N[0][0] = 1.0;
+                           meas->R[0]    = sensorNoise;
+                        } break;
+                        case MAG_SENSOR: {
+                           double sensorNoise;
+                           if (sensorNum >= S->Nmag) {
+                              printf("Sensor Set %s has requested more "
+                                     "magnetometers than "
+                                     "spacecraft SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, "  %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise, &sensorUnderWeight,
+                                      &sensorProbGate) != 5) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           meas->N[0][0] = 1.0;
+                           meas->R[0]    = sensorNoise;
+                        } break;
+                        case ACCEL_SENSOR: {
+                           double sensorNoise;
+                           if (sensorNum >= S->Nacc) {
+                              printf("Sensor Set %s has requested more "
+                                     "accelerometers than "
+                                     "spacecraft SC_[%ld] has. Exiting...\n",
+                                     SensorSetName, S->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           strcat(sensorData, "  %lf %lf %lf");
+                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
+                                      &sensorNoise, &sensorUnderWeight,
+                                      &sensorProbGate) != 5) {
+                              printf("%s is of invalid format for sensor type "
+                                     "%s. Exiting...\n",
+                                     token, sensorType);
+                              exit(EXIT_FAILURE);
+                           }
+                           meas->N[0][0] = 1.0;
+                           meas->R[0]    = sensorNoise;
+                        } break;
+                        default:
+                           printf("%s in %s is of invalid sensor type %s. "
+                                  "Exiting..\n",
+                                  token, SensorSetName, sensorType);
+                           exit(EXIT_FAILURE);
+                           break;
+                     }
+
+                     meas->underWeighting = sensorUnderWeight;
+                     meas->probGate       = sensorProbGate;
+                     meas->nextMeas       = NULL;
+                     meas->data           = NULL;
+                     meas->time           = 0.0;
+                     meas->sensorNum      = sensorNum;
+                     meas->type           = sensor;
+                     numSensors[sensor]++;
+                     Nav->residuals[sensor][sensorNum] =
+                         calloc(meas->errDim, sizeof(double));
+                     break;
+                  }
+               }
+            }
+            token = strtok(NULL, " ");
+         }
+
+         for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++)
+            Nav->sensorActive[sensor] = (numSensors[sensor] > 0 ? TRUE : FALSE);
+         break;
+      }
+   }
+   return (DataProcessed);
+}
+
+//------------------------------- NAVIGATION DATA ------------------------------
+long GetNavigationData(struct DSMNavType *const Nav,
+                       char NavigationDataName[255], FILE *InpDsmFilePtr,
+                       enum matType type) {
+   long DataProcessed = FALSE, (*inds)[] = NULL, (*sizes)[] = NULL;
+   enum navState state;
+   char NavigationData[255];
+   double *dataDest;
+   long dataDim;
+   char DsmCmdLine[1024] = "";
+   char data[1024];
+   char *token;
+   int datNum;
+   long i, maxI, startInd;
+
+   strcpy(NavigationData, NavigationDataName);
+   if (sscanf(NavigationData, "Dat_[%d]", &datNum) != 1) {
+      return (DataProcessed);
+   }
+
+   switch (type) {
+      case Q_DAT:
+         dataDim = Nav->navDim;
+         inds    = &Nav->navInd;
+         sizes   = &Nav->navSize;
+         break;
+      case P0_DAT:
+         dataDim = Nav->navDim;
+         inds    = &Nav->navInd;
+         sizes   = &Nav->navSize;
+         break;
+      case IC_DAT:
+         dataDim = Nav->stateDim;
+         inds    = &Nav->stateInd;
+         sizes   = &Nav->stateSize;
+         break;
+   }
+   dataDest = calloc(dataDim, sizeof(double));
+
+   // Ensure default Rotation Matrix and Quaternion are valid
+   if (type == IC_DAT) {
+      if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
+         dataDest[(*inds)[ROTMAT_STATE] + 0] = 1.0;
+         dataDest[(*inds)[ROTMAT_STATE] + 4] = 1.0;
+         dataDest[(*inds)[ROTMAT_STATE] + 8] = 1.0;
+      }
+      if (Nav->stateActive[QUAT_STATE] == TRUE) {
+         dataDest[(*inds)[QUAT_STATE] + 3] = 1.0;
+      }
+   }
+
+   strcat(NavigationData, " %[\040-\377]");
+   rewind(InpDsmFilePtr);
+   while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
+      if (sscanf(DsmCmdLine, NavigationData, &data) == 1) {
+         token = strtok(data, " ");
+         while (token != NULL) {
+            state = GetStateValue(token);
+            if (state != NULL_STATE) {
+               if (state == ATTITUDE_STATE) {
+                  if (Nav->stateActive[ROTMAT_STATE] == TRUE)
+                     state = ROTMAT_STATE;
+                  else
+                     state = QUAT_STATE;
+               }
+               // Nesting the ifs so default initial values can be used for ICs
+               // and sqrQ
+               if (Nav->stateActive[state] == TRUE) {
+                  maxI     = (*sizes)[state];
+                  startInd = (*inds)[state];
+                  if (type == IC_DAT &&
+                      (state == ROTMAT_STATE || state == QUAT_STATE)) {
+                     double tmpV[3] = {0.0};
+                     long SEQ;
+                     for (i = 0; i < 3; i++) {
+                        token = strtok(NULL, " ");
+                        sscanf(token, "%lf", &tmpV[i]);
+                     }
+                     token = strtok(NULL, " ");
+                     sscanf(token, "%ld", &SEQ);
+                     A2C(SEQ, tmpV[0], tmpV[1], tmpV[2], Nav->CRB);
+                  } else {
+                     for (i = 0; i < maxI; i++) {
+                        token = strtok(NULL, " ");
+                        sscanf(token, "%lf", &dataDest[startInd + i]);
+                     }
+                  }
+               }
+            } else {
+               printf("%s is an invalid state for navigation data %s. "
+                      "Exiting...\n",
+                      token, NavigationDataName);
+               exit(EXIT_FAILURE);
+            }
+            token = strtok(NULL, " ");
+         }
+         break;
+      }
+   }
+
+   switch (type) {
+      case Q_DAT:
+         for (i = 0; i < Nav->navDim; i++)
+            Nav->sqrQ[i] = fabs(dataDest[i]);
+         DataProcessed = TRUE;
+         break;
+      case P0_DAT:
+         for (i = 0; i < Nav->navDim; i++) {
+            if (dataDest[i] < 0.0) {
+               printf("The initial estimation error covariance matrix in "
+                      "navigation data %s is not positive definite. Ensure "
+                      "that all states are supplied. Exiting...\n",
+                      NavigationDataName);
+               exit(EXIT_FAILURE);
+            }
+            Nav->S[i][i] = fabs(dataDest[i]);
+         }
+         DataProcessed = TRUE;
+         break;
+      case IC_DAT:
+         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+            if (Nav->stateActive[state] == TRUE) {
+               startInd = Nav->stateInd[state];
+               switch (state) {
+                  case TIME_STATE:
+                     Nav->Date0.JulDay = dataDest[startInd];
+                     JDToDate(dataDest[startInd], &Nav->Date0.Year,
+                              &Nav->Date0.Month, &Nav->Date0.Day,
+                              &Nav->Date0.Hour, &Nav->Date0.Minute,
+                              &Nav->Date0.Second);
+                     Nav->Date = Nav->Date0;
+                     break;
+                  case ROTMAT_STATE:
+                  case QUAT_STATE: {
+                     double tmpM[3][3] = {{0.0}};
+                     MT(Nav->CRB, tmpM);
+                     C2Q(tmpM, Nav->qbr);
+                  } break;
+                  case POS_STATE:
+                     for (i = 0; i < 3; i++)
+                        Nav->PosR[i] = dataDest[startInd + i];
+                     break;
+                  case VEL_STATE:
+                     for (i = 0; i < 3; i++)
+                        Nav->VelR[i] = dataDest[startInd + i];
+                     break;
+                  case OMEGA_STATE:
+                     for (i = 0; i < 3; i++)
+                        Nav->wbr[i] = dataDest[startInd + i];
+                     break;
+                  default:
+                     break;
+               }
+            }
+         }
+         DataProcessed = TRUE;
+         break;
+   }
+   free(dataDest);
+   return (DataProcessed);
+}
+
+//------------------------------- NAVIGATION CMD -------------------------------
+long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
+                      FILE *InpDsmFilePtr) {
+   char DsmCmdLine[1024] = "";
+   char NavigationCmdName[255];
+   char navType[255], batchingType[255], refOri[255], refFrame;
+   char QDat[255], P0Dat[255], ICDat[255], sensorSet[255];
+   char states[1024];
+   long NavigationCmdProcessed = FALSE;
+   enum navState state;
+   long i, j;
+
+   struct AcType *AC;
+   struct DSMType *DSM;
+   struct DSMNavType *Nav;
+
+   AC  = &S->AC;
+   DSM = &S->DSM;
+   Nav = &DSM->DsmNav;
+
+   strcpy(NavigationCmdName, NavigationCmd);
+   if (!strcmp(NavigationCmd, "NO_CHANGE")) {
+      NavigationCmdProcessed = TRUE;
+      return (NavigationCmdProcessed);
+   } else if (!strcmp(NavigationCmd, "PASSIVE_NAV")) {
+      Nav->NavigationActive  = FALSE;
+      NavigationCmdProcessed = TRUE;
+      return (NavigationCmdProcessed);
+   } else if (!strncmp(NavigationCmd, "NavigationCmd", 13)) {
+      Nav->NavigationActive = TRUE;
+      strcat(NavigationCmd, " %s %s %c %s %s %s %s %s %[\040-\377]");
+
+      rewind(InpDsmFilePtr);
+      while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
+         if (sscanf(DsmCmdLine, NavigationCmd, &navType, &batchingType,
+                    &refFrame, &refOri, &QDat, &P0Dat, &ICDat, &sensorSet,
+                    &states) == 9) {
+            NavigationCmdProcessed = TRUE;
+            break;
+         }
+      }
+   }
+
+   if (NavigationCmdProcessed == TRUE) {
+      // TODO: not the biggest fan of DTSIM being here, but I'm coming around
+      Nav->DT          = AC->DT;
+      Nav->subStepSize = DTSIM;
+      Nav->subStep     = 0;
+      Nav->step        = 0;
+      long double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
+      TimeToDate(t0, &Nav->Date0.Year, &Nav->Date0.Month, &Nav->Date0.Day,
+                 &Nav->Date0.Hour, &Nav->Date0.Minute, &Nav->Date0.Second,
+                 DTSIM);
+      Nav->Date0.doy =
+          MD2DOY(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day);
+      Nav->Date0.JulDay =
+          DateToJD(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day,
+                   Nav->Date0.Hour, Nav->Date0.Minute, Nav->Date0.Second);
+      Nav->Date = Nav->Date0;
+
+      Nav->subStepMax       = (long)(Nav->DT / Nav->subStepSize + 0.5);
+      Nav->Init             = FALSE;
+      Nav->reportConfigured = FALSE;
+      if (Nav->sqrQ != NULL) {
+         free(Nav->sqrQ);
+         free(Nav->delta);
+         DestroyMatrix(Nav->P);
+         DestroyMatrix(Nav->STM);
+         Nav->sqrQ     = NULL;
+         Nav->M        = NULL;
+         Nav->delta    = NULL;
+         Nav->P        = NULL;
+         Nav->S        = NULL;
+         Nav->jacobian = NULL;
+         Nav->STM      = NULL;
+         Nav->NxN      = NULL;
+         Nav->NxN2     = NULL;
+         Nav->whlH     = NULL;
+      }
+      DestroyMeasList(&Nav->measList);
+
+      if (!strcmp(navType, "RIEKF")) {
+         Nav->type = RIEKF_NAV;
+      } else if (!strcmp(navType, "LIEKF")) {
+         Nav->type = LIEKF_NAV;
+      } else if (!strcmp(navType, "MEKF")) {
+         Nav->type = MEKF_NAV;
+      } else {
+         printf("%s is an invalid filter type for filter %s. Exiting...\n",
+                navType, NavigationCmdName);
+         exit(EXIT_FAILURE);
+      }
+
+      if (!strcmp(batchingType, "None")) {
+         Nav->batching = NONE_BATCH;
+      } else if (!strcmp(batchingType, "Sensor")) {
+         Nav->batching = SENSOR_BATCH;
+      } else if (!strcmp(batchingType, "Time")) {
+         Nav->batching = TIME_BATCH;
+      } else {
+         printf("%s is an invalid batching type for filter %s. Exiting...\n",
+                batchingType, NavigationCmdName);
+         exit(EXIT_FAILURE);
+      }
+
+      if (refFrame == 'N') {
+         Nav->refFrame = FRAME_N;
+         // } else if (refFrame == 'L') {
+         //    Nav->refFrame = FRAME_L;
+         // } else if (refFrame == 'B') {
+         //    Nav->refFrame = FRAME_B;
+      } else {
+         printf("Frame %c is an invalid navigation reference frame for filter "
+                "%s. Exiting...\n",
+                refFrame, NavigationCmdName);
+         exit(EXIT_FAILURE);
+      }
+
+      if (!strcmp(refOri, "OP")) {
+         Nav->refOriType = ORI_OP;
+         Nav->refOri     = 0;
+      } else if (!strncmp(refOri, "SC", 2)) {
+         sscanf(refOri, "SC[%ld].B[%ld]", &Nav->refOriType, &Nav->refOri);
+         if (Nav->refOriType >= Nsc) {
+            printf("This mission only has %ld spacecraft, but spacecraft %ld "
+                   "was attempted to be set as the navigation reference frame. "
+                   "Exiting...\n",
+                   Nsc, Nav->refOriType);
+            exit(EXIT_FAILURE);
+         }
+         if (Nav->refOri >= SC[Nav->refOriType].Nb) {
+            printf("Spacecraft %ld only has %ld bodies, but the navigation "
+                   "reference frame was attempted to be set as body %ld. "
+                   "Exiting...\n",
+                   Nav->refOriType, SC[Nav->refOriType].Nb, Nav->refOri);
+            exit(EXIT_FAILURE);
+         }
+      } else {
+         Nav->refOriType = ORI_WORLD;
+         Nav->refOri     = DecodeString(refOri);
+         // error check?
+      }
+
+      for (i = INIT_STATE; i <= FIN_STATE; i++)
+         Nav->stateActive[i] = FALSE;
+
+      char *p = strtok(states, " ");
+      while (p != NULL) {
+         state = GetStateValue(p);
+         if (state == -1 || (state == ROTMAT_STATE && Nav->type == MEKF_NAV) ||
+             (state == QUAT_STATE && Nav->type != MEKF_NAV)) {
+            printf("%s is an invalid state to estimate for navigation filter "
+                   "%s of type %s. "
+                   "Exiting...\n",
+                   p, NavigationCmdName, navType);
+            exit(EXIT_FAILURE);
+         } else {
+            Nav->stateActive[state] = TRUE;
+         }
+         p = strtok(NULL, " ");
+      }
+
+      if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[QUAT_STATE]) {
+         printf("Cannot filter the Rotation Matrix and the attitude Quaternion "
+                "simultaneously. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+
+      for (i = INIT_STATE; i <= FIN_STATE; i++) {
+         switch (i) {
+            case TIME_STATE:
+               Nav->stateSize[i] = 1;
+               Nav->navSize[i]   = 1;
+               break;
+            case ROTMAT_STATE:
+               Nav->stateSize[i] = 9;
+               Nav->navSize[i]   = 3;
+               break;
+            case QUAT_STATE:
+               Nav->stateSize[i] = 4;
+               Nav->navSize[i]   = 3;
+               break;
+            case POS_STATE:
+            case VEL_STATE:
+            case OMEGA_STATE:
+               Nav->stateSize[i] = 3;
+               Nav->navSize[i]   = 3;
+               break;
+         }
+      }
+      Nav->whlH = calloc(AC->Nwhl, sizeof(double));
+
+      long stateInd = 0;
+      long navInd   = 0;
+      for (i = INIT_STATE; i <= FIN_STATE; i++) {
+         if (Nav->stateActive[i] == TRUE) {
+            Nav->stateInd[i]  = stateInd;
+            Nav->navInd[i]    = navInd;
+            stateInd         += Nav->stateSize[i];
+            navInd           += Nav->navSize[i];
+         } else {
+            // I need to figure out how to deal with this for varied frames &
+            // origins
+            Nav->stateInd[i] = -1;
+            Nav->navInd[i]   = -1;
+            switch (i) {
+               case POS_STATE:
+                  for (j = 0; j < 3; j++)
+                     Nav->PosR[j] = S->PosR[j] + (S->PosN[j] - AC->PosN[j]);
+                  break;
+               case VEL_STATE:
+                  for (j = 0; j < 3; j++)
+                     Nav->VelR[j] = S->VelR[j] + (S->VelN[j] - AC->VelN[j]);
+                  break;
+               case OMEGA_STATE:
+                  for (j = 0; j < 3; j++)
+                     Nav->wbr[j] = AC->wbn[j];
+                  break;
+               default:
+                  break;
+            }
+         }
+      }
+      if (navInd == 0) {
+         printf("Navigation Command is not filtering anything. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+
+      Nav->stateDim = stateInd;
+      Nav->navDim   = navInd;
+      if (!Nav->stateActive[ROTMAT_STATE] && !Nav->stateActive[QUAT_STATE])
+         for (j = 0; j < 4; j++)
+            Nav->qbr[j] = AC->qbn[j];
+
+      // sqrQ and P0 diagonal elements from Inp_DSM.txt
+      Nav->sqrQ  = calloc(Nav->navDim, sizeof(double));
+      Nav->M     = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->P     = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->S     = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->delta = calloc(Nav->navDim, sizeof(double));
+
+      Nav->jacobian = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->STM      = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->NxN      = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->NxN2     = CreateMatrix(Nav->navDim, Nav->navDim);
+      for (i = 0; i < Nav->navDim; i++)
+         Nav->STM[i][i] = 1.0;
+
+      if (GetNavigationData(Nav, ICDat, InpDsmFilePtr, IC_DAT) == FALSE) {
+         printf("%s is an invalid data set for the initial estimation states "
+                "for Navigation "
+                "command %s. Exiting...\n",
+                ICDat, NavigationCmdName);
+         exit(EXIT_FAILURE);
+      }
+
+      if (Nav->refOriType == ORI_WORLD && Nav->refFrame == FRAME_N) {
+         for (i = 0; i < 3; i++)
+            Nav->PosR[i] += Orb[S->RefOrb].PosN[i];
+         for (i = 0; i < 3; i++)
+            Nav->VelR[i] += Orb[S->RefOrb].VelN[i];
+      }
+
+      if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
+         // Simple test if given rot mat is a rot mat
+         double testM[3][3] = {{0.0}}, test = 0.0;
+         MTxM(Nav->CRB, Nav->CRB,
+              testM); // if Nav->CRB is valid, testM should be identity
+         for (i = 0; i < 3; i++)
+            testM[i][i] -=
+                1.0; // if Nav->CRB is valid, testM should now be zero matrix
+         for (i = 0; i < 3; i++)
+            for (j = 0; j < 3; j++)
+               test += fabs(testM[i][j]); // 1-norm of vec(testM)
+         if (test >= EPS_DSM) {
+            printf("The supplied initial rotation matrix for Navigation "
+                   "Command %s is not a valid Rotation Matrix. Exiting...\n",
+                   NavigationCmdName);
+            exit(EXIT_FAILURE);
+         }
+      }
+
+      if (GetNavigationData(Nav, QDat, InpDsmFilePtr, Q_DAT) == FALSE) {
+         sprintf("%s is an invalid data set for the process noise covariance "
+                 "matrix for Navigation command %s. Exiting...\n",
+                 QDat, NavigationCmdName);
+         exit(EXIT_FAILURE);
+      }
+      if (GetNavigationData(Nav, P0Dat, InpDsmFilePtr, P0_DAT) == FALSE) {
+         sprintf("%s is an invalid data set for the inital estimation error "
+                 "covariance matrix for Navigation command %s. Exiting...",
+                 P0Dat, NavigationCmdName);
+         exit(EXIT_FAILURE);
+      }
+
+      // Transform P0 to correct error state expression
+      double **linTForm;
+      linTForm = GetStateLinTForm(S);
+      MINVxMG(linTForm, Nav->S, Nav->NxN, Nav->navDim, Nav->navDim);
+      MxMTG(Nav->NxN, Nav->NxN, Nav->NxN2, Nav->navDim, Nav->navDim,
+            Nav->navDim);
+      for (i = 0; i < Nav->navDim; i++)
+         for (j = 0; j < Nav->navDim; j++)
+            Nav->S[i][j] = 0.0;
+      chol(Nav->NxN2, Nav->S, Nav->navDim);
+
+      DestroyMatrix(linTForm);
+
+      ConfigureNavigationSensors(S, sensorSet, InpDsmFilePtr);
+      AssignNavFunctions(S, Nav->type);
+
+      double avgArea = 0.0;
+      long nPoly     = 0;
+      long Ib, Ipoly;
+      for (Ib = 0; Ib < S->Nb; Ib++) {
+         struct BodyType *B = &S->B[Ib];
+         struct GeomType *G = &Geom[B->GeomTag];
+         for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
+            struct PolyType *P = &G->Poly[Ipoly];
+            nPoly++;
+            avgArea += P->Area;
+         }
+      }
+      avgArea            /= nPoly;
+      Nav->ballisticCoef  = AC->mass / (S->DragCoef * avgArea);
+   }
+
+   return (NavigationCmdProcessed);
+}
 //------------------------ INTERPRETER (FIRST ITERATION) -----------------------
 void DsmCmdInterpreterMrk1(struct SCType *S, FILE *InpDsmFilePtr) {
    char DSM_FileLine[1024] = "";
@@ -1269,8 +2219,8 @@ void DsmCmdInterpreterMrk1(struct SCType *S, FILE *InpDsmFilePtr) {
       // Read Spacecraft Command------------------------------------------------
       strcpy(DSM_CmdLine, "DSM_Cmd %s %s %lf");
       if (sscanf(DSM_FileLine, DSM_CmdLine, &ScID, Junk, &DSM_CmdTime) == 3) {
-         if (sscanf(ScID, "SC[%ld]", &Isc) !=
-             1) { // Decode Current SC ID Number
+         // Decode Current SC ID Number
+         if (sscanf(ScID, "SC[%ld]", &Isc) != 1) {
             printf("%s is not a valid Spacecraft Identifier. Exiting...\n",
                    ScID);
             exit(EXIT_FAILURE);
@@ -1305,7 +2255,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr) {
    char DSM_FileLine[1024] = "";
    char DSM_CmdLine[255];
    char Junk[50], ScID[50];
-   char TranslationCmd[255], AttitudeCmd[255], ActuatorCmd[255];
+   char TranslationCmd[255], AttitudeCmd[255], ActuatorCmd[255],
+       NavigationCmd[255];
    int DsmCmdLinelength = 1024;
    long Isc;
    double DSM_CmdTime;
@@ -1386,8 +2337,22 @@ void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr) {
                   strcpy(ActuatorCmd, curCommand);
                   if (GetActuatorCmd(S, ActuatorCmd, InpDsmFilePtr) == FALSE) {
                      printf("%s does not match any valid actuator command "
-                            "methods found in Inp_DSM.txt. Exiting...\n",
+                            "methods found in "
+                            "Inp_DSM.txt. Exiting...\n",
                             ActuatorCmd);
+                     exit(EXIT_FAILURE);
+                  }
+               }
+               // Parse Navigation Commands
+               else if (!strncmp(curCommand, "NavigationCmd", 13) ||
+                        strcmp(curCommand, "PASSIVE_NAV")) {
+                  strcpy(NavigationCmd, curCommand);
+                  if (GetNavigationCmd(S, NavigationCmd, InpDsmFilePtr) ==
+                      FALSE) {
+                     printf("%s does not match any valid navigation command "
+                            "methods found in "
+                            "Inp_DSM.txt. Exiting...\n",
+                            NavigationCmd);
                      exit(EXIT_FAILURE);
                   }
                } else {
@@ -1439,26 +2404,65 @@ void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr) {
 //------------------------------------------------------------------------------
 //                                SENSORS
 //------------------------------------------------------------------------------
-void SensorModule(struct SCType *S) {
-
+void DsmSensorModule(struct SCType *S) {
    struct AcType *AC;
+   struct DSMType *DSM;
+   struct DSMNavType *Nav;
+   struct DSMMeasListType measList[1] = {0};
+   long haveFSSMeas                   = FALSE;
 
-   AC = &S->AC;
+   AC  = &S->AC;
+   DSM = &S->DSM;
+   Nav = &DSM->DsmNav;
+   InitMeasList(measList);
 
-   if (AC->Ngyro > 0)
-      DSM_GyroProcessing(AC);
-   if (AC->Nmag > 0)
-      DSM_MagnetometerProcessing(AC);
-   if (AC->Ncss > 0)
-      DSM_CssProcessing(AC);
-   if (AC->Nfss > 0)
-      DSM_FssProcessing(AC);
-   if (AC->Nst > 0)
-      DSM_StarTrackerProcessing(AC);
-   if (AC->Ngps > 0)
-      DSM_GpsProcessing(AC);
-   if (AC->Nst > 0)
-      DSM_AccelProcessing(AC);
+   for (enum sensorType sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
+      if (Nav->sensorActive[sensor] == TRUE) {
+         struct DSMMeasListType *newMeasList = NULL;
+         switch (sensor) {
+            case GYRO_SENSOR:
+               newMeasList = DSM_GyroProcessing(AC, DSM);
+               break;
+            case MAG_SENSOR: // maybe add a condition to not run if
+                             // magnetorquers are active??
+               newMeasList = DSM_MagnetometerProcessing(AC, DSM);
+               break;
+            case FSS_SENSOR:
+               newMeasList = DSM_FssProcessing(AC, DSM);
+               if (newMeasList != NULL && newMeasList->head != NULL)
+                  haveFSSMeas = TRUE;
+               break;
+            case CSS_SENSOR: // Fine sun sensors preempt coarse sun sensors
+               if (haveFSSMeas == FALSE)
+                  newMeasList = DSM_CssProcessing(AC, DSM);
+               break;
+            case STARTRACK_SENSOR:
+               newMeasList = DSM_StarTrackerProcessing(AC, DSM);
+               break;
+            case GPS_SENSOR:
+               newMeasList = DSM_GpsProcessing(AC, DSM);
+               break;
+            case ACCEL_SENSOR:
+               newMeasList = DSM_AccelProcessing(AC, DSM);
+               break;
+            default:
+               printf("Invalid Sensor in INIT_SENSOR and FIN_SENSOR interval. "
+                      "Exiting...\n");
+               exit(EXIT_FAILURE);
+               break;
+         }
+         if (newMeasList != NULL) {
+            appendList(measList, newMeasList);
+            free(newMeasList);
+            newMeasList = NULL;
+         }
+      }
+   }
+
+   if (Nav->NavigationActive == TRUE && ((measList->head) != NULL)) {
+      bubbleSort(measList);
+      appendList(&Nav->measList, measList);
+   }
 }
 //------------------------------------------------------------------------------
 //                                ACTUATORS
@@ -1776,15 +2780,16 @@ void TranslationGuidance(struct SCType *S) {
          sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
                 &frame_body); // Decode ref SC ID Number
          if (Isc_Ref >= Nsc) {
-            printf(
-                "This mission only has %ld spacecraft, but spacecraft %ld was "
-                "attempted to be set as the reference frame. Exiting...\n",
-                Nsc, Isc_Ref);
+            printf("This mission only has %ld spacecraft, but spacecraft %ld "
+                   "was attempted to be "
+                   "set as the reference frame. Exiting...\n",
+                   Nsc, Isc_Ref);
             exit(EXIT_FAILURE);
          }
          if (frame_body >= SC[Isc_Ref].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the reference "
-                   "frame was attempted to be set as body %ld. Exiting...\n",
+                   "frame was attempted to "
+                   "be set as body %ld. Exiting...\n",
                    Isc_Ref, SC[Isc_Ref].Nb, frame_body);
             exit(EXIT_FAILURE);
          }
@@ -1794,8 +2799,9 @@ void TranslationGuidance(struct SCType *S) {
               wcn); // SC rotates wrt R
          goodOriginFrame = TRUE;
       }
-      if (!strcmp(Cmd->RefOrigin, "OP")) { // Specify disp from OP, in X frame
-                                           // directions, control to OP
+      if (!strcmp(Cmd->RefOrigin,
+                  "OP")) { // Specify disp from OP, in X frame directions,
+                           // control to OP
          // Add pos of F frame origin in R frame
          VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
          for (i = 0; i < 3; i++)
@@ -1808,39 +2814,40 @@ void TranslationGuidance(struct SCType *S) {
          sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
                 &origin_body); // Decode ref SC ID Number
          if (Isc_Ref >= Nsc) {
-            printf(
-                "This mission only has %ld spacecraft, but spacecraft %ld was "
-                "attempted to be set as the reference origin. Exiting...\n",
-                Nsc, Isc_Ref);
+            printf("This mission only has %ld spacecraft, but spacecraft %ld "
+                   "was attempted to be "
+                   "set as the reference origin. Exiting...\n",
+                   Nsc, Isc_Ref);
             exit(EXIT_FAILURE);
          }
          if (origin_body >= SC[Isc_Ref].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the reference "
-                   "origin was attempted to be set as body %ld. Exiting...\n",
+                   "origin was attempted to "
+                   "be set as body %ld. Exiting...\n",
                    Isc_Ref, SC[Isc_Ref].Nb, origin_body);
             exit(EXIT_FAILURE);
          }
          VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
          for (i = 0; i < 3; i++)
             CTRL->CmdVelR[i] +=
-                SC[Isc_Ref].VelR[i] + SC[Isc_Ref].B[origin_body].vn[i];
+                SC[Isc_Ref].DSM.VelR[i] + SC[Isc_Ref].B[origin_body].vn[i];
          for (i = 0; i < 3; i++)
             CTRL->CmdPosR[i] +=
-                SC[Isc_Ref].PosR[i] + SC[Isc_Ref].B[origin_body].pn[i];
+                SC[Isc_Ref].DSM.PosR[i] + SC[Isc_Ref].B[origin_body].pn[i];
          goodOriginFrame = TRUE;
       } else {
          goodOriginFrame = FALSE;
       }
       if (goodOriginFrame == FALSE) {
          printf("Invalid Ref origin/frame combo %s/%s in Translation Command "
-                "at %f. Exiting...\n",
+                "at %lf. Exiting...\n",
                 Cmd->RefOrigin, Cmd->RefFrame, SimTime);
          exit(EXIT_FAILURE);
       }
       for (i = 0; i < 3; i++) {
-         CTRL->CmdPosN[i] =
-             CTRL->CmdPosR[i] + S->PosN[i]; // Actually calculate these values
-         CTRL->CmdVelN[i] = CTRL->CmdVelR[i] + S->VelN[i];
+         CTRL->CmdPosN[i] = CTRL->CmdPosR[i] +
+                            S->AC.PosN[i]; // Actually calculate these values
+         CTRL->CmdVelN[i] = CTRL->CmdVelR[i] + S->AC.VelN[i];
       }
       for (i = 0; i < 3; i++) {
          CTRL->trn_kp[i]   = Cmd->trn_kp[i];
@@ -1881,23 +2888,22 @@ void AttitudeGuidance(struct SCType *S) {
       if (Cmd->Method == PARM_VECTORS) {
          if (PV->TrgType == TARGET_SC || PV->TrgType == TARGET_WORLD) {
             FindDsmCmdVecN(S, PV); // to get PV->wn, PV->N (in F Frame)
-            MxV(S->B[0].CN, PV->N,
+            QxV(S->AC.qbn, PV->N,
                 PriCmdVecB); // (Converting Cmd vec to body frame)
          } else if (PV->TrgType == TARGET_VEC) {
             if (!strcmp(Cmd->PriAttRefFrame, "N")) {
-               MxV(S->B[0].CN, PV->cmd_vec,
+               QxV(S->AC.qbn, PV->cmd_vec,
                    PriCmdVecB); // (Converting Cmd vec to body frame)
             } else if (!strcmp(Cmd->PriAttRefFrame, "F")) {
                MTxV(F->CN, PV->cmd_vec,
                     PriCmdVecN); // (Converting to Inertial frame)
-               MxV(S->B[0].CN, PriCmdVecN,
+               QxV(S->AC.qbn, PriCmdVecN,
                    PriCmdVecB); // (Converting to body frame) CHECK THIS
             } else if (!strcmp(Cmd->PriAttRefFrame, "L")) {
                MTxV(S->CLN, PV->cmd_vec,
                     PriCmdVecN); // (Converting to LVLH to Inertial frame)
                UNITV(PriCmdVecN);
-
-               MxV(S->B[0].CN, PriCmdVecN,
+               QxV(S->AC.qbn, PriCmdVecN,
                    PriCmdVecB); // (Converting to body frame)
             } else if (!strcmp(Cmd->PriAttRefFrame, "B")) {
                for (i = 0; i < 3; i++)
@@ -1908,21 +2914,21 @@ void AttitudeGuidance(struct SCType *S) {
 
          if (SV->TrgType == TARGET_SC || SV->TrgType == TARGET_WORLD) {
             FindDsmCmdVecN(S, SV); // to get SV->wn, SV->N
-            MxV(S->B[0].CN, SV->N, SecCmdVecB);
+            QxV(S->AC.qbn, SV->N, SecCmdVecB);
          } else if (SV->TrgType == TARGET_VEC) {
             if (!strcmp(Cmd->SecAttRefFrame, "N")) {
-               MxV(S->B[0].CN, SV->cmd_vec,
+               QxV(S->AC.qbn, SV->cmd_vec,
                    SecCmdVecB); // (Converting Cmd vec to body frame)
             } else if (!strcmp(Cmd->SecAttRefFrame, "F")) {
                MTxV(F->CN, SV->cmd_vec,
                     SecCmdVecN); // (Converting to Inertial frame)
-               MxV(S->B[0].CN, SecCmdVecN,
+               QxV(S->AC.qbn, SecCmdVecN,
                    SecCmdVecB); // (Converting to body frame)
             } else if (!strcmp(Cmd->SecAttRefFrame, "L")) {
                MTxV(S->CLN, SV->cmd_vec,
                     SecCmdVecN); // (Converting from LVLH to Inertial frame)
                UNITV(SecCmdVecN);
-               MxV(S->B[0].CN, SecCmdVecN,
+               QxV(S->AC.qbn, SecCmdVecN,
                    SecCmdVecB); // (Converting to body frame)
             } else if (!strcmp(Cmd->SecAttRefFrame, "B")) {
                for (i = 0; i < 3; i++)
@@ -1931,8 +2937,8 @@ void AttitudeGuidance(struct SCType *S) {
             UNITV(SecCmdVecB);
          }
 
-         MTxV(S->B[0].CN, PriCmdVecB, PriCmdVecN);
-         MTxV(S->B[0].CN, SecCmdVecB, SecCmdVecN);
+         QTxV(S->AC.qbn, PriCmdVecB, PriCmdVecN);
+         QTxV(S->AC.qbn, SecCmdVecB, SecCmdVecN);
          UNITV(PriCmdVecN);
          UNITV(SecCmdVecN);
 
@@ -1974,7 +2980,6 @@ void AttitudeGuidance(struct SCType *S) {
             C_tn[1][i] = tgtY_n[i];
             C_tn[2][i] = tgtZ_n[i];
          }
-
          C2Q(C_tb, q_tb);
          C2Q(C_tn, q_tn);
 
@@ -2067,6 +3072,78 @@ void AttitudeGuidance(struct SCType *S) {
 //------------------------------------------------------------------------------
 //                                NAVIGATION
 //------------------------------------------------------------------------------
+void NavigationModule(struct SCType *S) {
+   struct AcType *AC;
+   struct DSMType *DSM;
+   struct DSMNavType *Nav;
+   long i;
+
+   AC  = &S->AC;
+   DSM = &S->DSM;
+   Nav = &DSM->DsmNav;
+   if (Nav->NavigationActive == FALSE)
+      return;
+
+   KalmanFilt(S);
+   struct DateType *time = &Nav->Date;
+   AC->Time = DateToTime(time->Year, time->Month, time->Day, time->Hour,
+                         time->Minute, time->Second);
+   // Overwrite data in AC structure with filtered data
+   for (enum navState state = INIT_STATE; state <= FIN_STATE; state++) {
+      if (Nav->stateActive[state] == TRUE) {
+         double tmp3Vec[3] = {0.0}, tmpQ[4] = {0.0};
+         switch (state) {
+            case TIME_STATE:
+               // printf("TIME_STATE is set.\n");
+               // AC->Time = Nav->Time;
+               break;
+            case ROTMAT_STATE:
+               // printf("ROTMAT_STATE is set.\n");
+               MTxM(Nav->CRB, Nav->refCRN, AC->CBN);
+               C2Q(AC->CBN, AC->qbn);
+               break;
+            case QUAT_STATE:
+               // printf("QUAT_STATE is set.\n");
+               C2Q(Nav->refCRN, tmpQ);
+               QxQ(Nav->qbr, tmpQ, AC->qbn);
+               Q2C(AC->qbn, AC->CBN);
+               break;
+            case POS_STATE:
+               // printf("POS_STATE is set.\n");
+               for (i = 0; i < 3; i++)
+                  tmp3Vec[i] = Nav->PosR[i] + Nav->refPos[i];
+               MTxV(Nav->refCRN, tmp3Vec, AC->PosN);
+               break;
+            case VEL_STATE:
+               // printf("VEL_STATE is set.\n");
+               // will need more (BKE) for non-inertial frame
+               for (i = 0; i < 3; i++)
+                  tmp3Vec[i] = Nav->VelR[i] + Nav->refVel[i];
+               MTxV(Nav->refCRN, tmp3Vec, AC->VelN);
+               break;
+            case OMEGA_STATE:
+               // printf("OMEGA_STATE is set.\n");
+               MTxV(Nav->CRB, Nav->refOmega, tmp3Vec);
+               for (i = 0; i < 3; i++) {
+                  AC->wbn[i] = Nav->wbr[i] + tmp3Vec[i];
+               }
+               break;
+            default:
+               break;
+         }
+      }
+   }
+
+   if (Nav->stateActive[ROTMAT_STATE] == TRUE ||
+       Nav->stateActive[QUAT_STATE] == TRUE) {
+      if (Nav->sensorActive[MAG_SENSOR] == TRUE)
+         MxV(AC->CBN, AC->bvn, AC->bvb);
+      if (Nav->sensorActive[CSS_SENSOR] == TRUE ||
+          Nav->sensorActive[FSS_SENSOR] == TRUE)
+         MxV(AC->CBN, AC->svn, AC->svb);
+   }
+}
+//------------------------------------------------------------------------------
 void TranslationalNavigation(struct SCType *S) {
 
    long i;
@@ -2116,10 +3193,10 @@ void TranslationCtrl(struct SCType *S) {
    AC   = &S->AC;
 
    if (Cmd->TranslationCtrlActive == TRUE && Cmd->ManeuverMode == INACTIVE) {
-      // TO DO: do we want S->PosR to be AC->PosR? and DSM->FcmdB to be
+      // TODO: do we want S->PosR to be AC->PosR? and DSM->FcmdB to be
       // CTRL->FcmdB??
       if (Cmd->trn_controller == PID_CNTRL) { // PID Controller
-         // TO DO: do we want S->PosR to be AC->PosR? and DSM->FcmdB to be
+         // TODO: do we want S->PosR to be AC->PosR? and DSM->FcmdB to be
          // CTRL->FcmdB?
 
          if (Cmd->NewTrnGainsProcessed == TRUE) {
@@ -2130,8 +3207,8 @@ void TranslationCtrl(struct SCType *S) {
          }
 
          for (i = 0; i < 3; i++) {
-            DSM->perr[i]    = S->PosR[i] - CTRL->CmdPosR[i]; // Position Error
-            DSM->verr[i]    = S->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
+            DSM->perr[i] = S->DSM.PosR[i] - CTRL->CmdPosR[i]; // Position Error
+            DSM->verr[i] = S->DSM.VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
             DSM->trn_ei[i] += (DSM->Oldperr[i] + DSM->perr[i]) / 2.0 *
                               AC->DT; // Integrated Error
 
@@ -2152,7 +3229,7 @@ void TranslationCtrl(struct SCType *S) {
             CTRL->FcmdN[i] = -CTRL->trn_kr[i] * (CTRL->u1[i] + DSM->verr[i]) -
                              CTRL->trn_ki[i] * DSM->trn_ei[i];
          }
-         MxV(S->B[0].CN, CTRL->FcmdN,
+         QxV(AC->qbn, CTRL->FcmdN,
              CTRL->FcmdB); // Converting from Inertial to body frame for Report
          for (i = 0; i < 3; i++) {
             if (CTRL->FrcB_max[i] > 0)
@@ -2160,7 +3237,7 @@ void TranslationCtrl(struct SCType *S) {
                    Limit(CTRL->FcmdB[i], -CTRL->FrcB_max[i],
                          CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
          }
-         MTxV(S->B[0].CN, CTRL->FcmdB, CTRL->FcmdN);
+         QTxV(AC->qbn, CTRL->FcmdB, CTRL->FcmdN);
       } else if (Cmd->trn_controller == LYA_2BODY_CNTRL) {
          // Calculate relative radius, velocity
          for (i = 0; i < 3; i++) {
@@ -2182,7 +3259,7 @@ void TranslationCtrl(struct SCType *S) {
             CTRL->FcmdN[i] = -CTRL->trn_kp[i] * DSM->perr[i] -
                              CTRL->trn_kr[i] * DSM->verr[i] - dg[i] * AC->mass;
          }
-         MxV(S->B[0].CN, CTRL->FcmdN,
+         QxV(AC->qbn, CTRL->FcmdN,
              CTRL->FcmdB); // Converting from Inertial to body frame for Report
          for (i = 0; i < 3; i++) {
             if (CTRL->FrcB_max[i] > 0)
@@ -2190,7 +3267,7 @@ void TranslationCtrl(struct SCType *S) {
                    Limit(CTRL->FcmdB[i], -CTRL->FrcB_max[i],
                          CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
          }
-         MTxV(S->B[0].CN, CTRL->FcmdB, CTRL->FcmdN);
+         QTxV(AC->qbn, CTRL->FcmdB, CTRL->FcmdN);
       }
       for (i = 0; i < 3; i++)
          DSM->Oldperr[i] = DSM->perr[i];
@@ -2202,7 +3279,7 @@ void TranslationCtrl(struct SCType *S) {
                for (i = 0; i < 3; i++) {
                   CTRL->FcmdN[i] = S->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
                }
-               MxV(S->B[0].CN, CTRL->FcmdN,
+               QxV(AC->qbn, CTRL->FcmdN,
                    CTRL->FcmdB); // Converting from Inertial to body frame for
                                  // Report
             } else if (!strcmp(Cmd->RefFrame, "B")) {
@@ -2217,13 +3294,13 @@ void TranslationCtrl(struct SCType *S) {
                       CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
                }
             }
-            MTxV(S->B[0].CN, CTRL->FcmdB,
+            QTxV(AC->qbn, CTRL->FcmdB,
                  CTRL->FcmdN); // Converting back to Inertial from body frame
          } else if (Cmd->ManeuverMode == SMOOTHED) {
             double sharp =
                 -2 * atanh(-.99998) /
-                Cmd->BurnTime; // .99998 corresponds to capturing 99.999% of the
-                               // burn since tanh has an asymptote
+                Cmd->BurnTime; // .99998 corresponds to capturing 99.999%
+                               // of the burn since tanh has an asymptote
             double t_mid = Cmd->BurnStopTime - Cmd->BurnTime / 2.0;
             double t_since_mid =
                 SimTime - t_mid; // Time elapsed since middle of burn
@@ -2233,8 +3310,11 @@ void TranslationCtrl(struct SCType *S) {
                   CTRL->FcmdN[i] = S->mass * (Cmd->DeltaV[i] * sharp / 2.0) /
                                    ((cosh(sharp * t_since_mid)) *
                                     (cosh(sharp * t_since_mid)));
+                  CTRL->FcmdN[i] = S->mass * (Cmd->DeltaV[i] * sharp / 2.0) /
+                                   ((cosh(sharp * t_since_mid)) *
+                                    (cosh(sharp * t_since_mid)));
                }
-               MxV(S->B[0].CN, CTRL->FcmdN,
+               QxV(AC->qbn, CTRL->FcmdN,
                    CTRL->FcmdB); // Converting from Inertial to body frame for
                                  // Report
             } else if (!strcmp(Cmd->RefFrame, "B")) {
@@ -2251,7 +3331,7 @@ void TranslationCtrl(struct SCType *S) {
                       CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
                }
             }
-            MTxV(S->B[0].CN, CTRL->FcmdB,
+            QTxV(AC->qbn, CTRL->FcmdB,
                  CTRL->FcmdN); // Converting back to Inertial from body frame
          }
       } else {
@@ -2334,9 +3414,8 @@ void AttitudeCtrl(struct SCType *S) {
          for (i = 0; i < 3; i++)
             DSM->werr[i] =
                 DSM->wbn[i] - wrb[i]; // Angular Velocity Error (in body frame)
-
-         vxMov(DSM->werr, AC->MOI, om_x_I_om); // calculate nonlinear term in
-                                               // Quaternion Lyapunov stability
+         // calculate nonlinear term in Quaternion Lyapunov stability
+         vxMov(DSM->werr, AC->MOI, om_x_I_om);
 
          for (i = 0; i < 3; i++) {
             CTRL->Tcmd[i] = -Cmd->att_kp[i] * CTRL->qbr[i] -
@@ -2450,9 +3529,10 @@ void DsmFSW(struct SCType *S) {
    }
 
    // Generate Data From Sensors
-   SensorModule(S);
+   // DsmSensorModule(S);
 
    // Navigation Modules
+   NavigationModule(S);
    TranslationalNavigation(S);
    AttitudeNavigation(S);
 

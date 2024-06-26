@@ -688,7 +688,7 @@ void Ephemerides(void) {
    }
 
    /* .. Earth rotation is a special case */
-   GMST                   = JD2GMST(UTC.JulDay);
+   GMST                   = Date2GMST(&UTC);
    World[EARTH].PriMerAng = TwoPi * GMST;
    HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
    SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);

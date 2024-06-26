@@ -12,6 +12,7 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "42.h"
+#include "navkit.h"
 
 /* #ifdef __cplusplus
 ** namespace _42 {
@@ -132,11 +133,44 @@ void DSM_AttitudeReport(void) {
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le %18.12le ",
+         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le %18.36le ",
                  SC[Isc].B[0].qn[0], SC[Isc].B[0].qn[1], SC[Isc].B[0].qn[2],
                  SC[Isc].B[0].qn[3]);
-         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].B[0].wn[0], SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
+         fprintf(attitudefile[Isc], "\n");
+      }
+      fflush(attitudefile[Isc]);
+   }
+}
+/*********************************************************************/
+void DSM_AC_AttitudeReport(void) {
+   static FILE **attitudefile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+
+   if (First) {
+      attitudefile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_AC_attitude_%02li.42", Isc);
+            attitudefile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(attitudefile[Isc], "qbn_0 qbn_1 qbn_2 qbn_3 ");
+            fprintf(attitudefile[Isc], "wbn_X wbn_Y wbn_Z ");
+            fprintf(attitudefile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le %18.36le ",
+                 SC[Isc].AC.qbn[0], SC[Isc].AC.qbn[1], SC[Isc].AC.qbn[2],
+                 SC[Isc].AC.qbn[3]);
+         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le ",
+                 SC[Isc].AC.wbn[0], SC[Isc].AC.wbn[1], SC[Isc].AC.wbn[2]);
          fprintf(attitudefile[Isc], "\n");
       }
       fflush(attitudefile[Isc]);
@@ -165,15 +199,399 @@ void DSM_InertialReport(void) {
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
-         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
    }
 }
+/*********************************************************************/
+void DSM_RelativeReport(void) {
+   static FILE **relativefile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+
+   if (First) {
+      relativefile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_relative_L_%02li.42", Isc);
+            relativefile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(relativefile[Isc], "PosR_X PosR_Y PosR_Z ");
+            fprintf(relativefile[Isc], "VelR_X VelR_Y VelR_Z ");
+            fprintf(relativefile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      struct SCType *S = &SC[Isc];
+      if (S->Exists) {
+         struct OrbitType *O = &Orb[S->RefOrb];
+         double wxr[3], posr[3], velr[3];
+         VxV(O->wln, S->PosR, wxr);
+         MxV(O->CLN, S->VelR, velr);
+         MxV(O->CLN, wxr, posr);
+         for (int i = 0; i < 3; i++)
+            velr[i] -= posr[i];
+         MxV(O->CLN, S->PosR, posr);
+         fprintf(relativefile[Isc], "%18.36le %18.36le %18.36le ", posr[0],
+                 posr[1], posr[2]);
+         fprintf(relativefile[Isc], "%18.36le %18.36le %18.36le ", velr[0],
+                 velr[1], velr[2]);
+         fprintf(relativefile[Isc], "\n");
+      }
+      fflush(relativefile[Isc]);
+   }
+}
+/*********************************************************************/
+void DSM_AC_InertialReport(void) {
+   static FILE **inertialfile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+
+   if (First) {
+      inertialfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_AC_inertial_%02li.42", Isc);
+            inertialfile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(inertialfile[Isc], "PosN_X PosN_Y PosN_Z ");
+            fprintf(inertialfile[Isc], "VelN_X VelN_Y VelN_Z ");
+            fprintf(inertialfile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
+                 SC[Isc].AC.PosN[0], SC[Isc].AC.PosN[1], SC[Isc].AC.PosN[2]);
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
+                 SC[Isc].AC.VelN[0], SC[Isc].AC.VelN[1], SC[Isc].AC.VelN[2]);
+         fprintf(inertialfile[Isc], "\n");
+      }
+      fflush(inertialfile[Isc]);
+   }
+}
+/*********************************************************************/
+void DSM_NAV_StateReport(void) {
+   static FILE **stateFile, **covFile, **timeFile;
+   static long First = 1;
+   long Isc;
+   enum navState state;
+   char s[40];
+
+   struct DSMNavType *Nav;
+
+   if (First) {
+      stateFile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      covFile   = (FILE **)calloc(Nsc, sizeof(FILE *));
+      timeFile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      First     = 0;
+   }
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      Nav = &SC[Isc].DSM.DsmNav;
+      if (SC[Isc].Exists && Nav->NavigationActive == TRUE &&
+          Nav->reportConfigured == FALSE) {
+         sprintf(s, "DSM_navstate_%02li.42", Isc);
+         stateFile[Isc] = FileOpen(OutPath, s, "wt");
+         sprintf(s, "DSM_navtime_%02li.42", Isc);
+         timeFile[Isc] = FileOpen(OutPath, s, "wt");
+         sprintf(s, "DSM_navcov_%02li.42", Isc);
+         covFile[Isc] = FileOpen(OutPath, s, "wt");
+         Nav          = &SC[Isc].DSM.DsmNav;
+         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+            if (Nav->stateActive[state] == TRUE) {
+               switch (state) {
+                  // case TIME_STATE:
+                  //    fprintf(file[Isc],"time ");
+                  //    break;
+                  case ROTMAT_STATE:
+                     fprintf(stateFile[Isc],
+                             "CRB_00 CRB_01 CRB_02 CRB_10 CRB_11 CRB_12 CRB_20 "
+                             "CRB_21 CRB_22 ");
+                     break;
+                  case QUAT_STATE:
+                     fprintf(stateFile[Isc], "qbr_x qbr_z qbr_z qbr_s ");
+                     break;
+                  case OMEGA_STATE:
+                     fprintf(stateFile[Isc], "wbr_x wbr_z wbr_z ");
+                     break;
+                  case POS_STATE:
+                     fprintf(stateFile[Isc], "PosN_x PosN_y PosN_z ");
+                     break;
+                  case VEL_STATE:
+                     fprintf(stateFile[Isc], "VelN_x VelN_y VelN_z ");
+                     break;
+                  default:
+                     break;
+               }
+            }
+         }
+         fprintf(stateFile[Isc], "\n");
+         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+            if (Nav->stateActive[state] == TRUE) {
+               switch (state) {
+                  // case TIME_STATE:
+                  //    fprintf(file[Isc],"time ");
+                  //    break;
+                  case ROTMAT_STATE:
+                  case QUAT_STATE:
+                     fprintf(covFile[Isc], "s_theta_x s_theta_y s_theta_z ");
+                     break;
+                  case OMEGA_STATE:
+                     fprintf(covFile[Isc], "s_wbr_x s_wbr_z s_wbr_z ");
+                     break;
+                  case POS_STATE:
+                     fprintf(covFile[Isc], "s_PosN_x s_PosN_y s_PosN_z ");
+                     break;
+                  case VEL_STATE:
+                     fprintf(covFile[Isc], "s_VelN_x s_VelN_y s_VelN_z ");
+                     break;
+                  default:
+                     break;
+               }
+            }
+         }
+         fprintf(covFile[Isc], "\n");
+         fprintf(timeFile[Isc], "time\n");
+         Nav->reportConfigured = TRUE;
+      }
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists && SC[Isc].DSM.DsmNav.NavigationActive == TRUE) {
+         long writeTime = FALSE;
+         Nav            = &SC[Isc].DSM.DsmNav;
+         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+            if (Nav->stateActive[state] == TRUE) {
+               writeTime = TRUE;
+               switch (state) {
+                  case TIME_STATE:
+                     fprintf(stateFile[Isc], "%18.36le ",
+                             DateToTime(Nav->Date.Year, Nav->Date.Month,
+                                        Nav->Date.Day, Nav->Date.Hour,
+                                        Nav->Date.Minute, Nav->Date.Second));
+                     break;
+                  case ROTMAT_STATE:
+                     for (int i = 0; i < 3; i++)
+                        for (int j = 0; j < 3; j++)
+                           fprintf(stateFile[Isc], "%18.36le ", Nav->CRB[i][j]);
+                     break;
+                  case QUAT_STATE:
+                     for (int i = 0; i < 4; i++)
+                        fprintf(stateFile[Isc], "%18.36le ", Nav->qbr[i]);
+                     break;
+                  case OMEGA_STATE:
+                     fprintf(stateFile[Isc], "%18.36le %18.36le %18.36le ",
+                             Nav->wbr[0], Nav->wbr[1], Nav->wbr[2]);
+                     break;
+                  case POS_STATE: {
+                     double tmpV1[3] = {0.0}, tmpV2[3] = {0.0};
+                     for (int i = 0; i < 3; i++)
+                        tmpV1[i] = Nav->PosR[i] + Nav->refPos[i];
+                     MTxV(Nav->refCRN, tmpV1, tmpV2);
+                     fprintf(stateFile[Isc], "%18.36le %18.36le %18.36le ",
+                             tmpV2[0], tmpV2[1], tmpV2[2]);
+                  } break;
+                  case VEL_STATE: {
+                     double tmpV1[3] = {0.0}, tmpV2[3] = {0.0};
+                     for (int i = 0; i < 3; i++)
+                        tmpV1[i] = Nav->VelR[i] + Nav->refVel[i];
+                     MTxV(Nav->refCRN, tmpV1, tmpV2);
+                     fprintf(stateFile[Isc], "%18.36le %18.36le %18.36le ",
+                             tmpV2[0], tmpV2[1], tmpV2[2]);
+                  } break;
+                  default:
+                     break;
+               }
+            }
+         }
+         fprintf(stateFile[Isc], "\n");
+         fflush(stateFile[Isc]);
+
+         if (writeTime) {
+            fprintf(timeFile[Isc], "%18.36le\n", DynTime);
+            fflush(timeFile[Isc]);
+         }
+
+         long navDim       = Nav->navDim;
+         double **linTForm = GetStateLinTForm(&SC[Isc]);
+
+         MxMTG(Nav->S, Nav->S, Nav->P, navDim, navDim, navDim);
+         MxMG(linTForm, Nav->P, Nav->NxN, navDim, navDim, navDim);
+         MxMTG(Nav->NxN, linTForm, Nav->NxN2, navDim, navDim, navDim);
+         DestroyMatrix(linTForm);
+         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+            int stateInd = Nav->navInd[state];
+            if (Nav->stateActive[state] == TRUE) {
+               switch (state) {
+                  case TIME_STATE:
+                     fprintf(covFile[Isc], "%18.36le ",
+                             sqrt(Nav->NxN2[stateInd][stateInd]));
+                     break;
+                  default:
+                     for (int i = 0; i < 3; i++)
+                        fprintf(covFile[Isc], "%18.36le ",
+                                sqrt(Nav->NxN2[stateInd + i][stateInd + i]));
+                     break;
+               }
+            }
+         }
+         fprintf(covFile[Isc], "\n");
+         fflush(covFile[Isc]);
+      }
+   }
+}
+/*********************************************************************/
+// Last time I tried to analyze all the data from this, I ran out of memory...
+#if REPORT_RESIDUALS == TRUE
+void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1]) {
+   static FILE **residualFile;
+   static long First = TRUE;
+   long Isc;
+   enum sensorType sensor;
+   char s[40];
+
+   struct DSMNavType *Nav;
+
+   if (First) {
+      residualFile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         sprintf(s, "DSM_residuals_%02li.42", Isc);
+         residualFile[Isc] = FileOpen(OutPath, s, "wt");
+         Nav               = &SC[Isc].DSM.DsmNav;
+         FILE *file        = residualFile[Isc];
+         fprintf(file, "Time; ");
+         for (sensor = INIT_SENSOR; sensor < FIN_SENSOR; sensor++) {
+            if (Nav->sensorActive[sensor] == TRUE) {
+               for (int i = 0; i < Nav->nSensor[sensor]; i++) {
+                  switch (sensor) {
+                     case GPS_SENSOR:
+                        fprintf(file,
+                                "GPS[%02i]_Pos_x GPS[%02i]_Pos_y "
+                                "GPS[%02i]_Pos_z GPS[%02i]_Vel_x "
+                                "GPS[%02i]_Vel_y GPS[%02i]_Vel_z ",
+                                i, i, i, i, i, i);
+                        break;
+                     case STARTRACK_SENSOR:
+                        fprintf(
+                            file,
+                            "STARTRACK[%02i]_Theta_x STARTRACK[%02i]_Theta_z "
+                            "STARTRACK[%02i]_Theta_z ",
+                            i, i, i);
+                        break;
+                     case FSS_SENSOR:
+                        fprintf(file, "FSS[%02i]_Theta_h FSS[%02i]_Theta_v ", i,
+                                i);
+                        break;
+                     case CSS_SENSOR:
+                        fprintf(file, "CSS[%02i]_Out ", i);
+                        break;
+                     case GYRO_SENSOR:
+                        fprintf(file, "GYRO[%02i]_Out ", i);
+                        break;
+                     case MAG_SENSOR:
+                        fprintf(file, "MAG[%02i]_Out ", i);
+                        break;
+                     case ACCEL_SENSOR:
+                        fprintf(file, "ACCEL[%02i]_Out ", i);
+
+                        break;
+                     default:
+                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
+                               "configured correctly in "
+                               "navkit.c. Exiting...\n");
+                        exit(EXIT_FAILURE);
+                        break;
+                  }
+                  fprintf(file, "; ");
+               }
+            }
+         }
+         fprintf(file, "\n");
+      }
+      First = FALSE;
+   }
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      Nav        = &SC[Isc].DSM.DsmNav;
+      FILE *file = residualFile[Isc];
+      fprintf(file, "%18.36le ; ", time);
+      for (sensor = INIT_SENSOR; sensor < FIN_SENSOR; sensor++) {
+         if (Nav->sensorActive[sensor] == TRUE) {
+            for (int i = 0; i < Nav->nSensor[sensor]; i++) {
+               if (residuals[sensor][i] != NULL) {
+                  switch (sensor) {
+                     case GPS_SENSOR:
+                        for (int j = 0; j < 6; j++)
+                           fprintf(file, "%18.20le ", residuals[sensor][i][j]);
+                        break;
+                     case STARTRACK_SENSOR:
+                        for (int j = 0; j < 3; j++)
+                           fprintf(file, "%18.20le ", residuals[sensor][i][j]);
+                        break;
+                     case FSS_SENSOR:
+                        for (int j = 0; j < 2; j++)
+                           fprintf(file, "%18.20le ", residuals[sensor][i][j]);
+                        break;
+                     case CSS_SENSOR:
+                     case GYRO_SENSOR:
+                     case MAG_SENSOR:
+                     case ACCEL_SENSOR:
+                        fprintf(file, "%18.20le ", residuals[sensor][i][0]);
+                        break;
+                     default:
+                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
+                               "configured correctly in "
+                               "navkit.c. Exiting...\n");
+                        exit(EXIT_FAILURE);
+                        break;
+                  }
+               } else {
+                  switch (sensor) {
+                     case GPS_SENSOR:
+                        for (int j = 0; j < 6; j++)
+                           fprintf(file, "nan ");
+                        break;
+                     case STARTRACK_SENSOR:
+                        for (int j = 0; j < 3; j++)
+                           fprintf(file, "nan ");
+                        break;
+                     case FSS_SENSOR:
+                        for (int j = 0; j < 2; j++)
+                           fprintf(file, "nan ");
+                        break;
+                     case CSS_SENSOR:
+                     case GYRO_SENSOR:
+                     case MAG_SENSOR:
+                     case ACCEL_SENSOR:
+                        fprintf(file, "nan ");
+                        break;
+                     default:
+                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
+                               "configured correctly in "
+                               "navkit.c. Exiting...\n");
+                        exit(EXIT_FAILURE);
+                        break;
+                  }
+               }
+               fprintf(file, "; ");
+            }
+         }
+      }
+      fprintf(file, "\n");
+      fflush(file);
+   }
+}
+#endif
 /*********************************************************************/
 void DSM_ATT_ControlReport(void) {
    static FILE **attcontrolfile;
@@ -646,8 +1064,12 @@ void Report(void) {
          // GmatReport();
 
          if (SC[0].DSM.Init == 1) {
+            // DSM_AC_AttitudeReport();
             DSM_AttitudeReport();
+            // DSM_AC_InertialReport();
             DSM_InertialReport();
+            DSM_RelativeReport();
+            DSM_NAV_StateReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();

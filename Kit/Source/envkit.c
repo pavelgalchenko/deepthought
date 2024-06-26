@@ -20,11 +20,11 @@
 
 /**********************************************************************/
 /*  Earth Gravity Model 96, published by NIMA as part of the WGS84    */
-void EGM96(const char *ModelPath, long N, long M, double mass, double pbn[3],
-           double PriMerAng, double FgeoN[3]) {
+void EGM96(const char *ModelPath, long N, long M, double C[19][19],
+           double S[19][19], double mass, double pbn[3], double PriMerAng,
+           double FgeoN[3]) {
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
-   static double C[19][19], S[19][19];
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
    double r, theta, phi, Fr, Fth, Fph, Fe[3];
    double dum1, dum2;
@@ -76,7 +76,7 @@ void EGM96(const char *ModelPath, long N, long M, double mass, double pbn[3],
    cph   = cos(phi);
 
    /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, phi, theta, Re, mu / Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, pbe, Re, mu / Re, C, S, gradV);
    Fr  = mass * gradV[0];
    Fth = mass * gradV[1];
    Fph = mass * gradV[2];
@@ -91,11 +91,11 @@ void EGM96(const char *ModelPath, long N, long M, double mass, double pbn[3],
 /**********************************************************************/
 /*  Goddard Mars Model 2B.  Truncated to 18x18                        */
 /*  Ref:  http://bowie.gsfc.nasa.gov/926/MARS/GMM2B.html              */
-void GMM2B(const char *ModelPath, long N, long M, double mass, double pbn[3],
-           double PriMerAng, double FgeoN[3]) {
+void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
+           double S[19][19], double mass, double pbn[3], double PriMerAng,
+           double FgeoN[3]) {
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
-   static double C[19][19], S[19][19];
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
    double r, theta, phi, Fr, Fth, Fph, Fe[3];
    double dum1, dum2;
@@ -147,7 +147,7 @@ void GMM2B(const char *ModelPath, long N, long M, double mass, double pbn[3],
    cph   = cos(phi);
 
    /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, phi, theta, Re, mu / Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, pbe, Re, mu / Re, C, S, gradV);
    Fr  = mass * gradV[0];
    Fth = mass * gradV[1];
    Fph = mass * gradV[2];
@@ -164,11 +164,11 @@ void GMM2B(const char *ModelPath, long N, long M, double mass, double pbn[3],
 /*  Ref:
  * http://pds-geosciences.wustl.edu/geodata/clem1-gravity-topo-v1/cl_xxxx/gravity/glgm2sh.tab
  */
-void GLGM2(const char *ModelPath, long N, long M, double mass, double pbn[3],
-           double PriMerAng, double FgeoN[3]) {
+void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
+           double S[19][19], double mass, double pbn[3], double PriMerAng,
+           double FgeoN[3]) {
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
-   static double C[19][19], S[19][19];
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
    double r, theta, phi, Fr, Fth, Fph, Fe[3];
    double dum1, dum2;
@@ -220,7 +220,7 @@ void GLGM2(const char *ModelPath, long N, long M, double mass, double pbn[3],
    cph   = cos(phi);
 
    /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, phi, theta, Re, mu / Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, pbe, Re, mu / Re, C, S, gradV);
    Fr  = mass * gradV[0];
    Fth = mass * gradV[1];
    Fph = mass * gradV[2];
@@ -288,7 +288,7 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
    cph   = cos(phi);
 
    /*    Find Br, Bth, Bph */
-   SphericalHarmonics(N, M, r, phi, theta, Re, Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, pbe, Re, Re, C, S, gradV);
    Br  = -gradV[0];
    Bth = -gradV[1];
    Bph = -gradV[2];

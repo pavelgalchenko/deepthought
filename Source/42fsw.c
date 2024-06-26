@@ -1879,6 +1879,11 @@ void FlightSoftWare(struct SCType *S) {
    struct IpcType *I;
    long Iipc;
 #endif
+   if (S->FswTag == DSM_FSW) {
+      if (S->DSM.DsmNav.NavigationActive == TRUE)
+         S->DSM.DsmNav.subStep++;
+      DsmSensorModule(S);
+   }
 
    S->FswSampleCounter++;
    if (S->FswSampleCounter >= S->FswMaxCounter) {

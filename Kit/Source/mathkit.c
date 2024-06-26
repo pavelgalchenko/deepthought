@@ -19,14 +19,14 @@
 */
 
 /**********************************************************************/
-double signum(double x) {
+double signum(const double x) {
    return (x >= 0 ? 1.0 : -1.0);
 }
 /**********************************************************************/
 /* sinc(x) = sin(x)/x                                                 */
 /*  Series expansion: sinc(x) = 1 - x^2/3! + x^4/5! - x^6/7!...       */
 /*  Enough terms kept to be within 2E-10 for x in [-pi:pi]            */
-double sinc(double x) {
+double sinc(const double x) {
    double x2;
 
    if (x < -3.14159265358979 || x > 3.14159265358979) {
@@ -54,7 +54,7 @@ double sinc(double x) {
 }
 /**********************************************************************/
 /*   3x3 Matrix Product                                               */
-void MxM(double A[3][3], double B[3][3], double C[3][3]) {
+void MxM(const double A[3][3], const double B[3][3], double C[3][3]) {
 
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
    C[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1];
@@ -68,7 +68,7 @@ void MxM(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /* 3x3 Matrix times Transpose of Matrix                               */
-void MxMT(double A[3][3], double B[3][3], double C[3][3]) {
+void MxMT(const double A[3][3], const double B[3][3], double C[3][3]) {
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[0][1] + A[0][2] * B[0][2];
    C[0][1] = A[0][0] * B[1][0] + A[0][1] * B[1][1] + A[0][2] * B[1][2];
    C[0][2] = A[0][0] * B[2][0] + A[0][1] * B[2][1] + A[0][2] * B[2][2];
@@ -81,7 +81,7 @@ void MxMT(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Matrix                              */
-void MTxM(double A[3][3], double B[3][3], double C[3][3]) {
+void MTxM(const double A[3][3], const double B[3][3], double C[3][3]) {
    C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[1][0] + A[2][0] * B[2][0];
    C[0][1] = A[0][0] * B[0][1] + A[1][0] * B[1][1] + A[2][0] * B[2][1];
    C[0][2] = A[0][0] * B[0][2] + A[1][0] * B[1][2] + A[2][0] * B[2][2];
@@ -94,7 +94,7 @@ void MTxM(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Transpose of Matrix                 */
-void MTxMT(double A[3][3], double B[3][3], double C[3][3]) {
+void MTxMT(const double A[3][3], const double B[3][3], double C[3][3]) {
    C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[0][1] + A[2][0] * B[0][2];
    C[0][1] = A[0][0] * B[1][0] + A[1][0] * B[1][1] + A[2][0] * B[1][2];
    C[0][2] = A[0][0] * B[2][0] + A[1][0] * B[2][1] + A[2][0] * B[2][2];
@@ -107,42 +107,42 @@ void MTxMT(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /*  1x3 Vector times 3x3 Matrix                                       */
-void VxM(double V[3], double M[3][3], double W[3]) {
+void VxM(const double V[3], const double M[3][3], double W[3]) {
    W[0] = V[0] * M[0][0] + V[1] * M[1][0] + V[2] * M[2][0];
    W[1] = V[0] * M[0][1] + V[1] * M[1][1] + V[2] * M[2][1];
    W[2] = V[0] * M[0][2] + V[1] * M[1][2] + V[2] * M[2][2];
 }
 /**********************************************************************/
 /*  3x3 Matrix times 3x1 Vector                                       */
-void MxV(double M[3][3], double V[3], double W[3]) {
+void MxV(const double M[3][3], const double V[3], double W[3]) {
    W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
    W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
 }
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
-void VxMT(double V[3], double M[3][3], double W[3]) {
+void VxMT(const double V[3], const double M[3][3], double W[3]) {
    W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
    W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
 }
 /**********************************************************************/
 /*  Transpose of 3x3 Matrix times 3x1 Vector                          */
-void MTxV(double M[3][3], double V[3], double W[3]) {
+void MTxV(const double M[3][3], const double V[3], double W[3]) {
    W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
    W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
    W[2] = M[0][2] * V[0] + M[1][2] * V[1] + M[2][2] * V[2];
 }
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
-void SxV(double S, double V[3], double W[3]) {
+void SxV(const double S, const double V[3], double W[3]) {
    W[0] = S * V[0];
    W[1] = S * V[1];
    W[2] = S * V[2];
 }
 /**********************************************************************/
 /*  Scalar times 3x3 Matrix                                           */
-void SxM(double S, double A[3][3], double B[3][3]) {
+void SxM(const double S, const double A[3][3], double B[3][3]) {
    B[0][0] = S * A[0][0];
    B[0][1] = S * A[0][1];
    B[0][2] = S * A[0][2];
@@ -155,7 +155,7 @@ void SxM(double S, double A[3][3], double B[3][3]) {
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
-void MINV4(double A[4][4], double B[4][4]) {
+void MINV4(const double A[4][4], double B[4][4]) {
    double DET = 0.0;
    long r, s, i, j, k, x, y, z;
 
@@ -191,7 +191,7 @@ void MINV4(double A[4][4], double B[4][4]) {
 }
 /******************************************************************************/
 /*  Inverse of a 3x3 Matrix                                                   */
-void MINV3(double A[3][3], double B[3][3]) {
+void MINV3(const double A[3][3], double B[3][3]) {
    double DET;
 
    DET = A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] +
@@ -216,7 +216,7 @@ void MINV3(double A[3][3], double B[3][3]) {
 }
 /******************************************************************************/
 /*  Inverse of a 2x2 Matrix                                                   */
-void MINV2(double A[2][2], double B[2][2]) {
+void MINV2(const double A[2][2], double B[2][2]) {
    double DET;
 
    DET = A[0][0] * A[1][1] - A[1][0] * A[0][1];
@@ -234,7 +234,7 @@ void MINV2(double A[2][2], double B[2][2]) {
 }
 /**********************************************************************/
 /*  Pseudo-inverse of a 4x3 matrix                                    */
-void PINV4x3(double A[4][3], double Aplus[3][4]) {
+void PINV4x3(const double A[4][3], double Aplus[3][4]) {
    double AtA[3][3], AtAi[3][3];
 
    AtA[0][0] = A[0][0] * A[0][0] + A[1][0] * A[1][0] + A[2][0] * A[2][0] +
@@ -285,7 +285,7 @@ void PINV4x3(double A[4][3], double Aplus[3][4]) {
 }
 /**********************************************************************/
 /*  Transpose of a 3x3 Matrix                                         */
-void MT(double A[3][3], double B[3][3]) {
+void MT(const double A[3][3], double B[3][3]) {
    B[0][0] = A[0][0];
    B[0][1] = A[1][0];
    B[0][2] = A[2][0];
@@ -298,19 +298,19 @@ void MT(double A[3][3], double B[3][3]) {
 }
 /**********************************************************************/
 /*  Vector Dot Product                                                */
-double VoV(double A[3], double B[3]) {
+double VoV(const double A[3], const double B[3]) {
    return (A[0] * B[0] + A[1] * B[1] + A[2] * B[2]);
 }
 /**********************************************************************/
 /*  Vector Cross Product                                              */
-void VxV(double A[3], double B[3], double C[3]) {
+void VxV(const double A[3], const double B[3], double C[3]) {
    C[0] = A[1] * B[2] - A[2] * B[1];
    C[1] = A[2] * B[0] - A[0] * B[2];
    C[2] = A[0] * B[1] - A[1] * B[0];
 }
 /**********************************************************************/
 /*  Vector cross Matrix dot Vector                                    */
-void vxMov(double w[3], double M[3][3], double wxMow[3]) {
+void vxMov(const double w[3], const double M[3][3], double wxMow[3]) {
    double Mow[3];
 
    Mow[0] = M[0][0] * w[0] + M[0][1] * w[1] + M[0][2] * w[2];
@@ -323,7 +323,7 @@ void vxMov(double w[3], double M[3][3], double wxMow[3]) {
 }
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */
-double MAGV(double V[3]) {
+double MAGV(const double V[3]) {
    return (sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]));
 }
 /**********************************************************************/
@@ -347,7 +347,7 @@ double UNITV(double V[3]) {
 }
 /**********************************************************************/
 /*  Copy and normalize a 3-vector.  Return its magnitude              */
-double CopyUnitV(double V[3], double W[3]) {
+double CopyUnitV(const double V[3], double W[3]) {
    double A;
 
    A = sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
@@ -367,7 +367,7 @@ double CopyUnitV(double V[3], double W[3]) {
 /**********************************************************************/
 /*  Form a skew-symmetric matrix M from a vector V such that the      */
 /*  product MxA equals the cross product VxA for any vector A.        */
-void V2CrossM(double V[3], double M[3][3]) {
+void V2CrossM(const double V[3], double M[3][3]) {
    M[0][0] = 0.0;
    M[1][1] = 0.0;
    M[2][2] = 0.0;
@@ -381,7 +381,7 @@ void V2CrossM(double V[3], double M[3][3]) {
 /**********************************************************************/
 /*  Form a symmetric matrix M from a vector V such that the           */
 /*  product M*A equals the product Vx(VxA) for any vector A.          */
-void V2DoubleCrossM(double V[3], double M[3][3]) {
+void V2DoubleCrossM(const double V[3], double M[3][3]) {
    M[0][0] = -V[1] * V[1] - V[2] * V[2];
    M[1][1] = -V[2] * V[2] - V[0] * V[0];
    M[2][2] = -V[0] * V[0] - V[1] * V[1];
@@ -394,7 +394,7 @@ void V2DoubleCrossM(double V[3], double M[3][3]) {
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by M       */
-void VcrossM(double V[3], double M[3][3], double A[3][3]) {
+void VcrossM(const double V[3], const double M[3][3], double A[3][3]) {
 
    A[0][0] = V[1] * M[2][0] - V[2] * M[1][0];
    A[0][1] = V[1] * M[2][1] - V[2] * M[1][1];
@@ -408,7 +408,7 @@ void VcrossM(double V[3], double M[3][3], double A[3][3]) {
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by MT      */
-void VcrossMT(double V[3], double M[3][3], double A[3][3]) {
+void VcrossMT(const double V[3], const double M[3][3], double A[3][3]) {
 
    A[0][0] = V[1] * M[0][2] - V[2] * M[0][1];
    A[0][1] = V[1] * M[1][2] - V[2] * M[1][1];
@@ -422,7 +422,7 @@ void VcrossMT(double V[3], double M[3][3], double A[3][3]) {
 }
 /**********************************************************************/
 /*  Quaternion product                                                */
-void QxQ(double A[4], double B[4], double C[4]) {
+void QxQ(const double A[4], const double B[4], double C[4]) {
    C[0] = A[3] * B[0] + A[2] * B[1] - A[1] * B[2] + A[0] * B[3];
    C[1] = -A[2] * B[0] + A[3] * B[1] + A[0] * B[2] + A[1] * B[3];
    C[2] = A[1] * B[0] - A[0] * B[1] + A[3] * B[2] + A[2] * B[3];
@@ -430,7 +430,7 @@ void QxQ(double A[4], double B[4], double C[4]) {
 }
 /**********************************************************************/
 /* Product of the Complement of a Quaternion (A) with a Quaternion (B)*/
-void QTxQ(double A[4], double B[4], double C[4]) {
+void QTxQ(const double A[4], const double B[4], double C[4]) {
    C[0] = A[3] * B[0] - A[2] * B[1] + A[1] * B[2] - A[0] * B[3];
    C[1] = A[2] * B[0] + A[3] * B[1] - A[0] * B[2] - A[1] * B[3];
    C[2] = -A[1] * B[0] + A[0] * B[1] + A[3] * B[2] - A[2] * B[3];
@@ -438,7 +438,7 @@ void QTxQ(double A[4], double B[4], double C[4]) {
 }
 /**********************************************************************/
 /* Product of a Quaternion (A) with the Complement of a Quaternion (B)*/
-void QxQT(double A[4], double B[4], double C[4]) {
+void QxQT(const double A[4], const double B[4], double C[4]) {
    C[0] = -A[3] * B[0] - A[2] * B[1] + A[1] * B[2] + A[0] * B[3];
    C[1] = A[2] * B[0] - A[3] * B[1] - A[0] * B[2] + A[1] * B[3];
    C[2] = -A[1] * B[0] + A[0] * B[1] - A[3] * B[2] + A[2] * B[3];
@@ -446,7 +446,7 @@ void QxQT(double A[4], double B[4], double C[4]) {
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-void VxQ(double Va[3], double QAB[4], double Vb[3]) {
+void VxQ(const double Va[3], const double QAB[4], double Vb[3]) {
    double qq[4][4];
    long i, j;
 
@@ -467,7 +467,7 @@ void VxQ(double Va[3], double QAB[4], double Vb[3]) {
 }
 /**********************************************************************/
 /* Find components of V in A, given components of V in B, and qab     */
-void QxV(double QAB[4], double Vb[3], double Va[3]) {
+void QxV(const double QAB[4], const double Vb[3], double Va[3]) {
    double qq[4][4];
    long i, j;
 
@@ -488,7 +488,7 @@ void QxV(double QAB[4], double Vb[3], double Va[3]) {
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-void QTxV(double QAB[4], double Va[3], double Vb[3]) {
+void QTxV(const double QAB[4], const double Va[3], double Vb[3]) {
    double qq[4][4];
    long i, j;
 
@@ -537,7 +537,7 @@ void RECTIFYQ(double Q[4]) {
 }
 /*********************************************************************/
 /* Given vector A, find vectors B, C to form orthogonal basis        */
-void PerpBasis(double A[3], double B[3], double C[3]) {
+void PerpBasis(const double A[3], double B[3], double C[3]) {
    long i;
    double V[3] = {0.0, 0.0, 0.0};
    double Amin;
@@ -559,7 +559,7 @@ void PerpBasis(double A[3], double B[3], double C[3]) {
    UNITV(C);
 }
 /**********************************************************************/
-double fact(long n) {
+double fact(const long n) {
    double F = 1.0;
    long i;
 
@@ -569,7 +569,7 @@ double fact(long n) {
    return F;
 }
 /**********************************************************************/
-double oddfact(long n) {
+double oddfact(const long n) {
    double F = 1.0;
    long i;
 
@@ -585,8 +585,8 @@ double oddfact(long n) {
 /*  sdP = sqrt(1-x^2)*dP are not singular, and are how dP's are used  */
 /*  in SphericalHarmonics.                                            */
 #define NMAX 18
-void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
-              double sdP[NMAX + 1][NMAX + 1]) {
+void Legendre(const long N, const long M, const double x,
+              double P[NMAX + 1][NMAX + 1], double sdP[NMAX + 1][NMAX + 1]) {
 
    double Ps[NMAX + 1][NMAX + 1];
    long n, m;
@@ -642,14 +642,15 @@ void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
 /* gradV[0] = Radial (positive outward)                               */
 /* gradV[1] = Latitudinal (positive south)                            */
 /* gradV[2] = Longitudinal (positive east)                            */
-void SphericalHarmonics(long N, long M, double r, double phi, double theta,
-                        double Re, double K, double C[NMAX + 1][NMAX + 1],
-                        double S[NMAX + 1][NMAX + 1], double gradV[3]) {
+void SphericalHarmonics(const long N, const long M, const double r,
+                        const double pbe[3], const double Re, const double K,
+                        const double C[NMAX + 1][NMAX + 1],
+                        const double S[NMAX + 1][NMAX + 1], double gradV[3]) {
 
    double P[NMAX + 1][NMAX + 1], sdP[NMAX + 1][NMAX + 1];
    long n, m;
    double cphi[NMAX + 1], sphi[NMAX + 1];
-   double Rer, Rern1, CcSs, ScCs, sth;
+   double Rer, Rern1, CcSs, ScCs;
    double dVdr, dVdphi, dVdtheta;
 
    /* .. Order can't be greater than Degree */
@@ -658,14 +659,17 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
       exit(1);
    }
 
+   double cth = pbe[2] / r;
+   double sth = sqrt(1 - cth * cth); // sin(theta);
    /* .. Find Legendre functions */
-   Legendre(N, M, cos(theta), P, sdP);
+   Legendre(N, M, cth, P, sdP);
 
    /* .. Build cos(m*phi) and sin(m*phi) */
-   cphi[0] = 1.0;
-   sphi[0] = 0.0;
-   cphi[1] = cos(phi);
-   sphi[1] = sin(phi);
+   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
+   cphi[0]      = 1.0;
+   sphi[0]      = 0.0;
+   cphi[1]      = pbe[0] / denom; // cos(phi);
+   sphi[1]      = pbe[1] / denom; // sin(phi);
    for (m = 2; m <= M; m++) {
       cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
       sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
@@ -677,7 +681,6 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
    dVdtheta = 0.0;
    Rer      = Re / r;
    Rern1    = Rer;
-   sth      = sin(theta);
    for (n = 1; n <= N; n++) {
       Rern1 *= Rer;
       for (m = 0; m <= n && m <= M; m++) {
@@ -707,7 +710,8 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
 #undef NMAX
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
-void MxMG(double **A, double **B, double **C, long N, long K, long M) {
+void MxMG(double **A, double **B, double **C, const long N, const long K,
+          const long M) {
    long i, j, k;
 
    for (i = 0; i < N; i++) {
@@ -721,7 +725,8 @@ void MxMG(double **A, double **B, double **C, long N, long K, long M) {
 }
 /**********************************************************************/
 /*  A is NxK, B is MxK, C is NxM                                      */
-void MxMTG(double **A, double **B, double **C, long N, long K, long M) {
+void MxMTG(double **A, double **B, double **C, const long N, const long K,
+           const long M) {
    long i, j, k;
 
    for (i = 0; i < N; i++) {
@@ -735,7 +740,8 @@ void MxMTG(double **A, double **B, double **C, long N, long K, long M) {
 }
 /**********************************************************************/
 /*  A is KxN, B is KxM, C is NxM                                      */
-void MTxMG(double **A, double **B, double **C, long N, long K, long M) {
+void MTxMG(double **A, double **B, double **C, const long N, const long K,
+           const long M) {
    long i, j, k;
 
    for (i = 0; i < N; i++) {
@@ -748,7 +754,7 @@ void MTxMG(double **A, double **B, double **C, long N, long K, long M) {
    }
 }
 /**********************************************************************/
-void MxVG(double **M, double *v, double *w, long n, long m) {
+void MxVG(double **M, double *v, double *w, const long n, const long m) {
    long i, j;
 
    for (i = 0; i < n; i++) {
@@ -760,7 +766,7 @@ void MxVG(double **M, double *v, double *w, long n, long m) {
 }
 /**********************************************************************/
 /*  Product of scalar S with NxM matrix A                             */
-void SxMG(double s, double **A, double **B, long N, long M) {
+void SxMG(double s, double **A, double **B, const long N, const long M) {
    long i, j;
 
    for (i = 0; i < N; i++) {
@@ -772,7 +778,7 @@ void SxMG(double s, double **A, double **B, long N, long M) {
 /**********************************************************************/
 /*                  GENERAL MATRIX INVERSE                            */
 /* Inverse of an NxN matrix                                           */
-void MINVG(double **A, double **AI, long N) {
+void MINVG(double **A, double **AI, const long N) {
    long I, J, ROW;
    long IPIVOT = 0;
    double **M;
@@ -840,7 +846,7 @@ void MINVG(double **A, double **AI, long N) {
 /******************************************************************************/
 /* For Order-N dynamics, we need to invert matrices of size 1 <= N <= 6       */
 /* This specialized function avoids mallocs to save time                      */
-void FastMINV6(double A[6][6], double AI[6][6], long N) {
+void FastMINV6(const double A[6][6], double AI[6][6], const long N) {
    long I, J, ROW;
    long IPIVOT = 0;
    double M[6][6];
@@ -899,7 +905,7 @@ void FastMINV6(double A[6][6], double AI[6][6], long N) {
 }
 /**********************************************************************/
 /*  Find the pseudo-inverse of an n-by-m matrix A                     */
-void PINVG(double **A, double **Ai, long n, long m) {
+void PINVG(double **A, double **Ai, const long n, const long m) {
    double **AtA, **AtAi;
    double **AAt, **AAti;
 
@@ -924,7 +930,7 @@ void PINVG(double **A, double **Ai, long n, long m) {
    }
 }
 /**********************************************************************/
-double **CreateMatrix(long n, long m) {
+double **CreateMatrix(const long n, const long m) {
    double **A;
    long i;
 
@@ -960,7 +966,7 @@ void DestroyMatrix(double **A) {
 /**********************************************************************/
 /*   Solution of NxN system      A * x = b                            */
 /*   by Gaussian Elimination and Back Substitution, with pivoting     */
-void LINSOLVE(double **A, double *x, double *b, long n) {
+void LINSOLVE(double **A, double *x, double *b, const long n) {
    long i, j, k, l, m;
    double mm, *a1, b1;
 
@@ -1025,7 +1031,7 @@ void LINSOLVE(double **A, double *x, double *b, long n) {
 /*  Elimination.                                                      */
 /*  In testing, this didn't live up to the hype, being slightly       */
 /*  slower than LINSOLVE.  I must have an inefficiency.               */
-void CholeskySolve(double **A, double *x, double *b, long n) {
+void CholeskySolve(double **A, double *x, double *b, const long n) {
    double **L, *D, **LD;
    double *y;
    long i, j, k;
@@ -1078,8 +1084,8 @@ void CholeskySolve(double **A, double *x, double *b, long n) {
 /* Solution of linear equations by Conjugate Gradient method.         */
 /* See "An Introduction to the Conjugate Gradient Method              */
 /* Without the Agonizing Pain", by Jonathan Richard Shewchuk          */
-void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
-                   long maxiter) {
+void ConjGradSolve(double **A, double *x, double *b, const long n,
+                   const double errtol, const long maxiter) {
    double *r, *d, *q;
    double DeltaNew, DeltaOld, Err2D0, alpha, Beta, dq;
    long i, j, Iter;
@@ -1155,7 +1161,7 @@ void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
 /*  a = Coefficients of polynomial (length n+1)                         */
 /*  Real = Real parts of roots (length n)                               */
 /*  Imag = Imaginary parts of roots (length n)                          */
-void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
+void Bairstow(long n, double *a, const double Tol, double *Real, double *Imag) {
 #define MAX(x, y) (x > y ? x : y)
 
    double *b, *c;
@@ -1255,8 +1261,9 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
 /*               must return a double                                 */
 /*  scale = Size of initial amoeba                                    */
 /*  Tol = Tolerance on cost function to declare convergence           */
-double Amoeba(long N, double *P, double CostFunction(double *p, double *Parm),
-              double *CostParm, double scale, double Tol) {
+double Amoeba(const long N, double *P,
+              double CostFunction(double *p, double *Parm), double *CostParm,
+              const double scale, const double Tol) {
 
    long Converged = 0;
    double **p, *pc, *f;
@@ -1416,7 +1423,8 @@ double Amoeba(long N, double *P, double CostFunction(double *p, double *Parm),
 }
 /**********************************************************************/
 /*  Find unit normal vector to plane defined by points V1, V2, V3     */
-void FindNormal(double V1[3], double V2[3], double V3[3], double N[3]) {
+void FindNormal(const double V1[3], const double V2[3], const double V3[3],
+                double N[3]) {
    long i;
    double D1[3], D2[3];
 
@@ -1429,7 +1437,7 @@ void FindNormal(double V1[3], double V2[3], double V3[3], double N[3]) {
 }
 /**********************************************************************/
 /*  Output clamped at ends of interval                                */
-double LinInterp(double *X, double *Y, double x, long n) {
+double LinInterp(double *X, double *Y, const double x, const long n) {
    double dx, dxn, y;
    long i, i1, i2;
 
@@ -1461,7 +1469,7 @@ double LinInterp(double *X, double *Y, double x, long n) {
 /*  A constant-rate interpolation for quaternions                     */
 /*  Ref: Ken Shoemake, "Animating Rotation with Quaternion Curves"    */
 /*  q(u=0.0) = q1, q(u=1.0) = q2                                      */
-void SphereInterp(double q1[4], double q2[4], double u, double q[4]) {
+void SphereInterp(double q1[4], double q2[4], const double u, double q[4]) {
    double Theta, CosTheta, SinTheta;
    double SinU, Sin1mU;
    long k;

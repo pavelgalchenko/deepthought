@@ -389,7 +389,7 @@ void C2A(long SEQ, double C[3][3], double *TH1, double *TH2, double *TH3) {
 /* simple rotation of THETA radians about a unit vector               */
 /* parallel to AXIS                                                   */
 
-void SimpRot(double AXIS[3], double THETA, double C[3][3]) {
+void SimpRot(const double AXIS[3], const double THETA, double C[3][3]) {
    double CTH, STH, CTH1, AX[3];
 
    CTH  = cos(THETA);
@@ -424,7 +424,7 @@ void Q2AngleVec(double Q[4], double AngleVec[3]) {
 }
 /**********************************************************************/
 /*  Given body rates and quaternion, find qdot.  Ref Kane, 1.13       */
-void QW2QDOT(double Q[4], double W[3], double QDOT[4]) {
+void QW2QDOT(const double Q[4], const double W[3], double QDOT[4]) {
 
    QDOT[0] = 0.5 * (W[0] * Q[3] - W[1] * Q[2] + W[2] * Q[1]);
    QDOT[1] = 0.5 * (W[0] * Q[2] + W[1] * Q[3] - W[2] * Q[0]);

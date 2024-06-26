@@ -483,18 +483,18 @@ void GravPertForce(struct SCType *S) {
 
    /* Perturbations due to non-spherical gravity potential */
    if (OrbCenter == EARTH) {
-      EGM96(ModelPath, EarthGravModel.N, EarthGravModel.M, S->mass, S->PosN,
-            World[EARTH].PriMerAng, FgeoN);
+      EGM96(ModelPath, EarthGravModel.N, EarthGravModel.M, EarthGravModel.C,
+            EarthGravModel.S, S->mass, S->PosN, World[EARTH].PriMerAng, FgeoN);
       for (j = 0; j < 3; j++)
          S->FrcN[j] += FgeoN[j];
    } else if (OrbCenter == MARS) {
-      GMM2B(ModelPath, MarsGravModel.N, MarsGravModel.M, S->mass, S->PosN,
-            World[MARS].PriMerAng, FgeoN);
+      GMM2B(ModelPath, MarsGravModel.N, MarsGravModel.M, MarsGravModel.C,
+            MarsGravModel.S, S->mass, S->PosN, World[MARS].PriMerAng, FgeoN);
       for (j = 0; j < 3; j++)
          S->FrcN[j] += FgeoN[j];
    } else if (OrbCenter == LUNA) {
-      GLGM2(ModelPath, LunaGravModel.N, LunaGravModel.M, S->mass, S->PosN,
-            World[LUNA].PriMerAng, FgeoN);
+      GLGM2(ModelPath, LunaGravModel.N, LunaGravModel.M, LunaGravModel.C,
+            LunaGravModel.S, S->mass, S->PosN, World[LUNA].PriMerAng, FgeoN);
       for (j = 0; j < 3; j++)
          S->FrcN[j] += FgeoN[j];
    }

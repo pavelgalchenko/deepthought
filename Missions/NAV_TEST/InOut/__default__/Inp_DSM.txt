@@ -1,0 +1,270 @@
+<<<<<<<<<<<<<<<<<<<<<<<<  42:  DSM Command Script File  >>>>>>>>>>>>>>>>>>>>>>>>
+#-------------------------------------------------------------------------------
+#                              Spacecraft Commands
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Command Interp ID Flag (hard coded in interpreter)
+# Col: 2   ->  Spacecraft ID Number: "SC[#]"
+# Col: 3   ->  Command Sequence Flag: "FswMode" or "CmdTime"
+# Col: 4   ->  Command Sequence Parameter: FSW Mode ID or Command Execution Time
+# If Col: 3 -> CmdTime, then Col: 5 is "NUM_CMD[#]" ("#" is the number of commands)
+#                       Command Types:
+#                       Translation Command Method_Mode ("PASSIVE_TRN" for none)
+#                       Attitude Command Method_Mode ("PASSIVE_ATT" for none)
+#                       Optional Actuator Command_Mode
+
+DSM_Cmd  SC[0]  CmdTime            0.000  NUM_CMD[2]  PASSIVE_TRN  PASSIVE_ATT
+DSM_Cmd  SC[1]  CmdTime            0.000  NUM_CMD[2]  PASSIVE_TRN  PASSIVE_ATT
+DSM_Cmd  SC[2]  CmdTime            0.000  NUM_CMD[2]  PASSIVE_TRN  PASSIVE_ATT
+DSM_Cmd  SC[3]  CmdTime            0.000  NUM_CMD[2]  PASSIVE_TRN  PASSIVE_ATT
+DSM_Cmd  SC[4]  CmdTime            0.000  NUM_CMD[1]  QuaternionCmd_[0]
+
+DSM_Cmd  SC[0]  CmdTime           30.000  NUM_CMD[1]  DetumbleCmd_[0]
+DSM_Cmd  SC[1]  CmdTime           30.000  NUM_CMD[1]  DetumbleCmd_[0]
+DSM_Cmd  SC[2]  CmdTime           30.000  NUM_CMD[1]  DetumbleCmd_[0]
+DSM_Cmd  SC[3]  CmdTime           30.000  NUM_CMD[1]  DetumbleCmd_[0]
+
+DSM_Cmd  SC[0]  CmdTime           60.000  NUM_CMD[1]  AttitudeCmd_PV[0]_SV[0]
+DSM_Cmd  SC[1]  CmdTime           60.000  NUM_CMD[1]  AttitudeCmd_PV[1]_SV[1]
+DSM_Cmd  SC[2]  CmdTime           60.000  NUM_CMD[1]  AttitudeCmd_PV[2]_SV[2]
+DSM_Cmd  SC[3]  CmdTime           60.000  NUM_CMD[1]  AttitudeCmd_PV[3]_SV[3]
+
+DSM_Cmd  SC[0]  CmdTime          120.000  NUM_CMD[2]  ManeuverCmd_[0]  AttitudeCmd_PV[0]_SV[0]
+
+DSM_Cmd  SC[0]  CmdTime          180.000  NUM_CMD[2]  TranslationCmd_[0]  AttitudeCmd_PV[0]_SV[0]
+
+DSM_Cmd  SC[3]  CmdTime          320.000  NUM_CMD[2]  AttitudeCmd_PV[3]_SV[3]  ActuatorCmd_[0]
+
+DSM_Cmd  SC[3]  CmdTime          400.000  NUM_CMD[1]  ActuatorCmd_[1]
+
+DSM_Cmd  SC[1]  CmdTime          420.000  NUM_CMD[2]  TranslationCmd_[2]  AttitudeCmd_PV[1]_SV[1]
+DSM_Cmd  SC[2]  CmdTime          420.000  NUM_CMD[2]  TranslationCmd_[3]  AttitudeCmd_PV[2]_SV[2]
+
+DSM_Cmd  SC[0]  CmdTime          550.000  NUM_CMD[2]  TranslationCmd_[1]  AttitudeCmd_PV[4]_SV[4]
+DSM_Cmd  SC[1]  CmdTime          550.000  NUM_CMD[1]  AttitudeCmd_PV[4]_SV[4]
+DSM_Cmd  SC[2]  CmdTime          550.000  NUM_CMD[1]  AttitudeCmd_PV[4]_SV[4]
+
+DSM_Cmd  SC[0]  CmdTime          600.000  NUM_CMD[1]  WhlHManageCmd_[0]
+DSM_Cmd  SC[2]  CmdTime          600.000  NUM_CMD[1]  WhlHManageCmd_[1]
+
+DSM_Cmd  SC[4]  CmdTime          640.000  NUM_CMD[2]  TranslationCmd_[4]  QuaternionCmd_[0]
+
+DSM_Cmd  SC[0]  CmdTime          700.000  NUM_CMD[1]  WhlHManageCmd_[2]
+DSM_Cmd  SC[2]  CmdTime          700.000  NUM_CMD[1]  WhlHManageCmd_[3]
+
+DSM_Cmd  SC[4]  CmdTime          720.000  NUM_CMD[1]  AttitudeCmd_PV[5]_SV[5]
+
+DSM_Cmd  SC[1]  CmdTime          840.000  NUM_CMD[2]  TranslationCmd_[5]  AttitudeCmd_PV[4]_SV[4]
+
+DSM_Cmd  SC[4]  CmdTime         1000.000  NUM_CMD[1]  AttitudeCmd_PV[6]_SV[5]
+
+DSM_Cmd  SC[4]  CmdTime         1800.000  NUM_CMD[1]  AttitudeCmd_PV[7]_SV[6]
+
+End_Of_File
+
+#-------------------------------------------------------------------------------
+#                             Translation Command
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Command Interp ID Flag: "TranslationCmd_[#]"
+# Col: 2   ->  Position 1: X (meters)
+# Col: 3   ->  Position 2: Y (meters)
+# Col: 4   ->  Position 3: Z (meters)
+# Col: 5   ->  Ref Origin (ctrl wrt): Orbit Point "OP" or SC ID Number ("SC[#].B[#]")
+# Col: 6   ->  Ref Frame Directions: "N", "F", "L", or SC ID Number ("SC[#].B[#]")
+# Col: 7   ->  Controller Mode
+# Col: 8   ->  Actuator Mode
+
+TranslationCmd_[0]  2.0  0.0  0.0  OP  F  Controller_[0]  Actuators_[3]  #  TranslationCmd_[0]
+TranslationCmd_[1]  2.0  0.0  0.0  OP  F  Controller_[0]  Actuators_[5]  #  TranslationCmd_[1]
+TranslationCmd_[2]  0.0  2.0  0.0  OP  F  Controller_[0]  Actuators_[3]  #  TranslationCmd_[2]
+TranslationCmd_[3]  -2.0  0.0  0.0  OP  F  Controller_[0]  Actuators_[5]  #  TranslationCmd_[3]
+TranslationCmd_[4]  0.0  0.0  -2.0  OP  F  Controller_[0]  Actuators_[3]  #  TranslationCmd_[4]
+TranslationCmd_[5]  1.0  0.0  0.0  SC[4].B[0]  SC[4].B[0]  Controller_[0]  Actuators_[3]  #  TranslationCmd_[5]
+
+#-------------------------------------------------------------------------------
+#                              Attitude Command
+#-------------------------------------------------------------------------------
+#------------------------------Primary Axis Cmd---------------------------------
+# Col: 1   ->  Command Interp ID Flag: "AttitudeCmd_PV[#]"
+# Col: 2   ->  Primary Target Type: BODY, SC, VEC
+# Col: 3   ->  Primary Axis Direction 1
+# Col: 4   ->  Primary Axis Direction 2
+# Col: 5   ->  Primary Axis Direction 3
+# Col: 6   ->  Primary Target: Specify Body, SC[#].B[#] or Vec
+# Col: 7   ->  Controller Mode
+# Col: 8   ->  Actuator Mode
+# If Col: 2 -> VEC, then Col: 6 is the Ref. Frame of the pointing vector: "N", "F", "L"
+#                        Col: 7-9 are the pointing vec for Primary axis
+#                        Col: 10-11 are Controller and Actuator Sets
+
+AttitudeCmd_PV[0]  VEC  0  0  1  L  1  0  0  Controller_[1]  Actuators_[2]  #  AttitudeCmd_PV[0]
+AttitudeCmd_PV[1]  VEC  0  0  1  L  0  -1  0  Controller_[1]  Actuators_[2]  #  AttitudeCmd_PV[1]
+AttitudeCmd_PV[2]  VEC  0  0  1  L  -1  0  0  Controller_[1]  Actuators_[2]  #  AttitudeCmd_PV[2]
+AttitudeCmd_PV[3]  VEC  0  0  1  L  0  1  0  Controller_[1]  Actuators_[2]  #  AttitudeCmd_PV[3]
+AttitudeCmd_PV[4]  SC  0  0  1  SC[4].B[0]  Controller_[1]  Actuators_[2]  #  AttitudeCmd_PV[4]
+AttitudeCmd_PV[5]  VEC  1  0  0  N  0  0  -1  Controller_[1]  Actuators_[2]  #  AttitudeCmd_PV[5]
+AttitudeCmd_PV[6]  VEC  1  0  0  N  -1  0  0  Controller_[2]  Actuators_[2]  #  AttitudeCmd_PV[6]
+AttitudeCmd_PV[7]  VEC  1  0  0  N  0  -1  0  Controller_[2]  Actuators_[2]  #  AttitudeCmd_PV[7]
+
+#------------------------------Secondary Axis Cmd-------------------------------
+# Col: 1   ->  Command Interp ID Flag: "AttitudeCmd_SV[0]"
+# Col: 2   ->  Secondary Target Type: BODY, SC, VEC
+# Col: 3   ->  Secondary Axis Direction 1
+# Col: 4   ->  Secondary Axis Direction 2
+# Col: 5   ->  Secondary Axis Direction 3
+# Col: 6   ->  Secondary Target: Specify Body, SC[#].B[#] or Vec
+# If Col: 2 -> VEC, then Col: 6 is the Ref. Frame of the pointing vector: "N", "F", "L"
+#                        Col: 7-9 are the pointing vec for Secondary axis
+
+AttitudeCmd_SV[0]  BODY  -1  0  0  EARTH  #  AttitudeCmd_SV[0]
+AttitudeCmd_SV[1]  BODY  -1  0  0  EARTH  #  AttitudeCmd_SV[1]
+AttitudeCmd_SV[2]  BODY  -1  0  0  EARTH  #  AttitudeCmd_SV[2]
+AttitudeCmd_SV[3]  BODY  -1  0  0  EARTH  #  AttitudeCmd_SV[3]
+AttitudeCmd_SV[4]  BODY  1  0  0  SUN  #  AttitudeCmd_SV[4]
+AttitudeCmd_SV[5]  VEC  0  0  1  N  0  1  0  #  AttitudeCmd_SV[5]
+AttitudeCmd_SV[6]  VEC  0  1  0  N  0  0  1  #  AttitudeCmd_SV[6]
+
+#------------------------Quaternion Attitude Cmd--------------------------------
+# Col: 1   ->  Command Interp ID Flag: "QuaternionCmd_[#]"
+# Col: 2   ->  Quaternion Component, q0
+# Col: 3   ->  Quaternion Component, q1
+# Col: 4   ->  Quaternion Component, q2
+# Col: 5   ->  Quaternion Component, q3
+# Col: 6   ->  Reference Frame of Quaternion
+# Col: 7   ->  Controller Mode
+# Col: 8   ->  Actuator Mode
+
+QuaternionCmd_[0]  0  0  0  1  L  Controller_[6]  Actuators_[0]  #  QuaternionCmd_[0]
+
+#----------------------------Mirror Attitude Cmd--------------------------------
+# Col: 1   ->  Command Interp ID Flag: "MirrorCmd_[#]"
+# Col: 2   ->  Spacecraft to mirror the attitude of: "SC[#]"
+# Col: 3   ->  Controller Mode
+# Col: 4   ->  Actuator Mode
+
+MirrorCmd_[0]  SC[0]  Controller_[6]  Actuators_[0]  #  MirrorCmd_[0]
+
+#---------------------------Detumble Attitude Cmd-------------------------------
+# Col: 1   ->  Command Interp ID Flag: "DetumbleCmd_[#]"
+# Col: 2   ->  Controller Mode
+# Col: 3   ->  Actuator Mode
+
+DetumbleCmd_[0]    Controller_[1]  Actuators_[2]  #  DetumbleCmd_[0]
+DetumbleCmd_[1]    Controller_[3]  Actuators_[4]  #  DetumbleCmd_[1]
+
+#---------------------------Wheel Momentum Management Cmd-------------------------------
+# Col: 1   ->  Command Interp ID Flag: "WhlHManageCmd_[#]"
+# Col: 2   ->  Momentum Dumping [ON/OFF]
+# Col: 3   ->  Minimum H_norm [Nms] (0 to always dump, *large* to never dump)
+# Col: 4   ->  Maximum H_norm [Nms] (0 to always dump, *large* to never dump)
+# Col: 5   ->  Controller Mode
+# Col: 6   ->  Actuator Mode
+
+WhlHManageCmd_[0]  ON  0.002  0.005  Controller_[7]  Actuators_[4]  #  WhlHManageCmd_[0]
+WhlHManageCmd_[1]  ON  0.002  0.005  Controller_[8]  Actuators_[5]  #  WhlHManageCmd_[1]
+WhlHManageCmd_[2]  OFF  0.002  0.005  Controller_[7]  Actuators_[4]  #  WhlHManageCmd_[2]
+WhlHManageCmd_[3]  OFF  0.002  0.005  Controller_[8]  Actuators_[5]  #  WhlHManageCmd_[3]
+
+#-------------------------------------------------------------------------------
+#                             Actuator Command
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Command Interp ID Flag: "ActuatorCmd[#]"
+# Col: 2   ->  Number of Commands Declared
+# Col: 3-N ->  Actuator[Number]_[Duty Cycle], e.g. WHL[0]_[100]
+
+ActuatorCmd_[0]  NUM_CMD[2]  THR_[13]_[100.0]  THR_[16]_[100.0]  #  ActuatorCmd_[0]
+ActuatorCmd_[1]  NUM_CMD[0]  #  ActuatorCmd_[1]
+
+#-------------------------------------------------------------------------------
+#                              Maneuver Command
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "ManeuverCmd_[#]"
+# Col: 2   ->  Delta-V in x direction [m/s]
+# Col: 3   ->  Delta-V in y direction [m/s]
+# Col: 4   ->  Delta-V in z direction [m/s]
+# Col: 5   ->  Maneuver Frame [%s]: "N", "B"
+# Col: 6   ->  Approximation Type [%s]: "CONSTANT", "SMOOTHED". Note that
+#    "SMOOTHED" Cmd must start at half of burn duration before the equivalent DeltaV
+#    occurs.
+# Col: 7   ->  Delta-V burn duration [s]
+# Col: 8   ->  Set of Control Limits
+# Col: 9   ->  Actuator Mode
+
+ManeuverCmd_[0]  0.0  0.0  0.1  B  CONSTANT  30.0  Limits_[0]  Actuators_[3]  #  ManeuverCmd_[0]
+ManeuverCmd_[1]  0.0  0.0  0.1  B  CONSTANT  15.0  Limits_[0]  Actuators_[3]  #  ManeuverCmd_[1]
+ManeuverCmd_[2]  0.0  0.0  0.1  B  CONSTANT  15.0  Limits_[0]  Actuators_[3]  #  ManeuverCmd_[2]
+ManeuverCmd_[3]  0.0  0.0  -0.2  B  CONSTANT  90.0  Limits_[0]  Actuators_[3]  #  ManeuverCmd_[3]
+
+#-------------------------------------------------------------------------------
+#                              Controllers
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Command Interp ID Flag: "Controller_[#]"
+# Col: 2   ->  Controller Type: "PID_CNTRL", "LYA_ATT_CNTRL", "LYA_2BODY_CNTRL", "H_DUMP_CNTRL", "CUSTOM_CNTRL"
+# Col: 3   ->  Set of Control Gains
+# Col: 4   ->  Set of Control Limits
+
+Controller_[0]  PID_CNTRL  Gains_[5]  Limits_[0]  #  Controller_[0]
+Controller_[1]  PID_CNTRL  Gains_[0]  Limits_[1]  #  Controller_[1]
+Controller_[2]  PID_CNTRL  Gains_[5]  Limits_[2]  #  Controller_[2]
+Controller_[3]  PID_CNTRL  Gains_[1]  Limits_[0]  #  Controller_[3]
+Controller_[4]  LYA_ATT_CNTRL  Gains_[6]  Limits_[1]  #  Controller_[4]
+Controller_[5]  LYA_2BODY_CNTRL  Gains_[7]  Limits_[0]  #  Controller_[5]
+Controller_[6]  PID_CNTRL  Gains_[0]  Limits_[0]  #  Controller_[6]
+Controller_[7]  H_DUMP_CNTRL  Gains_[2]  Limits_[3]  #  Controller_[7]
+Controller_[8]  H_DUMP_CNTRL  Gains_[8]  Limits_[3]  #  Controller_[8]
+
+#-------------------------------------------------------------------------------
+#                             Control Actuators
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "Actuators_[#]"
+# Col: 2   ->  Actuators: "WHL_[#]", "MTB", "THR", "Ideal"
+
+Actuators_[0]  Ideal  #  Actuators_[0]
+Actuators_[1]  Ideal  #  Actuators_[1]
+Actuators_[2]  WHL  #  Actuators_[2]
+Actuators_[3]  THR_3DOF  #  Actuators_[3]
+Actuators_[4]  MTB  #  Actuators_[4]
+Actuators_[5]  THR_6DOF  #  Actuators_[5]
+
+#-------------------------------------------------------------------------------
+#                   Translational / Attitude Control Parameters
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "Gains_[#]"
+# Col: 2   ->  Gain Mode: "PID", "PID_WN", "MomentumDump", "FC_LYA", "CUSTOM"
+# Col: 3   ->  Proportional Gain Direction 1, Kp
+# Col: 4   ->  Proportional Gain Direction 2, Kp
+# Col: 5   ->  Proportional Gain Direction 3, Kp
+# Col: 6   ->  Rate Gain Direction 1, Kr
+# Col: 7   ->  Rate Gain Direction 2, Kr
+# Col: 8   ->  Rate Gain Direction 3, Kr
+# Col: 9   ->  Integral Gain Direction 1, Ki
+# Col: 10  ->  Integral Gain Direction 2, Ki
+# Col: 11  ->  Integral Gain Direction 3, Ki
+
+Gains_[0]  PID_WN  0.24  0.7  0.0  0.0  #  Gains_[0]
+Gains_[1]  PID  Kp  0  0  0  Kr  1e-1  1e-1  1e-1  Ki  0.0  0.0  0.0  Ki_Limit  0.0  0.0  0.0  #  Gains_[1]
+Gains_[2]  MomentumDump  1.3  1.3  1.3  #  Gains_[2]
+Gains_[3]  PID_WN  2.4  0.4  0.0  #  Gains_[3]
+Gains_[4]  PID  Kp  20  20  20  Kr  200  200  200  Ki  0.0  0.0  0.0  Ki_Limit  0.0  0.0  0.0  #  Gains_[4]
+Gains_[5]  PID_WN  0.2  1.0  0.0  0.0  #  Gains_[5]
+Gains_[6]  FC_LYA  .01  3  #  Gains_[6]
+Gains_[7]  FC_LYA  0.2  1  #  Gains_[7]
+Gains_[8]  MomentumDump  0.1  0.1  0.1  #  Gains_[8]
+
+#-------------------------------------------------------------------------------
+#                   Translational / Attitude Control Limits
+#-------------------------------------------------------------------------------
+# Col: 1   ->  Cmd Interp ID Flag: "Limits_[#]"
+# Col: 2   ->  Max. Acceleration Direction 1, frc_max/trq_max [N, Nm]
+# Col: 3   ->  Max. Acceleration Direction 2, frc_max/trq_max [N, Nm]
+# Col: 4   ->  Max. Acceleration Direction 3, frc_max/trq_max [N, Nm]
+# Col: 5   ->  Max. Velocity Direction 1, vel_max/w_max [m/s, deg/s]
+# Col: 6   ->  Max. Velocity Direction 2, vel_max/w_max [m/s, deg/s]
+# Col: 7   ->  Max. Velocity Direction 3, vel_max/w_max [m/s, deg/s]
+
+Limits_[0]  0   0   0   0   0   0    #  Limits_[0]
+Limits_[1]  0.001   0.001   0.001   0   0   0    #  Limits_[1]
+Limits_[2]  0.001   0.001   0.001   0.5   0.5   0.5    #  Limits_[2]
+Limits_[3]  0.004   0.004   0.004   0   0   0    #  Limits_[3]
+
+
+EOF

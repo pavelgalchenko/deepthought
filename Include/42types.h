@@ -31,6 +31,8 @@ struct SphereHarmType {
    long Type;
    long N;
    long M;
+   double C[19][19];
+   double S[19][19];
 };
 
 struct FormationType {
