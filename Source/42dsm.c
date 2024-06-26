@@ -1740,6 +1740,12 @@ long GetNavigationData(struct DSMNavType *const Nav,
          inds    = &Nav->stateInd;
          sizes   = &Nav->stateSize;
          break;
+      default:
+         printf("Invalid matType %d in GetNavigationData. How did that "
+                "happen? Exiting...\n",
+                type);
+         exit(EXIT_FAILURE);
+         break;
    }
    dataDest = calloc(dataDim, sizeof(double));
 
