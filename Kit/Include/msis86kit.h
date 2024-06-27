@@ -29,14 +29,16 @@ typedef short int shortint;
 typedef double real;
 typedef real doublereal;
 /* typedef struct { real r, i; } complex; */
-typedef struct { doublereal r, i; } doublecomplex;
+typedef struct {
+   doublereal r, i;
+} doublecomplex;
 typedef long int logical;
 typedef short int shortlogical;
 typedef char logical1;
 typedef char integer1;
 /* typedef long long longint; */ /* system-dependent */
 
-#define TRUE_ (1)
+#define TRUE_  (1)
 #define FALSE_ (0)
 
 /* Extern is for use with -E */
@@ -58,8 +60,8 @@ typedef long ftnint;
 #endif
 
 /*external read, write*/
-typedef struct
-{  flag cierr;
+typedef struct {
+   flag cierr;
    ftnint ciunit;
    flag ciend;
    char *cifmt;
@@ -67,8 +69,8 @@ typedef struct
 } cilist;
 
 /*internal read, write*/
-typedef struct
-{  flag icierr;
+typedef struct {
+   flag icierr;
    char *iciunit;
    flag iciend;
    char *icifmt;
@@ -77,8 +79,8 @@ typedef struct
 } icilist;
 
 /*open*/
-typedef struct
-{  flag oerr;
+typedef struct {
+   flag oerr;
    ftnint ounit;
    char *ofnm;
    ftnlen ofnmlen;
@@ -90,46 +92,46 @@ typedef struct
 } olist;
 
 /*close*/
-typedef struct
-{  flag cerr;
+typedef struct {
+   flag cerr;
    ftnint cunit;
    char *csta;
 } cllist;
 
 /*rewind, backspace, endfile*/
-typedef struct
-{  flag aerr;
+typedef struct {
+   flag aerr;
    ftnint aunit;
 } alist;
 
 /* inquire */
-typedef struct
-{  flag inerr;
+typedef struct {
+   flag inerr;
    ftnint inunit;
    char *infile;
    ftnlen infilen;
-   ftnint   *inex;   /*parameters in standard's order*/
-   ftnint   *inopen;
-   ftnint   *innum;
-   ftnint   *innamed;
-   char  *inname;
-   ftnlen   innamlen;
-   char  *inacc;
-   ftnlen   inacclen;
-   char  *inseq;
-   ftnlen   inseqlen;
-   char  *indir;
-   ftnlen   indirlen;
-   char  *infmt;
-   ftnlen   infmtlen;
-   char  *inform;
-   ftnint   informlen;
-   char  *inunf;
-   ftnlen   inunflen;
-   ftnint   *inrecl;
-   ftnint   *innrec;
-   char  *inblank;
-   ftnlen   inblanklen;
+   ftnint *inex; /*parameters in standard's order*/
+   ftnint *inopen;
+   ftnint *innum;
+   ftnint *innamed;
+   char *inname;
+   ftnlen innamlen;
+   char *inacc;
+   ftnlen inacclen;
+   char *inseq;
+   ftnlen inseqlen;
+   char *indir;
+   ftnlen indirlen;
+   char *infmt;
+   ftnlen infmtlen;
+   char *inform;
+   ftnint informlen;
+   char *inunf;
+   ftnlen inunflen;
+   ftnint *inrecl;
+   ftnint *innrec;
+   char *inblank;
+   ftnlen inblanklen;
 } inlist;
 
 #define VOID void
@@ -147,26 +149,26 @@ union Multitype { /* for multiple entry points */
 
 typedef union Multitype Multitype;
 
-typedef long Long;   /* No longer used; formerly in Namelist */
+typedef long Long; /* No longer used; formerly in Namelist */
 
-struct Vardesc {  /* for Namelist */
+struct Vardesc { /* for Namelist */
    char *name;
    char *addr;
    ftnlen *dims;
-   int  type;
-   };
+   int type;
+};
 typedef struct Vardesc Vardesc;
 
 struct Namelist {
    char *name;
    Vardesc **vars;
    int nvars;
-   };
+};
 typedef struct Namelist Namelist;
 
 #define f2c_abs(x) ((x) >= 0 ? (x) : -(x))
-#define dabs(x) (doublereal) f2c_abs(x)
-/* These defines might trip up a Raspberry Pi, and are only used once.  
+#define dabs(x)    (doublereal) f2c_abs(x)
+/* These defines might trip up a Raspberry Pi, and are only used once.
    Inlining.  See msis86kit.c:570
 #ifndef min
 #define min(a,b) ((a) <= (b) ? (a) : (b))
@@ -207,9 +209,9 @@ typedef /* Character */ VOID (*H_fp)();
 typedef /* Subroutine */ int (*S_fp)();
 #endif
 /* E_fp is for real functions when -R is not specified */
-typedef VOID C_f; /* complex function */
-typedef VOID H_f; /* character function */
-typedef VOID Z_f; /* double complex function */
+typedef VOID C_f;       /* complex function */
+typedef VOID H_f;       /* character function */
+typedef VOID Z_f;       /* double complex function */
 typedef doublereal E_f; /* real function with -R not specified */
 
 /* undef any lower-case symbols that your C compiler predefines, e.g.: */
@@ -241,8 +243,8 @@ typedef doublereal E_f; /* real function with -R not specified */
 /* Common Block Declarations */
 
 struct gts3c_86Type {
-    real tlb, s, db04, db16, db28, db32, db40, db48, db01, za, t0, z0, g0, rl,
-        dd, db14;
+   real tlb, s, db04, db16, db28, db32, db40, db48, db01, za, t0, z0, g0, rl,
+       dd, db14;
 };
 
 EXTERN struct gts3c_86Type gts3c_86;
@@ -250,44 +252,44 @@ EXTERN struct gts3c_86Type gts3c_86;
 #define gts3c_1 gts3c_86
 
 struct lower5_1_ {
-    real ptm[8], pdm[56]   /* was [8][7] */;
+   real ptm[8], pdm[56] /* was [8][7] */;
 };
 
-#define lower5_1 (*(struct lower5_1_ *) &lower5_)
+#define lower5_1 (*(struct lower5_1_ *)&lower5_)
 
 struct parm5_1_ {
-    real pt[150], pd[1050] /* was [150][7] */, ps[150], pdl[50]   /*
-       was [25][2] */;
+   real pt[150], pd[1050] /* was [150][7] */, ps[150], pdl[50] /*
+    was [25][2] */
+       ;
 };
 struct parm5_2_ {
-    real pt1[50], pt2[50], pt3[50], pa1[50], pa2[50], pa3[50], pb1[50], pb2[
-       50], pb3[50], pc1[50], pc2[50], pc3[50], pd1[50], pd2[50], pd3[50]
-       , pe1[50], pe2[50], pe3[50], pf1[50], pf2[50], pf3[50], pg1[50],
-       pg2[50], pg3[50], ph1[50], ph2[50], ph3[50], pi1[50];
+   real pt1[50], pt2[50], pt3[50], pa1[50], pa2[50], pa3[50], pb1[50], pb2[50],
+       pb3[50], pc1[50], pc2[50], pc3[50], pd1[50], pd2[50], pd3[50], pe1[50],
+       pe2[50], pe3[50], pf1[50], pf2[50], pf3[50], pg1[50], pg2[50], pg3[50],
+       ph1[50], ph2[50], ph3[50], pi1[50];
 };
 
-#define parm5_1 (*(struct parm5_1_ *) &parm5_)
-#define parm5_2 (*(struct parm5_2_ *) &parm5_)
+#define parm5_1 (*(struct parm5_1_ *)&parm5_)
+#define parm5_2 (*(struct parm5_2_ *)&parm5_)
 
 struct csw_86Type {
-    real sw[25];
-    integer isw;
-    real swc[25];
+   real sw[25];
+   integer isw;
+   real swc[25];
 };
 
 EXTERN struct csw_86Type csw_86;
 
 #define csw_1 csw_86
 
-
 struct parmb_1_ {
-    real gsurf, re;
+   real gsurf, re;
 };
 
-#define parmb_1 (*(struct parmb_1_ *) &parmb_86)
+#define parmb_1 (*(struct parmb_1_ *)&parmb_86)
 
 struct fit_86Type {
-    real taf;
+   real taf;
 };
 
 EXTERN struct fit_86Type fit_86;
@@ -295,10 +297,10 @@ EXTERN struct fit_86Type fit_86;
 #define fit_1 fit_86
 
 struct lsqv_86Type {
-    integer mp, ii, jg, lt;
-    real qpb[50];
-    integer ierr, ifun, n, j;
-    real dv[60];
+   integer mp, ii, jg, lt;
+   real qpb[50];
+   integer ierr, ifun, n, j;
+   real dv[60];
 };
 
 EXTERN struct lsqv_86Type lsqv_86;
@@ -306,10 +308,9 @@ EXTERN struct lsqv_86Type lsqv_86;
 #define lsqv_1 lsqv_86
 
 struct ipoly_86Type {
-    real plg[36]  /* was [9][4] */, ctloc, stloc, c2tloc, s2tloc,
-       c3tloc, s3tloc;
-    integer iyr;
-    real day, df, dfa, apd, apdf, apt[4];
+   real plg[36] /* was [9][4] */, ctloc, stloc, c2tloc, s2tloc, c3tloc, s3tloc;
+   integer iyr;
+   real day, df, dfa, apd, apdf, apt[4];
 };
 
 EXTERN struct ipoly_86Type lpoly_86;
@@ -319,26 +320,25 @@ EXTERN struct ipoly_86Type lpoly_86;
 /* Initialized data */
 
 struct parmb_86Type {
-    real e_1[2];
+   real e_1[2];
 };
 
 EXTERN struct parmb_86Type parmb_86;
 
 struct lower5_Type {
-    real e_1[64];
+   real e_1[64];
 };
 EXTERN struct lower5_Type lower5_;
 
 struct parm5_Type {
-    real e_1[1400];
+   real e_1[1400];
 };
 EXTERN struct parm5_Type parm5_;
 
-
 /*====================================================================*/
-int gts5_(integer *iyd, real *sec, real *alt, real *glat,
-   real *glong, real *stl, real *f107a, real *f107, real *ap, integer *
-   mass, real *d__, real *t);
+int gts5_(integer *iyd, real *sec, real *alt, real *glat, real *glong,
+          real *stl, real *f107a, real *f107, real *ap, integer *mass,
+          real *d__, real *t);
 int tselec_86(real *);
 int tretrv_86(real *svv);
 /*====================================================================*/
@@ -412,10 +412,8 @@ int tretrv_86(real *svv);
 /*              To get current values of SW: CALL TRETRV(SW)          */
 /*====================================================================*/
 
-double MSIS86(long Year, long DOY, long Hour, long Minute,
-              double Second, double pbn[3],
-              double PriMerAng, double F107, double AP);
-
+double MSIS86(long Year, long DOY, long Hour, long Minute, double Second,
+              double pbn[3], double PriMerAng, double F107, double AP);
 
 /*
 ** #ifdef __cplusplus

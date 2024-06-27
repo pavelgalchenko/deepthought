@@ -11,7 +11,6 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #ifndef __ACTYPES_H__
 #define __ACTYPES_H__
 
@@ -26,7 +25,8 @@
 /* < : Send from standalone to 42 */
 /* = : Send both ways (eg. 42 Tx to 42 Rx) */
 /* ! : Read from command file */
-/* Example: [~!=~] means this variable can be read from command, and is sent both ways */
+/* Example: [~!=~] means this variable can be read from command, and is sent
+ * both ways */
 
 struct CmdVecType {
    /*~ Internal Variables ~*/
@@ -36,11 +36,11 @@ struct CmdVecType {
    long TrgWorld;
    long TrgSC;
    long TrgBody;
-   double N[3]; /* Components in N */
-   double W[3]; /* Components in W */
-   double L[3]; /* Components in L */
-   double R[3]; /* Components in R */
-   double T[3]; /* Components in T */
+   double N[3];  /* Components in N */
+   double W[3];  /* Components in W */
+   double L[3];  /* Components in L */
+   double R[3];  /* Components in R */
+   double T[3];  /* Components in T */
    double wn[3]; /* Angular velocity in N, expressed in N */
 };
 
@@ -49,7 +49,7 @@ struct CmdType {
    long Parm;
    long Frame;
    double AngRate[3]; /* [~<~] */
-   double Ang[3]; /* [~<~] */
+   double Ang[3];     /* [~<~] */
    double PosRate[3];
    double Pos[3];
    long RotSeq;
@@ -68,8 +68,8 @@ struct CmdType {
 
 struct AcBodyType {
    /*~ Parameters ~*/
-   double mass; /* [[kg]] */
-   double cm[3]; /* [[m]] */
+   double mass;      /* [[kg]] */
+   double cm[3];     /* [[m]] */
    double MOI[3][3]; /* [[kg-m^2]] */
 };
 
@@ -125,7 +125,7 @@ struct AcCssType {
    double Scale;
 
    /*~ Internal Variables ~*/
-   long Valid; /* [~>~] */
+   long Valid;   /* [~>~] */
    double Illum; /* [~>~] */
 };
 
@@ -154,20 +154,20 @@ struct AcStarTrackerType {
 
 struct AcGpsType {
    /*~ Internal Variables ~*/
-   long Valid; /* [~>~] */
-   long Rollover; /* [~>~] */
-   long Week; /* [~>~] */
-   double Sec; /* [~>~] */
+   long Valid;     /* [~>~] */
+   long Rollover;  /* [~>~] */
+   long Week;      /* [~>~] */
+   double Sec;     /* [~>~] */
    double PosN[3]; /* [[m]] [~>~] */
    double VelN[3]; /* [[m/s]] [~>~] */
    double PosW[3]; /* [[m]] [~>~] */
    double VelW[3]; /* [[m/s]] [~>~] */
-   double Lng; /* Geocentric [[rad]] [~>~] */
-   double Lat; /* Geocentric [[rad]] [~>~] */
-   double Alt; /* Geocentric [[m]] [~>~] */
-   double WgsLng; /* Geodetic, WGS-84 [[rad]] [~>~] */
-   double WgsLat; /* Geodetic, WGS-84 [[rad]] [~>~] */
-   double WgsAlt; /* Geodetic, WGS-84 [[m]] [~>~] */
+   double Lng;     /* Geocentric [[rad]] [~>~] */
+   double Lat;     /* Geocentric [[rad]] [~>~] */
+   double Alt;     /* Geocentric [[m]] [~>~] */
+   double WgsLng;  /* Geodetic, WGS-84 [[rad]] [~>~] */
+   double WgsLat;  /* Geodetic, WGS-84 [[rad]] [~>~] */
+   double WgsAlt;  /* Geodetic, WGS-84 [[m]] [~>~] */
 };
 
 struct AcAccelType {
@@ -197,7 +197,7 @@ struct AcWhlType {
 
    /*~ Internal Variables ~*/
    double w;
-   double H; /* [[Nms]] [~>~] */
+   double H;    /* [[Nms]] [~>~] */
    double Tcmd; /* [[N-m]] [~<~] */
 };
 
@@ -222,7 +222,7 @@ struct AcThrType {
 
    /*~ Internal Variables ~*/
    double Fcmd;
-   double PulseWidthCmd; /* for PULSED [[sec]] [~<~] */
+   double PulseWidthCmd;  /* for PULSED [[sec]] [~<~] */
    double ThrustLevelCmd; /* for PROPORTIONAL [[None]] [~<~] */
 };
 
@@ -262,12 +262,11 @@ struct AcSpinnerCtrlType {
    double Knute;
    double Kprec;
 
-
    /*~ Internal Variables ~*/
    long Init;
-   double Bold1,Bold2;
-   double xold,yold;
-   double rvn[3],rvb[3];
+   double Bold1, Bold2;
+   double xold, yold;
+   double rvn[3], rvb[3];
    double Tcmd[3];
    double Mcmd[3];
 };
@@ -308,7 +307,7 @@ struct AcCmgCtrlType {
 
    /*~ Internal Variables ~*/
    long Init;
-   double therr[3],werr[3];
+   double therr[3], werr[3];
    double Tcmd[3];
    double AngRateCmd[4];
 };
@@ -351,8 +350,8 @@ struct AcThrSteerCtrlType {
 
 struct AcType {
    /*~ Parameters ~*/
-   long ID; /* Spacecraft ID */
-   long EchoEnabled; /* For IPC */
+   long ID;              /* Spacecraft ID */
+   long EchoEnabled;     /* For IPC */
    long ParmLoadEnabled; /* [~>~] */
    long ParmDumpEnabled; /* [~>~] */
    long Nb;
@@ -417,8 +416,8 @@ struct AcType {
    /*~ Structures ~*/
 
    /* Dynamics */
-   struct AcBodyType *B;   /* [*Nb*] */
-   struct AcJointType *G;  /* [*Ng*] */
+   struct AcBodyType *B;  /* [*Nb*] */
+   struct AcJointType *G; /* [*Ng*] */
 
    /* Sensors */
    struct AcGyroType *Gyro;        /* [*Ngyro*] */
