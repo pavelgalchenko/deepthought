@@ -490,7 +490,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 /* Osculating elements drift from initial conditions due to J2        */
 void MeanEph2RV(struct OrbitType *O, double DynTime) {
    double e, e2, sin2i, sinw, sin2w, cosnu, g;
-   double CPN[3][3], cth, sth, R, c2, pr[3], pv[3];
+   double CPN[3][3], cth, sth, R, pr[3], pv[3];
    double C1, S1, C2, S2, C3, S3;
    long i;
 
@@ -501,7 +501,9 @@ void MeanEph2RV(struct OrbitType *O, double DynTime) {
    }
 
    /* 10.122 */
-   O->MeanAnom = O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch);
+   O->MeanAnom =
+       fmod(O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch) - PI, TWOPI) +
+       PI;
 
    O->anom = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
 
@@ -510,10 +512,12 @@ void MeanEph2RV(struct OrbitType *O, double DynTime) {
    sin2i = sin(O->inc) * sin(O->inc);
 
    /* 10.127 */
-   sinw  = sin(O->ArgP + O->anom);
-   sin2w = sinw * sinw;
-   cosnu = cos(O->anom);
-   g = pow((1.0 + e * cosnu) / (1.0 - e2), 3.0) * (1.0 - 3.0 * sin2i * sin2w);
+   sinw          = sin(O->ArgP + O->anom);
+   sin2w         = sinw * sinw;
+   cosnu         = cos(O->anom);
+   double gTerm  = (1.0 + e * cosnu) / (1.0 - e2);
+   double gTerm2 = gTerm * gTerm;
+   g             = (gTerm2 * gTerm) * (1.0 - 3.0 * sin2i * sin2w);
 
    /* 10.126 */
    O->SMA = O->MeanSMA + O->J2Rw2bya * g;
@@ -526,13 +530,38 @@ void MeanEph2RV(struct OrbitType *O, double DynTime) {
    cth = cos(O->anom);
    R   = O->SLR / (1.0 + e * cth);
 
-   c2    = sqrt(O->mu / O->SLR);
    pr[0] = R * cth;
    pr[1] = R * sth;
    pr[2] = 0.0;
-   pv[0] = -c2 * sth;
-   pv[1] = c2 * (e + cth);
-   pv[2] = 0.0;
+   if (O->J2DriftEnabled) {
+      // TODO: double/triple check the pv calculations here, there is notable
+      // difference between pv and finite differencing of pr, mostly in
+      // periapsis direction but that may just happen (due to, ya know, finite
+      // differencing)
+      // TODO: this only works for elliptical orbits
+      double sqrterat   = sqrt((1.0 - e) / (1.0 + e));
+      double EccAnom    = 2.0 * atan(sqrterat * tan(0.5 * O->anom));
+      double cE         = cos(EccAnom);
+      double EccAnomDot = O->MeanMotion / (1.0 - e * cE);
+      double AnomDot    = (1.0 + cth) / (1.0 + cE) * EccAnomDot / sqrterat;
+      double gdot =
+          -3.0 * gTerm2 *
+          ((e * AnomDot * sth / (1.0 - e2)) * (1.0 - 3.0 * sin2i * sin2w) +
+           2.0 * gTerm * sin2i * sinw * cos(O->ArgP + O->anom) *
+               (O->ArgPdot + AnomDot));
+      double SMAdot = O->J2Rw2bya * gdot;
+      double Rdot =
+          SMAdot * (1 - e * cE) + O->SMA * e * sin(EccAnom) * EccAnomDot;
+
+      pv[0] = Rdot * cth - R * AnomDot * sth;
+      pv[1] = Rdot * sth + R * AnomDot * cth;
+      pv[2] = 0.0;
+   } else {
+      double c2 = sqrt(O->mu / O->SLR);
+      pv[0]     = -c2 * sth;
+      pv[1]     = c2 * (e + cth);
+      pv[2]     = 0.0;
+   }
 
    C1 = cos(O->RAAN);
    S1 = sin(O->RAAN);
@@ -554,6 +583,17 @@ void MeanEph2RV(struct OrbitType *O, double DynTime) {
    for (i = 0; i < 3; i++) {
       O->PosN[i] = pr[0] * CPN[0][i] + pr[1] * CPN[1][i];
       O->VelN[i] = pv[0] * CPN[0][i] + pv[1] * CPN[1][i];
+   }
+   if (O->J2DriftEnabled) {
+      double wxr[3]  = {0.0};
+      wxr[0]        += (-pr[0] * CPN[0][1] - pr[1] * CPN[1][1]) * O->RAANdot;
+      wxr[1]        += (+pr[0] * CPN[0][0] + pr[1] * CPN[1][0]) * O->RAANdot;
+
+      for (i = 0; i < 3; i++)
+         wxr[i] += (+pr[0] * CPN[1][i] - pr[1] * CPN[0][i]) * O->ArgPdot;
+
+      for (i = 0; i < 3; i++)
+         O->VelN[i] += wxr[i];
    }
 }
 /**********************************************************************/
@@ -2586,7 +2626,6 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
           Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
-
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
