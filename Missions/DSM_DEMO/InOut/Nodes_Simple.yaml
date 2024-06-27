@@ -3,7 +3,7 @@
 # <<<<<<<<<<<<<<<<  Body Node Inputs for 42  >>>>>>>>>>>>>>>>>>>>>
 Configuration:
   # ---------------------------------Configuration---------------------------------
-  #   Name: 
+  #   Name:
   #   Description:
   Name: Nodes_Simple.txt
   Description: Simple Nodes
@@ -11,7 +11,7 @@ Nodes:
   # -------------------------------Node Configuration------------------------------
   # ((Sequence; one element for unique Atmospere Model Definition))
   #   - Node:
-  #       Index: 
+  #       Index:
   #       Location: [[x, y, z]] [[m]]
   #       Comment:
   - Node:

@@ -18,10 +18,10 @@ Orbit:
   #   Region:
   #   Polyhedron Grav:
   #   ((Type: CENTRAL))
-  #   World: 
+  #   World:
   #   J2 Secular Drift: [[true/false]]
-  #   Init: 
-  #     Method: [[KEP/RV/FILE]] 
+  #   Init:
+  #     Method: [[KEP/RV/FILE]]
   #     ((Additional fields depend on Method))
   #     ((Method: KEP))
   #     Inclination: [[deg]]
@@ -41,13 +41,13 @@ Orbit:
   #     Velocity: [[vel_x, vel_y, vel_z]] [km/sec]
   #     ((Method: FILE))
   #     File Type: [[TLE/TRV/SPLINE]]
-  #     File Name: 
-  #     Label in File: 
+  #     File Name:
+  #     Label in File:
   #   ((Type: THREE_BODY))
   #   Lagrange System: [[EARTHMOON/SUNEARTH/SUNJUPITER]]
   #   Propagation Method: [[LAGDOF_MODES/LAGDOF_COWELL/LAGDOF_SPLINE]]
-  #   Init: 
-  #     Method: [[MODES/XYZ/FILE]] 
+  #   Init:
+  #     Method: [[MODES/XYZ/FILE]]
   #     ((Additional fields depend on Method))
   #     ((Method: MODES))
   #     Lagrange Point: [[L1/L2/L3/L4/L5]]
@@ -65,7 +65,7 @@ Orbit:
   #     Velocity: [[vel_x, vel_y, vel_z]] [[nondimensional]]
   #     ((Method: FILE))
   #     File Type: [[TLE/TRV/SPLINE]]
-  #     File Name: 
+  #     File Name:
   #     Label in File:
   Type: THREE_BODY
   Lagrange System: SUNEARTH

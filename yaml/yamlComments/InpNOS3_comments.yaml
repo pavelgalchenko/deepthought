@@ -3,5 +3,5 @@
 SOF: "<<<<<<<<<<<<<<<<<<  42 NOS3 Time Configuration File  >>>>>>>>>>>>>>>>>>>"
 Configuration: |
   -------------------------------NOS3 Configuration------------------------------
-    Bus: 
+    Bus:
     Connection String: [[tcp://(hostname):(port)]]

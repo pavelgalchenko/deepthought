@@ -5,7 +5,7 @@ Name: '008'
 Configuration:
   # ----------------------------Spacecraft Configuration---------------------------
   #   Description:      [[]]
-  #   Label:            [[]]   
+  #   Label:            [[]]
   #   Sprite File:      [[]]
   #   FSW Identifier:   [[PASSIVE_FSW/PROTOTYPE_FSW/AD_HOC_FSW/SPINNER_FSW/MOMBIAS_FSW/THREE_AXIS_FSW/ISS_FSW/CMG_FSW/THR_FSW/CFS_FSW/RBT_FSW/DSM_FSW]]
   #   FSW Sample Time:  [[]]    [[sec]]
@@ -86,7 +86,7 @@ Bodies:
       Flex File Name: NONE
 Joints:
   # -------------------------------Joint Parameters--------------------------------
-  # ((Sequence; one element for each joint, one less than number of bodies))  
+  # ((Sequence; one element for each joint, one less than number of bodies))
   #   - Joint:
   #       Index:                      [[Index]]
   #       Body Indicies:              [[Inner Body Index, Outer Body Index]]
@@ -104,10 +104,10 @@ Joints:
   #       Init Displacement Rates:    [[disprate_x, disprate_y, disprate_z]]  [[m/s]]
   #       Bi-Gi Angles:
   #         Angles:                       [[angle_1, angle_2, angle_3]]       [[deg]]
-  #         Sequence:                     [[Sequence]] 
+  #         Sequence:                     [[Sequence]]
   #       Bo-Go Angles:
   #         Angles:                       [[angle_1, angle_2, angle_3]]       [[deg]]
-  #         Sequence:                     [[Sequence]] 
+  #         Sequence:                     [[Sequence]]
   #       Pos wrt Inner Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Pos wrt Outer Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Parm File Name:             [[NONE/filename]]

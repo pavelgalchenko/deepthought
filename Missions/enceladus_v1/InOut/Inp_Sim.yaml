@@ -7,7 +7,7 @@ Simulation Control:
   #   Duration: [[sec]]
   #   Step Size: [[sec]]
   #   File Interval: [[sec]]
-  #   RNG Seed: 
+  #   RNG Seed:
   #   Enable Graphics: [[true/false]]
   #   Command File:
   Mode: FAST

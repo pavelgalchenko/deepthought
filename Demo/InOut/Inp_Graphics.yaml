@@ -5,7 +5,7 @@ Configuration:
   # -----------------------------Graphics Configuration----------------------------
   #   Name: [[]]
   #   Output Interval:
-  #   Star Catalog File: 
+  #   Star Catalog File:
   #   Map Exists: [[true/false]]
   #   Orrery Exists: [[true/false]]
   #   Unit Sphere Exists: [[true/false]]
@@ -56,7 +56,7 @@ POV:
 Cam:
   # -----------------------------Camera Configuration------------------------------
   #   Title: [[]]
-  #   Dimensions: 
+  #   Dimensions:
   #     Width: [[pixels]]
   #     Height [[pixels]]
   #   Mouse Scale Factor: [[]]
@@ -180,7 +180,7 @@ Cam:
 Map:
   # -------------------------------Map Configuration-------------------------------
   #   Title: [[]]
-  #   Dimensions: 
+  #   Dimensions:
   #     Width: [[pixels]]
   #     Height [[pixels]]
   #   Map Show:
