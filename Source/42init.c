@@ -4915,7 +4915,8 @@ void InitSim(int argc, char **argv) {
 
    /* .. Environment */
    /* .. Date and time (UTC) */
-   node = fy_node_by_path_def(root, "/Time");
+   node          = fy_node_by_path_def(root, "/Time");
+   long millisec = 0;
    fy_node_scanf(node,
                  "/Date/Year %ld "
                  "/Date/Month %ld "
@@ -4923,13 +4924,15 @@ void InitSim(int argc, char **argv) {
                  "/Time/Hour %ld "
                  "/Time/Minute %ld "
                  "/Time/Second %lf "
+                 "/Time/Millisecond %ld"
                  "/Leap Seconds %lf",
                  &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
-                 &UTC.Second, &LeapSec);
+                 &UTC.Second, &millisec, &LeapSec);
+   UTC.Second += millisec / 1000.0;
 
    /* .. Choices for Modeling Solar Activity */
-   // TODO: add atmo model properties to world and use this to configure
-   // properties
+   // TODO: add atmo model properties to world and use this to
+   // configure properties
    node     = fy_node_by_path_def(root, "/Perturbation Models");
    iterNode = NULL;
    WHILE_FY_ITER(fy_node_by_path_def(node, "/Atmosphere/Models"), iterNode) {

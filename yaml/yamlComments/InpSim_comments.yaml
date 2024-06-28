@@ -20,6 +20,7 @@ Time: | #TODO: Julday?; Month by name?
       Hour:   [[]]
       Minute: [[]]
       Second: [[]]
+      Millisecond: [[]]
     Leap Seconds:   [[]]
 Orbits: |
   ------------------------------Orbit Configurations-----------------------------

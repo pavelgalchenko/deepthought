@@ -23,6 +23,7 @@
 
 # %%
 import numbers
+import numpy as np
 import sys
 import os
 import re
@@ -1501,9 +1502,13 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
                     dateDict["Year"] = int(strData[2])
                 case 2:
                     dateDict = timeDict["Time"] = dict()
+                    seconds = float(strData[2])
                     dateDict["Hour"] = int(strData[0])
                     dateDict["Minute"] = int(strData[1])
-                    dateDict["Second"] = float(strData[2])
+                    dateDict["Second"] = int(np.floor(seconds))
+                    dateDict["Millisecond"] = int(
+                        np.floor(seconds - dateDict["Second"]) * 1000
+                    )
                 case 3:
                     timeDict["Leap Seconds"] = float(lineData)
                 case 4:

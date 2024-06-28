@@ -35,7 +35,8 @@ Time:
   Time:
     Hour: 8
     Minute: 30
-    Second: 0.0
+    Second: 0
+    Millisecond: 0
   Leap Seconds: 37.0
 Orbits:
   # ------------------------------Orbit Configurations-----------------------------
