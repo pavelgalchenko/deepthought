@@ -33,75 +33,70 @@ struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb) {
    return (NewOrb);
 }
 /**********************************************************************/
+double eccFDF(double E, double params[2]) {
+   double f  = E - params[0] * sin(E) - params[1];
+   double fp = 1.0 - params[0] * cos(E);
+   return f / fp;
+}
+/**********************************************************************/
 double MeanAnomToTrueAnom(double MeanAnom, double ecc) {
 #define EPS (1.0E-12)
-   double E, f, fp, dE;
-   long i = 0;
-
-   E = MeanAnom;
-   do {
-      i++;
-      f  = E - ecc * sin(E) - MeanAnom;
-      fp = 1.0 - ecc * cos(E);
-      dE = f / fp;
-      if (dE > 0.1)
-         dE = 0.1;
-      if (dE < -0.1)
-         dE = -0.1;
-      E -= dE;
-   } while (fabs(f) > EPS && fabs(dE) > EPS && i < 100);
+   double params[2] = {ecc, MeanAnom};
+   double E         = NewtonsRaphson(MeanAnom, EPS, 100, 0.1, &eccFDF, params);
    return (2.0 * atan(sqrt((1.0 + ecc) / (1.0 - ecc)) * tan(0.5 * E)));
 #undef EPS
 }
 /**********************************************************************/
+double circFDF(double x, double B[1]) {
+   double f  = x * (x * x + 3.0) - 2.0 * B[0];
+   double fp = 3.0 * x * x + 3.0;
+   return f / fp;
+}
+/**********************************************************************/
+double hyperbolFDF(double H, double params[2]) {
+   double f  = params[0] * sinh(H) - H - params[1];
+   double fp = params[0] * cosh(H) - 1.0;
+   return f / fp;
+}
+/**********************************************************************/
 double TrueAnomaly(double mu, double p, double e, double t) {
 #define EPS (1.0E-12)
-
-   double p3, B, x, f, fp, e1, N, H, M, a;
-   double Ne, dx, dH, Anom;
-   long i;
-
-   p3 = p * p * p;
+   double Anom;
+   double p3 = p * p * p;
 
    if (e == 1.0) {
-      i = 0;
-      B = 3.0 * sqrt(mu / p3) * t;
-      x = 0.0;
-      do {
-         i++;
-         f   = x * (x * x + 3.0) - 2.0 * B;
-         fp  = 3.0 * x * x + 3.0;
-         dx  = f / fp;
-         x  -= dx;
-      } while (fabs(f) > EPS && fabs(dx) > EPS && i < 100);
-      Anom = 2.0 * atan(x);
+      double params[1] = {3.0 * sqrt(mu / p3) * t};
+      double x         = NewtonsRaphson(0, EPS, 100, 1.0, &circFDF, params);
+      Anom             = 2.0 * atan(x);
    } else if (e > 1.0) {
-      i  = 0;
-      e1 = e * e - 1.0;
-      N  = sqrt(mu * e1 * e1 * e1 / p3) * t;
-      Ne = N / e;
-      H  = log(Ne + sqrt(Ne * Ne + 1.0)); /* H = arcsinh(N/e); */
-      do {
-         i++;
-         f  = e * sinh(H) - H - N;
-         fp = e * cosh(H) - 1.0;
-         dH = f / fp;
-         if (dH > 0.1)
-            dH = 0.1;
-         if (dH < -0.1)
-            dH = -0.1;
-         H -= dH;
-      } while (fabs(f) > EPS && fabs(dH) > EPS && i < 100);
-      Anom = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
+      double e1        = e * e - 1.0;
+      double N         = sqrt(mu * e1 * e1 * e1 / p3) * t;
+      double Ne        = N / e;
+      double params[2] = {e, N};
+      /* H0 = arcsinh(N/e); */
+      double H = NewtonsRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1,
+                                &hyperbolFDF, params);
+      Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
    } else {
-      a    = p / (1.0 - e * e);
-      M    = sqrt(mu / (a * a * a)) * t;
-      M    = fmod(M + PI, TWOPI) - PI;
-      Anom = MeanAnomToTrueAnom(M, e);
+      double a = p / (1.0 - e * e);
+      double M = sqrt(mu / (a * a * a)) * t;
+      M        = fmod(M + PI, TWOPI) - PI;
+      Anom     = MeanAnomToTrueAnom(M, e);
    }
 
    return (Anom);
 #undef EPS
+}
+/**********************************************************************/
+double hyperradFDF(double r, double params[7]) {
+   double sqX = sqrt((2.0 - params[0] / r) / r - params[1]);
+   double f =
+       r * sqX -
+       params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
+       params[4];
+   params[5] = r;
+   params[6] = f;
+   return f * (r - params[5]) / (f - params[6]);
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -112,7 +107,7 @@ double TrueAnomaly(double mu, double p, double e, double t) {
 /* as e->inf.                                                         */
 void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R) {
 
-   double a, q, sqma, T, Den, alpha, r, sqX, f, rold, fold, dr;
+   double a, q, sqma, T, Den, alpha, sqX, r, f;
 
    a     = p / (1.0 - e * e);
    q     = p / (1.0 + e);
@@ -121,24 +116,12 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R) {
    Den   = q / sqma + sqma;
    alpha = 1.0 / a;
 
-   r    = p;
-   sqX  = sqrt((2.0 - p / r) / r - alpha);
-   f    = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
-   rold = r;
-   fold = f;
+   r   = p;
+   sqX = sqrt((2.0 - p / r) / r - alpha);
+   f   = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
 
-   r = 1.1 * p;
-   do {
-      sqX   = sqrt((2.0 - p / r) / r - alpha);
-      f     = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
-      dr    = -f * (r - rold) / (f - fold);
-      rold  = r;
-      fold  = f;
-      r    += dr;
-
-   } while (fabs(dr) > 1.0E-3);
-
-   *R = r;
+   double params[7] = {p, alpha, sqma, Den, T, r, f};
+   *R = NewtonsRaphson(1.1 * p, 1.0E-3, 200, 10.0, &hyperradFDF, params);
 }
 /**********************************************************************/
 double atanh(double x) {
@@ -1317,6 +1300,30 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]) {
    wln[2] = WorldW;
 }
 /**********************************************************************/
+double lagpointFDF(double x, double params[3]) {
+   double rho = params[0], rho1 = params[1];
+   double xp  = x - params[0];
+   double xp1 = xp + 1.0;
+   long lp    = params[2];
+   double f;
+   double fx;
+   switch (lp) {
+      case 1:
+         f  = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
+         fx = 1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
+         break;
+      case 2:
+         f  = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
+         fx = 1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
+         break;
+      case 3:
+         f  = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
+         fx = 1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
+         break;
+   }
+   return f / fx;
+}
+/**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
 /*  massive bodies (masses m1 and m2, m2 < m1) and a body of          */
 /*  negligible mass.  The locations of the Lagrange points are        */
@@ -1327,31 +1334,23 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]) {
 /*  Also see LagModes.pdf for dimensioned derivations.                */
 void FindLagPtParms(struct LagrangeSystemType *LS) {
    struct LagrangePointType *LP;
-   double rho, x, dx, f, fx;
+   double rho, x, rho1;
    double eps = 2.0E-16;
-   double rho1, xp, xp1;
    double n, D, X0rD, X0r1D, MuSum, a, b, c, s2;
    double R13, R15;
    double R23, R25;
    double alpha;
 
-   rho   = LS->rho;
-   rho1  = 1.0 - rho;
-   MuSum = LS->mu1 + LS->mu2;
-   n     = LS->MeanRate;
-   D     = LS->SMA;
+   rho                = LS->rho;
+   rho1               = 1.0 - rho;
+   double lpParams[3] = {rho, rho1, 1};
+   MuSum              = LS->mu1 + LS->mu2;
+   n                  = LS->MeanRate;
+   D                  = LS->SMA;
 
    /* .. L1 */
-   LP = &LS->LP[0];
-   x  = -1.0;
-   do {
-      xp   = x - rho;
-      xp1  = xp + 1.0;
-      f    = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
-      fx   = 1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-      dx   = -f / fx;
-      x   += dx;
-   } while (fabs(dx) > eps);
+   LP     = &LS->LP[0];
+   x      = NewtonsRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -1394,18 +1393,11 @@ void FindLagPtParms(struct LagrangeSystemType *LS) {
    LP->AR2 = 0.0;
 
    /* .. L2 */
-   LP = &LS->LP[1];
-   x  = -1.0;
-   do {
-      xp   = x - rho;
-      xp1  = xp + 1.0;
-      f    = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
-      fx   = 1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
-      dx   = -f / fx;
-      x   += dx;
-   } while (fabs(dx) > eps);
-   LP->X0 = x * D;
-   LP->Y0 = 0.0;
+   LP          = &LS->LP[1];
+   lpParams[2] = 2;
+   x           = NewtonsRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   LP->X0      = x * D;
+   LP->Y0      = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;
@@ -1446,18 +1438,11 @@ void FindLagPtParms(struct LagrangeSystemType *LS) {
    LP->AR2 = 0.0;
 
    /* .. L3 */
-   LP = &LS->LP[2];
-   x  = 1.0;
-   do {
-      xp   = x - rho;
-      xp1  = xp + 1.0;
-      f    = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
-      fx   = 1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-      dx   = -f / fx;
-      x   += dx;
-   } while (fabs(dx) > eps);
-   LP->X0 = x * D;
-   LP->Y0 = 0.0;
+   LP          = &LS->LP[2];
+   lpParams[2] = 3;
+   x           = NewtonsRaphson(1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   LP->X0      = x * D;
+   LP->Y0      = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;
