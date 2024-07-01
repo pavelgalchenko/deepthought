@@ -42,7 +42,7 @@ double eccFDF(double E, double params[2]) {
 double MeanAnomToTrueAnom(double MeanAnom, double ecc) {
 #define EPS (1.0E-12)
    double params[2] = {ecc, MeanAnom};
-   double E         = NewtonsRaphson(MeanAnom, EPS, 100, 0.1, &eccFDF, params);
+   double E         = NewtonRaphson(MeanAnom, EPS, 100, 0.1, &eccFDF, params);
    return (2.0 * atan(sqrt((1.0 + ecc) / (1.0 - ecc)) * tan(0.5 * E)));
 #undef EPS
 }
@@ -66,7 +66,7 @@ double TrueAnomaly(double mu, double p, double e, double t) {
 
    if (e == 1.0) {
       double params[1] = {3.0 * sqrt(mu / p3) * t};
-      double x         = NewtonsRaphson(0, EPS, 100, 1.0, &circFDF, params);
+      double x         = NewtonRaphson(0, EPS, 100, 1.0, &circFDF, params);
       Anom             = 2.0 * atan(x);
    } else if (e > 1.0) {
       double e1        = e * e - 1.0;
@@ -74,8 +74,8 @@ double TrueAnomaly(double mu, double p, double e, double t) {
       double Ne        = N / e;
       double params[2] = {e, N};
       /* H0 = arcsinh(N/e); */
-      double H = NewtonsRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1,
-                                &hyperbolFDF, params);
+      double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1,
+                               &hyperbolFDF, params);
       Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
    } else {
       double a = p / (1.0 - e * e);
@@ -89,14 +89,16 @@ double TrueAnomaly(double mu, double p, double e, double t) {
 }
 /**********************************************************************/
 double hyperradFDF(double r, double params[7]) {
-   double sqX = sqrt((2.0 - params[0] / r) / r - params[1]);
+   double rold = params[5];
+   double fold = params[6];
+   double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
    double f =
        r * sqX -
        params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
        params[4];
    params[5] = r;
    params[6] = f;
-   return f * (r - params[5]) / (f - params[6]);
+   return f * (r - rold) / (f - fold);
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -121,7 +123,7 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R) {
    f   = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
 
    double params[7] = {p, alpha, sqma, Den, T, r, f};
-   *R = NewtonsRaphson(1.1 * p, 1.0E-3, 200, 10.0, &hyperradFDF, params);
+   *R = NewtonRaphson(1.1 * p, 1.0E-3, 200, 1.0E6, &hyperradFDF, params);
 }
 /**********************************************************************/
 double atanh(double x) {
@@ -1350,7 +1352,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS) {
 
    /* .. L1 */
    LP     = &LS->LP[0];
-   x      = NewtonsRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -1395,7 +1397,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS) {
    /* .. L2 */
    LP          = &LS->LP[1];
    lpParams[2] = 2;
-   x           = NewtonsRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   x           = NewtonRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
    LP->X0      = x * D;
    LP->Y0      = 0.0;
 
@@ -1440,7 +1442,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS) {
    /* .. L3 */
    LP          = &LS->LP[2];
    lpParams[2] = 3;
-   x           = NewtonsRaphson(1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   x           = NewtonRaphson(1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
    LP->X0      = x * D;
    LP->Y0      = 0.0;
 

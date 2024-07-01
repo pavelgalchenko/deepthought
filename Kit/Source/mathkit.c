@@ -1808,8 +1808,8 @@ double WrapTo2Pi(double n) {
 /* Simple Newton-Raphson method for function given by f/dfdx = fdf            */
 /* Iterates until tolerance or max iterations are reached; maximum stepsize   */
 /* governed by maxStep. Use params to pass parameters to fdf                  */
-double NewtonsRaphson(double x0, double tol, long nMax, double maxStep,
-                      double (*fdf)(double, double *), double *params) {
+double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+                     double (*fdf)(double, double *), double *params) {
    if (maxStep < 0)
       maxStep = -maxStep;
    double x = x0;
