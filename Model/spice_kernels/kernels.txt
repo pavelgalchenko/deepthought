@@ -1,17 +1,21 @@
 KPL/MK
 \begindata
+
+PATH_VALUES = ( '.')
+
+PATH_SYMBOLS = ( 'SPICE_DIR' )
  
-KERNELS_TO_LOAD = ( '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/de440.bsp',
-                    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/de430.bsp',
-		    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/mar097.bsp',
-		    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/jup344.bsp',
-	            '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/jup365.bsp',
-	            '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/sat415.bsp',
-		    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/sat441.bsp', 
-                    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/ura111l.bsp',
-                    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/nep097.bsp',
-		    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/nep101.bsp',
-		    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/plu060.bsp',
-		    '/Users/jjvarghe/Desktop/42DSM/deepthought_wff/Model/spice_kernels/pck00010.tpc' )
+KERNELS_TO_LOAD = ( '$SPICE_DIR/de440.bsp',
+                    '$SPICE_DIR/de430.bsp',
+		    '$SPICE_DIR/mar097.bsp',
+		    '$SPICE_DIR/jup344.bsp',
+	            '$SPICE_DIR/jup365.bsp',
+	            '$SPICE_DIR/sat415.bsp',
+		    '$SPICE_DIR/sat441.bsp', 
+                    '$SPICE_DIR/ura111l.bsp',
+                    '$SPICE_DIR/nep097.bsp',
+		    '$SPICE_DIR/nep101.bsp',
+		    '$SPICE_DIR/plu060.bsp',
+		    '$SPICE_DIR/pck00010.tpc' )
  
 \begintext
