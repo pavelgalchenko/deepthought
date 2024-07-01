@@ -1,7 +1,7 @@
 KPL/MK
 \begindata
 
-PATH_VALUES = ( '.')
+PATH_VALUES = ( './Model/spice_kernels')
 
 PATH_SYMBOLS = ( 'SPICE_DIR' )
  
