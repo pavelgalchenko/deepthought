@@ -4807,7 +4807,7 @@ long LoadSpiceEphems(double JD) {
        (JD - j2000_c()) * spd_c(); // convert Julian days to seconds past J2000
    double ZAxis[3] = {0.0, 0.0, 1.0};
 
-   long Iw;
+   long Iw, Ip, Im;
    int i;
 
    char MajorBodiesNamesState[55][15] = {
@@ -4854,21 +4854,22 @@ long LoadSpiceEphems(double JD) {
    double CWH[3][3];
    double ang[3];
 
-   // Read all Major Bodies
-   for (Iw = 0; Iw < 55; Iw++) {
-      W   = &World[Iw];
-      Eph = &World[Iw].eph;
+   // Read all planets
 
+   for (Iw = MERCURY; Iw <= PLUTO; Iw++){
+      W   = &World[Iw];
+      Eph = &W->eph;
       spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
                tmp_state,
                &light_time); // State of major bodies in J2000 wrt Sun center
-      for (i = 0; i < 3; i++)
-         World[Iw].eph.PosN[i] = tmp_state[i]; // Assign inertial positions
-      for (i = 0; i < 3; i++)
-         World[Iw].eph.VelN[i] = tmp_state[i] + 3; // Assign inertial velocity
-      RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
-             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
+
+      for (i = 0; i<3; i++){
+         World[Iw].eph.PosN[i] = tmp_state[i]*1e3; // Assign inertial positions (m)
+         World[Iw].PosH[i] = tmp_state[i]*1e3; // Assign suncentric positions = inertial position (m)
+         
+         World[Iw].eph.VelN[i] = tmp_state[i + 3]*1e3; // Assign inertial velocity (m/s)
+         World[Iw].VelH[i] = tmp_state[i + 3]*1e3; // Assign suncentric velocity = inertial velocity (m/s)
+      }  
 
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
@@ -4882,6 +4883,70 @@ long LoadSpiceEphems(double JD) {
       eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
       eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
    }
+   // Read all moons
+   for (Ip = EARTH; Ip <= PLUTO; Ip++) {
+      if (World[Ip].Exists) {
+         for (Im = 0; Im < World[Ip].Nsat; Im++) {
+            Iw  = World[Ip].Sat[Im];
+            W   = &World[Iw];
+            Eph = &W->eph;
+
+            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+            tmp_state,
+            &light_time); // State of major bodies in J2000 wrt Sun center
+
+            for (i = 0; i<3; i++){
+               World[Iw].eph.PosN[i] = tmp_state[i]*1e3 - World[Ip].eph.PosN[i]; // Assign inertial positions (m)
+               World[Iw].PosH[i] = tmp_state[i]*1e3;
+
+               World[Iw].eph.VelN[i] = tmp_state[i + 3]*1e3 - World[Ip].eph.VelN[i]; // Assign inertial velocity (m/s)
+               World[Iw].VelH[i] = tmp_state[i + 3]*1e3;
+            }
+
+            char frame_name[25] = "IAU_";
+            strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+            pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
+
+            m2eul_c(CWH, 3, 1, 3, &ang[0], &ang[1], &ang[2]);
+            twist = ang[2];
+            dec   = halfpi_c() + ang[1];
+            ra    = ang[0] - halfpi_c();
+
+            eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
+            eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
+         }
+      }
+   }
+
+   // for (Iw = 0; Iw < 55; Iw++) {
+   //    W   = &World[Iw];
+   //    Eph = &World[Iw].eph;
+
+   //    spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+   //             tmp_state,
+   //             &light_time); // State of major bodies in J2000 wrt Sun center
+
+   //    for (i = 0; i<3; i++)
+   //       World[Iw].eph.PosN[i] = tmp_state[i]*1e3; // Assign inertial positions
+   //    for (i = 0; i<3; i++)
+   //       World[Iw].eph.VelN[i] = tmp_state[i + 3]*1e3/spd_c(); // Assign inertial velocity
+
+   //    RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
+   //           &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
+   //           &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
+
+   //    char frame_name[25] = "IAU_";
+   //    strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+   //    pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
+
+   //    m2eul_c(CWH, 3, 1, 3, &ang[0], &ang[1], &ang[2]);
+   //    twist = ang[2];
+   //    dec   = halfpi_c() + ang[1];
+   //    ra    = ang[0] - halfpi_c();
+
+   //    eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
+   //    eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
+   // }
    return (0);
 }
 /**********************************************************************/
