@@ -3196,6 +3196,7 @@ void LoadPlanets(void) {
    char MapFileName[10][20] = {
        "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
+
    double Mu[10]  = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
                      1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
    double J2[10]  = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
@@ -3206,12 +3207,47 @@ void LoadPlanets(void) {
                      1.7659E-4, 1.6728E-4, 1.631E-4, 1.105E-4,    0.0};
 
    double PoleRA[10]  = {0.0,     281.008, 272.758, 0.0,     317.683,
-                         268.057, 40.587,  257.313, 299.333, 133.046};
+                        268.057, 40.587,  257.313, 299.333, 133.046};
    double PoleDec[10] = {90.0,   61.45,  67.16,   0.0,   52.8865,
-                         64.496, 83.537, -15.175, 42.95, -6.145};
-   double CNJ[3][3];
+                        64.496, 83.537, -15.175, 42.95, -6.145};
    double PriMerAngJ2000[10] = {0.0,    329.71, 160.26, 190.16, 176.868,
-                                284.95, 38.90,  203.81, 253.18, 236.77};
+                              284.95, 38.90,  203.81, 253.18, 236.77};
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+   
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      for (int i = 0; i<10; i++){
+         dim = 1;
+         bodvrd_c(PlanetName[i], "GM", 1, &dim, &tmp_holder);
+         Mu[i] = tmp_holder*1E9;
+
+         dim = 3;
+         if ((!strcmp(PlanetName[i], "Pluto")) || (!strcmp(PlanetName[i], "Sun"))){ // Pluto/Sun J2 is not defined
+            J2[i] = 0.0;
+         }
+         else{
+            bodvrd_c(PlanetName[i], "J2", 1, &dim, tmp_holder3);
+            J2[i] = tmp_holder3[0];
+         }
+
+         bodvrd_c(PlanetName[i], "RADII", 3, &dim, tmp_holder3);
+         Rad[i] = tmp_holder3[0]*1e3;
+
+         bodvrd_c(PlanetName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         W[i] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(PlanetName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(PlanetName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
+   
+   double CNJ[3][3];
    /* Magnetic Field Dipole Strength, Wb-m */
    double DipoleMoment[10] = {0.0, 0.0, 0.0, 7.943E15, 0.0,
                               0.0, 0.0, 0.0, 0.0,      0.0};
@@ -3413,6 +3449,22 @@ void LoadMoonOfEarth(void) {
    struct OrbitType *E;
    double CNJ[3][3];
 
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      dim = 1;
+      bodvrd_c("Moon", "GM", 1, &dim, &tmp_holder);
+      mu[0] = tmp_holder*1E9;
+
+      bodvrd_c("Moon", "RADII", 3, &dim, tmp_holder3);
+      rad[0] = tmp_holder3[0]*1e3;
+
+      bodvrd_c("Moon", "PM", 3, &dim, tmp_holder3);
+      w[0] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+   }
+
    P       = &World[Ip];
    P->Nsat = 1;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
@@ -3504,6 +3556,24 @@ void LoadMoonsOfMars(void) {
    struct WorldType *M, *P;
    struct OrbitType *E;
 
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      for (i=0; i<2; i++){
+         dim = 1;
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder*1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0]*1e3;
+
+         bodvrd_c(Name[i], "PM", 3, &dim, tmp_holder3);
+         w[i] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      }
+   }
+
    P       = &World[Ip];
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
@@ -3511,11 +3581,6 @@ void LoadMoonsOfMars(void) {
       printf("Mars P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(1);
    }
-
-   // struct IAU4CoeffRotModel models[0] = {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0,
-   // 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}}; struct
-   // IAU4CoeffRotModel models[1] = {{0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0},
-   // {0.0, 0.0, 0.0, 0.0}, {0.0, 0.0, 0.0, 0.0}};
 
    for (Im = 0; Im < Nm; Im++) {
       Iw         = PHOBOS + Im;
@@ -3625,6 +3690,24 @@ void LoadMoonsOfJupiter(void) {
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      for (i=0; i<2; i++){
+         dim = 1;
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder*1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0]*1e3;
+
+         bodvrd_c(Name[i], "PM", 3, &dim, tmp_holder3);
+         w[i] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -3740,6 +3823,24 @@ void LoadMoonsOfSaturn(void) {
    struct WorldType *M, *P;
    struct OrbitType *E;
 
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      for (i=0; i<2; i++){
+         dim = 1;
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder*1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0]*1e3;
+
+         bodvrd_c(Name[i], "PM", 3, &dim, tmp_holder3);
+         w[i] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      }
+   }
+
    P       = &World[Ip];
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
@@ -3828,6 +3929,24 @@ void LoadMoonsOfUranus(void) {
    struct WorldType *M, *P;
    struct OrbitType *E;
 
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      for (i=0; i<2; i++){
+         dim = 1;
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder*1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0]*1e3;
+
+         bodvrd_c(Name[i], "PM", 3, &dim, tmp_holder3);
+         w[i] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      }
+   }
+
    P       = &World[Ip];
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
@@ -3915,6 +4034,29 @@ void LoadMoonsOfNeptune(void) {
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE_REC){ // If we are using SPICE, replace the hardcoded values with SPICE values
+      for (i=0; i<2; i++){
+         dim = 1;
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder*1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0]*1e3;
+
+         if (!strcmp(Name[i], "Nereid")){
+            w[i] = 0.0;
+         }
+         else{
+            bodvrd_c(Name[i], "PM", 3, &dim, tmp_holder3);
+            w[i] = tmp_holder3[1]*D2R/spd_c(); // converts the prime meridian rate in deg/day to rad/s
+         }
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -4651,9 +4793,9 @@ long LoadJplEphems(char EphemPath[80], double JD) {
 
    return (0);
 }
-long LoadSpiceKernels(char ModelPath[80]) {
+long LoadSpiceKernels(char SpicePath[80]) {
    char MetaKernelPath[80];
-   strcpy(MetaKernelPath, ModelPath);
+   strcpy(MetaKernelPath, SpicePath);
    strcat(MetaKernelPath, "spice_kernels/kernels.txt");
 
    furnsh_c(MetaKernelPath);
@@ -4718,11 +4860,11 @@ long LoadSpiceEphems(double JD) {
       Eph = &World[Iw].eph;
 
       spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-               &tmp_state,
+               tmp_state,
                &light_time); // State of major bodies in J2000 wrt Sun center
-      for (i = 0; i++; i < 3)
+      for (i = 0; i < 3; i++)
          World[Iw].eph.PosN[i] = tmp_state[i]; // Assign inertial positions
-      for (i = 0; i++; i < 3)
+      for (i = 0; i < 3; i++)
          World[Iw].eph.VelN[i] = tmp_state[i] + 3; // Assign inertial velocity
       RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
              &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
@@ -4740,9 +4882,6 @@ long LoadSpiceEphems(double JD) {
       eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
       eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
    }
-
-   // TO-DO: Read all Minor Bodies
-
    return (0);
 }
 /**********************************************************************/
@@ -5156,13 +5295,15 @@ void InitSim(int argc, char **argv) {
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
    /* .. Load Sun and Planets */
+   if (EphemOption == EPH_SPICE_REC) LoadSpiceKernels(ModelPath); // Load SPICE to get SPICE-provided values for mu, J2, etc
+
    LoadSun();
    LoadPlanets();
+   
    /* JPL planetary ephems */
    if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440)
       LoadJplEphems(ModelPath, TT.JulDay);
    else if (EphemOption == EPH_SPICE_REC) {
-      LoadSpiceKernels(ModelPath);
       LoadSpiceEphems(TT.JulDay);
    }
    /* .. Load Moons */
