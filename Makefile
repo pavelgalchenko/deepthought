@@ -88,14 +88,14 @@ ifeq ($(42PLATFORM),__APPLE__)
    GLUT_OR_GLFW = _USE_GLUT_
 
    ifeq (,$(shell which conda))
-      LDFLAGS = 
+      LDFLAGS =
    else
       CONDA_DIR=$(shell conda info --base)
       CONDA_LIB_DIR = $(CONDA_DIR)/lib
       LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
    endif
 
-   LFLAGS = 
+   LFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
       GLINC = -I /System/Library/Frameworks/OpenGL.framework/Headers/ -I /System/Library/Frameworks/GLUT.framework/Headers/
       ifeq ($(strip $(GLUT_OR_GLFW)),_USE_GLUT_)
@@ -127,7 +127,7 @@ ifeq ($(42PLATFORM),__linux__)
    #GLUT_OR_GLFW = _USE_GLFW_
    GLUT_OR_GLFW = _USE_GLUT_
 
-   LDFLAGS = 
+   LDFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
       ifeq ($(strip $(GLUT_OR_GLFW)),_USE_GLUT_)
          GUIOBJ = $(OBJ)42gl.o $(OBJ)42glut.o $(OBJ)glkit.o $(OBJ)42gpgpu.o
@@ -160,7 +160,7 @@ ifeq ($(42PLATFORM),__MSYS__)
    #GLUT_OR_GLFW = _USE_GLFW_
    GLUT_OR_GLFW = _USE_GLUT_
 
-   LDFLAGS = 
+   LDFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
       # TODO: Option to use GLFW instead of GLUT?
       GLEW = $(EXTERNDIR)GLEW/
@@ -212,8 +212,8 @@ ifneq ($(strip $(RBTFLAG)),)
    RBTSRC = $(RBTDIR)Source/
    RBTOBJ = $(OBJ)RbtFsw.o
 else
-   RBTDIR = 
-   RBTSRC = 
+   RBTDIR =
+   RBTSRC =
    RBTOBJ =
 endif
 
@@ -239,7 +239,7 @@ $(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
 $(OBJ)42nos3.o $(OBJ)42dsm.o
 
 KITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
-$(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o $(OBJ)msis86kit.o \
+$(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o \
 $(OBJ)orbkit.o $(OBJ)radbeltkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o \
 $(OBJ)docoptkit.o $(OBJ)dsmkit.o
 
@@ -359,9 +359,6 @@ $(OBJ)mathkit.o     : $(KITSRC)mathkit.c
 
 $(OBJ)nrlmsise00kit.o   : $(KITSRC)nrlmsise00kit.c
 	$(CC) $(CFLAGS) -c $(KITSRC)nrlmsise00kit.c -o $(OBJ)nrlmsise00kit.o
-
-$(OBJ)msis86kit.o   : $(KITSRC)msis86kit.c $(KITINC)msis86kit.h
-	$(CC) $(CFLAGS) -c $(KITSRC)msis86kit.c -o $(OBJ)msis86kit.o
 
 $(OBJ)orbkit.o      : $(KITSRC)orbkit.c
 	$(CC) $(CFLAGS) -c $(KITSRC)orbkit.c -o $(OBJ)orbkit.o

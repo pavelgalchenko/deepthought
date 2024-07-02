@@ -32,7 +32,6 @@
 #include "geomkit.h"
 #include "iokit.h"
 #include "mathkit.h"
-#include "msis86kit.h"
 #include "orbkit.h"
 #include "sigkit.h"
 #include "sphkit.h"
