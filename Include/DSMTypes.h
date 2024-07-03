@@ -11,31 +11,38 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #ifndef __DSMTYPES_H__
 #define __DSMTYPES_H__
 
 // Controller Type Definitions
-#define PID_CNTRL       0 // Translational and Rotational
-#define LYA_ATT_CNTRL   1 // Attitude
-#define LYA_2BODY_CNTRL 2 // 2 Body Relative Orbit Control
-#define H_DUMP_CNTRL    3 // Proportional only, for momentum dumping
+enum ctrlType {
+   PID_CNTRL = 0,   // Translational and Rotational
+   LYA_ATT_CNTRL,   // Attitude
+   LYA_2BODY_CNTRL, // 2 Body Relative Orbit Control
+   H_DUMP_CNTRL,    // Proportional only, for momentum dumping
+};
 
 // Controller State Definitions
-#define TRN_STATE 0 // Translational
-#define ATT_STATE  1 // Attitude
-#define FULL_STATE 2 // 6DOF controller, currently unused
-#define DMP_STATE  3 // Dumping Controller
+enum ctrlState {
+   TRN_STATE = 0, // Translational
+   ATT_STATE,     // Attitude
+   FULL_STATE,    // 6DOF controller, currently unused
+   DMP_STATE,     // Dumping Controller
+};
 
 // Manuever Type Definitions
-#define INACTIVE -1
-#define CONSTANT  0
-#define SMOOTHED  1
+enum maneuverType {
+   INACTIVE = -1,
+   CONSTANT,
+   SMOOTHED,
+};
 
 // Actuator Type Definitions
-#define WHL_TYPE 0
-#define THR_TYPE 1
-#define MTB_TYPE 2
+enum actuatorType {
+   WHL_TYPE = 0,
+   THR_TYPE,
+   MTB_TYPE,
+};
 
 /*
 ** #ifdef __cplusplus
@@ -48,7 +55,8 @@
 /* < : Send from standalone to 42 */
 /* = : Send both ways (eg. 42 Tx to 42 Rx) */
 /* ! : Read from command file */
-/* Example: [~!=~] means this variable can be read from command, and is sent both ways */
+/* Example: [~!=~] means this variable can be read from command, and is sent
+ * both ways */
 
 struct DSMCmdVecType {
    /*~ Internal Variables ~*/
@@ -58,11 +66,11 @@ struct DSMCmdVecType {
    long TrgWorld;
    long TrgSC;
    long TrgBody;
-   double N[3]; /* Components in N */
-   double W[3]; /* Components in W */
-   double L[3]; /* Components in L */
-   double R[3]; /* Components in R */
-   double T[3]; /* Components in T */
+   double N[3];  /* Components in N */
+   double W[3];  /* Components in W */
+   double L[3];  /* Components in L */
+   double R[3];  /* Components in R */
+   double T[3];  /* Components in T */
    double wn[3]; /* Angular velocity in N, expressed in N */
    double cmd_vec[3];
    double cmd_axis[3];
@@ -93,33 +101,33 @@ struct DSMCmdType {
    double Hvr[3];
    double Hvn[3];
    double OldCRN[3][3];
-   double k_nute[3]; // Nutation Gain
-   double k_prec[3]; // Precession Gain
-   double trn_kp[3]; // Proportional Gain
-   double trn_ki[3]; // Intergral Gain
-   double trn_kr[3]; // Rate / Derivitive Gain
+   double k_nute[3];      // Nutation Gain
+   double k_prec[3];      // Precession Gain
+   double trn_kp[3];      // Proportional Gain
+   double trn_ki[3];      // Intergral Gain
+   double trn_kr[3];      // Rate / Derivitive Gain
    double trn_kilimit[3]; // Integral Limit
-   double dmp_kp[3]; // Dumping Proportional Gain
-   double att_kp[3]; // Attitude Proportional Gain
-   double att_ki[3]; // Attitude Intergral Gain
-   double att_kr[3]; // Attitude Rate / Derivitive Gain
+   double dmp_kp[3];      // Dumping Proportional Gain
+   double att_kp[3];      // Attitude Proportional Gain
+   double att_ki[3];      // Attitude Intergral Gain
+   double att_kr[3];      // Attitude Rate / Derivitive Gain
    double att_kilimit[3]; // Attitude Integral Limit
-   double FrcB_max[3]; // Force limit in SC body frame
-   double vel_max[3]; // Velocity limit in SC body frame
-   double Trq_max[3]; // Torque limit in SC body frame
-   double dTrq_max[3]; // Detumble torque limit in SC body frame
-   double w_max[3];  // Angular velocity limit in SC body frame
-   double Pos[3]; // Position Vector of wrt any frame
-   double PosN[3]; // Position Vector of wrt Inertial frame N
-   double PosR[3]; // Position Vector of wrt Inertial frame R
-   double q[4]; // Quaternion wrt any frame
+   double FrcB_max[3];    // Force limit in SC body frame
+   double vel_max[3];     // Velocity limit in SC body frame
+   double Trq_max[3];     // Torque limit in SC body frame
+   double dTrq_max[3];    // Detumble torque limit in SC body frame
+   double w_max[3];       // Angular velocity limit in SC body frame
+   double Pos[3];         // Position Vector of wrt any frame
+   double PosN[3];        // Position Vector of wrt Inertial frame N
+   double PosR[3];        // Position Vector of wrt Inertial frame R
+   double q[4];           // Quaternion wrt any frame
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
    int trn_controller;
    int att_controller;
    int dmp_controller;
-   int ManeuverMode;
+   enum maneuverType ManeuverMode;
    char AttRefScID[6];
    char H_DumpGain[20];
    char H_DumpMode[20];
@@ -128,7 +136,7 @@ struct DSMCmdType {
    double BurnTime;
    double TrgVelR[3];
    double BurnStopTime;
-   int ActTypes[100];
+   enum actuatorType ActTypes[100];
    int ActInds[100];
    int ActNumCmds;
    double ActDuties[100];
@@ -141,21 +149,20 @@ struct DSMCmdType {
    struct DSMCmdVecType SecVec;
 };
 
-
 struct DSMCtrlType {
    /*~ Parameters ~*/
-   double trn_kp[3]; // Translational Proportional Gain
-   double trn_kr[3]; // Translational Rate/derivitive Gain
-   double trn_ki[3]; // Translational Integral Gain
-   double dmp_kp[3]; // Momentum Gain
-   double att_kp[3]; // Attitude Proportional Gain
-   double att_kr[3]; // Attitude Derivative Gain
-   double att_ki[3]; // Attitude Integral Gain
+   double trn_kp[3];   // Translational Proportional Gain
+   double trn_kr[3];   // Translational Rate/derivitive Gain
+   double trn_ki[3];   // Translational Integral Gain
+   double dmp_kp[3];   // Momentum Gain
+   double att_kp[3];   // Attitude Proportional Gain
+   double att_kr[3];   // Attitude Derivative Gain
+   double att_ki[3];   // Attitude Integral Gain
    double FrcB_max[3]; // Maximum Force / Force limit
    double FrcN_max[3]; // SC body Force limit in Inertial frame
-   double vel_max[3]; // Maximum Velocity / Velocity limit
-   double w_max[3]; // Maximum Angular Velocity / Angular Velocity limit
-   double Trq_max[3]; // Maximum Torque / Torque limit
+   double vel_max[3];  // Maximum Velocity / Velocity limit
+   double w_max[3];    // Maximum Angular Velocity / Angular Velocity limit
+   double Trq_max[3];  // Maximum Torque / Torque limit
    double dTrq_max[3]; // Detumble torque limit in SC body frame
 
    /*~ Internal Variables ~*/
@@ -164,11 +171,11 @@ struct DSMCtrlType {
    double qbr[4];
    double wrn[3];
    double therr[3];
-   double werr[3]; // Angular velocity error
-   double perr[3]; // Position error
-   double verr[3]; // Velocity error
-   double Tcmd[3]; // Torque Command
-   double Mcmd[3]; // Magnetorquer Command
+   double werr[3];  // Angular velocity error
+   double perr[3];  // Position error
+   double verr[3];  // Velocity error
+   double Tcmd[3];  // Torque Command
+   double Mcmd[3];  // Magnetorquer Command
    double dTcmd[3]; // Dump Torque Command
    double FcmdN[3]; // Force Command in N frame
    double FcmdB[3]; // Force Command in SC B Frame
@@ -191,34 +198,36 @@ struct DSMType {
    long Mode;
 
    /*~ Outputs ~*/
-   double Tcmd[3]; // Torque Command
-   double Mcmd[3]; // Magnetorquer Command
+   double Tcmd[3];  // Torque Command
+   double Mcmd[3];  // Magnetorquer Command
    double dTcmd[3]; // Dump Torque Command
    double FcmdN[3]; // Force Command in N frame
    double FcmdB[3]; // Force Command in SC B Frame
-   double VelR[3]; // Velocity in R Frame
-   double PosR[3]; // Position in R Frame
+   double VelR[3];  // Velocity in R Frame
+   double PosR[3];  // Position in R Frame
 
    double therr[3]; // Angular Position Error
-   double werr[3]; // Angular Velocity Error
-   double perr[3]; // Position Error
-   double verr[3]; // Velocity Error
+   double werr[3];  // Angular Velocity Error
+   double perr[3];  // Position Error
+   double verr[3];  // Velocity Error
 
    double trn_ei[3]; // translation error integral
    double att_ei[3]; // attitude error integral
 
-   double Oldtherr[3]; // stores previous iteration's therr for integration purposes
-   double Oldperr[3]; // stores previous iteration's therr for integration purposes  
+   double Oldtherr[3]; // stores previous iteration's therr for integration
+                       // purposes
+   double
+       Oldperr[3]; // stores previous iteration's therr for integration purposes
 
    double IdealTrq[3]; // Ideal Torque
    double IdealFrc[3]; // Ideal Force
-   double wbn[3]; // Angular Velocity in the SC Body Frame
-   double qbn[4]; // Quarternion from B to N
+   double wbn[3];      // Angular Velocity in the SC Body Frame
+   double qbn[4];      // Quarternion from B to N
 
    double CmdTime_f[100];
-   long   CmdNum;
-   long   CmdInit;
-   long   CmdCnt;
+   long CmdNum;
+   long CmdInit;
+   long CmdCnt;
    double CmdNextTime;
 
    /*~ Internal Variables ~*/

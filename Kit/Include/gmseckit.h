@@ -27,10 +27,10 @@
 #include "gmsec4_c.h"
 
 void CheckGmsecStatus(GMSEC_Status status);
-GMSEC_ConnectionMgr ConnectToMBServer(const char HostName[80], int Port, GMSEC_Status status,
-   GMSEC_Config cfg);
+GMSEC_ConnectionMgr ConnectToMBServer(const char HostName[80], int Port,
+                                      GMSEC_Status status, GMSEC_Config cfg);
 void GmsecSend(const char *Header, const char *Text,
-   GMSEC_ConnectionMgr ConnMgr,GMSEC_Status status);
+               GMSEC_ConnectionMgr ConnMgr, GMSEC_Status status);
 
 /* #ifdef __cplusplus
 ** }

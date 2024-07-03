@@ -11,7 +11,6 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #include "42.h"
 
 /* #ifdef __cplusplus
@@ -21,107 +20,109 @@
 */
 
 /*********************************************************************/
-double FindTotalProjectedArea(struct SCType *S,double VecN[3])
+double FindTotalProjectedArea(struct SCType *S, double VecN[3])
 {
-      struct BodyType *B;
-      struct GeomType *G;
-      struct PolyType *P;
-      double ProjArea = 0.0;
-      double VecB[3],VoN;
-      long Ib,Ipoly;
+   struct BodyType *B;
+   struct GeomType *G;
+   struct PolyType *P;
+   double ProjArea = 0.0;
+   double VecB[3], VoN;
+   long Ib, Ipoly;
 
-      for(Ib=0;Ib<S->Nb;Ib++) {
-         B = &S->B[Ib];
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
 
-         /* Transform Direction Vector from N to B */
-         MxV(B->CN,VecN,VecB);
+      /* Transform Direction Vector from N to B */
+      MxV(B->CN, VecN, VecB);
 
-         G = &Geom[B->GeomTag];
-         for(Ipoly=0;Ipoly<G->Npoly;Ipoly++) {
-            P = &G->Poly[Ipoly];
-            VoN = VoV(VecB,P->Norm);
-            if (VoN > 0.0) {
-               ProjArea += VoN*P->Area;
-            }
+      G = &Geom[B->GeomTag];
+      for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
+         P   = &G->Poly[Ipoly];
+         VoN = VoV(VecB, P->Norm);
+         if (VoN > 0.0) {
+            ProjArea += VoN * P->Area;
          }
       }
-      return(ProjArea);
+   }
+   return (ProjArea);
 }
 /*********************************************************************/
-double FindTotalUnshadedProjectedArea(struct SCType *S,double VecN[3])
+double FindTotalUnshadedProjectedArea(struct SCType *S, double VecN[3])
 {
-      struct BodyType *B;
-      struct GeomType *G;
-      struct PolyType *P;
-      double ProjArea = 0.0;
-      double VecB[3],VoN;
-      long Ib,Ipoly;
+   struct BodyType *B;
+   struct GeomType *G;
+   struct PolyType *P;
+   double ProjArea = 0.0;
+   double VecB[3], VoN;
+   long Ib, Ipoly;
 
-      FindUnshadedAreas(S,VecN);
+   FindUnshadedAreas(S, VecN);
 
-      for(Ib=0;Ib<S->Nb;Ib++) {
-         B = &S->B[Ib];
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
 
-         /* Transform Direction Vector from N to B */
-         MxV(B->CN,VecN,VecB);
+      /* Transform Direction Vector from N to B */
+      MxV(B->CN, VecN, VecB);
 
-         G = &Geom[B->GeomTag];
-         for(Ipoly=0;Ipoly<G->Npoly;Ipoly++) {
-            P = &G->Poly[Ipoly];
-            VoN = VoV(VecB,P->Norm);
-            if (VoN > 0.0) {
-               ProjArea += VoN*P->UnshadedArea;
-            }
+      G = &Geom[B->GeomTag];
+      for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
+         P   = &G->Poly[Ipoly];
+         VoN = VoV(VecB, P->Norm);
+         if (VoN > 0.0) {
+            ProjArea += VoN * P->UnshadedArea;
          }
       }
-      return(ProjArea);
+   }
+   return (ProjArea);
 }
 /*********************************************************************/
 void MagReport(void)
 {
-      static FILE *magfile;
-      static long First = 1;
+   static FILE *magfile;
+   static long First = 1;
 
-      if (First) {
-         First = 0;
-         magfile = FileOpen(OutPath,"MagBVB.42","wt");
-      }
+   if (First) {
+      First   = 0;
+      magfile = FileOpen(OutPath, "MagBVB.42", "wt");
+   }
 
-      fprintf(magfile,"%le %le %le %le %le %le %le %le %le \n",
-         SC[0].bvb[0],SC[0].bvb[1],SC[0].bvb[2],
-         SC[0].MAG[0].Field,SC[0].MAG[1].Field,SC[0].MAG[2].Field,
-         SC[0].AC.bvb[0],SC[0].AC.bvb[1],SC[0].AC.bvb[2]);
-
+   fprintf(magfile, "%le %le %le %le %le %le %le %le %le \n", SC[0].bvb[0],
+           SC[0].bvb[1], SC[0].bvb[2], SC[0].MAG[0].Field, SC[0].MAG[1].Field,
+           SC[0].MAG[2].Field, SC[0].AC.bvb[0], SC[0].AC.bvb[1],
+           SC[0].AC.bvb[2]);
 }
 /*********************************************************************/
 void GyroReport(void)
 {
-      static FILE *gyrofile;
-      static long First = 1;
+   static FILE *gyrofile;
+   static long First = 1;
 
-      if (First) {
-         First = 0;
-         gyrofile = FileOpen(OutPath,"Gyro.42","wt");
-      }
+   if (First) {
+      First    = 0;
+      gyrofile = FileOpen(OutPath, "Gyro.42", "wt");
+   }
 
-      fprintf(gyrofile,"%le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le \n",
-         SC[0].B[0].wn[0],SC[0].B[0].wn[1],SC[0].B[0].wn[2],
-         SC[0].Gyro[0].TrueRate,SC[0].Gyro[1].TrueRate,SC[0].Gyro[2].TrueRate,
-         SC[0].Gyro[0].Bias,SC[0].Gyro[1].Bias,SC[0].Gyro[2].Bias,
-         SC[0].Gyro[0].Angle,SC[0].Gyro[1].Angle,SC[0].Gyro[2].Angle,
-         SC[0].Gyro[0].MeasRate,SC[0].Gyro[1].MeasRate,SC[0].Gyro[2].MeasRate,
-         SC[0].AC.wbn[0],SC[0].AC.wbn[1],SC[0].AC.wbn[2]);
-
+   fprintf(gyrofile,
+           "%le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le "
+           "%le %le \n",
+           SC[0].B[0].wn[0], SC[0].B[0].wn[1], SC[0].B[0].wn[2],
+           SC[0].Gyro[0].TrueRate, SC[0].Gyro[1].TrueRate,
+           SC[0].Gyro[2].TrueRate, SC[0].Gyro[0].Bias, SC[0].Gyro[1].Bias,
+           SC[0].Gyro[2].Bias, SC[0].Gyro[0].Angle, SC[0].Gyro[1].Angle,
+           SC[0].Gyro[2].Angle, SC[0].Gyro[0].MeasRate, SC[0].Gyro[1].MeasRate,
+           SC[0].Gyro[2].MeasRate, SC[0].AC.wbn[0], SC[0].AC.wbn[1],
+           SC[0].AC.wbn[2]);
 }
 /*********************************************************************/
-void DSM_AttitudeReport(void) {
+void DSM_AttitudeReport(void)
+{
    static FILE **attitudefile;
    static long First = 1;
    long Isc;
    char s[40];
 
    if (First) {
-      attitudefile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      attitudefile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_attitude_%02li.42", Isc);
@@ -136,22 +137,26 @@ void DSM_AttitudeReport(void) {
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le %18.12le ", SC[Isc].B[0].qn[0], SC[Isc].B[0].qn[1], SC[Isc].B[0].qn[2], SC[Isc].B[0].qn[3]);
-         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].B[0].wn[0], SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
+         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le %18.12le ",
+                 SC[Isc].B[0].qn[0], SC[Isc].B[0].qn[1], SC[Isc].B[0].qn[2],
+                 SC[Isc].B[0].qn[3]);
+         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].B[0].wn[0], SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
          fprintf(attitudefile[Isc], "\n");
       }
-      fflush (attitudefile[Isc]);
+      fflush(attitudefile[Isc]);
    }
 }
 /*********************************************************************/
-void DSM_InertialReport(void) {
+void DSM_InertialReport(void)
+{
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
    char s[40];
 
    if (First) {
-      inertialfile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      inertialfile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_inertial_%02li.42", Isc);
@@ -166,22 +171,25 @@ void DSM_InertialReport(void) {
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
-         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
+         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
+         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
          fprintf(inertialfile[Isc], "\n");
       }
-      fflush (inertialfile[Isc]);
+      fflush(inertialfile[Isc]);
    }
 }
 /*********************************************************************/
-void DSM_ATT_ControlReport(void) {
+void DSM_ATT_ControlReport(void)
+{
    static FILE **attcontrolfile;
    static long First = 1;
    long Isc;
    char s[40];
 
    if (First) {
-      attcontrolfile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      attcontrolfile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_attcontrol_%02li.42", Isc);
@@ -199,25 +207,33 @@ void DSM_ATT_ControlReport(void) {
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.therr[0], SC[Isc].DSM.therr[1], SC[Isc].DSM.therr[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.werr[0], SC[Isc].DSM.werr[1], SC[Isc].DSM.werr[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.Tcmd[0], SC[Isc].DSM.Tcmd[1], SC[Isc].DSM.Tcmd[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.dTcmd[0], SC[Isc].DSM.dTcmd[1], SC[Isc].DSM.dTcmd[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.Mcmd[0], SC[Isc].DSM.Mcmd[1], SC[Isc].DSM.Mcmd[2]);
+         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.therr[0], SC[Isc].DSM.therr[1],
+                 SC[Isc].DSM.therr[2]);
+         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.werr[0], SC[Isc].DSM.werr[1], SC[Isc].DSM.werr[2]);
+         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.Tcmd[0], SC[Isc].DSM.Tcmd[1], SC[Isc].DSM.Tcmd[2]);
+         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.dTcmd[0], SC[Isc].DSM.dTcmd[1],
+                 SC[Isc].DSM.dTcmd[2]);
+         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.Mcmd[0], SC[Isc].DSM.Mcmd[1], SC[Isc].DSM.Mcmd[2]);
          fprintf(attcontrolfile[Isc], "\n");
       }
-      fflush (attcontrolfile[Isc]);
+      fflush(attcontrolfile[Isc]);
    }
 }
 /*********************************************************************/
-void DSM_POS_ControlReport(void) {
+void DSM_POS_ControlReport(void)
+{
    static FILE **poscontrolfile;
    static long First = 1;
    long Isc;
    char s[40];
 
    if (First) {
-      poscontrolfile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      poscontrolfile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_poscontrol_%02li.42", Isc);
@@ -234,17 +250,24 @@ void DSM_POS_ControlReport(void) {
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.perr[0], SC[Isc].DSM.perr[1], SC[Isc].DSM.perr[2]);
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.verr[0], SC[Isc].DSM.verr[1], SC[Isc].DSM.verr[2]);
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.FcmdN[0], SC[Isc].DSM.FcmdN[1], SC[Isc].DSM.FcmdN[2]);
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ", SC[Isc].DSM.FcmdB[0], SC[Isc].DSM.FcmdB[1], SC[Isc].DSM.FcmdB[2]);
+         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.perr[0], SC[Isc].DSM.perr[1], SC[Isc].DSM.perr[2]);
+         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.verr[0], SC[Isc].DSM.verr[1], SC[Isc].DSM.verr[2]);
+         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.FcmdN[0], SC[Isc].DSM.FcmdN[1],
+                 SC[Isc].DSM.FcmdN[2]);
+         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].DSM.FcmdB[0], SC[Isc].DSM.FcmdB[1],
+                 SC[Isc].DSM.FcmdB[2]);
          fprintf(poscontrolfile[Isc], "\n");
       }
-      fflush (poscontrolfile[Isc]);
+      fflush(poscontrolfile[Isc]);
    }
 }
 /*********************************************************************/
-void DSM_EphemReport(void) {
+void DSM_EphemReport(void)
+{
    static FILE **ephemfile;
    static long First = 1;
    long Isc;
@@ -253,7 +276,7 @@ void DSM_EphemReport(void) {
    double orb_beta, orb_inc, orb_AOP, orb_RAAN, orb_anom, orb_time;
 
    if (First) {
-      ephemfile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      ephemfile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_ephem_%02li.42", Isc);
@@ -279,7 +302,8 @@ void DSM_EphemReport(void) {
          orb_AOP  = WrapTo2Pi(Orb[SC[Isc].RefOrb].ArgP);
          orb_RAAN = WrapTo2Pi(Orb[SC[Isc].RefOrb].RAAN);
          orb_anom = WrapTo2Pi(Orb[SC[Isc].RefOrb].anom);
-         orb_time = TwoPi/sqrt(Orb[SC[Isc].RefOrb].mu/(pow(Orb[SC[Isc].RefOrb].SMA,3)));
+         orb_time = TwoPi / sqrt(Orb[SC[Isc].RefOrb].mu /
+                                 (pow(Orb[SC[Isc].RefOrb].SMA, 3)));
          fprintf(ephemfile[Isc], "%18.12le ", orb_beta);
          fprintf(ephemfile[Isc], "%18.12le ", orb_inc);
          fprintf(ephemfile[Isc], "%18.12le ", orb_AOP);
@@ -290,11 +314,12 @@ void DSM_EphemReport(void) {
          fprintf(ephemfile[Isc], "%18.12le", orb_time);
          fprintf(ephemfile[Isc], "\n");
       }
-      fflush (ephemfile[Isc]);
+      fflush(ephemfile[Isc]);
    }
 }
 /*********************************************************************/
-void DSM_WHLReport(void) {
+void DSM_WHLReport(void)
+{
    static FILE **WHLFile;
    static long First = 1;
    long Isc;
@@ -302,14 +327,15 @@ void DSM_WHLReport(void) {
    char s[40];
 
    if (First) {
-      WHLFile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      WHLFile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_WHL_H_%02li.42", Isc);
             WHLFile[Isc] = FileOpen(OutPath, s, "wt");
             if (SC[Isc].Nw > 0) {
-               for(i=0;i<SC[Isc].Nw;i++) fprintf(WHLFile[Isc],"WHL_%ld ",i);
-               fprintf(WHLFile[Isc],"\n");
+               for (i = 0; i < SC[Isc].Nw; i++)
+                  fprintf(WHLFile[Isc], "WHL_%ld ", i);
+               fprintf(WHLFile[Isc], "\n");
             }
          }
       }
@@ -317,17 +343,19 @@ void DSM_WHLReport(void) {
    }
 
    for (Isc = 0; Isc < Nsc; Isc++) {
-     if (SC[Isc].Exists) {
-        if (SC[Isc].Nw > 0) {
-           for(i=0;i<SC[Isc].Nw;i++) fprintf(WHLFile[Isc],"%lf ",SC[Isc].AC.Whl[i].H);
-           fprintf(WHLFile[Isc],"\n");
-        }
-     }
-      fflush (WHLFile[Isc]);
+      if (SC[Isc].Exists) {
+         if (SC[Isc].Nw > 0) {
+            for (i = 0; i < SC[Isc].Nw; i++)
+               fprintf(WHLFile[Isc], "%lf ", SC[Isc].AC.Whl[i].H);
+            fprintf(WHLFile[Isc], "\n");
+         }
+      }
+      fflush(WHLFile[Isc]);
    }
 }
 /*********************************************************************/
-void DSM_THRReport(void) {
+void DSM_THRReport(void)
+{
    static FILE **THRFile;
    static long First = 1;
    long Isc;
@@ -335,14 +363,15 @@ void DSM_THRReport(void) {
    char s[40];
 
    if (First) {
-      THRFile  = (FILE **)calloc(Nsc, sizeof(FILE *));
+      THRFile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_THR_%02li.42", Isc);
             THRFile[Isc] = FileOpen(OutPath, s, "wt");
             if (SC[Isc].Nthr > 0) {
-               for(i=0;i<SC[Isc].Nthr;i++) fprintf(THRFile[Isc],"THR_%ld ",i);
-               fprintf(THRFile[Isc],"\n");
+               for (i = 0; i < SC[Isc].Nthr; i++)
+                  fprintf(THRFile[Isc], "THR_%ld ", i);
+               fprintf(THRFile[Isc], "\n");
             }
          }
       }
@@ -350,298 +379,305 @@ void DSM_THRReport(void) {
    }
 
    for (Isc = 0; Isc < Nsc; Isc++) {
-     if (SC[Isc].Exists) {
-        if (SC[Isc].Nthr > 0) {
-           for(i=0;i<SC[Isc].Nthr;i++) fprintf(THRFile[Isc],"%lf ",SC[Isc].AC.Thr[i].PulseWidthCmd);
-           fprintf(THRFile[Isc],"\n");
-        }
-     }
-      fflush (THRFile[Isc]);
+      if (SC[Isc].Exists) {
+         if (SC[Isc].Nthr > 0) {
+            for (i = 0; i < SC[Isc].Nthr; i++)
+               fprintf(THRFile[Isc], "%lf ", SC[Isc].AC.Thr[i].PulseWidthCmd);
+            fprintf(THRFile[Isc], "\n");
+         }
+      }
+      fflush(THRFile[Isc]);
    }
 }
 /*********************************************************************/
 void OrbPropReport(void)
 {
-      static FILE *FixedFile;
-      static FILE *EnckeFile;
-      static FILE *CowellFile;
-      static FILE *EulHillFile;
-      static long First = 1;
+   static FILE *FixedFile;
+   static FILE *EnckeFile;
+   static FILE *CowellFile;
+   static FILE *EulHillFile;
+   static long First = 1;
 
-      if (First) {
-         First = 0;
-         FixedFile = FileOpen(OutPath,"PosVelNfixed.42","w");
-         EnckeFile = FileOpen(OutPath,"PosVelNencke.42","w");
-         CowellFile = FileOpen(OutPath,"PosVelNcowell.42","w");
-         EulHillFile = FileOpen(OutPath,"PosVelNeulhill.42","w");
-      }
+   if (First) {
+      First       = 0;
+      FixedFile   = FileOpen(OutPath, "PosVelNfixed.42", "w");
+      EnckeFile   = FileOpen(OutPath, "PosVelNencke.42", "w");
+      CowellFile  = FileOpen(OutPath, "PosVelNcowell.42", "w");
+      EulHillFile = FileOpen(OutPath, "PosVelNeulhill.42", "w");
+   }
 
-      if (OutFlag) {
-         fprintf(FixedFile,"%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-            SC[0].PosN[0],SC[0].PosN[1],SC[0].PosN[2],
-            SC[0].VelN[0],SC[0].VelN[1],SC[0].VelN[2]);
-         fprintf(EnckeFile,"%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-            SC[1].PosN[0],SC[1].PosN[1],SC[1].PosN[2],
-            SC[1].VelN[0],SC[1].VelN[1],SC[1].VelN[2]);
-         fprintf(CowellFile,"%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-            SC[2].PosN[0],SC[2].PosN[1],SC[2].PosN[2],
-            SC[2].VelN[0],SC[2].VelN[1],SC[2].VelN[2]);
-         fprintf(EulHillFile,"%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-            SC[3].PosN[0],SC[3].PosN[1],SC[3].PosN[2],
-            SC[3].VelN[0],SC[3].VelN[1],SC[3].VelN[2]);
-      }
+   if (OutFlag) {
+      fprintf(FixedFile,
+              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
+              SC[0].PosN[0], SC[0].PosN[1], SC[0].PosN[2], SC[0].VelN[0],
+              SC[0].VelN[1], SC[0].VelN[2]);
+      fprintf(EnckeFile,
+              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
+              SC[1].PosN[0], SC[1].PosN[1], SC[1].PosN[2], SC[1].VelN[0],
+              SC[1].VelN[1], SC[1].VelN[2]);
+      fprintf(CowellFile,
+              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
+              SC[2].PosN[0], SC[2].PosN[1], SC[2].PosN[2], SC[2].VelN[0],
+              SC[2].VelN[1], SC[2].VelN[2]);
+      fprintf(EulHillFile,
+              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
+              SC[3].PosN[0], SC[3].PosN[1], SC[3].PosN[2], SC[3].VelN[0],
+              SC[3].VelN[1], SC[3].VelN[2]);
+   }
 }
 /*********************************************************************/
 void GmatReport(void)
 {
-      static FILE *outfile;
-      static long First = 1;
-      long i;
+   static FILE *outfile;
+   static long First = 1;
+   long i;
 
-      if (First) {
-         First = 0;
-         outfile = FileOpen(OutPath,"PosN9sc.42","w");
-      }
+   if (First) {
+      First   = 0;
+      outfile = FileOpen(OutPath, "PosN9sc.42", "w");
+   }
 
-      if (OutFlag) {
-         for(i=0;i<9;i++) {
-            fprintf(outfile,"%24.18le %24.18le %24.18le ",
-            SC[i].PosN[0],SC[i].PosN[1],SC[i].PosN[2]);
-         }
-         fprintf(outfile,"\n");
+   if (OutFlag) {
+      for (i = 0; i < 9; i++) {
+         fprintf(outfile, "%24.18le %24.18le %24.18le ", SC[i].PosN[0],
+                 SC[i].PosN[1], SC[i].PosN[2]);
       }
+      fprintf(outfile, "\n");
+   }
 }
 /*********************************************************************/
 void Report(void)
 {
-      static FILE *timefile,*DynTimeFile,*UtcDateFile;
-      static FILE **xfile, **ufile, **xffile, **uffile;
-      static FILE **ConstraintFile;
-      static FILE *PosNfile,*VelNfile,*qbnfile,*wbnfile;
-      static FILE *PosWfile,*VelWfile;
-      static FILE *PosRfile,*VelRfile;
-      static FILE *Hvnfile,*KEfile;
-      static FILE *Hvbfile;
-      static FILE *svnfile,*svbfile;
-      static FILE *RPYfile;
-      static FILE *Hwhlfile;
-      static FILE *MTBfile;
-      static FILE *Thrfile;
-      static FILE *AlbedoFile;
-      static FILE *IllumFile;
-      //static FILE *ProjAreaFile;
-      static FILE *AccFile;
-      //static FILE *Kepfile;
-      //static FILE *EHfile;
-      static char First = TRUE;
-      long Isc,i;
-      struct DynType *D;
-      double CBR[3][3],CRN[3][3],Roll,Pitch,Yaw;
-      struct WorldType *W;
-      double WorldAngVel[3],wxR[3],VelN[3];
-      double PosW[3],VelW[3],PosR[3],VelR[3];
-      double CRL[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
-      //double SMA,ecc,inc,RAAN,ArgP,anom,tp,SLR,alpha,rmin,MeanMotion,Period;
-      char s[40];
-      //double ZAxis[3] = {0.0,0.0,1.0};
+   static FILE *timefile, *DynTimeFile, *UtcDateFile;
+   static FILE **xfile, **ufile, **xffile, **uffile;
+   static FILE **ConstraintFile;
+   static FILE *PosNfile, *VelNfile, *qbnfile, *wbnfile;
+   static FILE *PosWfile, *VelWfile;
+   static FILE *PosRfile, *VelRfile;
+   static FILE *Hvnfile, *KEfile;
+   static FILE *Hvbfile;
+   static FILE *svnfile, *svbfile;
+   static FILE *RPYfile;
+   static FILE *Hwhlfile;
+   static FILE *MTBfile;
+   static FILE *Thrfile;
+   static FILE *AlbedoFile;
+   static FILE *IllumFile;
+   // static FILE *ProjAreaFile;
+   static FILE *AccFile;
+   // static FILE *Kepfile;
+   // static FILE *EHfile;
+   static char First = TRUE;
+   long Isc, i;
+   struct DynType *D;
+   double CBR[3][3], CRN[3][3], Roll, Pitch, Yaw;
+   struct WorldType *W;
+   double WorldAngVel[3], wxR[3], VelN[3];
+   double PosW[3], VelW[3], PosR[3], VelR[3];
+   double CRL[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   // double SMA,ecc,inc,RAAN,ArgP,anom,tp,SLR,alpha,rmin,MeanMotion,Period;
+   char s[40];
+   // double ZAxis[3] = {0.0,0.0,1.0};
 
-      if (First) {
-         First = FALSE;
-         timefile = FileOpen(OutPath,"time.42","w");
-         DynTimeFile = FileOpen(OutPath,"DynTime.42","w");
-         UtcDateFile = FileOpen(OutPath,"UTC.42","w");
+   if (First) {
+      First       = FALSE;
+      timefile    = FileOpen(OutPath, "time.42", "w");
+      DynTimeFile = FileOpen(OutPath, "DynTime.42", "w");
+      UtcDateFile = FileOpen(OutPath, "UTC.42", "w");
 
-         ufile = (FILE **) calloc(Nsc,sizeof(FILE *));
-         xfile = (FILE **) calloc(Nsc,sizeof(FILE *));
-         uffile = (FILE **) calloc(Nsc,sizeof(FILE *));
-         xffile = (FILE **) calloc(Nsc,sizeof(FILE *));
-         ConstraintFile = (FILE **) calloc(Nsc,sizeof(FILE *));
-         for(Isc=0;Isc<Nsc;Isc++) {
-            if (SC[Isc].Exists) {
-               sprintf(s,"u%02ld.42",Isc);
-               ufile[Isc] = FileOpen(OutPath,s,"w");
-               sprintf(s,"x%02ld.42",Isc);
-               xfile[Isc] = FileOpen(OutPath,s,"w");
-               if (SC[Isc].FlexActive) {
-                  sprintf(s,"uf%02ld.42",Isc);
-                  uffile[Isc] = FileOpen(OutPath,s,"w");
-                  sprintf(s,"xf%02ld.42",Isc);
-                  xffile[Isc] = FileOpen(OutPath,s,"w");
-               }
-               if (SC[Isc].ConstraintsRequested) {
-                  sprintf(s,"Constraint%02ld.42",Isc);
-                  ConstraintFile[Isc] = FileOpen(OutPath,s,"w");
-               }
+      ufile          = (FILE **)calloc(Nsc, sizeof(FILE *));
+      xfile          = (FILE **)calloc(Nsc, sizeof(FILE *));
+      uffile         = (FILE **)calloc(Nsc, sizeof(FILE *));
+      xffile         = (FILE **)calloc(Nsc, sizeof(FILE *));
+      ConstraintFile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "u%02ld.42", Isc);
+            ufile[Isc] = FileOpen(OutPath, s, "w");
+            sprintf(s, "x%02ld.42", Isc);
+            xfile[Isc] = FileOpen(OutPath, s, "w");
+            if (SC[Isc].FlexActive) {
+               sprintf(s, "uf%02ld.42", Isc);
+               uffile[Isc] = FileOpen(OutPath, s, "w");
+               sprintf(s, "xf%02ld.42", Isc);
+               xffile[Isc] = FileOpen(OutPath, s, "w");
+            }
+            if (SC[Isc].ConstraintsRequested) {
+               sprintf(s, "Constraint%02ld.42", Isc);
+               ConstraintFile[Isc] = FileOpen(OutPath, s, "w");
             }
          }
+      }
 
-         PosNfile = FileOpen(OutPath,"PosN.42","w");
-         VelNfile = FileOpen(OutPath,"VelN.42","w");
-         PosWfile = FileOpen(OutPath,"PosW.42","w");
-         VelWfile = FileOpen(OutPath,"VelW.42","w");
-         PosRfile = FileOpen(OutPath,"PosR.42","w");
-         VelRfile = FileOpen(OutPath,"VelR.42","w");
-         qbnfile = FileOpen(OutPath,"qbn.42","w");
-         wbnfile = FileOpen(OutPath,"wbn.42","w");
-         Hvnfile = FileOpen(OutPath,"Hvn.42","w");
-         Hvbfile = FileOpen(InOutPath,"Hvb.42","w");
-         svnfile = FileOpen(OutPath,"svn.42","w");
-         svbfile = FileOpen(OutPath,"svb.42","w");
-         KEfile = FileOpen(OutPath,"KE.42","w");
-         //ProjAreaFile = FileOpen(InOutPath,"ProjArea.42","w");
-         RPYfile = FileOpen(OutPath,"RPY.42","w");
-         Hwhlfile = FileOpen(OutPath,"Hwhl.42","w");
+      PosNfile = FileOpen(OutPath, "PosN.42", "w");
+      VelNfile = FileOpen(OutPath, "VelN.42", "w");
+      PosWfile = FileOpen(OutPath, "PosW.42", "w");
+      VelWfile = FileOpen(OutPath, "VelW.42", "w");
+      PosRfile = FileOpen(OutPath, "PosR.42", "w");
+      VelRfile = FileOpen(OutPath, "VelR.42", "w");
+      qbnfile  = FileOpen(OutPath, "qbn.42", "w");
+      wbnfile  = FileOpen(OutPath, "wbn.42", "w");
+      Hvnfile  = FileOpen(OutPath, "Hvn.42", "w");
+      Hvbfile  = FileOpen(InOutPath, "Hvb.42", "w");
+      svnfile  = FileOpen(OutPath, "svn.42", "w");
+      svbfile  = FileOpen(OutPath, "svb.42", "w");
+      KEfile   = FileOpen(OutPath, "KE.42", "w");
+      // ProjAreaFile = FileOpen(InOutPath,"ProjArea.42","w");
+      RPYfile  = FileOpen(OutPath, "RPY.42", "w");
+      Hwhlfile = FileOpen(OutPath, "Hwhl.42", "w");
 
+      if (SC[0].Nmtb > 0) {
+         MTBfile = FileOpen(OutPath, "MTB.42", "w");
+      }
+
+      if (SC[0].Nthr > 0) {
+         Thrfile = FileOpen(OutPath, "Thr.42", "w");
+      }
+
+      if (SC[0].Nacc > 0) {
+         AccFile = FileOpen(OutPath, "Acc.42", "w");
+      }
+
+      if (SC[0].Ncss > 0) {
+         AlbedoFile = FileOpen(OutPath, "Albedo.42", "w");
+         IllumFile  = FileOpen(OutPath, "Illum.42", "w");
+      }
+   }
+
+   if (OutFlag) {
+      fprintf(timefile, "%lf\n", SimTime);
+      fprintf(DynTimeFile, "%lf\n", DynTime);
+      fprintf(UtcDateFile, " %ld:%02ld:%02ld:%02ld:%02ld:%09.6lf\n", UTC.Year,
+              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            D = &SC[Isc].Dyn;
+            for (i = 0; i < D->Nu; i++)
+               fprintf(ufile[Isc], "%18.12le ", D->u[i]);
+            fprintf(ufile[Isc], "\n");
+            for (i = 0; i < D->Nx; i++)
+               fprintf(xfile[Isc], "%18.12le ", D->x[i]);
+            fprintf(xfile[Isc], "\n");
+            if (SC[Isc].FlexActive) {
+               for (i = 0; i < D->Nf; i++)
+                  fprintf(uffile[Isc], "%18.12le ", D->uf[i]);
+               fprintf(uffile[Isc], "\n");
+               for (i = 0; i < D->Nf; i++)
+                  fprintf(xffile[Isc], "%18.12le ", D->xf[i]);
+               fprintf(xffile[Isc], "\n");
+            }
+            if (SC[Isc].ConstraintsRequested) {
+               for (i = 0; i < D->Nc; i++)
+                  fprintf(ConstraintFile[Isc], "%18.12le ",
+                          D->GenConstraintFrc[i]);
+               fprintf(ConstraintFile[Isc], "\n");
+            }
+         }
+      }
+      if (SC[0].Exists) {
+         fprintf(PosNfile, "%le %le %le\n", SC[0].PosN[0], SC[0].PosN[1],
+                 SC[0].PosN[2]);
+         fprintf(VelNfile, "%le %le %le\n", SC[0].VelN[0], SC[0].VelN[1],
+                 SC[0].VelN[2]);
+         W              = &World[Orb[SC[0].RefOrb].World];
+         WorldAngVel[0] = 0.0;
+         WorldAngVel[1] = 0.0;
+         WorldAngVel[2] = W->w;
+         VxV(WorldAngVel, SC[0].PosN, wxR);
+         for (i = 0; i < 3; i++)
+            VelN[i] = SC[0].VelN[i] - wxR[i];
+         MxV(W->CWN, SC[0].PosN, PosW);
+         MxV(W->CWN, VelN, VelW);
+         fprintf(PosWfile, "%18.12le %18.12le %18.12le\n", PosW[0], PosW[1],
+                 PosW[2]);
+         fprintf(VelWfile, "%18.12le %18.12le %18.12le\n", VelW[0], VelW[1],
+                 VelW[2]);
+         if (Orb[SC[0].RefOrb].Regime == ORB_FLIGHT) {
+            MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].PosR, PosR);
+            MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].VelR, VelR);
+            fprintf(PosRfile, "%le %le %le\n", PosR[0], PosR[1], PosR[2]);
+            fprintf(VelRfile, "%le %le %le\n", VelR[0], VelR[1], VelR[2]);
+         }
+         else {
+            fprintf(PosRfile, "%le %le %le\n", SC[0].PosR[0], SC[0].PosR[1],
+                    SC[0].PosR[2]);
+            fprintf(VelRfile, "%le %le %le\n", SC[0].VelR[0], SC[0].VelR[1],
+                    SC[0].VelR[2]);
+         }
+         fprintf(qbnfile, "%le %le %le %le\n", SC[0].B[0].qn[0],
+                 SC[0].B[0].qn[1], SC[0].B[0].qn[2], SC[0].B[0].qn[3]);
+         fprintf(wbnfile, "%le %le %le\n", SC[0].B[0].wn[0], SC[0].B[0].wn[1],
+                 SC[0].B[0].wn[2]);
+         fprintf(Hvnfile, "%18.12le %18.12le %18.12le\n", SC[0].Hvn[0],
+                 SC[0].Hvn[1], SC[0].Hvn[2]);
+         fprintf(Hvbfile, "%18.12le %18.12le %18.12le\n", SC[0].Hvb[0],
+                 SC[0].Hvb[1], SC[0].Hvb[2]);
+         fprintf(svnfile, "%18.12le %18.12le %18.12le\n", SC[0].svn[0],
+                 SC[0].svn[1], SC[0].svn[2]);
+         fprintf(svbfile, "%18.12le %18.12le %18.12le\n", SC[0].svb[0],
+                 SC[0].svb[1], SC[0].svb[2]);
+         fprintf(KEfile, "%18.12le\n", FindTotalKineticEnergy(&SC[0]));
+         // fprintf(ProjAreaFile,"%18.12le %18.12le\n",
+         //    FindTotalProjectedArea(&SC[0],ZAxis),
+         //    FindTotalUnshadedProjectedArea(&SC[0],ZAxis));
+         MxM(CRL, SC[0].CLN, CRN);
+         MxMT(SC[0].B[0].CN, CRN, CBR);
+         C2A(123, CBR, &Roll, &Pitch, &Yaw);
+         fprintf(RPYfile, "%le %le %le\n", Roll * R2D, Pitch * R2D, Yaw * R2D);
+         if (SC[0].Nw > 0) {
+            for (i = 0; i < SC[0].Nw; i++) {
+               fprintf(Hwhlfile, "%lf ", SC[0].Whl[i].H);
+            }
+            fprintf(Hwhlfile, "\n");
+         }
          if (SC[0].Nmtb > 0) {
-            MTBfile = FileOpen(OutPath,"MTB.42","w");
+            for (i = 0; i < SC[0].Nmtb; i++)
+               fprintf(MTBfile, "%lf ", SC[0].MTB[i].M);
+            fprintf(MTBfile, "\n");
          }
-
          if (SC[0].Nthr > 0) {
-            Thrfile = FileOpen(OutPath,"Thr.42","w");
+            for (i = 0; i < SC[0].Nthr; i++)
+               fprintf(Thrfile, "%lf ", SC[0].Thr[i].F);
+            fprintf(Thrfile, "\n");
          }
-
          if (SC[0].Nacc > 0) {
-            AccFile = FileOpen(OutPath,"Acc.42","w");
+            for (i = 0; i < SC[0].Nacc; i++)
+               fprintf(AccFile, "%le %le ", SC[0].Accel[i].TrueAcc,
+                       SC[0].Accel[i].MeasAcc);
+            fprintf(AccFile, "\n");
          }
-
          if (SC[0].Ncss > 0) {
-            AlbedoFile = FileOpen(OutPath,"Albedo.42","w");
-            IllumFile = FileOpen(OutPath,"Illum.42","w");
-         }
-      }
-
-      if (OutFlag) {
-         fprintf(timefile,"%lf\n",SimTime);
-         fprintf(DynTimeFile,"%lf\n",DynTime);
-         fprintf(UtcDateFile," %ld:%02ld:%02ld:%02ld:%02ld:%09.6lf\n",
-            UTC.Year,UTC.Month,UTC.Day,UTC.Hour,UTC.Minute,UTC.Second);
-         for(Isc=0;Isc<Nsc;Isc++) {
-            if (SC[Isc].Exists) {
-               D = &SC[Isc].Dyn;
-               for(i=0;i<D->Nu;i++) fprintf(ufile[Isc],"%18.12le ",D->u[i]);
-               fprintf(ufile[Isc],"\n");
-               for(i=0;i<D->Nx;i++) fprintf(xfile[Isc],"%18.12le ",D->x[i]);
-               fprintf(xfile[Isc],"\n");
-               if (SC[Isc].FlexActive) {
-                  for(i=0;i<D->Nf;i++) fprintf(uffile[Isc],"%18.12le ",D->uf[i]);
-                  fprintf(uffile[Isc],"\n");
-                  for(i=0;i<D->Nf;i++) fprintf(xffile[Isc],"%18.12le ",D->xf[i]);
-                  fprintf(xffile[Isc],"\n");
-               }
-               if (SC[Isc].ConstraintsRequested) {
-                  for(i=0;i<D->Nc;i++)
-                     fprintf(ConstraintFile[Isc],"%18.12le ",
-                             D->GenConstraintFrc[i]);
-                  fprintf(ConstraintFile[Isc],"\n");
-               }
+            for (i = 0; i < SC[0].Ncss; i++) {
+               fprintf(IllumFile, "%le ", SC[0].CSS[i].Illum);
+               fprintf(AlbedoFile, "%le ", SC[0].CSS[i].Albedo);
             }
-         }
-         if (SC[0].Exists) {
-            fprintf(PosNfile,"%le %le %le\n",
-               SC[0].PosN[0],SC[0].PosN[1],SC[0].PosN[2]);
-            fprintf(VelNfile,"%le %le %le\n",
-               SC[0].VelN[0],SC[0].VelN[1],SC[0].VelN[2]);
-            W = &World[Orb[SC[0].RefOrb].World];
-            WorldAngVel[0] = 0.0;
-            WorldAngVel[1] = 0.0;
-            WorldAngVel[2] = W->w;
-            VxV(WorldAngVel,SC[0].PosN,wxR);
-            for(i=0;i<3;i++) VelN[i] = SC[0].VelN[i] - wxR[i];
-            MxV(W->CWN,SC[0].PosN,PosW);
-            MxV(W->CWN,VelN,VelW);
-            fprintf(PosWfile,"%18.12le %18.12le %18.12le\n",
-               PosW[0],PosW[1],PosW[2]);
-            fprintf(VelWfile,"%18.12le %18.12le %18.12le\n",
-               VelW[0],VelW[1],VelW[2]);
-            if (Orb[SC[0].RefOrb].Regime == ORB_FLIGHT) {
-               MxV(Rgn[Orb[SC[0].RefOrb].Region].CN,SC[0].PosR,PosR);
-               MxV(Rgn[Orb[SC[0].RefOrb].Region].CN,SC[0].VelR,VelR);
-               fprintf(PosRfile,"%le %le %le\n",
-                  PosR[0],PosR[1],PosR[2]);
-               fprintf(VelRfile,"%le %le %le\n",
-                  VelR[0],VelR[1],VelR[2]);
-            }
-            else {
-               fprintf(PosRfile,"%le %le %le\n",
-                  SC[0].PosR[0],SC[0].PosR[1],SC[0].PosR[2]);
-               fprintf(VelRfile,"%le %le %le\n",
-                  SC[0].VelR[0],SC[0].VelR[1],SC[0].VelR[2]);
-            }
-            fprintf(qbnfile,"%le %le %le %le\n",
-               SC[0].B[0].qn[0],SC[0].B[0].qn[1],SC[0].B[0].qn[2],SC[0].B[0].qn[3]);
-            fprintf(wbnfile,"%le %le %le\n",
-               SC[0].B[0].wn[0],SC[0].B[0].wn[1],SC[0].B[0].wn[2]);
-            fprintf(Hvnfile,"%18.12le %18.12le %18.12le\n",
-               SC[0].Hvn[0],SC[0].Hvn[1],SC[0].Hvn[2]);
-            fprintf(Hvbfile,"%18.12le %18.12le %18.12le\n",
-               SC[0].Hvb[0],SC[0].Hvb[1],SC[0].Hvb[2]);
-            fprintf(svnfile,"%18.12le %18.12le %18.12le\n",
-               SC[0].svn[0],SC[0].svn[1],SC[0].svn[2]);
-            fprintf(svbfile,"%18.12le %18.12le %18.12le\n",
-               SC[0].svb[0],SC[0].svb[1],SC[0].svb[2]);
-            fprintf(KEfile,"%18.12le\n",FindTotalKineticEnergy(&SC[0]));
-            //fprintf(ProjAreaFile,"%18.12le %18.12le\n",
-            //   FindTotalProjectedArea(&SC[0],ZAxis),
-            //   FindTotalUnshadedProjectedArea(&SC[0],ZAxis));
-            MxM(CRL,SC[0].CLN,CRN);
-            MxMT(SC[0].B[0].CN,CRN,CBR);
-            C2A(123,CBR,&Roll,&Pitch,&Yaw);
-            fprintf(RPYfile,"%le %le %le\n",Roll*R2D,Pitch*R2D,Yaw*R2D);
-            if (SC[0].Nw > 0) {
-               for(i=0;i<SC[0].Nw;i++) {
-                  fprintf(Hwhlfile,"%lf ",SC[0].Whl[i].H);
-               }
-               fprintf(Hwhlfile,"\n");
-            }
-            if (SC[0].Nmtb > 0) {
-               for(i=0;i<SC[0].Nmtb;i++) fprintf(MTBfile,"%lf ",SC[0].MTB[i].M);
-               fprintf(MTBfile,"\n");
-            }
-            if (SC[0].Nthr > 0) {
-               for(i=0;i<SC[0].Nthr;i++) fprintf(Thrfile,"%lf ",SC[0].Thr[i].F);
-               fprintf(Thrfile,"\n");
-            }
-            if (SC[0].Nacc > 0) {
-               for(i=0;i<SC[0].Nacc;i++)
-                  fprintf(AccFile,"%le %le ",SC[0].Accel[i].TrueAcc,SC[0].Accel[i].MeasAcc);
-               fprintf(AccFile,"\n");
-            }
-            if (SC[0].Ncss > 0) {
-               for(i=0;i<SC[0].Ncss;i++) {
-                  fprintf(IllumFile,"%le ",SC[0].CSS[i].Illum);
-                  fprintf(AlbedoFile,"%le ",SC[0].CSS[i].Albedo);
-               }
-               fprintf(IllumFile,"\n");
-               fprintf(AlbedoFile,"\n");
-            }
-
-            //MagReport();
-            //GyroReport();
-            //OrbPropReport();
-            //GmatReport();
-
-            if (SC[0].DSM.Init == 1) {
-               DSM_AttitudeReport();
-               DSM_InertialReport();
-               DSM_ATT_ControlReport();
-               DSM_POS_ControlReport();
-               DSM_EphemReport();
-               DSM_WHLReport();
-               DSM_THRReport();
-            }
-
+            fprintf(IllumFile, "\n");
+            fprintf(AlbedoFile, "\n");
          }
 
+         // MagReport();
+         // GyroReport();
+         // OrbPropReport();
+         // GmatReport();
+
+         if (SC[0].DSM.Init == 1) {
+            DSM_AttitudeReport();
+            DSM_InertialReport();
+            DSM_ATT_ControlReport();
+            DSM_POS_ControlReport();
+            DSM_EphemReport();
+            DSM_WHLReport();
+            DSM_THRReport();
+         }
       }
+   }
 
-      /* An example how to call specialized reporting based on sim case */
-      /* if (!strcmp(InOutPath,"./Potato/")) PotatoReport(); */
+   /* An example how to call specialized reporting based on sim case */
+   /* if (!strcmp(InOutPath,"./Potato/")) PotatoReport(); */
 
-
-      if (CleanUpFlag) {
-         fclose(timefile);
-      }
-
+   if (CleanUpFlag) {
+      fclose(timefile);
+   }
 }
 
 /* #ifdef __cplusplus

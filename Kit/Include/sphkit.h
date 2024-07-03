@@ -11,21 +11,21 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #ifndef __SPHKIT_H__
 #define __SPHKIT_H__
 
-#include <math.h>
+#include "42constants.h"
 #include <fcntl.h>
-#include <unistd.h>
-#include <stdlib.h>
+#include <math.h>
 #include <stdio.h>
-#include <sys/types.h>
+#include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 /* #include <GLUT/glut.h> */
 
 #ifdef __cplusplus
-   extern "C" {
+extern "C" {
 #endif
 
 /* GLuint KernelToTexTag(void); */
@@ -38,7 +38,7 @@ double SpikyGradKernel(double r, double h, long Ndim);
 double Unwrap(double dx, double Span);
 
 #ifdef __cplusplus
-   } /* extern "C" */
+} /* extern "C" */
 #endif
 
 #endif /* __SPHKIT_H__ */

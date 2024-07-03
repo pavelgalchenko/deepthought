@@ -1,0 +1,47 @@
+# This file is based on the debian:gcc template, see https://hub.docker.com/_/gcc/
+# This will build deepthought, ensures it runs Demo and DSM_DEMO (does not verify output),
+# and ensure formatting
+#
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/C++.gitlab-ci.yml
+
+image: gcc
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  before_script:
+    - &update-dependencies apt -y update && apt -y install make freeglut3-dev
+  script:
+    - make GUIFLAG=
+  artifacts:
+    paths:
+      - "42"
+
+# run tests using the binary built before
+test-demo:
+  stage: test
+  before_script:
+    - *update-dependencies
+  script:
+    - ./run.sh Demo blah 0
+
+test-dsm-demo:
+  stage: test
+  before_script:
+    - *update-dependencies
+  script:
+    - ./run.sh Missions/DSM_DEMO blah 0
+
+test-format:
+  stage: test
+  before_script:
+    - *update-dependencies
+    - apt -y install clang-format
+  script:
+    - clang-format --style=file --Werror --verbose -n Kit/**/*.c Source/*.c Kit/**/*.h Include/*.h

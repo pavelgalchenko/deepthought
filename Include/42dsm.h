@@ -11,7 +11,6 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #ifndef __42DSM_H__
 #define __42DSM_H__
 
