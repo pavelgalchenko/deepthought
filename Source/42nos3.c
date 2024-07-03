@@ -97,10 +97,13 @@ static void ReadNos3InpFile(void)
       struct fy_document *fyd =
           fy_document_build_and_check(NULL, InOutPath, "Inp_NOS3.yaml");
       struct fy_node *root = fy_document_root(fyd);
-      fy_node_scanf(root,
-                    "/Configuration/Bus %119[^\n]s "
-                    "/Configuration/Connection String %119[^\n]s",
-                    BusName, ConnectionString);
+      if (fy_node_scanf(root,
+                        "/Configuration/Bus %119[^\n]s "
+                        "/Configuration/Connection String %119[^\n]s",
+                        BusName, ConnectionString) != 2) {
+         printf("Could not find NOS3 configuration. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       fy_document_destroy(fyd);
    }
 }

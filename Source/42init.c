@@ -691,12 +691,18 @@ void InitOrbit(struct OrbitType *O)
    O->Epoch          = DynTime;
    O->SplineActive   = FALSE;
    char response[50] = {0};
-   fy_node_scanf(node, "/Type %49s", response);
+   if (!fy_node_scanf(node, "/Type %49s", response)) {
+      printf("Could not find orbit type. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    O->Regime = DecodeString(response);
    enum orbitInputType inputType;
    switch (O->Regime) {
       case ORB_ZERO: {
-         fy_node_scanf(node, "/World %49s", response);
+         if (!fy_node_scanf(node, "/World %49s", response)) {
+            printf("Could not find World for orbit. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          O->World = DecodeString(response);
          O->mu    = World[O->World].mu;
          for (j = 0; j < 3; j++) {
@@ -712,7 +718,10 @@ void InitOrbit(struct OrbitType *O)
       } break;
       case ORB_FLIGHT: {
          long Ir = 0;
-         fy_node_scanf(node, "/Region %ld", &Ir);
+         if (!fy_node_scanf(node, "/Region %ld", &Ir)) {
+            printf("Could not find region for orbit. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          if (!Rgn[Ir].Exists) {
             printf("Oops.  Orbit %ld depends on a Region that doesn't exist.\n",
                    O->Tag);
@@ -735,7 +744,10 @@ void InitOrbit(struct OrbitType *O)
              getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
       case ORB_CENTRAL: {
-         fy_node_scanf(node, "/World %49s", response);
+         if (!fy_node_scanf(node, "/World %49s", response)) {
+            printf("Could not find World for orbit. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          O->World = DecodeString(response);
          if (!World[O->World].Exists) {
             printf("Oops.  Orbit %ld depends on a World that doesn't exist.\n",
@@ -748,24 +760,36 @@ void InitOrbit(struct OrbitType *O)
          double rad = World[O->World].rad;
          double J2  = World[O->World].J2;
          node       = fy_node_by_path_def(node, "/Init");
-         fy_node_scanf(node, "/Method %49s", response);
+         if (!fy_node_scanf(node, "/Method %49s", response)) {
+            printf("Could not find Central orbit initialization method. "
+                   "Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          inputType = DecodeString(response);
          switch (inputType) {
             case INP_KEPLER: {
-               fy_node_scanf(node,
-                             "/SMA Parameterization %49s "
-                             "/Inclination %lf "
-                             "/RAAN %lf "
-                             "/Arg of Periapsis %lf "
-                             "/True Anomaly %lf",
-                             response, &O->inc, &O->RAAN, &O->ArgP, &O->anom);
+               if (fy_node_scanf(node,
+                                 "/SMA Parameterization %49s "
+                                 "/Inclination %lf "
+                                 "/RAAN %lf "
+                                 "/Arg of Periapsis %lf "
+                                 "/True Anomaly %lf",
+                                 response, &O->inc, &O->RAAN, &O->ArgP,
+                                 &O->anom) != 5) {
+                  printf("Invalid Keplarian initialization. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
                long usePA = DecodeString(response);
                if (usePA) {
                   double alt1, alt2;
-                  fy_node_scanf(node,
-                                "/Periapsis %lf "
-                                "/Apoapsis %lf",
-                                &alt1, &alt2);
+                  if (!fy_node_scanf(node,
+                                     "/Periapsis %lf "
+                                     "/Apoapsis %lf",
+                                     &alt1, &alt2)) {
+                     printf("Could not find Periapsis and/or Apoapsis. "
+                            "Exiting...\n");
+                     exit(EXIT_FAILURE);
+                  }
                   O->SMA        = rad + 0.5 * (alt1 + alt2) * 1.0E3;
                   O->ecc        = 1.0E3 * fabs(alt1 - alt2) / (2.0 * O->SMA);
                   O->SLR        = O->SMA * (1.0 - O->ecc * O->ecc);
@@ -775,10 +799,14 @@ void InitOrbit(struct OrbitType *O)
                }
                else {
                   double alt1;
-                  fy_node_scanf(node,
-                                "/Minimum Altitude %lf "
-                                "/Eccentricity %lf",
-                                &alt1, &O->ecc);
+                  if (!fy_node_scanf(node,
+                                     "/Minimum Altitude %lf "
+                                     "/Eccentricity %lf",
+                                     &alt1, &O->ecc)) {
+                     printf("Could not find Minimum Altitude and/or "
+                            "Eccentricity. Exiting...\n");
+                     exit(EXIT_FAILURE);
+                  }
                   O->rmin  = rad + alt1 * 1.0E3;
                   O->SLR   = O->rmin * (1.0 + O->ecc);
                   O->alpha = (1.0 - O->ecc) / O->rmin;
@@ -830,11 +858,15 @@ void InitOrbit(struct OrbitType *O)
             } break;
             case INP_FILE: {
                char elementFileName[50] = {0}, elementLabel[50] = {0};
-               fy_node_scanf(node,
-                             "/File Type %49s "
-                             "/File Name %49s "
-                             "/Label in File %49s",
-                             response, elementFileName, elementLabel);
+               if (!fy_node_scanf(node,
+                                  "/File Type %49s "
+                                  "/File Name %49s "
+                                  "/Label in File %49s",
+                                  response, elementFileName, elementLabel)) {
+                  printf(
+                      "Could not configure File initialization. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
                inputType = DecodeString(response);
                switch (inputType) {
                   case INP_TLE: {
@@ -922,7 +954,11 @@ void InitOrbit(struct OrbitType *O)
 
       } break;
       case ORB_THREE_BODY: {
-         fy_node_scanf(node, "/Lagrange System %49s", response);
+         if (!fy_node_scanf(node, "/Lagrange System %49s", response)) {
+            printf("Could not find Lagrange System for Three Body orbit. "
+                   "Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          O->Sys = DecodeString(response);
          if (!LagSys[O->Sys].Exists) {
             printf("Oops.  Orbit %ld depends on a Lagrange System that doesn't "
@@ -934,33 +970,54 @@ void InitOrbit(struct OrbitType *O)
          O->Body2 = LagSys[O->Sys].Body2;
          O->mu1   = LagSys[O->Sys].mu1;
          O->mu2   = LagSys[O->Sys].mu2;
-         fy_node_scanf(node, "/Propagation Method %49s", response);
+         if (!fy_node_scanf(node, "/Propagation Method %49s", response)) {
+            printf("Could not find Propagation Method for Three Body orbit. "
+                   "Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          O->LagDOF = DecodeString(response);
 
-         fy_node_scanf(node, "/Method %49s", response);
+         if (!fy_node_scanf(node, "/Method %49s", response)) {
+            printf("Could not find Three Body orbit Initialization Method. "
+                   "Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          inputType = DecodeString(response);
          switch (inputType) {
             case INP_MODES: {
                double senseXY1 = 1.0, senseXY2 = 1.0;
                double ampXY1, ampXY2 = 0.0, phiXY1, phiXY2 = 0.0, ampZ, phiZ;
 
-               fy_node_scanf(node, "/Lagrange Point %49s", response);
+               if (!fy_node_scanf(node, "/Lagrange Point %49s", response)) {
+                  printf("Could not find Lagrange point of modal "
+                         "initialization. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
                O->LP = DecodeString(response);
-               fy_node_scanf(node,
-                             "/XY SMA %lf "
-                             "/XY Phase %lf "
-                             "/Sense %49s "
-                             "/Z SMA %lf "
-                             "/Z Phase %lf",
-                             &ampXY1, &phiXY1, response, &ampZ, &phiZ);
+               if (fy_node_scanf(node,
+                                 "/XY SMA %lf "
+                                 "/XY Phase %lf "
+                                 "/Sense %49s "
+                                 "/Z SMA %lf "
+                                 "/Z Phase %lf",
+                                 &ampXY1, &phiXY1, response, &ampZ,
+                                 &phiZ) != 5) {
+                  printf("Invalid configuration for Modal Three Body "
+                         "Initialization. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
                if (DecodeString(response) == DIR_CW)
                   senseXY1 = -1.0;
                if (O->LP == LAGPT_L4 || O->LP == LAGPT_L5) {
-                  fy_node_scanf(node,
-                                "/XY 2nd SMA %lf "
-                                "/XY 2nd Phase %lf "
-                                "/2nd Sense %49s",
-                                &ampXY2, &phiXY2, response);
+                  if (fy_node_scanf(node,
+                                    "/XY 2nd SMA %lf "
+                                    "/XY 2nd Phase %lf "
+                                    "/2nd Sense %49s",
+                                    &ampXY2, &phiXY2, response) != 3) {
+                     printf("Invalid configuration for Triangular Lagrange "
+                            "Point modal initialization. Exiting...\n");
+                     exit(EXIT_FAILURE);
+                  }
                   if (DecodeString(response) == DIR_CW)
                      senseXY2 = -1.0;
                }
@@ -987,13 +1044,22 @@ void InitOrbit(struct OrbitType *O)
             } break;
             case INP_FILE: {
                char elementFileName[50] = {0}, elementLabel[50] = {0};
-               fy_node_scanf(node,
-                             "/Lagrange Point %49s "
-                             "/File Name %49s "
-                             "/Label in File %49s",
-                             response, elementFileName, elementLabel);
+               if (fy_node_scanf(node,
+                                 "/Lagrange Point %49s "
+                                 "/File Name %49s "
+                                 "/Label in File %49s",
+                                 response, elementFileName,
+                                 elementLabel) != 3) {
+                  printf(
+                      "Could not configure File initialization. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
                O->LP = DecodeString(response);
-               fy_node_scanf(node, "/File Type %49s", response);
+               if (!fy_node_scanf(node, "/File Type %49s", response)) {
+                  printf("Could not find File Type for Three Body Orbit "
+                         "Initialization. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
                inputType = DecodeString(response);
                switch (inputType) {
                   case INP_TRV: {
@@ -1069,10 +1135,13 @@ void InitOrbit(struct OrbitType *O)
    node                    = fy_node_by_path_def(root, "/Formation");
 
    char FrmExpressedIn = 0;
-   fy_node_scanf(node,
-                 "/Fixed Frame %c "
-                 "/Expression Frame %c",
-                 &F->FixedInFrame, &FrmExpressedIn);
+   if (fy_node_scanf(node,
+                     "/Fixed Frame %c "
+                     "/Expression Frame %c",
+                     &F->FixedInFrame, &FrmExpressedIn) != 2) {
+      printf("Could not find configuration for formation frame. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    double ang[3] = {0.0};
    long seq;
    getYAMLEulerAngles(fy_node_by_path_def(node, "/Euler Angles"), ang, &seq);
@@ -1878,9 +1947,15 @@ void InitNodes(struct BodyType *B)
       {
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Node");
          long In                 = 0;
-         fy_node_scanf(seqNode, "/Index %ld", &In);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &In)) {
+            printf("Could not find index for node. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct NodeType *N = &B->Node[In];
-         fy_node_scanf(seqNode, "/Comment %79[^\n]s", N->comment);
+         if (!fy_node_scanf(seqNode, "/Comment %79[^\n]s", N->comment)) {
+            printf("Could not find comment for node. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Location"),
                                  N->NomPosB);
       }
@@ -2168,12 +2243,17 @@ void InitSpacecraft(struct SCType *S)
    struct fy_node *node = NULL, *iterNode = NULL;
    node           = fy_node_by_path_def(root, "/Configuration");
    char dummy[50] = {0};
-   fy_node_scanf(node,
-                 "/Label %41s "
-                 "/Sprite File %41s "
-                 "/FSW Identifier %49s "
-                 "/FSW Sample Time %lf",
-                 S->Label, S->SpriteFileName, dummy, &S->FswSampleTime);
+   if (fy_node_scanf(node,
+                     "/Label %41s "
+                     "/Sprite File %41s "
+                     "/FSW Identifier %49s "
+                     "/FSW Sample Time %lf",
+                     S->Label, S->SpriteFileName, dummy,
+                     &S->FswSampleTime) != 4) {
+      printf(
+          "Could not find spacecraft Configuration information. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    S->FswTag        = DecodeString(dummy);
    S->FswMaxCounter = (long)(S->FswSampleTime / DTSIM + 0.5);
    if (S->FswSampleTime < DTSIM) {
@@ -2185,9 +2265,15 @@ void InitSpacecraft(struct SCType *S)
    S->InitDSM          = 1;
 
    node = fy_node_by_path_def(root, "/Orbit");
-   fy_node_scanf(node, "/Prop Type %49s", dummy);
+   if (!fy_node_scanf(node, "/Prop Type %49s", dummy)) {
+      printf("Could not find propagation type for spacecraft. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    S->OrbDOF = DecodeString(dummy);
-   fy_node_scanf(node, "/Pos Specifier %49s", dummy);
+   if (!fy_node_scanf(node, "/Pos Specifier %49s", dummy)) {
+      printf("Could not find Position Specifier for spacecraft. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    long useCM = DecodeString(dummy);
    double posVec[3], velVec[3];
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Pos wrt F"), posVec);
@@ -2197,11 +2283,14 @@ void InitSpacecraft(struct SCType *S)
    char rateFrame, attParm, attFrame;
    double wbn[3], ang[3], qbn[4], CBN[3][3];
    long seq;
-   fy_node_scanf(node,
-                 "Ang Vel Frame %c "
-                 "Att Representation %c "
-                 "Att Frame %c",
-                 &rateFrame, &attParm, &attFrame);
+   if (fy_node_scanf(node,
+                     "Ang Vel Frame %c "
+                     "Att Representation %c "
+                     "Att Frame %c",
+                     &rateFrame, &attParm, &attFrame) != 3) {
+      printf("Could not find spacecraft Attitude information. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Ang Vel"), wbn);
    for (i = 0; i < 3; i++)
       wbn[i] *= D2R;
@@ -2246,14 +2335,24 @@ void InitSpacecraft(struct SCType *S)
    MxMT(CBN, Frm[S->RefOrb].CN, S->CF);
 
    node = fy_node_by_path_def(root, "/Dynamics Flags");
-   fy_node_scanf(node, "/Method %49s", dummy);
+   if (!fy_node_scanf(node, "/Method %49s", dummy)) {
+      printf("Could not find spacraft propagation method. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    S->DynMethod = DecodeString(dummy);
-   fy_node_scanf(node, "/Mass Reference %49s", dummy);
+   if (!fy_node_scanf(node, "/Mass Reference Point %49s", dummy)) {
+      printf("Could not find spacecraft mass reference point. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    S->RefPt = DecodeString(dummy);
-   fy_node_scanf(node,
-                 "/Drag Coefficient %lf "
-                 "/Shaker File Name %41s",
-                 &S->DragCoef, S->ShakerFileName);
+   if (fy_node_scanf(node,
+                     "/Drag Coefficient %lf "
+                     "/Shaker File Name %41s",
+                     &S->DragCoef, S->ShakerFileName) != 2) {
+      printf("Could not find Drag Coefficient or Shaker File Name for "
+             "spacecraft. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
 
    S->ConstraintsRequested =
        getYAMLBool(fy_node_by_path_def(node, "/Compute Constraints"));
@@ -2289,16 +2388,24 @@ void InitSpacecraft(struct SCType *S)
    {
       long Ib;
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Body");
-      fy_node_scanf(seqNode, "/Index %ld", &Ib);
+      if (!fy_node_scanf(seqNode, "/Index %ld", &Ib)) {
+         printf("could not find Body index. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       struct BodyType *B = &S->B[Ib];
       double moi[3], poi[3];
-      fy_node_scanf(seqNode,
-                    "/Mass %lf "
-                    "/Geometry File Name %41s "
-                    "/Node File Name %41s "
-                    "/Flex File Name %41s",
-                    &B->mass, B->GeomFileName, B->NodeFileName,
-                    B->FlexFileName);
+      if (fy_node_scanf(seqNode,
+                        "/Mass %lf "
+                        "/Geometry File Name %41s "
+                        "/Node File Name %41s "
+                        "/Flex File Name %41s",
+                        &B->mass, B->GeomFileName, B->NodeFileName,
+                        B->FlexFileName) != 4) {
+         printf("Could not find spacecraft body %ld configuration information. "
+                "Exiting...\n",
+                Ib);
+         exit(EXIT_FAILURE);
+      }
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/MOI"), moi);
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/POI"), poi);
       for (i = 0; i < 3; i++)
@@ -2336,10 +2443,17 @@ void InitSpacecraft(struct SCType *S)
       {
          long Ig;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Joint");
-         fy_node_scanf(seqNode, "/Index %ld", &Ig);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ig)) {
+            printf("Could not find spacecraft Joint index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct JointType *G = &S->G[Ig];
 
-         fy_node_scanf(seqNode, "/Joint Type %49s ", dummy);
+         if (!fy_node_scanf(seqNode, "/Joint Type %49s", dummy)) {
+            printf("Could not find spacecraft Joint %ld's type. Exiting...\n",
+                   Ig);
+            exit(EXIT_FAILURE);
+         }
          G->Type          = DecodeString(dummy);
          long bodyInds[2] = {0};
          assignYAMLToLongArray(
@@ -2356,11 +2470,16 @@ void InitSpacecraft(struct SCType *S)
          }
          S->B[G->Bout].Gin = Ig;
 
-         fy_node_scanf(seqNode,
-                       "/Rot DOF %ld "
-                       "/Rot Sequence %ld "
-                       "/Rot Type %49s",
-                       &G->RotDOF, &G->RotSeq, dummy);
+         if (fy_node_scanf(seqNode,
+                           "/Rot DOF %ld "
+                           "/Rot Sequence %ld "
+                           "/Rot Type %49s",
+                           &G->RotDOF, &G->RotSeq, dummy) != 3) {
+            printf("Could not find spacecraft Joint %ld's rotation "
+                   "information. Exiting...\n",
+                   Ig);
+            exit(EXIT_FAILURE);
+         }
          long i3 = G->RotSeq % 10;         /* Pick off third digit */
          long i2 = (G->RotSeq % 100) / 10; /* Extract second digit */
          long i1 = G->RotSeq / 100;        /* Pick off first digit */
@@ -2429,7 +2548,13 @@ void InitSpacecraft(struct SCType *S)
                G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
             }
          }
-         fy_node_scanf(seqNode, "/Parm File Name %41[^\n]s", G->ParmFileName);
+         if (!fy_node_scanf(seqNode, "/Parm File Name %41[^\n]s",
+                            G->ParmFileName)) {
+            printf("Could not find spacecraft Joint %ld's parameter file name. "
+                   "Exiting...\n",
+                   Ig);
+            exit(EXIT_FAILURE);
+         }
 
          if (G->Type == PASSIVE_JOINT)
             InitPassiveJoint(G, S);
@@ -2439,10 +2564,10 @@ void InitSpacecraft(struct SCType *S)
    }
 
    /* .. Wheel parameters */
-   fy_node_scanf(root,
-                 "/Wheel Params/Drag %ld "
-                 "/Wheel Params/Jitter %ld",
-                 &S->WhlDragActive, &S->WhlJitterActive);
+   S->WhlDragActive =
+       getYAMLBool(fy_node_by_path_def(root, "/Wheel Params/Drag"));
+   S->WhlJitterActive =
+       getYAMLBool(fy_node_by_path_def(root, "/Wheel Params/Jitter"));
 
    node   = fy_node_by_path_def(root, "/Wheels");
    S->Nw  = fy_node_sequence_item_count(node);
@@ -2453,22 +2578,29 @@ void InitSpacecraft(struct SCType *S)
       {
          long Iw                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Wheel");
-         fy_node_scanf(seqNode, "/Index %ld", &Iw);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Iw)) {
+            printf("Could not find spacecraft Wheel index. Exiting...\n");
+         }
          struct WhlType *W = &S->Whl[Iw];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  W->A);
          UNITV(W->A);
          PerpBasis(W->A, W->Uaxis, W->Vaxis);
-         fy_node_scanf(seqNode,
-                       "/Initial Momentum %lf "
-                       "/Max Torque %lf "
-                       "/Max Momentum %lf "
-                       "/Rotor Inertia %lf "
-                       "/Body/Index %ld "
-                       "/Node %ld "
-                       "/Drag-Jitter File Name %41s",
-                       &W->H, &W->Tmax, &W->Hmax, &W->J, &W->Body, &W->Node,
-                       W->DragJitterFileName);
+         if (fy_node_scanf(seqNode,
+                           "/Initial Momentum %lf "
+                           "/Max Torque %lf "
+                           "/Max Momentum %lf "
+                           "/Rotor Inertia %lf "
+                           "/Body/Index %ld "
+                           "/Node %ld "
+                           "/Drag-Jitter File Name %41s",
+                           &W->H, &W->Tmax, &W->Hmax, &W->J, &W->Body, &W->Node,
+                           W->DragJitterFileName) != 7) {
+            printf(
+                "Spacecraft Wheel %ld is improperly configured. Exiting...\n",
+                Iw);
+            exit(EXIT_FAILURE);
+         }
          if (W->Node >= S->B[W->Body].NumNodes) {
             printf("SC[%ld].Whl[%ld] Node out of range\n", S->ID, Iw);
             exit(EXIT_FAILURE);
@@ -2487,15 +2619,23 @@ void InitSpacecraft(struct SCType *S)
       {
          long Im                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/MTB");
-         fy_node_scanf(seqNode, "/Index %ld", &Im);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Im)) {
+            printf("Could not find spacecraft MTB index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct MTBType *MTB = &S->MTB[Im];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  MTB->A);
          UNITV(MTB->A);
-         fy_node_scanf(seqNode,
-                       "/Saturation %lf "
-                       "/Node %ld ",
-                       &MTB->Mmax, &MTB->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Saturation %lf "
+                           "/Node %ld",
+                           &MTB->Mmax, &MTB->Node) != 2) {
+            printf("Could not find configuration for spacecraft MTB %ld. "
+                   "Exiting...\n",
+                   Im);
+            exit(EXIT_FAILURE);
+         }
          if (MTB->Node >= S->B[0].NumNodes) {
             printf("SC[%ld].Whl[%ld] Node out of range\n", S->ID, Im);
             exit(EXIT_FAILURE);
@@ -2513,17 +2653,25 @@ void InitSpacecraft(struct SCType *S)
       {
          long It                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Thruster");
-         fy_node_scanf(seqNode, "/Index %ld", &It);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &It)) {
+            printf("Could not find spacecraft Thruster Index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct ThrType *T = &S->Thr[It];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  T->A);
          UNITV(T->A);
-         fy_node_scanf(seqNode,
-                       "/Mode %49s "
-                       "/Force %lf "
-                       "/Body/Index %ld "
-                       "/Node %ld",
-                       dummy, &T->Fmax, &T->Body, &T->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Mode %49s "
+                           "/Force %lf "
+                           "/Body/Index %ld "
+                           "/Node %ld",
+                           dummy, &T->Fmax, &T->Body, &T->Node) != 4) {
+            printf("Could not find spacecraft Thruster %ld configuration. "
+                   "Exiting...\n",
+                   It);
+            exit(EXIT_FAILURE);
+         }
          T->Mode = DecodeString(dummy);
          if (T->Node >= S->B[T->Body].NumNodes) {
             printf("SC[%ld].Thr[%ld] Node out of range\n", S->ID, It);
@@ -2542,26 +2690,34 @@ void InitSpacecraft(struct SCType *S)
       {
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Gyro");
-         fy_node_scanf(seqNode, "/Index %ld", &Ig);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ig)) {
+            printf("Could not find spacecraft Gyro Index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct GyroType *Gyro = &S->Gyro[Ig];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  Gyro->Axis);
          UNITV(Gyro->Axis);
          double biasTime;
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Max Rate %lf "
-                       "/Scale Factor %lf "
-                       "/Quantization %lf "
-                       "/Angle Random Walk %lf "
-                       "/Bias Stability %lf "
-                       "/Bias Stability Timespan %lf "
-                       "/Angle Noise %lf "
-                       "/Initial Bias %lf "
-                       "/Node %ld",
-                       &Gyro->SampleTime, &Gyro->MaxRate, &Gyro->Scale,
-                       &Gyro->Quant, &Gyro->SigV, &Gyro->SigU, &biasTime,
-                       &Gyro->SigE, &Gyro->Bias, &Gyro->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Max Rate %lf "
+                           "/Scale Factor %lf "
+                           "/Quantization %lf "
+                           "/Angle Random Walk %lf "
+                           "/Bias Stability %lf "
+                           "/Bias Stability Timespan %lf "
+                           "/Angle Noise %lf "
+                           "/Initial Bias %lf "
+                           "/Node %ld",
+                           &Gyro->SampleTime, &Gyro->MaxRate, &Gyro->Scale,
+                           &Gyro->Quant, &Gyro->SigV, &Gyro->SigU, &biasTime,
+                           &Gyro->SigE, &Gyro->Bias, &Gyro->Node) != 10) {
+            printf(
+                "Spacecraft Gyro %ld has improper configuration. Exiting...\n",
+                Ig);
+            exit(EXIT_FAILURE);
+         }
 
          Gyro->MaxCounter = (long)(Gyro->SampleTime / DTSIM + 0.5);
          if (Gyro->SampleTime < DTSIM) {
@@ -2602,20 +2758,29 @@ void InitSpacecraft(struct SCType *S)
          long Im = 0;
          struct fy_node *seqNode =
              fy_node_by_path_def(iterNode, "/Magnetometer");
-         fy_node_scanf(seqNode, "/Index %ld", &Im);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Im)) {
+            printf(
+                "Could not find spacecraft Magnetometer Index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct MagnetometerType *MAG = &S->MAG[Im];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  MAG->Axis);
          UNITV(MAG->Axis);
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Saturation %lf "
-                       "/Scale Factor %lf "
-                       "/Quantization %lf "
-                       "/Noise %lf "
-                       "/Node %ld",
-                       &MAG->SampleTime, &MAG->Saturation, &MAG->Scale,
-                       &MAG->Quant, &MAG->Noise, &MAG->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Saturation %lf "
+                           "/Scale Factor %lf "
+                           "/Quantization %lf "
+                           "/Noise %lf "
+                           "/Node %ld",
+                           &MAG->SampleTime, &MAG->Saturation, &MAG->Scale,
+                           &MAG->Quant, &MAG->Noise, &MAG->Node) != 6) {
+            printf("Could not find spacecraft Magnetometer %ld configuration. "
+                   "Exiting...\n",
+                   Im);
+            exit(EXIT_FAILURE);
+         }
 
          MAG->MaxCounter = (long)(MAG->SampleTime / DTSIM + 0.5);
          if (MAG->SampleTime < DTSIM) {
@@ -2641,20 +2806,27 @@ void InitSpacecraft(struct SCType *S)
       {
          long Ic                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/CSS");
-         fy_node_scanf(seqNode, "/Index %ld", &Ic);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ic)) {
+            printf("Could not find spacecraft CSS Index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct CssType *CSS = &S->CSS[Ic];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  CSS->Axis);
          UNITV(CSS->Axis);
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Half Cone Angle %lf "
-                       "/Scale Factor %lf "
-                       "/Quantization %lf "
-                       "/Body/Index %ld "
-                       "/Node %ld",
-                       &CSS->SampleTime, &CSS->FovHalfAng, &CSS->Scale,
-                       &CSS->Quant, &CSS->Body, &CSS->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Half Cone Angle %lf "
+                           "/Scale Factor %lf "
+                           "/Quantization %lf "
+                           "/Body/Index %ld "
+                           "/Node %ld",
+                           &CSS->SampleTime, &CSS->FovHalfAng, &CSS->Scale,
+                           &CSS->Quant, &CSS->Body, &CSS->Node) != 6) {
+            printf("Spacecraft CSS %ld is improperly configured. Exiting...\n",
+                   Ic);
+            exit(EXIT_FAILURE);
+         }
 
          CSS->MaxCounter = (long)(CSS->SampleTime / DTSIM + 0.5);
          if (CSS->SampleTime < DTSIM) {
@@ -2681,7 +2853,10 @@ void InitSpacecraft(struct SCType *S)
       {
          long If                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FSS");
-         fy_node_scanf(seqNode, "/Index %ld", &If);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &If)) {
+            printf("Could not find spacecraft FSS index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct FssType *FSS = &S->FSS[If];
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
@@ -2690,14 +2865,18 @@ void InitSpacecraft(struct SCType *S)
          C2Q(FSS->CB, FSS->qb);
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  FSS->FovHalfAng);
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Boresight Axis %ld "
-                       "/Noise Equivalent Angle %lf "
-                       "/Quantization %lf "
-                       "/Node %ld",
-                       &FSS->SampleTime, &FSS->BoreAxis, &FSS->NEA, &FSS->Quant,
-                       &FSS->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Boresight Axis %ld "
+                           "/Noise Equivalent Angle %lf "
+                           "/Quantization %lf "
+                           "/Node %ld",
+                           &FSS->SampleTime, &FSS->BoreAxis, &FSS->NEA,
+                           &FSS->Quant, &FSS->Node) != 5) {
+            printf("Spacecraft FSS %ld is improperly configured. Exiting...\n",
+                   If);
+            exit(EXIT_FAILURE);
+         }
 
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
@@ -2729,7 +2908,10 @@ void InitSpacecraft(struct SCType *S)
       {
          long Ist                = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/ST");
-         fy_node_scanf(seqNode, "/Index %ld", &Ist);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ist)) {
+            printf("Could not find spacecraft Startracker Index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct StarTrackerType *ST = &S->ST[Ist];
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
@@ -2743,17 +2925,28 @@ void InitSpacecraft(struct SCType *S)
              ST->NEA);
          struct fy_node *excAng =
              fy_node_by_path_def(seqNode, "/Exclusion Angles");
-         fy_node_scanf(excAng,
-                       "/Sun %lf "
-                       "/Earth %lf "
-                       "/Luna %lf",
-                       &ST->SunExclAng, &ST->EarthExclAng, &ST->MoonExclAng);
+         if (fy_node_scanf(excAng,
+                           "/Sun %lf "
+                           "/Earth %lf "
+                           "/Luna %lf",
+                           &ST->SunExclAng, &ST->EarthExclAng,
+                           &ST->MoonExclAng) != 3) {
+            printf("For spacecraft Startracker %ld, Could not find "
+                   "Sun/Earth/Moon Exclusion Angles. Exiting...\n",
+                   Ist);
+            exit(EXIT_FAILURE);
+         }
 
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Boresight Axis %ld "
-                       "/Node %ld",
-                       &ST->SampleTime, &ST->BoreAxis, &ST->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Boresight Axis %ld "
+                           "/Node %ld",
+                           &ST->SampleTime, &ST->BoreAxis, &ST->Node) != 3) {
+            printf("Spacecraft Startracker %ld is improperly configured. "
+                   "Exiting...\n",
+                   Ist);
+            exit(EXIT_FAILURE);
+         }
 
          ST->MaxCounter = (long)(ST->SampleTime / DTSIM + 0.5);
          if (ST->SampleTime < DTSIM) {
@@ -2792,17 +2985,23 @@ void InitSpacecraft(struct SCType *S)
       {
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/GPS");
-         fy_node_scanf(seqNode, "/Index %ld", &Ig);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ig)) {
+            printf("Could not find spacecraft GPS Index. Exiting...\n");
+         }
          struct GpsType *GPS = &S->GPS[Ig];
 
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Position Noise %lf "
-                       "/Velocity Noise %lf "
-                       "/Time Noise %lf "
-                       "/Node %ld",
-                       &GPS->SampleTime, &GPS->PosNoise, &GPS->VelNoise,
-                       &GPS->TimeNoise, &GPS->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Position Noise %lf "
+                           "/Velocity Noise %lf "
+                           "/Time Noise %lf "
+                           "/Node %ld",
+                           &GPS->SampleTime, &GPS->PosNoise, &GPS->VelNoise,
+                           &GPS->TimeNoise, &GPS->Node) != 5) {
+            printf("Spacecraft GPS %ld is improperly configured. Exiting...\n",
+                   Ig);
+            exit(EXIT_FAILURE);
+         }
 
          GPS->MaxCounter = (long)(GPS->SampleTime / DTSIM + 0.5);
          if (GPS->SampleTime < DTSIM) {
@@ -2828,26 +3027,35 @@ void InitSpacecraft(struct SCType *S)
          long Ia = 0;
          struct fy_node *seqNode =
              fy_node_by_path_def(iterNode, "/Accelerometer");
-         fy_node_scanf(seqNode, "/Index %ld", &Ia);
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ia)) {
+            printf(
+                "Could not find spacecraft Accelerometer index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          struct AccelType *Accel = &S->Accel[Ia];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  Accel->Axis);
          UNITV(Accel->Axis);
          double biasTime;
-         fy_node_scanf(seqNode,
-                       "/Sample Time %lf "
-                       "/Max Acceleration %lf "
-                       "/Scale Factor %lf "
-                       "/Quantization %lf "
-                       "/DV Random Walk %lf "
-                       "/Bias Stability %lf "
-                       "/Bias Stability TimeSpan %lf "
-                       "/DV Noise %lf "
-                       "/Initial Bias %lf "
-                       "/Node %ld",
-                       &Accel->SampleTime, &Accel->MaxAcc, &Accel->Scale,
-                       &Accel->Quant, &Accel->SigV, &Accel->SigU, &biasTime,
-                       &Accel->SigE, &Accel->Bias, &Accel->Node);
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Max Acceleration %lf "
+                           "/Scale Factor %lf "
+                           "/Quantization %lf "
+                           "/DV Random Walk %lf "
+                           "/Bias Stability %lf "
+                           "/Bias Stability TimeSpan %lf "
+                           "/DV Noise %lf "
+                           "/Initial Bias %lf "
+                           "/Node %ld",
+                           &Accel->SampleTime, &Accel->MaxAcc, &Accel->Scale,
+                           &Accel->Quant, &Accel->SigV, &Accel->SigU, &biasTime,
+                           &Accel->SigE, &Accel->Bias, &Accel->Node) != 10) {
+            printf("Spacecraft Accelerometer %ld is improperly configured. "
+                   "Exiting...\n",
+                   Ia);
+            exit(EXIT_FAILURE);
+         }
 
          Accel->MaxCounter = (long)(Accel->SampleTime / DTSIM + 0.5);
          if (Accel->SampleTime < DTSIM) {
@@ -3089,11 +3297,17 @@ void LoadTdrs(void)
    {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/TDRS");
       long i                  = 0;
-      fy_node_scanf(seqNode, "/Index %ld", &i);
+      if (!fy_node_scanf(seqNode, "/Number %ld", &i)) {
+         printf("Could not find TDRS Number. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       if (i >= 10)
          continue;
 
-      fy_node_scanf(seqNode, "/Label %39[^\n]s", Tdrs[i].Designation);
+      if (!fy_node_scanf(seqNode, "/Label %39[^\n]s", Tdrs[i].Designation)) {
+         printf("Could not find TDRS %ld's Label. Exiting...\n", i);
+         exit(EXIT_FAILURE);
+      }
       Tdrs[i].Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
    }
    fy_document_destroy(fyd);
@@ -4176,16 +4390,19 @@ void LoadRegions(void)
       struct RegionType *R    = &Rgn[Ir];
       char IsPosW[120] = {0}, WorldID[20] = {0};
       R->Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
-      fy_node_scanf(seqNode,
-                    "/Name %19s "
-                    "/World %19s "
-                    "/Location/Type %119s "
-                    "/Coefficients/Elasticity %lf "
-                    "/Coefficients/Damping %lf "
-                    "/Coefficients/Friction %lf "
-                    "/Geometry File Name %39s",
-                    R->Name, WorldID, IsPosW, &R->ElastCoef, &R->DampCoef,
-                    &R->FricCoef, R->GeomFileName);
+      if (fy_node_scanf(seqNode,
+                        "/Name %19s "
+                        "/World %19s "
+                        "/Location/Type %119s "
+                        "/Coefficients/Elasticity %lf "
+                        "/Coefficients/Damping %lf "
+                        "/Coefficients/Friction %lf "
+                        "/Geometry File Name %39s",
+                        R->Name, WorldID, IsPosW, &R->ElastCoef, &R->DampCoef,
+                        &R->FricCoef, R->GeomFileName) != 7) {
+         printf("Region has improper configuration. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
 
       R->World = DecodeString(WorldID);
       if (R->World < 0 || R->World > NWORLD) {
@@ -4888,14 +5105,19 @@ void InitSim(int argc, char **argv)
    /* .. RNG Seed */
    /* .. Graphics Front End? */
    /* .. Cmd Script File Name */
-   fy_node_scanf(node,
-                 "/Mode %119s "
-                 "/Duration %lf "
-                 "/Step Size %lf "
-                 "/File Interval %lf "
-                 "/RNG Seed %ld "
-                 "/Command File %999s",
-                 response, &STOPTIME, &DTSIM, &DTOUT, &RngSeed, CmdFileName);
+   if (fy_node_scanf(node,
+                     "/Mode %119s "
+                     "/Duration %lf "
+                     "/Step Size %lf "
+                     "/File Interval %lf "
+                     "/RNG Seed %ld "
+                     "/Command File %999s",
+                     response, &STOPTIME, &DTSIM, &DTOUT, &RngSeed,
+                     CmdFileName) != 6) {
+      printf("Simulation Control in Inp_Sim is improperly configured. "
+             "Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
    if (CLI_ARGS.graphics != NULL) {
@@ -4940,7 +5162,10 @@ void InitSim(int argc, char **argv)
    Iorb                     = 0;
    WHILE_FY_ITER(node, iterNode)
    {
-      fy_node_scanf(iterNode, "/Name %39[^\n]s", Orb[Iorb].FileName);
+      if (!fy_node_scanf(iterNode, "/Name %39[^\n]s", Orb[Iorb].FileName)) {
+         printf("Could not find Orbit name. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       strcat(Orb[Iorb].FileName, ".yaml");
       Orb[Iorb].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
       Orb[Iorb].Tag    = Iorb;
@@ -4961,10 +5186,13 @@ void InitSim(int argc, char **argv)
    Isc      = 0;
    WHILE_FY_ITER(node, iterNode)
    {
-      fy_node_scanf(iterNode,
-                    "/Name %49s "
-                    "/Orbit %19s",
-                    SC[Isc].FileName, response);
+      if (fy_node_scanf(iterNode,
+                        "/Name %49s "
+                        "/Orbit %19s",
+                        SC[Isc].FileName, response) != 2) {
+         printf("Could not find SC's name and/or its orbit. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       strcat(SC[Isc].FileName, ".yaml");
       strcat(response, ".yaml");
       SC[Isc].RefOrb = -1;
@@ -4995,17 +5223,20 @@ void InitSim(int argc, char **argv)
    /* .. Date and time (UTC) */
    node          = fy_node_by_path_def(root, "/Time");
    long millisec = 0;
-   fy_node_scanf(node,
-                 "/Date/Year %ld "
-                 "/Date/Month %ld "
-                 "/Date/Day %ld "
-                 "/Time/Hour %ld "
-                 "/Time/Minute %ld "
-                 "/Time/Second %lf "
-                 "/Time/Millisecond %ld"
-                 "/Leap Seconds %lf",
-                 &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
-                 &UTC.Second, &millisec, &LeapSec);
+   if (fy_node_scanf(node,
+                     "/Date/Year %ld "
+                     "/Date/Month %ld "
+                     "/Date/Day %ld "
+                     "/Time/Hour %ld "
+                     "/Time/Minute %ld "
+                     "/Time/Second %lf "
+                     "/Time/Millisecond %ld "
+                     "/Leap Seconds %lf",
+                     &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
+                     &UTC.Second, &millisec, &LeapSec) != 8) {
+      printf("Time is improperly configured in Inp_Sim. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    UTC.Second += millisec / 1000.0;
 
    /* .. Choices for Modeling Solar Activity */
@@ -5015,15 +5246,24 @@ void InitSim(int argc, char **argv)
    iterNode = NULL;
    WHILE_FY_ITER(fy_node_by_path_def(node, "/Atmosphere/Models"), iterNode)
    {
-      fy_node_scanf(iterNode,
-                    "/World %119s "
-                    "/Method %119s",
-                    response1, response2);
+      if (fy_node_scanf(iterNode,
+                        "/World %119s "
+                        "/Method %119s",
+                        response1, response2) != 2) {
+         printf("Could not find World and/or Method for Atmospheric Model. "
+                "Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       Iw            = DecodeString(response1);
       long atmoType = DecodeString(response2);
       double f10p7 = 0.0, geomag = 0.0;
       if (atmoType == USER_ATMO)
-         fy_node_scanf(iterNode, "/F10.7 %lf /Ap %lf", &f10p7, &geomag);
+         if (fy_node_scanf(iterNode, "/F10.7 %lf /Ap %lf", &f10p7, &geomag) !=
+             2) {
+            printf("Could not find user defined F10.7 and/or Ap. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
+
       switch (Iw) {
          case EARTH:
             AtmoOption  = atmoType;
@@ -5046,10 +5286,14 @@ void InitSim(int argc, char **argv)
    iterNode = NULL;
    WHILE_FY_ITER(fy_node_by_path_def(node, "/Magnetic/Models"), iterNode)
    {
-      fy_node_scanf(iterNode,
-                    "/World %119s "
-                    "/Method %119s",
-                    response1, response2);
+      if (fy_node_scanf(iterNode,
+                        "/World %119s "
+                        "/Method %119s",
+                        response1, response2) != 2) {
+         printf("Could not find World and/or Method for Magnetic Model. "
+                "Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       Iw           = DecodeString(response1);
       long magType = DecodeString(response2);
       switch (Iw) {
@@ -5065,10 +5309,14 @@ void InitSim(int argc, char **argv)
       }
       if (magType == IGRF) {
          long N = 0, M = 0;
-         fy_node_scanf(iterNode,
-                       "/Degree %ld "
-                       "/Order %ld",
-                       &N, &M);
+         if (fy_node_scanf(iterNode,
+                           "/Degree %ld "
+                           "/Order %ld",
+                           &N, &M) != 2) {
+            printf("Could not find Degree and/or Order for Magnetic Field "
+                   "Model. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
          switch (Iw) {
             case EARTH:
                MagModel.N = N;
@@ -5092,11 +5340,15 @@ void InitSim(int argc, char **argv)
    WHILE_FY_ITER(fy_node_by_path_def(node, "/Gravitation/Models"), iterNode)
    {
       long N = 0, M = 0;
-      fy_node_scanf(iterNode,
-                    "/World %119s "
-                    "/Degree %ld "
-                    "/Order %ld",
-                    response, &N, &M);
+      if (fy_node_scanf(iterNode,
+                        "/World %119s "
+                        "/Degree %ld "
+                        "/Order %ld",
+                        response, &N, &M) != 3) {
+         printf("Could not find World, Degree, and/or Order for Gravitational "
+                "Model. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       Iw = DecodeString(response);
       switch (Iw) {
          case EARTH:
@@ -5142,7 +5394,10 @@ void InitSim(int argc, char **argv)
        getYAMLBool(fy_node_by_path_def(node, "/Output Env Torques to File"));
 
    /* .. Celestial Bodies */
-   fy_node_scanf(root, "/Ephem Type %119s", response);
+   if (!fy_node_scanf(root, "/Ephem Type %119s", response)) {
+      printf("Could not find Ephemeris Type in Inp_Sim. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    EphemOption = DecodeString(response);
    node        = fy_node_by_path_def(root, "/Celestial Bodies");
    // I wish this was more programmatic, but it doesn't really need to be I
@@ -5183,15 +5438,27 @@ void InitSim(int argc, char **argv)
    iterNode = NULL;
    WHILE_FY_ITER(node, iterNode)
    {
+      struct fy_node *seqNode =
+          fy_node_by_path_def(iterNode, "/Ground Station");
       long Ignd = 0;
-      fy_node_scanf(iterNode, "/Index %ld", &Ignd);
-      fy_node_scanf(iterNode,
-                    "/Ground Station/World %119s "
-                    "/Ground Station/Longitude %lf "
-                    "/Ground Station/Latitude %lf "
-                    "/Ground Station/Label %39s",
-                    response, &GroundStation[Ignd].lng,
-                    &GroundStation[Ignd].lat, GroundStation[Ignd].Label);
+      if (!fy_node_scanf(seqNode, "/Index %ld", &Ignd)) {
+         printf("Could not find Ground Station Index. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      if (fy_node_scanf(seqNode,
+                        "/World %119s "
+                        "/Longitude %lf "
+                        "/Latitude %lf",
+                        response, &GroundStation[Ignd].lng,
+                        &GroundStation[Ignd].lat) != 3) {
+         printf("Ground Station %ld is improperly configured. Exiting...\n",
+                Ignd);
+         exit(EXIT_FAILURE);
+      }
+      size_t str_len;
+      const char *label =
+          fy_node_get_scalar(fy_node_by_path_def(seqNode, "/Label"), &str_len);
+      strncpy(GroundStation[Ignd].Label, label, str_len);
       GroundStation[Ignd].World = DecodeString(response);
       GroundStation[Ignd].Exists =
           getYAMLBool(fy_node_by_path_def(iterNode, "/Ground Station/Enabled"));

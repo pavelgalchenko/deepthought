@@ -295,8 +295,8 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode, long controllerState)
          GainsProcessed = TRUE;
    }
 
-   if (GainsProcessed ==
-       TRUE) { // Set GainsProcessed flag for relevant controller
+   // Set GainsProcessed flag for relevant controller
+   if (GainsProcessed == TRUE) {
       if (controllerState == TRN_STATE) {
          Cmd->NewTrnGainsProcessed = TRUE;
       }
@@ -612,8 +612,7 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
       if (Cmd->ManeuverMode == INACTIVE) {
          if (GetController(S, ctrlNode, TRN_STATE) == FALSE) {
             printf("For %s index %ld, could not find Controller alias %s or "
-                   "invalid format. "
-                   "Exiting...\n",
+                   "invalid format. Exiting...\n",
                    subType, cmdInd,
                    fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
             exit(EXIT_FAILURE);
@@ -631,8 +630,7 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
       }
       if (GetActuators(S, actNode, TRN_STATE) == FALSE) {
          printf("For %s index %ld, could not find Actuator alias %s or invalid "
-                "format. "
-                "Exiting...\n",
+                "format. Exiting...\n",
                 subType, cmdInd,
                 fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
@@ -1061,7 +1059,10 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
    WHILE_FY_ITER(dsmCmds, iterNode)
    {
       long scInd = 0;
-      fy_node_scanf(iterNode, "/SC %ld", &scInd);
+      if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
+         printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       if (scInd == S->ID) {
          scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
          break;
@@ -1078,7 +1079,10 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
       iterNode       = NULL;
       WHILE_FY_ITER(scCmdsNode, iterNode)
       {
-         fy_node_scanf(iterNode, "/Time %lf", &DSM->CmdTime_f[i++]);
+         if (!fy_node_scanf(iterNode, "/Time %lf", &DSM->CmdTime_f[i++])) {
+            printf("Bad DSM command time. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
       }
       qsort(DSM->CmdTime_f, DSM->CmdCnt, sizeof(double), compare);
       DSM->CmdNextTime = DSM->CmdTime_f[0];
@@ -1098,7 +1102,10 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
    WHILE_FY_ITER(dsmCmds, iterNode)
    {
       long scInd = 0;
-      fy_node_scanf(iterNode, "/SC %ld", &scInd);
+      if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
+         printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       if (scInd == S->ID) {
          scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
          break;
@@ -1108,7 +1115,10 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
    WHILE_FY_ITER(scCmdsNode, iterNode)
    {
       double cmdTime = 0.0;
-      fy_node_scanf(iterNode, "/Time %lf", &cmdTime);
+      if (!fy_node_scanf(iterNode, "/Time %lf", &cmdTime)) {
+         printf("Bad DSM command time. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       if (cmdTime == DSM->CmdNextTime) {
          cmdsNode = fy_node_by_path_def(iterNode, "/Commands");
          break;

@@ -5339,8 +5339,12 @@ void ReadGraphicsInpFile(void)
    /* .. 42 Graphics Configuration File */
    struct fy_node *node = fy_node_by_path_def(root, "/Configuration");
    /* .. GL Output Interval */
-   fy_node_scanf(node, "/Output Interval %lf /Star Catalog File %79[^\n]s",
-                 &DTOUTGL, StarCatFileName);
+   if (fy_node_scanf(node, "/Output Interval %lf /Star Catalog File %79[^\n]s",
+                     &DTOUTGL, StarCatFileName) != 2) {
+      printf("Invalid graphics output interval or star catalog file. "
+             "Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
 
    MapWindowExists = getYAMLBool(fy_node_by_path_def(node, "/Map Exists"));
    OrreryWindowExists =
@@ -5351,22 +5355,32 @@ void ReadGraphicsInpFile(void)
    /* .. POV */
    char Frame = 0;
    node       = fy_node_by_path_def(root, "/POV");
-   fy_node_scanf(node,
-                 "/Mode %119s "
-                 "/Host/SC %ld "
-                 "/Host/Body %ld "
-                 "/Target/SC %ld "
-                 "/Target/Body %ld "
-                 "/Target/Frame %c "
-                 "/POV Range %lf "
-                 "/POV Vertical Angle %lf",
-                 response, &POV.Host.SC, &POV.Host.Body, &POV.Target.SC,
-                 &POV.Target.Body, &Frame, &POV.Range, &POV.Angle);
+   if (fy_node_scanf(node,
+                     "/Mode %119s "
+                     "/Host/SC %ld "
+                     "/Host/Body %ld "
+                     "/Target/SC %ld "
+                     "/Target/Body %ld "
+                     "/Target/Frame %c "
+                     "/POV Range %lf "
+                     "/POV Vertical Angle %lf",
+                     response, &POV.Host.SC, &POV.Host.Body, &POV.Target.SC,
+                     &POV.Target.Body, &Frame, &POV.Range, &POV.Angle) != 8) {
+      printf("Improperly formatted POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.Mode = DecodeString(response);
 
-   fy_node_scanf(node, "/Host/Type %119s", response);
+   if (!fy_node_scanf(node, "/Host/Type %119s", response)) {
+      printf("Could not find Host Type for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.Host.Type = DecodeString(response);
-   fy_node_scanf(node, "/Target/Type %119s", response);
+   if (!fy_node_scanf(node, "/Target/Type %119s", response)) {
+      printf(
+          "Could not find Target Type for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.Target.Type = DecodeString(response);
 
    if (POV.Host.SC >= Nsc || !SC[POV.Host.SC].Exists) {
@@ -5406,25 +5420,38 @@ void ReadGraphicsInpFile(void)
          break;
    }
 
-   fy_node_scanf(node, "/Boresight Axis %119s", response);
+   if (!fy_node_scanf(node, "/Boresight Axis %119s", response)) {
+      printf("Could not find Boresight Axis for POV in Inp_Graphics. "
+             "Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.BoreAxis = DecodeString(response);
-   fy_node_scanf(node, "/Up Axis %119s", response);
+   if (!fy_node_scanf(node, "/Up Axis %119s", response)) {
+      printf("Could not find Up Axis for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.UpAxis = DecodeString(response);
-   fy_node_scanf(node, "/POV View %119s", response);
+   if (!fy_node_scanf(node, "/POV View %119s", response)) {
+      printf("Could not find POV View for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.View = DecodeString(response);
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/POV Host Position"),
                            POV.PosB);
 
    /* .. CAM Parameters */
    node = fy_node_by_path_def(root, "/Cam");
-   fy_node_scanf(node,
-                 "/Title %79[^\n]s "
-                 "/Dimensions/Width %ld "
-                 "/Dimensions/Height %ld "
-                 "/Mouse Scale Factor %lf "
-                 "/Gamma Exposure %lf",
-                 CamTitle, &CamWidth, &CamHeight, &MouseScaleFactor,
-                 &GammaCorrection);
+   if (fy_node_scanf(node,
+                     "/Title %79[^\n]s "
+                     "/Dimensions/Width %ld "
+                     "/Dimensions/Height %ld "
+                     "/Mouse Scale Factor %lf "
+                     "/Gamma Exposure %lf",
+                     CamTitle, &CamWidth, &CamHeight, &MouseScaleFactor,
+                     &GammaCorrection) != 5) {
+      printf("Improperly configured Cam field in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    const char camShowFields[CAM_MENU_SIZE][20] = {
        {"/N Axes"},         {"/L Axes"},       {"/F Axes"},
        {"/B Axes"},         {"/N Grid"},       {"/L Grid"},
@@ -5441,17 +5468,23 @@ void ReadGraphicsInpFile(void)
       strcat(label, camShowFields[i]);
       strcat(label, "/Label %39[^\n]s");
       CamShow[i] = getYAMLBool(fy_node_by_path_def(node, show));
-      fy_node_scanf(node, label, CamShowLabel[i]);
+      if (!fy_node_scanf(node, label, CamShowLabel[i])) {
+         printf("Could not find label for Cam configuration %s. Exiting...\n",
+                &camShowFields[i][1]);
+      }
    }
    ShadowsEnabled = CamShow[CAM_SHADOWS];
 
    /* .. MAP Parameters */
    node = fy_node_by_path_def(root, "/Map");
-   fy_node_scanf(node,
-                 "/Title %79[^\n]s "
-                 "/Dimensions/Width %ld "
-                 "/Dimensions/Height %ld",
-                 MapTitle, &MapWidth, &MapHeight);
+   if (fy_node_scanf(node,
+                     "/Title %79[^\n]s "
+                     "/Dimensions/Width %ld "
+                     "/Dimensions/Height %ld",
+                     MapTitle, &MapWidth, &MapHeight) != 3) {
+      printf("Improperly configured Map field in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    const char mapShowFields[MAP_MENU_SIZE][20] = {
        {"/Clock"}, {"/Tlm Clock"}, {"/Credits"}, {"/Night"}};
    node = fy_node_by_path_def(node, "/Map Show");
@@ -5462,7 +5495,10 @@ void ReadGraphicsInpFile(void)
       strcat(label, mapShowFields[i]);
       strcat(label, "/Label %39[^\n]s");
       MapShow[i] = getYAMLBool(fy_node_by_path_def(node, show));
-      fy_node_scanf(node, label, MapShowLabel[i]);
+      if (!fy_node_scanf(node, label, MapShowLabel[i])) {
+         printf("Could not find label for Map configuration %s. Exiting...\n",
+                &camShowFields[i][1]);
+      }
    }
    node = fy_node_by_path_def(root, "/Constellations Show");
    ShowConstellations[MAJOR_CONSTELL] =
@@ -5488,20 +5524,24 @@ void LoadFOVs(void)
    {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FOV");
       char response1[120] = {0}, response2[120] = {0};
-      fy_node_scanf(seqNode,
-                    "/Label %39[^\n]s "
-                    "/Sides/Number %ld "
-                    "/Sides/Length %lf "
-                    "/Width %lf "
-                    "/Height %lf "
-                    "/Color/Alpha %f "
-                    "/Type %119s "
-                    "/SC %ld "
-                    "/Body %ld "
-                    "/Boresight %119s",
-                    FOV[Ifov].Label, &FOV[Ifov].Nv, &FOV[Ifov].Length,
-                    &FOV[Ifov].Width, &FOV[Ifov].Height, &FOV[Ifov].Color[3],
-                    response1, &FOV[Ifov].SC, &FOV[Ifov].Body, response2);
+      if (fy_node_scanf(seqNode,
+                        "/Label %39[^\n]s "
+                        "/Sides/Number %ld "
+                        "/Sides/Length %lf "
+                        "/Width %lf "
+                        "/Height %lf "
+                        "/Color/Alpha %f "
+                        "/Type %119s "
+                        "/SC %ld "
+                        "/Body %ld "
+                        "/Boresight %119s",
+                        FOV[Ifov].Label, &FOV[Ifov].Nv, &FOV[Ifov].Length,
+                        &FOV[Ifov].Width, &FOV[Ifov].Height,
+                        &FOV[Ifov].Color[3], response1, &FOV[Ifov].SC,
+                        &FOV[Ifov].Body, response2) != 10) {
+         printf("Bad FOV Configuration. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
 
       if (FOV[Ifov].Width >= 180.0) {
          printf(

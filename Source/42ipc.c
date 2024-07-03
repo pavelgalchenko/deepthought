@@ -56,15 +56,22 @@ void InitInterProcessComm(void)
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/IPC");
       struct IpcType *I       = &IPC[Iipc];
 
-      fy_node_scanf(seqNode,
-                    "/Mode %119s "
-                    "/AC ID %ld "
-                    "/File Name %79[^\n]s "
-                    "/Socket/Host/Name %39[^\n]s "
-                    "/Socket/Host/Port %ld ",
-                    response, &I->AcsID, FileName, I->HostName, &I->Port);
+      if (fy_node_scanf(seqNode,
+                        "/Mode %119s "
+                        "/AC ID %ld "
+                        "/File Name %79[^\n]s "
+                        "/Socket/Host/Name %39[^\n]s "
+                        "/Socket/Host/Port %ld",
+                        response, &I->AcsID, FileName, I->HostName,
+                        &I->Port) != 5) {
+         printf("IPC is improperly configured. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       I->Mode = DecodeString(response);
-      fy_node_scanf(seqNode, "/Socket/Role %119s", response);
+      if(!fy_node_scanf(seqNode, "/Socket/Role %119s", response)){
+         printf("Could not find Socket Role for IPC. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       I->SocketRole = DecodeString(response);
       I->AllowBlocking =
           getYAMLBool(fy_node_by_path_def(seqNode, "/Socket/Blocking"));

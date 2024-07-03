@@ -46,6 +46,8 @@ long getYAMLBool(struct fy_node *node)
 {
    size_t strLen    = 0;
    const char *data = fy_node_get_scalar(node, &strLen);
+   if (data == NULL)
+      return 0;
    return !strncasecmp(data, "true", strLen);
 }
 /**********************************************************************/
