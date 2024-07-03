@@ -26,7 +26,8 @@
 */
 
 /*********************************************************************/
-void SetupViewVolume(int width, int height) {
+void SetupViewVolume(int width, int height)
+{
    glfwSetWindowSize(CamWindow, width, height);
 
    POV.AR     = ((double)width) / ((double)height);
@@ -41,7 +42,8 @@ void SetupViewVolume(int width, int height) {
    POV.SinFov = sqrt(1.0 - POV.CosFov * POV.CosFov);
 }
 /*********************************************************************/
-void MainLoop(void) {
+void MainLoop(void)
+{
    long MaxCamFrame = 20000;
    char CamFileName[40];
    long Done = 0;
@@ -68,7 +70,8 @@ void MainLoop(void) {
             glfwSwapBuffers(SphereWindow);
          }
          glfwMakeContextCurrent(NULL);
-      } else {
+      }
+      else {
          POV.w[0] = 0.0;
          POV.w[1] = 0.0;
          POV.w[2] = 0.0;
@@ -111,12 +114,13 @@ void MainLoop(void) {
    exit(0);
 }
 /**********************************************************************/
-void GlfwErrorHandler(int error, const char *description) {
+void GlfwErrorHandler(int error, const char *description)
+{
    fprintf(stderr, "GLFW Error: %s\n", description);
 }
 /**********************************************************************/
-void KeyHandler(GLFWwindow *Window, int key, int scancode, int action,
-                int mods) {
+void KeyHandler(GLFWwindow *Window, int key, int scancode, int action, int mods)
+{
 
    static long Refresh = FALSE;
 
@@ -199,8 +203,8 @@ void KeyHandler(GLFWwindow *Window, int key, int scancode, int action,
    }
 }
 /******************************************************************************/
-void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
-                           int Mods) {
+void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action, int Mods)
+{
    static long Refresh = FALSE;
    long Pick, i;
    double x, y;
@@ -225,13 +229,15 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                PovWidget.Spot[Pick].Selected = 1;
                POV.Mode                      = TRACK_HOST + Pick;
                Refresh                       = TRUE;
-            } else if (Pick < 8) {
+            }
+            else if (Pick < 8) {
                for (i = 0; i < 5; i++)
                   PovWidget.Spot[3 + i].Selected = 0;
                PovWidget.Spot[Pick].Selected = 1;
                POV.Frame                     = FRAME_N + (Pick - 3);
                Refresh                       = TRUE;
-            } else if (Pick < 11) {
+            }
+            else if (Pick < 11) {
                for (i = 0; i < 6; i++)
                   PovWidget.Spot[8 + i].Selected = 0;
                if (Pick == 8) {
@@ -240,35 +246,41 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                   if (POV.BoreAxis == POS_X) {
                      POV.BoreAxis = NEG_X;
                      POV.UpAxis   = NEG_Z;
-                  } else {
+                  }
+                  else {
                      POV.BoreAxis = POS_X;
                      POV.UpAxis   = POS_Z;
                   }
                   Refresh = TRUE;
-               } else if (Pick == 9) {
+               }
+               else if (Pick == 9) {
                   PovWidget.Spot[9].Selected  = 1;
                   PovWidget.Spot[11].Selected = 1;
                   if (POV.BoreAxis == POS_Y) {
                      POV.BoreAxis = NEG_Y;
                      POV.UpAxis   = NEG_X;
-                  } else {
+                  }
+                  else {
                      POV.BoreAxis = POS_Y;
                      POV.UpAxis   = POS_X;
                   }
                   Refresh = TRUE;
-               } else if (Pick == 10) {
+               }
+               else if (Pick == 10) {
                   PovWidget.Spot[10].Selected = 1;
                   PovWidget.Spot[12].Selected = 1;
                   if (POV.BoreAxis == POS_Z) {
                      POV.BoreAxis = NEG_Z;
                      POV.UpAxis   = NEG_Y;
-                  } else {
+                  }
+                  else {
                      POV.BoreAxis = POS_Z;
                      POV.UpAxis   = POS_Y;
                   }
                   Refresh = TRUE;
                }
-            } else if (Pick == 11) {
+            }
+            else if (Pick == 11) {
                if (POV.BoreAxis != POS_X && POV.BoreAxis != NEG_X) {
                   PovWidget.Spot[11].Selected = 1;
                   PovWidget.Spot[12].Selected = 0;
@@ -279,7 +291,8 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                      POV.UpAxis = POS_X;
                   Refresh = TRUE;
                }
-            } else if (Pick == 12) {
+            }
+            else if (Pick == 12) {
                if (POV.BoreAxis != POS_Y && POV.BoreAxis != NEG_Y) {
                   PovWidget.Spot[11].Selected = 0;
                   PovWidget.Spot[12].Selected = 1;
@@ -290,7 +303,8 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                      POV.UpAxis = POS_Y;
                   Refresh = TRUE;
                }
-            } else if (Pick == 13) {
+            }
+            else if (Pick == 13) {
                if (POV.BoreAxis != POS_Z && POV.BoreAxis != NEG_Z) {
                   PovWidget.Spot[11].Selected = 0;
                   PovWidget.Spot[12].Selected = 0;
@@ -302,8 +316,9 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                   Refresh = TRUE;
                }
             }
-         } else if (x >= HostWidget.xmin && x <= HostWidget.xmax &&
-                    y >= HostWidget.ymin && y <= HostWidget.ymax) {
+         }
+         else if (x >= HostWidget.xmin && x <= HostWidget.xmax &&
+                  y >= HostWidget.ymin && y <= HostWidget.ymax) {
             /* Host Widget */
             Pick = 100; /* Bogus value */
             for (i = 0; i < HostWidget.Nspot; i++) {
@@ -319,62 +334,73 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                   HostWidget.Spot[i].Selected = 0;
                HostWidget.Spot[Pick].Selected = 1;
                POV.Host.Type                  = Pick;
-            } else if (Pick == 5) {
+            }
+            else if (Pick == 5) {
                if (POV.Host.Type == TARGET_WORLD) {
                   do {
                      POV.Host.World = (POV.Host.World + NWORLD - 1) % NWORLD;
                   } while (!World[POV.Host.World].Exists);
-               } else if (POV.Host.Type == TARGET_REFORB ||
-                          POV.Host.Type == TARGET_FRM) {
+               }
+               else if (POV.Host.Type == TARGET_REFORB ||
+                        POV.Host.Type == TARGET_FRM) {
                   POV.Host.RefOrb = (POV.Host.RefOrb + Norb - 1) % Norb;
                   POV.Host.World  = Orb[POV.Host.RefOrb].World;
                   while (!(SC[POV.Host.SC].Exists &&
                            SC[POV.Host.SC].RefOrb == POV.Host.RefOrb)) {
                      POV.Host.SC = (POV.Host.SC + 1) % Nsc;
                   };
-               } else if (POV.Host.Type == TARGET_SC) {
+               }
+               else if (POV.Host.Type == TARGET_SC) {
                   do {
                      POV.Host.SC = (POV.Host.SC + Nsc - 1) % Nsc;
                   } while (!SC[POV.Host.SC].Exists);
                   POV.Host.RefOrb = SC[POV.Host.SC].RefOrb;
                   POV.Host.World  = Orb[POV.Host.RefOrb].World;
-               } else {
+               }
+               else {
                   POV.Host.Body = (POV.Host.Body + SC[POV.Host.SC].Nb - 1) %
                                   SC[POV.Host.SC].Nb;
                }
-            } else if (Pick == 6) {
+            }
+            else if (Pick == 6) {
                if (POV.Host.Type == TARGET_WORLD) {
                   do {
                      POV.Host.World = (POV.Host.World + 1) % NWORLD;
                   } while (!World[POV.Host.World].Exists);
-               } else if (POV.Host.Type == TARGET_REFORB ||
-                          POV.Host.Type == TARGET_FRM) {
+               }
+               else if (POV.Host.Type == TARGET_REFORB ||
+                        POV.Host.Type == TARGET_FRM) {
                   POV.Host.RefOrb = (POV.Host.RefOrb + 1) % Norb;
                   POV.Host.World  = Orb[POV.Host.RefOrb].World;
                   while (!(SC[POV.Host.SC].Exists &&
                            SC[POV.Host.SC].RefOrb == POV.Host.RefOrb)) {
                      POV.Host.SC = (POV.Host.SC + 1) % Nsc;
                   };
-               } else if (POV.Host.Type == TARGET_SC) {
+               }
+               else if (POV.Host.Type == TARGET_SC) {
                   do {
                      POV.Host.SC = (POV.Host.SC + 1) % Nsc;
                   } while (!SC[POV.Host.SC].Exists);
                   POV.Host.RefOrb = SC[POV.Host.SC].RefOrb;
                   POV.Host.World  = Orb[POV.Host.RefOrb].World;
-               } else {
+               }
+               else {
                   POV.Host.Body = (POV.Host.Body + 1) % SC[POV.Host.SC].Nb;
                }
-            } else if (Pick == 7) {
+            }
+            else if (Pick == 7) {
                POV.Range *= 1.6;
                if (POV.Range > 10000.0)
                   POV.Range = 10000.0;
-            } else if (Pick == 8) {
+            }
+            else if (Pick == 8) {
                POV.Range *= 0.625;
                if (POV.Range < 1.0)
                   POV.Range = 1.0;
             }
-         } else if (x >= TargetWidget.xmin && x <= TargetWidget.xmax &&
-                    y >= TargetWidget.ymin && y <= TargetWidget.ymax) {
+         }
+         else if (x >= TargetWidget.xmin && x <= TargetWidget.xmax &&
+                  y >= TargetWidget.ymin && y <= TargetWidget.ymax) {
             /* Target Widget */
             Pick = 100; /* Bogus value */
             for (i = 0; i < TargetWidget.Nspot; i++) {
@@ -390,57 +416,68 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                   TargetWidget.Spot[i].Selected = 0;
                TargetWidget.Spot[Pick].Selected = 1;
                POV.Target.Type                  = Pick;
-            } else if (Pick == 5) {
+            }
+            else if (Pick == 5) {
                if (POV.Target.Type == TARGET_WORLD) {
                   do {
                      POV.Target.World =
                          (POV.Target.World + NWORLD - 1) % NWORLD;
                   } while (!World[POV.Target.World].Exists);
-               } else if (POV.Target.Type == TARGET_REFORB ||
-                          POV.Target.Type == TARGET_FRM) {
+               }
+               else if (POV.Target.Type == TARGET_REFORB ||
+                        POV.Target.Type == TARGET_FRM) {
                   POV.Target.RefOrb = (POV.Target.RefOrb + Norb - 1) % Norb;
                   POV.Target.World  = Orb[POV.Target.RefOrb].World;
-               } else if (POV.Target.Type == TARGET_SC) {
+               }
+               else if (POV.Target.Type == TARGET_SC) {
                   do {
                      POV.Target.SC = (POV.Target.SC + Nsc - 1) % Nsc;
                   } while (!SC[POV.Target.SC].Exists);
                   POV.Target.RefOrb = SC[POV.Target.SC].RefOrb;
                   POV.Target.World  = Orb[POV.Target.RefOrb].World;
-               } else {
+               }
+               else {
                   POV.Target.Body =
                       (POV.Target.Body + SC[POV.Target.SC].Nb - 1) %
                       SC[POV.Target.SC].Nb;
                }
-            } else if (Pick == 6) {
+            }
+            else if (Pick == 6) {
                if (POV.Target.Type == TARGET_WORLD) {
                   do {
                      POV.Target.World = (POV.Target.World + 1) % NWORLD;
                   } while (!World[POV.Target.World].Exists);
-               } else if (POV.Target.Type == TARGET_REFORB ||
-                          POV.Target.Type == TARGET_FRM) {
+               }
+               else if (POV.Target.Type == TARGET_REFORB ||
+                        POV.Target.Type == TARGET_FRM) {
                   POV.Target.RefOrb = (POV.Target.RefOrb + 1) % Norb;
                   POV.Target.World  = Orb[POV.Target.RefOrb].World;
-               } else if (POV.Target.Type == TARGET_SC) {
+               }
+               else if (POV.Target.Type == TARGET_SC) {
                   do {
                      POV.Target.SC = (POV.Target.SC + 1) % Nsc;
                   } while (!SC[POV.Target.SC].Exists);
                   POV.Target.RefOrb = SC[POV.Target.SC].RefOrb;
                   POV.Target.World  = Orb[POV.Target.RefOrb].World;
-               } else {
+               }
+               else {
                   POV.Target.Body =
                       (POV.Target.Body + 1) % SC[POV.Target.SC].Nb;
                }
-            } else if (Pick == 7) {
+            }
+            else if (Pick == 7) {
                POV.Range *= 1.6;
                if (POV.Range > 10000.0)
                   POV.Range = 10000.0;
-            } else if (Pick == 8) {
+            }
+            else if (Pick == 8) {
                POV.Range *= 0.625;
                if (POV.Range < 1.0)
                   POV.Range = 1.0;
             }
-         } else if (x >= CamShowWidget.xmin && x <= CamShowWidget.xmax &&
-                    y >= CamShowWidget.ymin && y <= CamShowWidget.ymax) {
+         }
+         else if (x >= CamShowWidget.xmin && x <= CamShowWidget.xmax &&
+                  y >= CamShowWidget.ymin && y <= CamShowWidget.ymax) {
             /* CamShow Widget */
             Pick = 100; /* Bogus value */
             for (i = 0; i < CamShowWidget.Nspot; i++) {
@@ -458,7 +495,8 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                   CamShow[Pick] = 1;
             }
             ShadowsEnabled = CamShow[CAM_SHADOWS];
-         } else {
+         }
+         else {
             /* Click and Drag POV */
             if (!PauseFlag)
                PausedByMouse = 1;
@@ -470,7 +508,8 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
             MouseClickY = y;
          }
          /* printf("Mouse Down\n"); */
-      } else { /* UP */
+      }
+      else { /* UP */
          /* printf("Mouse Up\n"); */
          if (PausedByMouse)
             PauseFlag = 0;
@@ -487,7 +526,8 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
    }
 }
 /**********************************************************************/
-void CamMouseMotionHandler(GLFWwindow *Window, double x, double y) {
+void CamMouseMotionHandler(GLFWwindow *Window, double x, double y)
+{
    if (MouseDown && POV.Mode == TRACK_HOST) {
       POV.w[1] = MouseScaleFactor * (x - MouseClickX);
       POV.w[0] = MouseScaleFactor * (y - MouseClickY);
@@ -496,7 +536,8 @@ void CamMouseMotionHandler(GLFWwindow *Window, double x, double y) {
 }
 /**********************************************************************/
 void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
-                              int Mods) {
+                              int Mods)
+{
    struct SpotType *S;
    long i, j, Pick;
    double rwn[3], rwh[3], rw[3], xw, yw, dx, dy, d, LPrh[3];
@@ -541,7 +582,8 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                case 2: /* Pan Up */
                   if (O->Regime == ORB_CENTRAL) {
                      O->PosN[1] += 0.5 * O->Radius;
-                  } else {
+                  }
+                  else {
                      for (i = 0; i < 3; i++)
                         O->PosN[i] +=
                             0.5 * O->Radius * LagSys[O->LagSys].CLN[1][i];
@@ -602,7 +644,8 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                      MxV(O->CNH, rwh, rwn);
                      for (i = 0; i < 3; i++)
                         rw[i] = rwn[i] - O->PosN[i];
-                  } else {
+                  }
+                  else {
                      LS = &LagSys[O->LagSys];
                      LP = &LS->LP[O->LP];
                      for (i = 0; i < 3; i++)
@@ -653,7 +696,8 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                      if (O->Regime == ORB_CENTRAL) {
                         for (i = 0; i < 3; i++)
                            rw[i] = rwn[i] - O->PosN[i];
-                     } else {
+                     }
+                     else {
                         for (i = 0; i < 3; i++)
                            rwn[i] -=
                                LagSys[O->LagSys].LP[O->LP].PosN[i] + O->PosN[i];
@@ -690,7 +734,8 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 }
 /**********************************************************************/
 void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
-                              int Mods) {
+                              int Mods)
+{
    struct SpotType *S;
    struct WidgetType *W;
    long i, Pick;
@@ -723,7 +768,8 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
                      if (i != Pick)
                         W->Spot[i].Selected = 0;
                   }
-               } else {
+               }
+               else {
                   for (i = 6; i < 10; i++) {
                      if (i != Pick)
                         W->Spot[i].Selected = 0;
@@ -749,7 +795,8 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 
                if (W->Spot[Pick].Selected == 0) {
                   W->Spot[Pick].Selected = 1;
-               } else {
+               }
+               else {
                   W->Spot[Pick].Selected = 0;
                }
             }
@@ -772,7 +819,8 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 
                if (W->Spot[Pick].Selected == 0) {
                   W->Spot[Pick].Selected = 1;
-               } else {
+               }
+               else {
                   W->Spot[Pick].Selected = 0;
                }
             }
@@ -795,7 +843,8 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 
                if (W->Spot[Pick].Selected == 0) {
                   W->Spot[Pick].Selected = 1;
-               } else {
+               }
+               else {
                   W->Spot[Pick].Selected = 0;
                }
             }
@@ -818,7 +867,8 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 
                if (W->Spot[Pick].Selected == 0) {
                   W->Spot[Pick].Selected = 1;
-               } else {
+               }
+               else {
                   W->Spot[Pick].Selected = 0;
                }
             }
@@ -841,7 +891,8 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 
                if (W->Spot[Pick].Selected == 0) {
                   W->Spot[Pick].Selected = 1;
-               } else {
+               }
+               else {
                   W->Spot[Pick].Selected = 0;
                }
             }
@@ -850,26 +901,30 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
    }
 }
 /**********************************************************************/
-void FrameReshape(GLFWwindow *Window, int width, int height) {
+void FrameReshape(GLFWwindow *Window, int width, int height)
+{
    glfwMakeContextCurrent(Window);
    glViewport(0, 0, width, height);
 }
 /**********************************************************************/
-void CamReshape(GLFWwindow *Window, int width, int height) {
+void CamReshape(GLFWwindow *Window, int width, int height)
+{
    glfwMakeContextCurrent(Window);
    CamWidth  = width;
    CamHeight = height;
    SetupViewVolume(width, height);
 }
 /**********************************************************************/
-void MapReshape(GLFWwindow *Window, int width, int height) {
+void MapReshape(GLFWwindow *Window, int width, int height)
+{
    glfwMakeContextCurrent(Window);
    MapWidth  = width;
    MapHeight = height;
    glfwSetWindowSize(MapWindow, width, height);
 }
 /**********************************************************************/
-void OrreryReshape(GLFWwindow *Window, int width, int height) {
+void OrreryReshape(GLFWwindow *Window, int width, int height)
+{
    struct OrreryPOVType *O;
    O            = &Orrery;
    OrreryWidth  = width;
@@ -879,7 +934,8 @@ void OrreryReshape(GLFWwindow *Window, int width, int height) {
    O->Radius = ((double)OrreryWidth) / (2.0 * 80.0) * O->Scale[O->Zoom];
 }
 /**********************************************************************/
-void SphereReshape(GLFWwindow *Window, int width, int height) {
+void SphereReshape(GLFWwindow *Window, int width, int height)
+{
    double ymin;
 
    if (width >= 512)
@@ -903,7 +959,8 @@ void SphereReshape(GLFWwindow *Window, int width, int height) {
    InitSphereWidgets();
 }
 /*********************************************************************/
-void InitCamWindow(void) {
+void InitCamWindow(void)
+{
 
 #ifdef __APPLE__
    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
@@ -984,7 +1041,8 @@ void InitCamWindow(void) {
    printf("Done Initializing Cam Window\n");
 }
 /*********************************************************************/
-void InitMapWindow(void) {
+void InitMapWindow(void)
+{
    GLfloat White[4] = {1.0, 1.0, 1.0, 1.0};
    GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
    long Isc, Iw;
@@ -1065,7 +1123,8 @@ void InitMapWindow(void) {
 #endif
 }
 /*********************************************************************/
-void InitOrreryWindow(void) {
+void InitOrreryWindow(void)
+{
    GLfloat White[4]       = {1.0, 1.0, 1.0, 1.0};
    GLfloat Black[4]       = {0.0, 0.0, 0.0, 1.0};
    char ScaleLabel[30][8] = {
@@ -1154,7 +1213,8 @@ void InitOrreryWindow(void) {
    glEndList();
 }
 /*********************************************************************/
-void InitSphereWindow(void) {
+void InitSphereWindow(void)
+{
    double ymin;
 
    NumSphereWindowMenuLines = 6;
@@ -1201,7 +1261,8 @@ void InitSphereWindow(void) {
    InitSphereWidgets();
 }
 /*********************************************************************/
-long GuiCmdInterpreter(char CmdLine[512], double *CmdTime) {
+long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
+{
    char response[120];
    char FrameChar;
    double Ang1, Ang2, Ang3;
@@ -1342,7 +1403,8 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime) {
    return (NewCmdProcessed);
 }
 /*********************************************************************/
-void HandoffToGui(int argc, char **argv) {
+void HandoffToGui(int argc, char **argv)
+{
    PausedByMouse = 0;
 
    ReadGraphicsInpFile();

@@ -36,7 +36,8 @@ static NE_TimeTickCallbackId (*NE_bus_add_time_tick_callback)(
     NE_Bus *, NE_TimeTickCallbackFunction) =
     NULL; /* Pointer to add time tick callback function from the library */
 
-static void ReleaseHandle(void) {
+static void ReleaseHandle(void)
+{
    if (NOSHandle != NULL)
       dlclose(NOSHandle);
 }
@@ -48,7 +49,8 @@ static void TimeTickCallback(NE_SimTime time);
 #endif
 
 void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
-              long *minute, double *second) {
+              long *minute, double *second)
+{
 
 #if defined(_WIN32)
    printf("NOS3Time:  NOS3 time mode is not supported on _WIN32\n");
@@ -87,7 +89,8 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
 }
 
 #if defined(__linux__)
-static void ReadNos3InpFile(void) {
+static void ReadNos3InpFile(void)
+{
    static long First = 1;
    if (First) {
       First = 0;
@@ -102,7 +105,8 @@ static void ReadNos3InpFile(void) {
    }
 }
 
-static void InitializeTimeNode(void) {
+static void InitializeTimeNode(void)
+{
    char *error;
    NE_Bus *(*NE_create_bus2)(const char *, const char *);
 
@@ -147,7 +151,8 @@ static void InitializeTimeNode(void) {
    return;
 }
 
-static void TimeTickCallback(NE_SimTime time) {
+static void TimeTickCallback(NE_SimTime time)
+{
    if (sem_post(&sem) == -1) {
       perror("NOS3Time error on sem_post");
       exit(2);

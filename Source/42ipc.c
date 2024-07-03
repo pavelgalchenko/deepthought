@@ -38,7 +38,8 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled);
 void ReadFromSocket(SOCKET Socket, long EchoEnabled);
 
 /*********************************************************************/
-void InitInterProcessComm(void) {
+void InitInterProcessComm(void)
+{
    struct fy_document *fyd =
        fy_document_build_and_check(NULL, InOutPath, "Inp_IPC.yaml");
    struct fy_node *root = fy_document_root(fyd);
@@ -50,7 +51,8 @@ void InitInterProcessComm(void) {
 
    long Iipc                = 0;
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(node, iterNode) {
+   WHILE_FY_ITER(node, iterNode)
+   {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/IPC");
       struct IpcType *I       = &IPC[Iipc];
 
@@ -73,7 +75,8 @@ void InitInterProcessComm(void) {
       I->Prefix                  = (char **)calloc(I->Nprefix, sizeof(char *));
       struct fy_node *prefixIterNode = NULL;
       long Ipx                       = 0;
-      WHILE_FY_ITER(prefixNode, prefixIterNode) {
+      WHILE_FY_ITER(prefixNode, prefixIterNode)
+      {
          size_t prefLen     = 0;
          const char *prefix = fy_node_get_scalar(prefixIterNode, &prefLen);
          I->Prefix[Ipx]     = (char *)calloc(prefLen + 1, sizeof(char));
@@ -86,7 +89,8 @@ void InitInterProcessComm(void) {
       if (I->Mode == IPC_TX) {
          if (I->SocketRole == IPC_SERVER) {
             I->Socket = InitSocketServer(I->Port, I->AllowBlocking);
-         } else if (I->SocketRole == IPC_CLIENT) {
+         }
+         else if (I->SocketRole == IPC_CLIENT) {
             I->Socket =
                 InitSocketClient(I->HostName, I->Port, I->AllowBlocking);
          }
@@ -105,10 +109,12 @@ void InitInterProcessComm(void) {
                    I->SocketRole, Iipc);
             exit(1);
          }
-      } else if (I->Mode == IPC_RX) {
+      }
+      else if (I->Mode == IPC_RX) {
          if (I->SocketRole == IPC_SERVER) {
             I->Socket = InitSocketServer(I->Port, I->AllowBlocking);
-         } else if (I->SocketRole == IPC_CLIENT) {
+         }
+         else if (I->SocketRole == IPC_CLIENT) {
             I->Socket =
                 InitSocketClient(I->HostName, I->Port, I->AllowBlocking);
          }
@@ -127,11 +133,12 @@ void InitInterProcessComm(void) {
                    I->SocketRole, Iipc);
             exit(1);
          }
-
-      } else if (I->Mode == IPC_TXRX) {
+      }
+      else if (I->Mode == IPC_TXRX) {
          if (I->SocketRole == IPC_SERVER) {
             I->Socket = InitSocketServer(I->Port, I->AllowBlocking);
-         } else if (I->SocketRole == IPC_CLIENT) {
+         }
+         else if (I->SocketRole == IPC_CLIENT) {
             I->Socket =
                 InitSocketClient(I->HostName, I->Port, I->AllowBlocking);
          }
@@ -150,14 +157,17 @@ void InitInterProcessComm(void) {
                    I->SocketRole, Iipc);
             exit(1);
          }
-
-      } else if (I->Mode == IPC_ACS) {
+      }
+      else if (I->Mode == IPC_ACS) {
          I->Socket = InitSocketServer(I->Port, I->AllowBlocking);
-      } else if (I->Mode == IPC_WRITEFILE) {
+      }
+      else if (I->Mode == IPC_WRITEFILE) {
          I->File = FileOpen(InOutPath, FileName, "wt");
-      } else if (I->Mode == IPC_READFILE) {
+      }
+      else if (I->Mode == IPC_READFILE) {
          I->File = FileOpen(InOutPath, FileName, "rt");
-      } else if (I->Mode == IPC_FFTB) {
+      }
+      else if (I->Mode == IPC_FFTB) {
          I->SocketRole = IPC_CLIENT; /* Spirent is Host */
          I->Socket = InitSocketClient(I->HostName, I->Port, I->AllowBlocking);
       }
@@ -166,7 +176,8 @@ void InitInterProcessComm(void) {
    fy_document_destroy(fyd);
 }
 /*********************************************************************/
-void InterProcessComm(void) {
+void InterProcessComm(void)
+{
    struct IpcType *I;
    long Iipc;
 
@@ -182,7 +193,8 @@ void InterProcessComm(void) {
                          I->EchoEnabled);
          }
 #endif
-      } else if (I->Mode == IPC_RX) {
+      }
+      else if (I->Mode == IPC_RX) {
          if (I->SocketRole != IPC_GMSEC_CLIENT) {
             ReadFromSocket(I->Socket, I->EchoEnabled);
          }
@@ -191,7 +203,8 @@ void InterProcessComm(void) {
             ReadFromGmsec(ConnMgr, status, I->EchoEnabled);
          }
 #endif
-      } else if (I->Mode == IPC_TXRX) {
+      }
+      else if (I->Mode == IPC_TXRX) {
          if (I->SocketRole != IPC_GMSEC_CLIENT) {
             WriteToSocket(I->Socket, I->Prefix, I->Nprefix, I->EchoEnabled);
             ReadFromSocket(I->Socket, I->EchoEnabled);
@@ -203,9 +216,11 @@ void InterProcessComm(void) {
             ReadFromGmsec(ConnMgr, status, I->EchoEnabled);
          }
 #endif
-      } else if (I->Mode == IPC_WRITEFILE) {
+      }
+      else if (I->Mode == IPC_WRITEFILE) {
          WriteToFile(I->File, I->Prefix, I->Nprefix, I->EchoEnabled);
-      } else if (I->Mode == IPC_READFILE) {
+      }
+      else if (I->Mode == IPC_READFILE) {
          ReadFromFile(I->File, I->EchoEnabled);
       }
 #ifdef _ENABLE_FFTB_CODE_

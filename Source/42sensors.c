@@ -29,7 +29,8 @@
 /*  gravity terms apply equally to A and B[0].  (Assuming gravity-    */
 /*  gradient from non-spherical primary and 3rd-body forces is        */
 /*  negligible.)  Surface forces are included in S->         */
-void AccelerometerModel(struct SCType *S) {
+void AccelerometerModel(struct SCType *S)
+{
    struct AccelType *A;
    struct BodyType *B;
    struct NodeType *N;
@@ -105,7 +106,8 @@ void AccelerometerModel(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void GyroModel(struct SCType *S) {
+void GyroModel(struct SCType *S)
+{
    struct GyroType *G;
    struct BodyType *B;
    struct NodeType *N;
@@ -148,7 +150,8 @@ void GyroModel(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void MagnetometerModel(struct SCType *S) {
+void MagnetometerModel(struct SCType *S)
+{
    struct MagnetometerType *MAG;
    long Counts, Imag;
    double Signal;
@@ -172,7 +175,8 @@ void MagnetometerModel(struct SCType *S) {
 }
 /**********************************************************************/
 /* This model credit Paul McKee, summer intern 2018                   */
-void CssModel(struct SCType *S) {
+void CssModel(struct SCType *S)
+{
    struct CssType *CSS;
    long Counts, Icss;
    double Signal;
@@ -189,7 +193,8 @@ void CssModel(struct SCType *S) {
          if (S->Eclipse) {
             CSS->Valid = FALSE;
             CSS->Illum = 0.0;
-         } else {
+         }
+         else {
             MxV(S->B[CSS->Body].CN, S->svn, svb);
             SoA = VoV(svb, CSS->Axis);
             if (SoA > CSS->CosFov) {
@@ -198,7 +203,8 @@ void CssModel(struct SCType *S) {
                Signal     = CSS->Scale * SoA;
                Counts     = (long)(Signal / CSS->Quant + 0.5);
                CSS->Illum = ((double)Counts) * CSS->Quant;
-            } else {
+            }
+            else {
                /* Sun not in FOV */
                CSS->Valid = FALSE;
                CSS->Illum = 0.0;
@@ -223,7 +229,8 @@ void CssModel(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FssModel(struct SCType *S) {
+void FssModel(struct SCType *S)
+{
    struct FssType *FSS;
    static struct RandomProcessType *FssNoise;
    double svs[3], SunAng[2], Signal;
@@ -245,7 +252,8 @@ void FssModel(struct SCType *S) {
 
          if (S->Eclipse) {
             FSS->Valid = FALSE;
-         } else {
+         }
+         else {
             MxV(FSS->CB, S->svb, svs);
             SunAng[0] = atan2(svs[FSS->H_Axis], svs[FSS->BoreAxis]);
             SunAng[1] = atan2(svs[FSS->V_Axis], svs[FSS->BoreAxis]);
@@ -253,7 +261,8 @@ void FssModel(struct SCType *S) {
                 fabs(SunAng[1]) < FSS->FovHalfAng[1] &&
                 svs[FSS->BoreAxis] > 0.0) {
                FSS->Valid = TRUE;
-            } else {
+            }
+            else {
                FSS->Valid = FALSE;
             }
          }
@@ -264,7 +273,8 @@ void FssModel(struct SCType *S) {
                Counts         = (long)(Signal / FSS->Quant + 0.5);
                FSS->SunAng[i] = ((double)Counts) * FSS->Quant;
             }
-         } else {
+         }
+         else {
             FSS->SunAng[0] = 0.0;
             FSS->SunAng[1] = 0.0;
          }
@@ -276,7 +286,8 @@ void FssModel(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void StarTrackerModel(struct SCType *S) {
+void StarTrackerModel(struct SCType *S)
+{
    struct StarTrackerType *ST;
    struct NodeType *N;
    static struct RandomProcessType *StNoise;
@@ -345,7 +356,8 @@ void StarTrackerModel(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void GpsModel(struct SCType *S) {
+void GpsModel(struct SCType *S)
+{
    struct GpsType *GPS;
    static struct RandomProcessType *GpsNoise;
    double PosW[3], MagPosW;
@@ -409,7 +421,8 @@ void GpsModel(struct SCType *S) {
             S->AC.GPS[Ig].WgsAlt = GPS->WgsAlt;
          }
       }
-   } else {
+   }
+   else {
       for (Ig = 0; Ig < S->Ngps; Ig++)
          S->GPS[Ig].Valid = FALSE;
    }
@@ -417,7 +430,8 @@ void GpsModel(struct SCType *S) {
 /**********************************************************************/
 /*  This function is called at the simulation rate.  Sub-sampling of  */
 /*  sensors should be done on a case-by-case basis.                   */
-void Sensors(struct SCType *S) {
+void Sensors(struct SCType *S)
+{
 
    double evn[3], evb[3];
    long i, j, k, DOF;
@@ -442,7 +456,8 @@ void Sensors(struct SCType *S) {
    if (S->Ngyro == 0) {
       for (i = 0; i < 3; i++)
          AC->wbn[i] = S->B[0].wn[i];
-   } else {
+   }
+   else {
       GyroModel(S);
    }
 
@@ -452,10 +467,12 @@ void Sensors(struct SCType *S) {
       if (S->Nmag == 0) {
          for (i = 0; i < 3; i++)
             AC->bvb[i] = S->bvb[i];
-      } else {
+      }
+      else {
          MagnetometerModel(S);
       }
-   } else {
+   }
+   else {
       AC->MagValid = FALSE;
    }
 
@@ -463,7 +480,8 @@ void Sensors(struct SCType *S) {
    if (S->Ncss == 0 && S->Nfss == 0) {
       if (S->Eclipse) {
          AC->SunValid = FALSE;
-      } else {
+      }
+      else {
          AC->SunValid = TRUE;
          MxV(S->B[0].CN, S->svn, AC->svb);
       }
@@ -479,7 +497,8 @@ void Sensors(struct SCType *S) {
    if (S->Nst == 0) {
       for (i = 0; i < 4; i++)
          AC->qbn[i] = S->B[0].qn[i];
-   } else {
+   }
+   else {
       StarTrackerModel(S);
    }
 
@@ -490,7 +509,8 @@ void Sensors(struct SCType *S) {
          AC->PosN[i] = S->PosN[i];
          AC->VelN[i] = S->VelN[i];
       }
-   } else {
+   }
+   else {
       GpsModel(S);
    }
 
@@ -503,7 +523,8 @@ void Sensors(struct SCType *S) {
       AC->ES.Valid = TRUE;
       AC->ES.Roll  = evb[1];
       AC->ES.Pitch = -evb[0];
-   } else {
+   }
+   else {
       AC->ES.Valid = FALSE;
       AC->ES.Roll  = 0.0;
       AC->ES.Pitch = 0.0;

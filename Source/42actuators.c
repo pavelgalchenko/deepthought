@@ -20,12 +20,14 @@
 */
 
 /**********************************************************************/
-double ViscousFriction(struct WhlType *W) {
+double ViscousFriction(struct WhlType *W)
+{
    return (-W->ViscCoef * W->w);
 }
 /**********************************************************************/
 /* Ref: Lugre Friction Model.pdf                                      */
-void WhlDrag(struct WhlType *W) {
+void WhlDrag(struct WhlType *W)
+{
    double v0, g, m, vd, zdot;
 
    v0 = W->w / W->StribeckZone;
@@ -34,7 +36,8 @@ void WhlDrag(struct WhlType *W) {
    if (m * DTSIM > 1.0) {
       zdot       = (g * signum(W->w) / W->LugreSpringCoef - W->z) / DTSIM;
       W->FricTrq = -g * signum(W->w) + ViscousFriction(W);
-   } else {
+   }
+   else {
       zdot       = W->w - m * W->z;
       vd         = W->w / W->LugreDampZone;
       W->FricTrq = -W->LugreSpringCoef * W->z -
@@ -44,7 +47,8 @@ void WhlDrag(struct WhlType *W) {
    W->z += zdot * DTSIM;
 }
 /**********************************************************************/
-void WhlModel(struct WhlType *W, struct SCType *S) {
+void WhlModel(struct WhlType *W, struct SCType *S)
+{
    struct BodyType *B;
    struct NodeType *N;
    long i;
@@ -71,7 +75,8 @@ void WhlModel(struct WhlType *W, struct SCType *S) {
    }
 }
 /**********************************************************************/
-void MTBModel(struct MTBType *MTB, double bvb[3]) {
+void MTBModel(struct MTBType *MTB, double bvb[3])
+{
 
    MTB->M = MTB->Mcmd;
    if (MTB->M < -MTB->Mmax)
@@ -84,7 +89,8 @@ void MTBModel(struct MTBType *MTB, double bvb[3]) {
    MTB->Trq[2] = MTB->M * (MTB->A[0] * bvb[1] - MTB->A[1] * bvb[0]);
 }
 /**********************************************************************/
-void ThrModel(struct ThrType *Thr, struct SCType *S, double DT) {
+void ThrModel(struct ThrType *Thr, struct SCType *S, double DT)
+{
    struct BodyType *B;
    struct NodeType *N;
    long i;
@@ -93,11 +99,13 @@ void ThrModel(struct ThrType *Thr, struct SCType *S, double DT) {
       if (Thr->PulseWidthCmd > DT) {
          Thr->F              = Thr->Fmax;
          Thr->PulseWidthCmd -= DT;
-      } else {
+      }
+      else {
          Thr->F             = (Thr->PulseWidthCmd / DT) * Thr->Fmax;
          Thr->PulseWidthCmd = 0.0;
       }
-   } else { /* THR_PROPORTIONAL */
+   }
+   else { /* THR_PROPORTIONAL */
       Thr->F = Thr->ThrustLevelCmd * Thr->Fmax;
    }
 
@@ -123,7 +131,8 @@ void ThrModel(struct ThrType *Thr, struct SCType *S, double DT) {
    }
 }
 /**********************************************************************/
-void ThrusterPlumeFrcTrq(struct SCType *S) {
+void ThrusterPlumeFrcTrq(struct SCType *S)
+{
    /* Plume Parameters */
    double Temp = 100.0; /* WAG */
    double R    = 8.134; /* J/(K*mol) */
@@ -219,7 +228,8 @@ void ThrusterPlumeFrcTrq(struct SCType *S) {
 /*  This function is called at the simulation rate.  Sub-sampling of  */
 /*  actuators should be done on a case-by-case basis.                 */
 
-void Actuators(struct SCType *S) {
+void Actuators(struct SCType *S)
+{
 
    struct NodeType *N;
    long i, j;
@@ -300,7 +310,8 @@ void Actuators(struct SCType *S) {
          if (Sh->FrcTrq == FORCE) {
             for (j = 0; j < 3; j++)
                N->Frc[j] += Sh->Output * Sh->Axis[j];
-         } else {
+         }
+         else {
             for (j = 0; j < 3; j++)
                N->Trq[j] += Sh->Output * Sh->Axis[j];
          }

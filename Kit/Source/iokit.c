@@ -19,7 +19,8 @@
 */
 /**********************************************************************/
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
-                                                char *path, char *fileName) {
+                                                char *path, char *fileName)
+{
    FILE *f                 = FileOpen(path, fileName, "r");
    struct fy_document *fyd = fy_document_build_from_fp(NULL, f);
    fclose(f);
@@ -36,18 +37,21 @@ struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
    return fyd;
 }
 /**********************************************************************/
-struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path) {
+struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path)
+{
    return (fy_node_by_path(node, path, -1, FYNWF_PTR_YAML));
 }
 /**********************************************************************/
-long getYAMLBool(struct fy_node *node) {
+long getYAMLBool(struct fy_node *node)
+{
    size_t strLen    = 0;
    const char *data = fy_node_get_scalar(node, &strLen);
    return !strncasecmp(data, "true", strLen);
 }
 /**********************************************************************/
 long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
-                             double dest[]) {
+                             double dest[])
+{
    long i                   = 0;
    struct fy_node *iterNode = NULL;
    while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
@@ -67,7 +71,8 @@ long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
 }
 /**********************************************************************/
 long assignYAMLToFloatArray(const long n, struct fy_node *yamlSequence,
-                            float dest[]) {
+                            float dest[])
+{
    long i                   = 0;
    struct fy_node *iterNode = NULL;
    while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
@@ -87,7 +92,8 @@ long assignYAMLToFloatArray(const long n, struct fy_node *yamlSequence,
 }
 /**********************************************************************/
 long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
-                           long dest[]) {
+                           long dest[])
+{
    long i                   = 0;
    struct fy_node *iterNode = NULL;
    while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
@@ -106,7 +112,8 @@ long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
 }
 /**********************************************************************/
 long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
-                           long dest[]) {
+                           long dest[])
+{
    long i                   = 0;
    struct fy_node *iterNode = NULL;
    while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
@@ -118,8 +125,8 @@ long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
    return (i);
 }
 /**********************************************************************/
-long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3],
-                        long *seq) {
+long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq)
+{
    long i = 0;
    i      = assignYAMLToDoubleArray(
        3, fy_node_by_path(yamlEuler, "/Angles", -1, FYNWF_PTR_YAML), angles);
@@ -133,7 +140,8 @@ long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3],
    return (i);
 }
 /**********************************************************************/
-FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode) {
+FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
+{
    FILE *FilePtr;
    char FileName[1024];
 
@@ -147,7 +155,8 @@ FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode) {
    return (FilePtr);
 }
 /**********************************************************************/
-void ByteSwapDouble(double *A) {
+void ByteSwapDouble(double *A)
+{
    char fwd[8], bak[8];
    long i;
 
@@ -160,7 +169,8 @@ void ByteSwapDouble(double *A) {
 /*  This function cribbed from an OpenCL example                      */
 /*  on the Apple developer site                                       */
 int FileToString(const char *file_name, char **result_string,
-                 size_t *string_len) {
+                 size_t *string_len)
+{
    int fd;
    size_t file_len;
    struct stat file_status;
@@ -192,7 +202,8 @@ int FileToString(const char *file_name, char **result_string,
    return 0;
 }
 /**********************************************************************/
-SOCKET InitSocketServer(int Port, int AllowBlocking) {
+SOCKET InitSocketServer(int Port, int AllowBlocking)
+{
 #if defined(_WIN32)
 
    WSADATA wsa;
@@ -303,7 +314,8 @@ SOCKET InitSocketServer(int Port, int AllowBlocking) {
 #endif
 }
 /**********************************************************************/
-SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking) {
+SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
+{
 #if defined(_WIN32)
 
    WSADATA wsa; /* winsock */

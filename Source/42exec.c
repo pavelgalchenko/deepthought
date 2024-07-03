@@ -26,7 +26,8 @@ extern int HandoffToGui(int argc, char **argv);
 #endif
 
 /**********************************************************************/
-void ReportProgress(void) {
+void ReportProgress(void)
+{
 #define PROGRESSPERCENT 10
 
    static long ProgressPercent = 0;
@@ -46,7 +47,8 @@ void ReportProgress(void) {
    }
 }
 /**********************************************************************/
-void ManageFlags(void) {
+void ManageFlags(void)
+{
    long nout, GLnout;
    static long iout   = 1000000;
    static long GLiout = 1000000;
@@ -58,18 +60,21 @@ void ManageFlags(void) {
    if (iout >= nout) {
       iout    = 0;
       OutFlag = TRUE;
-   } else
+   }
+   else
       OutFlag = FALSE;
 
    GLiout++;
    if (GLiout >= GLnout) {
       GLiout    = 0;
       GLOutFlag = TRUE;
-   } else
+   }
+   else
       GLOutFlag = FALSE;
 }
 /**********************************************************************/
-long AdvanceTime(void) {
+long AdvanceTime(void)
+{
    static long itime    = 0;
    static long PrevTick = 0;
    static long CurrTick = 1;
@@ -186,7 +191,8 @@ long AdvanceTime(void) {
 /*********************************************************************/
 /* The SC Bounding Box is referred to the origin of B0,              */
 /* and expressed in B0                                               */
-void UpdateScBoundingBox(struct SCType *S) {
+void UpdateScBoundingBox(struct SCType *S)
+{
 #define REFPT_CM 0
    struct BodyType *B, *B0;
    struct BoundingBoxType *BBox;
@@ -231,7 +237,8 @@ void UpdateScBoundingBox(struct SCType *S) {
 #undef REFPT_CM
 }
 /**********************************************************************/
-void ManageBoundingBoxes(void) {
+void ManageBoundingBoxes(void)
+{
    static long BBoxCtr = 100;
    long Isc;
    struct SCType *S;
@@ -249,7 +256,8 @@ void ManageBoundingBoxes(void) {
 }
 /**********************************************************************/
 /* Zero forces and torques                                            */
-void ZeroFrcTrq(void) {
+void ZeroFrcTrq(void)
+{
    struct SCType *S;
    struct BodyType *B;
    struct JointType *G;
@@ -298,7 +306,8 @@ void ZeroFrcTrq(void) {
    }
 }
 /**********************************************************************/
-long SimStep(void) {
+long SimStep(void)
+{
    long Isc;
    static long First = 1;
    struct SCType *S;
@@ -374,7 +383,8 @@ long SimStep(void) {
    return (SimComplete);
 }
 /**********************************************************************/
-int exec(int argc, char **argv) {
+int exec(int argc, char **argv)
+{
    long Done = 0;
 
    MapTime      = 0.0;
@@ -394,7 +404,8 @@ int exec(int argc, char **argv) {
 #ifdef _ENABLE_GUI_
    if (GLEnable) {
       HandoffToGui(argc, argv);
-   } else {
+   }
+   else {
       while (!Done) {
          Done = SimStep();
       }

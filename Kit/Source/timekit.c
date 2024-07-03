@@ -21,14 +21,16 @@
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-double TimeToJD(double SecSinceJ2000) {
+double TimeToJD(double SecSinceJ2000)
+{
    return (SecSinceJ2000 / 86400.0 + 2451545.0);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-double JDToTime(double JD) {
+double JDToTime(double JD)
+{
    return ((JD - 2451545.0) * 86400.0);
 }
 /**********************************************************************/
@@ -40,7 +42,8 @@ double JDToTime(double JD) {
 /*  what you put in.                                                  */
 
 double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
-                  double Second) {
+                  double Second)
+{
    long A, B;
    double Days;
 
@@ -68,7 +71,8 @@ double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
 double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
-                double Second) {
+                double Second)
+{
    long A, B;
    double JD;
 
@@ -93,7 +97,8 @@ double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
 void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
-              long *Minute, double *Second) {
+              long *Minute, double *Second)
+{
    double Z, F, A, B, C, D, E, alpha;
    double FD;
 
@@ -102,7 +107,8 @@ void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
 
    if (Z < 2299161.0) {
       A = Z;
-   } else {
+   }
+   else {
       alpha = floor((Z - 1867216.25) / 36524.25);
       A     = Z + 1.0 + alpha - floor(alpha / 4.0);
    }
@@ -118,7 +124,8 @@ void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
    if (E < 14.0) {
       *Month = (long)(E - 1.0);
       *Year  = (long)(C - 4716.0);
-   } else {
+   }
+   else {
       *Month = (long)(E - 13.0);
       *Year  = (long)(C - 4715.0);
    }
@@ -140,7 +147,8 @@ void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
 /*   This function is agnostic to the TT-to-UTC offset.  You get out  */
 /*   what you put in.                                                 */
 void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
-                long *Minute, double *Second, double LSB) {
+                long *Minute, double *Second, double LSB)
+{
    double Z, F, A, B, C, D, E, alpha;
    double FD, JD;
 
@@ -151,7 +159,8 @@ void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
 
    if (Z < 2299161.0) {
       A = Z;
-   } else {
+   }
+   else {
       alpha = floor((Z - 1867216.25) / 36524.25);
       A     = Z + 1.0 + alpha - floor(alpha / 4.0);
    }
@@ -167,7 +176,8 @@ void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
    if (E < 14.0) {
       *Month = (long)(E - 1.0);
       *Year  = (long)(C - 4716.0);
-   } else {
+   }
+   else {
       *Month = (long)(E - 13.0);
       *Year  = (long)(C - 4715.0);
    }
@@ -193,12 +203,14 @@ void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*   This function is agnostic to the TT-to-UTC offset.  You get out  */
 /*   what you put in.                                                 */
-long MD2DOY(long Year, long Month, long Day) {
+long MD2DOY(long Year, long Month, long Day)
+{
    long K;
 
    if (Year % 4 == 0) {
       K = 1;
-   } else {
+   }
+   else {
       K = 2;
    }
 
@@ -209,18 +221,21 @@ long MD2DOY(long Year, long Month, long Day) {
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*   This function is agnostic to the TT-to-UTC offset.  You get out  */
 /*   what you put in.                                                 */
-void DOY2MD(long Year, long DayOfYear, long *Month, long *Day) {
+void DOY2MD(long Year, long DayOfYear, long *Month, long *Day)
+{
    long K;
 
    if (Year % 4 == 0) {
       K = 1;
-   } else {
+   }
+   else {
       K = 2;
    }
 
    if (DayOfYear < 32) {
       *Month = 1;
-   } else {
+   }
+   else {
       *Month = (long)(9.0 * (K + DayOfYear) / 275.0 + 0.98);
    }
 
@@ -231,7 +246,8 @@ void DOY2MD(long Year, long DayOfYear, long *Month, long *Day) {
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*  GMST is output in units of days.                                  */
 /*  This function requires JD in UTC                                  */
-double JD2GMST(double JD) {
+double JD2GMST(double JD)
+{
    double T, JD0, GMST0, GMST;
 
    JD0 = floor(JD) + 0.5;
@@ -258,7 +274,8 @@ double JD2GMST(double JD) {
 /* which is 1 Jan 2000 11:59:27.816 TAI                               */
 /* so J2000-GPS epoch is 7300.5 days minus (19+32.184) sec            */
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
-                      double *GpsSecond) {
+                      double *GpsSecond)
+{
    double DaysSinceEpoch, DaysSinceRollover, DaysSinceWeek;
 
    DaysSinceEpoch    = 7300.5 + GpsTime / 86400.0;
@@ -274,7 +291,8 @@ void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
 /* J2000 is 1 Jan 2000 12:00:00.0 TT                                  */
 /* which is 1 Jan 2000 11:59:27.816 TAI                               */
 /* so J2000-GPS epoch is 7300.5 days minus (19+32.184) sec            */
-double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond) {
+double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond)
+{
    return (((GpsRollover * 1024.0 + GpsWeek) * 7.0 - 7300.5) * 86400.0 +
            GpsSecond);
 }
@@ -283,7 +301,8 @@ double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond) {
 /* This function returns the number of microseconds since the Unix    */
 /* epoch, 00:00:00.0 Jan 1 1970.  Typically used as a tick/tock       */
 /* duration measurement.                                              */
-double usec(void) {
+double usec(void)
+{
 #if defined(_WIN32)
 
    static LARGE_INTEGER SysFreq;
@@ -314,7 +333,8 @@ double usec(void) {
 /* Get time from operating system, and convert to compatible format.  */
 /* TODO:  Is this date returned in TT or UTC?                         */
 void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
-                    long *Minute, double *Second, double DT) {
+                    long *Minute, double *Second, double DT)
+{
 #if (defined(__APPLE__) || defined(__linux__))
    struct timeval now;
    double UnixTime, Time;
@@ -331,7 +351,8 @@ void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
 #endif
 }
 /**********************************************************************/
-double RealRunTime(double *RealTimeDT, double LSB) {
+double RealRunTime(double *RealTimeDT, double LSB)
+{
    static double RunTime = 0.0;
    static long First     = 1;
 

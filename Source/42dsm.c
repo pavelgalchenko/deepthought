@@ -38,7 +38,8 @@
 // to handle the new form of Thruster processing, with Force/Torque ONLY (3DOF),
 // OR both Force & Torque (6DOF)
 //------------------------------------------------------------------------------
-void ThrProcessingMinPower(struct SCType *S) {
+void ThrProcessingMinPower(struct SCType *S)
+{
    long i, j;
    double cmdVec[6], distDotCmd;
 
@@ -64,7 +65,8 @@ void ThrProcessingMinPower(struct SCType *S) {
 // This does the heavy lifting for figuring out how to allocate Thrusters for a
 // given Force/Torque Command for use in ThrProcessingMinPower()
 //------------------------------------------------------------------------------
-void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState) {
+void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState)
+{
    double **A, **APlus;
    long i, j;
 
@@ -80,11 +82,13 @@ void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState) {
          if (DOF == 3) {
             if (controllerState == TRN_STATE) {
                A[j][i] = AC->Thr[i].Axis[j];
-            } else if (controllerState == ATT_STATE ||
-                       controllerState == DMP_STATE) {
+            }
+            else if (controllerState == ATT_STATE ||
+                     controllerState == DMP_STATE) {
                A[j][i] = AC->Thr[i].rxA[j];
             }
-         } else if (DOF == 6) {
+         }
+         else if (DOF == 6) {
             A[j][i]     = AC->Thr[i].Axis[j];
             A[j + 3][i] = AC->Thr[i].rxA[j];
          }
@@ -106,12 +110,14 @@ void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState) {
          for (j = 0; j < DOF; j++) {
             if (controllerState == TRN_STATE) {
                AC->Thr[i].DistVec[j] = APlus[i][j];
-            } else if (controllerState == ATT_STATE ||
-                       controllerState == DMP_STATE) {
+            }
+            else if (controllerState == ATT_STATE ||
+                     controllerState == DMP_STATE) {
                AC->Thr[i].DistVec[j + 3] = APlus[i][j];
             }
          }
-      } else if (DOF == 6) {
+      }
+      else if (DOF == 6) {
          for (j = 0; j < DOF; j++) {
             AC->Thr[i].DistVec[j] = APlus[i][j];
          }
@@ -123,7 +129,8 @@ void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState) {
 //------------------------------------------------------------------------------
 //                           Initialize DSM Structure
 //------------------------------------------------------------------------------
-void InitDSM(struct SCType *S) {
+void InitDSM(struct SCType *S)
+{
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
@@ -152,8 +159,8 @@ void InitDSM(struct SCType *S) {
 
 #define FIELDWIDTH 63
 //----------------------------------- GAINS -----------------------------------
-long GetGains(struct SCType *S, struct fy_node *gainsNode,
-              long controllerState) {
+long GetGains(struct SCType *S, struct fy_node *gainsNode, long controllerState)
+{
    long GainsProcessed = FALSE;
 
    struct DSMType *DSM;
@@ -205,7 +212,8 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
                           gains[i]) == 3;
       if (gainsGood && controller == PID_CNTRL)
          GainsProcessed = TRUE;
-   } else if (!strcmp(gainMode, "PID_WN")) {
+   }
+   else if (!strcmp(gainMode, "PID_WN")) {
       if (fy_node_scanf(gainsDataNode,
                         "/Omega %lf /Zeta %lf /Alpha %lf /Ki_Limit %lf", &omega,
                         &zeta, &alpha, &limit) == 4 &&
@@ -242,7 +250,8 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
                break;
          }
       }
-   } else if (!strcmp(gainMode, "FC_LYA")) {
+   }
+   else if (!strcmp(gainMode, "FC_LYA")) {
       struct fy_node *kNode = fy_node_by_path_def(gainsDataNode, "/K_lya");
       switch (controller) {
          case LYA_2BODY_CNTRL:
@@ -272,7 +281,8 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
          default:
             break;
       }
-   } else if (!strcmp(gainMode, "MomentumDump")) {
+   }
+   else if (!strcmp(gainMode, "MomentumDump")) {
       if (controllerState != DMP_STATE) {
          printf(
              "Gain alias %s gain sets can only be used for momentum dumping. "
@@ -289,15 +299,16 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
        TRUE) { // Set GainsProcessed flag for relevant controller
       if (controllerState == TRN_STATE) {
          Cmd->NewTrnGainsProcessed = TRUE;
-      } else if (controllerState == ATT_STATE) {
+      }
+      else if (controllerState == ATT_STATE) {
          Cmd->NewAttGainsProcessed = TRUE;
       }
    }
    return (GainsProcessed);
 }
 //----------------------------------- LIMITS -----------------------------------
-long GetLimits(struct SCType *S, struct fy_node *limsNode,
-               long controllerState) {
+long GetLimits(struct SCType *S, struct fy_node *limsNode, long controllerState)
+{
    long LimitsProcessed = FALSE;
 
    struct DSMType *DSM;
@@ -339,7 +350,8 @@ long GetLimits(struct SCType *S, struct fy_node *limsNode,
 //----------------------------------- CONTROLLER
 //-----------------------------------
 long GetController(struct SCType *S, struct fy_node *ctrlNode,
-                   long controllerState) {
+                   long controllerState)
+{
    struct fy_node *gainNode = NULL, *limNode = NULL;
 
    long CntrlProcessed = FALSE;
@@ -425,7 +437,8 @@ long GetController(struct SCType *S, struct fy_node *ctrlNode,
 //----------------------------------- ACTUATORS
 //-----------------------------------
 long GetActuators(struct SCType *S, struct fy_node *actNode,
-                  long controllerState) {
+                  long controllerState)
+{
    long ActuatorsProcessed = FALSE;
 
    struct DSMType *DSM;
@@ -446,16 +459,21 @@ long GetActuators(struct SCType *S, struct fy_node *actNode,
       if (!strcmp(actName, "WHL")) {
          if (controllerState == TRN_STATE || controllerState == DMP_STATE)
             ActuatorsProcessed = FALSE;
-      } else if (!strcmp(actName, "MTB")) {
+      }
+      else if (!strcmp(actName, "MTB")) {
          if (controllerState == TRN_STATE)
             ActuatorsProcessed = FALSE;
-      } else if (!strcmp(actName, "THR_3DOF")) {
+      }
+      else if (!strcmp(actName, "THR_3DOF")) {
          InitThrDistVecs(AC, 3, controllerState);
-      } else if (!strcmp(actName, "THR_6DOF")) {
+      }
+      else if (!strcmp(actName, "THR_6DOF")) {
          InitThrDistVecs(AC, 6, controllerState);
-      } else if (!strcmp(actName, "Ideal")) {
+      }
+      else if (!strcmp(actName, "Ideal")) {
          // Ideal do what it wants
-      } else {
+      }
+      else {
          ActuatorsProcessed = FALSE;
       }
 
@@ -480,7 +498,8 @@ long GetActuators(struct SCType *S, struct fy_node *actNode,
 }
 //------------------------- TRANSLATIONAL CMD ----------------------------------
 long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
-                       const double DsmCmdTime, struct fy_node *dsmRoot) {
+                       const double DsmCmdTime, struct fy_node *dsmRoot)
+{
    struct fy_node *iterNode = NULL, *ctrlNode = NULL, *actNode = NULL,
                   *limNode      = NULL;
    long TranslationCmdProcessed = FALSE;
@@ -498,11 +517,13 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
    if (!strcmp(subType, "NO_CHANGE")) {
       TranslationCmdProcessed = TRUE;
       return (TranslationCmdProcessed);
-   } else if (!strcmp(subType, "Passive")) {
+   }
+   else if (!strcmp(subType, "Passive")) {
       Cmd->TranslationCtrlActive = FALSE;
       TranslationCmdProcessed    = TRUE;
       return (TranslationCmdProcessed);
-   } else if (!strcmp(subType, "Translation")) {
+   }
+   else if (!strcmp(subType, "Translation")) {
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
           fy_node_by_path_def(dsmRoot, "/Translation Configurations");
@@ -537,7 +558,8 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
              cmdInd);
          exit(EXIT_FAILURE);
       }
-   } else if (!strcmp(subType, "Maneuver")) {
+   }
+   else if (!strcmp(subType, "Maneuver")) {
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
           fy_node_by_path_def(dsmRoot, "/Maneuver Configurations");
@@ -595,7 +617,8 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
                    fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
             exit(EXIT_FAILURE);
          }
-      } else {
+      }
+      else {
          if (GetLimits(S, limNode, TRN_STATE) == FALSE) {
             printf("For %s index %ld, could not find Limit alias %s or invalid "
                    "format. "
@@ -619,7 +642,8 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
 }
 //-----------------------ATTITUDE CMD ---------------------------------------
 long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
-                    struct fy_node *dsmRoot) {
+                    struct fy_node *dsmRoot)
+{
    struct fy_node *iterNode = NULL, *ctrlNode = NULL, *actNode = NULL;
    long AttitudeCmdProcessed = FALSE, AttPriCmdProcessed = FALSE,
         AttSecCmdProcessed = FALSE;
@@ -639,11 +663,13 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
    fy_node_scanf(attCmdNode, searchStr, subType);
    if (!strcmp(subType, "NO_CHANGE")) {
       AttitudeCmdProcessed = TRUE;
-   } else if (!strcmp(subType, "Passive")) {
+   }
+   else if (!strcmp(subType, "Passive")) {
       Cmd->AttitudeCtrlActive = FALSE;
       AttitudeCmdProcessed    = TRUE;
-   } else if (!strcmp(subType, "Two Vector Pointing") ||
-              !strcmp(subType, "One Vector Pointing")) {
+   }
+   else if (!strcmp(subType, "Two Vector Pointing") ||
+            !strcmp(subType, "One Vector Pointing")) {
       long kMax;
       long inds[2]                 = {0};
       struct DSMCmdVecType *vecs[] = {&Cmd->PriVec, NULL};
@@ -660,7 +686,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
          for (int k = 0; k < kMax; k++)
             *cmdModes[k] = inds[k];
          Cmd->Method = PARM_VECTORS;
-      } else {
+      }
+      else {
          kMax        = 1;
          Cmd->Method = PARM_UNITVECTOR;
          cmdModes[0] = &AttCmdMode;
@@ -709,12 +736,14 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                      vecs[k]->TrgWorld = GroundStation[gsNum].World;
                      for (int i = 0; i < 3; i++)
                         vecs[k]->W[i] = GroundStation[gsNum].PosW[i];
-                  } else {
+                  }
+                  else {
                      vecs[k]->TrgWorld = DecodeString(target);
                      for (int i = 0; i < 3; i++)
                         vecs[k]->W[i] = 0.0;
                   }
-               } else if (!strcmp(tgtType, "SC")) {
+               }
+               else if (!strcmp(tgtType, "SC")) {
                   vecs[k]->TrgType = TARGET_SC;
                   if (sscanf(target, "SC[%ld].B[%ld]", &vecs[k]->TrgSC,
                              &vecs[k]->TrgBody) ==
@@ -735,11 +764,13 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                                vecs[k]->TrgBody);
                         exit(EXIT_FAILURE);
                      }
-                  } else {
+                  }
+                  else {
                      printf("%s is in incorrect format. Exiting...", target);
                      exit(EXIT_FAILURE);
                   }
-               } else {
+               }
+               else {
                   printf("%s Vector index %ld has improper format for SC or "
                          "BODY targeting. "
                          "Exiting...\n",
@@ -747,7 +778,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                   exit(EXIT_FAILURE);
                }
                *attcmdProc[k] = TRUE;
-            } else if (!strcmp(tgtType, "VEC")) {
+            }
+            else if (!strcmp(tgtType, "VEC")) {
                vecs[k]->CmdMode = CMD_DIRECTION;
                vecs[k]->TrgType = TARGET_VEC;
                *attcmdProc[k] =
@@ -762,7 +794,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                          (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
                   exit(EXIT_FAILURE);
                }
-            } else {
+            }
+            else {
                printf(
                    "For %s Vector index %ld, %s is an invalid targeting type. "
                    "Exiting...\n",
@@ -771,7 +804,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                exit(EXIT_FAILURE);
             }
          }
-      } else {
+      }
+      else {
          printf("Could not find either Primary Vector command index %ld or "
                 "Secondary Vector "
                 "command index %ld. "
@@ -782,7 +816,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
       if (AttPriCmdProcessed == TRUE && AttSecCmdProcessed == TRUE) {
          AttitudeCmdProcessed = TRUE;
       }
-   } else if (!strcmp(subType, "Quaternion")) {
+   }
+   else if (!strcmp(subType, "Quaternion")) {
       fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
       cmdInd      = &AttCmdMode;
       Cmd->Method = PARM_QUATERNION;
@@ -807,7 +842,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
       AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
       Cmd->AttitudeCtrlActive = TRUE;
-   } else if (!strcmp(subType, "Mirror")) {
+   }
+   else if (!strcmp(subType, "Mirror")) {
       fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
       cmdInd      = &AttCmdMode;
       Cmd->Method = PARM_MIRROR;
@@ -829,7 +865,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
       AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
       Cmd->AttitudeCtrlActive = TRUE;
-   } else if (!strcmp(subType, "Detumble")) {
+   }
+   else if (!strcmp(subType, "Detumble")) {
       fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
       cmdInd      = &AttCmdMode;
       Cmd->Method = PARM_DETUMBLE;
@@ -849,7 +886,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
       AttitudeCmdProcessed = ctrlNode != NULL && actNode != NULL;
 
       Cmd->AttitudeCtrlActive = TRUE;
-   } else if (!strcmp(subType, "Whl H Manage")) {
+   }
+   else if (!strcmp(subType, "Whl H Manage")) {
       fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
       cmdInd = &AttCmdMode;
 
@@ -885,7 +923,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                 *cmdInd);
          exit(EXIT_FAILURE);
       }
-   } else {
+   }
+   else {
       AttitudeCmdProcessed = FALSE;
    }
    if (AttitudeCmdProcessed == TRUE && Cmd->AttitudeCtrlActive == TRUE) {
@@ -911,7 +950,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
 }
 //-------------------------------- ACTUATOR CMD --------------------------------
 long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
-                    struct fy_node *dsmRoot) {
+                    struct fy_node *dsmRoot)
+{
    struct fy_node *iterNode = NULL, *actSeqNode = NULL;
    long ActuatorCmdProcessed = FALSE;
    long i = 0, actCmdInd = 0;
@@ -955,7 +995,8 @@ long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
                    actCmdInd, type);
             exit(EXIT_FAILURE);
          }
-      } else {
+      }
+      else {
          printf(
              "Actuator Command index %ld is impropertly formatted. Exiting...",
              actCmdInd);
@@ -990,7 +1031,8 @@ long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
 }
 
 // the compare function for double values
-static int compare(const void *a, const void *b) {
+static int compare(const void *a, const void *b)
+{
    if (*(double *)a > *(double *)b)
       return 1;
    else if (*(double *)a < *(double *)b)
@@ -999,7 +1041,8 @@ static int compare(const void *a, const void *b) {
       return 0;
 }
 //------------------------ INTERPRETER (FIRST ITERATION) -----------------------
-void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds) {
+void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
+{
    struct DSMType *DSM;
    struct fy_node *iterNode = NULL, *scCmdsNode = NULL;
 
@@ -1019,7 +1062,8 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds) {
    if (scCmdsNode == NULL) {
       DSM->CmdTime_f   = NULL;
       DSM->CmdNextTime = 0.0;
-   } else {
+   }
+   else {
       DSM->CmdCnt    = fy_node_sequence_item_count(scCmdsNode);
       DSM->CmdTime_f = calloc(DSM->CmdCnt, sizeof(double));
       long i         = 0;
@@ -1034,7 +1078,8 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds) {
 }
 //--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
 void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
-                           struct fy_node *dsmCmds) {
+                           struct fy_node *dsmCmds)
+{
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
    struct fy_node *iterNode = NULL, *scCmdsNode = NULL, *cmdsNode = NULL;
@@ -1085,7 +1130,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
                    FIELDWIDTH, subType, index);
             exit(EXIT_FAILURE);
          }
-      } else if (!strcmp(typeToken, "Attitude")) {
+      }
+      else if (!strcmp(typeToken, "Attitude")) {
          if (GetAttitudeCmd(S, iterNode, dsmRoot) == FALSE) {
             const char *searchSubtypeStr = "/Sub Type %" STR(FIELDWIDTH) "s";
             fy_node_scanf(iterNode, searchSubtypeStr, subType);
@@ -1096,7 +1142,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
                printf("Actuator command of subtype %*s and indicies [%ld %ld]"
                       "cannot be found in Inp_DSM.yaml. Exiting...\n",
                       FIELDWIDTH, subType, indicies[0], indicies[1]);
-            } else {
+            }
+            else {
                long index;
                fy_node_scanf(iterNode, "/Index %ld", &index);
                printf("Actuator command of subtype %*s and index %ld "
@@ -1105,7 +1152,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
             }
             exit(EXIT_FAILURE);
          }
-      } else if (!strcmp(typeToken, "Actuator")) {
+      }
+      else if (!strcmp(typeToken, "Actuator")) {
          if (GetActuatorCmd(S, iterNode, dsmRoot) == FALSE) {
             long index;
             fy_node_scanf(iterNode, "/Index %ld", &index);
@@ -1114,7 +1162,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
                    index);
             exit(EXIT_FAILURE);
          }
-      } else {
+      }
+      else {
          printf("%s is not a supported command type. Exiting...\n", typeToken);
          exit(EXIT_FAILURE);
       }
@@ -1144,7 +1193,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
 //------------------------------------------------------------------------------
 //                                SENSORS
 //------------------------------------------------------------------------------
-void SensorModule(struct SCType *S) {
+void SensorModule(struct SCType *S)
+{
 
    struct AcType *AC;
 
@@ -1168,7 +1218,8 @@ void SensorModule(struct SCType *S) {
 //------------------------------------------------------------------------------
 //                                ACTUATORS
 //------------------------------------------------------------------------------
-void ActuatorModule(struct SCType *S) {
+void ActuatorModule(struct SCType *S)
+{
 
    long i;
    double unit_bvb[3];
@@ -1216,10 +1267,12 @@ void ActuatorModule(struct SCType *S) {
          for (i = 0; i < 3; i++)
             AC->Fcmd[i] = DSM->FcmdB[i];
          ThrProcessingMinPower(S);
-      } else if (!strcmp(Cmd->trn_actuator, "Ideal")) {
+      }
+      else if (!strcmp(Cmd->trn_actuator, "Ideal")) {
          for (i = 0; i < 3; i++)
             AC->IdealFrc[i] = DSM->FcmdB[i];
-      } else {
+      }
+      else {
       } // What is Cmd->trn_actuator if no valid Cmd->ActuatorMode?? Error????
    }
 
@@ -1232,20 +1285,24 @@ void ActuatorModule(struct SCType *S) {
             AC->Tcmd[i] = DSM->Tcmd[i];
          ThrProcessingMinPower(
              S); // if THR_TRN, this does both force & torque since AC->Fcmd set
-      } else if (!strcmp(Cmd->att_actuator, "WHL") && AC->Nwhl > 0) {
+      }
+      else if (!strcmp(Cmd->att_actuator, "WHL") && AC->Nwhl > 0) {
          for (i = 0; i < 3; i++)
             AC->Tcmd[i] = DSM->Tcmd[i];
          DSM_WheelProcessing(AC);
-      } else if (!strcmp(Cmd->att_actuator, "MTB") && AC->Nmtb > 0) {
+      }
+      else if (!strcmp(Cmd->att_actuator, "MTB") && AC->Nmtb > 0) {
          CopyUnitV(AC->bvb, unit_bvb);
          VxV(unit_bvb, DSM->Tcmd, DSM->Mcmd);
          for (i = 0; i < 3; i++)
             AC->Mcmd[i] = DSM->Mcmd[i] / MAGV(AC->bvb);
          DSM_MtbProcessing(AC);
-      } else if (!strcmp(Cmd->att_actuator, "Ideal")) {
+      }
+      else if (!strcmp(Cmd->att_actuator, "Ideal")) {
          for (i = 0; i < 3; i++)
             AC->IdealTrq[i] = DSM->Tcmd[i];
-      } else {
+      }
+      else {
       } // What is Cmd->att_actuator if no valid Cmd->AttActuatorMode??
         // Error????
    }
@@ -1264,10 +1321,11 @@ void ActuatorModule(struct SCType *S) {
          for (i = 0; i < 3; i++)
             AC->Mcmd[i] = DSM->Mcmd[i] / MAGV(AC->bvb);
          DSM_MtbProcessing(AC);
-      } else if (DSM->DsmCtrl.H_DumpActive == TRUE &&
-                 (!strcmp(Cmd->dmp_actuator, "THR_3DOF") ||
-                  !strcmp(Cmd->dmp_actuator, "THR_6DOF")) &&
-                 AC->Nthr > 0) {
+      }
+      else if (DSM->DsmCtrl.H_DumpActive == TRUE &&
+               (!strcmp(Cmd->dmp_actuator, "THR_3DOF") ||
+                !strcmp(Cmd->dmp_actuator, "THR_6DOF")) &&
+               AC->Nthr > 0) {
          // maybe have thrusters just thrust at
          // min(thrustertorquemax,SCALE*AC->Whl[i].Tmax)??? this could run into
          // issues if Thruster is being used for translation
@@ -1275,8 +1333,9 @@ void ActuatorModule(struct SCType *S) {
             AC->Tcmd[i] = DSM->dTcmd[i];
          ThrProcessingMinPower(
              S); // if THR_TRN, this does both force & torque since AC->Fcmd set
-      } else if (DSM->DsmCtrl.H_DumpActive == TRUE &&
-                 !strcmp(Cmd->dmp_actuator, "Ideal")) {
+      }
+      else if (DSM->DsmCtrl.H_DumpActive == TRUE &&
+               !strcmp(Cmd->dmp_actuator, "Ideal")) {
          for (i = 0; i < 3; i++)
             AC->IdealTrq[i] = DSM->dTcmd[i];
       }
@@ -1289,11 +1348,13 @@ void ActuatorModule(struct SCType *S) {
       if (Cmd->ActTypes[i] == WHL_TYPE) {
          AC->Whl[Cmd->ActInds[i]].Tcmd =
              AC->Whl[i].Tmax * Cmd->ActDuties[i] / 100;
-      } else if (Cmd->ActTypes[i] == THR_TYPE) {
+      }
+      else if (Cmd->ActTypes[i] == THR_TYPE) {
          AC->Thr[Cmd->ActInds[i]].PulseWidthCmd =
              Cmd->ActDuties[i] / 100 * AC->DT;
          AC->Thr[Cmd->ActInds[i]].ThrustLevelCmd = Cmd->ActDuties[i] / 100;
-      } else if (Cmd->ActTypes[i] == MTB_TYPE) {
+      }
+      else if (Cmd->ActTypes[i] == MTB_TYPE) {
          AC->MTB[Cmd->ActInds[i]].Mcmd =
              AC->MTB[i].Mmax * Cmd->ActDuties[i] / 100;
       }
@@ -1302,7 +1363,8 @@ void ActuatorModule(struct SCType *S) {
 //------------------------------------------------------------------------------
 //                                GUIDANCE
 //------------------------------------------------------------------------------
-void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
+void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV)
+{
    /*Clone of FindCmdVecN()from 42fsw.c with new structure type */
    struct WorldType *W;
    double RelPosB[3], vb[3];
@@ -1328,7 +1390,8 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
                RelPosN[i] = pn[i] - S->PosN[i];
                RelVelN[i] = vn[i] - S->VelN[i];
             }
-         } else {
+         }
+         else {
             MTxV(W->CNH, pn, ph);
             MTxV(W->CNH, vn, vh);
             for (i = 0; i < 3; i++) {
@@ -1347,12 +1410,14 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
                RelPosN[i] = SC[CV->TrgSC].PosR[i] - S->PosR[i];
                RelVelN[i] = SC[CV->TrgSC].VelR[i] - S->VelR[i];
             }
-         } else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
+         }
+         else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = SC[CV->TrgSC].PosN[i] - S->PosN[i];
                RelVelN[i] = SC[CV->TrgSC].VelN[i] - S->VelN[i];
             }
-         } else {
+         }
+         else {
             for (i = 0; i < 3; i++) {
                RelPosH[i] = SC[CV->TrgSC].PosH[i] - S->PosH[i];
                RelVelH[i] = SC[CV->TrgSC].VelH[i] - S->VelH[i];
@@ -1379,12 +1444,14 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
                RelPosN[i] = SC[CV->TrgSC].PosR[i] + pn[i] - S->PosR[i];
                RelVelN[i] = SC[CV->TrgSC].VelR[i] + vn[i] - S->VelR[i];
             }
-         } else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
+         }
+         else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = SC[CV->TrgSC].PosN[i] + pn[i] - S->PosN[i];
                RelVelN[i] = SC[CV->TrgSC].VelN[i] + vn[i] - S->VelN[i];
             }
-         } else {
+         }
+         else {
             MTxV(World[Orb[SC[CV->TrgSC].RefOrb].World].CNH, pn, ph);
             MTxV(World[Orb[SC[CV->TrgSC].RefOrb].World].CNH, vn, vh);
             for (i = 0; i < 3; i++) {
@@ -1435,7 +1502,8 @@ void FindDsmCmdVecN(struct SCType *S, struct DSMCmdVecType *CV) {
    }
 }
 //------------------------------------------------------------------------------
-void TranslationGuidance(struct SCType *S) {
+void TranslationGuidance(struct SCType *S)
+{
 
    double wcn[3];
    long i, Isc_Ref, goodOriginFrame = FALSE;
@@ -1459,25 +1527,29 @@ void TranslationGuidance(struct SCType *S) {
             for (i = 0; i < 3; i++)
                wcn[i] = Orb[S->RefOrb].wln[i]; // L rotates wrt R
             goodOriginFrame = TRUE;
-         } else if (F->FixedInFrame == 'N') {
+         }
+         else if (F->FixedInFrame == 'N') {
             for (i = 0; i < 3; i++)
                wcn[i] = 0.0; // R does not rotate wrt R Inertial
             goodOriginFrame = TRUE;
          }
-      } else if (!strcmp(Cmd->RefFrame, "N")) {
+      }
+      else if (!strcmp(Cmd->RefFrame, "N")) {
          for (i = 0; i < 3; i++)
             CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
          for (i = 0; i < 3; i++)
             wcn[i] = 0.0; // R does not rotate wrt R Inertial
          goodOriginFrame = TRUE;
-      } else if (!strcmp(Cmd->RefFrame, "L")) {
+      }
+      else if (!strcmp(Cmd->RefFrame, "L")) {
          MTxV(S->CLN, Cmd->Pos, CTRL->CmdPosR); // Convert LVLH to R Inertial
          for (i = 0; i < 3; i++)
             wcn[i] = Orb[S->RefOrb].wln[i]; // L rotates wrt R
          goodOriginFrame = TRUE;
-      } else if (!strncmp(Cmd->RefFrame, "SC",
-                          2)) { // Specify disp from OP, in SC B frame
-                                // directions, control to OP
+      }
+      else if (!strncmp(Cmd->RefFrame, "SC",
+                        2)) { // Specify disp from OP, in SC B frame
+                              // directions, control to OP
          sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
                 &frame_body); // Decode ref SC ID Number
          if (Isc_Ref >= Nsc) {
@@ -1506,9 +1578,10 @@ void TranslationGuidance(struct SCType *S) {
          for (i = 0; i < 3; i++)
             CTRL->CmdPosR[i] += F->PosR[i];
          goodOriginFrame = TRUE;
-      } else if (!strncmp(Cmd->RefOrigin, "SC",
-                          2)) { // Specify disp from SC, in X frame directions,
-                                // control to SC
+      }
+      else if (!strncmp(Cmd->RefOrigin, "SC",
+                        2)) { // Specify disp from SC, in X frame directions,
+                              // control to SC
          // Add pos of SC in R frame
          sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
                 &origin_body); // Decode ref SC ID Number
@@ -1533,7 +1606,8 @@ void TranslationGuidance(struct SCType *S) {
             CTRL->CmdPosR[i] +=
                 SC[Isc_Ref].PosR[i] + SC[Isc_Ref].B[origin_body].pn[i];
          goodOriginFrame = TRUE;
-      } else {
+      }
+      else {
          goodOriginFrame = FALSE;
       }
       if (goodOriginFrame == FALSE) {
@@ -1557,7 +1631,8 @@ void TranslationGuidance(struct SCType *S) {
    }
 }
 //------------------------------------------------------------------------------
-void AttitudeGuidance(struct SCType *S) {
+void AttitudeGuidance(struct SCType *S)
+{
 
    long i, Isc_Ref, target_num;
    double qfn[4], qrn[4], qfl[4], qrf[4];
@@ -1589,23 +1664,27 @@ void AttitudeGuidance(struct SCType *S) {
             FindDsmCmdVecN(S, PV); // to get PV->wn, PV->N (in F Frame)
             MxV(S->B[0].CN, PV->N,
                 PriCmdVecB); // (Converting Cmd vec to body frame)
-         } else if (PV->TrgType == TARGET_VEC) {
+         }
+         else if (PV->TrgType == TARGET_VEC) {
             if (!strcmp(Cmd->PriAttRefFrame, "N")) {
                MxV(S->B[0].CN, PV->cmd_vec,
                    PriCmdVecB); // (Converting Cmd vec to body frame)
-            } else if (!strcmp(Cmd->PriAttRefFrame, "F")) {
+            }
+            else if (!strcmp(Cmd->PriAttRefFrame, "F")) {
                MTxV(F->CN, PV->cmd_vec,
                     PriCmdVecN); // (Converting to Inertial frame)
                MxV(S->B[0].CN, PriCmdVecN,
                    PriCmdVecB); // (Converting to body frame) CHECK THIS
-            } else if (!strcmp(Cmd->PriAttRefFrame, "L")) {
+            }
+            else if (!strcmp(Cmd->PriAttRefFrame, "L")) {
                MTxV(S->CLN, PV->cmd_vec,
                     PriCmdVecN); // (Converting to LVLH to Inertial frame)
                UNITV(PriCmdVecN);
 
                MxV(S->B[0].CN, PriCmdVecN,
                    PriCmdVecB); // (Converting to body frame)
-            } else if (!strcmp(Cmd->PriAttRefFrame, "B")) {
+            }
+            else if (!strcmp(Cmd->PriAttRefFrame, "B")) {
                for (i = 0; i < 3; i++)
                   PriCmdVecB[i] = PV->cmd_vec[i];
             }
@@ -1615,22 +1694,26 @@ void AttitudeGuidance(struct SCType *S) {
          if (SV->TrgType == TARGET_SC || SV->TrgType == TARGET_WORLD) {
             FindDsmCmdVecN(S, SV); // to get SV->wn, SV->N
             MxV(S->B[0].CN, SV->N, SecCmdVecB);
-         } else if (SV->TrgType == TARGET_VEC) {
+         }
+         else if (SV->TrgType == TARGET_VEC) {
             if (!strcmp(Cmd->SecAttRefFrame, "N")) {
                MxV(S->B[0].CN, SV->cmd_vec,
                    SecCmdVecB); // (Converting Cmd vec to body frame)
-            } else if (!strcmp(Cmd->SecAttRefFrame, "F")) {
+            }
+            else if (!strcmp(Cmd->SecAttRefFrame, "F")) {
                MTxV(F->CN, SV->cmd_vec,
                     SecCmdVecN); // (Converting to Inertial frame)
                MxV(S->B[0].CN, SecCmdVecN,
                    SecCmdVecB); // (Converting to body frame)
-            } else if (!strcmp(Cmd->SecAttRefFrame, "L")) {
+            }
+            else if (!strcmp(Cmd->SecAttRefFrame, "L")) {
                MTxV(S->CLN, SV->cmd_vec,
                     SecCmdVecN); // (Converting from LVLH to Inertial frame)
                UNITV(SecCmdVecN);
                MxV(S->B[0].CN, SecCmdVecN,
                    SecCmdVecB); // (Converting to body frame)
-            } else if (!strcmp(Cmd->SecAttRefFrame, "B")) {
+            }
+            else if (!strcmp(Cmd->SecAttRefFrame, "B")) {
                for (i = 0; i < 3; i++)
                   SecCmdVecB[i] = SV->cmd_vec[i];
             }
@@ -1701,18 +1784,21 @@ void AttitudeGuidance(struct SCType *S) {
          QTxQ(q_tb, q_tn, qbn_cmd);
          UNITQ(qbn_cmd);
          QxQT(DSM->qbn, qbn_cmd, Cmd->qbr);
-      } else if (Cmd->Method == PARM_UNITVECTOR) {
+      }
+      else if (Cmd->Method == PARM_UNITVECTOR) {
          printf("Feature for Singular Primary Unit Vector Pointing not "
                 "currently fully implemented. Exiting...\n");
          exit(EXIT_FAILURE);
-      } else if (Cmd->Method == PARM_QUATERNION) {
+      }
+      else if (Cmd->Method == PARM_QUATERNION) {
          if (!strcmp(Cmd->AttRefFrame, "N")) {
             for (i = 0; i < 4; i++)
                Cmd->qrn[i] = Cmd->q[i];
             QxQT(DSM->qbn, Cmd->qrn, Cmd->qbr);
             for (i = 0; i < 3; i++)
                Cmd->wrn[i] = 0.0;
-         } else if (!strcmp(Cmd->AttRefFrame, "F")) {
+         }
+         else if (!strcmp(Cmd->AttRefFrame, "F")) {
             for (i = 0; i < 4; i++)
                Cmd->qrf[i] = Cmd->q[i];
             C2Q(F->CN, qfn);
@@ -1721,11 +1807,13 @@ void AttitudeGuidance(struct SCType *S) {
             if (F->FixedInFrame == 'L') {
                for (i = 0; i < 3; i++)
                   Cmd->wrn[i] = Orb[S->RefOrb].wln[i]; // F rotates wrt N
-            } else if (F->FixedInFrame == 'N') {
+            }
+            else if (F->FixedInFrame == 'N') {
                for (i = 0; i < 3; i++)
                   Cmd->wrn[i] = 0.0; // N does not rotate wrt N Inertial
             }
-         } else if (!strcmp(Cmd->AttRefFrame, "L")) {
+         }
+         else if (!strcmp(Cmd->AttRefFrame, "L")) {
             for (i = 0; i < 4; i++)
                Cmd->qrl[i] = Cmd->q[i];
             C2Q(F->CL, qfl);
@@ -1736,7 +1824,8 @@ void AttitudeGuidance(struct SCType *S) {
             for (i = 0; i < 3; i++)
                Cmd->wrn[i] = Orb[S->RefOrb].wln[i];
          }
-      } else if (Cmd->Method == PARM_MIRROR) {
+      }
+      else if (Cmd->Method == PARM_MIRROR) {
          sscanf(Cmd->AttRefScID, "SC[%ld].B[%ld]", &Isc_Ref,
                 &target_num); // Decode ref SC ID Number - does this need to be
                               // SC[%ld].B[%ld]?
@@ -1755,7 +1844,8 @@ void AttitudeGuidance(struct SCType *S) {
          }
          QxQT(SC[S->ID].DSM.qbn, SC[Isc_Ref].B[target_num].qn, Cmd->qbr);
          QTxV(SC[Isc_Ref].DSM.qbn, SC[Isc_Ref].B[target_num].wn, Cmd->wrn);
-      } else if (Cmd->Method == PARM_DETUMBLE) {
+      }
+      else if (Cmd->Method == PARM_DETUMBLE) {
          for (i = 0; i < 3; i++)
             Cmd->qbr[i] = 0;
          Cmd->qbr[3] = 1;
@@ -1779,7 +1869,8 @@ void AttitudeGuidance(struct SCType *S) {
 //------------------------------------------------------------------------------
 //                                NAVIGATION
 //------------------------------------------------------------------------------
-void TranslationalNavigation(struct SCType *S) {
+void TranslationalNavigation(struct SCType *S)
+{
 
    long i;
 
@@ -1795,7 +1886,8 @@ void TranslationalNavigation(struct SCType *S) {
    }
 }
 //------------------------------------------------------------------------------
-void AttitudeNavigation(struct SCType *S) {
+void AttitudeNavigation(struct SCType *S)
+{
 
    long i;
 
@@ -1813,7 +1905,8 @@ void AttitudeNavigation(struct SCType *S) {
 //------------------------------------------------------------------------------
 //                                 CONTROL
 //------------------------------------------------------------------------------
-void TranslationCtrl(struct SCType *S) {
+void TranslationCtrl(struct SCType *S)
+{
 
    long i;
 
@@ -1873,7 +1966,8 @@ void TranslationCtrl(struct SCType *S) {
                          CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
          }
          MTxV(S->B[0].CN, CTRL->FcmdB, CTRL->FcmdN);
-      } else if (Cmd->trn_controller == LYA_2BODY_CNTRL) {
+      }
+      else if (Cmd->trn_controller == LYA_2BODY_CNTRL) {
          // Calculate relative radius, velocity
          for (i = 0; i < 3; i++) {
             DSM->perr[i] =
@@ -1906,8 +2000,9 @@ void TranslationCtrl(struct SCType *S) {
       }
       for (i = 0; i < 3; i++)
          DSM->Oldperr[i] = DSM->perr[i];
-   } else if (Cmd->TranslationCtrlActive == TRUE &&
-              Cmd->ManeuverMode != INACTIVE) {
+   }
+   else if (Cmd->TranslationCtrlActive == TRUE &&
+            Cmd->ManeuverMode != INACTIVE) {
       if (SimTime < Cmd->BurnStopTime) {
          if (Cmd->ManeuverMode == CONSTANT) {
             if (!strcmp(Cmd->RefFrame, "N")) {
@@ -1917,7 +2012,8 @@ void TranslationCtrl(struct SCType *S) {
                MxV(S->B[0].CN, CTRL->FcmdN,
                    CTRL->FcmdB); // Converting from Inertial to body frame for
                                  // Report
-            } else if (!strcmp(Cmd->RefFrame, "B")) {
+            }
+            else if (!strcmp(Cmd->RefFrame, "B")) {
                for (i = 0; i < 3; i++) {
                   CTRL->FcmdB[i] = S->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
                }
@@ -1931,7 +2027,8 @@ void TranslationCtrl(struct SCType *S) {
             }
             MTxV(S->B[0].CN, CTRL->FcmdB,
                  CTRL->FcmdN); // Converting back to Inertial from body frame
-         } else if (Cmd->ManeuverMode == SMOOTHED) {
+         }
+         else if (Cmd->ManeuverMode == SMOOTHED) {
             double sharp =
                 -2 * atanh(-.99998) /
                 Cmd->BurnTime; // .99998 corresponds to capturing 99.999% of the
@@ -1949,7 +2046,8 @@ void TranslationCtrl(struct SCType *S) {
                MxV(S->B[0].CN, CTRL->FcmdN,
                    CTRL->FcmdB); // Converting from Inertial to body frame for
                                  // Report
-            } else if (!strcmp(Cmd->RefFrame, "B")) {
+            }
+            else if (!strcmp(Cmd->RefFrame, "B")) {
                for (i = 0; i < 3; i++) {
                   CTRL->FcmdB[i] = S->mass * (Cmd->DeltaV[i] * sharp / 2.0) /
                                    ((cosh(sharp * t_since_mid)) *
@@ -1966,7 +2064,8 @@ void TranslationCtrl(struct SCType *S) {
             MTxV(S->B[0].CN, CTRL->FcmdB,
                  CTRL->FcmdN); // Converting back to Inertial from body frame
          }
-      } else {
+      }
+      else {
          Cmd->ManeuverMode          = INACTIVE;
          Cmd->TranslationCtrlActive = FALSE;
          for (i = 0; i < 3; i++) {
@@ -1974,7 +2073,8 @@ void TranslationCtrl(struct SCType *S) {
             CTRL->FcmdB[i] = 0;
          }
       }
-   } else {
+   }
+   else {
       for (i = 0; i < 3; i++) {
          CTRL->FcmdN[i] = 0;
          CTRL->FcmdB[i] = 0;
@@ -1987,7 +2087,8 @@ void TranslationCtrl(struct SCType *S) {
    }
 }
 //------------------------------------------------------------------------------
-void AttitudeCtrl(struct SCType *S) {
+void AttitudeCtrl(struct SCType *S)
+{
 
    long i;
    double wrb[3];
@@ -2037,7 +2138,8 @@ void AttitudeCtrl(struct SCType *S) {
          }
          for (i = 0; i < 3; i++)
             DSM->Oldtherr[i] = DSM->therr[i];
-      } else if (Cmd->att_controller == LYA_ATT_CNTRL) {
+      }
+      else if (Cmd->att_controller == LYA_ATT_CNTRL) {
          double om_x_I_om[3];
 
          Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
@@ -2060,7 +2162,8 @@ void AttitudeCtrl(struct SCType *S) {
             CTRL->Tcmd[i] =
                 Limit(CTRL->Tcmd[i], -CTRL->Trq_max[i], CTRL->Trq_max[i]);
       }
-   } else {
+   }
+   else {
       for (i = 0; i < 3; i++)
          CTRL->Tcmd[i] = 0;
    }
@@ -2071,7 +2174,8 @@ void AttitudeCtrl(struct SCType *S) {
    }
 }
 //------------------------------------------------------------------------------
-void MomentumDumpCtrl(struct SCType *S) {
+void MomentumDumpCtrl(struct SCType *S)
+{
 
    long i, j;
    double TotalWhlH[3] = {0.0, 0.0, 0.0};
@@ -2116,7 +2220,8 @@ void MomentumDumpCtrl(struct SCType *S) {
             CTRL->dTcmd[i] =
                 Limit(CTRL->dTcmd[i], -CTRL->dTrq_max[i], CTRL->dTrq_max[i]);
       }
-   } else {
+   }
+   else {
       for (i = 0; i < 3; i++)
          CTRL->dTcmd[i] = 0.0;
    }
@@ -2127,7 +2232,8 @@ void MomentumDumpCtrl(struct SCType *S) {
 //------------------------------------------------------------------------------
 //                             FLIGHT SOFTWARE
 //------------------------------------------------------------------------------
-void DsmFSW(struct SCType *S) {
+void DsmFSW(struct SCType *S)
+{
    // load the DSM file statically so that all DsmFSW calls have access to same
    // object
    static struct fy_node *dsmRoot = NULL, *dsmCmds = NULL;

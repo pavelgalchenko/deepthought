@@ -29,7 +29,8 @@ GLuint AlbedoWindow;
 /* GLUT wants a display callback for AlbedoWindow */
 void NullDisplay(void) {}
 /**********************************************************************/
-void InitAlbedo(void) {
+void InitAlbedo(void)
+{
    size_t StrLen;
    char *ShaderText;
    GLint UniLoc;
@@ -126,7 +127,8 @@ void InitAlbedo(void) {
 /* Significant contributions to this algorithm were made by           */
 /* Daniel Wilkinson, summer intern 2020, and                          */
 /* Emily Ballantyne, summer intern 2021.                              */
-void FindAlbedo(struct SCType *S, struct CssType *CSS) {
+void FindAlbedo(struct SCType *S, struct CssType *CSS)
+{
    struct BodyType *B;
    struct WorldType *W;
    struct AlbedoFBOType *A;

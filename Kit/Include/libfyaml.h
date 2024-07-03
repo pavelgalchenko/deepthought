@@ -10,8 +10,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -31,15 +31,15 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <unistd.h>
 #endif
 
@@ -62,22 +62,21 @@ struct fy_path_component;
 struct fy_path;
 struct fy_document_iterator;
 
-
 #ifndef FY_BIT
 #define FY_BIT(x) (1U << (x))
 #endif
 
 /* NULL terminated string length specifier */
-#define FY_NT	((size_t)-1)
+#define FY_NT ((size_t) - 1)
 
 #if defined(__GNUC__) && __GNUC__ >= 4
-#define FY_EXPORT __attribute__ ((visibility ("default")))
-#define FY_DEPRECATED __attribute__ ((deprecated))
-#define FY_FORMAT(_t, _x, _y) __attribute__ ((format(_t, _x, _y)))
+#define FY_EXPORT             __attribute__((visibility("default")))
+#define FY_DEPRECATED         __attribute__((deprecated))
+#define FY_FORMAT(_t, _x, _y) __attribute__((format(_t, _x, _y)))
 #else
-#define FY_EXPORT /* nothing */
-#define FY_DEPRECATED /* nothing */
-#define FY_FORMAT(_t, x, y)	/* nothing */
+#define FY_EXPORT           /* nothing */
+#define FY_DEPRECATED       /* nothing */
+#define FY_FORMAT(_t, x, y) /* nothing */
 #endif
 
 /* make a copy of an allocated string and return it on stack
@@ -86,34 +85,34 @@ struct fy_document_iterator;
  * If the _str pointer is NULL, then NULL will be returned
  */
 #ifndef FY_ALLOCA_COPY_FREE
-#define FY_ALLOCA_COPY_FREE(_str, _len)				\
-        ({							\
-                char *__str = (_str), *__stra = NULL;		\
-                size_t __len = (size_t)(_len);			\
-								\
-		if (__str) {					\
-			if (__len == FY_NT) 			\
-				__len = strlen(__str);		\
-			__stra = alloca(__len + 1);		\
-			memcpy(__stra, __str, __len);		\
-			__stra[__len] = '\0';			\
-			free(__str);				\
-		}						\
-                (const char *)__stra;				\
-        })
+#define FY_ALLOCA_COPY_FREE(_str, _len)                                        \
+   ({                                                                          \
+      char *__str = (_str), *__stra = NULL;                                    \
+      size_t __len = (size_t)(_len);                                           \
+                                                                               \
+      if (__str) {                                                             \
+         if (__len == FY_NT)                                                   \
+            __len = strlen(__str);                                             \
+         __stra = alloca(__len + 1);                                           \
+         memcpy(__stra, __str, __len);                                         \
+         __stra[__len] = '\0';                                                 \
+         free(__str);                                                          \
+      }                                                                        \
+      (const char *)__stra;                                                    \
+   })
 #endif
 
 /* same as above but when _str == NULL return "" */
 #ifndef FY_ALLOCA_COPY_FREE_NO_NULL
-#define FY_ALLOCA_COPY_FREE_NO_NULL(_str, _len)			\
-        ({							\
-                const char *__strb;				\
-								\
-		__strb = FY_ALLOCA_COPY_FREE(_str, _len);	\
-		if (!__strb)					\
-			__strb = "";				\
-		__strb;						\
-        })
+#define FY_ALLOCA_COPY_FREE_NO_NULL(_str, _len)                                \
+   ({                                                                          \
+      const char *__strb;                                                      \
+                                                                               \
+      __strb = FY_ALLOCA_COPY_FREE(_str, _len);                                \
+      if (!__strb)                                                             \
+         __strb = "";                                                          \
+      __strb;                                                                  \
+   })
 #endif
 
 /**
@@ -131,12 +130,12 @@ struct fy_document_iterator;
  * found in the document.
  */
 struct fy_version {
-	int major;
-	int minor;
+   int major;
+   int minor;
 };
 
 /* Build a fy_version * from the given major and minor */
-#define fy_version_make(_maj, _min) (&(struct fy_version){ (_maj), (_min) })
+#define fy_version_make(_maj, _min) (&(struct fy_version){(_maj), (_min)})
 
 /**
  * fy_version_compare() - Compare two yaml versions
@@ -150,9 +149,8 @@ struct fy_version {
  * 0 if versions are equal, > 0 if version va is higher than vb
  * < 0 if version va is lower than vb
  */
-int
-fy_version_compare(const struct fy_version *va, const struct fy_version *vb)
-	FY_EXPORT;
+int fy_version_compare(const struct fy_version *va,
+                       const struct fy_version *vb) FY_EXPORT;
 
 /**
  * fy_version_default() - Get the default version of the library
@@ -163,9 +161,7 @@ fy_version_compare(const struct fy_version *va, const struct fy_version *vb)
  * Returns:
  * The default YAML version of this library
  */
-const struct fy_version *
-fy_version_default(void)
-	FY_EXPORT;
+const struct fy_version *fy_version_default(void) FY_EXPORT;
 
 /**
  * fy_version_is_supported() - Check if supported version
@@ -177,9 +173,7 @@ fy_version_default(void)
  * Returns:
  * true if version supported, false otherwise.
  */
-bool
-fy_version_is_supported(const struct fy_version *vers)
-	FY_EXPORT;
+bool fy_version_is_supported(const struct fy_version *vers) FY_EXPORT;
 
 /**
  * fy_version_supported_iterate() - Iterate over the supported YAML versions
@@ -192,9 +186,7 @@ fy_version_is_supported(const struct fy_version *vers)
  * Returns:
  * The next node in sequence or NULL at the end of the sequence.
  */
-const struct fy_version *
-fy_version_supported_iterate(void **prevp)
-	FY_EXPORT;
+const struct fy_version *fy_version_supported_iterate(void **prevp) FY_EXPORT;
 
 /**
  * struct fy_tag - The YAML tag structure.
@@ -206,8 +198,8 @@ fy_version_supported_iterate(void **prevp)
  * encountered during parsing.
  */
 struct fy_tag {
-	const char *handle;
-	const char *prefix;
+   const char *handle;
+   const char *prefix;
 };
 
 /**
@@ -219,9 +211,9 @@ struct fy_tag {
  * @column: Column position (0 index based)
  */
 struct fy_mark {
-	size_t input_pos;
-	int line;
-	int column;
+   size_t input_pos;
+   int line;
+   int column;
 };
 
 /**
@@ -236,12 +228,12 @@ struct fy_mark {
  *
  */
 enum fy_error_type {
-	FYET_DEBUG,
-	FYET_INFO,
-	FYET_NOTICE,
-	FYET_WARNING,
-	FYET_ERROR,
-	FYET_MAX,
+   FYET_DEBUG,
+   FYET_INFO,
+   FYET_NOTICE,
+   FYET_WARNING,
+   FYET_ERROR,
+   FYET_MAX,
 };
 
 /**
@@ -258,34 +250,37 @@ enum fy_error_type {
  * @FYEM_MAX: Non inclusive maximum fy_error_module value
  */
 enum fy_error_module {
-	FYEM_UNKNOWN,
-	FYEM_ATOM,
-	FYEM_SCAN,
-	FYEM_PARSE,
-	FYEM_DOC,
-	FYEM_BUILD,
-	FYEM_INTERNAL,
-	FYEM_SYSTEM,
-	FYEM_MAX,
+   FYEM_UNKNOWN,
+   FYEM_ATOM,
+   FYEM_SCAN,
+   FYEM_PARSE,
+   FYEM_DOC,
+   FYEM_BUILD,
+   FYEM_INTERNAL,
+   FYEM_SYSTEM,
+   FYEM_MAX,
 };
 
 /* Shift amount of the default version */
-#define FYPCF_DEFAULT_VERSION_SHIFT	9
+#define FYPCF_DEFAULT_VERSION_SHIFT 9
 /* Mask of the default version */
-#define FYPCF_DEFAULT_VERSION_MASK	((1U << 5) - 1)
+#define FYPCF_DEFAULT_VERSION_MASK ((1U << 5) - 1)
 /* Build a default version */
-#define FYPCF_DEFAULT_VERSION(x)	(((unsigned int)(x) & FYPCF_DEFAULT_VERSION_MASK) << FYPCF_DEFAULT_VERSION_SHIFT)
+#define FYPCF_DEFAULT_VERSION(x)                                               \
+   (((unsigned int)(x) & FYPCF_DEFAULT_VERSION_MASK)                           \
+    << FYPCF_DEFAULT_VERSION_SHIFT)
 
 /* Shift amount of the JSON input mode */
-#define FYPCF_JSON_SHIFT		16
+#define FYPCF_JSON_SHIFT 16
 /* Mask of the JSON input mode */
-#define FYPCF_JSON_MASK			((1U << 2) - 1)
+#define FYPCF_JSON_MASK ((1U << 2) - 1)
 /* Build a JSON input mode option */
-#define FYPCF_JSON(x)			(((unsigned int)(x) & FYPCF_JSON_MASK) << FYPCF_JSON_SHIFT)
+#define FYPCF_JSON(x)                                                          \
+   (((unsigned int)(x) & FYPCF_JSON_MASK) << FYPCF_JSON_SHIFT)
 
 /* guaranteed minimum depth limit for generated document */
 /* the actual limit is larger depending on the platform */
-#define FYPCF_GUARANTEED_MINIMUM_DEPTH_LIMIT	64
+#define FYPCF_GUARANTEED_MINIMUM_DEPTH_LIMIT 64
 
 /**
  * enum fy_parse_cfg_flags - Parse configuration flags
@@ -299,15 +294,19 @@ enum fy_error_module {
  * @FYPCF_DISABLE_MMAP_OPT: Disable mmap optimization
  * @FYPCF_DISABLE_RECYCLING: Disable recycling optimization
  * @FYPCF_PARSE_COMMENTS: Enable parsing of comments (experimental)
- * @FYPCF_DISABLE_DEPTH_LIMIT: Disable depth limit check, use with enlarged stack
- * @FYPCF_DISABLE_ACCELERATORS: Disable use of access accelerators (saves memory)
+ * @FYPCF_DISABLE_DEPTH_LIMIT: Disable depth limit check, use with enlarged
+ * stack
+ * @FYPCF_DISABLE_ACCELERATORS: Disable use of access accelerators (saves
+ * memory)
  * @FYPCF_DISABLE_BUFFERING: Disable use of buffering where possible
- * @FYPCF_DEFAULT_VERSION_AUTO: Automatically use the most recent version the library supports
+ * @FYPCF_DEFAULT_VERSION_AUTO: Automatically use the most recent version the
+ * library supports
  * @FYPCF_DEFAULT_VERSION_1_1: Default version is YAML 1.1
  * @FYPCF_DEFAULT_VERSION_1_2: Default version is YAML 1.2
  * @FYPCF_DEFAULT_VERSION_1_3: Default version is YAML 1.3 (experimental)
  * @FYPCF_SLOPPY_FLOW_INDENTATION: Allow sloppy indentation in flow mode
- * @FYPCF_PREFER_RECURSIVE: Prefer recursive algorighms instead of iterative whenever possible
+ * @FYPCF_PREFER_RECURSIVE: Prefer recursive algorighms instead of iterative
+ * whenever possible
  * @FYPCF_JSON_AUTO: Automatically enable JSON mode (when extension is .json)
  * @FYPCF_JSON_NONE: Never enable JSON input mode
  * @FYPCF_JSON_FORCE: Force JSON mode always
@@ -315,31 +314,31 @@ enum fy_error_module {
  * @FYPCF_ALLOW_DUPLICATE_KEYS: Allow duplicate keys on mappings
  */
 enum fy_parse_cfg_flags {
-	FYPCF_QUIET			= FY_BIT(0),
-	FYPCF_COLLECT_DIAG		= FY_BIT(1),
-	FYPCF_RESOLVE_DOCUMENT		= FY_BIT(2),
-	FYPCF_DISABLE_MMAP_OPT		= FY_BIT(3),
-	FYPCF_DISABLE_RECYCLING		= FY_BIT(4),
-	FYPCF_PARSE_COMMENTS		= FY_BIT(5),
-	FYPCF_DISABLE_DEPTH_LIMIT	= FY_BIT(6),
-	FYPCF_DISABLE_ACCELERATORS	= FY_BIT(7),
-	FYPCF_DISABLE_BUFFERING		= FY_BIT(8),
-	FYPCF_DEFAULT_VERSION_AUTO	= FYPCF_DEFAULT_VERSION(0),
-	FYPCF_DEFAULT_VERSION_1_1	= FYPCF_DEFAULT_VERSION(1),
-	FYPCF_DEFAULT_VERSION_1_2	= FYPCF_DEFAULT_VERSION(2),
-	FYPCF_DEFAULT_VERSION_1_3	= FYPCF_DEFAULT_VERSION(3),
-	FYPCF_SLOPPY_FLOW_INDENTATION	= FY_BIT(14),
-	FYPCF_PREFER_RECURSIVE		= FY_BIT(15),
-	FYPCF_JSON_AUTO			= FYPCF_JSON(0),
-	FYPCF_JSON_NONE			= FYPCF_JSON(1),
-	FYPCF_JSON_FORCE		= FYPCF_JSON(2),
-	FYPCF_YPATH_ALIASES		= FY_BIT(18),
-	FYPCF_ALLOW_DUPLICATE_KEYS	= FY_BIT(19),
+   FYPCF_QUIET                   = FY_BIT(0),
+   FYPCF_COLLECT_DIAG            = FY_BIT(1),
+   FYPCF_RESOLVE_DOCUMENT        = FY_BIT(2),
+   FYPCF_DISABLE_MMAP_OPT        = FY_BIT(3),
+   FYPCF_DISABLE_RECYCLING       = FY_BIT(4),
+   FYPCF_PARSE_COMMENTS          = FY_BIT(5),
+   FYPCF_DISABLE_DEPTH_LIMIT     = FY_BIT(6),
+   FYPCF_DISABLE_ACCELERATORS    = FY_BIT(7),
+   FYPCF_DISABLE_BUFFERING       = FY_BIT(8),
+   FYPCF_DEFAULT_VERSION_AUTO    = FYPCF_DEFAULT_VERSION(0),
+   FYPCF_DEFAULT_VERSION_1_1     = FYPCF_DEFAULT_VERSION(1),
+   FYPCF_DEFAULT_VERSION_1_2     = FYPCF_DEFAULT_VERSION(2),
+   FYPCF_DEFAULT_VERSION_1_3     = FYPCF_DEFAULT_VERSION(3),
+   FYPCF_SLOPPY_FLOW_INDENTATION = FY_BIT(14),
+   FYPCF_PREFER_RECURSIVE        = FY_BIT(15),
+   FYPCF_JSON_AUTO               = FYPCF_JSON(0),
+   FYPCF_JSON_NONE               = FYPCF_JSON(1),
+   FYPCF_JSON_FORCE              = FYPCF_JSON(2),
+   FYPCF_YPATH_ALIASES           = FY_BIT(18),
+   FYPCF_ALLOW_DUPLICATE_KEYS    = FY_BIT(19),
 };
 
-#define FYPCF_DEFAULT_PARSE	(0)
+#define FYPCF_DEFAULT_PARSE (0)
 
-#define FYPCF_DEFAULT_DOC	(FYPCF_QUIET | FYPCF_DEFAULT_PARSE)
+#define FYPCF_DEFAULT_DOC (FYPCF_QUIET | FYPCF_DEFAULT_PARSE)
 
 /*
  * The FYPCF_DEBUG and FYPCF_COLOR flags have been removed, however
@@ -349,40 +348,40 @@ enum fy_parse_cfg_flags {
  * You will need to eventualy modify the code if you actually depended
  * on the old behaviour.
  */
-#define FYPCF_MODULE_SHIFT		0
-#define FYPCF_MODULE_MASK		0
-#define FYPCF_DEBUG_LEVEL_SHIFT		0
-#define FYPCF_DEBUG_LEVEL_MASK		0
-#define FYPCF_DEBUG_LEVEL(x)		0
-#define FYPCF_DEBUG_DIAG_SHIFT		0
-#define FYPCF_DEBUG_DIAG_MASK		0
-#define FYPCF_DEBUG_DIAG_ALL		0
-#define FYPCF_DEBUG_DIAG_DEFAULT	0
-#define FYPCF_DEBUG_UNKNOWN		0
-#define FYPCF_DEBUG_ATOM		0
-#define FYPCF_DEBUG_SCAN		0
-#define FYPCF_DEBUG_PARSE		0
-#define FYPCF_DEBUG_DOC			0
-#define FYPCF_DEBUG_BUILD		0
-#define FYPCF_DEBUG_INTERNAL		0
-#define FYPCF_DEBUG_SYSTEM		0
-#define FYPCF_DEBUG_LEVEL_DEBUG		0
-#define FYPCF_DEBUG_LEVEL_INFO		0
-#define FYPCF_DEBUG_LEVEL_NOTICE	0
-#define FYPCF_DEBUG_LEVEL_WARNING	0
-#define FYPCF_DEBUG_LEVEL_ERROR		0
-#define FYPCF_DEBUG_DIAG_SOURCE		0
-#define FYPCF_DEBUG_DIAG_POSITION	0
-#define FYPCF_DEBUG_DIAG_TYPE		0
-#define FYPCF_DEBUG_DIAG_MODULE		0
-#define FYPCF_DEBUG_ALL			0
-#define FYPCF_DEBUG_DEFAULT		0
-#define FYPCF_COLOR_SHIFT		0
-#define FYPCF_COLOR_MASK		0
-#define FYPCF_COLOR(x)			0
-#define FYPCF_COLOR_AUTO		0
-#define FYPCF_COLOR_NONE		0
-#define FYPCF_COLOR_FORCE		0
+#define FYPCF_MODULE_SHIFT        0
+#define FYPCF_MODULE_MASK         0
+#define FYPCF_DEBUG_LEVEL_SHIFT   0
+#define FYPCF_DEBUG_LEVEL_MASK    0
+#define FYPCF_DEBUG_LEVEL(x)      0
+#define FYPCF_DEBUG_DIAG_SHIFT    0
+#define FYPCF_DEBUG_DIAG_MASK     0
+#define FYPCF_DEBUG_DIAG_ALL      0
+#define FYPCF_DEBUG_DIAG_DEFAULT  0
+#define FYPCF_DEBUG_UNKNOWN       0
+#define FYPCF_DEBUG_ATOM          0
+#define FYPCF_DEBUG_SCAN          0
+#define FYPCF_DEBUG_PARSE         0
+#define FYPCF_DEBUG_DOC           0
+#define FYPCF_DEBUG_BUILD         0
+#define FYPCF_DEBUG_INTERNAL      0
+#define FYPCF_DEBUG_SYSTEM        0
+#define FYPCF_DEBUG_LEVEL_DEBUG   0
+#define FYPCF_DEBUG_LEVEL_INFO    0
+#define FYPCF_DEBUG_LEVEL_NOTICE  0
+#define FYPCF_DEBUG_LEVEL_WARNING 0
+#define FYPCF_DEBUG_LEVEL_ERROR   0
+#define FYPCF_DEBUG_DIAG_SOURCE   0
+#define FYPCF_DEBUG_DIAG_POSITION 0
+#define FYPCF_DEBUG_DIAG_TYPE     0
+#define FYPCF_DEBUG_DIAG_MODULE   0
+#define FYPCF_DEBUG_ALL           0
+#define FYPCF_DEBUG_DEFAULT       0
+#define FYPCF_COLOR_SHIFT         0
+#define FYPCF_COLOR_MASK          0
+#define FYPCF_COLOR(x)            0
+#define FYPCF_COLOR_AUTO          0
+#define FYPCF_COLOR_NONE          0
+#define FYPCF_COLOR_FORCE         0
 
 /**
  * struct fy_parse_cfg - parser configuration structure.
@@ -396,10 +395,10 @@ enum fy_parse_cfg_flags {
  * @diag: Optional diagnostic interface to use
  */
 struct fy_parse_cfg {
-	const char *search_path;
-	enum fy_parse_cfg_flags flags;
-	void *userdata;
-	struct fy_diag *diag;
+   const char *search_path;
+   enum fy_parse_cfg_flags flags;
+   void *userdata;
+   struct fy_diag *diag;
 };
 
 /**
@@ -418,17 +417,17 @@ struct fy_parse_cfg {
  * @FYET_ALIAS: YAML alias event
  */
 enum fy_event_type {
-	FYET_NONE,
-	FYET_STREAM_START,
-	FYET_STREAM_END,
-	FYET_DOCUMENT_START,
-	FYET_DOCUMENT_END,
-	FYET_MAPPING_START,
-	FYET_MAPPING_END,
-	FYET_SEQUENCE_START,
-	FYET_SEQUENCE_END,
-	FYET_SCALAR,
-	FYET_ALIAS,
+   FYET_NONE,
+   FYET_STREAM_START,
+   FYET_STREAM_END,
+   FYET_DOCUMENT_START,
+   FYET_DOCUMENT_END,
+   FYET_MAPPING_START,
+   FYET_MAPPING_END,
+   FYET_SEQUENCE_START,
+   FYET_SEQUENCE_END,
+   FYET_SCALAR,
+   FYET_ALIAS,
 };
 
 /**
@@ -439,9 +438,7 @@ enum fy_event_type {
  * Returns:
  * A pointer to a text, i.e for FYET_SCALAR "=VAL".
  */
-const char *
-fy_event_type_get_text(enum fy_event_type type)
-	FY_EXPORT;
+const char *fy_event_type_get_text(enum fy_event_type type) FY_EXPORT;
 
 /**
  * enum fy_scalar_style - Scalar styles supported by the parser/emitter
@@ -456,13 +453,13 @@ fy_event_type_get_text(enum fy_event_type type)
  * @FYSS_MAX: marks end of scalar styles
  */
 enum fy_scalar_style {
-	FYSS_ANY = -1,
-	FYSS_PLAIN,
-	FYSS_SINGLE_QUOTED,
-	FYSS_DOUBLE_QUOTED,
-	FYSS_LITERAL,
-	FYSS_FOLDED,
-	FYSS_MAX,
+   FYSS_ANY = -1,
+   FYSS_PLAIN,
+   FYSS_SINGLE_QUOTED,
+   FYSS_DOUBLE_QUOTED,
+   FYSS_LITERAL,
+   FYSS_FOLDED,
+   FYSS_MAX,
 };
 
 /**
@@ -471,7 +468,7 @@ enum fy_scalar_style {
  * @stream_start: The token that started the stream
  */
 struct fy_event_stream_start_data {
-	struct fy_token *stream_start;
+   struct fy_token *stream_start;
 };
 
 /*
@@ -480,7 +477,7 @@ struct fy_event_stream_start_data {
  * @stream_end: The token that ended the stream
  */
 struct fy_event_stream_end_data {
-	struct fy_token *stream_end;
+   struct fy_token *stream_end;
 };
 
 /*
@@ -493,9 +490,9 @@ struct fy_event_stream_end_data {
  * @implicit: True if the document started implicitly
  */
 struct fy_event_document_start_data {
-	struct fy_token *document_start;
-	struct fy_document_state *document_state;
-	bool implicit;
+   struct fy_token *document_start;
+   struct fy_document_state *document_state;
+   bool implicit;
 };
 
 /*
@@ -506,8 +503,8 @@ struct fy_event_document_start_data {
  * @implicit: True if the document ended implicitly
  */
 struct fy_event_document_end_data {
-	struct fy_token *document_end;
-	bool implicit;
+   struct fy_token *document_end;
+   bool implicit;
 };
 
 /*
@@ -516,7 +513,7 @@ struct fy_event_document_end_data {
  * @anchor: The anchor token definining this alias.
  */
 struct fy_event_alias_data {
-	struct fy_token *anchor;
+   struct fy_token *anchor;
 };
 
 /*
@@ -528,10 +525,10 @@ struct fy_event_alias_data {
  * @tag_implicit: true if the tag was implicit or explicit
  */
 struct fy_event_scalar_data {
-	struct fy_token *anchor;
-	struct fy_token *tag;
-	struct fy_token *value;
-	bool tag_implicit;
+   struct fy_token *anchor;
+   struct fy_token *tag;
+   struct fy_token *value;
+   bool tag_implicit;
 };
 
 /*
@@ -543,9 +540,9 @@ struct fy_event_scalar_data {
  * 		    was started implicitly
  */
 struct fy_event_sequence_start_data {
-	struct fy_token *anchor;
-	struct fy_token *tag;
-	struct fy_token *sequence_start;
+   struct fy_token *anchor;
+   struct fy_token *tag;
+   struct fy_token *sequence_start;
 };
 
 /*
@@ -555,7 +552,7 @@ struct fy_event_sequence_start_data {
  * 		  the sequence was implicitly ended
  */
 struct fy_event_sequence_end_data {
-	struct fy_token *sequence_end;
+   struct fy_token *sequence_end;
 };
 
 /*
@@ -567,9 +564,9 @@ struct fy_event_sequence_end_data {
  * 		    was started implicitly
  */
 struct fy_event_mapping_start_data {
-	struct fy_token *anchor;
-	struct fy_token *tag;
-	struct fy_token *mapping_start;
+   struct fy_token *anchor;
+   struct fy_token *tag;
+   struct fy_token *mapping_start;
 };
 
 /*
@@ -579,7 +576,7 @@ struct fy_event_mapping_start_data {
  * 		  the mapping was implicitly ended
  */
 struct fy_event_mapping_end_data {
-	struct fy_token *mapping_end;
+   struct fy_token *mapping_end;
 };
 
 /**
@@ -612,20 +609,20 @@ struct fy_event_mapping_end_data {
  *               &fy_event->type is &enum FYET_MAPPING_END
  */
 struct fy_event {
-	enum fy_event_type type;
-	/* anonymous union */
-	union {
-		struct fy_event_stream_start_data stream_start;
-		struct fy_event_stream_end_data stream_end;
-		struct fy_event_document_start_data document_start;
-		struct fy_event_document_end_data document_end;
-		struct fy_event_alias_data alias;
-		struct fy_event_scalar_data scalar;
-		struct fy_event_sequence_start_data sequence_start;
-		struct fy_event_sequence_end_data sequence_end;
-		struct fy_event_mapping_start_data mapping_start;
-		struct fy_event_mapping_end_data mapping_end;
-	};
+   enum fy_event_type type;
+   /* anonymous union */
+   union {
+      struct fy_event_stream_start_data stream_start;
+      struct fy_event_stream_end_data stream_end;
+      struct fy_event_document_start_data document_start;
+      struct fy_event_document_end_data document_end;
+      struct fy_event_alias_data alias;
+      struct fy_event_scalar_data scalar;
+      struct fy_event_sequence_start_data sequence_start;
+      struct fy_event_sequence_end_data sequence_end;
+      struct fy_event_mapping_start_data mapping_start;
+      struct fy_event_mapping_end_data mapping_end;
+   };
 };
 
 /**
@@ -642,43 +639,42 @@ struct fy_event {
  * A pointer to the event data structure, or NULL if the
  * event is invalid
  */
-static inline void *
-fy_event_data(struct fy_event *fye)
+static inline void *fy_event_data(struct fy_event *fye)
 {
-	if (!fye)
-		return NULL;
+   if (!fye)
+      return NULL;
 
-	/* note that the unions should all be laid out
-	 * at the same address, but play it straight and
-	 * hope the optimizer will figure this is all
-	 * the same...
-	 */
-	switch (fye->type) {
-	case FYET_STREAM_START:
-		return &fye->stream_start;
-	case FYET_STREAM_END:
-		return &fye->stream_end;
-	case FYET_DOCUMENT_START:
-		return &fye->document_start;
-	case FYET_DOCUMENT_END:
-		return &fye->document_end;
-	case FYET_ALIAS:
-		return &fye->alias;
-	case FYET_SCALAR:
-		return &fye->scalar;
-	case FYET_SEQUENCE_START:
-		return &fye->sequence_start;
-	case FYET_SEQUENCE_END:
-		return &fye->sequence_end;
-	case FYET_MAPPING_START:
-		return &fye->mapping_start;
-	case FYET_MAPPING_END:
-		return &fye->mapping_end;
-	default:
-		break;
-	}
+   /* note that the unions should all be laid out
+    * at the same address, but play it straight and
+    * hope the optimizer will figure this is all
+    * the same...
+    */
+   switch (fye->type) {
+      case FYET_STREAM_START:
+         return &fye->stream_start;
+      case FYET_STREAM_END:
+         return &fye->stream_end;
+      case FYET_DOCUMENT_START:
+         return &fye->document_start;
+      case FYET_DOCUMENT_END:
+         return &fye->document_end;
+      case FYET_ALIAS:
+         return &fye->alias;
+      case FYET_SCALAR:
+         return &fye->scalar;
+      case FYET_SEQUENCE_START:
+         return &fye->sequence_start;
+      case FYET_SEQUENCE_END:
+         return &fye->sequence_end;
+      case FYET_MAPPING_START:
+         return &fye->mapping_start;
+      case FYET_MAPPING_END:
+         return &fye->mapping_end;
+      default:
+         break;
+   }
 
-	return NULL;
+   return NULL;
 }
 
 /**
@@ -688,9 +684,7 @@ fy_event_data(struct fy_event *fye)
  * A pointer to a version string of the form
  * <MAJOR>.<MINOR>[[.<PATCH>][-EXTRA-VERSION-INFO]]
  */
-const char *
-fy_library_version(void)
-	FY_EXPORT;
+const char *fy_library_version(void) FY_EXPORT;
 
 /**
  * fy_string_to_error_type() - Return the error type from a string
@@ -700,8 +694,7 @@ fy_library_version(void)
  * Returns:
  * The error type if greater or equal to zero, FYET_MAX otherwise
  */
-enum fy_error_type fy_string_to_error_type(const char *str)
-	FY_EXPORT;
+enum fy_error_type fy_string_to_error_type(const char *str) FY_EXPORT;
 
 /**
  * fy_error_type_to_string() - Convert an error type to string
@@ -711,8 +704,7 @@ enum fy_error_type fy_string_to_error_type(const char *str)
  * Returns:
  * The string value of the error type or the empty string "" on error
  */
-const char *fy_error_type_to_string(enum fy_error_type type)
-	FY_EXPORT;
+const char *fy_error_type_to_string(enum fy_error_type type) FY_EXPORT;
 
 /**
  * fy_string_to_error_module() - Return the error module from a string
@@ -722,8 +714,7 @@ const char *fy_error_type_to_string(enum fy_error_type type)
  * Returns:
  * The error type if greater or equal to zero, FYEM_MAX otherwise
  */
-enum fy_error_module fy_string_to_error_module(const char *str)
-	FY_EXPORT;
+enum fy_error_module fy_string_to_error_module(const char *str) FY_EXPORT;
 
 /**
  * fy_error_module_to_string() - Convert an error module to string
@@ -733,8 +724,7 @@ enum fy_error_module fy_string_to_error_module(const char *str)
  * Returns:
  * The string value of the error module or the empty string "" on error
  */
-const char *fy_error_module_to_string(enum fy_error_module module)
-	FY_EXPORT;
+const char *fy_error_module_to_string(enum fy_error_module module) FY_EXPORT;
 
 /**
  * fy_event_is_implicit() - Check whether the given event is an implicit one
@@ -744,12 +734,11 @@ const char *fy_error_module_to_string(enum fy_error_module module)
  * Returns:
  * true if the event is an implicit one.
  */
-bool
-fy_event_is_implicit(struct fy_event *fye)
-	FY_EXPORT;
+bool fy_event_is_implicit(struct fy_event *fye) FY_EXPORT;
 
 /**
- * fy_document_event_is_implicit() - Check whether the given document event is an implicit one
+ * fy_document_event_is_implicit() - Check whether the given document event is
+ * an implicit one
  *
  * @fye: A pointer to a &struct fy_event to check.
  *       It must be either a document start or document end event.
@@ -757,9 +746,7 @@ fy_event_is_implicit(struct fy_event *fye)
  * Returns:
  * true if the event is an implicit one.
  */
-bool
-fy_document_event_is_implicit(const struct fy_event *fye)
-	FY_EXPORT;
+bool fy_document_event_is_implicit(const struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_parser_create() - Create a parser.
@@ -773,9 +760,7 @@ fy_document_event_is_implicit(const struct fy_event *fye)
  * Returns:
  * A pointer to the parser or NULL in case of an error.
  */
-struct fy_parser *
-fy_parser_create(const struct fy_parse_cfg *cfg)
-	FY_EXPORT;
+struct fy_parser *fy_parser_create(const struct fy_parse_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_parser_destroy() - Destroy the given parser
@@ -784,9 +769,7 @@ fy_parser_create(const struct fy_parse_cfg *cfg)
  *
  * @fyp: The parser to destroy
  */
-void
-fy_parser_destroy(struct fy_parser *fyp)
-	FY_EXPORT;
+void fy_parser_destroy(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_parser_get_cfg() - Get the configuration of a parser
@@ -796,9 +779,7 @@ fy_parser_destroy(struct fy_parser *fyp)
  * Returns:
  * The configuration of the parser
  */
-const struct fy_parse_cfg *
-fy_parser_get_cfg(struct fy_parser *fyp)
-	FY_EXPORT;
+const struct fy_parse_cfg *fy_parser_get_cfg(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_parser_get_diag() - Get the diagnostic object of a parser
@@ -813,9 +794,7 @@ fy_parser_get_cfg(struct fy_parser *fyp)
  * A pointer to a ref'ed diagnostic object or NULL in case of an
  * error.
  */
-struct fy_diag *
-fy_parser_get_diag(struct fy_parser *fyp)
-	FY_EXPORT;
+struct fy_diag *fy_parser_get_diag(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_parser_set_diag() - Set the diagnostic object of a parser
@@ -831,9 +810,7 @@ fy_parser_get_diag(struct fy_parser *fyp)
  * Returns:
  * 0 if everything OK, -1 otherwise
  */
-int
-fy_parser_set_diag(struct fy_parser *fyp, struct fy_diag *diag)
-	FY_EXPORT;
+int fy_parser_set_diag(struct fy_parser *fyp, struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_parser_reset() - Reset a parser completely
@@ -846,9 +823,7 @@ fy_parser_set_diag(struct fy_parser *fyp, struct fy_diag *diag)
  * Returns:
  * 0 if the reset was successful, -1 otherwise
  */
-int
-fy_parser_reset(struct fy_parser *fyp)
-	FY_EXPORT;
+int fy_parser_reset(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_parser_set_input_file() - Set the parser to process the given file
@@ -864,9 +839,7 @@ fy_parser_reset(struct fy_parser *fyp)
  * Returns:
  * zero on success, -1 on error
  */
-int
-fy_parser_set_input_file(struct fy_parser *fyp, const char *file)
-	FY_EXPORT;
+int fy_parser_set_input_file(struct fy_parser *fyp, const char *file) FY_EXPORT;
 
 /**
  * fy_parser_set_string() - Set the parser to process the given string.
@@ -881,17 +854,17 @@ fy_parser_set_input_file(struct fy_parser *fyp, const char *file)
  * Returns:
  * zero on success, -1 on error
  */
-int
-fy_parser_set_string(struct fy_parser *fyp, const char *str, size_t len)
-	FY_EXPORT;
+int fy_parser_set_string(struct fy_parser *fyp, const char *str,
+                         size_t len) FY_EXPORT;
 
 /**
- * fy_parser_set_malloc_string() - Set the parser to process the given malloced string.
+ * fy_parser_set_malloc_string() - Set the parser to process the given malloced
+ * string.
  *
  * Point the parser to the given (possible NULL terminated) string. Note that
- * the string is expected to be allocated via malloc(3) and ownership is transferred
- * to the created input. When the input is free'ed the memory will be automatically
- * freed.
+ * the string is expected to be allocated via malloc(3) and ownership is
+ * transferred to the created input. When the input is free'ed the memory will
+ * be automatically freed.
  *
  * In case of an error the string is not freed.
  *
@@ -902,9 +875,8 @@ fy_parser_set_string(struct fy_parser *fyp, const char *str, size_t len)
  * Returns:
  * zero on success, -1 on error
  */
-int
-fy_parser_set_malloc_string(struct fy_parser *fyp, char *str, size_t len)
-	FY_EXPORT;
+int fy_parser_set_malloc_string(struct fy_parser *fyp, char *str,
+                                size_t len) FY_EXPORT;
 
 /**
  * fy_parser_set_input_fp() - Set the parser to process the given file
@@ -918,9 +890,8 @@ fy_parser_set_malloc_string(struct fy_parser *fyp, char *str, size_t len)
  * Returns:
  * zero on success, -1 on error
  */
-int
-fy_parser_set_input_fp(struct fy_parser *fyp, const char *name, FILE *fp)
-	FY_EXPORT;
+int fy_parser_set_input_fp(struct fy_parser *fyp, const char *name,
+                           FILE *fp) FY_EXPORT;
 
 /**
  * fy_parser_set_input_callback() - Set the parser to process via a callback
@@ -935,11 +906,12 @@ fy_parser_set_input_fp(struct fy_parser *fyp, const char *name, FILE *fp)
  * zero on success, -1 on error
  */
 int fy_parser_set_input_callback(struct fy_parser *fyp, void *user,
-		ssize_t (*callback)(void *user, void *buf, size_t count))
-	FY_EXPORT;
+                                 ssize_t (*callback)(void *user, void *buf,
+                                                     size_t count)) FY_EXPORT;
 
 /**
- * fy_parser_set_input_db() - Set the parser to process the given file descriptor
+ * fy_parser_set_input_db() - Set the parser to process the given file
+ * descriptor
  *
  * Point the parser to use @fd for processing.
  *
@@ -949,9 +921,7 @@ int fy_parser_set_input_callback(struct fy_parser *fyp, void *user,
  * Returns:
  * zero on success, -1 on error
  */
-int
-fy_parser_set_input_fd(struct fy_parser *fyp, int fd)
-	FY_EXPORT;
+int fy_parser_set_input_fd(struct fy_parser *fyp, int fd) FY_EXPORT;
 
 /**
  * fy_parser_parse() - Parse and return the next event.
@@ -966,9 +936,7 @@ fy_parser_set_input_fd(struct fy_parser *fyp, int fd)
  * Returns:
  * The next event in the stream or NULL.
  */
-struct fy_event *
-fy_parser_parse(struct fy_parser *fyp)
-	FY_EXPORT;
+struct fy_event *fy_parser_parse(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_parser_event_free() - Free an event
@@ -978,9 +946,8 @@ fy_parser_parse(struct fy_parser *fyp)
  * @fyp: The parser
  * @fye: The event to free (may be NULL)
  */
-void
-fy_parser_event_free(struct fy_parser *fyp, struct fy_event *fye)
-	FY_EXPORT;
+void fy_parser_event_free(struct fy_parser *fyp,
+                          struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_parser_get_stream_error() - Check the parser for stream errors
@@ -990,9 +957,7 @@ fy_parser_event_free(struct fy_parser *fyp, struct fy_event *fye)
  * Returns:
  * true in case of a stream error, false otherwise.
  */
-bool
-fy_parser_get_stream_error(struct fy_parser *fyp)
-	FY_EXPORT;
+bool fy_parser_get_stream_error(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_parser_vlog() - Log using the parsers diagnostics printf style (va_arg)
@@ -1004,9 +969,8 @@ fy_parser_get_stream_error(struct fy_parser *fyp)
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_parser_vlog(struct fy_parser *fyp, enum fy_error_type type, const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_parser_vlog(struct fy_parser *fyp, enum fy_error_type type,
+                    const char *fmt, va_list ap) FY_EXPORT;
 
 /**
  * fy_parser_log() - Log using the parsers diagnostics printf style
@@ -1018,33 +982,33 @@ fy_parser_vlog(struct fy_parser *fyp, enum fy_error_type type, const char *fmt, 
  * @fmt: The printf format string
  * @...: The extra arguments
  */
-void
-fy_parser_log(struct fy_parser *fyp, enum fy_error_type type, const char *fmt, ...)
-	FY_FORMAT(printf, 3, 4)
-	FY_EXPORT;
+void fy_parser_log(struct fy_parser *fyp, enum fy_error_type type,
+                   const char *fmt, ...) FY_FORMAT(printf, 3, 4) FY_EXPORT;
 
 #ifndef NDEBUG
 
-#define fy_parser_debug(_fyp, _fmt, ...) \
-	fy_parser_log((_fyp), FYET_DEBUG, (_fmt) , ## __VA_ARGS__)
+#define fy_parser_debug(_fyp, _fmt, ...)                                       \
+   fy_parser_log((_fyp), FYET_DEBUG, (_fmt), ##__VA_ARGS__)
 #else
 
-#define fy_parser_debug(_fyp, _fmt, ...) \
-	do { } while(0)
+#define fy_parser_debug(_fyp, _fmt, ...)                                       \
+   do {                                                                        \
+   } while (0)
 
 #endif
 
-#define fy_parser_info(_fyp, _fmt, ...) \
-	fy_parser_log((_fyp), FYET_INFO, (_fmt) , ## __VA_ARGS__)
-#define fy_parser_notice(_fyp, _fmt, ...) \
-	fy_parser_log((_fyp), FYET_NOTICE, (_fmt) , ## __VA_ARGS__)
-#define fy_parser_warning(_fyp, _fmt, ...) \
-	fy_parser_log((_fyp), FYET_WARNING, (_fmt) , ## __VA_ARGS__)
-#define fy_parser_error(_fyp, _fmt, ...) \
-	fy_parser_log((_fyp), FYET_ERROR, (_fmt) , ## __VA_ARGS__)
+#define fy_parser_info(_fyp, _fmt, ...)                                        \
+   fy_parser_log((_fyp), FYET_INFO, (_fmt), ##__VA_ARGS__)
+#define fy_parser_notice(_fyp, _fmt, ...)                                      \
+   fy_parser_log((_fyp), FYET_NOTICE, (_fmt), ##__VA_ARGS__)
+#define fy_parser_warning(_fyp, _fmt, ...)                                     \
+   fy_parser_log((_fyp), FYET_WARNING, (_fmt), ##__VA_ARGS__)
+#define fy_parser_error(_fyp, _fmt, ...)                                       \
+   fy_parser_log((_fyp), FYET_ERROR, (_fmt), ##__VA_ARGS__)
 
 /**
- * fy_parser_vreport() - Report using the parsers diagnostics printf style and mark token (va_arg)
+ * fy_parser_vreport() - Report using the parsers diagnostics printf style and
+ * mark token (va_arg)
  *
  * Output a report on the parser and indicate the token's position
  *
@@ -1054,13 +1018,13 @@ fy_parser_log(struct fy_parser *fyp, enum fy_error_type type, const char *fmt, .
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_parser_vreport(struct fy_parser *fyp, enum fy_error_type type, struct fy_token *fyt,
-		  const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_parser_vreport(struct fy_parser *fyp, enum fy_error_type type,
+                       struct fy_token *fyt, const char *fmt,
+                       va_list ap) FY_EXPORT;
 
 /**
- * fy_parser_report() - Report using the parsers diagnostics printf style and mark token
+ * fy_parser_report() - Report using the parsers diagnostics printf style and
+ * mark token
  *
  * Output a report on the parser and indicate the token's position
  *
@@ -1070,31 +1034,30 @@ fy_parser_vreport(struct fy_parser *fyp, enum fy_error_type type, struct fy_toke
  * @fmt: The printf format string
  * @..: The extra arguments
  */
-void
-fy_parser_report(struct fy_parser *fyp, enum fy_error_type type, struct fy_token *fyt,
-		 const char *fmt, ...)
-	FY_FORMAT(printf, 4, 5)
-	FY_EXPORT;
+void fy_parser_report(struct fy_parser *fyp, enum fy_error_type type,
+                      struct fy_token *fyt, const char *fmt, ...)
+    FY_FORMAT(printf, 4, 5) FY_EXPORT;
 
 #ifndef NDEBUG
 
-#define fy_parser_report_debug(_fyp, _fyt, _fmt, ...) \
-	fy_parser_report((_fyp), FYET_DEBUG, (_fyt), (_fmt) , ## __VA_ARGS__)
+#define fy_parser_report_debug(_fyp, _fyt, _fmt, ...)                          \
+   fy_parser_report((_fyp), FYET_DEBUG, (_fyt), (_fmt), ##__VA_ARGS__)
 #else
 
-#define fy_parser_report_debug(_fyp, _fyt, _fmt, ...) \
-	do { } while(0)
+#define fy_parser_report_debug(_fyp, _fyt, _fmt, ...)                          \
+   do {                                                                        \
+   } while (0)
 
 #endif
 
-#define fy_parser_report_info(_fyp, _fyt, _fmt, ...) \
-	fy_parser_report((_fyp), FYET_INFO, (_fyt), (_fmt) , ## __VA_ARGS__)
-#define fy_parser_report_notice(_fyp, _fyt, _fmt, ...) \
-	fy_parser_report((_fyp), FYET_NOTICE, (_fyt), (_fmt) , ## __VA_ARGS__)
-#define fy_parser_report_warning(_fyp, _fyt, _fmt, ...) \
-	fy_parser_report((_fyp), FYET_WARNING, (_fyt), (_fmt) , ## __VA_ARGS__)
-#define fy_parser_report_error(_fyp, _fyt, _fmt, ...) \
-	fy_parser_report((_fyp), FYET_ERROR, (_fyt), (_fmt) , ## __VA_ARGS__)
+#define fy_parser_report_info(_fyp, _fyt, _fmt, ...)                           \
+   fy_parser_report((_fyp), FYET_INFO, (_fyt), (_fmt), ##__VA_ARGS__)
+#define fy_parser_report_notice(_fyp, _fyt, _fmt, ...)                         \
+   fy_parser_report((_fyp), FYET_NOTICE, (_fyt), (_fmt), ##__VA_ARGS__)
+#define fy_parser_report_warning(_fyp, _fyt, _fmt, ...)                        \
+   fy_parser_report((_fyp), FYET_WARNING, (_fyt), (_fmt), ##__VA_ARGS__)
+#define fy_parser_report_error(_fyp, _fyt, _fmt, ...)                          \
+   fy_parser_report((_fyp), FYET_ERROR, (_fyt), (_fmt), ##__VA_ARGS__)
 
 /**
  * fy_token_scalar_style() - Get the style of a scalar token
@@ -1105,9 +1068,7 @@ fy_parser_report(struct fy_parser *fyp, enum fy_error_type type, struct fy_token
  * Returns:
  * The scalar style of the token, or FYSS_PLAIN on each other case
  */
-enum fy_scalar_style
-fy_token_scalar_style(struct fy_token *fyt)
-	FY_EXPORT;
+enum fy_scalar_style fy_token_scalar_style(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_scalar_is_null() - Test whether the scalar is null (content)
@@ -1121,9 +1082,7 @@ fy_token_scalar_style(struct fy_token *fyt)
  * Returns:
  * true if is a null scalar, false otherwise
  */
-bool
-fy_token_scalar_is_null(struct fy_token *fyt)
-	FY_EXPORT;
+bool fy_token_scalar_is_null(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_get_text() - Get text (and length of it) of a token
@@ -1154,9 +1113,7 @@ fy_token_scalar_is_null(struct fy_token *fyt)
  * @lenp will be assigned the character length of said representation.
  * NULL in case of an error.
  */
-const char *
-fy_token_get_text(struct fy_token *fyt, size_t *lenp)
-	FY_EXPORT;
+const char *fy_token_get_text(struct fy_token *fyt, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_token_get_text0() - Get zero terminated text of a token
@@ -1172,9 +1129,7 @@ fy_token_get_text(struct fy_token *fyt, size_t *lenp)
  * A pointer to a zero terminated text representation of the token.
  * NULL in case of an error.
  */
-const char *
-fy_token_get_text0(struct fy_token *fyt)
-	FY_EXPORT;
+const char *fy_token_get_text0(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_get_text_length() - Get length of the text of a token
@@ -1188,9 +1143,7 @@ fy_token_get_text0(struct fy_token *fyt)
  * The size of the text representation of a token, -1 in case of an error.
  * Note that the NULL token will return a length of zero.
  */
-size_t
-fy_token_get_text_length(struct fy_token *fyt)
-	FY_EXPORT;
+size_t fy_token_get_text_length(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_get_utf8_length() - Get length of the text of a token
@@ -1204,9 +1157,7 @@ fy_token_get_text_length(struct fy_token *fyt)
  * The size of the utf8 text representation of a token, -1 in case of an error.
  * Note that the NULL token will return a length of zero.
  */
-size_t
-fy_token_get_utf8_length(struct fy_token *fyt)
-	FY_EXPORT;
+size_t fy_token_get_utf8_length(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * enum fy_comment_placement - Comment placement relative to token
@@ -1215,11 +1166,7 @@ fy_token_get_utf8_length(struct fy_token *fyt)
  * @fycp_right: Comment to the right of the token
  * @fycp_bottom: Comment to the bottom of the token
  */
-enum fy_comment_placement {
-	fycp_top,
-	fycp_right,
-	fycp_bottom
-};
+enum fy_comment_placement { fycp_top, fycp_right, fycp_bottom };
 #define fycp_max (fycp_bottom + 1)
 
 /**
@@ -1234,10 +1181,8 @@ enum fy_comment_placement {
  * A pointer to a zero terminated text representation of the token comment.
  * NULL in case of an error or if the token has no comment.
  */
-const char *
-fy_token_get_comment(struct fy_token *fyt, char *buf, size_t maxsz,
-		     enum fy_comment_placement which)
-	FY_EXPORT;
+const char *fy_token_get_comment(struct fy_token *fyt, char *buf, size_t maxsz,
+                                 enum fy_comment_placement which) FY_EXPORT;
 
 /**
  * struct fy_iter_chunk - An iteration chunk
@@ -1249,8 +1194,8 @@ fy_token_get_comment(struct fy_token *fyt, char *buf, size_t maxsz,
  * cover the whole object.
  */
 struct fy_iter_chunk {
-	const char *str;
-	size_t len;
+   const char *str;
+   size_t len;
 };
 
 /**
@@ -1267,9 +1212,7 @@ struct fy_iter_chunk {
  * A pointer to the newly created iterator, or NULL in case of
  * an error.
  */
-struct fy_token_iter *
-fy_token_iter_create(struct fy_token *fyt)
-	FY_EXPORT;
+struct fy_token_iter *fy_token_iter_create(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_iter_destroy() - Destroy the iterator
@@ -1278,9 +1221,7 @@ fy_token_iter_create(struct fy_token *fyt)
  *
  * @iter: The iterator to destroy.
  */
-void
-fy_token_iter_destroy(struct fy_token_iter *iter)
-	FY_EXPORT;
+void fy_token_iter_destroy(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_start() - Start iterating over the contents of a token
@@ -1292,9 +1233,8 @@ fy_token_iter_destroy(struct fy_token_iter *iter)
  * @fyt: The token to iterate over
  * @iter: The iterator to prepare.
  */
-void
-fy_token_iter_start(struct fy_token *fyt, struct fy_token_iter *iter)
-	FY_EXPORT;
+void fy_token_iter_start(struct fy_token *fyt,
+                         struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_finish() - Stop iterating over the contents of a token
@@ -1303,9 +1243,7 @@ fy_token_iter_start(struct fy_token *fyt, struct fy_token_iter *iter)
  *
  * @iter: The iterator.
  */
-void
-fy_token_iter_finish(struct fy_token_iter *iter)
-	FY_EXPORT;
+void fy_token_iter_finish(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_peek_chunk() - Peek at the next iterator chunk
@@ -1319,8 +1257,7 @@ fy_token_iter_finish(struct fy_token_iter *iter)
  * no other.
  */
 const struct fy_iter_chunk *
-fy_token_iter_peek_chunk(struct fy_token_iter *iter)
-	FY_EXPORT;
+fy_token_iter_peek_chunk(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_chunk_next() - Get next iterator chunk
@@ -1338,8 +1275,7 @@ fy_token_iter_peek_chunk(struct fy_token_iter *iter)
  */
 const struct fy_iter_chunk *
 fy_token_iter_chunk_next(struct fy_token_iter *iter,
-			 const struct fy_iter_chunk *curr, int *errp)
-	FY_EXPORT;
+                         const struct fy_iter_chunk *curr, int *errp) FY_EXPORT;
 
 /**
  * fy_token_iter_advance() - Advance the iterator position
@@ -1352,9 +1288,7 @@ fy_token_iter_chunk_next(struct fy_token_iter *iter,
  * @iter: The iterator.
  * @len: Number of bytes to advance the iterator position
  */
-void
-fy_token_iter_advance(struct fy_token_iter *iter, size_t len)
-	FY_EXPORT;
+void fy_token_iter_advance(struct fy_token_iter *iter, size_t len) FY_EXPORT;
 
 /**
  * fy_token_iter_read() - Read a block from an iterator
@@ -1370,9 +1304,8 @@ fy_token_iter_advance(struct fy_token_iter *iter, size_t len)
  * Returns:
  * The amount of data read, or -1 in case of an error.
  */
-ssize_t
-fy_token_iter_read(struct fy_token_iter *iter, void *buf, size_t count)
-	FY_EXPORT;
+ssize_t fy_token_iter_read(struct fy_token_iter *iter, void *buf,
+                           size_t count) FY_EXPORT;
 
 /**
  * fy_token_iter_getc() - Get a single character from an iterator
@@ -1387,9 +1320,7 @@ fy_token_iter_read(struct fy_token_iter *iter, void *buf, size_t count)
  * The next character in the iterator, or -1 in case of an error, or
  * end of stream.
  */
-int
-fy_token_iter_getc(struct fy_token_iter *iter)
-	FY_EXPORT;
+int fy_token_iter_getc(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_ungetc() - Ungets a single character from an iterator
@@ -1406,9 +1337,7 @@ fy_token_iter_getc(struct fy_token_iter *iter)
  * The pushed back character given as argument, or -1 in case of an error.
  * If the pushed back character was -1, then 0 will be returned.
  */
-int
-fy_token_iter_ungetc(struct fy_token_iter *iter, int c)
-	FY_EXPORT;
+int fy_token_iter_ungetc(struct fy_token_iter *iter, int c) FY_EXPORT;
 
 /**
  * fy_token_iter_peekc() - Peeks at single character from an iterator
@@ -1424,9 +1353,7 @@ fy_token_iter_ungetc(struct fy_token_iter *iter, int c)
  * The next character in the iterator, or -1 in case of an error, or end
  * of stream.
  */
-int
-fy_token_iter_peekc(struct fy_token_iter *iter)
-	FY_EXPORT;
+int fy_token_iter_peekc(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_utf8_get() - Get a single utf8 character from an iterator
@@ -1441,9 +1368,7 @@ fy_token_iter_peekc(struct fy_token_iter *iter)
  * The next utf8 character in the iterator, or -1 in case of an error, or end
  * of stream.
  */
-int
-fy_token_iter_utf8_get(struct fy_token_iter *iter)
-	FY_EXPORT;
+int fy_token_iter_utf8_get(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_token_iter_utf8_unget() - Ungets a single utf8 character from an iterator
@@ -1460,9 +1385,7 @@ fy_token_iter_utf8_get(struct fy_token_iter *iter)
  * The pushed back utf8 character given as argument, or -1 in case of an error.
  * If the pushed back utf8 character was -1, then 0 will be returned.
  */
-int
-fy_token_iter_utf8_unget(struct fy_token_iter *iter, int c)
-	FY_EXPORT;
+int fy_token_iter_utf8_unget(struct fy_token_iter *iter, int c) FY_EXPORT;
 
 /**
  * fy_token_iter_utf8_peek() - Peeks at single utf8 character from an iterator
@@ -1478,9 +1401,7 @@ fy_token_iter_utf8_unget(struct fy_token_iter *iter, int c)
  * The next utf8 character in the iterator, or -1 in case of an error, or end
  * of stream.
  */
-int
-fy_token_iter_utf8_peek(struct fy_token_iter *iter)
-	FY_EXPORT;
+int fy_token_iter_utf8_peek(struct fy_token_iter *iter) FY_EXPORT;
 
 /**
  * fy_parse_load_document() - Parse the next document from the parser stream
@@ -1494,19 +1415,17 @@ fy_token_iter_utf8_peek(struct fy_token_iter *iter)
  * Returns:
  * The next document from the parser stream.
  */
-struct fy_document *
-fy_parse_load_document(struct fy_parser *fyp)
-	FY_EXPORT;
+struct fy_document *fy_parse_load_document(struct fy_parser *fyp) FY_EXPORT;
 
 /**
- * fy_parse_document_destroy() - Destroy a document created by fy_parse_load_document()
+ * fy_parse_document_destroy() - Destroy a document created by
+ * fy_parse_load_document()
  *
  * @fyp: The parser
  * @fyd: The document to destroy
  */
-void
-fy_parse_document_destroy(struct fy_parser *fyp, struct fy_document *fyd)
-	FY_EXPORT;
+void fy_parse_document_destroy(struct fy_parser *fyp,
+                               struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_resolve() - Resolve anchors and merge keys
@@ -1520,9 +1439,7 @@ fy_parse_document_destroy(struct fy_parser *fyp, struct fy_document *fyd)
  * Returns:
  * zero on success, -1 on error
  */
-int
-fy_document_resolve(struct fy_document *fyd)
-	FY_EXPORT;
+int fy_document_resolve(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_has_directives() - Document directive check
@@ -1535,9 +1452,7 @@ fy_document_resolve(struct fy_document *fyd)
  * Returns:
  * true if directives exist, false if not
  */
-bool
-fy_document_has_directives(const struct fy_document *fyd)
-	FY_EXPORT;
+bool fy_document_has_directives(const struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_has_explicit_document_start() - Explicit document start check
@@ -1550,9 +1465,8 @@ fy_document_has_directives(const struct fy_document *fyd)
  * Returns:
  * true if document has an explicit document start marker, false if not
  */
-bool
-fy_document_has_explicit_document_start(const struct fy_document *fyd)
-	FY_EXPORT;
+bool fy_document_has_explicit_document_start(
+    const struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_has_explicit_document_end() - Explicit document end check
@@ -1565,9 +1479,8 @@ fy_document_has_explicit_document_start(const struct fy_document *fyd)
  * Returns:
  * true if document has an explicit document end marker, false if not
  */
-bool
-fy_document_has_explicit_document_end(const struct fy_document *fyd)
-	FY_EXPORT;
+bool fy_document_has_explicit_document_end(
+    const struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_node_document() - Retreive the document the node belong to
@@ -1582,9 +1495,7 @@ fy_document_has_explicit_document_end(const struct fy_document *fyd)
  * The document of the node, or NULL in case of an error, or
  * when the node has no document attached.
  */
-struct fy_document *
-fy_node_document(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_document *fy_node_document(struct fy_node *fyn) FY_EXPORT;
 
 /*
  * enum fy_emitter_write_type - Type of the emitted output
@@ -1616,80 +1527,84 @@ fy_node_document(struct fy_node *fyn)
  *
  */
 enum fy_emitter_write_type {
-	fyewt_document_indicator,
-	fyewt_tag_directive,
-	fyewt_version_directive,
-	fyewt_indent,
-	fyewt_indicator,
-	fyewt_whitespace,
-	fyewt_plain_scalar,
-	fyewt_single_quoted_scalar,
-	fyewt_double_quoted_scalar,
-	fyewt_literal_scalar,
-	fyewt_folded_scalar,
-	fyewt_anchor,
-	fyewt_tag,
-	fyewt_linebreak,
-	fyewt_alias,
-	fyewt_terminating_zero,
-	fyewt_plain_scalar_key,
-	fyewt_single_quoted_scalar_key,
-	fyewt_double_quoted_scalar_key,
-	fyewt_comment,
-	// extended indicators
-	fyewt_indicator_question_mark,
-	fyewt_indicator_colon,
-	fyewt_indicator_dash,
-	fyewt_indicator_left_bracket,
-	fyewt_indicator_right_bracket,
-	fyewt_indicator_left_brace,
-	fyewt_indicator_right_brace,
-	fyewt_indicator_comma,
-	fyewt_indicator_bar,
-	fyewt_indicator_greater,
-	fyewt_indicator_single_quote_start,
-	fyewt_indicator_single_quote_end,
-	fyewt_indicator_double_quote_start,
-	fyewt_indicator_double_quote_end,
-	fyewt_indicator_ambersand,
-	fyewt_indicator_star,
-	fyewt_indicator_chomp,			// - or +
-	fyewt_indicator_explicit_indent,	// 0-9
+   fyewt_document_indicator,
+   fyewt_tag_directive,
+   fyewt_version_directive,
+   fyewt_indent,
+   fyewt_indicator,
+   fyewt_whitespace,
+   fyewt_plain_scalar,
+   fyewt_single_quoted_scalar,
+   fyewt_double_quoted_scalar,
+   fyewt_literal_scalar,
+   fyewt_folded_scalar,
+   fyewt_anchor,
+   fyewt_tag,
+   fyewt_linebreak,
+   fyewt_alias,
+   fyewt_terminating_zero,
+   fyewt_plain_scalar_key,
+   fyewt_single_quoted_scalar_key,
+   fyewt_double_quoted_scalar_key,
+   fyewt_comment,
+   // extended indicators
+   fyewt_indicator_question_mark,
+   fyewt_indicator_colon,
+   fyewt_indicator_dash,
+   fyewt_indicator_left_bracket,
+   fyewt_indicator_right_bracket,
+   fyewt_indicator_left_brace,
+   fyewt_indicator_right_brace,
+   fyewt_indicator_comma,
+   fyewt_indicator_bar,
+   fyewt_indicator_greater,
+   fyewt_indicator_single_quote_start,
+   fyewt_indicator_single_quote_end,
+   fyewt_indicator_double_quote_start,
+   fyewt_indicator_double_quote_end,
+   fyewt_indicator_ambersand,
+   fyewt_indicator_star,
+   fyewt_indicator_chomp,           // - or +
+   fyewt_indicator_explicit_indent, // 0-9
 };
 
 #define FYEWT_EXTENDED_INDICATORS_FIRST fyewt_indicator_question_mark
-#define FYEWT_EXTENDED_INDICATORS_LAST 	fyewt_indicator_explicit_indent
+#define FYEWT_EXTENDED_INDICATORS_LAST  fyewt_indicator_explicit_indent
 
-#define FYEWT_EXTENDED_START 	fyewt_indicator_question_mark
-#define FYEWT_COUNT 		(fyewt_indicator_explicit_indent + 1)
+#define FYEWT_EXTENDED_START fyewt_indicator_question_mark
+#define FYEWT_COUNT          (fyewt_indicator_explicit_indent + 1)
 
-#define FYECF_INDENT_SHIFT	8
-#define FYECF_INDENT_MASK	0xf
-#define FYECF_INDENT(x)	(((x) & FYECF_INDENT_MASK) << FYECF_INDENT_SHIFT)
+#define FYECF_INDENT_SHIFT 8
+#define FYECF_INDENT_MASK  0xf
+#define FYECF_INDENT(x)    (((x) & FYECF_INDENT_MASK) << FYECF_INDENT_SHIFT)
 
-#define FYECF_WIDTH_SHIFT	12
-#define FYECF_WIDTH_MASK	0xff
-#define FYECF_WIDTH(x)		(((x) & FYECF_WIDTH_MASK) << FYECF_WIDTH_SHIFT)
+#define FYECF_WIDTH_SHIFT 12
+#define FYECF_WIDTH_MASK  0xff
+#define FYECF_WIDTH(x)    (((x) & FYECF_WIDTH_MASK) << FYECF_WIDTH_SHIFT)
 
-#define FYECF_MODE_SHIFT	20
-#define FYECF_MODE_MASK		0xf
-#define FYECF_MODE(x)		(((x) & FYECF_MODE_MASK) << FYECF_MODE_SHIFT)
+#define FYECF_MODE_SHIFT 20
+#define FYECF_MODE_MASK  0xf
+#define FYECF_MODE(x)    (((x) & FYECF_MODE_MASK) << FYECF_MODE_SHIFT)
 
-#define FYECF_DOC_START_MARK_SHIFT	24
-#define FYECF_DOC_START_MARK_MASK	0x3
-#define FYECF_DOC_START_MARK(x)		(((x) & FYECF_DOC_START_MARK_MASK) << FYECF_DOC_START_MARK_SHIFT)
+#define FYECF_DOC_START_MARK_SHIFT 24
+#define FYECF_DOC_START_MARK_MASK  0x3
+#define FYECF_DOC_START_MARK(x)                                                \
+   (((x) & FYECF_DOC_START_MARK_MASK) << FYECF_DOC_START_MARK_SHIFT)
 
-#define FYECF_DOC_END_MARK_SHIFT	26
-#define FYECF_DOC_END_MARK_MASK		0x3
-#define FYECF_DOC_END_MARK(x)		(((x) & FYECF_DOC_END_MARK_MASK) << FYECF_DOC_END_MARK_SHIFT)
+#define FYECF_DOC_END_MARK_SHIFT 26
+#define FYECF_DOC_END_MARK_MASK  0x3
+#define FYECF_DOC_END_MARK(x)                                                  \
+   (((x) & FYECF_DOC_END_MARK_MASK) << FYECF_DOC_END_MARK_SHIFT)
 
-#define FYECF_VERSION_DIR_SHIFT		28
-#define FYECF_VERSION_DIR_MASK		0x3
-#define FYECF_VERSION_DIR(x)		(((x) & FYECF_VERSION_DIR_MASK) << FYECF_VERSION_DIR_SHIFT)
+#define FYECF_VERSION_DIR_SHIFT 28
+#define FYECF_VERSION_DIR_MASK  0x3
+#define FYECF_VERSION_DIR(x)                                                   \
+   (((x) & FYECF_VERSION_DIR_MASK) << FYECF_VERSION_DIR_SHIFT)
 
-#define FYECF_TAG_DIR_SHIFT		30
-#define FYECF_TAG_DIR_MASK		0x3
-#define FYECF_TAG_DIR(x)		(((unsigned int)(x) & FYECF_TAG_DIR_MASK) << FYECF_TAG_DIR_SHIFT)
+#define FYECF_TAG_DIR_SHIFT 30
+#define FYECF_TAG_DIR_MASK  0x3
+#define FYECF_TAG_DIR(x)                                                       \
+   (((unsigned int)(x) & FYECF_TAG_DIR_MASK) << FYECF_TAG_DIR_SHIFT)
 
 /**
  * enum fy_emitter_cfg_flags - Emitter configuration flags
@@ -1701,9 +1616,12 @@ enum fy_emitter_write_type {
  * @FYECF_STRIP_LABELS: Strip labels when emitting
  * @FYECF_STRIP_TAGS: Strip tags when emitting
  * @FYECF_STRIP_DOC: Strip document tags and markers when emitting
- * @FYECF_NO_ENDING_NEWLINE: Do not output ending new line (useful for single line mode)
- * @FYECF_STRIP_EMPTY_KV: Remove all keys with empty values from the output (not available in streaming mode)
- * @FYECF_EXTENDED_CFG: Extend configuration, this config structure is embedded in a fy_emitter_xcfg.
+ * @FYECF_NO_ENDING_NEWLINE: Do not output ending new line (useful for single
+ * line mode)
+ * @FYECF_STRIP_EMPTY_KV: Remove all keys with empty values from the output (not
+ * available in streaming mode)
+ * @FYECF_EXTENDED_CFG: Extend configuration, this config structure is embedded
+ * in a fy_emitter_xcfg.
  * @FYECF_INDENT_DEFAULT: Default emit output indent
  * @FYECF_INDENT_1: Output indent is 1
  * @FYECF_INDENT_2: Output indent is 2
@@ -1724,14 +1642,18 @@ enum fy_emitter_write_type {
  * @FYECF_MODE_FLOW_ONELINE: Emit using only the flow mode (in one line)
  * @FYECF_MODE_JSON: Emit using JSON mode (non type preserving)
  * @FYECF_MODE_JSON_TP: Emit using JSON mode (type preserving)
- * @FYECF_MODE_JSON_ONELINE: Emit using JSON mode (non type preserving, one line)
+ * @FYECF_MODE_JSON_ONELINE: Emit using JSON mode (non type preserving, one
+ * line)
  * @FYECF_MODE_DEJSON: Emit YAML trying to pretify JSON
  * @FYECF_MODE_PRETTY: Emit YAML that tries to look good
- * @FYECF_MODE_MANUAL: Emit YAML respecting all manual style hints (reformats if needed)
- * @FYECF_DOC_START_MARK_AUTO: Automatically generate document start markers if required
+ * @FYECF_MODE_MANUAL: Emit YAML respecting all manual style hints (reformats if
+ * needed)
+ * @FYECF_DOC_START_MARK_AUTO: Automatically generate document start markers if
+ * required
  * @FYECF_DOC_START_MARK_OFF: Do not generate document start markers
  * @FYECF_DOC_START_MARK_ON: Always generate document start markers
- * @FYECF_DOC_END_MARK_AUTO: Automatically generate document end markers if required
+ * @FYECF_DOC_END_MARK_AUTO: Automatically generate document end markers if
+ * required
  * @FYECF_DOC_END_MARK_OFF: Do not generate document end markers
  * @FYECF_DOC_END_MARK_ON: Always generate document end markers
  * @FYECF_VERSION_DIR_AUTO: Automatically generate version directive
@@ -1743,54 +1665,52 @@ enum fy_emitter_write_type {
  * @FYECF_DEFAULT: The default emitter configuration
  */
 enum fy_emitter_cfg_flags {
-	FYECF_SORT_KEYS			= FY_BIT(0),
-	FYECF_OUTPUT_COMMENTS		= FY_BIT(1),
-	FYECF_STRIP_LABELS		= FY_BIT(2),
-	FYECF_STRIP_TAGS		= FY_BIT(3),
-	FYECF_STRIP_DOC			= FY_BIT(4),
-	FYECF_NO_ENDING_NEWLINE		= FY_BIT(5),
-	FYECF_STRIP_EMPTY_KV		= FY_BIT(6),
-	FYECF_EXTENDED_CFG		= FY_BIT(7),
-	FYECF_INDENT_DEFAULT		= FYECF_INDENT(0),
-	FYECF_INDENT_1			= FYECF_INDENT(1),
-	FYECF_INDENT_2			= FYECF_INDENT(2),
-	FYECF_INDENT_3			= FYECF_INDENT(3),
-	FYECF_INDENT_4			= FYECF_INDENT(4),
-	FYECF_INDENT_5			= FYECF_INDENT(5),
-	FYECF_INDENT_6			= FYECF_INDENT(6),
-	FYECF_INDENT_7			= FYECF_INDENT(7),
-	FYECF_INDENT_8			= FYECF_INDENT(8),
-	FYECF_INDENT_9			= FYECF_INDENT(9),
-	FYECF_WIDTH_DEFAULT		= FYECF_WIDTH(80),
-	FYECF_WIDTH_80			= FYECF_WIDTH(80),
-	FYECF_WIDTH_132			= FYECF_WIDTH(132),
-	FYECF_WIDTH_INF			= FYECF_WIDTH(255),
-	FYECF_MODE_ORIGINAL		= FYECF_MODE(0),
-	FYECF_MODE_BLOCK		= FYECF_MODE(1),
-	FYECF_MODE_FLOW			= FYECF_MODE(2),
-	FYECF_MODE_FLOW_ONELINE 	= FYECF_MODE(3),
-	FYECF_MODE_JSON			= FYECF_MODE(4),
-	FYECF_MODE_JSON_TP		= FYECF_MODE(5),
-	FYECF_MODE_JSON_ONELINE 	= FYECF_MODE(6),
-	FYECF_MODE_DEJSON 		= FYECF_MODE(7),
-	FYECF_MODE_PRETTY 		= FYECF_MODE(8),
-	FYECF_MODE_MANUAL 		= FYECF_MODE(9),
-	FYECF_DOC_START_MARK_AUTO	= FYECF_DOC_START_MARK(0),
-	FYECF_DOC_START_MARK_OFF	= FYECF_DOC_START_MARK(1),
-	FYECF_DOC_START_MARK_ON		= FYECF_DOC_START_MARK(2),
-	FYECF_DOC_END_MARK_AUTO		= FYECF_DOC_END_MARK(0),
-	FYECF_DOC_END_MARK_OFF		= FYECF_DOC_END_MARK(1),
-	FYECF_DOC_END_MARK_ON		= FYECF_DOC_END_MARK(2),
-	FYECF_VERSION_DIR_AUTO		= FYECF_VERSION_DIR(0),
-	FYECF_VERSION_DIR_OFF		= FYECF_VERSION_DIR(1),
-	FYECF_VERSION_DIR_ON		= FYECF_VERSION_DIR(2),
-	FYECF_TAG_DIR_AUTO		= FYECF_TAG_DIR(0),
-	FYECF_TAG_DIR_OFF		= FYECF_TAG_DIR(1),
-	FYECF_TAG_DIR_ON		= FYECF_TAG_DIR(2),
+   FYECF_SORT_KEYS           = FY_BIT(0),
+   FYECF_OUTPUT_COMMENTS     = FY_BIT(1),
+   FYECF_STRIP_LABELS        = FY_BIT(2),
+   FYECF_STRIP_TAGS          = FY_BIT(3),
+   FYECF_STRIP_DOC           = FY_BIT(4),
+   FYECF_NO_ENDING_NEWLINE   = FY_BIT(5),
+   FYECF_STRIP_EMPTY_KV      = FY_BIT(6),
+   FYECF_EXTENDED_CFG        = FY_BIT(7),
+   FYECF_INDENT_DEFAULT      = FYECF_INDENT(0),
+   FYECF_INDENT_1            = FYECF_INDENT(1),
+   FYECF_INDENT_2            = FYECF_INDENT(2),
+   FYECF_INDENT_3            = FYECF_INDENT(3),
+   FYECF_INDENT_4            = FYECF_INDENT(4),
+   FYECF_INDENT_5            = FYECF_INDENT(5),
+   FYECF_INDENT_6            = FYECF_INDENT(6),
+   FYECF_INDENT_7            = FYECF_INDENT(7),
+   FYECF_INDENT_8            = FYECF_INDENT(8),
+   FYECF_INDENT_9            = FYECF_INDENT(9),
+   FYECF_WIDTH_DEFAULT       = FYECF_WIDTH(80),
+   FYECF_WIDTH_80            = FYECF_WIDTH(80),
+   FYECF_WIDTH_132           = FYECF_WIDTH(132),
+   FYECF_WIDTH_INF           = FYECF_WIDTH(255),
+   FYECF_MODE_ORIGINAL       = FYECF_MODE(0),
+   FYECF_MODE_BLOCK          = FYECF_MODE(1),
+   FYECF_MODE_FLOW           = FYECF_MODE(2),
+   FYECF_MODE_FLOW_ONELINE   = FYECF_MODE(3),
+   FYECF_MODE_JSON           = FYECF_MODE(4),
+   FYECF_MODE_JSON_TP        = FYECF_MODE(5),
+   FYECF_MODE_JSON_ONELINE   = FYECF_MODE(6),
+   FYECF_MODE_DEJSON         = FYECF_MODE(7),
+   FYECF_MODE_PRETTY         = FYECF_MODE(8),
+   FYECF_MODE_MANUAL         = FYECF_MODE(9),
+   FYECF_DOC_START_MARK_AUTO = FYECF_DOC_START_MARK(0),
+   FYECF_DOC_START_MARK_OFF  = FYECF_DOC_START_MARK(1),
+   FYECF_DOC_START_MARK_ON   = FYECF_DOC_START_MARK(2),
+   FYECF_DOC_END_MARK_AUTO   = FYECF_DOC_END_MARK(0),
+   FYECF_DOC_END_MARK_OFF    = FYECF_DOC_END_MARK(1),
+   FYECF_DOC_END_MARK_ON     = FYECF_DOC_END_MARK(2),
+   FYECF_VERSION_DIR_AUTO    = FYECF_VERSION_DIR(0),
+   FYECF_VERSION_DIR_OFF     = FYECF_VERSION_DIR(1),
+   FYECF_VERSION_DIR_ON      = FYECF_VERSION_DIR(2),
+   FYECF_TAG_DIR_AUTO        = FYECF_TAG_DIR(0),
+   FYECF_TAG_DIR_OFF         = FYECF_TAG_DIR(1),
+   FYECF_TAG_DIR_ON          = FYECF_TAG_DIR(2),
 
-	FYECF_DEFAULT			= FYECF_WIDTH_INF |
-					  FYECF_MODE_ORIGINAL |
-					  FYECF_INDENT_DEFAULT,
+   FYECF_DEFAULT = FYECF_WIDTH_INF | FYECF_MODE_ORIGINAL | FYECF_INDENT_DEFAULT,
 };
 
 /**
@@ -1805,26 +1725,28 @@ enum fy_emitter_cfg_flags {
  * @diag: Diagnostic interface
  */
 struct fy_emitter_cfg {
-	enum fy_emitter_cfg_flags flags;
-	int (*output)(struct fy_emitter *emit, enum fy_emitter_write_type type,
-		      const char *str, int len, void *userdata);
-	void *userdata;
-	struct fy_diag *diag;
+   enum fy_emitter_cfg_flags flags;
+   int (*output)(struct fy_emitter *emit, enum fy_emitter_write_type type,
+                 const char *str, int len, void *userdata);
+   void *userdata;
+   struct fy_diag *diag;
 };
 
 /* Shift amount of the color settings */
-#define FYEXCF_COLOR_SHIFT	0
+#define FYEXCF_COLOR_SHIFT 0
 /* Mask of the color */
-#define FYEXCF_COLOR_MASK	((1U << 2) - 1)
+#define FYEXCF_COLOR_MASK ((1U << 2) - 1)
 /* Build a color version */
-#define FYEXCF_COLOR(x)	(((unsigned int)(x) & FYEXCF_COLOR_MASK) << FYEXCF_COLOR_SHIFT)
+#define FYEXCF_COLOR(x)                                                        \
+   (((unsigned int)(x) & FYEXCF_COLOR_MASK) << FYEXCF_COLOR_SHIFT)
 
 /* Shift amount of the output settings */
-#define FYEXCF_OUTPUT_SHIFT	2
+#define FYEXCF_OUTPUT_SHIFT 2
 /* Mask of the output */
-#define FYEXCF_OUTPUT_MASK	((1U << 3) - 1)
+#define FYEXCF_OUTPUT_MASK ((1U << 3) - 1)
 /* Build an output */
-#define FYEXCF_OUTPUT(x)	(((unsigned int)(x) & FYEXCF_OUTPUT_MASK) << FYEXCF_OUTPUT_SHIFT)
+#define FYEXCF_OUTPUT(x)                                                       \
+   (((unsigned int)(x) & FYEXCF_OUTPUT_MASK) << FYEXCF_OUTPUT_SHIFT)
 
 /**
  * enum fy_emitter_xcfg_flags - Emitter extended configuration flags
@@ -1844,16 +1766,16 @@ struct fy_emitter_cfg {
  * @FYEXCF_NULL_OUTPUT: No output
  */
 enum fy_emitter_xcfg_flags {
-	FYEXCF_COLOR_AUTO		= FYEXCF_COLOR(0),
-	FYEXCF_COLOR_NONE		= FYEXCF_COLOR(1),
-	FYEXCF_COLOR_FORCE		= FYEXCF_COLOR(2),
-	FYEXCF_OUTPUT_STDOUT		= FYEXCF_OUTPUT(0),
-	FYEXCF_OUTPUT_STDERR		= FYEXCF_OUTPUT(1),
-	FYEXCF_OUTPUT_FILE		= FYEXCF_OUTPUT(2),
-	FYEXCF_OUTPUT_FD		= FYEXCF_OUTPUT(2),
-	FYEXCF_NULL_OUTPUT		= FYEXCF_OUTPUT(3),
-	FYEXCF_VISIBLE_WS		= FY_BIT(5),
-	FYEXCF_EXTENDED_INDICATORS	= FY_BIT(6),
+   FYEXCF_COLOR_AUTO          = FYEXCF_COLOR(0),
+   FYEXCF_COLOR_NONE          = FYEXCF_COLOR(1),
+   FYEXCF_COLOR_FORCE         = FYEXCF_COLOR(2),
+   FYEXCF_OUTPUT_STDOUT       = FYEXCF_OUTPUT(0),
+   FYEXCF_OUTPUT_STDERR       = FYEXCF_OUTPUT(1),
+   FYEXCF_OUTPUT_FILE         = FYEXCF_OUTPUT(2),
+   FYEXCF_OUTPUT_FD           = FYEXCF_OUTPUT(2),
+   FYEXCF_NULL_OUTPUT         = FYEXCF_OUTPUT(3),
+   FYEXCF_VISIBLE_WS          = FY_BIT(5),
+   FYEXCF_EXTENDED_INDICATORS = FY_BIT(6),
 };
 
 /**
@@ -1869,13 +1791,13 @@ enum fy_emitter_xcfg_flags {
  * @output_fd: The output file descriptor, FYEXCF_FD_OUTPUT must be set
  */
 struct fy_emitter_xcfg {
-	struct fy_emitter_cfg cfg;
-	enum fy_emitter_xcfg_flags xflags;
-	const char *colors[FYEWT_COUNT];
-	union {
-		FILE *output_fp;
-		int output_fd;
-	};
+   struct fy_emitter_cfg cfg;
+   enum fy_emitter_xcfg_flags xflags;
+   const char *colors[FYEWT_COUNT];
+   union {
+      FILE *output_fp;
+      int output_fd;
+   };
 };
 
 /**
@@ -1889,8 +1811,7 @@ struct fy_emitter_xcfg {
  * The newly created emitter or NULL on error.
  */
 struct fy_emitter *
-fy_emitter_create(const struct fy_emitter_cfg *cfg)
-	FY_EXPORT;
+fy_emitter_create(const struct fy_emitter_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_emitter_destroy() - Destroy an emitter
@@ -1899,9 +1820,7 @@ fy_emitter_create(const struct fy_emitter_cfg *cfg)
  *
  * @emit: The emitter to destroy
  */
-void
-fy_emitter_destroy(struct fy_emitter *emit)
-	FY_EXPORT;
+void fy_emitter_destroy(struct fy_emitter *emit) FY_EXPORT;
 
 /**
  * fy_emitter_get_cfg() - Get the configuration of an emitter
@@ -1912,8 +1831,7 @@ fy_emitter_destroy(struct fy_emitter *emit)
  * The configuration of the emitter
  */
 const struct fy_emitter_cfg *
-fy_emitter_get_cfg(struct fy_emitter *emit)
-	FY_EXPORT;
+fy_emitter_get_cfg(struct fy_emitter *emit) FY_EXPORT;
 
 /**
  * fy_emitter_get_diag() - Get the diagnostic object of an emitter
@@ -1928,9 +1846,7 @@ fy_emitter_get_cfg(struct fy_emitter *emit)
  * A pointer to a ref'ed diagnostic object or NULL in case of an
  * error.
  */
-struct fy_diag *
-fy_emitter_get_diag(struct fy_emitter *emit)
-	FY_EXPORT;
+struct fy_diag *fy_emitter_get_diag(struct fy_emitter *emit) FY_EXPORT;
 
 /**
  * fy_emitter_set_diag() - Set the diagnostic object of an emitter
@@ -1946,9 +1862,8 @@ fy_emitter_get_diag(struct fy_emitter *emit)
  * Returns:
  * 0 if everything OK, -1 otherwise
  */
-int
-fy_emitter_set_diag(struct fy_emitter *emit, struct fy_diag *diag)
-	FY_EXPORT;
+int fy_emitter_set_diag(struct fy_emitter *emit,
+                        struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_emitter_set_finalizer() - Set emitter finalizer
@@ -1960,10 +1875,9 @@ fy_emitter_set_diag(struct fy_emitter *emit, struct fy_diag *diag)
  * @emit: The emitter to replace the diagnostic object
  * @finalizer: The finalizer callback
  */
-void
-fy_emitter_set_finalizer(struct fy_emitter *emit,
-		void (*finalizer)(struct fy_emitter *emit))
-	FY_EXPORT;
+void fy_emitter_set_finalizer(
+    struct fy_emitter *emit,
+    void (*finalizer)(struct fy_emitter *emit)) FY_EXPORT;
 
 /**
  * struct fy_emitter_default_output_data - emitter default output configuration
@@ -1975,9 +1889,9 @@ fy_emitter_set_finalizer(struct fy_emitter *emit,
  * @visible: Make whitespace visible (requires a UTF8 capable terminal)
  */
 struct fy_emitter_default_output_data {
-	FILE *fp;
-	bool colorize;
-	bool visible;
+   FILE *fp;
+   bool colorize;
+   bool visible;
 };
 
 /**
@@ -1995,10 +1909,9 @@ struct fy_emitter_default_output_data {
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emitter_default_output(struct fy_emitter *fye, enum fy_emitter_write_type type,
-			  const char *str, int len, void *userdata)
-	FY_EXPORT;
+int fy_emitter_default_output(struct fy_emitter *fye,
+                              enum fy_emitter_write_type type, const char *str,
+                              int len, void *userdata) FY_EXPORT;
 
 /**
  * fy_document_default_emit_to_fp() - Emit a document to a file, using defaults
@@ -2012,9 +1925,7 @@ fy_emitter_default_output(struct fy_emitter *fye, enum fy_emitter_write_type typ
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_document_default_emit_to_fp(struct fy_document *fyd, FILE *fp)
-	FY_EXPORT;
+int fy_document_default_emit_to_fp(struct fy_document *fyd, FILE *fp) FY_EXPORT;
 
 /**
  * fy_emit_event() - Queue (and possibly emit) an event
@@ -2028,9 +1939,7 @@ fy_document_default_emit_to_fp(struct fy_document *fyd, FILE *fp)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_event(struct fy_emitter *emit, struct fy_event *fye)
-	FY_EXPORT;
+int fy_emit_event(struct fy_emitter *emit, struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_emit_vevent() - Queue (and possibly emit) an event using varargs
@@ -2045,9 +1954,8 @@ fy_emit_event(struct fy_emitter *emit, struct fy_event *fye)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_vevent(struct fy_emitter *emit, enum fy_event_type type, va_list ap)
-	FY_EXPORT;
+int fy_emit_vevent(struct fy_emitter *emit, enum fy_event_type type,
+                   va_list ap) FY_EXPORT;
 
 /**
  * fy_emit_eventf() - Queue (and possibly emit) an event using variable args
@@ -2062,9 +1970,8 @@ fy_emit_vevent(struct fy_emitter *emit, enum fy_event_type type, va_list ap)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_eventf(struct fy_emitter *emit, enum fy_event_type type, ...)
-	FY_EXPORT;
+int fy_emit_eventf(struct fy_emitter *emit, enum fy_event_type type,
+                   ...) FY_EXPORT;
 
 /**
  * fy_emit_scalar_write() - Emit a scalar with write semantics
@@ -2082,11 +1989,9 @@ fy_emit_eventf(struct fy_emitter *emit, enum fy_event_type type, ...)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_scalar_write(struct fy_emitter *fye, enum fy_scalar_style style,
-		     const char *anchor, const char *tag,
-		     const char *buf, size_t count)
-	FY_EXPORT;
+int fy_emit_scalar_write(struct fy_emitter *fye, enum fy_scalar_style style,
+                         const char *anchor, const char *tag, const char *buf,
+                         size_t count) FY_EXPORT;
 
 /**
  * fy_emit_scalar_vprintf() - Emit a scalar with vprintf semantics
@@ -2104,11 +2009,9 @@ fy_emit_scalar_write(struct fy_emitter *fye, enum fy_scalar_style style,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_scalar_vprintf(struct fy_emitter *fye, enum fy_scalar_style style,
-		       const char *anchor, const char *tag,
-		       const char *fmt, va_list ap)
-	FY_EXPORT;
+int fy_emit_scalar_vprintf(struct fy_emitter *fye, enum fy_scalar_style style,
+                           const char *anchor, const char *tag, const char *fmt,
+                           va_list ap) FY_EXPORT;
 
 /**
  * fy_emit_scalar_printf() - Emit a scalar with printf semantics
@@ -2126,12 +2029,9 @@ fy_emit_scalar_vprintf(struct fy_emitter *fye, enum fy_scalar_style style,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_scalar_printf(struct fy_emitter *fye, enum fy_scalar_style style,
-		      const char *anchor, const char *tag,
-		      const char *fmt, ...)
-	FY_FORMAT(printf, 5, 6)
-	FY_EXPORT;
+int fy_emit_scalar_printf(struct fy_emitter *fye, enum fy_scalar_style style,
+                          const char *anchor, const char *tag, const char *fmt,
+                          ...) FY_FORMAT(printf, 5, 6) FY_EXPORT;
 
 /**
  * fy_emit_event_from_parser() - Queue (and possibly emit) an event
@@ -2148,9 +2048,8 @@ fy_emit_scalar_printf(struct fy_emitter *fye, enum fy_scalar_style style,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_event_from_parser(struct fy_emitter *emit, struct fy_parser *fyp, struct fy_event *fye)
-	FY_EXPORT;
+int fy_emit_event_from_parser(struct fy_emitter *emit, struct fy_parser *fyp,
+                              struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_emit_document() - Emit the document using the emitter
@@ -2163,9 +2062,8 @@ fy_emit_event_from_parser(struct fy_emitter *emit, struct fy_parser *fyp, struct
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_document(struct fy_emitter *emit, struct fy_document *fyd)
-	FY_EXPORT;
+int fy_emit_document(struct fy_emitter *emit,
+                     struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_emit_document_start() - Emit document start using the emitter
@@ -2180,10 +2078,8 @@ fy_emit_document(struct fy_emitter *emit, struct fy_document *fyd)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_document_start(struct fy_emitter *emit, struct fy_document *fyd,
-		       struct fy_node *fyn)
-	FY_EXPORT;
+int fy_emit_document_start(struct fy_emitter *emit, struct fy_document *fyd,
+                           struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_emit_document_end() - Emit document end using the emitter
@@ -2196,9 +2092,7 @@ fy_emit_document_start(struct fy_emitter *emit, struct fy_document *fyd,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_document_end(struct fy_emitter *emit)
-	FY_EXPORT;
+int fy_emit_document_end(struct fy_emitter *emit) FY_EXPORT;
 
 /**
  * fy_emit_node() - Emit a single node using the emitter
@@ -2212,9 +2106,7 @@ fy_emit_document_end(struct fy_emitter *emit)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_node(struct fy_emitter *emit, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_emit_node(struct fy_emitter *emit, struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_emit_root_node() - Emit a single root node using the emitter
@@ -2228,9 +2120,7 @@ fy_emit_node(struct fy_emitter *emit, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_root_node(struct fy_emitter *emit, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_emit_root_node(struct fy_emitter *emit, struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_emit_explicit_document_end() - Emit an explicit document end
@@ -2243,9 +2133,7 @@ fy_emit_root_node(struct fy_emitter *emit, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_explicit_document_end(struct fy_emitter *emit)
-	FY_EXPORT;
+int fy_emit_explicit_document_end(struct fy_emitter *emit) FY_EXPORT;
 
 /**
  * fy_emit_document_to_fp() - Emit a document to an file pointer
@@ -2259,10 +2147,8 @@ fy_emit_explicit_document_end(struct fy_emitter *emit)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_document_to_fp(struct fy_document *fyd,
-		       enum fy_emitter_cfg_flags flags, FILE *fp)
-	FY_EXPORT;
+int fy_emit_document_to_fp(struct fy_document *fyd,
+                           enum fy_emitter_cfg_flags flags, FILE *fp) FY_EXPORT;
 
 /**
  * fy_emit_document_to_file() - Emit a document to file
@@ -2277,11 +2163,9 @@ fy_emit_document_to_fp(struct fy_document *fyd,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_document_to_file(struct fy_document *fyd,
-			 enum fy_emitter_cfg_flags flags,
-			 const char *filename)
-	FY_EXPORT;
+int fy_emit_document_to_file(struct fy_document *fyd,
+                             enum fy_emitter_cfg_flags flags,
+                             const char *filename) FY_EXPORT;
 
 /**
  * fy_emit_document_to_fd() - Emit a document to a file descriptor
@@ -2295,10 +2179,8 @@ fy_emit_document_to_file(struct fy_document *fyd,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_emit_document_to_fd(struct fy_document *fyd,
-		       enum fy_emitter_cfg_flags flags, int fd)
-	FY_EXPORT;
+int fy_emit_document_to_fd(struct fy_document *fyd,
+                           enum fy_emitter_cfg_flags flags, int fd) FY_EXPORT;
 
 /**
  * fy_emit_document_to_buffer() - Emit a document to a buffer
@@ -2315,11 +2197,9 @@ fy_emit_document_to_fd(struct fy_document *fyd,
  * A positive number, which is the size of the emitted document
  * on the buffer on success, -1 on error
  */
-int
-fy_emit_document_to_buffer(struct fy_document *fyd,
-			   enum fy_emitter_cfg_flags flags,
-			   char *buf, size_t size)
-	FY_EXPORT;
+int fy_emit_document_to_buffer(struct fy_document *fyd,
+                               enum fy_emitter_cfg_flags flags, char *buf,
+                               size_t size) FY_EXPORT;
 
 /**
  * fy_emit_document_to_string() - Emit a document to an allocated string
@@ -2333,13 +2213,11 @@ fy_emit_document_to_buffer(struct fy_document *fyd,
  * Returns:
  * A pointer to the allocated string, or NULL in case of an error
  */
-char *
-fy_emit_document_to_string(struct fy_document *fyd,
-			   enum fy_emitter_cfg_flags flags)
-	FY_EXPORT;
+char *fy_emit_document_to_string(struct fy_document *fyd,
+                                 enum fy_emitter_cfg_flags flags) FY_EXPORT;
 
-#define fy_emit_document_to_string_alloca(_fyd, _flags) \
-	FY_ALLOCA_COPY_FREE(fy_emit_document_to_string((_fyd), (_flags)), FY_NT)
+#define fy_emit_document_to_string_alloca(_fyd, _flags)                        \
+   FY_ALLOCA_COPY_FREE(fy_emit_document_to_string((_fyd), (_flags)), FY_NT)
 
 /**
  * fy_emit_node_to_buffer() - Emit a node (recursively) to a buffer
@@ -2356,10 +2234,8 @@ fy_emit_document_to_string(struct fy_document *fyd,
  * A positive number, which is the size of the emitted node
  * on the buffer on success, -1 on error
  */
-int
-fy_emit_node_to_buffer(struct fy_node *fyn, enum fy_emitter_cfg_flags flags,
-		       char *buf, size_t size)
-	FY_EXPORT;
+int fy_emit_node_to_buffer(struct fy_node *fyn, enum fy_emitter_cfg_flags flags,
+                           char *buf, size_t size) FY_EXPORT;
 
 /**
  * fy_emit_node_to_string() - Emit a node to an allocated string
@@ -2373,12 +2249,11 @@ fy_emit_node_to_buffer(struct fy_node *fyn, enum fy_emitter_cfg_flags flags,
  * Returns:
  * A pointer to the allocated string, or NULL in case of an error
  */
-char *
-fy_emit_node_to_string(struct fy_node *fyn, enum fy_emitter_cfg_flags flags)
-	FY_EXPORT;
+char *fy_emit_node_to_string(struct fy_node *fyn,
+                             enum fy_emitter_cfg_flags flags) FY_EXPORT;
 
-#define fy_emit_node_to_string_alloca(_fyn, _flags) \
-	FY_ALLOCA_COPY_FREE(fy_emit_node_to_string((_fyn), (_flags)), FY_NT)
+#define fy_emit_node_to_string_alloca(_fyn, _flags)                            \
+   FY_ALLOCA_COPY_FREE(fy_emit_node_to_string((_fyn), (_flags)), FY_NT)
 
 /**
  * fy_emit_to_buffer() - Create an emitter for buffer output.
@@ -2394,9 +2269,8 @@ fy_emit_node_to_string(struct fy_node *fyn, enum fy_emitter_cfg_flags flags)
  * Returns:
  * The newly created emitter or NULL on error.
  */
-struct fy_emitter *
-fy_emit_to_buffer(enum fy_emitter_cfg_flags flags, char *buf, size_t size)
-	FY_EXPORT;
+struct fy_emitter *fy_emit_to_buffer(enum fy_emitter_cfg_flags flags, char *buf,
+                                     size_t size) FY_EXPORT;
 
 /**
  * fy_emit_to_buffer_collect() - Collect the buffer emitter output
@@ -2413,9 +2287,8 @@ fy_emit_to_buffer(enum fy_emitter_cfg_flags flags, char *buf, size_t size)
  * Returns:
  * The buffer or NULL in case of an error.
  */
-char *
-fy_emit_to_buffer_collect(struct fy_emitter *emit, size_t *sizep)
-	FY_EXPORT;
+char *fy_emit_to_buffer_collect(struct fy_emitter *emit,
+                                size_t *sizep) FY_EXPORT;
 
 /**
  * fy_emit_to_string() - Create an emitter to create a dynamically
@@ -2431,9 +2304,7 @@ fy_emit_to_buffer_collect(struct fy_emitter *emit, size_t *sizep)
  * Returns:
  * The newly created emitter or NULL on error.
  */
-struct fy_emitter *
-fy_emit_to_string(enum fy_emitter_cfg_flags flags)
-	FY_EXPORT;
+struct fy_emitter *fy_emit_to_string(enum fy_emitter_cfg_flags flags) FY_EXPORT;
 
 /**
  * fy_emit_to_string_collect() - Collect the string emitter output
@@ -2450,16 +2321,17 @@ fy_emit_to_string(enum fy_emitter_cfg_flags flags)
  * Returns:
  * The dynamically allocated string or NULL in case of an error.
  */
-char *
-fy_emit_to_string_collect(struct fy_emitter *emit, size_t *sizep)
-	FY_EXPORT;
+char *fy_emit_to_string_collect(struct fy_emitter *emit,
+                                size_t *sizep) FY_EXPORT;
 
 /**
- * fy_node_copy() - Copy a node, associating the new node with the given document
+ * fy_node_copy() - Copy a node, associating the new node with the given
+ * document
  *
  * Make a deep copy of a node, associating the copy with the given document.
  * Note that no content copying takes place as the contents of the nodes
- * are reference counted. This means that the operation is relatively inexpensive.
+ * are reference counted. This means that the operation is relatively
+ * inexpensive.
  *
  * Note that the copy includes all anchors contained in the subtree of the
  * source, so this call will register them with the document.
@@ -2470,25 +2342,23 @@ fy_emit_to_string_collect(struct fy_emitter *emit, size_t *sizep)
  * Returns:
  * The copied node on success, NULL on error
  */
-struct fy_node *
-fy_node_copy(struct fy_document *fyd, struct fy_node *fyn_from)
-	FY_EXPORT;
+struct fy_node *fy_node_copy(struct fy_document *fyd,
+                             struct fy_node *fyn_from) FY_EXPORT;
 
 /**
  * fy_document_clone() - Clones a document
  *
  * Clone a document, by making a deep copy of the source.
  * Note that no content copying takes place as the contents of the nodes
- * are reference counted. This means that the operation is relatively inexpensive.
+ * are reference counted. This means that the operation is relatively
+ * inexpensive.
  *
  * @fydsrc: The source document to clone
  *
  * Returns:
  * The newly created clone document, or NULL in case of an error
  */
-struct fy_document *
-fy_document_clone(struct fy_document *fydsrc)
-	FY_EXPORT;
+struct fy_document *fy_document_clone(struct fy_document *fydsrc) FY_EXPORT;
 
 /**
  * fy_node_insert() - Insert a node to the given node
@@ -2535,9 +2405,7 @@ fy_document_clone(struct fy_document *fydsrc)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_insert(struct fy_node *fyn_to, struct fy_node *fyn_from)
-	FY_EXPORT;
+int fy_node_insert(struct fy_node *fyn_to, struct fy_node *fyn_from) FY_EXPORT;
 
 /**
  * fy_document_insert_at() - Insert a node to the given path in the document
@@ -2560,11 +2428,8 @@ fy_node_insert(struct fy_node *fyn_to, struct fy_node *fyn_from)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_document_insert_at(struct fy_document *fyd,
-		      const char *path, size_t pathlen,
-		      struct fy_node *fyn)
-	FY_EXPORT;
+int fy_document_insert_at(struct fy_document *fyd, const char *path,
+                          size_t pathlen, struct fy_node *fyn) FY_EXPORT;
 
 /**
  * enum fy_node_type - Node type
@@ -2576,9 +2441,9 @@ fy_document_insert_at(struct fy_document *fyd,
  * @FYNT_MAPPING: Node is a mapping
  */
 enum fy_node_type {
-	FYNT_SCALAR,
-	FYNT_SEQUENCE,
-	FYNT_MAPPING,
+   FYNT_SCALAR,
+   FYNT_SEQUENCE,
+   FYNT_MAPPING,
 };
 
 /**
@@ -2598,27 +2463,27 @@ enum fy_node_type {
  * @FYNS_ALIAS: It's an alias
  */
 enum fy_node_style {
-	FYNS_ANY = -1,
-	FYNS_FLOW,
-	FYNS_BLOCK,
-	FYNS_PLAIN,
-	FYNS_SINGLE_QUOTED,
-	FYNS_DOUBLE_QUOTED,
-	FYNS_LITERAL,
-	FYNS_FOLDED,
-	FYNS_ALIAS,
+   FYNS_ANY = -1,
+   FYNS_FLOW,
+   FYNS_BLOCK,
+   FYNS_PLAIN,
+   FYNS_SINGLE_QUOTED,
+   FYNS_DOUBLE_QUOTED,
+   FYNS_LITERAL,
+   FYNS_FOLDED,
+   FYNS_ALIAS,
 };
 
 /* maximum depth is 256 */
-#define FYNWF_MAXDEPTH_SHIFT	4
-#define FYNWF_MAXDEPTH_MASK	0xff
-#define FYNWF_MAXDEPTH(x)	(((x) & FYNWF_MAXDEPTH_MASK) << FYNWF_MAXDEPTH_SHIFT)
-#define FYNWF_MARKER_SHIFT	12
-#define FYNWF_MARKER_MASK	0x1f
-#define FYNWF_MARKER(x)		(((x) & FYNWF_MARKER_MASK) << FYNWF_MARKER_SHIFT)
-#define FYNWF_PTR_SHIFT		16
-#define FYNWF_PTR_MASK		0x03
-#define FYNWF_PTR(x)		(((x) & FYNWF_PTR_MASK) << FYNWF_PTR_SHIFT)
+#define FYNWF_MAXDEPTH_SHIFT 4
+#define FYNWF_MAXDEPTH_MASK  0xff
+#define FYNWF_MAXDEPTH(x)    (((x) & FYNWF_MAXDEPTH_MASK) << FYNWF_MAXDEPTH_SHIFT)
+#define FYNWF_MARKER_SHIFT   12
+#define FYNWF_MARKER_MASK    0x1f
+#define FYNWF_MARKER(x)      (((x) & FYNWF_MARKER_MASK) << FYNWF_MARKER_SHIFT)
+#define FYNWF_PTR_SHIFT      16
+#define FYNWF_PTR_MASK       0x03
+#define FYNWF_PTR(x)         (((x) & FYNWF_PTR_MASK) << FYNWF_PTR_SHIFT)
 
 /**
  * enum fy_node_walk_flags - Node walk flags
@@ -2635,20 +2500,20 @@ enum fy_node_style {
  * @FYNWF_PTR_DEFAULT: Default path type
  */
 enum fy_node_walk_flags {
-	FYNWF_DONT_FOLLOW = 0,
-	FYNWF_FOLLOW = FY_BIT(0),
-	FYNWF_PTR_YAML = FYNWF_PTR(0),
-	FYNWF_PTR_JSON = FYNWF_PTR(1),
-	FYNWF_PTR_RELJSON = FYNWF_PTR(2),
-	FYNWF_PTR_YPATH = FYNWF_PTR(3),
-	FYNWF_URI_ENCODED = FY_BIT(18),
-	FYNWF_MAXDEPTH_DEFAULT = FYNWF_MAXDEPTH(0),
-	FYNWF_MARKER_DEFAULT = FYNWF_MARKER(0),
-	FYNWF_PTR_DEFAULT = FYNWF_PTR(0),
+   FYNWF_DONT_FOLLOW      = 0,
+   FYNWF_FOLLOW           = FY_BIT(0),
+   FYNWF_PTR_YAML         = FYNWF_PTR(0),
+   FYNWF_PTR_JSON         = FYNWF_PTR(1),
+   FYNWF_PTR_RELJSON      = FYNWF_PTR(2),
+   FYNWF_PTR_YPATH        = FYNWF_PTR(3),
+   FYNWF_URI_ENCODED      = FY_BIT(18),
+   FYNWF_MAXDEPTH_DEFAULT = FYNWF_MAXDEPTH(0),
+   FYNWF_MARKER_DEFAULT   = FYNWF_MARKER(0),
+   FYNWF_PTR_DEFAULT      = FYNWF_PTR(0),
 };
 
 /* the maximum user marker */
-#define FYNWF_MAX_USER_MARKER	24
+#define FYNWF_MAX_USER_MARKER 24
 
 /**
  * fy_node_style_from_scalar_style() - Convert from scalar to node style
@@ -2663,9 +2528,9 @@ enum fy_node_walk_flags {
 static inline enum fy_node_style
 fy_node_style_from_scalar_style(enum fy_scalar_style sstyle)
 {
-	if (sstyle == FYSS_ANY)
-		return FYNS_ANY;
-	return (enum fy_node_style)(FYNS_PLAIN + (sstyle - FYSS_PLAIN));
+   if (sstyle == FYSS_ANY)
+      return FYNS_ANY;
+   return (enum fy_node_style)(FYNS_PLAIN + (sstyle - FYSS_PLAIN));
 }
 
 /**
@@ -2681,8 +2546,8 @@ fy_node_style_from_scalar_style(enum fy_scalar_style sstyle)
  * >0 if @fynp_a is greater than @fynp_b
  */
 typedef int (*fy_node_mapping_sort_fn)(const struct fy_node_pair *fynp_a,
-				       const struct fy_node_pair *fynp_b,
-				       void *arg);
+                                       const struct fy_node_pair *fynp_b,
+                                       void *arg);
 
 /**
  * typedef fy_node_scalar_compare_fn - Node compare method function for scalars
@@ -2697,8 +2562,7 @@ typedef int (*fy_node_mapping_sort_fn)(const struct fy_node_pair *fynp_a,
  * >0 if @fyn_a is greater than @fyn_b
  */
 typedef int (*fy_node_scalar_compare_fn)(struct fy_node *fyn_a,
-					 struct fy_node *fyn_b,
-					 void *arg);
+                                         struct fy_node *fyn_b, void *arg);
 
 /**
  * fy_node_compare() - Compare two nodes for equality
@@ -2715,9 +2579,7 @@ typedef int (*fy_node_scalar_compare_fn)(struct fy_node *fyn_a,
  * Returns:
  * true if the nodes contain the same content, false otherwise
  */
-bool
-fy_node_compare(struct fy_node *fyn1, struct fy_node *fyn2)
-	FY_EXPORT;
+bool fy_node_compare(struct fy_node *fyn1, struct fy_node *fyn2) FY_EXPORT;
 
 /**
  * fy_node_compare_user() - Compare two nodes for equality using
@@ -2740,11 +2602,10 @@ fy_node_compare(struct fy_node *fyn1, struct fy_node *fyn2)
  * Returns:
  * true if the nodes contain the same content, false otherwise
  */
-bool
-fy_node_compare_user(struct fy_node *fyn1, struct fy_node *fyn2,
-		     fy_node_mapping_sort_fn sort_fn, void *sort_fn_arg,
-		     fy_node_scalar_compare_fn cmp_fn, void *cmp_fn_arg)
-	FY_EXPORT;
+bool fy_node_compare_user(struct fy_node *fyn1, struct fy_node *fyn2,
+                          fy_node_mapping_sort_fn sort_fn, void *sort_fn_arg,
+                          fy_node_scalar_compare_fn cmp_fn,
+                          void *cmp_fn_arg) FY_EXPORT;
 
 /**
  * fy_node_compare_string() - Compare a node for equality with a YAML string
@@ -2761,9 +2622,8 @@ fy_node_compare_user(struct fy_node *fyn1, struct fy_node *fyn2,
  * Returns:
  * true if the node and the string are equal.
  */
-bool
-fy_node_compare_string(struct fy_node *fyn, const char *str, size_t len)
-	FY_EXPORT;
+bool fy_node_compare_string(struct fy_node *fyn, const char *str,
+                            size_t len) FY_EXPORT;
 
 /**
  * fy_node_compare_token() - Compare a node for equality against a token
@@ -2777,9 +2637,7 @@ fy_node_compare_string(struct fy_node *fyn, const char *str, size_t len)
  * Returns:
  * true if the node and the token are equal.
  */
-bool
-fy_node_compare_token(struct fy_node *fyn, struct fy_token *fyt)
-	FY_EXPORT;
+bool fy_node_compare_token(struct fy_node *fyn, struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_node_compare_text() - Compare a node for equality with a raw C text
@@ -2794,9 +2652,8 @@ fy_node_compare_token(struct fy_node *fyn, struct fy_token *fyt)
  * Returns:
  * true if the node and the text are equal.
  */
-bool
-fy_node_compare_text(struct fy_node *fyn, const char *text, size_t len)
-	FY_EXPORT;
+bool fy_node_compare_text(struct fy_node *fyn, const char *text,
+                          size_t len) FY_EXPORT;
 
 /**
  * fy_document_create() - Create an empty document
@@ -2810,8 +2667,7 @@ fy_node_compare_text(struct fy_node *fyn, const char *text, size_t len)
  * The created empty document, or NULL on error.
  */
 struct fy_document *
-fy_document_create(const struct fy_parse_cfg *cfg)
-	FY_EXPORT;
+fy_document_create(const struct fy_parse_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_document_destroy() - Destroy a document previously created via
@@ -2822,9 +2678,7 @@ fy_document_create(const struct fy_parse_cfg *cfg)
  * @fyd: The document to destroy
  *
  */
-void
-fy_document_destroy(struct fy_document *fyd)
-	FY_EXPORT;
+void fy_document_destroy(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_get_cfg() - Get the configuration of a document
@@ -2835,8 +2689,7 @@ fy_document_destroy(struct fy_document *fyd)
  * The configuration of the document
  */
 const struct fy_parse_cfg *
-fy_document_get_cfg(struct fy_document *fyd)
-	FY_EXPORT;
+fy_document_get_cfg(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_get_diag() - Get the diagnostic object of a document
@@ -2851,9 +2704,7 @@ fy_document_get_cfg(struct fy_document *fyd)
  * A pointer to a ref'ed diagnostic object or NULL in case of an
  * error.
  */
-struct fy_diag *
-fy_document_get_diag(struct fy_document *fyd)
-	FY_EXPORT;
+struct fy_diag *fy_document_get_diag(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_set_diag() - Set the diagnostic object of a document
@@ -2869,9 +2720,8 @@ fy_document_get_diag(struct fy_document *fyd)
  * Returns:
  * 0 if everything OK, -1 otherwise
  */
-int
-fy_document_set_diag(struct fy_document *fyd, struct fy_diag *diag)
-	FY_EXPORT;
+int fy_document_set_diag(struct fy_document *fyd,
+                         struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_document_set_parent() - Make a document a child of another
@@ -2884,12 +2734,12 @@ fy_document_set_diag(struct fy_document *fyd, struct fy_diag *diag)
  * Returns:
  * 0 if all OK, -1 on error.
  */
-int
-fy_document_set_parent(struct fy_document *fyd, struct fy_document *fyd_child)
-	FY_EXPORT;
+int fy_document_set_parent(struct fy_document *fyd,
+                           struct fy_document *fyd_child) FY_EXPORT;
 
 /**
- * fy_document_build_from_string() - Create a document using the provided YAML source.
+ * fy_document_build_from_string() - Create a document using the provided YAML
+ * source.
  *
  * Create a document parsing the provided string as a YAML source.
  *
@@ -2901,15 +2751,16 @@ fy_document_set_parent(struct fy_document *fyd, struct fy_document *fyd_child)
  * The created document, or NULL on error.
  */
 struct fy_document *
-fy_document_build_from_string(const struct fy_parse_cfg *cfg,
-			      const char *str, size_t len)
-	FY_EXPORT;
+fy_document_build_from_string(const struct fy_parse_cfg *cfg, const char *str,
+                              size_t len) FY_EXPORT;
 
 /**
- * fy_document_build_from_malloc_string() - Create a document using the provided YAML source which was malloced.
+ * fy_document_build_from_malloc_string() - Create a document using the provided
+ * YAML source which was malloced.
  *
- * Create a document parsing the provided string as a YAML source. The string is expected to have been
- * allocated by malloc(3) and when the document is destroyed it will be automatically freed.
+ * Create a document parsing the provided string as a YAML source. The string is
+ * expected to have been allocated by malloc(3) and when the document is
+ * destroyed it will be automatically freed.
  *
  * @cfg: The parse configuration to use or NULL for the default.
  * @str: The YAML source to use.
@@ -2919,9 +2770,8 @@ fy_document_build_from_string(const struct fy_parse_cfg *cfg,
  * The created document, or NULL on error.
  */
 struct fy_document *
-fy_document_build_from_malloc_string(const struct fy_parse_cfg *cfg,
-				     char *str, size_t len)
-	FY_EXPORT;
+fy_document_build_from_malloc_string(const struct fy_parse_cfg *cfg, char *str,
+                                     size_t len) FY_EXPORT;
 /**
  * fy_document_build_from_file() - Create a document parsing the given file
  *
@@ -2933,12 +2783,12 @@ fy_document_build_from_malloc_string(const struct fy_parse_cfg *cfg,
  * Returns:
  * The created document, or NULL on error.
  */
-struct fy_document *
-fy_document_build_from_file(const struct fy_parse_cfg *cfg, const char *file)
-	FY_EXPORT;
+struct fy_document *fy_document_build_from_file(const struct fy_parse_cfg *cfg,
+                                                const char *file) FY_EXPORT;
 
 /**
- * fy_document_build_from_fp() - Create a document parsing the given file pointer
+ * fy_document_build_from_fp() - Create a document parsing the given file
+ * pointer
  *
  * Create a document parsing the provided file pointer as a YAML source.
  *
@@ -2948,12 +2798,12 @@ fy_document_build_from_file(const struct fy_parse_cfg *cfg, const char *file)
  * Returns:
  * The created document, or NULL on error.
  */
-struct fy_document *
-fy_document_build_from_fp(const struct fy_parse_cfg *cfg, FILE *fp)
-	FY_EXPORT;
+struct fy_document *fy_document_build_from_fp(const struct fy_parse_cfg *cfg,
+                                              FILE *fp) FY_EXPORT;
 
 /**
- * fy_document_vbuildf() - Create a document using the provided YAML via vprintf formatting
+ * fy_document_vbuildf() - Create a document using the provided YAML via vprintf
+ * formatting
  *
  * Create a document parsing the provided string as a YAML source. The string
  * is created by applying vprintf formatting.
@@ -2965,13 +2815,12 @@ fy_document_build_from_fp(const struct fy_parse_cfg *cfg, FILE *fp)
  * Returns:
  * The created document, or NULL on error.
  */
-struct fy_document *
-fy_document_vbuildf(const struct fy_parse_cfg *cfg,
-		    const char *fmt, va_list ap)
-	FY_EXPORT;
+struct fy_document *fy_document_vbuildf(const struct fy_parse_cfg *cfg,
+                                        const char *fmt, va_list ap) FY_EXPORT;
 
 /**
- * fy_document_buildf() - Create a document using the provided YAML source via printf formatting
+ * fy_document_buildf() - Create a document using the provided YAML source via
+ * printf formatting
  *
  * Create a document parsing the provided string as a YAML source. The string
  * is created by applying printf formatting.
@@ -2983,13 +2832,13 @@ fy_document_vbuildf(const struct fy_parse_cfg *cfg,
  * Returns:
  * The created document, or NULL on error.
  */
-struct fy_document *
-fy_document_buildf(const struct fy_parse_cfg *cfg, const char *fmt, ...)
-	FY_FORMAT(printf, 2, 3)
-	FY_EXPORT;
+struct fy_document *fy_document_buildf(const struct fy_parse_cfg *cfg,
+                                       const char *fmt, ...)
+    FY_FORMAT(printf, 2, 3) FY_EXPORT;
 
 /**
- * fy_flow_document_build_from_string() - Create a document using the provided YAML source.
+ * fy_flow_document_build_from_string() - Create a document using the provided
+ * YAML source.
  *
  * Create a document parsing the provided string as a YAML source.
  *
@@ -3017,11 +2866,12 @@ fy_document_buildf(const struct fy_parse_cfg *cfg, const char *fmt, ...)
  */
 struct fy_document *
 fy_flow_document_build_from_string(const struct fy_parse_cfg *cfg,
-				   const char *str, size_t len, size_t *consumed)
-	FY_EXPORT;
+                                   const char *str, size_t len,
+                                   size_t *consumed) FY_EXPORT;
 
 /**
- * fy_block_document_build_from_string() - Create a document using the provided YAML source.
+ * fy_block_document_build_from_string() - Create a document using the provided
+ * YAML source.
  *
  * Create a document parsing the provided string as a YAML source.
  *
@@ -3047,8 +2897,8 @@ fy_flow_document_build_from_string(const struct fy_parse_cfg *cfg,
  */
 struct fy_document *
 fy_block_document_build_from_string(const struct fy_parse_cfg *cfg,
-				   const char *str, size_t len, size_t *consumed)
-	FY_EXPORT;
+                                    const char *str, size_t len,
+                                    size_t *consumed) FY_EXPORT;
 
 /**
  * fy_document_root() - Return the root node of the document
@@ -3061,9 +2911,7 @@ fy_block_document_build_from_string(const struct fy_parse_cfg *cfg,
  * Returns:
  * The root of the document, or NULL if the document is empty.
  */
-struct fy_node *
-fy_document_root(struct fy_document *fyd)
-	FY_EXPORT;
+struct fy_node *fy_document_root(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_set_root() - Set the root of the document
@@ -3078,9 +2926,8 @@ fy_document_root(struct fy_document *fyd)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_document_set_root(struct fy_document *fyd, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_document_set_root(struct fy_document *fyd,
+                         struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_type() - Get the node type
@@ -3093,9 +2940,7 @@ fy_document_set_root(struct fy_document *fyd, struct fy_node *fyn)
  * Returns:
  * The node type
  */
-enum fy_node_type
-fy_node_get_type(struct fy_node *fyn)
-	FY_EXPORT;
+enum fy_node_type fy_node_get_type(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_style() - Get the node style
@@ -3108,9 +2953,7 @@ fy_node_get_type(struct fy_node *fyn)
  * Returns:
  * The node style
  */
-enum fy_node_style
-fy_node_get_style(struct fy_node *fyn)
-	FY_EXPORT;
+enum fy_node_style fy_node_get_style(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_start_token() - Get the node start token
@@ -3124,8 +2967,7 @@ fy_node_get_style(struct fy_node *fyn)
  * Returns:
  * The node start token
  */
-struct fy_token * fy_node_get_start_token(struct fy_node *fyn)
-        FY_EXPORT;
+struct fy_token *fy_node_get_start_token(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_end_token() - Get the node end token
@@ -3139,8 +2981,7 @@ struct fy_token * fy_node_get_start_token(struct fy_node *fyn)
  * Returns:
  * The node end token
  */
- struct fy_token * fy_node_get_end_token(struct fy_node *fyn)
-        FY_EXPORT;
+struct fy_token *fy_node_get_end_token(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_is_scalar() - Check whether the node is a scalar
@@ -3152,10 +2993,9 @@ struct fy_token * fy_node_get_start_token(struct fy_node *fyn)
  * Returns:
  * true if the node is a scalar, false otherwise
  */
-static inline bool
-fy_node_is_scalar(struct fy_node *fyn)
+static inline bool fy_node_is_scalar(struct fy_node *fyn)
 {
-	return fy_node_get_type(fyn) == FYNT_SCALAR;
+   return fy_node_get_type(fyn) == FYNT_SCALAR;
 }
 
 /**
@@ -3168,10 +3008,9 @@ fy_node_is_scalar(struct fy_node *fyn)
  * Returns:
  * true if the node is a sequence, false otherwise
  */
-static inline bool
-fy_node_is_sequence(struct fy_node *fyn)
+static inline bool fy_node_is_sequence(struct fy_node *fyn)
 {
-	return fy_node_get_type(fyn) == FYNT_SEQUENCE;
+   return fy_node_get_type(fyn) == FYNT_SEQUENCE;
 }
 
 /**
@@ -3184,10 +3023,9 @@ fy_node_is_sequence(struct fy_node *fyn)
  * Returns:
  * true if the node is a mapping, false otherwise
  */
-static inline bool
-fy_node_is_mapping(struct fy_node *fyn)
+static inline bool fy_node_is_mapping(struct fy_node *fyn)
 {
-	return fy_node_get_type(fyn) == FYNT_MAPPING;
+   return fy_node_get_type(fyn) == FYNT_MAPPING;
 }
 
 /**
@@ -3200,11 +3038,10 @@ fy_node_is_mapping(struct fy_node *fyn)
  * Returns:
  * true if the node is an alias, false otherwise
  */
-static inline bool
-fy_node_is_alias(struct fy_node *fyn)
+static inline bool fy_node_is_alias(struct fy_node *fyn)
 {
-	return fy_node_get_type(fyn) == FYNT_SCALAR &&
-	       fy_node_get_style(fyn) == FYNS_ALIAS;
+   return fy_node_get_type(fyn) == FYNT_SCALAR &&
+          fy_node_get_style(fyn) == FYNS_ALIAS;
 }
 
 /**
@@ -3218,9 +3055,7 @@ fy_node_is_alias(struct fy_node *fyn)
  * Returns:
  * true if the node is a NULL scalar, false otherwise
  */
-bool
-fy_node_is_null(struct fy_node *fyn)
-	FY_EXPORT;
+bool fy_node_is_null(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_is_attached() - Check whether the node is attached
@@ -3236,9 +3071,7 @@ fy_node_is_null(struct fy_node *fyn)
  * Returns:
  * true if the node is attached, false otherwise
  */
-bool
-fy_node_is_attached(struct fy_node *fyn)
-	FY_EXPORT;
+bool fy_node_is_attached(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_tag_token() - Gets the tag token of a node (if it exists)
@@ -3251,9 +3084,7 @@ fy_node_is_attached(struct fy_node *fyn)
  * The tag token of the given node, or NULL if the tag does not
  * exist.
  */
-struct fy_token *
-fy_node_get_tag_token(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_token *fy_node_get_tag_token(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_scalar_token() - Gets the scalar token of a node (if it exists)
@@ -3267,9 +3098,7 @@ fy_node_get_tag_token(struct fy_node *fyn)
  * Returns:
  * The scalar token of the given node, or NULL if the node is not a scalar.
  */
-struct fy_token *
-fy_node_get_scalar_token(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_token *fy_node_get_scalar_token(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_resolve_alias() - Resolve an alias node
@@ -3285,9 +3114,7 @@ fy_node_get_scalar_token(struct fy_node *fyn)
  * The resolved alias node, or NULL if either fyn is not an alias, or
  * resolution fails due to a graph cycle.
  */
-struct fy_node *
-fy_node_resolve_alias(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_resolve_alias(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_dereference() - Dereference a single alias node
@@ -3305,9 +3132,7 @@ fy_node_resolve_alias(struct fy_node *fyn)
  * The dereferenced alias node, or NULL if either fyn is not an alias, or
  * resolution fails due to a graph cycle.
  */
-struct fy_node *
-fy_node_dereference(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_dereference(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_free() - Free a node
@@ -3324,9 +3149,7 @@ fy_node_dereference(struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_free(struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_free(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_build_from_string() - Create a node using the provided YAML source.
@@ -3341,17 +3164,18 @@ fy_node_free(struct fy_node *fyn)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_build_from_string(struct fy_document *fyd,
-			  const char *str, size_t len)
-	FY_EXPORT;
+struct fy_node *fy_node_build_from_string(struct fy_document *fyd,
+                                          const char *str,
+                                          size_t len) FY_EXPORT;
 
 /**
- * fy_node_build_from_malloc_string() - Create a node using the provided YAML source which was malloced.
+ * fy_node_build_from_malloc_string() - Create a node using the provided YAML
+ * source which was malloced.
  *
  * Create a node parsing the provided string as a YAML source. The
- * node created will be associated with the provided document. The string is expected to have been
- * allocated by malloc(3) and when the document is destroyed it will be automatically freed.
+ * node created will be associated with the provided document. The string is
+ * expected to have been allocated by malloc(3) and when the document is
+ * destroyed it will be automatically freed.
  *
  * @fyd: The document
  * @str: The YAML source to use.
@@ -3360,11 +3184,9 @@ fy_node_build_from_string(struct fy_document *fyd,
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_build_from_malloc_string(struct fy_document *fyd,
-				 char *str, size_t len)
-	FY_EXPORT;
-
+struct fy_node *fy_node_build_from_malloc_string(struct fy_document *fyd,
+                                                 char *str,
+                                                 size_t len) FY_EXPORT;
 
 /**
  * fy_node_build_from_file() - Create a node using the provided YAML file.
@@ -3378,9 +3200,8 @@ fy_node_build_from_malloc_string(struct fy_document *fyd,
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_build_from_file(struct fy_document *fyd, const char *file)
-	FY_EXPORT;
+struct fy_node *fy_node_build_from_file(struct fy_document *fyd,
+                                        const char *file) FY_EXPORT;
 
 /**
  * fy_node_build_from_fp() - Create a node using the provided file pointer.
@@ -3394,12 +3215,12 @@ fy_node_build_from_file(struct fy_document *fyd, const char *file)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_build_from_fp(struct fy_document *fyd, FILE *fp)
-	FY_EXPORT;
+struct fy_node *fy_node_build_from_fp(struct fy_document *fyd,
+                                      FILE *fp) FY_EXPORT;
 
 /**
- * fy_node_vbuildf() - Create a node using the provided YAML source via vprintf formatting
+ * fy_node_vbuildf() - Create a node using the provided YAML source via vprintf
+ * formatting
  *
  * Create a node parsing the resulting string as a YAML source. The string
  * is created by applying vprintf formatting.
@@ -3411,12 +3232,12 @@ fy_node_build_from_fp(struct fy_document *fyd, FILE *fp)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_vbuildf(struct fy_document *fyd, const char *fmt, va_list ap)
-	FY_EXPORT;
+struct fy_node *fy_node_vbuildf(struct fy_document *fyd, const char *fmt,
+                                va_list ap) FY_EXPORT;
 
 /**
- * fy_node_buildf() - Create a node using the provided YAML source via printf formatting
+ * fy_node_buildf() - Create a node using the provided YAML source via printf
+ * formatting
  *
  * Create a node parsing the resulting string as a YAML source. The string
  * is created by applying printf formatting.
@@ -3428,10 +3249,8 @@ fy_node_vbuildf(struct fy_document *fyd, const char *fmt, va_list ap)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_buildf(struct fy_document *fyd, const char *fmt, ...)
-	FY_FORMAT(printf, 2, 3)
-	FY_EXPORT;
+struct fy_node *fy_node_buildf(struct fy_document *fyd, const char *fmt, ...)
+    FY_FORMAT(printf, 2, 3) FY_EXPORT;
 
 /**
  * fy_node_by_path() - Retrieve a node using the provided path spec.
@@ -3465,10 +3284,9 @@ fy_node_buildf(struct fy_document *fyd, const char *fmt, ...)
  * Returns:
  * The retrieved node, or NULL if not possible to be found.
  */
-struct fy_node *
-fy_node_by_path(struct fy_node *fyn, const char *path, size_t len,
-		enum fy_node_walk_flags flags)
-	FY_EXPORT;
+struct fy_node *fy_node_by_path(struct fy_node *fyn, const char *path,
+                                size_t len,
+                                enum fy_node_walk_flags flags) FY_EXPORT;
 
 /**
  * fy_node_get_path() - Get the path of this node
@@ -3482,12 +3300,10 @@ fy_node_by_path(struct fy_node *fyn, const char *path, size_t len,
  * Returns:
  * The node's address, or NULL if fyn is the root.
  */
-char *
-fy_node_get_path(struct fy_node *fyn)
-	FY_EXPORT;
+char *fy_node_get_path(struct fy_node *fyn) FY_EXPORT;
 
-#define fy_node_get_path_alloca(_fyn) \
-	FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_path((_fyn)), FY_NT)
+#define fy_node_get_path_alloca(_fyn)                                          \
+   FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_path((_fyn)), FY_NT)
 
 /**
  * fy_node_get_parent() - Get the parent node of a node
@@ -3502,9 +3318,7 @@ fy_node_get_path(struct fy_node *fyn)
  * Returns:
  * The node's parent, or NULL if fyn is the root, or the root of a key mapping.
  */
-struct fy_node *
-fy_node_get_parent(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_get_parent(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_document_parent() - Get the document parent node of a node
@@ -3518,9 +3332,7 @@ fy_node_get_parent(struct fy_node *fyn)
  * Returns:
  * The node's document parent, or NULL if fyn is the root
  */
-struct fy_node *
-fy_node_get_document_parent(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_get_document_parent(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_parent_address() - Get the path address of this node's parent
@@ -3534,12 +3346,10 @@ fy_node_get_document_parent(struct fy_node *fyn)
  * Returns:
  * The parent's address, or NULL if fyn is the root.
  */
-char *
-fy_node_get_parent_address(struct fy_node *fyn)
-	FY_EXPORT;
+char *fy_node_get_parent_address(struct fy_node *fyn) FY_EXPORT;
 
-#define fy_node_get_parent_address_alloca(_fyn) \
-	FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_parent_address((_fyn)), FY_NT)
+#define fy_node_get_parent_address_alloca(_fyn)                                \
+   FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_parent_address((_fyn)), FY_NT)
 
 /**
  * fy_node_get_path_relative_to() - Get a path address of a node
@@ -3556,12 +3366,12 @@ fy_node_get_parent_address(struct fy_node *fyn)
  * Returns:
  * The relative address from the parent to the node
  */
-char *
-fy_node_get_path_relative_to(struct fy_node *fyn_parent, struct fy_node *fyn)
-	FY_EXPORT;
+char *fy_node_get_path_relative_to(struct fy_node *fyn_parent,
+                                   struct fy_node *fyn) FY_EXPORT;
 
-#define fy_node_get_path_relative_to_alloca(_fynp, _fyn) \
-	FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_path_relative_to((_fynp), (_fyn)), FY_NT)
+#define fy_node_get_path_relative_to_alloca(_fynp, _fyn)                       \
+   FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_path_relative_to((_fynp), (_fyn)),  \
+                               FY_NT)
 
 /**
  * fy_node_get_short_path() - Get a path address of a node in the shortest
@@ -3589,12 +3399,10 @@ fy_node_get_path_relative_to(struct fy_node *fyn_parent, struct fy_node *fyn)
  * Returns:
  * The shortest path describing the node
  */
-char *
-fy_node_get_short_path(struct fy_node *fyn)
-	FY_EXPORT;
+char *fy_node_get_short_path(struct fy_node *fyn) FY_EXPORT;
 
-#define fy_node_get_short_path_alloca(_fyn) \
-	FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_short_path((_fyn)), FY_NT)
+#define fy_node_get_short_path_alloca(_fyn)                                    \
+   FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_short_path((_fyn)), FY_NT)
 
 /**
  * fy_node_get_reference() - Get a textual reference to a node
@@ -3612,12 +3420,10 @@ fy_node_get_short_path(struct fy_node *fyn)
  * Returns:
  * The node's text reference.
  */
-char *
-fy_node_get_reference(struct fy_node *fyn)
-	FY_EXPORT;
+char *fy_node_get_reference(struct fy_node *fyn) FY_EXPORT;
 
-#define fy_node_get_reference_alloca(_fyn) \
-	FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_reference((_fyn)), FY_NT)
+#define fy_node_get_reference_alloca(_fyn)                                     \
+   FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_reference((_fyn)), FY_NT)
 
 /**
  * fy_node_create_reference() - Create an alias reference node
@@ -3632,9 +3438,7 @@ fy_node_get_reference(struct fy_node *fyn)
  * Returns:
  * An alias node referencing the argument node
  */
-struct fy_node *
-fy_node_create_reference(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_create_reference(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_relative_reference() - Get a textual reference to a node
@@ -3656,12 +3460,12 @@ fy_node_create_reference(struct fy_node *fyn)
  * Returns:
  * The node's text reference.
  */
-char *
-fy_node_get_relative_reference(struct fy_node *fyn_base, struct fy_node *fyn)
-	FY_EXPORT;
+char *fy_node_get_relative_reference(struct fy_node *fyn_base,
+                                     struct fy_node *fyn) FY_EXPORT;
 
-#define fy_node_get_relative_reference_alloca(_fynb, _fyn) \
-	FY_ALLOCA_COPY_FREE_NO_NULL(fy_node_get_relative_reference((_fynb), (_fyn)), FY_NT)
+#define fy_node_get_relative_reference_alloca(_fynb, _fyn)                     \
+   FY_ALLOCA_COPY_FREE_NO_NULL(                                                \
+       fy_node_get_relative_reference((_fynb), (_fyn)), FY_NT)
 
 /**
  * fy_node_create_relative_reference() - Create an alias reference node
@@ -3679,8 +3483,8 @@ fy_node_get_relative_reference(struct fy_node *fyn_base, struct fy_node *fyn)
  * An alias node referencing the argument node relative to the base
  */
 struct fy_node *
-fy_node_create_relative_reference(struct fy_node *fyn_base, struct fy_node *fyn)
-	FY_EXPORT;
+fy_node_create_relative_reference(struct fy_node *fyn_base,
+                                  struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_create_scalar() - Create a scalar node.
@@ -3700,10 +3504,8 @@ fy_node_create_relative_reference(struct fy_node *fyn_base, struct fy_node *fyn)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_create_scalar(struct fy_document *fyd,
-		      const char *data, size_t size)
-	FY_EXPORT;
+struct fy_node *fy_node_create_scalar(struct fy_document *fyd, const char *data,
+                                      size_t size) FY_EXPORT;
 
 /**
  * fy_node_create_scalar_copy() - Create a scalar node copying the data.
@@ -3723,10 +3525,9 @@ fy_node_create_scalar(struct fy_document *fyd,
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_create_scalar_copy(struct fy_document *fyd,
-			   const char *data, size_t size)
-	FY_EXPORT;
+struct fy_node *fy_node_create_scalar_copy(struct fy_document *fyd,
+                                           const char *data,
+                                           size_t size) FY_EXPORT;
 
 /**
  * fy_node_create_vscalarf() - vprintf interface for creating scalars
@@ -3743,9 +3544,8 @@ fy_node_create_scalar_copy(struct fy_document *fyd,
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_create_vscalarf(struct fy_document *fyd, const char *fmt, va_list ap)
-	FY_EXPORT;
+struct fy_node *fy_node_create_vscalarf(struct fy_document *fyd,
+                                        const char *fmt, va_list ap) FY_EXPORT;
 
 /**
  * fy_node_create_scalarf() - printf interface for creating scalars
@@ -3762,10 +3562,8 @@ fy_node_create_vscalarf(struct fy_document *fyd, const char *fmt, va_list ap)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_create_scalarf(struct fy_document *fyd, const char *fmt, ...)
-	FY_FORMAT(printf, 2, 3)
-	FY_EXPORT;
+struct fy_node *fy_node_create_scalarf(struct fy_document *fyd, const char *fmt,
+                                       ...) FY_FORMAT(printf, 2, 3) FY_EXPORT;
 
 /**
  * fy_node_create_sequence() - Create an empty sequence node.
@@ -3777,9 +3575,7 @@ fy_node_create_scalarf(struct fy_document *fyd, const char *fmt, ...)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_create_sequence(struct fy_document *fyd)
-	FY_EXPORT;
+struct fy_node *fy_node_create_sequence(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_node_create_mapping() - Create an empty mapping node.
@@ -3791,9 +3587,7 @@ fy_node_create_sequence(struct fy_document *fyd)
  * Returns:
  * The created node, or NULL on error.
  */
-struct fy_node *
-fy_node_create_mapping(struct fy_document *fyd)
-	FY_EXPORT;
+struct fy_node *fy_node_create_mapping(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_node_set_tag() - Set the tag of node
@@ -3813,9 +3607,8 @@ fy_node_create_mapping(struct fy_document *fyd)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_set_tag(struct fy_node *fyn, const char *data, size_t len)
-	FY_EXPORT;
+int fy_node_set_tag(struct fy_node *fyn, const char *data,
+                    size_t len) FY_EXPORT;
 
 /**
  * fy_node_remove_tag() - Remove the tag of node
@@ -3827,9 +3620,7 @@ fy_node_set_tag(struct fy_node *fyn, const char *data, size_t len)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_remove_tag(struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_remove_tag(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_tag() - Get the tag of the node
@@ -3846,9 +3637,7 @@ fy_node_remove_tag(struct fy_node *fyn)
  * length of said tag.
  * A NULL will be returned in case of an error.
  */
-const char *
-fy_node_get_tag(struct fy_node *fyn, size_t *lenp)
-	FY_EXPORT;
+const char *fy_node_get_tag(struct fy_node *fyn, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_node_get_scalar() - Get the scalar content of the node
@@ -3866,9 +3655,7 @@ fy_node_get_tag(struct fy_node *fyn, size_t *lenp)
  * A NULL will be returned in case of an error, i.e. the node is not
  * a scalar.
  */
-const char *
-fy_node_get_scalar(struct fy_node *fyn, size_t *lenp)
-	FY_EXPORT;
+const char *fy_node_get_scalar(struct fy_node *fyn, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_node_get_scalar0() - Get the scalar content of the node
@@ -3881,11 +3668,10 @@ fy_node_get_scalar(struct fy_node *fyn, size_t *lenp)
  * @fyn: The scalar node
  *
  * Returns:
- * A pointer to the scalar content of the node or NULL in returned in case of an error.
+ * A pointer to the scalar content of the node or NULL in returned in case of an
+ * error.
  */
-const char *
-fy_node_get_scalar0(struct fy_node *fyn)
-	FY_EXPORT;
+const char *fy_node_get_scalar0(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_scalar_length() - Get the length of the scalar content
@@ -3898,9 +3684,7 @@ fy_node_get_scalar0(struct fy_node *fyn)
  * Returns:
  * The size of the scalar content, or 0 if node is not scalar.
  */
-size_t
-fy_node_get_scalar_length(struct fy_node *fyn)
-	FY_EXPORT;
+size_t fy_node_get_scalar_length(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_scalar_utf8_length() - Get the length of the scalar content
@@ -3913,11 +3697,10 @@ fy_node_get_scalar_length(struct fy_node *fyn)
  * @fyn: The scalar node
  *
  * Returns:
- * The size of the scalar content in utf8 characters, or 0 if node is not scalar.
+ * The size of the scalar content in utf8 characters, or 0 if node is not
+ * scalar.
  */
-size_t
-fy_node_get_scalar_utf8_length(struct fy_node *fyn)
-	FY_EXPORT;
+size_t fy_node_get_scalar_utf8_length(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_iterate() - Iterate over a sequence node
@@ -3931,9 +3714,8 @@ fy_node_get_scalar_utf8_length(struct fy_node *fyn)
  * Returns:
  * The next node in sequence or NULL at the end of the sequence.
  */
-struct fy_node *
-fy_node_sequence_iterate(struct fy_node *fyn, void **prevp)
-	FY_EXPORT;
+struct fy_node *fy_node_sequence_iterate(struct fy_node *fyn,
+                                         void **prevp) FY_EXPORT;
 
 /**
  * fy_node_sequence_reverse_iterate() - Iterate over a sequence node in reverse
@@ -3947,9 +3729,8 @@ fy_node_sequence_iterate(struct fy_node *fyn, void **prevp)
  * Returns:
  * The next node in reverse sequence or NULL at the end of the sequence.
  */
-struct fy_node *
-fy_node_sequence_reverse_iterate(struct fy_node *fyn, void **prevp)
-	FY_EXPORT;
+struct fy_node *fy_node_sequence_reverse_iterate(struct fy_node *fyn,
+                                                 void **prevp) FY_EXPORT;
 
 /**
  * fy_node_sequence_item_count() - Return the item count of the sequence
@@ -3961,9 +3742,7 @@ fy_node_sequence_reverse_iterate(struct fy_node *fyn, void **prevp)
  * Returns:
  * The count of items in the sequence or -1 in case of an error.
  */
-int
-fy_node_sequence_item_count(struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_sequence_item_count(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_is_empty() - Check whether the sequence is empty
@@ -3975,9 +3754,7 @@ fy_node_sequence_item_count(struct fy_node *fyn)
  * Returns:
  * true if the node is a sequence containing items, false otherwise
  */
-bool
-fy_node_sequence_is_empty(struct fy_node *fyn)
-	FY_EXPORT;
+bool fy_node_sequence_is_empty(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_get_by_index() - Return a sequence item by index
@@ -3995,9 +3772,8 @@ fy_node_sequence_is_empty(struct fy_node *fyn)
  * Returns:
  * The node at the specified index or NULL if no such item exist.
  */
-struct fy_node *
-fy_node_sequence_get_by_index(struct fy_node *fyn, int index)
-	FY_EXPORT;
+struct fy_node *fy_node_sequence_get_by_index(struct fy_node *fyn,
+                                              int index) FY_EXPORT;
 
 /**
  * fy_node_sequence_append() - Append a node item to a sequence
@@ -4010,9 +3786,8 @@ fy_node_sequence_get_by_index(struct fy_node *fyn, int index)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_sequence_append(struct fy_node *fyn_seq, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_sequence_append(struct fy_node *fyn_seq,
+                            struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_prepend() - Append a node item to a sequence
@@ -4025,8 +3800,8 @@ fy_node_sequence_append(struct fy_node *fyn_seq, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int fy_node_sequence_prepend(struct fy_node *fyn_seq, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_sequence_prepend(struct fy_node *fyn_seq,
+                             struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_insert_before() - Insert a node item before another
@@ -4040,10 +3815,9 @@ int fy_node_sequence_prepend(struct fy_node *fyn_seq, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_sequence_insert_before(struct fy_node *fyn_seq,
-			       struct fy_node *fyn_mark, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_sequence_insert_before(struct fy_node *fyn_seq,
+                                   struct fy_node *fyn_mark,
+                                   struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_insert_after() - Insert a node item after another
@@ -4057,10 +3831,9 @@ fy_node_sequence_insert_before(struct fy_node *fyn_seq,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_sequence_insert_after(struct fy_node *fyn_seq,
-			      struct fy_node *fyn_mark, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_sequence_insert_after(struct fy_node *fyn_seq,
+                                  struct fy_node *fyn_mark,
+                                  struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_remove() - Remove an item from a sequence
@@ -4073,9 +3846,8 @@ fy_node_sequence_insert_after(struct fy_node *fyn_seq,
  * Returns:
  * The removed node item fyn, or NULL in case of an error.
  */
-struct fy_node *
-fy_node_sequence_remove(struct fy_node *fyn_seq, struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_sequence_remove(struct fy_node *fyn_seq,
+                                        struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_mapping_iterate() - Iterate over a mapping node
@@ -4093,9 +3865,8 @@ fy_node_sequence_remove(struct fy_node *fyn_seq, struct fy_node *fyn)
  * Returns:
  * The next node pair in the mapping or NULL at the end of the mapping.
  */
-struct fy_node_pair *
-fy_node_mapping_iterate(struct fy_node *fyn, void **prevp)
-	FY_EXPORT;
+struct fy_node_pair *fy_node_mapping_iterate(struct fy_node *fyn,
+                                             void **prevp) FY_EXPORT;
 
 /**
  * fy_node_mapping_reverse_iterate() - Iterate over a mapping node in reverse
@@ -4111,11 +3882,11 @@ fy_node_mapping_iterate(struct fy_node *fyn, void **prevp)
  * @prevp: The previous sequence iterator
  *
  * Returns:
- * The next node pair in reverse sequence in the mapping or NULL at the end of the mapping.
+ * The next node pair in reverse sequence in the mapping or NULL at the end of
+ * the mapping.
  */
-struct fy_node_pair *
-fy_node_mapping_reverse_iterate(struct fy_node *fyn, void **prevp)
-	FY_EXPORT;
+struct fy_node_pair *fy_node_mapping_reverse_iterate(struct fy_node *fyn,
+                                                     void **prevp) FY_EXPORT;
 
 /**
  * fy_node_mapping_item_count() - Return the node pair count of the mapping
@@ -4127,9 +3898,7 @@ fy_node_mapping_reverse_iterate(struct fy_node *fyn, void **prevp)
  * Returns:
  * The count of node pairs in the mapping or -1 in case of an error.
  */
-int
-fy_node_mapping_item_count(struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_mapping_item_count(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_mapping_is_empty() - Check whether the mapping is empty
@@ -4141,9 +3910,7 @@ fy_node_mapping_item_count(struct fy_node *fyn)
  * Returns:
  * true if the node is a mapping containing node pairs, false otherwise
  */
-bool
-fy_node_mapping_is_empty(struct fy_node *fyn)
-	FY_EXPORT;
+bool fy_node_mapping_is_empty(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_mapping_get_by_index() - Return a node pair by index
@@ -4161,12 +3928,12 @@ fy_node_mapping_is_empty(struct fy_node *fyn)
  * Returns:
  * The node pair at the specified index or NULL if no such item exist.
  */
-struct fy_node_pair *
-fy_node_mapping_get_by_index(struct fy_node *fyn, int index)
-	FY_EXPORT;
+struct fy_node_pair *fy_node_mapping_get_by_index(struct fy_node *fyn,
+                                                  int index) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_pair_by_string() - Lookup a node pair in mapping by string
+ * fy_node_mapping_lookup_pair_by_string() - Lookup a node pair in mapping by
+ * string
  *
  * This method will return the node pair that contains the same key
  * from the YAML node created from the @key argument. The comparison of the
@@ -4180,9 +3947,8 @@ fy_node_mapping_get_by_index(struct fy_node *fyn, int index)
  * The value matching the given key, or NULL if not found.
  */
 struct fy_node_pair *
-fy_node_mapping_lookup_pair_by_string(struct fy_node *fyn,
-				      const char *key, size_t len)
-	FY_EXPORT;
+fy_node_mapping_lookup_pair_by_string(struct fy_node *fyn, const char *key,
+                                      size_t len) FY_EXPORT;
 
 /**
  * fy_node_mapping_lookup_by_string() - Lookup a node value in mapping by string
@@ -4198,13 +3964,13 @@ fy_node_mapping_lookup_pair_by_string(struct fy_node *fyn,
  * Returns:
  * The value matching the given key, or NULL if not found.
  */
-struct fy_node *
-fy_node_mapping_lookup_by_string(struct fy_node *fyn,
-				 const char *key, size_t len)
-	FY_EXPORT;
+struct fy_node *fy_node_mapping_lookup_by_string(struct fy_node *fyn,
+                                                 const char *key,
+                                                 size_t len) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_value_by_string() - Lookup a node value in mapping by string
+ * fy_node_mapping_lookup_value_by_string() - Lookup a node value in mapping by
+ * string
  *
  * This method will return the value of node pair that contains the same key
  * from the YAML node created from the @key argument. The comparison of the
@@ -4219,13 +3985,13 @@ fy_node_mapping_lookup_by_string(struct fy_node *fyn,
  * Returns:
  * The value matching the given key, or NULL if not found.
  */
-struct fy_node *
-fy_node_mapping_lookup_value_by_string(struct fy_node *fyn,
-				       const char *key, size_t len)
-	FY_EXPORT;
+struct fy_node *fy_node_mapping_lookup_value_by_string(struct fy_node *fyn,
+                                                       const char *key,
+                                                       size_t len) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_key_by_string() - Lookup a node key in mapping by string
+ * fy_node_mapping_lookup_key_by_string() - Lookup a node key in mapping by
+ * string
  *
  * This method will return the key of node pair that contains the same key
  * from the YAML node created from the @key argument. The comparison of the
@@ -4238,14 +4004,13 @@ fy_node_mapping_lookup_value_by_string(struct fy_node *fyn,
  * Returns:
  * The key matching the given key, or NULL if not found.
  */
-struct fy_node *
-fy_node_mapping_lookup_key_by_string(struct fy_node *fyn,
-				     const char *key, size_t len)
-	FY_EXPORT;
-
+struct fy_node *fy_node_mapping_lookup_key_by_string(struct fy_node *fyn,
+                                                     const char *key,
+                                                     size_t len) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_pair_by_simple_key() - Lookup a node pair in mapping by simple string
+ * fy_node_mapping_lookup_pair_by_simple_key() - Lookup a node pair in mapping
+ * by simple string
  *
  * This method will return the node pair that contains the same key
  * from the YAML node created from the @key argument. The comparison of the
@@ -4259,11 +4024,11 @@ fy_node_mapping_lookup_key_by_string(struct fy_node *fyn,
  * The node pair matching the given key, or NULL if not found.
  */
 struct fy_node_pair *
-fy_node_mapping_lookup_pair_by_simple_key(struct fy_node *fyn,
-					  const char *key, size_t len)
-	FY_EXPORT;
+fy_node_mapping_lookup_pair_by_simple_key(struct fy_node *fyn, const char *key,
+                                          size_t len) FY_EXPORT;
 /**
- * fy_node_mapping_lookup_value_by_simple_key() - Lookup a node value in mapping by simple string
+ * fy_node_mapping_lookup_value_by_simple_key() - Lookup a node value in mapping
+ * by simple string
  *
  * This method will return the value of node pair that contains the same key
  * from the YAML node created from the @key argument. The comparison of the
@@ -4277,12 +4042,12 @@ fy_node_mapping_lookup_pair_by_simple_key(struct fy_node *fyn,
  * The value matching the given key, or NULL if not found.
  */
 struct fy_node *
-fy_node_mapping_lookup_value_by_simple_key(struct fy_node *fyn,
-					   const char *key, size_t len)
-	FY_EXPORT;
+fy_node_mapping_lookup_value_by_simple_key(struct fy_node *fyn, const char *key,
+                                           size_t len) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_pair_by_null_key() - Lookup a node pair in mapping that has a NULL key
+ * fy_node_mapping_lookup_pair_by_null_key() - Lookup a node pair in mapping
+ * that has a NULL key
  *
  * This method will return the node pair that has a NULL key.
  * Note this method is not using the mapping accelerator
@@ -4294,11 +4059,11 @@ fy_node_mapping_lookup_value_by_simple_key(struct fy_node *fyn,
  * The node pair with a NULL key, NULL otherwise
  */
 struct fy_node_pair *
-fy_node_mapping_lookup_pair_by_null_key(struct fy_node *fyn)
-	FY_EXPORT;
+fy_node_mapping_lookup_pair_by_null_key(struct fy_node *fyn) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_value_by_null_key() - Lookup a node value with a NULL key.
+ * fy_node_mapping_lookup_value_by_null_key() - Lookup a node value with a NULL
+ * key.
  *
  * Return the value of a node pair that has a NULL key.
  *
@@ -4310,11 +4075,11 @@ fy_node_mapping_lookup_pair_by_null_key(struct fy_node *fyn)
  * use the node pair method instead.
  */
 struct fy_node *
-fy_node_mapping_lookup_value_by_null_key(struct fy_node *fyn)
-	FY_EXPORT;
+fy_node_mapping_lookup_value_by_null_key(struct fy_node *fyn) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_scalar_by_simple_key() - Lookup a scalar in mapping by simple string
+ * fy_node_mapping_lookup_scalar_by_simple_key() - Lookup a scalar in mapping by
+ * simple string
  *
  * This method will return the scalar contents that contains the same key
  * from the YAML node created from the @key argument. The comparison of the
@@ -4330,28 +4095,27 @@ fy_node_mapping_lookup_value_by_null_key(struct fy_node *fyn)
  */
 const char *
 fy_node_mapping_lookup_scalar_by_simple_key(struct fy_node *fyn, size_t *lenp,
-					    const char *key, size_t keylen)
-	FY_EXPORT;
+                                            const char *key,
+                                            size_t keylen) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_scalar0_by_simple_key() - Lookup a scalar in mapping by simple string
- * 						    returning a '\0' terminated scalar
+ * fy_node_mapping_lookup_scalar0_by_simple_key() - Lookup a scalar in mapping
+ * by simple string returning a '\0' terminated scalar
  *
- * This method will return the NUL terminated scalar contents that contains the same key
- * from the YAML node created from the @key argument. The comparison of the
- * node is using by comparing the strings for identity.
+ * This method will return the NUL terminated scalar contents that contains the
+ * same key from the YAML node created from the @key argument. The comparison of
+ * the node is using by comparing the strings for identity.
  *
  * @fyn: The mapping node
  * @key: The string to use as key
  * @keylen: The length of the key (or -1 if '\0' terminated)
  *
  * Returns:
- * The NUL terminated scalar contents matching the given key, or NULL if not found.
+ * The NUL terminated scalar contents matching the given key, or NULL if not
+ * found.
  */
-const char *
-fy_node_mapping_lookup_scalar0_by_simple_key(struct fy_node *fyn,
-					     const char *key, size_t keylen)
-	FY_EXPORT;
+const char *fy_node_mapping_lookup_scalar0_by_simple_key(
+    struct fy_node *fyn, const char *key, size_t keylen) FY_EXPORT;
 
 /**
  * fy_node_mapping_lookup_pair() - Lookup a node pair matching the provided key
@@ -4365,12 +4129,12 @@ fy_node_mapping_lookup_scalar0_by_simple_key(struct fy_node *fyn,
  * The node pair matching the given key, or NULL if not found.
  */
 struct fy_node_pair *
-fy_node_mapping_lookup_pair(struct fy_node *fyn, struct fy_node *fyn_key)
-	FY_EXPORT;
-
+fy_node_mapping_lookup_pair(struct fy_node *fyn,
+                            struct fy_node *fyn_key) FY_EXPORT;
 
 /**
- * fy_node_mapping_lookup_value_by_key() - Lookup a node pair's value matching the provided key
+ * fy_node_mapping_lookup_value_by_key() - Lookup a node pair's value matching
+ * the provided key
  *
  * This method will return the node pair that matches the provided @fyn_key
  * The key may be collection and a content match check is performed recursively
@@ -4382,11 +4146,12 @@ fy_node_mapping_lookup_pair(struct fy_node *fyn, struct fy_node *fyn_key)
  * Returns:
  * The node value matching the given key, or NULL if not found.
  */
-struct fy_node *
-fy_node_mapping_lookup_value_by_key(struct fy_node *fyn, struct fy_node *fyn_key);
+struct fy_node *fy_node_mapping_lookup_value_by_key(struct fy_node *fyn,
+                                                    struct fy_node *fyn_key);
 
 /**
- * fy_node_mapping_lookup_key_by_key() - Lookup a node pair's key matching the provided key
+ * fy_node_mapping_lookup_key_by_key() - Lookup a node pair's key matching the
+ * provided key
  *
  * This method will return the node pair that matches the provided @fyn_key
  * The key may be collection and a content match check is performed recursively
@@ -4398,8 +4163,8 @@ fy_node_mapping_lookup_value_by_key(struct fy_node *fyn, struct fy_node *fyn_key
  * Returns:
  * The node key matching the given key, or NULL if not found.
  */
-struct fy_node *
-fy_node_mapping_lookup_key_by_key(struct fy_node *fyn, struct fy_node *fyn_key);
+struct fy_node *fy_node_mapping_lookup_key_by_key(struct fy_node *fyn,
+                                                  struct fy_node *fyn_key);
 
 /**
  * fy_node_mapping_get_pair_index() - Return the node pair index in the mapping
@@ -4413,10 +4178,8 @@ fy_node_mapping_lookup_key_by_key(struct fy_node *fyn, struct fy_node *fyn_key);
  * Returns:
  * The index of the node pair in the mapping or -1 in case of an error.
  */
-int
-fy_node_mapping_get_pair_index(struct fy_node *fyn,
-			       const struct fy_node_pair *fynp)
-	FY_EXPORT;
+int fy_node_mapping_get_pair_index(struct fy_node *fyn,
+                                   const struct fy_node_pair *fynp) FY_EXPORT;
 
 /**
  * fy_node_pair_key() - Return the key of a node pair
@@ -4431,9 +4194,7 @@ fy_node_mapping_get_pair_index(struct fy_node *fyn,
  * Returns:
  * The node pair key
  */
-struct fy_node *
-fy_node_pair_key(struct fy_node_pair *fynp)
-	FY_EXPORT;
+struct fy_node *fy_node_pair_key(struct fy_node_pair *fynp) FY_EXPORT;
 
 /**
  * fy_node_pair_value() - Return the value of a node pair
@@ -4448,9 +4209,7 @@ fy_node_pair_key(struct fy_node_pair *fynp)
  * Returns:
  * The node pair value
  */
-struct fy_node *
-fy_node_pair_value(struct fy_node_pair *fynp)
-	FY_EXPORT;
+struct fy_node *fy_node_pair_value(struct fy_node_pair *fynp) FY_EXPORT;
 
 /**
  * fy_node_pair_set_key() - Sets the key of a node pair
@@ -4467,9 +4226,8 @@ fy_node_pair_value(struct fy_node_pair *fynp)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_pair_set_key(struct fy_node_pair *fynp, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_pair_set_key(struct fy_node_pair *fynp,
+                         struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_pair_set_value() - Sets the value of a node pair
@@ -4483,9 +4241,8 @@ fy_node_pair_set_key(struct fy_node_pair *fynp, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_pair_set_value(struct fy_node_pair *fynp, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_pair_set_value(struct fy_node_pair *fynp,
+                           struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_mapping_append() - Append a node item to a mapping
@@ -4499,10 +4256,8 @@ fy_node_pair_set_value(struct fy_node_pair *fynp, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_mapping_append(struct fy_node *fyn_map,
-		       struct fy_node *fyn_key, struct fy_node *fyn_value)
-	FY_EXPORT;
+int fy_node_mapping_append(struct fy_node *fyn_map, struct fy_node *fyn_key,
+                           struct fy_node *fyn_value) FY_EXPORT;
 
 /**
  * fy_node_mapping_prepend() - Prepend a node item to a mapping
@@ -4516,10 +4271,8 @@ fy_node_mapping_append(struct fy_node *fyn_map,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_mapping_prepend(struct fy_node *fyn_map,
-			struct fy_node *fyn_key, struct fy_node *fyn_value)
-	FY_EXPORT;
+int fy_node_mapping_prepend(struct fy_node *fyn_map, struct fy_node *fyn_key,
+                            struct fy_node *fyn_value) FY_EXPORT;
 
 /**
  * fy_node_mapping_remove() - Remove a node pair from a mapping
@@ -4532,12 +4285,12 @@ fy_node_mapping_prepend(struct fy_node *fyn_map,
  * Returns:
  * 0 on success, -1 on failure.
  */
-int
-fy_node_mapping_remove(struct fy_node *fyn_map, struct fy_node_pair *fynp)
-	FY_EXPORT;
+int fy_node_mapping_remove(struct fy_node *fyn_map,
+                           struct fy_node_pair *fynp) FY_EXPORT;
 
 /**
- * fy_node_mapping_remove_by_key() - Remove a node pair from a mapping returning the value
+ * fy_node_mapping_remove_by_key() - Remove a node pair from a mapping returning
+ * the value
  *
  * Remove node pair from a mapping using the supplied key.
  *
@@ -4548,8 +4301,8 @@ fy_node_mapping_remove(struct fy_node *fyn_map, struct fy_node_pair *fynp)
  * The value part of removed node pair, or NULL in case of an error.
  */
 struct fy_node *
-fy_node_mapping_remove_by_key(struct fy_node *fyn_map, struct fy_node *fyn_key)
-	FY_EXPORT;
+fy_node_mapping_remove_by_key(struct fy_node *fyn_map,
+                              struct fy_node *fyn_key) FY_EXPORT;
 
 /**
  * fy_node_sort() - Recursively sort node
@@ -4564,9 +4317,8 @@ fy_node_mapping_remove_by_key(struct fy_node *fyn_map, struct fy_node *fyn_key)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_sort(struct fy_node *fyn, fy_node_mapping_sort_fn key_cmp, void *arg)
-	FY_EXPORT;
+int fy_node_sort(struct fy_node *fyn, fy_node_mapping_sort_fn key_cmp,
+                 void *arg) FY_EXPORT;
 
 /**
  * fy_node_vscanf() - Retrieve data via vscanf
@@ -4612,10 +4364,8 @@ int fy_node_vscanf(struct fy_node *fyn, const char *fmt, va_list ap);
  * Returns:
  * The number of scanned arguments, or -1 on error.
  */
-int
-fy_node_scanf(struct fy_node *fyn, const char *fmt, ...)
-	FY_FORMAT(scanf, 2, 3)
-	FY_EXPORT;
+int fy_node_scanf(struct fy_node *fyn, const char *fmt, ...)
+    FY_FORMAT(scanf, 2, 3) FY_EXPORT;
 
 /**
  * fy_document_vscanf() - Retrieve data via vscanf relative to document root
@@ -4638,9 +4388,8 @@ fy_node_scanf(struct fy_node *fyn, const char *fmt, ...)
  * Returns:
  * The number of scanned arguments, or -1 on error.
  */
-int
-fy_document_vscanf(struct fy_document *fyd, const char *fmt, va_list ap)
-	FY_EXPORT;
+int fy_document_vscanf(struct fy_document *fyd, const char *fmt,
+                       va_list ap) FY_EXPORT;
 
 /**
  * fy_document_scanf() - Retrieve data via scanf relative to document root
@@ -4663,13 +4412,12 @@ fy_document_vscanf(struct fy_document *fyd, const char *fmt, va_list ap)
  * Returns:
  * The number of scanned arguments, or -1 on error.
  */
-int
-fy_document_scanf(struct fy_document *fyd, const char *fmt, ...)
-	FY_FORMAT(scanf, 2, 3)
-	FY_EXPORT;
+int fy_document_scanf(struct fy_document *fyd, const char *fmt, ...)
+    FY_FORMAT(scanf, 2, 3) FY_EXPORT;
 
 /**
- * fy_document_tag_directive_iterate() - Iterate over a document's tag directives
+ * fy_document_tag_directive_iterate() - Iterate over a document's tag
+ * directives
  *
  * This method iterates over all the documents tag directives.
  * The start of the iteration is signalled by a NULL in \*prevp.
@@ -4680,14 +4428,14 @@ fy_document_scanf(struct fy_document *fyd, const char *fmt, ...)
  * Returns:
  * The next tag directive token in the document or NULL at the end of them.
  */
-struct fy_token *
-fy_document_tag_directive_iterate(struct fy_document *fyd, void **prevp)
-	FY_EXPORT;
+struct fy_token *fy_document_tag_directive_iterate(struct fy_document *fyd,
+                                                   void **prevp) FY_EXPORT;
 
 /**
  * fy_document_tag_directive_lookup() - Retreive a document's tag directive
  *
- * Retreives the matching tag directive token of the document matching the handle.
+ * Retreives the matching tag directive token of the document matching the
+ * handle.
  *
  * @fyd: The document
  * @handle: The handle to look for
@@ -4695,9 +4443,8 @@ fy_document_tag_directive_iterate(struct fy_document *fyd, void **prevp)
  * Returns:
  * The tag directive token with the given handle or NULL if not found
  */
-struct fy_token *
-fy_document_tag_directive_lookup(struct fy_document *fyd, const char *handle)
-	FY_EXPORT;
+struct fy_token *fy_document_tag_directive_lookup(struct fy_document *fyd,
+                                                  const char *handle) FY_EXPORT;
 
 /**
  * fy_tag_directive_token_handle() - Get a tag directive handle
@@ -4713,9 +4460,8 @@ fy_document_tag_directive_lookup(struct fy_document *fyd, const char *handle)
  * length of said handle.
  * A NULL will be returned in case of an error.
  */
-const char *
-fy_tag_directive_token_handle(struct fy_token *fyt, size_t *lenp)
-	FY_EXPORT;
+const char *fy_tag_directive_token_handle(struct fy_token *fyt,
+                                          size_t *lenp) FY_EXPORT;
 
 /**
  * fy_tag_directive_token_prefix() - Get a tag directive prefix
@@ -4731,9 +4477,8 @@ fy_tag_directive_token_handle(struct fy_token *fyt, size_t *lenp)
  * length of said prefix.
  * A NULL will be returned in case of an error.
  */
-const char *
-fy_tag_directive_token_prefix(struct fy_token *fyt, size_t *lenp)
-	FY_EXPORT;
+const char *fy_tag_directive_token_prefix(struct fy_token *fyt,
+                                          size_t *lenp) FY_EXPORT;
 
 /**
  * fy_document_tag_directive_add() - Add a tag directive to a document
@@ -4747,16 +4492,15 @@ fy_tag_directive_token_prefix(struct fy_token *fyt, size_t *lenp)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_document_tag_directive_add(struct fy_document *fyd,
-			      const char *handle, const char *prefix)
-	FY_EXPORT;
+int fy_document_tag_directive_add(struct fy_document *fyd, const char *handle,
+                                  const char *prefix) FY_EXPORT;
 
 /**
  * fy_document_tag_directive_remove() - Remove a tag directive
  *
  * Remove a tag directive from a document.
- * Note that removal is prohibited if any node is still using this tag directive.
+ * Note that removal is prohibited if any node is still using this tag
+ * directive.
  *
  * @fyd: The document
  * @handle: The handle of the tag directive to remove.
@@ -4764,9 +4508,8 @@ fy_document_tag_directive_add(struct fy_document *fyd,
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_document_tag_directive_remove(struct fy_document *fyd, const char *handle)
-	FY_EXPORT;
+int fy_document_tag_directive_remove(struct fy_document *fyd,
+                                     const char *handle) FY_EXPORT;
 
 /**
  * fy_document_lookup_anchor() - Lookup an anchor
@@ -4780,10 +4523,9 @@ fy_document_tag_directive_remove(struct fy_document *fyd, const char *handle)
  * Returns:
  * The anchor if found, NULL otherwise
  */
-struct fy_anchor *
-fy_document_lookup_anchor(struct fy_document *fyd,
-			  const char *anchor, size_t len)
-	FY_EXPORT;
+struct fy_anchor *fy_document_lookup_anchor(struct fy_document *fyd,
+                                            const char *anchor,
+                                            size_t len) FY_EXPORT;
 
 /**
  * fy_document_lookup_anchor_by_token() - Lookup an anchor by token text
@@ -4798,8 +4540,7 @@ fy_document_lookup_anchor(struct fy_document *fyd,
  */
 struct fy_anchor *
 fy_document_lookup_anchor_by_token(struct fy_document *fyd,
-				   struct fy_token *anchor)
-	FY_EXPORT;
+                                   struct fy_token *anchor) FY_EXPORT;
 
 /**
  * fy_document_lookup_anchor_by_node() - Lookup an anchor by node
@@ -4814,8 +4555,7 @@ fy_document_lookup_anchor_by_token(struct fy_document *fyd,
  */
 struct fy_anchor *
 fy_document_lookup_anchor_by_node(struct fy_document *fyd,
-				  struct fy_node *fyn)
-	FY_EXPORT;
+                                  struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_anchor_get_text() - Get the text of an anchor
@@ -4832,9 +4572,7 @@ fy_document_lookup_anchor_by_node(struct fy_document *fyd,
  * length of said anchor.
  * A NULL will be returned in case of an error.
  */
-const char *
-fy_anchor_get_text(struct fy_anchor *fya, size_t *lenp)
-	FY_EXPORT;
+const char *fy_anchor_get_text(struct fy_anchor *fya, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_anchor_node() - Get the node of an anchor
@@ -4846,9 +4584,7 @@ fy_anchor_get_text(struct fy_anchor *fya, size_t *lenp)
  * Returns:
  * The node of the anchor, or NULL in case of an error.
  */
-struct fy_node *
-fy_anchor_node(struct fy_anchor *fya)
-	FY_EXPORT;
+struct fy_node *fy_anchor_node(struct fy_anchor *fya) FY_EXPORT;
 
 /**
  * fy_document_anchor_iterate() - Iterate over a document's anchors
@@ -4862,9 +4598,8 @@ fy_anchor_node(struct fy_anchor *fya)
  * Returns:
  * The next anchor in the document or NULL at the end of them.
  */
-struct fy_anchor *
-fy_document_anchor_iterate(struct fy_document *fyd, void **prevp)
-	FY_EXPORT;
+struct fy_anchor *fy_document_anchor_iterate(struct fy_document *fyd,
+                                             void **prevp) FY_EXPORT;
 
 /**
  * fy_document_set_anchor() - Place an anchor
@@ -4885,10 +4620,9 @@ fy_document_anchor_iterate(struct fy_document *fyd, void **prevp)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_document_set_anchor(struct fy_document *fyd, struct fy_node *fyn,
-		       const char *text, size_t len)
-	FY_EXPORT FY_DEPRECATED;
+int fy_document_set_anchor(struct fy_document *fyd, struct fy_node *fyn,
+                           const char *text,
+                           size_t len) FY_EXPORT FY_DEPRECATED;
 
 /**
  * fy_node_set_anchor() - Place an anchor to the node
@@ -4908,9 +4642,8 @@ fy_document_set_anchor(struct fy_document *fyd, struct fy_node *fyn,
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_set_anchor(struct fy_node *fyn, const char *text, size_t len)
-	FY_EXPORT;
+int fy_node_set_anchor(struct fy_node *fyn, const char *text,
+                       size_t len) FY_EXPORT;
 
 /**
  * fy_node_set_anchor_copy() - Place an anchor to the node copying the text
@@ -4925,12 +4658,12 @@ fy_node_set_anchor(struct fy_node *fyn, const char *text, size_t len)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_set_anchor_copy(struct fy_node *fyn, const char *text, size_t len)
-	FY_EXPORT;
+int fy_node_set_anchor_copy(struct fy_node *fyn, const char *text,
+                            size_t len) FY_EXPORT;
 
 /**
- * fy_node_set_vanchorf() - Place an anchor to the node using a vprintf interface.
+ * fy_node_set_vanchorf() - Place an anchor to the node using a vprintf
+ * interface.
  *
  * Places an anchor to the node with the give text name as created
  * via vprintf'ing the arguments.
@@ -4942,9 +4675,8 @@ fy_node_set_anchor_copy(struct fy_node *fyn, const char *text, size_t len)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_set_vanchorf(struct fy_node *fyn, const char *fmt, va_list ap)
-	FY_EXPORT;
+int fy_node_set_vanchorf(struct fy_node *fyn, const char *fmt,
+                         va_list ap) FY_EXPORT;
 
 /**
  * fy_node_set_anchorf() - Place an anchor to the node using a printf interface.
@@ -4959,10 +4691,8 @@ fy_node_set_vanchorf(struct fy_node *fyn, const char *fmt, va_list ap)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_set_anchorf(struct fy_node *fyn, const char *fmt, ...)
-	FY_FORMAT(printf, 2, 3)
-	FY_EXPORT;
+int fy_node_set_anchorf(struct fy_node *fyn, const char *fmt, ...)
+    FY_FORMAT(printf, 2, 3) FY_EXPORT;
 
 /**
  * fy_node_remove_anchor() - Remove an anchor
@@ -4974,9 +4704,7 @@ fy_node_set_anchorf(struct fy_node *fyn, const char *fmt, ...)
  * Returns:
  * 0 on success, -1 on error.
  */
-int
-fy_node_remove_anchor(struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_remove_anchor(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_anchor() - Get the anchor of a node
@@ -4988,9 +4716,7 @@ fy_node_remove_anchor(struct fy_node *fyn)
  * Returns:
  * The anchor if there's one at the node, or NULL otherwise
  */
-struct fy_anchor *
-fy_node_get_anchor(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_anchor *fy_node_get_anchor(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_nearest_anchor() - Get the nearest anchor of the node
@@ -5003,9 +4729,7 @@ fy_node_get_anchor(struct fy_node *fyn)
  * Returns:
  * The nearest anchor if there's one, or NULL otherwise
  */
-struct fy_anchor *
-fy_node_get_nearest_anchor(struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_anchor *fy_node_get_nearest_anchor(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_get_nearest_child_of() - Get the nearest node which is a
@@ -5020,9 +4744,8 @@ fy_node_get_nearest_anchor(struct fy_node *fyn)
  * Returns:
  * The nearest child of the base if there's one, or NULL otherwise
  */
-struct fy_node *
-fy_node_get_nearest_child_of(struct fy_node *fyn_base, struct fy_node *fyn)
-	FY_EXPORT;
+struct fy_node *fy_node_get_nearest_child_of(struct fy_node *fyn_base,
+                                             struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_create_alias() - Create an alias node
@@ -5039,10 +4762,8 @@ fy_node_get_nearest_child_of(struct fy_node *fyn_base, struct fy_node *fyn)
  * Returns:
  * The created alias node, or NULL in case of an error
  */
-struct fy_node *
-fy_node_create_alias(struct fy_document *fyd,
-		     const char *alias, size_t len)
-	FY_EXPORT;
+struct fy_node *fy_node_create_alias(struct fy_document *fyd, const char *alias,
+                                     size_t len) FY_EXPORT;
 
 /**
  * fy_node_create_alias_copy() - Create an alias node copying the data
@@ -5059,10 +4780,9 @@ fy_node_create_alias(struct fy_document *fyd,
  * Returns:
  * The created alias node, or NULL in case of an error
  */
-struct fy_node *
-fy_node_create_alias_copy(struct fy_document *fyd,
-			  const char *alias, size_t len)
-	FY_EXPORT;
+struct fy_node *fy_node_create_alias_copy(struct fy_document *fyd,
+                                          const char *alias,
+                                          size_t len) FY_EXPORT;
 
 /**
  * fy_node_get_meta() - Get the meta pointer of a node
@@ -5074,9 +4794,7 @@ fy_node_create_alias_copy(struct fy_document *fyd,
  * Returns:
  * The stored meta data pointer
  */
-void *
-fy_node_get_meta(struct fy_node *fyn)
-	FY_EXPORT;
+void *fy_node_get_meta(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_set_meta() - Set the meta pointer of a node
@@ -5090,9 +4808,7 @@ fy_node_get_meta(struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_set_meta(struct fy_node *fyn, void *meta)
-	FY_EXPORT;
+int fy_node_set_meta(struct fy_node *fyn, void *meta) FY_EXPORT;
 
 /**
  * fy_node_clear_meta() - Clear the meta data of a node
@@ -5101,9 +4817,7 @@ fy_node_set_meta(struct fy_node *fyn, void *meta)
  *
  * @fyn: The node to clear meta data
  */
-void
-fy_node_clear_meta(struct fy_node *fyn)
-	FY_EXPORT;
+void fy_node_clear_meta(struct fy_node *fyn) FY_EXPORT;
 
 /**
  * typedef fy_node_meta_clear_fn - Meta data clear method
@@ -5115,7 +4829,8 @@ fy_node_clear_meta(struct fy_node *fyn)
  * @user: The user pointer of fy_document_register_meta()
  *
  */
-typedef void (*fy_node_meta_clear_fn)(struct fy_node *fyn, void *meta, void *user);
+typedef void (*fy_node_meta_clear_fn)(struct fy_node *fyn, void *meta,
+                                      void *user);
 
 /**
  * fy_document_register_meta() - Register a meta cleanup hook
@@ -5131,10 +4846,9 @@ typedef void (*fy_node_meta_clear_fn)(struct fy_node *fyn, void *meta, void *use
  * Returns:
  * 0 on success, -1 if another hook is already registered.
  */
-int
-fy_document_register_meta(struct fy_document *fyd,
-			  fy_node_meta_clear_fn clear_fn, void *user)
-	FY_EXPORT;
+int fy_document_register_meta(struct fy_document *fyd,
+                              fy_node_meta_clear_fn clear_fn,
+                              void *user) FY_EXPORT;
 
 /**
  * fy_document_unregister_meta() - Unregister a meta cleanup hook
@@ -5145,9 +4859,7 @@ fy_document_register_meta(struct fy_document *fyd,
  *
  * @fyd: The document to unregister it's meta cleanup hook.
  */
-void
-fy_document_unregister_meta(struct fy_document *fyd)
-	FY_EXPORT;
+void fy_document_unregister_meta(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_node_set_marker() - Set a marker of a node
@@ -5162,9 +4874,7 @@ fy_document_unregister_meta(struct fy_document *fyd)
  * Returns:
  * The previous value of the marker
  */
-bool
-fy_node_set_marker(struct fy_node *fyn, unsigned int marker)
-	FY_EXPORT;
+bool fy_node_set_marker(struct fy_node *fyn, unsigned int marker) FY_EXPORT;
 
 /**
  * fy_node_clear_marker() - Clear a marker of a node
@@ -5179,9 +4889,7 @@ fy_node_set_marker(struct fy_node *fyn, unsigned int marker)
  * Returns:
  * The previous value of the marker
  */
-bool
-fy_node_clear_marker(struct fy_node *fyn, unsigned int marker)
-	FY_EXPORT;
+bool fy_node_clear_marker(struct fy_node *fyn, unsigned int marker) FY_EXPORT;
 
 /**
  * fy_node_is_marker_set() - Checks whether a marker is set
@@ -5194,9 +4902,7 @@ fy_node_clear_marker(struct fy_node *fyn, unsigned int marker)
  * Returns:
  * The value of the marker (invalid markers return false)
  */
-bool
-fy_node_is_marker_set(struct fy_node *fyn, unsigned int marker)
-	FY_EXPORT;
+bool fy_node_is_marker_set(struct fy_node *fyn, unsigned int marker) FY_EXPORT;
 
 /**
  * fy_node_vreport() - Report about a node vprintf style
@@ -5210,10 +4916,8 @@ fy_node_is_marker_set(struct fy_node *fyn, unsigned int marker)
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_node_vreport(struct fy_node *fyn, enum fy_error_type type,
-		const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_node_vreport(struct fy_node *fyn, enum fy_error_type type,
+                     const char *fmt, va_list ap) FY_EXPORT;
 
 /**
  * fy_node_report() - Report about a node printf style
@@ -5227,11 +4931,8 @@ fy_node_vreport(struct fy_node *fyn, enum fy_error_type type,
  * @fmt: The printf format string
  * @...: The extra arguments.
  */
-void
-fy_node_report(struct fy_node *fyn, enum fy_error_type type,
-	       const char *fmt, ...)
-	FY_FORMAT(printf, 3, 4)
-	FY_EXPORT;
+void fy_node_report(struct fy_node *fyn, enum fy_error_type type,
+                    const char *fmt, ...) FY_FORMAT(printf, 3, 4) FY_EXPORT;
 
 /**
  * fy_node_override_vreport() - Report about a node vprintf style,
@@ -5252,11 +4953,9 @@ fy_node_report(struct fy_node *fyn, enum fy_error_type type,
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_node_override_vreport(struct fy_node *fyn, enum fy_error_type type,
-			 const char *file, int line, int column,
-			 const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_node_override_vreport(struct fy_node *fyn, enum fy_error_type type,
+                              const char *file, int line, int column,
+                              const char *fmt, va_list ap) FY_EXPORT;
 
 /**
  * fy_node_override_report() - Report about a node printf style,
@@ -5277,15 +4976,13 @@ fy_node_override_vreport(struct fy_node *fyn, enum fy_error_type type,
  * @fmt: The printf format string
  * @...: The extra arguments.
  */
-void
-fy_node_override_report(struct fy_node *fyn, enum fy_error_type type,
-			const char *file, int line, int column,
-			const char *fmt, ...)
-	FY_FORMAT(printf, 6, 7)
-	FY_EXPORT;
+void fy_node_override_report(struct fy_node *fyn, enum fy_error_type type,
+                             const char *file, int line, int column,
+                             const char *fmt, ...)
+    FY_FORMAT(printf, 6, 7) FY_EXPORT;
 
 typedef void (*fy_diag_output_fn)(struct fy_diag *diag, void *user,
-				  const char *buf, size_t len);
+                                  const char *buf, size_t len);
 
 /**
  * struct fy_diag_cfg - The diagnostics configuration
@@ -5309,20 +5006,20 @@ typedef void (*fy_diag_output_fn)(struct fy_diag *diag, void *user,
  * diagnostic object.
  */
 struct fy_diag_cfg {
-	FILE *fp;
-	fy_diag_output_fn output_fn;
-	void *user;
-	enum fy_error_type level;
-	unsigned int module_mask;
-	bool colorize : 1;
-	bool show_source : 1;
-	bool show_position : 1;
-	bool show_type : 1;
-	bool show_module : 1;
-	int source_width;
-	int position_width;
-	int type_width;
-	int module_width;
+   FILE *fp;
+   fy_diag_output_fn output_fn;
+   void *user;
+   enum fy_error_type level;
+   unsigned int module_mask;
+   bool colorize : 1;
+   bool show_source : 1;
+   bool show_position : 1;
+   bool show_type : 1;
+   bool show_module : 1;
+   int source_width;
+   int position_width;
+   int type_width;
+   int module_width;
 };
 
 /**
@@ -5340,13 +5037,13 @@ struct fy_diag_cfg {
  * being collected by the diagnostic object.
  */
 struct fy_diag_error {
-	enum fy_error_type type;
-	enum fy_error_module module;
-	struct fy_token *fyt;
-	const char *msg;
-	const char *file;
-	int line;
-	int column;
+   enum fy_error_type type;
+   enum fy_error_module module;
+   struct fy_token *fyt;
+   const char *msg;
+   const char *file;
+   int line;
+   int column;
 };
 
 /**
@@ -5359,9 +5056,7 @@ struct fy_diag_error {
  * Returns:
  * A pointer to the diagnostic object or NULL in case of an error.
  */
-struct fy_diag *
-fy_diag_create(const struct fy_diag_cfg *cfg)
-	FY_EXPORT;
+struct fy_diag *fy_diag_create(const struct fy_diag_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_diag_destroy() - Destroy a diagnostic object
@@ -5373,9 +5068,7 @@ fy_diag_create(const struct fy_diag_cfg *cfg)
  *
  * @diag: The diagnostic object to destroy
  */
-void
-fy_diag_destroy(struct fy_diag *diag)
-	FY_EXPORT;
+void fy_diag_destroy(struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_diag_get_cfg() - Get a diagnostic object's configuration
@@ -5388,9 +5081,7 @@ fy_diag_destroy(struct fy_diag *diag)
  * A const pointer to the diagnostic object configuration, or NULL
  * in case where diag is NULL
  */
-const struct fy_diag_cfg *
-fy_diag_get_cfg(struct fy_diag *diag)
-	FY_EXPORT;
+const struct fy_diag_cfg *fy_diag_get_cfg(struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_diag_set_cfg() - Set a diagnostic object's configuration
@@ -5401,9 +5092,8 @@ fy_diag_get_cfg(struct fy_diag *diag)
  * @diag: The diagnostic object
  * @cfg: The diagnostic configuration
  */
-void
-fy_diag_set_cfg(struct fy_diag *diag, const struct fy_diag_cfg *cfg)
-	FY_EXPORT;
+void fy_diag_set_cfg(struct fy_diag *diag,
+                     const struct fy_diag_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_diag_set_level() - Set a diagnostic object's debug error level
@@ -5411,8 +5101,7 @@ fy_diag_set_cfg(struct fy_diag *diag, const struct fy_diag_cfg *cfg)
  * @diag: The diagnostic object
  * @level: The debugging level to set
  */
-void
-fy_diag_set_level(struct fy_diag *diag, enum fy_error_type level);
+void fy_diag_set_level(struct fy_diag *diag, enum fy_error_type level);
 
 /**
  * fy_diag_set_colorize() - Set a diagnostic object's colorize option
@@ -5420,8 +5109,7 @@ fy_diag_set_level(struct fy_diag *diag, enum fy_error_type level);
  * @diag: The diagnostic object
  * @colorize: The colorize option
  */
-void
-fy_diag_set_colorize(struct fy_diag *diag, bool colorize);
+void fy_diag_set_colorize(struct fy_diag *diag, bool colorize);
 
 /**
  * fy_diag_ref() - Increment that reference counter of a diagnostic object
@@ -5433,9 +5121,7 @@ fy_diag_set_colorize(struct fy_diag *diag, bool colorize);
  * Returns:
  * Always returns the @diag argument
  */
-struct fy_diag *
-fy_diag_ref(struct fy_diag *diag)
-	FY_EXPORT;
+struct fy_diag *fy_diag_ref(struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_diag_unref() - Take away a ref from a diagnostic object
@@ -5445,9 +5131,7 @@ fy_diag_ref(struct fy_diag *diag)
  *
  * @diag: The diagnostic object to unref
  */
-void
-fy_diag_unref(struct fy_diag *diag)
-	FY_EXPORT;
+void fy_diag_unref(struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_diag_got_error() - Test whether an error level diagnostic
@@ -5460,9 +5144,7 @@ fy_diag_unref(struct fy_diag *diag)
  * Returns:
  * true if an error has been produced, false otherwise
  */
-bool
-fy_diag_got_error(struct fy_diag *diag)
-	FY_EXPORT;
+bool fy_diag_got_error(struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_diag_reset_error() - Reset the error flag of
@@ -5473,9 +5155,7 @@ fy_diag_got_error(struct fy_diag *diag)
  *
  * @diag: The diagnostic object
  */
-void
-fy_diag_reset_error(struct fy_diag *diag)
-	FY_EXPORT;
+void fy_diag_reset_error(struct fy_diag *diag) FY_EXPORT;
 
 /**
  * fy_diag_set_collect_errors() - Collect errors instead of outputting
@@ -5487,9 +5167,8 @@ fy_diag_reset_error(struct fy_diag *diag)
  * @diag: The diagnostic object
  * @collect_errors: The collect errors mode
  */
-void
-fy_diag_set_collect_errors(struct fy_diag *diag, bool collect_errors)
-	FY_EXPORT;
+void fy_diag_set_collect_errors(struct fy_diag *diag,
+                                bool collect_errors) FY_EXPORT;
 
 /**
  * fy_diag_cfg_default() - Fill in the configuration structure
@@ -5500,9 +5179,7 @@ fy_diag_set_collect_errors(struct fy_diag *diag, bool collect_errors)
  *
  * @cfg: The diagnostic configuration structure
  */
-void
-fy_diag_cfg_default(struct fy_diag_cfg *cfg)
-	FY_EXPORT;
+void fy_diag_cfg_default(struct fy_diag_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_diag_cfg_from_parser_flags() - Fill partial diagnostic config
@@ -5515,10 +5192,9 @@ fy_diag_cfg_default(struct fy_diag_cfg *cfg)
  * @cfg: The diagnostic configuration structure
  * @pflags: The parser flags
  */
-void
-fy_diag_cfg_from_parser_flags(struct fy_diag_cfg *cfg,
-			      enum fy_parse_cfg_flags pflags)
-	FY_EXPORT FY_DEPRECATED;
+void fy_diag_cfg_from_parser_flags(struct fy_diag_cfg *cfg,
+                                   enum fy_parse_cfg_flags pflags) FY_EXPORT
+    FY_DEPRECATED;
 
 /**
  * fy_diag_vprintf() - vprintf raw interface to diagnostics
@@ -5537,9 +5213,8 @@ fy_diag_cfg_from_parser_flags(struct fy_diag_cfg *cfg,
  * Note that 0 shall be returned if the diagnostic object has
  * been destroyed but not yet freed.
  */
-int
-fy_diag_vprintf(struct fy_diag *diag, const char *fmt, va_list ap)
-	FY_EXPORT;
+int fy_diag_vprintf(struct fy_diag *diag, const char *fmt,
+                    va_list ap) FY_EXPORT;
 
 /**
  * fy_diag_printf() - printf raw interface to diagnostics
@@ -5558,10 +5233,8 @@ fy_diag_vprintf(struct fy_diag *diag, const char *fmt, va_list ap)
  * Note that 0 shall be returned if the diagnostic object has
  * been destroyed but not yet freed.
  */
-int
-fy_diag_printf(struct fy_diag *diag, const char *fmt, ...)
-	FY_FORMAT(printf, 2, 3)
-	FY_EXPORT;
+int fy_diag_printf(struct fy_diag *diag, const char *fmt, ...)
+    FY_FORMAT(printf, 2, 3) FY_EXPORT;
 
 /**
  * struct fy_diag_ctx - The diagnostics context
@@ -5578,14 +5251,14 @@ fy_diag_printf(struct fy_diag *diag, const char *fmt, ...)
  * This structure contains the diagnostic context
  */
 struct fy_diag_ctx {
-	enum fy_error_type level;
-	enum fy_error_module module;
-	const char *source_func;
-	const char *source_file;
-	int source_line;
-	const char *file;
-	int line;
-	int column;
+   enum fy_error_type level;
+   enum fy_error_module module;
+   const char *source_func;
+   const char *source_file;
+   int source_line;
+   const char *file;
+   int line;
+   int column;
 };
 
 /**
@@ -5604,10 +5277,8 @@ struct fy_diag_ctx {
  * Note that 0 shall be returned if the diagnostic object has
  * been destroyed but not yet freed.
  */
-int
-fy_vdiag(struct fy_diag *diag, const struct fy_diag_ctx *fydc,
-	 const char *fmt, va_list ap)
-	FY_EXPORT;
+int fy_vdiag(struct fy_diag *diag, const struct fy_diag_ctx *fydc,
+             const char *fmt, va_list ap) FY_EXPORT;
 
 /**
  * fy_diagf() - context aware diagnostic output like printf
@@ -5624,46 +5295,44 @@ fy_vdiag(struct fy_diag *diag, const struct fy_diag_ctx *fydc,
  * Note that 0 shall be returned if the diagnostic object has
  * been destroyed but not yet freed.
  */
-int
-fy_diagf(struct fy_diag *diag, const struct fy_diag_ctx *fydc,
-	 const char *fmt, ...)
-	FY_FORMAT(printf, 3, 4)
-	FY_EXPORT;
+int fy_diagf(struct fy_diag *diag, const struct fy_diag_ctx *fydc,
+             const char *fmt, ...) FY_FORMAT(printf, 3, 4) FY_EXPORT;
 
-#define fy_diag_diag(_diag, _level, _fmt, ...) \
-	({ \
-		struct fy_diag_ctx _ctx = { \
-			.level = (_level), \
-			.module = FYEM_UNKNOWN, \
-			.source_func = __func__, \
-			.source_file = __FILE__, \
-			.source_line = __LINE__, \
-			.file = NULL, \
-			.line = 0, \
-			.column = 0, \
-		}; \
-		fy_diagf((_diag), &_ctx, (_fmt) , ## __VA_ARGS__); \
-	})
+#define fy_diag_diag(_diag, _level, _fmt, ...)                                 \
+   ({                                                                          \
+      struct fy_diag_ctx _ctx = {                                              \
+          .level       = (_level),                                             \
+          .module      = FYEM_UNKNOWN,                                         \
+          .source_func = __func__,                                             \
+          .source_file = __FILE__,                                             \
+          .source_line = __LINE__,                                             \
+          .file        = NULL,                                                 \
+          .line        = 0,                                                    \
+          .column      = 0,                                                    \
+      };                                                                       \
+      fy_diagf((_diag), &_ctx, (_fmt), ##__VA_ARGS__);                         \
+   })
 
 #ifndef NDEBUG
 
-#define fy_debug(_diag, _fmt, ...) \
-	fy_diag_diag((_diag), FYET_DEBUG, (_fmt) , ## __VA_ARGS__)
+#define fy_debug(_diag, _fmt, ...)                                             \
+   fy_diag_diag((_diag), FYET_DEBUG, (_fmt), ##__VA_ARGS__)
 #else
 
-#define fy_debug(_diag, _fmt, ...) \
-	do { } while(0)
+#define fy_debug(_diag, _fmt, ...)                                             \
+   do {                                                                        \
+   } while (0)
 
 #endif
 
-#define fy_info(_diag, _fmt, ...) \
-	fy_diag_diag((_diag), FYET_INFO, (_fmt) , ## __VA_ARGS__)
-#define fy_notice(_diag, _fmt, ...) \
-	fy_diag_diag((_diag), FYET_NOTICE, (_fmt) , ## __VA_ARGS__)
-#define fy_warning(_diag, _fmt, ...) \
-	fy_diag_diag((_diag), FYET_WARNING, (_fmt) , ## __VA_ARGS__)
-#define fy_error(_diag, _fmt, ...) \
-	fy_diag_diag((_diag), FYET_ERROR, (_fmt) , ## __VA_ARGS__)
+#define fy_info(_diag, _fmt, ...)                                              \
+   fy_diag_diag((_diag), FYET_INFO, (_fmt), ##__VA_ARGS__)
+#define fy_notice(_diag, _fmt, ...)                                            \
+   fy_diag_diag((_diag), FYET_NOTICE, (_fmt), ##__VA_ARGS__)
+#define fy_warning(_diag, _fmt, ...)                                           \
+   fy_diag_diag((_diag), FYET_WARNING, (_fmt), ##__VA_ARGS__)
+#define fy_error(_diag, _fmt, ...)                                             \
+   fy_diag_diag((_diag), FYET_ERROR, (_fmt), ##__VA_ARGS__)
 
 /**
  * fy_diag_token_vreport() - Report about a token vprintf style using
@@ -5679,10 +5348,9 @@ fy_diagf(struct fy_diag *diag, const struct fy_diag_ctx *fydc,
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_diag_token_vreport(struct fy_diag *diag, struct fy_token *fyt,
-		     enum fy_error_type type, const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_diag_token_vreport(struct fy_diag *diag, struct fy_token *fyt,
+                           enum fy_error_type type, const char *fmt,
+                           va_list ap) FY_EXPORT;
 
 /**
  * fy_diag_token_report() - Report about a token printf style using
@@ -5698,11 +5366,9 @@ fy_diag_token_vreport(struct fy_diag *diag, struct fy_token *fyt,
  * @fmt: The printf format string
  * @...: The extra arguments.
  */
-void
-fy_diag_token_report(struct fy_diag *diag, struct fy_token *fye,
-		    enum fy_error_type type, const char *fmt, ...)
-	FY_FORMAT(printf, 4, 5)
-	FY_EXPORT;
+void fy_diag_token_report(struct fy_diag *diag, struct fy_token *fye,
+                          enum fy_error_type type, const char *fmt, ...)
+    FY_FORMAT(printf, 4, 5) FY_EXPORT;
 
 /**
  * fy_diag_token_override_vreport() - Report about a token vprintf style,
@@ -5725,11 +5391,10 @@ fy_diag_token_report(struct fy_diag *diag, struct fy_token *fye,
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_diag_token_override_vreport(struct fy_diag *diag, struct fy_token *fyt,
-			      enum fy_error_type type, const char *file,
-			      int line, int column, const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_diag_token_override_vreport(struct fy_diag *diag, struct fy_token *fyt,
+                                    enum fy_error_type type, const char *file,
+                                    int line, int column, const char *fmt,
+                                    va_list ap) FY_EXPORT;
 
 /**
  * fy_diag_token_override_report() - Report about a token printf style,
@@ -5752,12 +5417,10 @@ fy_diag_token_override_vreport(struct fy_diag *diag, struct fy_token *fyt,
  * @fmt: The printf format string
  * @...: The extra arguments.
  */
-void
-fy_diag_token_override_report(struct fy_diag *diag, struct fy_token *fyt,
-			     enum fy_error_type type, const char *file,
-			     int line, int column, const char *fmt, ...)
-	FY_FORMAT(printf, 7, 8)
-	FY_EXPORT;
+void fy_diag_token_override_report(struct fy_diag *diag, struct fy_token *fyt,
+                                   enum fy_error_type type, const char *file,
+                                   int line, int column, const char *fmt, ...)
+    FY_FORMAT(printf, 7, 8) FY_EXPORT;
 
 /**
  * fy_diag_node_vreport() - Report about a node vprintf style using
@@ -5773,10 +5436,9 @@ fy_diag_token_override_report(struct fy_diag *diag, struct fy_token *fyt,
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_diag_node_vreport(struct fy_diag *diag, struct fy_node *fyn,
-		     enum fy_error_type type, const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_diag_node_vreport(struct fy_diag *diag, struct fy_node *fyn,
+                          enum fy_error_type type, const char *fmt,
+                          va_list ap) FY_EXPORT;
 
 /**
  * fy_diag_node_report() - Report about a node printf style using
@@ -5792,11 +5454,9 @@ fy_diag_node_vreport(struct fy_diag *diag, struct fy_node *fyn,
  * @fmt: The printf format string
  * @...: The extra arguments.
  */
-void
-fy_diag_node_report(struct fy_diag *diag, struct fy_node *fyn,
-		    enum fy_error_type type, const char *fmt, ...)
-	FY_FORMAT(printf, 4, 5)
-	FY_EXPORT;
+void fy_diag_node_report(struct fy_diag *diag, struct fy_node *fyn,
+                         enum fy_error_type type, const char *fmt, ...)
+    FY_FORMAT(printf, 4, 5) FY_EXPORT;
 
 /**
  * fy_diag_node_override_vreport() - Report about a node vprintf style,
@@ -5819,11 +5479,10 @@ fy_diag_node_report(struct fy_diag *diag, struct fy_node *fyn,
  * @fmt: The printf format string
  * @ap: The argument list
  */
-void
-fy_diag_node_override_vreport(struct fy_diag *diag, struct fy_node *fyn,
-			      enum fy_error_type type, const char *file,
-			      int line, int column, const char *fmt, va_list ap)
-	FY_EXPORT;
+void fy_diag_node_override_vreport(struct fy_diag *diag, struct fy_node *fyn,
+                                   enum fy_error_type type, const char *file,
+                                   int line, int column, const char *fmt,
+                                   va_list ap) FY_EXPORT;
 
 /**
  * fy_diag_node_override_report() - Report about a node printf style,
@@ -5846,12 +5505,10 @@ fy_diag_node_override_vreport(struct fy_diag *diag, struct fy_node *fyn,
  * @fmt: The printf format string
  * @...: The extra arguments.
  */
-void
-fy_diag_node_override_report(struct fy_diag *diag, struct fy_node *fyn,
-			     enum fy_error_type type, const char *file,
-			     int line, int column, const char *fmt, ...)
-	FY_FORMAT(printf, 7, 8)
-	FY_EXPORT;
+void fy_diag_node_override_report(struct fy_diag *diag, struct fy_node *fyn,
+                                  enum fy_error_type type, const char *file,
+                                  int line, int column, const char *fmt, ...)
+    FY_FORMAT(printf, 7, 8) FY_EXPORT;
 
 /**
  * fy_diag_errors_iterate() - Iterate over the errors of a diagnostic object
@@ -5865,9 +5522,8 @@ fy_diag_node_override_report(struct fy_diag *diag, struct fy_node *fyn,
  * Returns:
  * The next errors or NULL when there are not any more.
  */
-struct fy_diag_error *
-fy_diag_errors_iterate(struct fy_diag *diag, void **prevp)
-	FY_EXPORT;
+struct fy_diag_error *fy_diag_errors_iterate(struct fy_diag *diag,
+                                             void **prevp) FY_EXPORT;
 
 /**
  * enum fy_path_parse_cfg_flags - Path parse configuration flags
@@ -5876,12 +5532,13 @@ fy_diag_errors_iterate(struct fy_diag *diag, void **prevp)
  *
  * @FYPPCF_QUIET: Quiet, do not output any information messages
  * @FYPPCF_DISABLE_RECYCLING: Disable recycling optimization
- * @FYPPCF_DISABLE_ACCELERATORS: Disable use of access accelerators (saves memory)
+ * @FYPPCF_DISABLE_ACCELERATORS: Disable use of access accelerators (saves
+ * memory)
  */
 enum fy_path_parse_cfg_flags {
-	FYPPCF_QUIET			= FY_BIT(0),
-	FYPPCF_DISABLE_RECYCLING	= FY_BIT(1),
-	FYPPCF_DISABLE_ACCELERATORS	= FY_BIT(2),
+   FYPPCF_QUIET                = FY_BIT(0),
+   FYPPCF_DISABLE_RECYCLING    = FY_BIT(1),
+   FYPPCF_DISABLE_ACCELERATORS = FY_BIT(2),
 };
 
 /**
@@ -5895,9 +5552,9 @@ enum fy_path_parse_cfg_flags {
  * @diag: Optional diagnostic interface to use
  */
 struct fy_path_parse_cfg {
-	enum fy_path_parse_cfg_flags flags;
-	void *userdata;
-	struct fy_diag *diag;
+   enum fy_path_parse_cfg_flags flags;
+   void *userdata;
+   struct fy_diag *diag;
 };
 
 /**
@@ -5913,8 +5570,7 @@ struct fy_path_parse_cfg {
  * A pointer to the path parser or NULL in case of an error.
  */
 struct fy_path_parser *
-fy_path_parser_create(const struct fy_path_parse_cfg *cfg)
-	FY_EXPORT;
+fy_path_parser_create(const struct fy_path_parse_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_path_parser_destroy() - Destroy the given path parser
@@ -5923,9 +5579,7 @@ fy_path_parser_create(const struct fy_path_parse_cfg *cfg)
  *
  * @fypp: The path parser to destroy
  */
-void
-fy_path_parser_destroy(struct fy_path_parser *fypp)
-	FY_EXPORT;
+void fy_path_parser_destroy(struct fy_path_parser *fypp) FY_EXPORT;
 
 /**
  * fy_path_parser_reset() - Reset a path parser completely
@@ -5938,9 +5592,7 @@ fy_path_parser_destroy(struct fy_path_parser *fypp)
  * Returns:
  * 0 if the reset was successful, -1 otherwise
  */
-int
-fy_path_parser_reset(struct fy_path_parser *fypp)
-	FY_EXPORT;
+int fy_path_parser_reset(struct fy_path_parser *fypp) FY_EXPORT;
 
 /**
  * fy_path_parse_expr_from_string() - Parse an expression from a given string
@@ -5954,10 +5606,9 @@ fy_path_parser_reset(struct fy_path_parser *fypp)
  * Returns:
  * The created path expression or NULL on error.
  */
-struct fy_path_expr *
-fy_path_parse_expr_from_string(struct fy_path_parser *fypp,
-			       const char *str, size_t len)
-	FY_EXPORT;
+struct fy_path_expr *fy_path_parse_expr_from_string(struct fy_path_parser *fypp,
+                                                    const char *str,
+                                                    size_t len) FY_EXPORT;
 
 /**
  * fy_path_expr_build_from_string() - Parse an expression from a given string
@@ -5974,8 +5625,7 @@ fy_path_parse_expr_from_string(struct fy_path_parser *fypp,
  */
 struct fy_path_expr *
 fy_path_expr_build_from_string(const struct fy_path_parse_cfg *pcfg,
-			       const char *str, size_t len)
-	FY_EXPORT;
+                               const char *str, size_t len) FY_EXPORT;
 
 /**
  * fy_path_expr_free() - Free a path expression
@@ -5985,9 +5635,7 @@ fy_path_expr_build_from_string(const struct fy_path_parse_cfg *pcfg,
  *
  * @expr: The expression to free (may be NULL)
  */
-void
-fy_path_expr_free(struct fy_path_expr *expr)
-	FY_EXPORT;
+void fy_path_expr_free(struct fy_path_expr *expr) FY_EXPORT;
 
 /**
  * fy_path_expr_dump() - Dump the contents of a path expression to
@@ -6001,10 +5649,9 @@ fy_path_expr_free(struct fy_path_expr *expr)
  * @level: The nest level; should be set to 0
  * @banner: The banner to display on level 0
  */
-void
-fy_path_expr_dump(struct fy_path_expr *expr, struct fy_diag *diag,
-		  enum fy_error_type errlevel, int level, const char *banner)
-	FY_EXPORT;
+void fy_path_expr_dump(struct fy_path_expr *expr, struct fy_diag *diag,
+                       enum fy_error_type errlevel, int level,
+                       const char *banner) FY_EXPORT;
 
 /**
  * fy_path_expr_to_document() - Converts the path expression to a YAML document
@@ -6018,8 +5665,7 @@ fy_path_expr_dump(struct fy_path_expr *expr, struct fy_diag *diag,
  * The document of the expression or NULL on error.
  */
 struct fy_document *
-fy_path_expr_to_document(struct fy_path_expr *expr)
-	FY_EXPORT;
+fy_path_expr_to_document(struct fy_path_expr *expr) FY_EXPORT;
 
 /**
  * enum fy_path_exec_cfg_flags - Path executor configuration flags
@@ -6028,12 +5674,13 @@ fy_path_expr_to_document(struct fy_path_expr *expr)
  *
  * @FYPXCF_QUIET: Quiet, do not output any information messages
  * @FYPXCF_DISABLE_RECYCLING: Disable recycling optimization
- * @FYPXCF_DISABLE_ACCELERATORS: Disable use of access accelerators (saves memory)
+ * @FYPXCF_DISABLE_ACCELERATORS: Disable use of access accelerators (saves
+ * memory)
  */
 enum fy_path_exec_cfg_flags {
-	FYPXCF_QUIET			= FY_BIT(0),
-	FYPXCF_DISABLE_RECYCLING	= FY_BIT(1),
-	FYPXCF_DISABLE_ACCELERATORS	= FY_BIT(2),
+   FYPXCF_QUIET                = FY_BIT(0),
+   FYPXCF_DISABLE_RECYCLING    = FY_BIT(1),
+   FYPXCF_DISABLE_ACCELERATORS = FY_BIT(2),
 };
 
 /**
@@ -6047,9 +5694,9 @@ enum fy_path_exec_cfg_flags {
  * @diag: Optional diagnostic interface to use
  */
 struct fy_path_exec_cfg {
-	enum fy_path_exec_cfg_flags flags;
-	void *userdata;
-	struct fy_diag *diag;
+   enum fy_path_exec_cfg_flags flags;
+   void *userdata;
+   struct fy_diag *diag;
 };
 
 /**
@@ -6065,8 +5712,7 @@ struct fy_path_exec_cfg {
  * A pointer to the executor or NULL in case of an error.
  */
 struct fy_path_exec *
-fy_path_exec_create(const struct fy_path_exec_cfg *xcfg)
-	FY_EXPORT;
+fy_path_exec_create(const struct fy_path_exec_cfg *xcfg) FY_EXPORT;
 
 /**
  * fy_path_exec_destroy() - Destroy the given path expression executor
@@ -6075,9 +5721,7 @@ fy_path_exec_create(const struct fy_path_exec_cfg *xcfg)
  *
  * @fypx: The path parser to destroy
  */
-void
-fy_path_exec_destroy(struct fy_path_exec *fypx)
-	FY_EXPORT;
+void fy_path_exec_destroy(struct fy_path_exec *fypx) FY_EXPORT;
 
 /**
  * fy_path_exec_reset() - Reset an executor
@@ -6089,9 +5733,7 @@ fy_path_exec_destroy(struct fy_path_exec *fypx)
  * Returns:
  * 0 if the reset was successful, -1 otherwise
  */
-int
-fy_path_exec_reset(struct fy_path_exec *fypx)
-	FY_EXPORT;
+int fy_path_exec_reset(struct fy_path_exec *fypx) FY_EXPORT;
 
 /**
  * fy_path_exec_execute() - Execute a path expression starting at
@@ -6113,10 +5755,8 @@ fy_path_exec_reset(struct fy_path_exec *fypx)
  * Note that the execution may be successful but no results were
  * produced, in which case the iterator will return NULL.
  */
-int
-fy_path_exec_execute(struct fy_path_exec *fypx, struct fy_path_expr *expr,
-		     struct fy_node *fyn_start)
-	FY_EXPORT;
+int fy_path_exec_execute(struct fy_path_exec *fypx, struct fy_path_expr *expr,
+                         struct fy_node *fyn_start) FY_EXPORT;
 
 /**
  * fy_path_exec_results_iterate() - Iterate over the results of execution
@@ -6130,9 +5770,8 @@ fy_path_exec_execute(struct fy_path_exec *fypx, struct fy_path_expr *expr,
  * Returns:
  * The next node in the result set or NULL at the end of the results.
  */
-struct fy_node *
-fy_path_exec_results_iterate(struct fy_path_exec *fypx, void **prevp)
-	FY_EXPORT;
+struct fy_node *fy_path_exec_results_iterate(struct fy_path_exec *fypx,
+                                             void **prevp) FY_EXPORT;
 
 /*
  * Helper methods for binding implementers
@@ -6204,77 +5843,77 @@ fy_path_exec_results_iterate(struct fy_path_exec *fypx, void **prevp)
  * @FYTT_SE_METHOD: Scalar expression method (non chained)
  */
 enum fy_token_type {
-	/* non-content token types */
-	FYTT_NONE,
-	FYTT_STREAM_START,
-	FYTT_STREAM_END,
-	FYTT_VERSION_DIRECTIVE,
-	FYTT_TAG_DIRECTIVE,
-	FYTT_DOCUMENT_START,
-	FYTT_DOCUMENT_END,
-	/* content token types */
-	FYTT_BLOCK_SEQUENCE_START,
-	FYTT_BLOCK_MAPPING_START,
-	FYTT_BLOCK_END,
-	FYTT_FLOW_SEQUENCE_START,
-	FYTT_FLOW_SEQUENCE_END,
-	FYTT_FLOW_MAPPING_START,
-	FYTT_FLOW_MAPPING_END,
-	FYTT_BLOCK_ENTRY,
-	FYTT_FLOW_ENTRY,
-	FYTT_KEY,
-	FYTT_VALUE,
-	FYTT_ALIAS,
-	FYTT_ANCHOR,
-	FYTT_TAG,
-	FYTT_SCALAR,
+   /* non-content token types */
+   FYTT_NONE,
+   FYTT_STREAM_START,
+   FYTT_STREAM_END,
+   FYTT_VERSION_DIRECTIVE,
+   FYTT_TAG_DIRECTIVE,
+   FYTT_DOCUMENT_START,
+   FYTT_DOCUMENT_END,
+   /* content token types */
+   FYTT_BLOCK_SEQUENCE_START,
+   FYTT_BLOCK_MAPPING_START,
+   FYTT_BLOCK_END,
+   FYTT_FLOW_SEQUENCE_START,
+   FYTT_FLOW_SEQUENCE_END,
+   FYTT_FLOW_MAPPING_START,
+   FYTT_FLOW_MAPPING_END,
+   FYTT_BLOCK_ENTRY,
+   FYTT_FLOW_ENTRY,
+   FYTT_KEY,
+   FYTT_VALUE,
+   FYTT_ALIAS,
+   FYTT_ANCHOR,
+   FYTT_TAG,
+   FYTT_SCALAR,
 
-	/* special error reporting */
-	FYTT_INPUT_MARKER,
+   /* special error reporting */
+   FYTT_INPUT_MARKER,
 
-	/* path expression tokens */
-	FYTT_PE_SLASH,
-	FYTT_PE_ROOT,
-	FYTT_PE_THIS,
-	FYTT_PE_PARENT,
-	FYTT_PE_MAP_KEY,
-	FYTT_PE_SEQ_INDEX,
-	FYTT_PE_SEQ_SLICE,
-	FYTT_PE_SCALAR_FILTER,
-	FYTT_PE_COLLECTION_FILTER,
-	FYTT_PE_SEQ_FILTER,
-	FYTT_PE_MAP_FILTER,
-	FYTT_PE_UNIQUE_FILTER,
-	FYTT_PE_EVERY_CHILD,
-	FYTT_PE_EVERY_CHILD_R,
-	FYTT_PE_ALIAS,
-	FYTT_PE_SIBLING,
-	FYTT_PE_COMMA,
-	FYTT_PE_BARBAR,
-	FYTT_PE_AMPAMP,
-	FYTT_PE_LPAREN,
-	FYTT_PE_RPAREN,
+   /* path expression tokens */
+   FYTT_PE_SLASH,
+   FYTT_PE_ROOT,
+   FYTT_PE_THIS,
+   FYTT_PE_PARENT,
+   FYTT_PE_MAP_KEY,
+   FYTT_PE_SEQ_INDEX,
+   FYTT_PE_SEQ_SLICE,
+   FYTT_PE_SCALAR_FILTER,
+   FYTT_PE_COLLECTION_FILTER,
+   FYTT_PE_SEQ_FILTER,
+   FYTT_PE_MAP_FILTER,
+   FYTT_PE_UNIQUE_FILTER,
+   FYTT_PE_EVERY_CHILD,
+   FYTT_PE_EVERY_CHILD_R,
+   FYTT_PE_ALIAS,
+   FYTT_PE_SIBLING,
+   FYTT_PE_COMMA,
+   FYTT_PE_BARBAR,
+   FYTT_PE_AMPAMP,
+   FYTT_PE_LPAREN,
+   FYTT_PE_RPAREN,
 
-	/* comparison operators */
-	FYTT_PE_EQEQ,		/* == */
-	FYTT_PE_NOTEQ,		/* != */
-	FYTT_PE_LT,		/* <  */
-	FYTT_PE_GT,		/* >  */
-	FYTT_PE_LTE,		/* <= */
-	FYTT_PE_GTE,		/* >= */
+   /* comparison operators */
+   FYTT_PE_EQEQ,  /* == */
+   FYTT_PE_NOTEQ, /* != */
+   FYTT_PE_LT,    /* <  */
+   FYTT_PE_GT,    /* >  */
+   FYTT_PE_LTE,   /* <= */
+   FYTT_PE_GTE,   /* >= */
 
-	/* scalar expression tokens */
-	FYTT_SE_PLUS,
-	FYTT_SE_MINUS,
-	FYTT_SE_MULT,
-	FYTT_SE_DIV,
+   /* scalar expression tokens */
+   FYTT_SE_PLUS,
+   FYTT_SE_MINUS,
+   FYTT_SE_MULT,
+   FYTT_SE_DIV,
 
-	FYTT_PE_METHOD,		/* path expr method (chained) */
-	FYTT_SE_METHOD,		/* scalar expr method (non chained) */
+   FYTT_PE_METHOD, /* path expr method (chained) */
+   FYTT_SE_METHOD, /* scalar expr method (non chained) */
 };
 
 /* The number of token types available */
-#define FYTT_COUNT	(FYTT_SE_METHOD+1)
+#define FYTT_COUNT (FYTT_SE_METHOD + 1)
 
 /**
  * fy_token_type_is_valid() - Check token type validity
@@ -6286,10 +5925,9 @@ enum fy_token_type {
  * Returns:
  * true if the token type is valid, false otherwise
  */
-static inline bool
-fy_token_type_is_valid(enum fy_token_type type)
+static inline bool fy_token_type_is_valid(enum fy_token_type type)
 {
-	return type >= FYTT_NONE && type < FYTT_COUNT;
+   return type >= FYTT_NONE && type < FYTT_COUNT;
 }
 
 /**
@@ -6302,10 +5940,9 @@ fy_token_type_is_valid(enum fy_token_type type)
  * Returns:
  * true if the token type is a valid YAML one, false otherwise
  */
-static inline bool
-fy_token_type_is_yaml(enum fy_token_type type)
+static inline bool fy_token_type_is_yaml(enum fy_token_type type)
 {
-	return type >= FYTT_STREAM_START && type <= FYTT_SCALAR;
+   return type >= FYTT_STREAM_START && type <= FYTT_SCALAR;
 }
 
 /**
@@ -6319,10 +5956,9 @@ fy_token_type_is_yaml(enum fy_token_type type)
  * Returns:
  * true if the token type is a valid YAML content one, false otherwise
  */
-static inline bool
-fy_token_type_is_content(enum fy_token_type type)
+static inline bool fy_token_type_is_content(enum fy_token_type type)
 {
-	return type >= FYTT_BLOCK_SEQUENCE_START && type <= FYTT_SCALAR;
+   return type >= FYTT_BLOCK_SEQUENCE_START && type <= FYTT_SCALAR;
 }
 
 /**
@@ -6336,10 +5972,9 @@ fy_token_type_is_content(enum fy_token_type type)
  * Returns:
  * true if the token type is a valid YPATH one, false otherwise
  */
-static inline bool
-fy_token_type_is_path_expr(enum fy_token_type type)
+static inline bool fy_token_type_is_path_expr(enum fy_token_type type)
 {
-	return type >= FYTT_PE_SLASH && type <= FYTT_PE_GTE;
+   return type >= FYTT_PE_SLASH && type <= FYTT_PE_GTE;
 }
 
 /**
@@ -6353,10 +5988,9 @@ fy_token_type_is_path_expr(enum fy_token_type type)
  * Returns:
  * true if the token type is a valid YPATH scalar one, false otherwise
  */
-static inline bool
-fy_token_type_is_scalar_expr(enum fy_token_type type)
+static inline bool fy_token_type_is_scalar_expr(enum fy_token_type type)
 {
-	return type >= FYTT_SE_PLUS && type <= FYTT_SE_DIV;
+   return type >= FYTT_SE_PLUS && type <= FYTT_SE_DIV;
 }
 
 /**
@@ -6369,9 +6003,7 @@ fy_token_type_is_scalar_expr(enum fy_token_type type)
  * Returns:
  * The token's type; FYTT_NONE if not a valid token (or NULL)
  */
-enum fy_token_type
-fy_token_get_type(struct fy_token *fyt)
-	FY_EXPORT;
+enum fy_token_type fy_token_get_type(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_start_mark() - Get token's start marker
@@ -6385,9 +6017,7 @@ fy_token_get_type(struct fy_token *fyt)
  * Returns:
  * The token's start marker, NULL if not available.
  */
-const struct fy_mark *
-fy_token_start_mark(struct fy_token *fyt)
-	FY_EXPORT;
+const struct fy_mark *fy_token_start_mark(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_token_end_mark() - Get token's end marker
@@ -6401,9 +6031,7 @@ fy_token_start_mark(struct fy_token *fyt)
  * Returns:
  * The token's end marker, NULL if not available.
  */
-const struct fy_mark *
-fy_token_end_mark(struct fy_token *fyt)
-	FY_EXPORT;
+const struct fy_mark *fy_token_end_mark(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_scan() - Low level access to the scanner
@@ -6418,9 +6046,7 @@ fy_token_end_mark(struct fy_token *fyt)
  * Returns:
  * The next token, or NULL if no more tokens are available.
  */
-struct fy_token *
-fy_scan(struct fy_parser *fyp)
-	FY_EXPORT;
+struct fy_token *fy_scan(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_scan_token_free() - Free the token returned by fy_scan()
@@ -6430,9 +6056,7 @@ fy_scan(struct fy_parser *fyp)
  * @fyp: The parser of which the token was returned by fy_scan()
  * @fyt: The token to free
  */
-void
-fy_scan_token_free(struct fy_parser *fyp, struct fy_token *fyt)
-	FY_EXPORT;
+void fy_scan_token_free(struct fy_parser *fyp, struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_directive_token_prefix0() - Get the prefix contained in the
@@ -6451,9 +6075,7 @@ fy_scan_token_free(struct fy_parser *fyp, struct fy_token *fyt)
  * A pointer to the zero terminated text representation of the prefix token.
  * NULL in case of an error.
  */
-const char *
-fy_tag_directive_token_prefix0(struct fy_token *fyt)
-	FY_EXPORT;
+const char *fy_tag_directive_token_prefix0(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_directive_token_handle0() - Get the handle contained in the
@@ -6472,9 +6094,7 @@ fy_tag_directive_token_prefix0(struct fy_token *fyt)
  * A pointer to the zero terminated text representation of the handle token.
  * NULL in case of an error.
  */
-const char *
-fy_tag_directive_token_handle0(struct fy_token *fyt)
-	FY_EXPORT;
+const char *fy_tag_directive_token_handle0(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_token_handle() - Get the handle contained in the
@@ -6492,9 +6112,7 @@ fy_tag_directive_token_handle0(struct fy_token *fyt)
  * @lenp will be assigned the character length of said representation.
  * NULL in case of an error.
  */
-const char *
-fy_tag_token_handle(struct fy_token *fyt, size_t *lenp)
-	FY_EXPORT;
+const char *fy_tag_token_handle(struct fy_token *fyt, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_tag_token_suffix() - Get the suffix contained in the
@@ -6512,9 +6130,7 @@ fy_tag_token_handle(struct fy_token *fyt, size_t *lenp)
  * @lenp will be assigned the character length of said representation.
  * NULL in case of an error.
  */
-const char *
-fy_tag_token_suffix(struct fy_token *fyt, size_t *lenp)
-	FY_EXPORT;
+const char *fy_tag_token_suffix(struct fy_token *fyt, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_tag_token_short() - Get the short tag of the tag token
@@ -6532,9 +6148,7 @@ fy_tag_token_suffix(struct fy_token *fyt, size_t *lenp)
  * @lenp will be assigned the character length of said representation.
  * NULL in case of an error.
  */
-const char *
-fy_tag_token_short(struct fy_token *fyt, size_t *lenp)
-	FY_EXPORT;
+const char *fy_tag_token_short(struct fy_token *fyt, size_t *lenp) FY_EXPORT;
 
 /**
  * fy_tag_token_handle0() - Get the handle contained in the
@@ -6551,9 +6165,7 @@ fy_tag_token_short(struct fy_token *fyt, size_t *lenp)
  * A pointer to the zero terminated text representation of the handle token.
  * NULL in case of an error.
  */
-const char *
-fy_tag_token_handle0(struct fy_token *fyt)
-	FY_EXPORT;
+const char *fy_tag_token_handle0(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_token_short0() - Get the short tag of the tag token as zero
@@ -6569,9 +6181,7 @@ fy_tag_token_handle0(struct fy_token *fyt)
  * A pointer to the null terminated text representation of the short tag.
  * NULL in case of an error.
  */
-const char *
-fy_tag_token_short0(struct fy_token *fyt)
-	FY_EXPORT;
+const char *fy_tag_token_short0(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_token_suffix0() - Get the suffix contained in the
@@ -6588,9 +6198,7 @@ fy_tag_token_short0(struct fy_token *fyt)
  * A pointer to the zero terminated text representation of the suffix token.
  * NULL in case of an error.
  */
-const char *
-fy_tag_token_suffix0(struct fy_token *fyt)
-	FY_EXPORT;
+const char *fy_tag_token_suffix0(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_version_directive_token_version() - Return the version of a version
@@ -6605,8 +6213,7 @@ fy_tag_token_suffix0(struct fy_token *fyt)
  * NULL in case of an error, or the token not being a version directive token.
  */
 const struct fy_version *
-fy_version_directive_token_version(struct fy_token *fyt)
-	FY_EXPORT;
+fy_version_directive_token_version(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_scalar_token_get_style() - Return the style of a scalar token
@@ -6618,9 +6225,7 @@ fy_version_directive_token_version(struct fy_token *fyt)
  * Returns:
  * The scalar style of the token, or FYSS_ANY for an error
  */
-enum fy_scalar_style
-fy_scalar_token_get_style(struct fy_token *fyt)
-	FY_EXPORT;
+enum fy_scalar_style fy_scalar_token_get_style(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_token_tag() - Get tag of a tag token
@@ -6632,9 +6237,7 @@ fy_scalar_token_get_style(struct fy_token *fyt)
  * Returns:
  * A pointer to the tag or NULL in case of an error
  */
-const struct fy_tag *
-fy_tag_token_tag(struct fy_token *fyt)
-	FY_EXPORT;
+const struct fy_tag *fy_tag_token_tag(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_tag_directive_token_tag() - Get tag of a tag directive token
@@ -6646,9 +6249,7 @@ fy_tag_token_tag(struct fy_token *fyt)
  * Returns:
  * A pointer to the tag or NULL in case of an error
  */
-const struct fy_tag *
-fy_tag_directive_token_tag(struct fy_token *fyt)
-	FY_EXPORT;
+const struct fy_tag *fy_tag_directive_token_tag(struct fy_token *fyt) FY_EXPORT;
 
 /**
  * fy_event_get_token() - Return the main token of an event
@@ -6661,9 +6262,7 @@ fy_tag_directive_token_tag(struct fy_token *fyt)
  * Returns:
  * The main token if it exists, NULL otherwise or in case of an error
  */
-struct fy_token *
-fy_event_get_token(struct fy_event *fye)
-	FY_EXPORT;
+struct fy_token *fy_event_get_token(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_event_get_anchor_token() - Return the anchor token of an event
@@ -6676,9 +6275,7 @@ fy_event_get_token(struct fy_event *fye)
  * Returns:
  * The anchor token if it exists, NULL otherwise or in case of an error
  */
-struct fy_token *
-fy_event_get_anchor_token(struct fy_event *fye)
-	FY_EXPORT;
+struct fy_token *fy_event_get_anchor_token(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_event_get_tag_token() - Return the tag token of an event
@@ -6691,9 +6288,7 @@ fy_event_get_anchor_token(struct fy_event *fye)
  * Returns:
  * The tag token if it exists, NULL otherwise or in case of an error
  */
-struct fy_token *
-fy_event_get_tag_token(struct fy_event *fye)
-	FY_EXPORT;
+struct fy_token *fy_event_get_tag_token(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_event_start_mark() - Get event's start marker
@@ -6706,9 +6301,7 @@ fy_event_get_tag_token(struct fy_event *fye)
  * Returns:
  * The event's start marker, NULL if not available.
  */
-const struct fy_mark *
-fy_event_start_mark(struct fy_event *fye)
-	FY_EXPORT;
+const struct fy_mark *fy_event_start_mark(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_event_end_mark() - Get event's end marker
@@ -6721,9 +6314,7 @@ fy_event_start_mark(struct fy_event *fye)
  * Returns:
  * The event's end marker, NULL if not available.
  */
-const struct fy_mark *
-fy_event_end_mark(struct fy_event *fye)
-	FY_EXPORT;
+const struct fy_mark *fy_event_end_mark(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_event_get_node_style() - Get the node style of an event
@@ -6739,9 +6330,7 @@ fy_event_end_mark(struct fy_event *fye)
  * Returns:
  * The event's end marker, NULL if not available.
  */
-enum fy_node_style
-fy_event_get_node_style(struct fy_event *fye)
-	FY_EXPORT;
+enum fy_node_style fy_event_get_node_style(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_document_start_event_version() - Return the version of a document
@@ -6756,8 +6345,7 @@ fy_event_get_node_style(struct fy_event *fye)
  * not being a document start event.
  */
 const struct fy_version *
-fy_document_start_event_version(struct fy_event *fye)
-	FY_EXPORT;
+fy_document_start_event_version(struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_document_state_version() - Return the version of a document state
@@ -6771,8 +6359,7 @@ fy_document_start_event_version(struct fy_event *fye)
  * A pointer to the version, or NULL in case of an error
  */
 const struct fy_version *
-fy_document_state_version(struct fy_document_state *fyds)
-	FY_EXPORT;
+fy_document_state_version(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_start_mark() - Get document state's start mark
@@ -6786,8 +6373,7 @@ fy_document_state_version(struct fy_document_state *fyds)
  * The document's start marker, NULL if not available.
  */
 const struct fy_mark *
-fy_document_state_start_mark(struct fy_document_state *fyds)
-	FY_EXPORT;
+fy_document_state_start_mark(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_end_mark() - Get document state's end mark
@@ -6801,8 +6387,7 @@ fy_document_state_start_mark(struct fy_document_state *fyds)
  * The document's end marker, NULL if not available.
  */
 const struct fy_mark *
-fy_document_state_end_mark(struct fy_document_state *fyds)
-	FY_EXPORT;
+fy_document_state_end_mark(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_version_explicit() - Version explicit?
@@ -6816,9 +6401,8 @@ fy_document_state_end_mark(struct fy_document_state *fyds)
  * Returns:
  * true if version was set explicitly, false otherwise
  */
-bool
-fy_document_state_version_explicit(struct fy_document_state *fyds)
-	FY_EXPORT;
+bool fy_document_state_version_explicit(
+    struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_tags_explicit() - Tags explicit?
@@ -6832,9 +6416,7 @@ fy_document_state_version_explicit(struct fy_document_state *fyds)
  * Returns:
  * true if document had tags set explicitly, false otherwise
  */
-bool
-fy_document_state_tags_explicit(struct fy_document_state *fyds)
-	FY_EXPORT;
+bool fy_document_state_tags_explicit(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_start_implicit() - Started implicitly?
@@ -6848,9 +6430,7 @@ fy_document_state_tags_explicit(struct fy_document_state *fyds)
  * Returns:
  * true if document was started implicitly, false otherwise
  */
-bool
-fy_document_state_start_implicit(struct fy_document_state *fyds)
-	FY_EXPORT;
+bool fy_document_state_start_implicit(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_end_implicit() - Started implicitly?
@@ -6864,9 +6444,7 @@ fy_document_state_start_implicit(struct fy_document_state *fyds)
  * Returns:
  * true if document was ended implicitly, false otherwise
  */
-bool
-fy_document_state_end_implicit(struct fy_document_state *fyds)
-	FY_EXPORT;
+bool fy_document_state_end_implicit(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_json_mode() - Input was JSON?
@@ -6880,9 +6458,7 @@ fy_document_state_end_implicit(struct fy_document_state *fyds)
  * Returns:
  * true if document was created in JSON mode, false otherwise
  */
-bool
-fy_document_state_json_mode(struct fy_document_state *fyds)
-	FY_EXPORT;
+bool fy_document_state_json_mode(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_state_tag_directive_iterate() - Iterate over the tag
@@ -6900,8 +6476,8 @@ fy_document_state_json_mode(struct fy_document_state *fyds)
  * The next tag or NULL at the end of the iteration sequence.
  */
 const struct fy_tag *
-fy_document_state_tag_directive_iterate(struct fy_document_state *fyds, void **prevp)
-	FY_EXPORT;
+fy_document_state_tag_directive_iterate(struct fy_document_state *fyds,
+                                        void **prevp) FY_EXPORT;
 
 /**
  * fy_document_state_tag_directives() - Get all the tag directives in a
@@ -6917,11 +6493,11 @@ fy_document_state_tag_directive_iterate(struct fy_document_state *fyds, void **p
  * NULL on error
  */
 struct fy_tag **
-fy_document_state_tag_directives(struct fy_document_state *fyds)
-	FY_EXPORT;
+fy_document_state_tag_directives(struct fy_document_state *fyds) FY_EXPORT;
 
 /**
- * fy_document_state_tag_is_default() - Test whether the given tag is a default one
+ * fy_document_state_tag_is_default() - Test whether the given tag is a default
+ * one
  *
  * Test whether a tag is a default (i.e. impliciticly set)
  *
@@ -6931,9 +6507,8 @@ fy_document_state_tag_directives(struct fy_document_state *fyds)
  * Returns:
  * true in case that the tag is a default one, false otherwise
  */
-bool
-fy_document_state_tag_is_default(struct fy_document_state *fyds, const struct fy_tag *tag)
-	FY_EXPORT;
+bool fy_document_state_tag_is_default(struct fy_document_state *fyds,
+                                      const struct fy_tag *tag) FY_EXPORT;
 
 /**
  * fy_parser_get_document_state() - Get the document state of a parser object
@@ -6947,8 +6522,7 @@ fy_document_state_tag_is_default(struct fy_document_state *fyds, const struct fy
  * The active document state object of the parser, NULL otherwise
  */
 struct fy_document_state *
-fy_parser_get_document_state(struct fy_parser *fyp)
-	FY_EXPORT;
+fy_parser_get_document_state(struct fy_parser *fyp) FY_EXPORT;
 
 /**
  * fy_document_get_document_state() - Get the document state of a document
@@ -6961,8 +6535,7 @@ fy_parser_get_document_state(struct fy_parser *fyp)
  * The document state object of the document, NULL otherwise
  */
 struct fy_document_state *
-fy_document_get_document_state(struct fy_document *fyd)
-	FY_EXPORT;
+fy_document_get_document_state(struct fy_document *fyd) FY_EXPORT;
 
 /**
  * fy_document_set_document_state() - Set the document state of a document
@@ -6975,9 +6548,8 @@ fy_document_get_document_state(struct fy_document *fyd)
  * Returns:
  * 0 if set operation was successful, -1 otherwise
  */
-int
-fy_document_set_document_state(struct fy_document *fyd, struct fy_document_state *fyds)
-	FY_EXPORT;
+int fy_document_set_document_state(struct fy_document *fyd,
+                                   struct fy_document_state *fyds) FY_EXPORT;
 
 /**
  * fy_document_create_from_event() - Create an empty document using the event
@@ -6992,8 +6564,8 @@ fy_document_set_document_state(struct fy_document *fyd, struct fy_document_state
  * The created empty document, or NULL on error.
  */
 struct fy_document *
-fy_document_create_from_event(struct fy_parser *fyp, struct fy_event *fye)
-	FY_EXPORT;
+fy_document_create_from_event(struct fy_parser *fyp,
+                              struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_document_update_from_event() - Update the document with the event
@@ -7008,15 +6580,16 @@ fy_document_create_from_event(struct fy_parser *fyp, struct fy_event *fye)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_document_update_from_event(struct fy_document *fyd, struct fy_parser *fyp, struct fy_event *fye)
-	FY_EXPORT;
+int fy_document_update_from_event(struct fy_document *fyd,
+                                  struct fy_parser *fyp,
+                                  struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_node_create_from_event() - Create a node using the event
  *
  * Create a new node using the supplied event.
- * Allowed events are FYET_SCALAR, FYET_ALIAS, FYET_MAPPING_START & FYET_SEQUENCE_START
+ * Allowed events are FYET_SCALAR, FYET_ALIAS, FYET_MAPPING_START &
+ * FYET_SEQUENCE_START
  *
  * @fyd: The document
  * @fyp: The parser
@@ -7025,9 +6598,9 @@ fy_document_update_from_event(struct fy_document *fyd, struct fy_parser *fyp, st
  * Returns:
  * The newly created node, or NULL on error
  */
-struct fy_node *
-fy_node_create_from_event(struct fy_document *fyd, struct fy_parser *fyp, struct fy_event *fye)
-	FY_EXPORT;
+struct fy_node *fy_node_create_from_event(struct fy_document *fyd,
+                                          struct fy_parser *fyp,
+                                          struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_node_update_from_event() - Update a node using the event
@@ -7042,16 +6615,16 @@ fy_node_create_from_event(struct fy_document *fyd, struct fy_parser *fyp, struct
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_update_from_event(struct fy_node *fyn, struct fy_parser *fyp, struct fy_event *fye)
-	FY_EXPORT;
+int fy_node_update_from_event(struct fy_node *fyn, struct fy_parser *fyp,
+                              struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_node_pair_create_with_key() - Create a new node pair and set it's key
  *
  * Create a new node pair using the supplied fyn_parent mapping and fyn node as
- * a key. Note that the nodes _must_ have been created by fy_node_create_from_event
- * and they are not interchangeable with other node pair methods.
+ * a key. Note that the nodes _must_ have been created by
+ * fy_node_create_from_event and they are not interchangeable with other node
+ * pair methods.
  *
  * The node pair will be added to the fyn_parent mapping with a subsequent call
  * to fy_node_pair_update_with_value().
@@ -7064,11 +6637,13 @@ fy_node_update_from_event(struct fy_node *fyn, struct fy_parser *fyp, struct fy_
  * The newly created node pair, or NULL on error
  */
 struct fy_node_pair *
-fy_node_pair_create_with_key(struct fy_document *fyd, struct fy_node *fyn_parent, struct fy_node *fyn)
-	FY_EXPORT;
+fy_node_pair_create_with_key(struct fy_document *fyd,
+                             struct fy_node *fyn_parent,
+                             struct fy_node *fyn) FY_EXPORT;
 
 /**
- * fy_node_pair_update_with_value() - Update a node pair with a value and add it to the parent mapping
+ * fy_node_pair_update_with_value() - Update a node pair with a value and add it
+ * to the parent mapping
  *
  * Update the node pair with the given value and add it to the parent mapping.
  * Note that the fyn node _must_ have been created by fy_node_create_from_event
@@ -7081,9 +6656,8 @@ fy_node_pair_create_with_key(struct fy_document *fyd, struct fy_node *fyn_parent
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_pair_update_with_value(struct fy_node_pair *fynp, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_pair_update_with_value(struct fy_node_pair *fynp,
+                                   struct fy_node *fyn) FY_EXPORT;
 
 /**
  * fy_node_sequence_add_item() - Add an item node to a sequence node
@@ -7099,12 +6673,11 @@ fy_node_pair_update_with_value(struct fy_node_pair *fynp, struct fy_node *fyn)
  * Returns:
  * 0 on success, -1 on error
  */
-int
-fy_node_sequence_add_item(struct fy_node *fyn_parent, struct fy_node *fyn)
-	FY_EXPORT;
+int fy_node_sequence_add_item(struct fy_node *fyn_parent,
+                              struct fy_node *fyn) FY_EXPORT;
 
 /**
- * fy_emitter_get_document_state() - Get the document state of an emitter  object
+ * fy_emitter_get_document_state() - Get the document state of an emitter object
  *
  * Retrieve the document state object of an emitter. Note that this is only
  * valid during emitting.
@@ -7115,8 +6688,7 @@ fy_node_sequence_add_item(struct fy_node *fyn_parent, struct fy_node *fyn)
  * The active document state object of the emitter, NULL otherwise
  */
 struct fy_document_state *
-fy_emitter_get_document_state(struct fy_emitter *emit)
-	FY_EXPORT;
+fy_emitter_get_document_state(struct fy_emitter *emit) FY_EXPORT;
 
 /**
  * fy_emit_event_create() - Create an emit event.
@@ -7192,9 +6764,8 @@ fy_emitter_get_document_state(struct fy_emitter *emit)
  * Returns:
  * The created event or NULL in case of an error
  */
-struct fy_event *
-fy_emit_event_create(struct fy_emitter *emit, enum fy_event_type type, ...)
-	FY_EXPORT;
+struct fy_event *fy_emit_event_create(struct fy_emitter *emit,
+                                      enum fy_event_type type, ...) FY_EXPORT;
 
 /**
  * fy_emit_event_vcreate() - Create an emit event using varargs.
@@ -7209,9 +6780,9 @@ fy_emit_event_create(struct fy_emitter *emit, enum fy_event_type type, ...)
  * Returns:
  * The created event or NULL in case of an error
  */
-struct fy_event *
-fy_emit_event_vcreate(struct fy_emitter *emit, enum fy_event_type type, va_list ap)
-	FY_EXPORT;
+struct fy_event *fy_emit_event_vcreate(struct fy_emitter *emit,
+                                       enum fy_event_type type,
+                                       va_list ap) FY_EXPORT;
 
 /**
  * fy_emit_event_free() - Free an event created via fy_emit_event_create()
@@ -7224,9 +6795,8 @@ fy_emit_event_vcreate(struct fy_emitter *emit, enum fy_event_type type, va_list 
  * @emit: The emitter
  * @fye: The event to free
  */
-void
-fy_emit_event_free(struct fy_emitter *emit, struct fy_event *fye)
-	FY_EXPORT;
+void fy_emit_event_free(struct fy_emitter *emit,
+                        struct fy_event *fye) FY_EXPORT;
 
 /**
  * fy_parse_event_create() - Create an emit event.
@@ -7239,9 +6809,8 @@ fy_emit_event_free(struct fy_emitter *emit, struct fy_event *fye)
  * Returns:
  * The created event or NULL in case of an error
  */
-struct fy_event *
-fy_parse_event_create(struct fy_parser *fyp, enum fy_event_type type, ...)
-	FY_EXPORT;
+struct fy_event *fy_parse_event_create(struct fy_parser *fyp,
+                                       enum fy_event_type type, ...) FY_EXPORT;
 
 /**
  * fy_parse_event_vcreate() - Create an emit event using varargs.
@@ -7256,9 +6825,9 @@ fy_parse_event_create(struct fy_parser *fyp, enum fy_event_type type, ...)
  * Returns:
  * The created event or NULL in case of an error
  */
-struct fy_event *
-fy_parse_event_vcreate(struct fy_parser *fyp, enum fy_event_type type, va_list ap)
-	FY_EXPORT;
+struct fy_event *fy_parse_event_vcreate(struct fy_parser *fyp,
+                                        enum fy_event_type type,
+                                        va_list ap) FY_EXPORT;
 
 /**
  * enum fy_composer_return - The returns of the composer callback
@@ -7270,11 +6839,11 @@ fy_parse_event_vcreate(struct fy_parser *fyp, enum fy_event_type type, va_list a
  * @FYCR_ERROR: error, stop processing
  */
 enum fy_composer_return {
-	FYCR_OK_CONTINUE = 0,
-	FYCR_OK_STOP = 1,
-	FYCR_OK_START_SKIP = 2,
-	FYCR_OK_STOP_SKIP = 3,
-	FYCR_ERROR = -1,
+   FYCR_OK_CONTINUE   = 0,
+   FYCR_OK_STOP       = 1,
+   FYCR_OK_START_SKIP = 2,
+   FYCR_OK_STOP_SKIP  = 3,
+   FYCR_ERROR         = -1,
 };
 
 /**
@@ -7287,10 +6856,9 @@ enum fy_composer_return {
  * Returns:
  * true if non error or skip condition
  */
-static inline bool
-fy_composer_return_is_ok(enum fy_composer_return ret)
+static inline bool fy_composer_return_is_ok(enum fy_composer_return ret)
 {
-	return ret == FYCR_OK_CONTINUE || ret == FYCR_OK_STOP;
+   return ret == FYCR_OK_CONTINUE || ret == FYCR_OK_STOP;
 }
 
 /**
@@ -7307,9 +6875,10 @@ fy_composer_return_is_ok(enum fy_composer_return ret)
  * Returns:
  * fy_composer_return code telling the parser what to do
  */
-typedef enum fy_composer_return
-(*fy_parse_composer_cb)(struct fy_parser *fyp, struct fy_event *fye,
-			struct fy_path *path, void *userdata);
+typedef enum fy_composer_return (*fy_parse_composer_cb)(struct fy_parser *fyp,
+                                                        struct fy_event *fye,
+                                                        struct fy_path *path,
+                                                        void *userdata);
 
 /**
  * fy_parse_compose() - Parse using a compose callback
@@ -7328,10 +6897,8 @@ typedef enum fy_composer_return
  * 0 if no error occured
  * -1 on error
  */
-int
-fy_parse_compose(struct fy_parser *fyp, fy_parse_composer_cb cb,
-		 void *userdata)
-	FY_EXPORT;
+int fy_parse_compose(struct fy_parser *fyp, fy_parse_composer_cb cb,
+                     void *userdata) FY_EXPORT;
 
 /**
  * fy_path_component_is_mapping() - Check if the component is a mapping
@@ -7341,9 +6908,7 @@ fy_parse_compose(struct fy_parser *fyp, fy_parse_composer_cb cb,
  * Returns:
  * true if the path component is a mapping, false otherwise
  */
-bool
-fy_path_component_is_mapping(struct fy_path_component *fypc)
-	FY_EXPORT;
+bool fy_path_component_is_mapping(struct fy_path_component *fypc) FY_EXPORT;
 
 /**
  * fy_path_component_is_sequence() - Check if the component is a sequence
@@ -7353,12 +6918,11 @@ fy_path_component_is_mapping(struct fy_path_component *fypc)
  * Returns:
  * true if the path component is a sequence, false otherwise
  */
-bool
-fy_path_component_is_sequence(struct fy_path_component *fypc)
-	FY_EXPORT;
+bool fy_path_component_is_sequence(struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_sequence_get_index() - Get the index of sequence path component
+ * fy_path_component_sequence_get_index() - Get the index of sequence path
+ * component
  *
  * @fypc: The sequence path component to return it's index value
  *
@@ -7366,9 +6930,8 @@ fy_path_component_is_sequence(struct fy_path_component *fypc)
  * >= 0 the sequence index
  * -1 if the component is either not in the proper mode, or not a sequence
  */
-int
-fy_path_component_sequence_get_index(struct fy_path_component *fypc)
-	FY_EXPORT;
+int fy_path_component_sequence_get_index(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
  * fy_path_component_mapping_get_scalar_key() - Get the scalar key of a mapping
@@ -7379,12 +6942,12 @@ fy_path_component_sequence_get_index(struct fy_path_component *fypc)
  * a non NULL scalar or alias token if the mapping contains a scalar key
  * NULL in case of an error, or if the component has a complex key
  */
-struct fy_token *
-fy_path_component_mapping_get_scalar_key(struct fy_path_component *fypc)
-	FY_EXPORT;
+struct fy_token *fy_path_component_mapping_get_scalar_key(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_mapping_get_scalar_key_tag() - Get the scalar key's tag of a mapping
+ * fy_path_component_mapping_get_scalar_key_tag() - Get the scalar key's tag of
+ * a mapping
  *
  * @fypc: The mapping path component to return it's scalar key's tag
  *
@@ -7392,12 +6955,12 @@ fy_path_component_mapping_get_scalar_key(struct fy_path_component *fypc)
  * a non NULL tag token if the mapping contains a scalar key with a tag or
  * NULL in case of an error, or if the component has a complex key
  */
-struct fy_token *
-fy_path_component_mapping_get_scalar_key_tag(struct fy_path_component *fypc)
-	FY_EXPORT;
+struct fy_token *fy_path_component_mapping_get_scalar_key_tag(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_mapping_get_complex_key() - Get the complex key of a mapping
+ * fy_path_component_mapping_get_complex_key() - Get the complex key of a
+ * mapping
  *
  * @fypc: The mapping path component to return it's complex key
  *
@@ -7405,12 +6968,12 @@ fy_path_component_mapping_get_scalar_key_tag(struct fy_path_component *fypc)
  * a non NULL document if the mapping contains a complex key
  * NULL in case of an error, or if the component has a simple key
  */
-struct fy_document *
-fy_path_component_mapping_get_complex_key(struct fy_path_component *fypc)
-	FY_EXPORT;
+struct fy_document *fy_path_component_mapping_get_complex_key(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_get_text() - Get the textual representation of a path component
+ * fy_path_component_get_text() - Get the textual representation of a path
+ * component
  *
  * Given a path component, return a malloc'ed string which contains
  * the textual representation of it.
@@ -7426,12 +6989,10 @@ fy_path_component_mapping_get_complex_key(struct fy_path_component *fypc)
  * of a complex key.
  * The string must be free'ed using free.
  */
-char *
-fy_path_component_get_text(struct fy_path_component *fypc)
-	FY_EXPORT;
+char *fy_path_component_get_text(struct fy_path_component *fypc) FY_EXPORT;
 
-#define fy_path_component_get_text_alloca(_fypc) \
-	FY_ALLOCA_COPY_FREE(fy_path_component_get_text((_fypc)), FY_NT)
+#define fy_path_component_get_text_alloca(_fypc)                               \
+   FY_ALLOCA_COPY_FREE(fy_path_component_get_text((_fypc)), FY_NT)
 /**
  * fy_path_depth() - Get the depth of a path
  *
@@ -7440,9 +7001,7 @@ fy_path_component_get_text(struct fy_path_component *fypc)
  * Returns:
  * The depth of the path, or -1 on error
  */
-int
-fy_path_depth(struct fy_path *fypp)
-	FY_EXPORT;
+int fy_path_depth(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_parent() - Get the parent of a path
@@ -7455,9 +7014,7 @@ fy_path_depth(struct fy_path *fypp)
  * Returns:
  * The path parent or NULL on error, if it doesn't exist
  */
-struct fy_path *
-fy_path_parent(struct fy_path *fypp)
-	FY_EXPORT;
+struct fy_path *fy_path_parent(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_get_text() - Get the textual representation of a path
@@ -7474,12 +7031,10 @@ fy_path_parent(struct fy_path *fypp)
  * The textual representation of the path, NULL on error.
  * The string must be free'ed using free.
  */
-char *
-fy_path_get_text(struct fy_path *fypp)
-	FY_EXPORT;
+char *fy_path_get_text(struct fy_path *fypp) FY_EXPORT;
 
-#define fy_path_get_text_alloca(_fypp) \
-	FY_ALLOCA_COPY_FREE(fy_path_get_text((_fypp)), FY_NT)
+#define fy_path_get_text_alloca(_fypp)                                         \
+   FY_ALLOCA_COPY_FREE(fy_path_get_text((_fypp)), FY_NT)
 
 /**
  * fy_path_in_root() - Check if the path is in the root of the document
@@ -7489,9 +7044,7 @@ fy_path_get_text(struct fy_path *fypp)
  * Returns:
  * true if the path is located within the root of the document
  */
-bool
-fy_path_in_root(struct fy_path *fypp)
-	FY_EXPORT;
+bool fy_path_in_root(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_in_mapping() - Check if the path is in a mapping
@@ -7501,9 +7054,7 @@ fy_path_in_root(struct fy_path *fypp)
  * Returns:
  * true if the path is located within a mapping
  */
-bool
-fy_path_in_mapping(struct fy_path *fypp)
-	FY_EXPORT;
+bool fy_path_in_mapping(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_in_sequence() - Check if the path is in a sequence
@@ -7513,9 +7064,7 @@ fy_path_in_mapping(struct fy_path *fypp)
  * Returns:
  * true if the path is located within a sequence
  */
-bool
-fy_path_in_sequence(struct fy_path *fypp)
-	FY_EXPORT;
+bool fy_path_in_sequence(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_in_mapping_key() - Check if the path is in a mapping key state
@@ -7525,9 +7074,7 @@ fy_path_in_sequence(struct fy_path *fypp)
  * Returns:
  * true if the path is located within a mapping key state
  */
-bool
-fy_path_in_mapping_key(struct fy_path *fypp)
-	FY_EXPORT;
+bool fy_path_in_mapping_key(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_in_mapping_value() - Check if the path is in a mapping value state
@@ -7537,9 +7084,7 @@ fy_path_in_mapping_key(struct fy_path *fypp)
  * Returns:
  * true if the path is located within a mapping value state
  */
-bool
-fy_path_in_mapping_value(struct fy_path *fypp)
-	FY_EXPORT;
+bool fy_path_in_mapping_value(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_in_collection_root() - Check if the path is in a collection root
@@ -7554,21 +7099,18 @@ fy_path_in_mapping_value(struct fy_path *fypp)
  * Returns:
  * true if the path is located within a collectin root state
  */
-bool
-fy_path_in_collection_root(struct fy_path *fypp)
-	FY_EXPORT;
+bool fy_path_in_collection_root(struct fy_path *fypp) FY_EXPORT;
 
 /**
- * fy_path_get_root_user_data() - Return the userdata associated with the path root
+ * fy_path_get_root_user_data() - Return the userdata associated with the path
+ * root
  *
  * @fypp: The path
  *
  * Returns:
  * The user data associated with the root of the path, or NULL if no path
  */
-void *
-fy_path_get_root_user_data(struct fy_path *fypp)
-	FY_EXPORT;
+void *fy_path_get_root_user_data(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_path_set_root_user_data() - Set the user data associated with the root
@@ -7578,81 +7120,82 @@ fy_path_get_root_user_data(struct fy_path *fypp)
  * @fypp: The path
  * @data: The data to set as root data
  */
-void
-fy_path_set_root_user_data(struct fy_path *fypp, void *data)
-	FY_EXPORT;
+void fy_path_set_root_user_data(struct fy_path *fypp, void *data) FY_EXPORT;
 
 /**
- * fy_path_component_get_mapping_user_data() - Return the userdata associated with the mapping
+ * fy_path_component_get_mapping_user_data() - Return the userdata associated
+ * with the mapping
  *
  * @fypc: The path component
  *
  * Returns:
- * The user data associated with the mapping, or NULL if not a mapping or the user data are NULL
+ * The user data associated with the mapping, or NULL if not a mapping or the
+ * user data are NULL
  */
-void *
-fy_path_component_get_mapping_user_data(struct fy_path_component *fypc)
-	FY_EXPORT;
+void *fy_path_component_get_mapping_user_data(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_get_mapping_key_user_data() - Return the userdata associated with the mapping key
+ * fy_path_component_get_mapping_key_user_data() - Return the userdata
+ * associated with the mapping key
  *
  * @fypc: The path component
  *
  * Returns:
- * The user data associated with the mapping key, or NULL if not a mapping or the user data are NULL
+ * The user data associated with the mapping key, or NULL if not a mapping or
+ * the user data are NULL
  */
-void *
-fy_path_component_get_mapping_key_user_data(struct fy_path_component *fypc)
-	FY_EXPORT;
+void *fy_path_component_get_mapping_key_user_data(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_get_sequence_user_data() - Return the userdata associated with the sequence
+ * fy_path_component_get_sequence_user_data() - Return the userdata associated
+ * with the sequence
  *
  * @fypc: The path component
  *
  * Returns:
- * The user data associated with the sequence, or NULL if not a sequence or the user data are NULL
+ * The user data associated with the sequence, or NULL if not a sequence or the
+ * user data are NULL
  */
-void *
-fy_path_component_get_sequence_user_data(struct fy_path_component *fypc)
-	FY_EXPORT;
+void *fy_path_component_get_sequence_user_data(
+    struct fy_path_component *fypc) FY_EXPORT;
 
 /**
- * fy_path_component_set_mapping_user_data() - Set the user data associated with a mapping
+ * fy_path_component_set_mapping_user_data() - Set the user data associated with
+ * a mapping
  *
  * Note, no error condition if not a mapping
  *
  * @fypc: The path component
  * @data: The data to set as mapping data
  */
-void
-fy_path_component_set_mapping_user_data(struct fy_path_component *fypc, void *data)
-	FY_EXPORT;
+void fy_path_component_set_mapping_user_data(struct fy_path_component *fypc,
+                                             void *data) FY_EXPORT;
 
 /**
- * fy_path_component_set_mapping_key_user_data() - Set the user data associated with a mapping key
+ * fy_path_component_set_mapping_key_user_data() - Set the user data associated
+ * with a mapping key
  *
  * Note, no error condition if not in a mapping key state
  *
  * @fypc: The path component
  * @data: The data to set as mapping key data
  */
-void
-fy_path_component_set_mapping_key_user_data(struct fy_path_component *fypc, void *data)
-	FY_EXPORT;
+void fy_path_component_set_mapping_key_user_data(struct fy_path_component *fypc,
+                                                 void *data) FY_EXPORT;
 
 /**
- * fy_path_component_set_sequence_user_data() - Set the user data associated with a sequence
+ * fy_path_component_set_sequence_user_data() - Set the user data associated
+ * with a sequence
  *
  * Note, no error condition if not a sequence
  *
  * @fypc: The path component
  * @data: The data to set as sequence data
  */
-void
-fy_path_component_set_sequence_user_data(struct fy_path_component *fypc, void *data)
-	FY_EXPORT;
+void fy_path_component_set_sequence_user_data(struct fy_path_component *fypc,
+                                              void *data) FY_EXPORT;
 
 /**
  * fy_path_get_parent_user_data() - Return the userdata of the parent collection
@@ -7660,23 +7203,21 @@ fy_path_component_set_sequence_user_data(struct fy_path_component *fypc, void *d
  * @fypp: The path
  *
  * Returns:
- * The user data associated with the parent collection of the path, or NULL if no path
+ * The user data associated with the parent collection of the path, or NULL if
+ * no path
  */
-void *
-fy_path_get_parent_user_data(struct fy_path *path)
-	FY_EXPORT;
+void *fy_path_get_parent_user_data(struct fy_path *path) FY_EXPORT;
 
 /**
- * fy_path_set_parent_user_data() - Set the user data associated with the parent collection
+ * fy_path_set_parent_user_data() - Set the user data associated with the parent
+ * collection
  *
  * Note, no error condition if not a path
  *
  * @fypp: The path
  * @data: The data to set as parent collection data
  */
-void
-fy_path_set_parent_user_data(struct fy_path *path, void *data)
-	FY_EXPORT;
+void fy_path_set_parent_user_data(struct fy_path *path, void *data) FY_EXPORT;
 
 /**
  * fy_path_get_last_user_data() - Return the userdata of the last collection
@@ -7684,23 +7225,21 @@ fy_path_set_parent_user_data(struct fy_path *path, void *data)
  * @fypp: The path
  *
  * Returns:
- * The user data associated with the last collection of the path, or NULL if no path
+ * The user data associated with the last collection of the path, or NULL if no
+ * path
  */
-void *
-fy_path_get_last_user_data(struct fy_path *path)
-	FY_EXPORT;
+void *fy_path_get_last_user_data(struct fy_path *path) FY_EXPORT;
 
 /**
- * fy_path_set_last_user_data() - Set the user data associated with the last collection
+ * fy_path_set_last_user_data() - Set the user data associated with the last
+ * collection
  *
  * Note, no error condition if not a path
  *
  * @fypp: The path
  * @data: The data to set as last collection data
  */
-void
-fy_path_set_last_user_data(struct fy_path *path, void *data)
-	FY_EXPORT;
+void fy_path_set_last_user_data(struct fy_path *path, void *data) FY_EXPORT;
 
 /**
  * fy_path_last_component() - Get the very last component of a path
@@ -7714,11 +7253,11 @@ fy_path_set_last_user_data(struct fy_path *path, void *data)
  * if it does not exist
  */
 struct fy_path_component *
-fy_path_last_component(struct fy_path *fypp)
-	FY_EXPORT;
+fy_path_last_component(struct fy_path *fypp) FY_EXPORT;
 
 /**
- * fy_path_last_not_collection_root_component() - Get the last non collection root component of a path
+ * fy_path_last_not_collection_root_component() - Get the last non collection
+ * root component of a path
  *
  * Returns the last non collection root component of a path. This may not be the
  * last component that is returned by fy_path_last_component().
@@ -7732,8 +7271,7 @@ fy_path_last_component(struct fy_path *fypp)
  * The last non collection root component, or NULL if it does not exist
  */
 struct fy_path_component *
-fy_path_last_not_collection_root_component(struct fy_path *fypp)
-	FY_EXPORT;
+fy_path_last_not_collection_root_component(struct fy_path *fypp) FY_EXPORT;
 
 /**
  * fy_document_iterator_create() - Create a document iterator
@@ -7744,38 +7282,36 @@ fy_path_last_not_collection_root_component(struct fy_path *fypp)
  * Returns:
  * The newly created document iterator or NULL on error
  */
-struct fy_document_iterator *
-fy_document_iterator_create(void)
-	FY_EXPORT;
+struct fy_document_iterator *fy_document_iterator_create(void) FY_EXPORT;
 
 /**
  * fy_document_iterator_destroy() - Destroy the given document iterator
  *
- * Destroy a document iterator created earlier via fy_document_iterator_create().
+ * Destroy a document iterator created earlier via
+ * fy_document_iterator_create().
  *
  * @fydi: The document iterator to destroy
  */
-void
-fy_document_iterator_destroy(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+void fy_document_iterator_destroy(struct fy_document_iterator *fydi) FY_EXPORT;
 
 /**
- * fy_document_iterator_event_free() - Free an event that was created by a document iterator
+ * fy_document_iterator_event_free() - Free an event that was created by a
+ * document iterator
  *
  * Free (possibly recycling) an event that was created by a document iterator.
  *
  * @fydi: The document iterator that created the event
  * @fye: The event
  */
-void
-fy_document_iterator_event_free(struct fy_document_iterator *fydi, struct fy_event *fye)
-	FY_EXPORT;
+void fy_document_iterator_event_free(struct fy_document_iterator *fydi,
+                                     struct fy_event *fye) FY_EXPORT;
 
 /**
- * fy_document_iterator_stream_start() - Create a stream start event using the iterator
+ * fy_document_iterator_stream_start() - Create a stream start event using the
+ * iterator
  *
- * Creates a stream start event on the document iterator and advances the internal state
- * of it accordingly.
+ * Creates a stream start event on the document iterator and advances the
+ * internal state of it accordingly.
  *
  * @fydi: The document iterator to create the event
  *
@@ -7783,14 +7319,14 @@ fy_document_iterator_event_free(struct fy_document_iterator *fydi, struct fy_eve
  * The newly created stream start event, or NULL on error.
  */
 struct fy_event *
-fy_document_iterator_stream_start(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+fy_document_iterator_stream_start(struct fy_document_iterator *fydi) FY_EXPORT;
 
 /**
- * fy_document_iterator_stream_end() - Create a stream end event using the iterator
+ * fy_document_iterator_stream_end() - Create a stream end event using the
+ * iterator
  *
- * Creates a stream end event on the document iterator and advances the internal state
- * of it accordingly.
+ * Creates a stream end event on the document iterator and advances the internal
+ * state of it accordingly.
  *
  * @fydi: The document iterator to create the event
  *
@@ -7798,15 +7334,15 @@ fy_document_iterator_stream_start(struct fy_document_iterator *fydi)
  * The newly created stream end event, or NULL on error.
  */
 struct fy_event *
-fy_document_iterator_stream_end(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+fy_document_iterator_stream_end(struct fy_document_iterator *fydi) FY_EXPORT;
 
 /**
- * fy_document_iterator_document_start() - Create a document start event using the iterator
+ * fy_document_iterator_document_start() - Create a document start event using
+ * the iterator
  *
- * Creates a document start event on the document iterator and advances the internal state
- * of it accordingly. The document must not be released until an error, cleanup or a call
- * to fy_document_iterator_document_end().
+ * Creates a document start event on the document iterator and advances the
+ * internal state of it accordingly. The document must not be released until an
+ * error, cleanup or a call to fy_document_iterator_document_end().
  *
  * @fydi: The document iterator to create the event
  * @fyd: The document containing the document state that is used in the event
@@ -7815,15 +7351,16 @@ fy_document_iterator_stream_end(struct fy_document_iterator *fydi)
  * The newly created document start event, or NULL on error.
  */
 struct fy_event *
-fy_document_iterator_document_start(struct fy_document_iterator *fydi, struct fy_document *fyd)
-	FY_EXPORT;
+fy_document_iterator_document_start(struct fy_document_iterator *fydi,
+                                    struct fy_document *fyd) FY_EXPORT;
 
 /**
- * fy_document_iterator_document_end() - Create a document end event using the iterator
+ * fy_document_iterator_document_end() - Create a document end event using the
+ * iterator
  *
- * Creates a document end event on the document iterator and advances the internal state
- * of it accordingly. The document that was used earlier in the call of
- * fy_document_iterator_document_start() can now be released.
+ * Creates a document end event on the document iterator and advances the
+ * internal state of it accordingly. The document that was used earlier in the
+ * call of fy_document_iterator_document_start() can now be released.
  *
  * @fydi: The document iterator to create the event
  *
@@ -7831,8 +7368,7 @@ fy_document_iterator_document_start(struct fy_document_iterator *fydi, struct fy
  * The newly created document end event, or NULL on error.
  */
 struct fy_event *
-fy_document_iterator_document_end(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+fy_document_iterator_document_end(struct fy_document_iterator *fydi) FY_EXPORT;
 
 /**
  * fy_document_iterator_body_next() - Create document body events until the end
@@ -7841,38 +7377,39 @@ fy_document_iterator_document_end(struct fy_document_iterator *fydi)
  * The events are created depth first and are in same exact sequence that the
  * original events that created the document.
  *
- * That means that the finite event stream that generated the document is losslesly
- * preserved in such a way that the document tree representation is functionally
- * equivalent.
+ * That means that the finite event stream that generated the document is
+ * losslesly preserved in such a way that the document tree representation is
+ * functionally equivalent.
  *
- * Repeated calls to this function will generate a stream of SCALAR, ALIAS, SEQUENCE
- * START, SEQUENCE END, MAPPING START and MAPPING END events, returning NULL at the
- * end of the body event stream.
+ * Repeated calls to this function will generate a stream of SCALAR, ALIAS,
+ * SEQUENCE START, SEQUENCE END, MAPPING START and MAPPING END events, returning
+ * NULL at the end of the body event stream.
  *
  * @fydi: The document iterator to create the event
  *
  * Returns:
  * The newly created document body event or NULL at an error, or an end of the
- * event stream. Use fy_document_iterator_get_error() to check if an error occured.
+ * event stream. Use fy_document_iterator_get_error() to check if an error
+ * occured.
  */
 struct fy_event *
-fy_document_iterator_body_next(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+fy_document_iterator_body_next(struct fy_document_iterator *fydi) FY_EXPORT;
 
 /**
- * fy_document_iterator_node_start() - Start a document node iteration run using a starting point
+ * fy_document_iterator_node_start() - Start a document node iteration run using
+ * a starting point
  *
  * Starts an iteration run starting at the given node.
  *
  * @fydi: The document iterator to run with
  * @fyn: The iterator root for the iteration
  */
-void
-fy_document_iterator_node_start(struct fy_document_iterator *fydi, struct fy_node *fyn)
-	FY_EXPORT;
+void fy_document_iterator_node_start(struct fy_document_iterator *fydi,
+                                     struct fy_node *fyn) FY_EXPORT;
 
 /**
- * fy_document_iterator_node_next() - Return the next node in the iteration sequence
+ * fy_document_iterator_node_next() - Return the next node in the iteration
+ * sequence
  *
  * Returns a pointer to the next node iterating using as a start the node given
  * at fy_document_iterator_node_start(). The first node returned will be that,
@@ -7881,14 +7418,15 @@ fy_document_iterator_node_start(struct fy_document_iterator *fydi, struct fy_nod
  * @fydi: The document iterator to use for the iteration
  *
  * Returns:
- * The next node in the iteration sequence or NULL at the end, or if an error occured.
+ * The next node in the iteration sequence or NULL at the end, or if an error
+ * occured.
  */
 struct fy_node *
-fy_document_iterator_node_next(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+fy_document_iterator_node_next(struct fy_document_iterator *fydi) FY_EXPORT;
 
 /**
- * fy_document_iterator_get_error() - Get the error state of the document iterator
+ * fy_document_iterator_get_error() - Get the error state of the document
+ * iterator
  *
  * Returns the error state of the iterator. If it's in error state, return true
  * and reset the iterator to the state just after creation.
@@ -7898,9 +7436,8 @@ fy_document_iterator_node_next(struct fy_document_iterator *fydi)
  * Returns:
  * true if it was in an error state, false otherwise.
  */
-bool
-fy_document_iterator_get_error(struct fy_document_iterator *fydi)
-	FY_EXPORT;
+bool fy_document_iterator_get_error(
+    struct fy_document_iterator *fydi) FY_EXPORT;
 
 /*
  * The libfyaml's push-pull thread implementation
@@ -7947,9 +7484,9 @@ typedef bool (*fy_work_check_fn)(const void *arg);
  * to a thread for execution.
  */
 struct fy_thread_work {
-	fy_work_exec_fn fn;
-	void *arg;
-	struct fy_work_pool *wp;
+   fy_work_exec_fn fn;
+   void *arg;
+   struct fy_work_pool *wp;
 };
 
 /*
@@ -7961,7 +7498,7 @@ struct fy_thread_work {
  * @FYTPCF_STEAL_MODE: Enable steal mode for the thread pool
  */
 enum fy_thread_pool_cfg_flags {
-	FYTPCF_STEAL_MODE	= FY_BIT(0),
+   FYTPCF_STEAL_MODE = FY_BIT(0),
 };
 
 /**
@@ -7974,9 +7511,9 @@ enum fy_thread_pool_cfg_flags {
  * @userdata: A userdata pointer
  */
 struct fy_thread_pool_cfg {
-	enum fy_thread_pool_cfg_flags flags;
-	unsigned int num_threads;
-	void *userdata;
+   enum fy_thread_pool_cfg_flags flags;
+   unsigned int num_threads;
+   void *userdata;
 };
 
 /**
@@ -7992,8 +7529,7 @@ struct fy_thread_pool_cfg {
  * A pointer to the thread pool or NULL in case of an error.
  */
 struct fy_thread_pool *
-fy_thread_pool_create(const struct fy_thread_pool_cfg *cfg)
-	FY_EXPORT;
+fy_thread_pool_create(const struct fy_thread_pool_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_thread_pool_destroy() - Destroy the given thread pool
@@ -8004,9 +7540,7 @@ fy_thread_pool_create(const struct fy_thread_pool_cfg *cfg)
  *
  * @tp: The thread pool to destroy
  */
-void
-fy_thread_pool_destroy(struct fy_thread_pool *tp)
-	FY_EXPORT;
+void fy_thread_pool_destroy(struct fy_thread_pool *tp) FY_EXPORT;
 
 /**
  * fy_thread_pool_get_num_threads() - Get the number of threads
@@ -8019,9 +7553,7 @@ fy_thread_pool_destroy(struct fy_thread_pool *tp)
  * > 0 for the number of actual threads created,
  * -1 on error
  */
-int
-fy_thread_pool_get_num_threads(struct fy_thread_pool *tp)
-	FY_EXPORT;
+int fy_thread_pool_get_num_threads(struct fy_thread_pool *tp) FY_EXPORT;
 
 /**
  * fy_thread_pool_get_cfg() - Get the configuration of a thread pool
@@ -8032,8 +7564,7 @@ fy_thread_pool_get_num_threads(struct fy_thread_pool *tp)
  * The configuration of the thread pool
  */
 const struct fy_thread_pool_cfg *
-fy_thread_pool_get_cfg(struct fy_thread_pool *tp)
-	FY_EXPORT;
+fy_thread_pool_get_cfg(struct fy_thread_pool *tp) FY_EXPORT;
 
 /*
  * fy_thread_reserve() - Reserve a thread from the pool.
@@ -8047,9 +7578,7 @@ fy_thread_pool_get_cfg(struct fy_thread_pool *tp)
  * Returns:
  * A reserved thread if not NULL, NULL if no threads are available.
  */
-struct fy_thread *
-fy_thread_reserve(struct fy_thread_pool *tp)
-	FY_EXPORT;
+struct fy_thread *fy_thread_reserve(struct fy_thread_pool *tp) FY_EXPORT;
 
 /*
  * fy_thread_unreserve() - Unreserve a previously reserved thread
@@ -8059,9 +7588,7 @@ fy_thread_reserve(struct fy_thread_pool *tp)
  *
  * @t: The thread
  */
-void
-fy_thread_unreserve(struct fy_thread *t)
-	FY_EXPORT;
+void fy_thread_unreserve(struct fy_thread *t) FY_EXPORT;
 
 /*
  * fy_thread_submit_work() - Submit work for execution
@@ -8080,9 +7607,8 @@ fy_thread_unreserve(struct fy_thread *t)
  * Returns:
  * 0 if work has been submitted, -1 otherwise.
  */
-int
-fy_thread_submit_work(struct fy_thread *t, struct fy_thread_work *work)
-	FY_EXPORT;
+int fy_thread_submit_work(struct fy_thread *t,
+                          struct fy_thread_work *work) FY_EXPORT;
 
 /*
  * fy_thread_wait_work() - Wait for completion of submitted work
@@ -8095,9 +7621,7 @@ fy_thread_submit_work(struct fy_thread *t, struct fy_thread_work *work)
  * Returns:
  * 0 if work finished, -1 on error.
  */
-int
-fy_thread_wait_work(struct fy_thread *t)
-	FY_EXPORT;
+int fy_thread_wait_work(struct fy_thread *t) FY_EXPORT;
 
 /*
  * fy_thread_work_join() - Submit works for execution and wait
@@ -8112,14 +7636,13 @@ fy_thread_wait_work(struct fy_thread *t)
  * @work_count: The size of the @works array
  * @check_fn: Pointer to a check function, or NULL for no checks
  */
-void
-fy_thread_work_join(struct fy_thread_pool *tp,
-		    struct fy_thread_work *works, size_t work_count,
-		    fy_work_check_fn check_fn)
-	FY_EXPORT;
+void fy_thread_work_join(struct fy_thread_pool *tp,
+                         struct fy_thread_work *works, size_t work_count,
+                         fy_work_check_fn check_fn) FY_EXPORT;
 
 /*
- * fy_thread_args_join() - Execute function in parallel using arguments as pointers
+ * fy_thread_args_join() - Execute function in parallel using arguments as
+ * pointers
  *
  * Execute @fn possibly in parallel using the threads in the thread pool.
  * The arguments of the function are provided by the args array.
@@ -8130,14 +7653,13 @@ fy_thread_work_join(struct fy_thread_pool *tp,
  * @args: An args array sized @count of argument pointers
  * @count: The count of the args array items
  */
-void
-fy_thread_args_join(struct fy_thread_pool *tp,
-		    fy_work_exec_fn, fy_work_check_fn check_fn,
-		    void **args, size_t count)
-	FY_EXPORT;
+void fy_thread_args_join(struct fy_thread_pool *tp, fy_work_exec_fn,
+                         fy_work_check_fn check_fn, void **args,
+                         size_t count) FY_EXPORT;
 
 /*
- * fy_thread_arg_array_join() - Execute function in parallel using argument array
+ * fy_thread_arg_array_join() - Execute function in parallel using argument
+ * array
  *
  * Execute @fn possibly in parallel using the threads in the thread pool.
  * The arguments of the function are provided by the args array.
@@ -8149,14 +7671,13 @@ fy_thread_args_join(struct fy_thread_pool *tp,
  * @argsize: The size of each argument array item
  * @count: The count of the args array items
  */
-void
-fy_thread_arg_array_join(struct fy_thread_pool *tp,
-			 fy_work_exec_fn fn, fy_work_check_fn check_fn,
-			 void *args, size_t argsize, size_t count)
-	FY_EXPORT;
+void fy_thread_arg_array_join(struct fy_thread_pool *tp, fy_work_exec_fn fn,
+                              fy_work_check_fn check_fn, void *args,
+                              size_t argsize, size_t count) FY_EXPORT;
 
 /*
- * fy_thread_arg_array_join() - Execute function in parallel with the same argument
+ * fy_thread_arg_array_join() - Execute function in parallel with the same
+ * argument
  *
  * Execute @fn possibly in parallel using the threads in the thread pool.
  * The argument of the functions is the same.
@@ -8166,11 +7687,9 @@ fy_thread_arg_array_join(struct fy_thread_pool *tp,
  * @arg: The common argument
  * @count: The count of executions
  */
-void
-fy_thread_arg_join(struct fy_thread_pool *tp,
-		   fy_work_exec_fn fn, fy_work_check_fn check_fn,
-		   void *arg, size_t count)
-	FY_EXPORT;
+void fy_thread_arg_join(struct fy_thread_pool *tp, fy_work_exec_fn fn,
+                        fy_work_check_fn check_fn, void *arg,
+                        size_t count) FY_EXPORT;
 
 /*
  * Minimal exposing of internal BLAKE3 implementation
@@ -8200,9 +7719,7 @@ struct fy_blake3_hasher;
  * Returns:
  * The next backend or NULL at the end.
  */
-const char *
-fy_blake3_backend_iterate(const char **prevp)
-	FY_EXPORT;
+const char *fy_blake3_backend_iterate(const char **prevp) FY_EXPORT;
 
 /**
  * struct fy_blake3_hasher_cfg - BLAKE3 hasher configuration
@@ -8230,16 +7747,16 @@ fy_blake3_backend_iterate(const char **prevp)
  *               - -1 disable threading entirely
  */
 struct fy_blake3_hasher_cfg {
-	const char *backend;
-	size_t file_buffer;
-	size_t mmap_min_chunk;
-	size_t mmap_max_chunk;
-	bool no_mmap;
-	const uint8_t *key;
-	const void *context;
-	size_t context_len;
-	struct fy_thread_pool *tp;
-	int num_threads;
+   const char *backend;
+   size_t file_buffer;
+   size_t mmap_min_chunk;
+   size_t mmap_max_chunk;
+   bool no_mmap;
+   const uint8_t *key;
+   const void *context;
+   size_t context_len;
+   struct fy_thread_pool *tp;
+   int num_threads;
 };
 
 /**
@@ -8255,8 +7772,7 @@ struct fy_blake3_hasher_cfg {
  * A pointer to the BLAKE3 hasher or NULL in case of an error.
  */
 struct fy_blake3_hasher *
-fy_blake3_hasher_create(const struct fy_blake3_hasher_cfg *cfg)
-	FY_EXPORT;
+fy_blake3_hasher_create(const struct fy_blake3_hasher_cfg *cfg) FY_EXPORT;
 
 /**
  * fy_blake3_hasher_destroy() - Destroy the given BLAKE3 hasher
@@ -8265,12 +7781,11 @@ fy_blake3_hasher_create(const struct fy_blake3_hasher_cfg *cfg)
  *
  * @fyh: The BLAKE3 hasher to destroy
  */
-void
-fy_blake3_hasher_destroy(struct fy_blake3_hasher *fyh)
-	FY_EXPORT;
+void fy_blake3_hasher_destroy(struct fy_blake3_hasher *fyh) FY_EXPORT;
 
 /**
- * fy_blake3_hasher_update() - Update the BLAKE3 hasher state with the given input
+ * fy_blake3_hasher_update() - Update the BLAKE3 hasher state with the given
+ * input
  *
  * Updates the BLAKE3 hasher state by hashing the given input.
  *
@@ -8278,9 +7793,8 @@ fy_blake3_hasher_destroy(struct fy_blake3_hasher *fyh)
  * @input: Pointer to the input
  * @input_len: Size of the input in bytes
  */
-void
-fy_blake3_hasher_update(struct fy_blake3_hasher *fyh, const void *input, size_t input_len)
-	FY_EXPORT;
+void fy_blake3_hasher_update(struct fy_blake3_hasher *fyh, const void *input,
+                             size_t input_len) FY_EXPORT;
 
 /**
  * fy_blake3_hasher_finalize() - Finalize the hash and get output
@@ -8294,8 +7808,7 @@ fy_blake3_hasher_update(struct fy_blake3_hasher *fyh, const void *input, size_t 
  * in case of an error.
  */
 const uint8_t *
-fy_blake3_hasher_finalize(struct fy_blake3_hasher *fyh)
-	FY_EXPORT;
+fy_blake3_hasher_finalize(struct fy_blake3_hasher *fyh) FY_EXPORT;
 
 /**
  * fy_blake3_hasher_reset() - Resets the hasher
@@ -8304,9 +7817,7 @@ fy_blake3_hasher_finalize(struct fy_blake3_hasher *fyh)
  *
  * @fyh: The BLAKE3 hasher
  */
-void
-fy_blake3_hasher_reset(struct fy_blake3_hasher *fyh)
-	FY_EXPORT;
+void fy_blake3_hasher_reset(struct fy_blake3_hasher *fyh) FY_EXPORT;
 
 /**
  * fy_blake3_hash() - BLAKE3 hash a memory area
@@ -8321,9 +7832,8 @@ fy_blake3_hasher_reset(struct fy_blake3_hasher *fyh)
  * A pointer to the BLAKE3 output (sized FY_BLAKE3_OUT_LEN), or NULL
  * in case of an error.
  */
-const uint8_t *
-fy_blake3_hash(struct fy_blake3_hasher *fyh, const void *mem, size_t size)
-	FY_EXPORT;
+const uint8_t *fy_blake3_hash(struct fy_blake3_hasher *fyh, const void *mem,
+                              size_t size) FY_EXPORT;
 
 /**
  * fy_blake3_hash_file() - BLAKE3 hash a file.
@@ -8337,9 +7847,8 @@ fy_blake3_hash(struct fy_blake3_hasher *fyh, const void *mem, size_t size)
  * A pointer to the BLAKE3 output (sized FY_BLAKE3_OUT_LEN), or NULL
  * in case of an error.
  */
-const uint8_t *
-fy_blake3_hash_file(struct fy_blake3_hasher *fyh, const char *filename)
-	FY_EXPORT;
+const uint8_t *fy_blake3_hash_file(struct fy_blake3_hasher *fyh,
+                                   const char *filename) FY_EXPORT;
 
 #ifdef __cplusplus
 }

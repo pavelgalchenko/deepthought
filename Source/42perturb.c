@@ -21,7 +21,8 @@
 /*********************************************************************/
 /* Ref: Sutherland-Hodgman                                           */
 long ClipEdgeAgainstPlane(double V1[3], double V2[3], double A[3], double B[3],
-                          double C[3], double DirVec[3], double OutVtx[2][3]) {
+                          double C[3], double DirVec[3], double OutVtx[2][3])
+{
    double Bary1[4], Bary2[4], P1[3], P2[3], c1, c2;
    long Nout, i;
 
@@ -45,30 +46,35 @@ long ClipEdgeAgainstPlane(double V1[3], double V2[3], double A[3], double B[3],
          for (i = 0; i < 3; i++)
             OutVtx[0][i] = V2[i];
          Nout = 1;
-      } else if (c1 >= 0.0 && c2 < 0.0) {
+      }
+      else if (c1 >= 0.0 && c2 < 0.0) {
          /* Case 2: P1 inside, P2 outside */
          Nout = 1;
          for (i = 0; i < 3; i++) {
             OutVtx[0][i] = V1[i] + c1 / (c1 - c2) * (V2[i] - V1[i]);
          }
-      } else if (c1 < 0.0 && c2 >= 0.0) {
+      }
+      else if (c1 < 0.0 && c2 >= 0.0) {
          /* Case 4: P1 outside, P2 inside */
          Nout = 2;
          for (i = 0; i < 3; i++) {
             OutVtx[0][i] = V2[i] + c2 / (c2 - c1) * (V1[i] - V2[i]);
             OutVtx[1][i] = V2[i];
          }
-      } else {
+      }
+      else {
          Nout = 0;
       }
-   } else {
+   }
+   else {
       Nout = 0;
    }
 
    return (Nout);
 }
 /*********************************************************************/
-void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
+void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
+{
    struct SilEdgeType *SilEdge = NULL, SwapEdge, *SE = NULL;
    struct SilVtxType *SilVtx  = NULL;
    struct SilVtxType *InVtx   = NULL;
@@ -105,7 +111,8 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
             if (SilNe == 0) {
                SilEdge =
                    (struct SilEdgeType *)calloc(1, sizeof(struct SilEdgeType));
-            } else {
+            }
+            else {
                SilEdge = (struct SilEdgeType *)realloc(
                    SilEdge, (SilNe + 1) * sizeof(struct SilEdgeType));
             }
@@ -118,7 +125,8 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
                   SE->PosV1B[i] = G->V[E->Vtx1][i];
                   SE->PosV2B[i] = G->V[E->Vtx2][i];
                }
-            } else {
+            }
+            else {
                SE->Iv1 = E->Vtx2;
                SE->Iv2 = E->Vtx1;
                for (i = 0; i < 3; i++) {
@@ -166,7 +174,8 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
             SilVtx[SilNv].PosN[i] = SilEdge[Ie].PosV2N[i];
          }
          SilNv++;
-      } else {
+      }
+      else {
          SilVtx = (struct SilVtxType *)realloc(
              SilVtx, (SilNv + 2) * sizeof(struct SilVtxType));
          SilVtx[SilNv].Body = SilEdge[Ie].Body;
@@ -308,7 +317,8 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
                       (P->Area * P->Centroid[i] - ClipArea * ClipCtr[i]) /
                       P->UnshadedArea;
                }
-            } else {
+            }
+            else {
                P->UnshadedArea = 0.0;
             }
          }
@@ -322,7 +332,8 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3]) {
 }
 
 /**********************************************************************/
-void GravGradFrcTrq(struct SCType *S) {
+void GravGradFrcTrq(struct SCType *S)
+{
    double r, rb[3], Coef, axIoa[3];
    double rhat[3], c[3], rhatoc;
    long Ib, i;
@@ -348,7 +359,8 @@ void GravGradFrcTrq(struct SCType *S) {
          GravGradTimesInertia(GravGradB, B->I, GGxI);
          for (i = 0; i < 3; i++)
             B->Trq[i] += GGxI[i];
-      } else {
+      }
+      else {
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
             /* GG torque */
@@ -369,8 +381,8 @@ void GravGradFrcTrq(struct SCType *S) {
             }
          }
       }
-
-   } else {
+   }
+   else {
       r    = CopyUnitV(S->PosN, rhat);
       Coef = Orb[S->RefOrb].mu / (r * r * r);
 
@@ -381,7 +393,8 @@ void GravGradFrcTrq(struct SCType *S) {
          vxMov(rb, B->I, axIoa);
          for (i = 0; i < 3; i++)
             B->Trq[i] += 3.0 * Coef * axIoa[i];
-      } else {
+      }
+      else {
          CopyUnitV(S->PosN, rhat);
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
@@ -408,7 +421,8 @@ void GravGradFrcTrq(struct SCType *S) {
 }
 /**********************************************************************/
 void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
-                        double Frc[3]) {
+                        double Frc[3])
+{
    double magp, mags, p3, s3;
    long j;
 
@@ -420,7 +434,8 @@ void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
       Frc[j] = mu * mass * (s[j] / s3 - p[j] / p3);
 }
 /**********************************************************************/
-void GravPertForce(struct SCType *S) {
+void GravPertForce(struct SCType *S)
+{
    struct OrbitType *O;
    double FgeoN[3], ph[3], p[3], s[3], FrcN[3];
    long Iw, Im, j;
@@ -430,7 +445,8 @@ void GravPertForce(struct SCType *S) {
    if (O->Regime == ORB_CENTRAL) {
       OrbCenter = O->World;
       SecCenter = -1; /* Nonsense value */
-   } else {
+   }
+   else {
       OrbCenter = O->Body1;
       SecCenter = O->Body2;
    }
@@ -487,12 +503,14 @@ void GravPertForce(struct SCType *S) {
             World[EARTH].PriMerAng, FgeoN);
       for (j = 0; j < 3; j++)
          S->FrcN[j] += FgeoN[j];
-   } else if (OrbCenter == MARS) {
+   }
+   else if (OrbCenter == MARS) {
       GMM2B(ModelPath, MarsGravModel.N, MarsGravModel.M, S->mass, S->PosN,
             World[MARS].PriMerAng, FgeoN);
       for (j = 0; j < 3; j++)
          S->FrcN[j] += FgeoN[j];
-   } else if (OrbCenter == LUNA) {
+   }
+   else if (OrbCenter == LUNA) {
       GLGM2(ModelPath, LunaGravModel.N, LunaGravModel.M, S->mass, S->PosN,
             World[LUNA].PriMerAng, FgeoN);
       for (j = 0; j < 3; j++)
@@ -501,7 +519,8 @@ void GravPertForce(struct SCType *S) {
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
-void AeroFrcTrq(struct SCType *S) {
+void AeroFrcTrq(struct SCType *S)
+{
 
    double VrelN[3], WindSpeed, VrelB[3], Area, PolyArea, cp[3];
    double WoN, Coef, Fb[3], Fn[3], Trq[3];
@@ -569,7 +588,8 @@ void AeroFrcTrq(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void SolPressFrcTrq(struct SCType *S) {
+void SolPressFrcTrq(struct SCType *S)
+{
    long Ib, i;
    long Ipoly;
    double svb[3], SoN, Coef, r[3], Fb[3], Fn[3], Tb[3], SolarPressure;
@@ -624,7 +644,8 @@ void SolPressFrcTrq(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void ResidualDipoleTrq(struct SCType *S) {
+void ResidualDipoleTrq(struct SCType *S)
+{
    struct BodyType *B;
    double bvb[3], Trq[3];
    long Ib, i;
@@ -642,7 +663,8 @@ void ResidualDipoleTrq(struct SCType *S) {
 /* Given its components in B, PosB, find its position and velocity    */
 /* wrt R, expressed in N.                                             */
 void FindPosVelR(struct SCType *S, struct BodyType *B, double PosB[3],
-                 double PosR[3], double VelR[3]) {
+                 double PosR[3], double VelR[3])
+{
    double PosCMB[3], PosCMN[3];
    double VelCMB[3], VelCMN[3];
    long i;
@@ -665,7 +687,8 @@ void FindPosVelR(struct SCType *S, struct BodyType *B, double PosB[3],
 /**********************************************************************/
 /* For each Poly in Body B, find force and torque due to contact with */
 /* each poly in Region R.                                             */
-void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R) {
+void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R)
+{
    struct GeomType *Gb, *Gr;
    struct BodyType *B;
    struct PolyType *Pb, *Pr;
@@ -753,7 +776,8 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R) {
             FrcP[2]     = -R->DampCoef * VelP[2] * ContactArea;
             FrcP[0]     = 0.0;
             FrcP[1]     = 0.0;
-         } else {
+         }
+         else {
             ContactArea = (1.0 - PosP[2] / Pb->radius) * Pb->Area;
             FrcP[2] =
                 -(R->ElastCoef * PosP[2] + R->DampCoef * VelP[2]) * ContactArea;
@@ -785,7 +809,8 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R) {
 /* For each Poly in Body Ba, find force and torque due to contact     */
 /* with each poly in Body Bb.                                         */
 void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
-                           long Jbody) {
+                           long Jbody)
+{
    struct GeomType *Ga, *Gb;
    struct BodyType *Ba, *Bb;
    struct PolyType *Pa, *Pb;
@@ -905,7 +930,8 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
             else {
                OCb = &Ob->OctCell[OCb->NextOnHit];
             }
-         } else if (OCb->NextOnMiss == 0)
+         }
+         else if (OCb->NextOnMiss == 0)
             ExhaustedB = 1;
          else {
             OCb = &Ob->OctCell[OCb->NextOnMiss];
@@ -917,7 +943,8 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
          else {
             OCa = &Oa->OctCell[OCa->NextOnHit];
          }
-      } else if (OCa->NextOnMiss == 0)
+      }
+      else if (OCa->NextOnMiss == 0)
          ExhaustedA = 1;
       else {
          OCa = &Oa->OctCell[OCa->NextOnMiss];
@@ -936,7 +963,8 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
    }
 }
 /**********************************************************************/
-void ContactFrcTrq(struct SCType *S) {
+void ContactFrcTrq(struct SCType *S)
+{
    struct OrbitType *O;
    struct RegionType *R;
    struct SCType *Sc;
@@ -1009,7 +1037,8 @@ void ContactFrcTrq(struct SCType *S) {
 /* .. Resolve perturbation torque and force system to torques about   */
 /* .. the S/C cm.  Express these in a special Sun-orbit frame to      */
 /* .. determine actuator capacity requirements.                       */
-void EnvTrq(struct SCType *S) {
+void EnvTrq(struct SCType *S)
+{
    long Ib, i;
    double S1[3], S2[3], S3[3], CSN[3][3];
    double rxF[3], TrqN[3], SumTrqN[3], TrqS[3];
@@ -1067,7 +1096,8 @@ void EnvTrq(struct SCType *S) {
 /*  Remember that torques are expressed in the Body frame, but forces */
 /*  are expressed in the N frame.                                     */
 
-void Perturbations(struct SCType *S) {
+void Perturbations(struct SCType *S)
+{
 
    /* .. Gravity-Gradient Torques */
    if (GGActive)
