@@ -21,7 +21,7 @@
 
 #define TABSIZE           256
 #define TABMASK           (TABSIZE - 1)
-#define PERM(x)           perm[(x)&TABMASK]
+#define PERM(x)           perm[(x) & TABMASK]
 #define INDEX(ix, iy, iz) PERM((ix) + PERM((iy) + PERM(iz)))
 static unsigned char perm[TABSIZE] = {
     225, 155, 210, 108, 175, 119, 221, 144, 203, 116, 70,  213, 69,  158, 33,
@@ -57,7 +57,8 @@ double GradRandomTable[3 * TABSIZE];
 
 /**********************************************************************/
 /* Ref p. 25                                                          */
-void MixColor(float C1[3], float C2[3], double f, float C[3]) {
+void MixColor(float C1[3], float C2[3], double f, float C[3])
+{
    C[0] = (1.0 - f) * C1[0] + f * C2[0];
    C[1] = (1.0 - f) * C1[1] + f * C2[1];
    C[2] = (1.0 - f) * C1[2] + f * C2[2];
@@ -66,7 +67,8 @@ void MixColor(float C1[3], float C2[3], double f, float C[3]) {
 /* Ref p. 34-35, 72                                                   */
 /* Cubic spline interpolation of domain [0:1] equally subdivided by   */
 /* four knots.                                                        */
-double Spline4(double x, double knot[4]) {
+double Spline4(double x, double knot[4])
+{
    double c1, c2, c3;
    x = Clamp(x, 0.0, 1.0);
 
@@ -78,12 +80,14 @@ double Spline4(double x, double knot[4]) {
 }
 /**********************************************************************/
 /* Ref p. 38                                                          */
-double PerlinBias(double b, double x) {
+double PerlinBias(double b, double x)
+{
    return pow(x, log(b) / -0.693147180559945);
 }
 /**********************************************************************/
 /* Ref p. 38                                                          */
-double PerlinGain(double g, double x) {
+double PerlinGain(double g, double x)
+{
    if (x < 0.5)
       return 0.5 * PerlinBias(1.0 - g, 2.0 * x);
    else
@@ -92,7 +96,8 @@ double PerlinGain(double g, double x) {
 /**********************************************************************/
 /* Ref p. 71                                                          */
 /* ValRandomTable gets packed with uniformly distributed PRNs in [-1:1] */
-void InitValRandomTable(int seed) {
+void InitValRandomTable(int seed)
+{
    double *T = ValRandomTable;
    long i;
    srandom(seed);
@@ -101,12 +106,14 @@ void InitValRandomTable(int seed) {
 }
 /**********************************************************************/
 /* Ref p. 71                                                          */
-double vlattice(long ix, long iy, long iz) {
+double vlattice(long ix, long iy, long iz)
+{
    return ValRandomTable[INDEX(ix, iy, iz)];
 }
 /**********************************************************************/
 /* Ref p. 71-72                                                       */
-double vnoise(double x, double y, double z) {
+double vnoise(double x, double y, double z)
+{
    long ix, iy, iz;
    long i, j, k;
    double fx, fy, fz;
@@ -138,7 +145,8 @@ double vnoise(double x, double y, double z) {
 /**********************************************************************/
 /* Ref p. 74-75                                                       */
 /* GradRandomTable gets packed with uniformly distributed PRNs in [-1:1] */
-void InitGradRandomTable(int seed) {
+void InitGradRandomTable(int seed)
+{
    double *T = GradRandomTable;
    double z, r, theta;
    long i;
@@ -153,13 +161,15 @@ void InitGradRandomTable(int seed) {
 }
 /**********************************************************************/
 /* Ref p. 76                                                          */
-double glattice(long ix, long iy, long iz, double fx, double fy, double fz) {
+double glattice(long ix, long iy, long iz, double fx, double fy, double fz)
+{
    double *g = &GradRandomTable[INDEX(ix, iy, iz) * 3];
    return g[0] * fx + g[1] * fy + g[2] * fz;
 }
 /**********************************************************************/
 /* Ref p. 76                                                          */
-double gnoise(double x, double y, double z) {
+double gnoise(double x, double y, double z)
+{
    long ix, iy, iz;
    double fx0, fx1, fy0, fy1, fz0, fz1;
    double wx, wy, wz;
@@ -202,8 +212,8 @@ double gnoise(double x, double y, double z) {
 }
 /**********************************************************************/
 /* Ref p. 86                                                          */
-double turbulence(double x, double y, double z, double MinFreq,
-                  double MaxFreq) {
+double turbulence(double x, double y, double z, double MinFreq, double MaxFreq)
+{
    double t = 0.0;
    double f;
    for (f = MinFreq; f < MaxFreq; f *= 2.0)
@@ -212,7 +222,8 @@ double turbulence(double x, double y, double z, double MinFreq,
 }
 /**********************************************************************/
 double FractalWorley(double p[3], long octaves, double lacunarity,
-                     long DistanceType) {
+                     long DistanceType)
+{
    long i, k;
    double G     = 0.0;
    double scale = 1.0;
@@ -232,7 +243,8 @@ double FractalWorley(double p[3], long octaves, double lacunarity,
 }
 /**********************************************************************/
 double FractalWorley2(double p[3], long octaves, double lacunarity,
-                      long DistanceType) {
+                      long DistanceType)
+{
    long i, k;
    double G     = 0.0;
    double scale = 1.0;
@@ -251,7 +263,8 @@ double FractalWorley2(double p[3], long octaves, double lacunarity,
    return (G);
 }
 /*********************************************************************/
-double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct) {
+double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct)
+{
    long k;
    long ix, iy;
    double kx, ky, fx, fy;
@@ -277,7 +290,8 @@ double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct) {
 }
 /*********************************************************************/
 double ProcTex3D(double x, double y, double z, double Xunit, double Yunit,
-                 double Zunit, long Noct, double Persist) {
+                 double Zunit, long Noct, double Persist)
+{
    long k;
    long ix, iy, iz;
    double kx, ky, kz, fx, fy, fz;
@@ -313,7 +327,8 @@ double ProcTex3D(double x, double y, double z, double Xunit, double Yunit,
 }
 /**********************************************************************/
 double SphereTex(double lng, double lat, double Xunit, double Yunit,
-                 double Zunit, long Noct, double Persist) {
+                 double Zunit, long Noct, double Persist)
+{
    double clat = cos(lat);
    double x    = cos(lng) * clat;
    double y    = sin(lng) * clat;

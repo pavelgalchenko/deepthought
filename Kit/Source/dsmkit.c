@@ -23,8 +23,8 @@
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3],
-                            double wn[3]) {
+void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3])
+{
    double magp, phat[3], Axis[3], Vpar, Vperp[3], magvp;
    long i;
 
@@ -47,7 +47,8 @@ void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3],
 /*  Note!  These are simple, sometimes naive.  Use with care.         */
 /**********************************************************************/
 struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
-                                           struct DSMType *const DSM) {
+                                           struct DSMType *const DSM)
+{
    struct AcGyroType *G;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -72,7 +73,8 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
             appendMeas(measList, meas);
          }
       }
-   } else {
+   }
+   else {
       double A0xA1[3];
       double A[3][3], b[3], Ai[3][3];
       double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
@@ -82,7 +84,8 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
          G = &AC->Gyro[0];
          for (i = 0; i < 3; i++)
             AC->wbn[i] = G->Rate * G->Axis[i];
-      } else if (AC->Ngyro == 2) {
+      }
+      else if (AC->Ngyro == 2) {
          VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
          for (i = 0; i < 3; i++) {
             A[0][i] = AC->Gyro[0].Axis[i];
@@ -94,7 +97,8 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
          b[2] = 0.0;
          MINV3(A, Ai);
          MxV(Ai, b, AC->wbn);
-      } else if (AC->Ngyro > 2) {
+      }
+      else if (AC->Ngyro > 2) {
          /* Normal Equations */
          for (Ig = 0; Ig < AC->Ngyro; Ig++) {
             G = &AC->Gyro[Ig];
@@ -113,7 +117,8 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
 }
 /**********************************************************************/
 struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
-                                                   struct DSMType *const DSM) {
+                                                   struct DSMType *const DSM)
+{
    struct AcMagnetometerType *M;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -138,7 +143,8 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
             appendMeas(measList, meas);
          }
       }
-   } else {
+   }
+   else {
       double A0xA1[3];
       double A[3][3], b[3], Ai[3][3];
       double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
@@ -148,7 +154,8 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
          M = &AC->MAG[0];
          for (i = 0; i < 3; i++)
             AC->bvb[i] = M->Field * M->Axis[i];
-      } else if (AC->Nmag == 2) {
+      }
+      else if (AC->Nmag == 2) {
          VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
          for (i = 0; i < 3; i++) {
             A[0][i] = AC->MAG[0].Axis[i];
@@ -160,7 +167,8 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
          b[2] = 0.0;
          MINV3(A, Ai);
          MxV(Ai, b, AC->bvb);
-      } else if (AC->Nmag > 2) {
+      }
+      else if (AC->Nmag > 2) {
          /* Normal Equations */
          for (Im = 0; Im < AC->Nmag; Im++) {
             M = &AC->MAG[Im];
@@ -179,7 +187,8 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
 }
 /**********************************************************************/
 struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
-                                          struct DSMType *const DSM) {
+                                          struct DSMType *const DSM)
+{
    struct AcCssType *Css;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -203,7 +212,8 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
             appendMeas(measList, meas);
          }
       }
-   } else {
+   }
+   else {
       double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
       double Atb[3]    = {0.0, 0.0, 0.0};
       double AtAi[3][3];
@@ -237,17 +247,20 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
          MINV3(AtA, AtAi);
          MxV(AtAi, Atb, AC->svb);
          UNITV(AC->svb);
-      } else if (Nvalid == 2) {
+      }
+      else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = b[0] * A[0][i] + b[1] * A[1][i];
          UNITV(AC->svb);
-      } else if (Nvalid == 1) {
+      }
+      else if (Nvalid == 1) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = Atb[i];
          UNITV(AC->svb);
-      } else {
+      }
+      else {
          AC->SunValid = FALSE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = InvalidSVB[i];
@@ -258,7 +271,8 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
 /******************************************************************************/
 /* This function assumes FSS FOVs don't overlap, and FSS overwrites CSS */
 struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
-                                          struct DSMType *const DSM) {
+                                          struct DSMType *const DSM)
+{
    struct AcFssType *FSS;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -283,7 +297,8 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
             appendMeas(measList, meas);
          }
       }
-   } else {
+   }
+   else {
       double tanx, tany, z;
 
       for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
@@ -307,7 +322,8 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
 /**********************************************************************/
 /* TODO: Weight measurements to reduce impact of "weak" axis */
 struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
-                                                  struct DSMType *const DSM) {
+                                                  struct DSMType *const DSM)
+{
    struct AcStarTrackerType *ST;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -333,7 +349,8 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
             appendMeas(measList, meas);
          }
       }
-   } else {
+   }
+   else {
       long Nvalid = 0;
       double qbn[4];
       /* Naive averaging */
@@ -352,7 +369,8 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
       if (Nvalid > 0) {
          AC->StValid = TRUE;
          UNITQ(AC->qbn);
-      } else {
+      }
+      else {
          AC->StValid = FALSE;
          AC->qbn[3]  = 1.0;
       }
@@ -361,7 +379,8 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
 }
 /**********************************************************************/
 struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
-                                          struct DSMType *const DSM) {
+                                          struct DSMType *const DSM)
+{
    struct AcGpsType *G;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -409,7 +428,8 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
 }
 /**********************************************************************/
 struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
-                                            struct DSMType *const DSM) {
+                                            struct DSMType *const DSM)
+{
    struct AcAccelType *Acc;
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
@@ -442,7 +462,8 @@ struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
 /**********************************************************************/
 /*  Some Actuator Processing Functions                                */
 /**********************************************************************/
-void DSM_WheelProcessing(struct AcType *AC) {
+void DSM_WheelProcessing(struct AcType *AC)
+{
    struct AcWhlType *W;
    long Iw;
 
@@ -452,7 +473,8 @@ void DSM_WheelProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void DSM_MtbProcessing(struct AcType *AC) {
+void DSM_MtbProcessing(struct AcType *AC)
+{
    struct AcMtbType *M;
    long Im;
 

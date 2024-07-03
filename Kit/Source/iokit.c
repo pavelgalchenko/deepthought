@@ -19,7 +19,8 @@
 */
 
 /**********************************************************************/
-FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode) {
+FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
+{
    FILE *FilePtr;
    char FileName[1024];
 
@@ -33,7 +34,8 @@ FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode) {
    return (FilePtr);
 }
 /**********************************************************************/
-void ByteSwapDouble(double *A) {
+void ByteSwapDouble(double *A)
+{
    char fwd[8], bak[8];
    long i;
 
@@ -46,7 +48,8 @@ void ByteSwapDouble(double *A) {
 /*  This function cribbed from an OpenCL example                      */
 /*  on the Apple developer site                                       */
 int FileToString(const char *file_name, char **result_string,
-                 size_t *string_len) {
+                 size_t *string_len)
+{
    int fd;
    size_t file_len;
    struct stat file_status;
@@ -78,7 +81,8 @@ int FileToString(const char *file_name, char **result_string,
    return 0;
 }
 /**********************************************************************/
-SOCKET InitSocketServer(int Port, int AllowBlocking) {
+SOCKET InitSocketServer(int Port, int AllowBlocking)
+{
 #if defined(_WIN32)
 
    WSADATA wsa;
@@ -189,7 +193,8 @@ SOCKET InitSocketServer(int Port, int AllowBlocking) {
 #endif
 }
 /**********************************************************************/
-SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking) {
+SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
+{
 #if defined(_WIN32)
 
    WSADATA wsa; /* winsock */

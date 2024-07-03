@@ -21,7 +21,8 @@
 */
 
 /*********************************************************************/
-double FindTotalProjectedArea(struct SCType *S, double VecN[3]) {
+double FindTotalProjectedArea(struct SCType *S, double VecN[3])
+{
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
@@ -47,7 +48,8 @@ double FindTotalProjectedArea(struct SCType *S, double VecN[3]) {
    return (ProjArea);
 }
 /*********************************************************************/
-double FindTotalUnshadedProjectedArea(struct SCType *S, double VecN[3]) {
+double FindTotalUnshadedProjectedArea(struct SCType *S, double VecN[3])
+{
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
@@ -75,7 +77,8 @@ double FindTotalUnshadedProjectedArea(struct SCType *S, double VecN[3]) {
    return (ProjArea);
 }
 /*********************************************************************/
-void MagReport(void) {
+void MagReport(void)
+{
    static FILE *magfile;
    static long First = 1;
 
@@ -90,7 +93,8 @@ void MagReport(void) {
            SC[0].AC.bvb[2]);
 }
 /*********************************************************************/
-void GyroReport(void) {
+void GyroReport(void)
+{
    static FILE *gyrofile;
    static long First = 1;
 
@@ -111,7 +115,8 @@ void GyroReport(void) {
            SC[0].AC.wbn[2]);
 }
 /*********************************************************************/
-void DSM_AttitudeReport(void) {
+void DSM_AttitudeReport(void)
+{
    static FILE **attitudefile;
    static long First = 1;
    long Isc;
@@ -144,7 +149,8 @@ void DSM_AttitudeReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_AC_AttitudeReport(void) {
+void DSM_AC_AttitudeReport(void)
+{
    static FILE **attitudefile;
    static long First = 1;
    long Isc;
@@ -177,7 +183,8 @@ void DSM_AC_AttitudeReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_InertialReport(void) {
+void DSM_InertialReport(void)
+{
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
@@ -209,7 +216,8 @@ void DSM_InertialReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_RelativeReport(void) {
+void DSM_RelativeReport(void)
+{
    static FILE **relativefile;
    static long First = 1;
    long Isc;
@@ -250,7 +258,8 @@ void DSM_RelativeReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_AC_InertialReport(void) {
+void DSM_AC_InertialReport(void)
+{
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
@@ -282,7 +291,8 @@ void DSM_AC_InertialReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_NAV_StateReport(void) {
+void DSM_NAV_StateReport(void)
+{
    static FILE **stateFile, **covFile, **timeFile;
    static long First = 1;
    long Isc;
@@ -454,7 +464,8 @@ void DSM_NAV_StateReport(void) {
 /*********************************************************************/
 // Last time I tried to analyze all the data from this, I ran out of memory...
 #if REPORT_RESIDUALS == TRUE
-void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1]) {
+void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1])
+{
    static FILE **residualFile;
    static long First = TRUE;
    long Isc;
@@ -555,7 +566,8 @@ void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1]) {
                         exit(EXIT_FAILURE);
                         break;
                   }
-               } else {
+               }
+               else {
                   switch (sensor) {
                      case GPS_SENSOR:
                         for (int j = 0; j < 6; j++)
@@ -593,7 +605,8 @@ void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1]) {
 }
 #endif
 /*********************************************************************/
-void DSM_ATT_ControlReport(void) {
+void DSM_ATT_ControlReport(void)
+{
    static FILE **attcontrolfile;
    static long First = 1;
    long Isc;
@@ -636,7 +649,8 @@ void DSM_ATT_ControlReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_POS_ControlReport(void) {
+void DSM_POS_ControlReport(void)
+{
    static FILE **poscontrolfile;
    static long First = 1;
    long Isc;
@@ -676,7 +690,8 @@ void DSM_POS_ControlReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_EphemReport(void) {
+void DSM_EphemReport(void)
+{
    static FILE **ephemfile;
    static long First = 1;
    long Isc;
@@ -727,7 +742,8 @@ void DSM_EphemReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_WHLReport(void) {
+void DSM_WHLReport(void)
+{
    static FILE **WHLFile;
    static long First = 1;
    long Isc;
@@ -762,7 +778,8 @@ void DSM_WHLReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_THRReport(void) {
+void DSM_THRReport(void)
+{
    static FILE **THRFile;
    static long First = 1;
    long Isc;
@@ -797,7 +814,8 @@ void DSM_THRReport(void) {
    }
 }
 /*********************************************************************/
-void OrbPropReport(void) {
+void OrbPropReport(void)
+{
    static FILE *FixedFile;
    static FILE *EnckeFile;
    static FILE *CowellFile;
@@ -832,7 +850,8 @@ void OrbPropReport(void) {
    }
 }
 /*********************************************************************/
-void GmatReport(void) {
+void GmatReport(void)
+{
    static FILE *outfile;
    static long First = 1;
    long i;
@@ -851,7 +870,8 @@ void GmatReport(void) {
    }
 }
 /*********************************************************************/
-void Report(void) {
+void Report(void)
+{
    static FILE *timefile, *DynTimeFile, *UtcDateFile;
    static FILE **xfile, **ufile, **xffile, **uffile;
    static FILE **ConstraintFile;
@@ -1001,7 +1021,8 @@ void Report(void) {
             MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].VelR, VelR);
             fprintf(PosRfile, "%le %le %le\n", PosR[0], PosR[1], PosR[2]);
             fprintf(VelRfile, "%le %le %le\n", VelR[0], VelR[1], VelR[2]);
-         } else {
+         }
+         else {
             fprintf(PosRfile, "%le %le %le\n", SC[0].PosR[0], SC[0].PosR[1],
                     SC[0].PosR[2]);
             fprintf(VelRfile, "%le %le %le\n", SC[0].VelR[0], SC[0].VelR[1],

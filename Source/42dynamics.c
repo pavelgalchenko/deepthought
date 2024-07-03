@@ -22,7 +22,8 @@
 /**********************************************************************/
 /*  Adjust body positions and velocities so that they are related to  */
 /*  those of the spacecraft center of mass.                           */
-void MotionConstraints(struct SCType *S) {
+void MotionConstraints(struct SCType *S)
+{
    struct BodyType *B;
    double pcm[3], vcm[3];
    long Ib, i;
@@ -61,7 +62,8 @@ void MotionConstraints(struct SCType *S) {
 /**********************************************************************/
 /*  Given body locations, attitudes, and mass properties,             */
 /*  find SC mass center and inertia matrix.                           */
-void SCMassProps(struct SCType *S) {
+void SCMassProps(struct SCType *S)
+{
    struct BodyType *B0, *B;
    double pnb[3];
    double p2, p[3], pp[3][3], CI0[3][3], MOI[3][3];
@@ -103,7 +105,8 @@ void SCMassProps(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void MapJointStatesToStateVector(struct SCType *S) {
+void MapJointStatesToStateVector(struct SCType *S)
+{
    double CGoGi[3][3], qgogi[4];
    long i, j, Ig;
    struct JointType *G;
@@ -129,7 +132,8 @@ void MapJointStatesToStateVector(struct SCType *S) {
             D->u[G->Rotu0 + i] = G->AngRate[i];
          for (i = 0; i < 4; i++)
             D->x[G->Rotx0 + i] = qgogi[i];
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             D->u[G->Rotu0 + i] = G->AngRate[i];
             D->x[G->Rotx0 + i] = G->Ang[i];
@@ -159,7 +163,8 @@ void MapJointStatesToStateVector(struct SCType *S) {
 }
 /**********************************************************************/
 void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
-                                double *uf, double *xf, struct SCType *S) {
+                                double *uf, double *xf, struct SCType *S)
+{
    double wi[3], ri[3], ro[3], wxr[3], wxri[3], wxro[3];
    double xg[3];
    double CBfiBi[3][3], CBfoBo[3][3], CGoBfi[3][3];
@@ -207,7 +212,8 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
          }
          Q2C(G->q, G->CGoGi);
          C2A(G->RotSeq, G->CGoGi, &G->Ang[0], &G->Ang[1], &G->Ang[2]);
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->AngRate[i] = u[G->Rotu0 + i];
             while (x[G->Rotx0 + i] > Pi)
@@ -267,7 +273,8 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
          MTxM(G->CBoGo, CBfoBo, G->CTrqBo);
          MxM(G->CGoGi, G->CGiBi, CGoBfi);
          MxM(CGoBfi, CBfiBi, G->CTrqBi);
-      } else {
+      }
+      else {
          MxM(G->CGoGi, G->CGiBi, G->CTrqBi);
       }
       MTxM(G->CTrqBo, G->CTrqBi, G->COI);
@@ -283,7 +290,8 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
             wi[i]      = Bi->wn[i] + G->FlexAngVeli[i];
          }
          MxV(G->COI, wi, wo);
-      } else {
+      }
+      else {
          MxV(G->COI, Bi->wn, wo);
       }
       for (i = 0; i < 3; i++)
@@ -338,7 +346,8 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
    }
 }
 /**********************************************************************/
-void BodyStatesToNodeStates(struct SCType *S) {
+void BodyStatesToNodeStates(struct SCType *S)
+{
    struct BodyType *B;
    struct NodeType *N;
    double vb[3], wxr[3];
@@ -387,7 +396,8 @@ void BodyStatesToNodeStates(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindTotalAngMom(struct SCType *S) {
+void FindTotalAngMom(struct SCType *S)
+{
 
    struct BodyType *B;
    struct WhlType *W;
@@ -428,7 +438,8 @@ void FindTotalAngMom(struct SCType *S) {
    MxV(S->B[0].CN, S->Hvn, S->Hvb);
 }
 /**********************************************************************/
-double FindTotalKineticEnergy(struct SCType *S) {
+double FindTotalKineticEnergy(struct SCType *S)
+{
    struct BodyType *B;
    struct WhlType *W;
    double Iw[3], mv[3];
@@ -449,14 +460,16 @@ double FindTotalKineticEnergy(struct SCType *S) {
 
    if (Orb[S->RefOrb].Regime == ORB_ZERO) {
       KE += 0.5 * S->mass * VoV(S->VelN, S->VelN);
-   } else if (Orb[S->RefOrb].Regime == ORB_FLIGHT) {
+   }
+   else if (Orb[S->RefOrb].Regime == ORB_FLIGHT) {
       KE += 0.5 * S->mass * VoV(S->VelR, S->VelR);
    }
 
    return (KE);
 }
 /**********************************************************************/
-void FindBodyPathDCMs(struct SCType *S) {
+void FindBodyPathDCMs(struct SCType *S)
+{
    struct DynType *D;
    struct JointType *G;
    long Ig, i, j, Bo, Bi, Gi;
@@ -479,7 +492,8 @@ void FindBodyPathDCMs(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindPathVectors(struct SCType *S) {
+void FindPathVectors(struct SCType *S)
+{
    struct DynType *D;
    struct JointType *G;
    double ri[3], ro[3];
@@ -508,7 +522,8 @@ void FindPathVectors(struct SCType *S) {
 }
 /**********************************************************************/
 /*  PAngVel and IPAngVel                                              */
-void FindPAngVel(struct SCType *S) {
+void FindPAngVel(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib;
    struct JointType *G;
@@ -585,7 +600,8 @@ void FindPAngVel(struct SCType *S) {
 }
 /**********************************************************************/
 /* PVel and mPVel                                                     */
-void FindPVel(struct SCType *S) {
+void FindPVel(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
@@ -658,7 +674,8 @@ void FindPVel(struct SCType *S) {
 }
 /**********************************************************************/
 /*  PAngVelf and IPAngVelf                                            */
-void FindPAngVelf(struct SCType *S) {
+void FindPAngVelf(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi, *Go;
@@ -737,7 +754,8 @@ void FindPAngVelf(struct SCType *S) {
 }
 /**********************************************************************/
 /* PVelf and mPVelf                                                   */
-void FindPVelf(struct SCType *S) {
+void FindPVelf(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi, *Go;
@@ -807,7 +825,8 @@ void FindPVelf(struct SCType *S) {
 }
 /**********************************************************************/
 /* Add (c+Pf*eta)xPVel to IPAngVel                                    */
-void AugmentIPAngVel(struct SCType *S) {
+void AugmentIPAngVel(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
@@ -876,7 +895,8 @@ void AugmentIPAngVel(struct SCType *S) {
 }
 /**********************************************************************/
 /* Add -(c+Pf*eta)xPAngVel to mPVel                                   */
-void AugmentMPVel(struct SCType *S) {
+void AugmentMPVel(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
@@ -916,7 +936,8 @@ void AugmentMPVel(struct SCType *S) {
 }
 /**********************************************************************/
 /* Add (c+Pf*eta)xPVelf + (Hf+Qf*eta) to IPAngVelf                    */
-void AugmentIPAngVelf(struct SCType *S) {
+void AugmentIPAngVelf(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
@@ -988,7 +1009,8 @@ void AugmentIPAngVelf(struct SCType *S) {
 }
 /**********************************************************************/
 /* Add -[(c+Pf*eta)xPAngVelf - Pf] to mPVelf                          */
-void AugmentMPVelf(struct SCType *S) {
+void AugmentMPVelf(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
@@ -1057,7 +1079,8 @@ void AugmentMPVelf(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindHplusQetaPAngVelf(struct SCType *S) {
+void FindHplusQetaPAngVelf(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
@@ -1116,7 +1139,8 @@ void FindHplusQetaPAngVelf(struct SCType *S) {
 }
 /**********************************************************************/
 /* Compute Pf^T*CBN*PVelf                                             */
-void FindPCPVelf(struct SCType *S) {
+void FindPCPVelf(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
@@ -1172,7 +1196,8 @@ void FindPCPVelf(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindAlphaR(struct SCType *S) {
+void FindAlphaR(struct SCType *S)
+{
    struct JointType *G;
    struct BodyType *Bi, *Bo;
    double CGs[3], CGds[3];
@@ -1205,7 +1230,8 @@ void FindAlphaR(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindAccR(struct SCType *S) {
+void FindAccR(struct SCType *S)
+{
    struct JointType *G;
    struct BodyType *Bi, *Bo;
    double wxr[3], wxwxr[3], Cwri[3], Cwro[3];
@@ -1261,7 +1287,8 @@ void FindAccR(struct SCType *S) {
 }
 /**********************************************************************/
 /*  Find Peta, cplusPeta, HplusQeta, CnbP for each body          */
-void FindFlexTerms(struct SCType *S) {
+void FindFlexTerms(struct SCType *S)
+{
    struct BodyType *B;
    long Nf, Ib, i, j, k;
    double cPe[3];
@@ -1309,7 +1336,8 @@ void FindFlexTerms(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindInertiaTrq(struct SCType *S) {
+void FindInertiaTrq(struct SCType *S)
+{
    struct BodyType *B;
    struct WhlType *W;
    double H[3], wxH[3], Ia[3];
@@ -1352,7 +1380,8 @@ void FindInertiaTrq(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindInertiaFrc(struct SCType *S) {
+void FindInertiaFrc(struct SCType *S)
+{
    struct BodyType *B;
    double cPexa[3], cPexw[3], cPexwxw[3], Pxi[3], wxPxi[3];
    double FlexInertiaFrc[3], FlexInertiaFrcN[3];
@@ -1387,7 +1416,8 @@ void FindInertiaFrc(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindFlexInertiaFrc(struct SCType *S) {
+void FindFlexInertiaFrc(struct SCType *S)
+{
    long Ib, Nf, f0;
    struct BodyType *B;
    struct DynType *D;
@@ -1464,7 +1494,8 @@ void FindFlexInertiaFrc(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindFlexFrc(struct SCType *S) {
+void FindFlexFrc(struct SCType *S)
+{
    long Ib, In, i, k, Nf, f0;
    struct BodyType *B;
    struct DynType *D;
@@ -1494,7 +1525,8 @@ void FindFlexFrc(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void EchoPVel(struct SCType *S) {
+void EchoPVel(struct SCType *S)
+{
    FILE *outfile;
    long i, j, Nb, Nu, Nf;
    struct DynType *D;
@@ -1610,7 +1642,8 @@ void EchoPVel(struct SCType *S) {
    fclose(outfile);
 }
 /**********************************************************************/
-void EchoEOM(double **COEF, double *State, double *RHS, long Ns) {
+void EchoEOM(double **COEF, double *State, double *RHS, long Ns)
+{
    FILE *outfile;
    long i, j;
 
@@ -1634,7 +1667,8 @@ void EchoEOM(double **COEF, double *State, double *RHS, long Ns) {
    fclose(outfile);
 }
 /**********************************************************************/
-void EchoUdot(double *State, long Ns) {
+void EchoUdot(double *State, long Ns)
+{
    static FILE *outfile;
    long i;
    static long First = 1;
@@ -1649,7 +1683,8 @@ void EchoUdot(double *State, long Ns) {
    fprintf(outfile, "\n");
 }
 /********************************************************************/
-void EchoRemAcc(struct SCType *S) {
+void EchoRemAcc(struct SCType *S)
+{
    FILE *outfile;
    long i, Ib;
    struct BodyType *B;
@@ -1697,8 +1732,8 @@ void EchoRemAcc(struct SCType *S) {
 /**********************************************************************/
 void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
                   double *xf, double *udot, double *xdot, double *hdot,
-                  double *adot, double *ufdot, double *xfdot,
-                  struct SCType *S) {
+                  double *adot, double *ufdot, double *xfdot, struct SCType *S)
+{
    long i, j, k, Nk, Ig, Ib, Iw, N, ii, jj;
    struct DynType *D;
    struct JointType *G;
@@ -1911,7 +1946,8 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
          udot[D->ActiveStateIdx[i]] = D->ActiveState[i];
       for (i = 0; i < D->Nf; i++)
          ufdot[i] = D->ActiveState[N + i];
-   } else {
+   }
+   else {
       for (i = 0; i < D->Nu; i++)
          udot[i] = D->ActiveState[i];
       for (i = 0; i < D->Nf; i++)
@@ -1926,7 +1962,8 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
       G = &S->G[Ig];
       if (G->IsSpherical) {
          QW2QDOT(&x[G->Rotx0], &u[G->Rotu0], &xdot[G->Rotx0]);
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++)
             xdot[G->Rotx0 + i] = u[G->Rotu0 + i];
       }
@@ -1948,7 +1985,8 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
 }
 /**********************************************************************/
 /*  PAngVelc (for Constraints)                                        */
-void FindPAngVelc(struct SCType *S) {
+void FindPAngVelc(struct SCType *S)
+{
    struct DynType *D;
    struct JointType *G;
    double CGo[3][3], CG[3][3];
@@ -1997,7 +2035,8 @@ void FindPAngVelc(struct SCType *S) {
 }
 /**********************************************************************/
 /* PVelc (for Constraints)                                            */
-void FindPVelc(struct SCType *S) {
+void FindPVelc(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *Bjb;
    struct JointType *G;
@@ -2051,7 +2090,8 @@ void FindPVelc(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void KaneNBodyConstraints(struct SCType *S) {
+void KaneNBodyConstraints(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *B;
    struct JointType *G;
@@ -2175,7 +2215,8 @@ void KaneNBodyConstraints(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void FindBodyAccelerations(struct SCType *S) {
+void FindBodyAccelerations(struct SCType *S)
+{
    struct DynType *D;
    struct BodyType *B;
    long Ib, i, j;
@@ -2195,7 +2236,8 @@ void FindBodyAccelerations(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void KaneNBodyRK4(struct SCType *S) {
+void KaneNBodyRK4(struct SCType *S)
+{
    struct DynType *D;
    struct JointType *G;
    double *u, *uu, *du, *udot;
@@ -2258,7 +2300,8 @@ void KaneNBodyRK4(struct SCType *S) {
             G->ActiveRotDOF++;
             D->ActiveStateIdx[D->Ns] = iu;
             D->Ns++;
-         } else {
+         }
+         else {
             u[iu] = 0.0;
          }
          iu++;
@@ -2270,7 +2313,8 @@ void KaneNBodyRK4(struct SCType *S) {
             G->ActiveTrnDOF++;
             D->ActiveStateIdx[D->Ns] = iu;
             D->Ns++;
-         } else {
+         }
+         else {
             u[iu] = 0.0;
          }
          iu++;
@@ -2442,7 +2486,8 @@ void KaneNBodyRK4(struct SCType *S) {
 /* will work, but this should be faster.                              */
 void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
                 double *udot, double *xdot, double *hdot, double *ufdot,
-                double *xfdot, struct SCType *S) {
+                double *xfdot, struct SCType *S)
+{
    struct BodyType *B;
    struct DynType *D;
    struct NodeType *FN;
@@ -2511,7 +2556,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
          for (If = 0; If < Nf; If++) {
             ufdot[If] = D->FlexFrc[If] / B->Mf[If][If];
          }
-      } else {
+      }
+      else {
          LINSOLVE(B->Mf, ufdot, D->FlexFrc, Nf);
       }
       /* Flex Kinematics */
@@ -2521,7 +2567,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
    }
 }
 /**********************************************************************/
-void OneBodyRK4(struct SCType *S) {
+void OneBodyRK4(struct SCType *S)
+{
    struct DynType *D;
    struct WhlType *W;
    double *u, *uu, *du, *udot;
@@ -2677,7 +2724,8 @@ void OneBodyRK4(struct SCType *S) {
 /*  Finds rotational and translational joint partials                         */
 /*  On Init, populate all matrix elements.  Else, only populate               */
 /*  variable ones.                                                            */
-void OrderNJointPartials(struct JointType *G) {
+void OrderNJointPartials(struct JointType *G)
+{
    double s2, c2, s3, c3;
    double Pw[3][3]    = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
    double Pwdot[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
@@ -2745,7 +2793,8 @@ void OrderNJointPartials(struct JointType *G) {
          Pwdot[i2][0] = s2 * s3 * G->AngRate[1] - c2 * c3 * G->AngRate[2];
          Pwdot[i2][1] = -s3 * G->AngRate[2];
          Pwdot[i3][0] = c2 * G->AngRate[1];
-      } else if (Cyclic < 0) { /* 321, 132, 213 */
+      }
+      else if (Cyclic < 0) { /* 321, 132, 213 */
          Pw[i1][0] = c2 * c3;
          Pw[i1][1] = -s3;
          Pw[i2][0] = c2 * s3;
@@ -2758,7 +2807,8 @@ void OrderNJointPartials(struct JointType *G) {
          Pwdot[i2][0] = -s2 * s3 * G->AngRate[1] + c2 * c3 * G->AngRate[2];
          Pwdot[i2][1] = -s3 * G->AngRate[2];
          Pwdot[i3][0] = -c2 * G->AngRate[1];
-      } else {
+      }
+      else {
          printf("RotSeq %ld is not a Body-3 Sequence, so is not supported.\n",
                 G->RotSeq);
          exit(1);
@@ -2784,7 +2834,8 @@ void OrderNJointPartials(struct JointType *G) {
    }
 }
 /******************************************************************************/
-void MINV1to6(double A[6][6], double AI[6][6], long N) {
+void MINV1to6(double A[6][6], double AI[6][6], long N)
+{
    long I, J, ROW;
    long IPIVOT = 0;
    double M[6][6];
@@ -2842,7 +2893,8 @@ void MINV1to6(double A[6][6], double AI[6][6], long N) {
    }
 }
 /******************************************************************************/
-void ShiftArtFrc(double F[6], double r[3], double Fbar[6]) {
+void ShiftArtFrc(double F[6], double r[3], double Fbar[6])
+{
    double rxF[3];
 
    VxV(r, &F[3], rxF);
@@ -2855,7 +2907,8 @@ void ShiftArtFrc(double F[6], double r[3], double Fbar[6]) {
    Fbar[5] = F[5];
 }
 /******************************************************************************/
-void ShiftSpatAcc(double a[6], double r[3], double abar[6]) {
+void ShiftSpatAcc(double a[6], double r[3], double abar[6])
+{
    double axr[3];
 
    VxV(&a[0], r, axr);
@@ -2868,7 +2921,8 @@ void ShiftSpatAcc(double a[6], double r[3], double abar[6]) {
    abar[5] = a[5] + axr[2];
 }
 /******************************************************************************/
-void ShiftArtMass(double A[6][6], double r[3], double B[6][6]) {
+void ShiftArtMass(double A[6][6], double r[3], double B[6][6])
+{
    double rx[3][3], rxA21[3][3], A12xr[3][3], rxA22[3][3], A22xr[3][3],
        rxA22xr[3][3];
    long i, j, k;
@@ -2911,7 +2965,8 @@ void ShiftArtMass(double A[6][6], double r[3], double B[6][6]) {
    }
 }
 /******************************************************************************/
-void RotateSpatVec(double CBA[3][3], double Va[6], double Vb[6]) {
+void RotateSpatVec(double CBA[3][3], double Va[6], double Vb[6])
+{
    long i, j;
 
    for (i = 0; i < 3; i++) {
@@ -2924,7 +2979,8 @@ void RotateSpatVec(double CBA[3][3], double Va[6], double Vb[6]) {
    }
 }
 /******************************************************************************/
-void RotateSpatMat(double CBA[3][3], double Ma[6][6], double Mb[6][6]) {
+void RotateSpatMat(double CBA[3][3], double Ma[6][6], double Mb[6][6])
+{
    double CM11[3][3], CM12[3][3], CM21[3][3], CM22[3][3];
    long i, j, k;
 
@@ -2959,20 +3015,23 @@ void RotateSpatMat(double CBA[3][3], double Ma[6][6], double Mb[6][6]) {
    }
 }
 /******************************************************************************/
-void OrderNJointCOI(struct JointType *G) {
+void OrderNJointCOI(struct JointType *G)
+{
    double CBoGi[3][3];
 
    if (G->IsSpherical) {
       Q2C(G->q, G->CGoGi);
       C2A(G->RotSeq, G->CGoGi, &G->Ang[0], &G->Ang[1], &G->Ang[2]);
-   } else
+   }
+   else
       A2C(G->RotSeq, G->Ang[0], G->Ang[1], G->Ang[2], G->CGoGi);
 
    MxM(G->CBoGo, G->CGoGi, CBoGi);
    MxM(CBoGi, G->CGiBi, G->COI);
 }
 /******************************************************************************/
-void ScatterStates(struct JointType *G) {
+void ScatterStates(struct JointType *G)
+{
    struct BodyType *Bi, *Bo;
    double Pwu[3], Pvu[3], Pdwu[3];
    double pni[3], vi[3], Cvi[3], wxPvu[3], ai[3], Cai[3];
@@ -3051,7 +3110,8 @@ void ScatterStates(struct JointType *G) {
    }
 }
 /******************************************************************************/
-void GatherMassAndForce(struct JointType *G, struct SCType *S) {
+void GatherMassAndForce(struct JointType *G, struct SCType *S)
+{
    struct BodyType *Bo;
    struct JointType *Gd;
    double F[6], TF[6], CTF[6], rdk[3], SCTF[6];
@@ -3115,7 +3175,8 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S) {
    }
 }
 /******************************************************************************/
-void GatherDynMtx(struct JointType *G, struct SCType *S) {
+void GatherDynMtx(struct JointType *G, struct SCType *S)
+{
    double MP[6][6];
    long i, j, k;
 
@@ -3161,7 +3222,8 @@ void GatherDynMtx(struct JointType *G, struct SCType *S) {
    }
 }
 /******************************************************************************/
-void ScatterStateDerivatives(struct JointType *G) {
+void ScatterStateDerivatives(struct JointType *G)
+{
    struct BodyType *Bi, *Bo;
    double Ma[6], Saui[6], CSaui[6], F[6], CSauiPudot[6], rko[3];
    long i, j;
@@ -3193,7 +3255,8 @@ void ScatterStateDerivatives(struct JointType *G) {
    ShiftSpatAcc(CSauiPudot, rko, Bo->AccU);
 }
 /******************************************************************************/
-void OrderNMultiBodyEOM(struct SCType *S) {
+void OrderNMultiBodyEOM(struct SCType *S)
+{
    struct BodyType *B, *Bi, *Bo;
    struct JointType *G;
    struct WhlType *W;
@@ -3333,7 +3396,8 @@ void OrderNMultiBodyEOM(struct SCType *S) {
    }
 }
 /******************************************************************************/
-void OrderNMultiBodyRK4(struct SCType *S) {
+void OrderNMultiBodyRK4(struct SCType *S)
+{
    struct DynType *D; /* Copy to/from D->u, D->x */
    struct BodyType *B;
    struct JointType *G;
@@ -3366,7 +3430,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->RKqm[i] = D->x[G->Rotx0 + i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->RKqm[i] = D->x[G->Rotx0 + i];
          }
@@ -3409,7 +3474,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->Ang[i] = G->RKqm[i];
          }
@@ -3450,7 +3516,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->RKdq[i] = f * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->RKdq[i] = f * G->qdot[i];
          }
@@ -3494,7 +3561,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i] + dt * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->Ang[i] = G->RKqm[i] +
                         dt * G->qdot[i]; /* "q" here used for angle states */
@@ -3536,7 +3604,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->RKdq[i] += f * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->RKdq[i] += f * G->qdot[i];
          }
@@ -3580,7 +3649,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i] + dt * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->Ang[i] = G->RKqm[i] +
                         dt * G->qdot[i]; /* "q" here used for angle states */
@@ -3622,7 +3692,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->RKdq[i] += f * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->RKdq[i] += f * G->qdot[i];
          }
@@ -3666,7 +3737,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i] + dt * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->Ang[i] = G->RKqm[i] +
                         dt * G->qdot[i]; /* "q" here used for angle states */
@@ -3708,7 +3780,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
          for (i = 0; i < 4; i++) {
             G->RKdq[i] += f * G->qdot[i];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             G->RKdq[i] += f * G->qdot[i];
          }
@@ -3748,7 +3821,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
             D->x[G->Rotx0 + i] = G->RKqm[i] + dt * G->RKdq[i];
          }
          UNITQ(&D->x[G->Rotx0]);
-      } else {
+      }
+      else {
          for (i = 0; i < G->RotDOF; i++) {
             D->x[G->Rotx0 + i] =
                 G->RKqm[i] +
@@ -3771,7 +3845,8 @@ void OrderNMultiBodyRK4(struct SCType *S) {
 /**********************************************************************/
 /* Utility function for Encke's method.  Computes f(q).               */
 /* See Battin, p. 449                                                 */
-double EnckeFQ(double r[3], double delta[3]) {
+double EnckeFQ(double r[3], double delta[3])
+{
    double q, q1;
 
    q = (delta[0] * (delta[0] - 2.0 * r[0]) +
@@ -3790,7 +3865,8 @@ double EnckeFQ(double r[3], double delta[3]) {
 /*   u[3-5] is Vrel(1-3)                                              */
 
 void EnckeEOM(double u[6], double udot[6], double R[3], double muR3,
-              double a[3]) {
+              double a[3])
+{
    double r[3], fq;
 
    udot[0] = u[3];
@@ -3810,7 +3886,8 @@ void EnckeEOM(double u[6], double udot[6], double R[3], double muR3,
 /**********************************************************************/
 /* Integration of orbital equations of motion                         */
 /* by 4th order Runge-Kutta                                           */
-void EnckeRK4(struct SCType *S) {
+void EnckeRK4(struct SCType *S)
+{
    double accel[3], R[3], magr, muR3;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
@@ -3858,7 +3935,8 @@ void EnckeRK4(struct SCType *S) {
 }
 /**********************************************************************/
 void CowellEOM(double u[6], double udot[6], double mu, double mass,
-               double Frc[3]) {
+               double Frc[3])
+{
    double r, muR3;
 
    r    = MAGV(u);
@@ -3874,7 +3952,8 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass,
 /**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
-void CowellRK4(struct SCType *S) {
+void CowellRK4(struct SCType *S)
+{
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
    struct OrbitType *O;
@@ -3911,7 +3990,8 @@ void CowellRK4(struct SCType *S) {
 }
 /**********************************************************************/
 void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
-                         double GravAcc[3], double Frc[3]) {
+                         double GravAcc[3], double Frc[3])
+{
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
@@ -3922,7 +4002,8 @@ void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
 /**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
-void PolyhedronCowellRK4(struct SCType *S) {
+void PolyhedronCowellRK4(struct SCType *S)
+{
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
    struct OrbitType *O;
@@ -3977,7 +4058,8 @@ void PolyhedronCowellRK4(struct SCType *S) {
 /*   u[3-5] is Vrel(1-3)                                              */
 
 void ThreeBodyEnckeEOM(double u[6], double udot[6], double R1[3], double muR13,
-                       double R2[3], double muR23, double a[3]) {
+                       double R2[3], double muR23, double a[3])
+{
    double r1[3], r2[3], fq1, fq2;
 
    udot[0] = u[3];
@@ -4002,7 +4084,8 @@ void ThreeBodyEnckeEOM(double u[6], double udot[6], double R1[3], double muR13,
 /**********************************************************************/
 /* Integration of equations of perturbed motion from three-body orbit */
 /* by 4th order Runge-Kutta                                           */
-void ThreeBodyEnckeRK4(struct SCType *S) {
+void ThreeBodyEnckeRK4(struct SCType *S)
+{
    double accel[3], R1[3], MagR1, muR13, R2[3], MagR2, muR23;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
@@ -4057,7 +4140,8 @@ void ThreeBodyEnckeRK4(struct SCType *S) {
 /************************************************************/
 /*  Euler-Hill linearized EOM for near-circular orbits.     */
 
-void EulHillEOM(double u[6], double udot[6], double n, double a[3]) {
+void EulHillEOM(double u[6], double udot[6], double n, double a[3])
+{
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
@@ -4069,7 +4153,8 @@ void EulHillEOM(double u[6], double udot[6], double n, double a[3]) {
 /* Integration of orbital equations of motion                         */
 /* by 4th order Runge-Kutta                                           */
 /* State u[0:2] = r, u[3:5] = v                                       */
-void EulHillRK4(struct SCType *S) {
+void EulHillRK4(struct SCType *S)
+{
    double accelN[3], accel[3];
    double CLprop[3][3], CLN[3][3];
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
@@ -4116,7 +4201,8 @@ void EulHillRK4(struct SCType *S) {
 }
 /**********************************************************************/
 void ThreeBodyOrbitEOM(double mu1, double mu2, double p[3], double u[6],
-                       double udot[6]) {
+                       double udot[6])
+{
 
    double r2[3], r13, r23, p3, c1, c2, c3;
 
@@ -4145,7 +4231,8 @@ void ThreeBodyOrbitEOM(double mu1, double mu2, double p[3], double u[6],
 /************************************************************/
 /*  Propagates motion of Reference Orbit under              */
 /*  gravitational attraction of two large bodies.           */
-void ThreeBodyOrbitRK4(struct OrbitType *O) {
+void ThreeBodyOrbitRK4(struct OrbitType *O)
+{
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
@@ -4178,7 +4265,8 @@ void ThreeBodyOrbitRK4(struct OrbitType *O) {
    O->VelN[2] = u[5];
 }
 /**********************************************************************/
-void FixedOrbitPosition(struct SCType *S) {
+void FixedOrbitPosition(struct SCType *S)
+{
    struct OrbitType *O;
    struct FormationType *Fr;
 
@@ -4187,7 +4275,8 @@ void FixedOrbitPosition(struct SCType *S) {
    if (Fr->FixedInFrame == 'L') {
       /* TODO: This misbehaves for hyperbolic orbit.  Investigate */
       MxV(O->CLN, S->PosEH, S->PosR);
-   } else {
+   }
+   else {
       MTxV(O->CLN, S->PosR, S->PosEH);
    }
 }
@@ -4198,7 +4287,8 @@ void FixedOrbitPosition(struct SCType *S) {
 /*   multi-body S/C).                                                 */
 /*   Thus, S->Frc = External component                                */
 /*   and   S->B[j].Frc = Internal component                           */
-void PartitionForces(struct SCType *S) {
+void PartitionForces(struct SCType *S)
+{
    long i, Ib;
    double FextN[3] = {0.0, 0.0, 0.0};
    double FextB[3];
@@ -4222,7 +4312,8 @@ void PartitionForces(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void Dynamics(struct SCType *S) {
+void Dynamics(struct SCType *S)
+{
    struct OrbitType *O;
 
    O = &Orb[S->RefOrb];
@@ -4247,7 +4338,8 @@ void Dynamics(struct SCType *S) {
       case ORB_FLIGHT:
          if (O->PolyhedronGravityEnabled) {
             PolyhedronCowellRK4(S);
-         } else
+         }
+         else
             CowellRK4(S);
          break;
       case ORB_CENTRAL:

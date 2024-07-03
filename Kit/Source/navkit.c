@@ -26,19 +26,23 @@ extern void DSM_NAV_ResidualsReport(double time,
                                     double **residuals[FIN_SENSOR + 1]);
 #endif
 
-void InitMeasList(struct DSMMeasListType *list) {
+void InitMeasList(struct DSMMeasListType *list)
+{
    list->head    = NULL;
    list->length  = 0;
    list->measDim = 0;
 }
 
-void appendMeas(struct DSMMeasListType *list, struct DSMMeasType *newMeas) {
+void appendMeas(struct DSMMeasListType *list, struct DSMMeasType *newMeas)
+{
    struct DSMMeasType *last = list->head;
    if (newMeas == NULL) {
       return;
-   } else if (last == NULL) {
+   }
+   else if (last == NULL) {
       list->head = newMeas;
-   } else {
+   }
+   else {
       while (last->nextMeas != NULL) {
          last = last->nextMeas;
       }
@@ -49,13 +53,16 @@ void appendMeas(struct DSMMeasListType *list, struct DSMMeasType *newMeas) {
    list->measDim += newMeas->errDim;
 }
 
-void appendList(struct DSMMeasListType *list1, struct DSMMeasListType *list2) {
+void appendList(struct DSMMeasListType *list1, struct DSMMeasListType *list2)
+{
    struct DSMMeasType *last = list1->head;
    if (list2->head == NULL) {
       return;
-   } else if (last == NULL) {
+   }
+   else if (last == NULL) {
       list1->head = list2->head;
-   } else {
+   }
+   else {
       while (last->nextMeas != NULL) {
          last = last->nextMeas;
       }
@@ -66,7 +73,8 @@ void appendList(struct DSMMeasListType *list1, struct DSMMeasListType *list2) {
    list1->measDim += list2->measDim;
 }
 
-void DestroyMeas(struct DSMMeasType *meas) {
+void DestroyMeas(struct DSMMeasType *meas)
+{
    free(meas->data);
    free(meas->R);
    DestroyMatrix(meas->N);
@@ -74,7 +82,8 @@ void DestroyMeas(struct DSMMeasType *meas) {
    meas = NULL;
 }
 
-void push(struct DSMMeasListType *list, struct DSMMeasType *meas) {
+void push(struct DSMMeasListType *list, struct DSMMeasType *meas)
+{
    struct DSMMeasType *last = meas;
    long measDim             = last->errDim;
    long length              = 1;
@@ -90,7 +99,8 @@ void push(struct DSMMeasListType *list, struct DSMMeasType *meas) {
    list->measDim  += measDim;
 }
 
-struct DSMMeasType *pop_DSMMeas(struct DSMMeasListType *list) {
+struct DSMMeasType *pop_DSMMeas(struct DSMMeasListType *list)
+{
    if (list->head == NULL)
       return NULL;
    struct DSMMeasType *meas  = list->head;
@@ -101,7 +111,8 @@ struct DSMMeasType *pop_DSMMeas(struct DSMMeasListType *list) {
    return meas;
 }
 
-void DestroyMeasList(struct DSMMeasListType *list) {
+void DestroyMeasList(struct DSMMeasListType *list)
+{
    struct DSMMeasType *meas = pop_DSMMeas(list);
    while (meas != NULL) {
       DestroyMeas(meas);
@@ -110,7 +121,8 @@ void DestroyMeasList(struct DSMMeasListType *list) {
 }
 
 struct DSMMeasType *swap_DSMMeas(struct DSMMeasType *ptr1,
-                                 struct DSMMeasType *ptr2) {
+                                 struct DSMMeasType *ptr2)
+{
    struct DSMMeasType *tmp = ptr2->nextMeas;
    ptr2->nextMeas          = ptr1;
    ptr1->nextMeas          = tmp;
@@ -120,7 +132,8 @@ struct DSMMeasType *swap_DSMMeas(struct DSMMeasType *ptr1,
 // Measurements lists shouldn't be that long, maybe 20 or so per call, so bubble
 // sort should be fine Likely won't need to sort anything anyway do to how lists
 // are populated
-void bubbleSort(struct DSMMeasListType *list) {
+void bubbleSort(struct DSMMeasListType *list)
+{
    long count = list->length;
    struct DSMMeasType **node;
    long i, j, swapped;
@@ -148,8 +161,8 @@ void bubbleSort(struct DSMMeasListType *list) {
 }
 
 struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
-                               enum sensorType const type,
-                               long const sensorNum) {
+                               enum sensorType const type, long const sensorNum)
+{
    struct DSMMeasType *meas, *sourceMeas = &Nav->measTypes[type][sensorNum];
    meas                  = malloc(sizeof *meas);
    meas->measFun         = sourceMeas->measFun;
@@ -174,7 +187,8 @@ struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
 //------------------------------------------------------------------------------
 // Used to order the array of measurements
 //------------------------------------------------------------------------------
-int comparator_DSMMeas(const void *v1, const void *v2) {
+int comparator_DSMMeas(const void *v1, const void *v2)
+{
    const struct DSMMeasType *m1 = *(struct DSMMeasType **)v1;
    const struct DSMMeasType *m2 = *(struct DSMMeasType **)v2;
    if (m1->step < m2->step)
@@ -199,7 +213,8 @@ int comparator_DSMMeas(const void *v1, const void *v2) {
 
 // Take in GPS time information, output time since J2000 TT
 double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
-                        double const gpsSec) {
+                        double const gpsSec)
+{
    const double secPerDay       = 86400.0;
    const double dayperWk        = 7.0;
    const double daysperRollover = 7168.0;
@@ -218,7 +233,8 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
 /**********************************************************************/
 /* Given a time in seconds since J2000 TT, find the Prime Meridian    */
 /* offset angle of a given world.                                     */
-double GetPriMerAng(const long orbCenter, const struct DateType *date) {
+double GetPriMerAng(const long orbCenter, const struct DateType *date)
+{
    // Subtract the memory location of the starting index of the World array from
    // the memory location of W to get the index of W
    struct WorldType *W = &World[orbCenter];
@@ -275,7 +291,8 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date) {
 void SphericalHarmonicsJacobian(long N, long M, double r, double pbe[3],
                                 double phi, double theta, double Re, double K,
                                 double C[19][19], double S[19][19],
-                                double HV[3][3]) {
+                                double HV[3][3])
+{
    double P[19][19], sdP[19][19];
    long n, m;
    double cphi[M + 1], sphi[M + 1];
@@ -359,7 +376,8 @@ void SphericalHarmonicsJacobian(long N, long M, double r, double pbe[3],
    HV[2][1] = HV[1][2];
 }
 
-struct SphereHarmType *getGravModel(long Iworld) {
+struct SphereHarmType *getGravModel(long Iworld)
+{
    struct SphereHarmType *gravModel = NULL;
    switch (Iworld) {
       case EARTH:
@@ -379,7 +397,8 @@ struct SphereHarmType *getGravModel(long Iworld) {
 
 void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
                                double PriMerAng, double pbn[3],
-                               double HgeoN[3][3]) {
+                               double HgeoN[3][3])
+{
    double CEN[3][3] = {{0.0}}, cth, sth, cph, sph, pbe[3], HV[3][3] = {{0.0}};
    double r, rr, theta, phi;
    long i, j, k;
@@ -443,7 +462,8 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    AdjointT(CSN, HV, HgeoN);
 }
 
-void getGravAccel(double const mu, double const pos[3], double gravFrc[3]) {
+void getGravAccel(double const mu, double const pos[3], double gravFrc[3])
+{
    int i;
    double posHat[3];
    double posMag = CopyUnitV(pos, posHat);
@@ -454,7 +474,8 @@ void getGravAccel(double const mu, double const pos[3], double gravFrc[3]) {
 }
 
 void getDGravFrcDPos(double const mu, double const pos[3],
-                     double dGravFrcdPos[3][3]) {
+                     double dGravFrcdPos[3][3])
+{
    int i, j;
    double posHat[3];
    for (i = 0; i < 3; i++)
@@ -471,7 +492,8 @@ void getDGravFrcDPos(double const mu, double const pos[3],
    }
 }
 
-void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3]) {
+void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3])
+{
    double magp, mags, p3, s3;
    long j;
 
@@ -485,7 +507,8 @@ void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3]) {
 
 void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
                       double PosR[3], double mass, long RefOrb,
-                      double VelRdot[3]) {
+                      double VelRdot[3])
+{
    struct OrbitType *O;
    double ph[3], pn[3], pr[3], s[3], accelR[3];
    long Iw, Im, j;
@@ -495,7 +518,8 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
    if (O->Regime == ORB_CENTRAL) {
       OrbCenter = O->World;
       SecCenter = -1; /* Nonsense value */
-   } else {
+   }
+   else {
       OrbCenter = O->Body1;
       SecCenter = O->Body2;
    }
@@ -587,8 +611,8 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
 }
 
 void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
-                           double PosR[3], long RefOrb,
-                           double dGravDPos[3][3]) {
+                           double PosR[3], long RefOrb, double dGravDPos[3][3])
+{
    struct OrbitType *O;
    double ph[3], pn[3], pr[3], s[3], dGdR[3][3];
    long Iw, Im, i, j;
@@ -598,7 +622,8 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
    if (O->Regime == ORB_CENTRAL) {
       OrbCenter = O->World;
       SecCenter = -1; /* Nonsense value */
-   } else {
+   }
+   else {
       OrbCenter = O->Body1;
       SecCenter = O->Body2;
    }
@@ -673,7 +698,8 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                dGravDPos[i][j] += HgeoR[i][j];
-      } else {
+      }
+      else {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                dGravDPos[i][j] += HgeoN[i][j];
@@ -683,7 +709,8 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
 
 void getAeroForceAndTorque(struct SCType *const S, double const CRB[3][3],
                            double const VrelR[3], double frcR[3], double trq[3],
-                           double AtmoDensity) {
+                           double AtmoDensity)
+{
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
@@ -755,7 +782,8 @@ void getAeroForceAndTorque(struct SCType *const S, double const CRB[3][3],
 
 void getDAeroFrcAndTrqDVRel(struct SCType *const S, double const CRB[3][3],
                             double const VrelR[3], double dAeroFrcdVRel[3][3],
-                            double dAeroTrqdVRel[3][3], double AtmoDensity) {
+                            double dAeroTrqdVRel[3][3], double AtmoDensity)
+{
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
@@ -871,7 +899,8 @@ void getDAeroFrcAndTrqDVRel(struct SCType *const S, double const CRB[3][3],
 //                               NAV FUNCTIONS
 //------------------------------------------------------------------------------
 
-double **gyroJacobianFun(struct SCType *const S, const long Igyro) {
+double **gyroJacobianFun(struct SCType *const S, const long Igyro)
+{
    double Axis[3] = {0.0}, tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
@@ -944,7 +973,8 @@ double **gyroJacobianFun(struct SCType *const S, const long Igyro) {
    return (jacobian);
 }
 
-double **magJacobianFun(struct SCType *const S, const long Imag) {
+double **magJacobianFun(struct SCType *const S, const long Imag)
+{
    double **jacobian, tmp[3] = {0.0}, tmp2[3] = {0.0}, Axis[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
@@ -1004,7 +1034,8 @@ double **magJacobianFun(struct SCType *const S, const long Imag) {
    return (jacobian);
 }
 
-double **cssJacobianFun(struct SCType *const S, const long Icss) {
+double **cssJacobianFun(struct SCType *const S, const long Icss)
+{
    double **jacobian, tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
@@ -1058,7 +1089,8 @@ double **cssJacobianFun(struct SCType *const S, const long Icss) {
    return (jacobian);
 }
 
-double **fssJacobianFun(struct SCType *const S, const long Ifss) {
+double **fssJacobianFun(struct SCType *const S, const long Ifss)
+{
    double **jacobian, B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
    struct AcFssType *fss;
    static double **tmpAssign = NULL;
@@ -1139,7 +1171,8 @@ double **fssJacobianFun(struct SCType *const S, const long Ifss) {
    return (jacobian);
 }
 
-double **startrackJacobianFun(struct SCType *const S, const long Ist) {
+double **startrackJacobianFun(struct SCType *const S, const long Ist)
+{
    double **jacobian, tmpM[3][3] = {{0.0}}, qsb[4], CSB[3][3];
    static double **tmpAssign = NULL;
    struct AcType *AC;
@@ -1191,7 +1224,8 @@ double **startrackJacobianFun(struct SCType *const S, const long Ist) {
    return (jacobian);
 }
 
-double **gpsJacobianFun(struct SCType *const S, const long Igps) {
+double **gpsJacobianFun(struct SCType *const S, const long Igps)
+{
    double **jacobian, tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}},
                       tmp3[3][3] = {{0.0}}, tmpX[3][3] = {{0.0}},
                       tmpV[3] = {0.0};
@@ -1300,7 +1334,8 @@ double **gpsJacobianFun(struct SCType *const S, const long Igps) {
    return (jacobian);
 }
 
-double **accelJacobianFun(struct SCType *const S, const long Iaccel) {
+double **accelJacobianFun(struct SCType *const S, const long Iaccel)
+{
    double **jacobian;
    struct DSMType *DSM;
    struct DSMNavType *Nav;
@@ -1327,7 +1362,8 @@ double **accelJacobianFun(struct SCType *const S, const long Iaccel) {
    return (jacobian);
 }
 
-double *gyroFun(struct SCType *const S, const long Ig) {
+double *gyroFun(struct SCType *const S, const long Ig)
+{
    struct AcGyroType *G;
    struct NodeType *N;
    struct AcType *AC;
@@ -1352,7 +1388,8 @@ double *gyroFun(struct SCType *const S, const long Ig) {
    return (gyroEst);
 }
 
-double *magFun(struct SCType *const S, const long Imag) {
+double *magFun(struct SCType *const S, const long Imag)
+{
    struct AcMagnetometerType *MAG;
    struct NodeType *N;
    struct AcType *AC;
@@ -1382,7 +1419,8 @@ double *magFun(struct SCType *const S, const long Imag) {
    return (magEst);
 }
 
-double *cssFun(struct SCType *const S, const long Icss) {
+double *cssFun(struct SCType *const S, const long Icss)
+{
    struct AcCssType *css;
    struct AcType *AC;
    struct DSMType *DSM;
@@ -1403,7 +1441,8 @@ double *cssFun(struct SCType *const S, const long Icss) {
    return (IllumEst);
 }
 
-double *fssFun(struct SCType *const S, const long Ifss) {
+double *fssFun(struct SCType *const S, const long Ifss)
+{
    struct AcFssType *fss;
    struct AcType *AC;
    struct DSMType *DSM;
@@ -1431,7 +1470,8 @@ double *fssFun(struct SCType *const S, const long Ifss) {
    return (SunAngEst);
 }
 
-double *startrackFun(struct SCType *const S, const long Ist) {
+double *startrackFun(struct SCType *const S, const long Ist)
+{
    struct AcStarTrackerType *st;
    struct NodeType *N;
    struct AcType *AC;
@@ -1454,7 +1494,8 @@ double *startrackFun(struct SCType *const S, const long Ist) {
    return (qsnEst);
 }
 
-double *gpsFun(struct SCType *const S, const long Igps) {
+double *gpsFun(struct SCType *const S, const long Igps)
+{
    struct DSMType *DSM;
    struct DSMNavType *Nav;
    double *posNVelNEst, tmp3V[3], tmpPosN[3], tmpVelN[3];
@@ -1487,7 +1528,8 @@ double *gpsFun(struct SCType *const S, const long Igps) {
 }
 
 // don't need this at the moment, WIP
-double *accelFun(struct SCType *const S, const long Ia) {
+double *accelFun(struct SCType *const S, const long Ia)
+{
    return (NULL);
 } /*{
    static double prevVelB[3]={0.0}, prevQBN[4]={0.0, 0.0, 0.0, 1.0};
@@ -1564,14 +1606,17 @@ data
 /*                   Auxillary helper functions                       */
 /*--------------------------------------------------------------------*/
 void getEarthAtmoParams(const double JD, double *NavFlux10p7,
-                        double *NavGeomagIndex) {
+                        double *NavGeomagIndex)
+{
    if (AtmoOption == TWOSIGMA_ATMO) {
       *NavFlux10p7    = LinInterp(SchattenTable[0], SchattenTable[1], JD, 410);
       *NavGeomagIndex = LinInterp(SchattenTable[0], SchattenTable[3], JD, 410);
-   } else if (AtmoOption == NOMINAL_ATMO) {
+   }
+   else if (AtmoOption == NOMINAL_ATMO) {
       *NavFlux10p7    = LinInterp(SchattenTable[0], SchattenTable[2], JD, 410);
       *NavGeomagIndex = LinInterp(SchattenTable[0], SchattenTable[4], JD, 410);
-   } else {
+   }
+   else {
       // Pull from user-defined values in Inp_Sim.txt
       *NavFlux10p7    = Flux10p7;
       *NavGeomagIndex = GeomagIndex;
@@ -1586,7 +1631,8 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                          double const CRB[3][3], double const qbr[4],
                          double const PosR[3], double const VelR[3],
                          double const wbr[3], double const whlH[S->AC.Nwhl],
-                         const double AtmoDensity) {
+                         const double AtmoDensity)
+{
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
@@ -1912,12 +1958,14 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                }
             }
          }
-      } else {
+      }
+      else {
          printf("Orbit types other than CENTRAL are still in development for "
                 "filtering. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-   } else {
+   }
+   else {
       printf("For the moment, can only filter rotation matrix, position, "
              "velocity, & angular "
              "velocity *simultaneously* with the RIEKF. Exiting...\n");
@@ -1925,7 +1973,8 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
    }
 }
 
-void RIEKFUpdateLaw(struct DSMNavType *const Nav) {
+void RIEKFUpdateLaw(struct DSMNavType *const Nav)
+{
    double theta[3] = {0.0}, tmpM[3][3] = {{0.0}}, tmpV[3] = {0.0};
    double dR[3][3] = {{0.0}}, dr[3] = {0.0}, dv[3] = {0.0}, dw[3] = {0.0};
    long i, j;
@@ -1942,7 +1991,8 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav) {
          for (i = 0; i < 3; i++)
             x[curRInd][i] = -Nav->delta[i + Nav->navInd[j]];
          curRInd++;
-      } else if (j == OMEGA_STATE) {
+      }
+      else if (j == OMEGA_STATE) {
          for (i = 0; i < 3; i++)
             xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[j]];
          curBInd++;
@@ -2003,7 +2053,8 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                          double const CRB[3][3], double const qbr[4],
                          double const PosR[3], double const VelR[3],
                          double const wbr[3], double const whlH[S->AC.Nwhl],
-                         const double AtmoDensity) {
+                         const double AtmoDensity)
+{
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
@@ -2303,12 +2354,14 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                }
             }
          }
-      } else {
+      }
+      else {
          printf("Orbit types other than CENTRAL are still in development for "
                 "filtering. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-   } else {
+   }
+   else {
       printf("For the moment, can only filter rotation matrix, position, "
              "velocity, & angular "
              "velocity *simultaneously* with the LIEKF. Exiting...\n");
@@ -2316,7 +2369,8 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
    }
 }
 
-void LIEKFUpdateLaw(struct DSMNavType *const Nav) {
+void LIEKFUpdateLaw(struct DSMNavType *const Nav)
+{
    double theta[3] = {0.0}, tmpM[3][3] = {{0.0}}, tmpV[3] = {0.0};
    double dR[3][3] = {{0.0}}, dr[3] = {0.0}, dv[3] = {0.0}, dw[3] = {0.0};
    long i, j;
@@ -2333,7 +2387,8 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav) {
          for (i = 0; i < 3; i++)
             x[curRInd][i] = -Nav->delta[i + Nav->navInd[j]];
          curRInd++;
-      } else if (j == OMEGA_STATE) {
+      }
+      else if (j == OMEGA_STATE) {
          for (i = 0; i < 3; i++)
             xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[j]];
          curBInd++;
@@ -2394,7 +2449,8 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                         double const CRB[3][3], double const qbr[4],
                         double const PosR[3], double const VelR[3],
                         double const wbr[3], double const whlH[S->AC.Nwhl],
-                        const double AtmoDensity) {
+                        const double AtmoDensity)
+{
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
@@ -2610,12 +2666,14 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                }
             }
          }
-      } else {
+      }
+      else {
          printf("Orbit types other than CENTRAL are still in development for "
                 "filtering. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-   } else {
+   }
+   else {
       printf("For the moment, can only filter quaternion, position, velocity, "
              "& angular velocity "
              "*simulataneously* with the MEKF. Exiting...\n");
@@ -2623,7 +2681,8 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
    }
 }
 
-void MEKFUpdateLaw(struct DSMNavType *const Nav) {
+void MEKFUpdateLaw(struct DSMNavType *const Nav)
+{
    double q[4] = {0.0}, dq[4] = {0.0}, tmpM[3][3] = {{0.0}};
    long i;
 
@@ -2645,7 +2704,8 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav) {
 /******************************************************************************/
 //                            Navigation Functions
 /******************************************************************************/
-double **GetStateLinTForm(struct SCType *const S) {
+double **GetStateLinTForm(struct SCType *const S)
+{
    double **tForm, tmpM[3][3] = {{0.0}};
    static double **tmpAssign = NULL;
    struct DSMType *DSM;
@@ -2743,7 +2803,8 @@ double **GetStateLinTForm(struct SCType *const S) {
 }
 
 void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
-                       const long reset) {
+                       const long reset)
+{
    // set up reference frame. Not a fan of effectively using truth data for it
    long i, j;
    double targetPosN[3] = {0.0};
@@ -2860,7 +2921,8 @@ void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
 
 void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
           double CRB[3][3], double qbr[4], double PosR[3], double VelR[3],
-          double wbr[3]) {
+          double wbr[3])
+{
    double tmp3x3[3][3] = {{0.0}}, MOIInv[3][3] = {{0.0}};
    long i, j;
 
@@ -2940,7 +3002,8 @@ void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
 }
 
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
-                       double const CRB[3][3], double const *whlH) {
+                       double const CRB[3][3], double const *whlH)
+{
    long i, j;
 
    for (i = 0; i < 3; i++) {
@@ -2981,7 +3044,8 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
              double const VelR[3], double const wbr[3], double const *whlH,
              double CRBdot[3][3], double qbrdot[4], double PosRdot[3],
              double VelRdot[3], double wbrdot[3], double *whlHdot,
-             const long refOrb, const double AtmoDensity) {
+             const long refOrb, const double AtmoDensity)
+{
    long i, j, iState;
 
    struct AcType *AC;
@@ -3112,7 +3176,8 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
       whlHdot[Iw] = AC->Whl[Iw].Tcmd;
 }
 
-void updateNavTime(struct DateType *Time, const double dSeconds) {
+void updateNavTime(struct DateType *Time, const double dSeconds)
+{
    if (fabs(dSeconds) > 0.0) {
       Time->Second  += dSeconds;
       long quotient  = Time->Second / 60.0;
@@ -3156,8 +3221,8 @@ void updateNavTime(struct DateType *Time, const double dSeconds) {
    }
 }
 
-void PropagateNav(struct SCType *const S, const long dSubStep,
-                  const long dStep) {
+void PropagateNav(struct SCType *const S, const long dSubStep, const long dStep)
+{
    double lerpAlphaState, AtmoDensity = 0.0;
 
    long i, j, k;
@@ -3202,11 +3267,14 @@ void PropagateNav(struct SCType *const S, const long dSubStep,
                    NRLMSISE00(Nav->Date.Year, Nav->Date.doy, Nav->Date.Hour,
                               Nav->Date.Minute, Nav->Date.Second, PosW,
                               NavFlux10p7, NavGeomagIndex);
-            } else
+            }
+            else
                AtmoDensity = 0.0;
-         } else if (orbCenter == MARS) {
+         }
+         else if (orbCenter == MARS) {
             AtmoDensity = MarsAtmosphereModel(PosN);
-         } else
+         }
+         else
             AtmoDensity = 0.0;
       }
       (*Nav->EOMJacobianFun)(S, &Nav->Date, Nav->CRB, Nav->qbr, Nav->PosR,
@@ -3247,7 +3315,8 @@ void PropagateNav(struct SCType *const S, const long dSubStep,
 
          for (i = 0; i < AC->Nwhl; i++)
             whlH[i] = Nav->whlH[i];
-      } else {
+      }
+      else {
          for (Istate = INIT_STATE; Istate <= FIN_STATE; Istate++) {
             if (Nav->stateActive[Istate] == TRUE) {
                double CBR[3][3] = {{0.0}};
@@ -3419,7 +3488,8 @@ void PropagateNav(struct SCType *const S, const long dSubStep,
    configureRefFrame(S, DT / Nav->DT, FALSE);
 }
 
-void KalmanFilt(struct SCType *const S) {
+void KalmanFilt(struct SCType *const S)
+{
    long i, j;
 
    struct AcType *AC;
@@ -3444,7 +3514,8 @@ void KalmanFilt(struct SCType *const S) {
       PropagateNav(S, Nav->subStepMax, 0.0);
       Nav->step++;
       Nav->subStep = 0;
-   } else {
+   }
+   else {
       while (measList->head != NULL) {
          long measDim              = 0;
          enum sensorType senseType = measList->head->type;
@@ -3504,7 +3575,8 @@ void KalmanFilt(struct SCType *const S) {
                }
             }
 #endif
-         } else if (dSubStep < 0 || dStep < 0.0) {
+         }
+         else if (dSubStep < 0 || dStep < 0.0) {
             printf("Attempted to propagate Navigation state backwards in time. "
                    "How did that "
                    "happen? Exiting...\n");
@@ -3534,7 +3606,8 @@ void KalmanFilt(struct SCType *const S) {
                double tmpq[4];
                QxQT(meas->data, measEstData, tmpq);
                Q2AngleVec(tmpq, resid);
-            } else {
+            }
+            else {
                for (i = 0; i < dim; i++)
                   resid[i] = meas->data[i] - measEstData[i];
             }
@@ -3586,7 +3659,8 @@ void KalmanFilt(struct SCType *const S) {
             for (i = 0; i < Nav->navDim; i++)
                for (j = 0; j < measDim; j++)
                   tmp[i][j] = HS[j][i] * rtp;
-         } else {
+         }
+         else {
             for (i = 0; i < Nav->navDim; i++)
                for (j = 0; j < measDim; j++)
                   tmp[i][j] = HS[j][i];
@@ -3678,7 +3752,8 @@ void KalmanFilt(struct SCType *const S) {
 //    n  - number of rows of B
 //    m  - number of columns of B
 void subMatAdd(double **A, double **B, long const iN, long const iM,
-               long const n, long const m) {
+               long const n, long const m)
+{
    long i, j, curRow;
    for (i = 0; i < n; i++) {
       curRow = i + iN;
@@ -3687,7 +3762,8 @@ void subMatAdd(double **A, double **B, long const iN, long const iM,
    }
 }
 
-double mahalonobis2(double **A, double *x, long const n) {
+double mahalonobis2(double **A, double *x, long const n)
+{
    long i, j;
 
    double d = 0.0, xTA[n];
@@ -3701,7 +3777,8 @@ double mahalonobis2(double **A, double *x, long const n) {
 }
 
 // yes, this function is here just for pGate = 0.9999...
-double chi2InvLookup(double const pGate, long const dim) {
+double chi2InvLookup(double const pGate, long const dim)
+{
    long const nDeg = 24, nPGate = 9;
    // tbl generated from MATLAB's chi2inv
    static const double tbl[24][9] = {{
@@ -3988,9 +4065,11 @@ double chi2InvLookup(double const pGate, long const dim) {
    double out = 0.0;
    if (pGate == probGate[nPGate - 1]) {
       out = tbl[dim - 1][nPGate - 1];
-   } else if (pGate == probGate[0]) {
+   }
+   else if (pGate == probGate[0]) {
       out = tbl[dim - 1][0];
-   } else {
+   }
+   else {
       long lowPGateInd;
       for (lowPGateInd = nPGate - 1; lowPGateInd >= 0; lowPGateInd--) {
          if (probGate[lowPGateInd] <= pGate) {

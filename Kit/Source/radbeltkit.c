@@ -124,7 +124,8 @@ int Descriptors[4][8];
 int *MapAeMin, *MapApMin, *MapAeMax, *MapApMax;
 
 /******************************************************************************/
-void LoadMapsFromFiles(void) {
+void LoadMapsFromFiles(void)
+{
    FILE *infile;
    int i;
 
@@ -178,7 +179,8 @@ void LoadMapsFromFiles(void) {
 }
 
 /******************************************************************************/
-float trara5(void) {
+float trara5(void)
+{
    float retval;
 
    if (FKB < (FKBM + 1.E-10))
@@ -190,7 +192,8 @@ float trara5(void) {
    return (retval);
 }
 /******************************************************************************/
-float trara4(int *SUBMAP, int start_psn) {
+float trara4(int *SUBMAP, int start_psn)
+{
    int I2 = 0;
    int bypassto20;
    bypassto20 = 0.0;
@@ -200,14 +203,16 @@ float trara4(int *SUBMAP, int start_psn) {
 
    if (start_psn == 15) {
       ;
-   } else if (start_psn == 35) {
+   }
+   else if (start_psn == 35) {
       /*    35  FINCR1=0.
        SL1=-900000.
        GOTO 20  */
       FINCR1     = 0;
       SL1        = -900000;
       bypassto20 = 1; /* like going to 20 */
-   } else {
+   }
+   else {
       /* 29 FKBM=FKBJ1+(FKB2-FKBJ1)*DFL */
       FKBM  = FKBJ1 + (FKB2 - FKBJ1) * DFL;
       FLOGM = FKBM * SL2;
@@ -256,7 +261,8 @@ float trara4(int *SUBMAP, int start_psn) {
  *  incorporates old fortran gotos 23, 32, 28, 30
  */
 /******************************************************************************/
-float trara3(int *SUBMAP, int position) {
+float trara3(int *SUBMAP, int position)
+{
    int I2 = 0;
 
    /* reset statics */
@@ -322,7 +328,8 @@ float trara3(int *SUBMAP, int position) {
 /*     FUNCTION TRARA2(int MAP,IL,IB) */
 
 /******************************************************************************/
-float TRARA2(int *SUBMAP, float IL, float IB) {
+float TRARA2(int *SUBMAP, float IL, float IB)
+{
    float FNL, FLL1, FLL2;
    int I2, KT;
    /* TRARA2 may becalled multiple times --want to reset these statics */
@@ -436,7 +443,8 @@ float TRARA2(int *SUBMAP, float IL, float IB) {
 */
 
 /******************************************************************************/
-void TRARA1(float FL, float BB0, float *E, float *F, int N, int *DESCR) {
+void TRARA1(float FL, float BB0, float *E, float *F, int N, int *DESCR)
+{
    int S0 = 0, S1 = 0, S2 = 0;
    int I2 = 0, I3 = 0, L3 = 0, IE = 0, I0 = 0;
    float ESCALE = 0.0, FSCALE = 0.0;
@@ -544,7 +552,8 @@ void TRARA1(float FL, float BB0, float *E, float *F, int N, int *DESCR) {
 
 /******************************************************************************/
 void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies,
-             float *ElectronEnergy, float *ProtonEnergy, double **Flux) {
+             float *ElectronEnergy, float *ProtonEnergy, double **Flux)
+{
    float Lvalue, BB0;
    float bottomF, altrad, RE, BetaValueF;
    static int First = 1;

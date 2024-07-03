@@ -22,7 +22,8 @@
 /*  Earth Gravity Model 96, published by NIMA as part of the WGS84    */
 void EGM96(const char *ModelPath, long N, long M, double C[19][19],
            double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3]) {
+           double FgeoN[3])
+{
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
@@ -93,7 +94,8 @@ void EGM96(const char *ModelPath, long N, long M, double C[19][19],
 /*  Ref:  http://bowie.gsfc.nasa.gov/926/MARS/GMM2B.html              */
 void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
            double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3]) {
+           double FgeoN[3])
+{
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
@@ -166,7 +168,8 @@ void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
  */
 void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
            double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3]) {
+           double FgeoN[3])
+{
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
@@ -235,7 +238,8 @@ void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
 void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
-                  double PriMerAng, double MagVecN[3]) {
+                  double PriMerAng, double MagVecN[3])
+{
    double g[11][11], h[11][11];
    double ReNorm;
    static double C[19][19], S[19][19];
@@ -310,7 +314,8 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
 /*  Computes planetary dipole magnetic field vector at S/C position.  */
 void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
                     double DipoleOffset[3], double p[3], double PriMerAng,
-                    double MagVecN[3]) {
+                    double MagVecN[3])
+{
    double R[3], PCN[3], R3, MN[3], MoR, CEN[3][3];
    double AXIS[3] = {0.0, 0.0, 1.0};
    long i;
@@ -333,7 +338,8 @@ void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
 /* Kp is in the scale [0o 0+ 1- 1o 1+ ... 8+ 9- 9o].                  */
 /* We map it to [0.0 0.33 0.67 1.0 1.33 ... 8.33 8.67 9.0] for ease   */
 /* of table lookup.                                                   */
-double KpToAp(double Kp) {
+double KpToAp(double Kp)
+{
    long k;
    double Ap[28] = {0,   2,   3,   4,   5,   6,   7,   9,  12, 15,
                     18,  22,  27,  32,  39,  48,  56,  67, 80, 94,
@@ -352,7 +358,8 @@ double KpToAp(double Kp) {
 /* Earth's Atmosphere", NASA SP-8021, May 1969.  It is a modification */
 /* of the Jacchia model.  Range of validity is from 120 km to 1000 km */
 /* altitude.                                                          */
-double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap) {
+double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap)
+{
 #define ERAD 6378.145E3
    double N[5], Fbar, F, logT, sinth25;
    double W[5] = {1.6731E-24, 6.6435E-24, 4.6496E-23, 5.3104E-23, 2.6552E-23};
@@ -378,7 +385,8 @@ double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap) {
    if (z < 120.0) {
       printf("Altitude %f km too low for Jacchia-Roberts\n", z);
       exit(1);
-   } else if (z > 1000.0)
+   }
+   else if (z > 1000.0)
       density = 0.0; /* Beyond range of model */
    else {
 
@@ -449,7 +457,8 @@ double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap) {
 /*  on MSIS-86, averaged to be a function of altitude only, and       */
 /*  F10.7 chosen so that the density is according to the column.      */
 /*  Col = 0 (Min), 1, (Mean), or 2 (Max) as defined in table.         */
-double SimpleMSIS(double pbn[3], long Col) {
+double SimpleMSIS(double pbn[3], long Col)
+{
    double AltTable[22]    = {0.0,   100.0,  150.0,  200.0, 250.0, 300.0,
                              350.0, 400.0,  450.0,  500.0, 550.0, 600.0,
                              650.0, 700.0,  750.0,  800.0, 850.0, 900.0,
@@ -507,7 +516,8 @@ double SimpleMSIS(double pbn[3], long Col) {
 /**********************************************************************/
 /* This simple model is taken from                                    */
 /* http://www.grc.nasa.gov/WWW/K-12/airplane/atmosmrm.html            */
-double MarsAtmosphereModel(double r[3]) {
+double MarsAtmosphereModel(double r[3])
+{
    double Alt, T, p;
    double MarsRad = 3410.0E3;
    double Density;
@@ -516,12 +526,14 @@ double MarsAtmosphereModel(double r[3]) {
    if (Alt < 150.0E3) {
       if (Alt < 7000.0) {
          T = -23.4 - 0.00222 * Alt;
-      } else {
+      }
+      else {
          T = -31.0 - 9.98E-4 * Alt;
       }
       p       = 1.0E3 * 0.699 * exp(-9.0E-5 * Alt); /* p in Pa */
       Density = p / (0.1921 * (T + 273.1));
-   } else
+   }
+   else
       Density = 0.0;
 
    return (Density);
@@ -532,7 +544,8 @@ double MarsAtmosphereModel(double r[3]) {
 /* QB8.U5, 2003, p. B18,B20.                                          */
 /* TEME to TETE rotation from Montenbruck adn Gill (TL1080.M66)       */
 void SimpleEarthPrecNute(double JD, double C_TEME_TETE[3][3],
-                         double C_TETE_J2000[3][3]) {
+                         double C_TETE_J2000[3][3])
+{
    double d, arg1, arg2, dpsi, deps, eps, N[3][3];
    double T, z, theta, zeta, P[3][3];
    double c1, s1, c2, s2, c3, s3;
@@ -616,7 +629,8 @@ void SimpleEarthPrecNute(double JD, double C_TEME_TETE[3][3],
 /* Ref Montenbruck and Gill, "Satellite Orbits: Models, Methods,      */
 /* Applications", TL1080.M66                                          */
 void HiFiEarthPrecNute(double JD, double C_TEME_TETE[3][3],
-                       double C_TETE_J2000[3][3]) {
+                       double C_TETE_J2000[3][3])
+{
 
    double P[3][3], N[3][3];
    static long First = 1;
@@ -804,7 +818,8 @@ void HiFiEarthPrecNute(double JD, double C_TEME_TETE[3][3],
 /**********************************************************************/
 /* http://en.wikipedia.org/wiki/Geodetic_system#Geodetic_versus_geocentric_latitude
  */
-void WGS84ToECEF(double glat, double glong, double alt, double p[3]) {
+void WGS84ToECEF(double glat, double glong, double alt, double p[3])
+{
    double a  = 6378137.0;
    double f  = 1.0 / 298.257222101;
    double e2 = f * (2.0 - f);
@@ -823,7 +838,8 @@ void WGS84ToECEF(double glat, double glong, double alt, double p[3]) {
    p[2] = (a / X * (1.0 - e2) + alt) * SinLat;
 }
 /**********************************************************************/
-void ECEFToWGS84(double p[3], double *glat, double *glong, double *alt) {
+void ECEFToWGS84(double p[3], double *glat, double *glong, double *alt)
+{
    double a   = 6378137.0;
    double f   = 1.0 / 298.257222101;
    double b   = a * (1.0 - f);
@@ -878,7 +894,8 @@ void ECEFToWGS84(double p[3], double *glat, double *glong, double *alt) {
 /* Ref Werner and Scheeres, "Exterior Gravitation of a Polyhedron ..." */
 /* Returns 1 if PosN is outside polyhedron, 0 if inside */
 long PolyhedronGravAcc(struct GeomType *G, double Density, double PosN[3],
-                       double CWN[3][3], double GravAccN[3]) {
+                       double CWN[3][3], double GravAccN[3])
+{
    struct EdgeType *E;
    struct PolyType *P;
    double *V1, *V2, *V3;
@@ -953,7 +970,8 @@ long PolyhedronGravAcc(struct GeomType *G, double Density, double PosN[3],
 /* Ref Werner and Scheeres, "Exterior Gravitation of a Polyhedron ..." */
 /* Returns 1 if PosN is outside polyhedron, 0 if inside */
 long PolyhedronGravGrad(struct GeomType *G, double Density, double PosN[3],
-                        double CWN[3][3], double GravGradN[3][3]) {
+                        double CWN[3][3], double GravGradN[3][3])
+{
    struct EdgeType *E;
    struct PolyType *P;
    double *V1, *V2, *V3;
@@ -1028,7 +1046,8 @@ long PolyhedronGravGrad(struct GeomType *G, double Density, double PosN[3],
    return (PosIsOutside);
 }
 /**********************************************************************/
-void GravGradTimesInertia(double g[3][3], double I[3][3], double GGxI[3]) {
+void GravGradTimesInertia(double g[3][3], double I[3][3], double GGxI[3])
+{
    GGxI[0] = (I[2][2] - I[1][1]) * g[1][2] + (g[1][1] - g[2][2]) * I[1][2] +
              I[0][2] * g[1][0] - I[0][1] * g[2][0];
    GGxI[1] = (I[0][0] - I[2][2]) * g[2][0] + (g[2][2] - g[0][0]) * I[2][0] +
