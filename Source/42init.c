@@ -4943,6 +4943,7 @@ void InitSim(int argc, char **argv)
       fy_node_scanf(iterNode, "/Name %39[^\n]s", Orb[Iorb].FileName);
       strcat(Orb[Iorb].FileName, ".yaml");
       Orb[Iorb].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
+      Orb[Iorb].Tag    = Iorb;
       Iorb++;
    }
 
@@ -4980,13 +4981,13 @@ void InitSim(int argc, char **argv)
          exit(EXIT_FAILURE);
       }
       SC[Isc].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
-      SC[Isc].ID     = Isc;
       if ((SC[Isc].Exists && !Orb[SC[Isc].RefOrb].Exists) ||
           (SC[Isc].RefOrb > Norb)) {
          printf("Yo!  SC[%ld] is assigned to non-existent Orb[%ld]\n", Isc,
                 SC[Isc].RefOrb);
          exit(EXIT_FAILURE);
       }
+      SC[Isc].ID = Isc;
       Isc++;
    }
 
