@@ -1895,6 +1895,26 @@ double WrapTo2Pi(double n)
    }
    return (OrbVar);
 }
+/******************************************************************************/
+/* Simple Newton-Raphson method for function given by f/dfdx = fdf            */
+/* Iterates until tolerance or max iterations are reached; maximum stepsize   */
+/* governed by maxStep. Use params to pass parameters to fdf                  */
+double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+                     double (*fdf)(double, double *), double *params)
+{
+   if (maxStep < 0)
+      maxStep = -maxStep;
+   double x = x0;
+   double dx;
+   long k = 0;
+   do {
+      dx = fdf(x, params);
+      if (fabs(dx) > maxStep)
+         dx = signum(dx) * maxStep;
+      x -= dx;
+   } while (fabs(dx) > tol && k++ < nMax);
+   return x;
+}
 
 /* #ifdef __cplusplus
 ** }
