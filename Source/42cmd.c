@@ -25,7 +25,8 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime);
 #endif
 
 /**********************************************************************/
-long SimCmdInterpreter(char CmdLine[512], double *CmdTime) {
+long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
+{
    char response[80];
    long NewCmdProcessed = FALSE;
    long Isc, Ig, Idof;
@@ -75,11 +76,13 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime) {
          O->VelN[0] += DVN[0];
          O->VelN[1] += DVN[1];
          O->VelN[2] += DVN[2];
-      } else if (DvFrame == 'N') {
+      }
+      else if (DvFrame == 'N') {
          O->VelN[0] += Vec[0];
          O->VelN[1] += Vec[1];
          O->VelN[2] += Vec[2];
-      } else {
+      }
+      else {
          printf("Bogus DvFrame %c in SimCmdInterpreter\n", DvFrame);
          exit(1);
       }
@@ -102,13 +105,15 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime) {
       for (i = 0; i < 3; i++) {
          if (S->IdealAct[i].FrcDelay == NULL) {
             S->IdealAct[i].FrcDelay = CreateDelay(S->LoopDelay, DTSIM);
-         } else {
+         }
+         else {
             S->IdealAct[i].FrcDelay =
                 ResizeDelay(S->IdealAct[i].FrcDelay, S->LoopDelay, DTSIM);
          }
          if (S->IdealAct[i].TrqDelay == NULL) {
             S->IdealAct[i].TrqDelay = CreateDelay(S->LoopDelay, DTSIM);
-         } else {
+         }
+         else {
             S->IdealAct[i].TrqDelay =
                 ResizeDelay(S->IdealAct[i].TrqDelay, S->LoopDelay, DTSIM);
          }
@@ -116,21 +121,24 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime) {
       for (i = 0; i < S->Nw; i++) {
          if (S->Whl[i].Delay == NULL) {
             S->Whl[i].Delay = CreateDelay(S->LoopDelay, DTSIM);
-         } else {
+         }
+         else {
             S->Whl[i].Delay = ResizeDelay(S->Whl[i].Delay, S->LoopDelay, DTSIM);
          }
       }
       for (i = 0; i < S->Nmtb; i++) {
          if (S->MTB[i].Delay == NULL) {
             S->MTB[i].Delay = CreateDelay(S->LoopDelay, DTSIM);
-         } else {
+         }
+         else {
             S->MTB[i].Delay = ResizeDelay(S->MTB[i].Delay, S->LoopDelay, DTSIM);
          }
       }
       for (i = 0; i < S->Nthr; i++) {
          if (S->Thr[i].Delay == NULL) {
             S->Thr[i].Delay = CreateDelay(S->LoopDelay, DTSIM);
-         } else {
+         }
+         else {
             S->Thr[i].Delay = ResizeDelay(S->Thr[i].Delay, S->LoopDelay, DTSIM);
          }
       }
@@ -145,7 +153,8 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime) {
    return (NewCmdProcessed);
 }
 /**********************************************************************/
-void CmdInterpreter(void) {
+void CmdInterpreter(void)
+{
    static FILE *CmdFile;
    static char CmdLine[512];
    static double CmdTime;

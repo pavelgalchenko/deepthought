@@ -20,14 +20,16 @@
 #include "gmseckit.h"
 
 /*********************************************************************/
-void CheckGmsecStatus(GMSEC_Status status) {
+void CheckGmsecStatus(GMSEC_Status status)
+{
    if (statusIsError(status) == GMSEC_TRUE) {
       GMSEC_ERROR("Error: %s\n", statusGet(status));
    }
 }
 /*********************************************************************/
 GMSEC_ConnectionMgr ConnectToMBServer(const char HostName[80], int Port,
-                                      GMSEC_Status status, GMSEC_Config cfg) {
+                                      GMSEC_Status status, GMSEC_Config cfg)
+{
    GMSEC_ConnectionMgr ConnMgr;
    const char *name  = NULL;
    const char *value = NULL;
@@ -56,7 +58,8 @@ GMSEC_ConnectionMgr ConnectToMBServer(const char HostName[80], int Port,
 }
 /*********************************************************************/
 void GmsecSend(const char *Header, const char *Text,
-               GMSEC_ConnectionMgr ConnMgr, GMSEC_Status status) {
+               GMSEC_ConnectionMgr ConnMgr, GMSEC_Status status)
+{
    GMSEC_Message msg;
 
    msg = messageCreate(Header, GMSEC_PUBLISH, status);

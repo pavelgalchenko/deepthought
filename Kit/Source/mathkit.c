@@ -19,19 +19,22 @@
 */
 
 /**********************************************************************/
-double signum(double x) {
+double signum(double x)
+{
    return (x >= 0 ? 1.0 : -1.0);
 }
 /**********************************************************************/
 /* sinc(x) = sin(x)/x                                                 */
 /*  Series expansion: sinc(x) = 1 - x^2/3! + x^4/5! - x^6/7!...       */
 /*  Enough terms kept to be within 2E-10 for x in [-pi:pi]            */
-double sinc(double x) {
+double sinc(double x)
+{
    double x2;
 
    if (x < -3.14159265358979 || x > 3.14159265358979) {
       return (sin(x) / x);
-   } else {
+   }
+   else {
       x2 = x * x;
       return (1.0 -
               x2 / 6.0 *
@@ -54,7 +57,8 @@ double sinc(double x) {
 }
 /**********************************************************************/
 /*   3x3 Matrix Product                                               */
-void MxM(double A[3][3], double B[3][3], double C[3][3]) {
+void MxM(double A[3][3], double B[3][3], double C[3][3])
+{
 
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
    C[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1];
@@ -68,7 +72,8 @@ void MxM(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /* 3x3 Matrix times Transpose of Matrix                               */
-void MxMT(double A[3][3], double B[3][3], double C[3][3]) {
+void MxMT(double A[3][3], double B[3][3], double C[3][3])
+{
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[0][1] + A[0][2] * B[0][2];
    C[0][1] = A[0][0] * B[1][0] + A[0][1] * B[1][1] + A[0][2] * B[1][2];
    C[0][2] = A[0][0] * B[2][0] + A[0][1] * B[2][1] + A[0][2] * B[2][2];
@@ -81,7 +86,8 @@ void MxMT(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Matrix                              */
-void MTxM(double A[3][3], double B[3][3], double C[3][3]) {
+void MTxM(double A[3][3], double B[3][3], double C[3][3])
+{
    C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[1][0] + A[2][0] * B[2][0];
    C[0][1] = A[0][0] * B[0][1] + A[1][0] * B[1][1] + A[2][0] * B[2][1];
    C[0][2] = A[0][0] * B[0][2] + A[1][0] * B[1][2] + A[2][0] * B[2][2];
@@ -94,7 +100,8 @@ void MTxM(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Transpose of Matrix                 */
-void MTxMT(double A[3][3], double B[3][3], double C[3][3]) {
+void MTxMT(double A[3][3], double B[3][3], double C[3][3])
+{
    C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[0][1] + A[2][0] * B[0][2];
    C[0][1] = A[0][0] * B[1][0] + A[1][0] * B[1][1] + A[2][0] * B[1][2];
    C[0][2] = A[0][0] * B[2][0] + A[1][0] * B[2][1] + A[2][0] * B[2][2];
@@ -107,42 +114,48 @@ void MTxMT(double A[3][3], double B[3][3], double C[3][3]) {
 }
 /**********************************************************************/
 /*  1x3 Vector times 3x3 Matrix                                       */
-void VxM(double V[3], double M[3][3], double W[3]) {
+void VxM(double V[3], double M[3][3], double W[3])
+{
    W[0] = V[0] * M[0][0] + V[1] * M[1][0] + V[2] * M[2][0];
    W[1] = V[0] * M[0][1] + V[1] * M[1][1] + V[2] * M[2][1];
    W[2] = V[0] * M[0][2] + V[1] * M[1][2] + V[2] * M[2][2];
 }
 /**********************************************************************/
 /*  3x3 Matrix times 3x1 Vector                                       */
-void MxV(double M[3][3], double V[3], double W[3]) {
+void MxV(double M[3][3], double V[3], double W[3])
+{
    W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
    W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
 }
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
-void VxMT(double V[3], double M[3][3], double W[3]) {
+void VxMT(double V[3], double M[3][3], double W[3])
+{
    W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
    W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
 }
 /**********************************************************************/
 /*  Transpose of 3x3 Matrix times 3x1 Vector                          */
-void MTxV(double M[3][3], double V[3], double W[3]) {
+void MTxV(double M[3][3], double V[3], double W[3])
+{
    W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
    W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
    W[2] = M[0][2] * V[0] + M[1][2] * V[1] + M[2][2] * V[2];
 }
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
-void SxV(double S, double V[3], double W[3]) {
+void SxV(double S, double V[3], double W[3])
+{
    W[0] = S * V[0];
    W[1] = S * V[1];
    W[2] = S * V[2];
 }
 /**********************************************************************/
 /*  Scalar times 3x3 Matrix                                           */
-void SxM(double S, double A[3][3], double B[3][3]) {
+void SxM(double S, double A[3][3], double B[3][3])
+{
    B[0][0] = S * A[0][0];
    B[0][1] = S * A[0][1];
    B[0][2] = S * A[0][2];
@@ -155,7 +168,8 @@ void SxM(double S, double A[3][3], double B[3][3]) {
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
-void MINV4(double A[4][4], double B[4][4]) {
+void MINV4(double A[4][4], double B[4][4])
+{
    double DET = 0.0;
    long r, s, i, j, k, x, y, z;
 
@@ -181,7 +195,8 @@ void MINV4(double A[4][4], double B[4][4]) {
       printf(
           "Attempted inversion of singular matrix in MINV4.  Bailing out.\n");
       exit(1);
-   } else {
+   }
+   else {
       for (r = 0; r < 4; r++) {
          for (s = 0; s < 4; s++) {
             B[r][s] /= DET;
@@ -191,7 +206,8 @@ void MINV4(double A[4][4], double B[4][4]) {
 }
 /******************************************************************************/
 /*  Inverse of a 3x3 Matrix                                                   */
-void MINV3(double A[3][3], double B[3][3]) {
+void MINV3(double A[3][3], double B[3][3])
+{
    double DET;
 
    DET = A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] +
@@ -202,7 +218,8 @@ void MINV3(double A[3][3], double B[3][3]) {
       printf(
           "Attempted inversion of singular matrix in MINV3.  Bailing out.\n");
       exit(1);
-   } else {
+   }
+   else {
       B[0][0] = (A[1][1] * A[2][2] - A[2][1] * A[1][2]) / DET;
       B[0][1] = (A[2][1] * A[0][2] - A[0][1] * A[2][2]) / DET;
       B[0][2] = (A[0][1] * A[1][2] - A[1][1] * A[0][2]) / DET;
@@ -216,7 +233,8 @@ void MINV3(double A[3][3], double B[3][3]) {
 }
 /******************************************************************************/
 /*  Inverse of a 2x2 Matrix                                                   */
-void MINV2(double A[2][2], double B[2][2]) {
+void MINV2(double A[2][2], double B[2][2])
+{
    double DET;
 
    DET = A[0][0] * A[1][1] - A[1][0] * A[0][1];
@@ -225,7 +243,8 @@ void MINV2(double A[2][2], double B[2][2]) {
       printf(
           "Attempted inversion of singular matrix in MINV2.  Bailing out.\n");
       exit(1);
-   } else {
+   }
+   else {
       B[0][0] = A[1][1] / DET;
       B[0][1] = -A[0][1] / DET;
       B[1][0] = -A[1][0] / DET;
@@ -234,7 +253,8 @@ void MINV2(double A[2][2], double B[2][2]) {
 }
 /**********************************************************************/
 /*  Pseudo-inverse of a 4x3 matrix                                    */
-void PINV4x3(double A[4][3], double Aplus[3][4]) {
+void PINV4x3(double A[4][3], double Aplus[3][4])
+{
    double AtA[3][3], AtAi[3][3];
 
    AtA[0][0] = A[0][0] * A[0][0] + A[1][0] * A[1][0] + A[2][0] * A[2][0] +
@@ -285,7 +305,8 @@ void PINV4x3(double A[4][3], double Aplus[3][4]) {
 }
 /**********************************************************************/
 /*  Transpose of a 3x3 Matrix                                         */
-void MT(double A[3][3], double B[3][3]) {
+void MT(double A[3][3], double B[3][3])
+{
    B[0][0] = A[0][0];
    B[0][1] = A[1][0];
    B[0][2] = A[2][0];
@@ -298,19 +319,22 @@ void MT(double A[3][3], double B[3][3]) {
 }
 /**********************************************************************/
 /*  Vector Dot Product                                                */
-double VoV(double A[3], double B[3]) {
+double VoV(double A[3], double B[3])
+{
    return (A[0] * B[0] + A[1] * B[1] + A[2] * B[2]);
 }
 /**********************************************************************/
 /*  Vector Cross Product                                              */
-void VxV(double A[3], double B[3], double C[3]) {
+void VxV(double A[3], double B[3], double C[3])
+{
    C[0] = A[1] * B[2] - A[2] * B[1];
    C[1] = A[2] * B[0] - A[0] * B[2];
    C[2] = A[0] * B[1] - A[1] * B[0];
 }
 /**********************************************************************/
 /*  Vector cross Matrix dot Vector                                    */
-void vxMov(double w[3], double M[3][3], double wxMow[3]) {
+void vxMov(double w[3], double M[3][3], double wxMow[3])
+{
    double Mow[3];
 
    Mow[0] = M[0][0] * w[0] + M[0][1] * w[1] + M[0][2] * w[2];
@@ -323,12 +347,14 @@ void vxMov(double w[3], double M[3][3], double wxMow[3]) {
 }
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */
-double MAGV(double V[3]) {
+double MAGV(double V[3])
+{
    return (sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]));
 }
 /**********************************************************************/
 /*  Normalize a 3-vector.  Return its (pre-normalization) magnitude   */
-double UNITV(double V[3]) {
+double UNITV(double V[3])
+{
    double A;
 
    A = sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
@@ -336,7 +362,8 @@ double UNITV(double V[3]) {
       V[0] /= A;
       V[1] /= A;
       V[2] /= A;
-   } else {
+   }
+   else {
       printf("Attempted divide by zero in UNITV (Line %d of mathkit.c)\n",
              __LINE__);
       V[0] = 0.0;
@@ -347,7 +374,8 @@ double UNITV(double V[3]) {
 }
 /**********************************************************************/
 /*  Copy and normalize a 3-vector.  Return its magnitude              */
-double CopyUnitV(double V[3], double W[3]) {
+double CopyUnitV(double V[3], double W[3])
+{
    double A;
 
    A = sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
@@ -355,7 +383,8 @@ double CopyUnitV(double V[3], double W[3]) {
       W[0] = V[0] / A;
       W[1] = V[1] / A;
       W[2] = V[2] / A;
-   } else {
+   }
+   else {
       printf("Attempted divide by zero in COPYUNITV (Line %d of mathkit.c)\n",
              __LINE__);
       W[0] = 0.0;
@@ -367,7 +396,8 @@ double CopyUnitV(double V[3], double W[3]) {
 /**********************************************************************/
 /*  Form a skew-symmetric matrix M from a vector V such that the      */
 /*  product MxA equals the cross product VxA for any vector A.        */
-void V2CrossM(double V[3], double M[3][3]) {
+void V2CrossM(double V[3], double M[3][3])
+{
    M[0][0] = 0.0;
    M[1][1] = 0.0;
    M[2][2] = 0.0;
@@ -381,7 +411,8 @@ void V2CrossM(double V[3], double M[3][3]) {
 /**********************************************************************/
 /*  Form a symmetric matrix M from a vector V such that the           */
 /*  product M*A equals the product Vx(VxA) for any vector A.          */
-void V2DoubleCrossM(double V[3], double M[3][3]) {
+void V2DoubleCrossM(double V[3], double M[3][3])
+{
    M[0][0] = -V[1] * V[1] - V[2] * V[2];
    M[1][1] = -V[2] * V[2] - V[0] * V[0];
    M[2][2] = -V[0] * V[0] - V[1] * V[1];
@@ -394,7 +425,8 @@ void V2DoubleCrossM(double V[3], double M[3][3]) {
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by M       */
-void VcrossM(double V[3], double M[3][3], double A[3][3]) {
+void VcrossM(double V[3], double M[3][3], double A[3][3])
+{
 
    A[0][0] = V[1] * M[2][0] - V[2] * M[1][0];
    A[0][1] = V[1] * M[2][1] - V[2] * M[1][1];
@@ -408,7 +440,8 @@ void VcrossM(double V[3], double M[3][3], double A[3][3]) {
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by MT      */
-void VcrossMT(double V[3], double M[3][3], double A[3][3]) {
+void VcrossMT(double V[3], double M[3][3], double A[3][3])
+{
 
    A[0][0] = V[1] * M[0][2] - V[2] * M[0][1];
    A[0][1] = V[1] * M[1][2] - V[2] * M[1][1];
@@ -422,7 +455,8 @@ void VcrossMT(double V[3], double M[3][3], double A[3][3]) {
 }
 /**********************************************************************/
 /*  Quaternion product                                                */
-void QxQ(double A[4], double B[4], double C[4]) {
+void QxQ(double A[4], double B[4], double C[4])
+{
    C[0] = A[3] * B[0] + A[2] * B[1] - A[1] * B[2] + A[0] * B[3];
    C[1] = -A[2] * B[0] + A[3] * B[1] + A[0] * B[2] + A[1] * B[3];
    C[2] = A[1] * B[0] - A[0] * B[1] + A[3] * B[2] + A[2] * B[3];
@@ -430,7 +464,8 @@ void QxQ(double A[4], double B[4], double C[4]) {
 }
 /**********************************************************************/
 /* Product of the Complement of a Quaternion (A) with a Quaternion (B)*/
-void QTxQ(double A[4], double B[4], double C[4]) {
+void QTxQ(double A[4], double B[4], double C[4])
+{
    C[0] = A[3] * B[0] - A[2] * B[1] + A[1] * B[2] - A[0] * B[3];
    C[1] = A[2] * B[0] + A[3] * B[1] - A[0] * B[2] - A[1] * B[3];
    C[2] = -A[1] * B[0] + A[0] * B[1] + A[3] * B[2] - A[2] * B[3];
@@ -438,7 +473,8 @@ void QTxQ(double A[4], double B[4], double C[4]) {
 }
 /**********************************************************************/
 /* Product of a Quaternion (A) with the Complement of a Quaternion (B)*/
-void QxQT(double A[4], double B[4], double C[4]) {
+void QxQT(double A[4], double B[4], double C[4])
+{
    C[0] = -A[3] * B[0] - A[2] * B[1] + A[1] * B[2] + A[0] * B[3];
    C[1] = A[2] * B[0] - A[3] * B[1] - A[0] * B[2] + A[1] * B[3];
    C[2] = -A[1] * B[0] + A[0] * B[1] - A[3] * B[2] + A[2] * B[3];
@@ -446,7 +482,8 @@ void QxQT(double A[4], double B[4], double C[4]) {
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-void VxQ(double Va[3], double QAB[4], double Vb[3]) {
+void VxQ(double Va[3], double QAB[4], double Vb[3])
+{
    double qq[4][4];
    long i, j;
 
@@ -467,7 +504,8 @@ void VxQ(double Va[3], double QAB[4], double Vb[3]) {
 }
 /**********************************************************************/
 /* Find components of V in A, given components of V in B, and qab     */
-void QxV(double QAB[4], double Vb[3], double Va[3]) {
+void QxV(double QAB[4], double Vb[3], double Va[3])
+{
    double qq[4][4];
    long i, j;
 
@@ -488,7 +526,8 @@ void QxV(double QAB[4], double Vb[3], double Va[3]) {
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-void QTxV(double QAB[4], double Va[3], double Vb[3]) {
+void QTxV(double QAB[4], double Va[3], double Vb[3])
+{
    double qq[4][4];
    long i, j;
 
@@ -509,7 +548,8 @@ void QTxV(double QAB[4], double Va[3], double Vb[3]) {
 }
 /**********************************************************************/
 /*  Normalize a quaternion                                            */
-void UNITQ(double Q[4]) {
+void UNITQ(double Q[4])
+{
    double A;
 
    A = sqrt(Q[0] * Q[0] + Q[1] * Q[1] + Q[2] * Q[2] + Q[3] * Q[3]);
@@ -518,7 +558,8 @@ void UNITQ(double Q[4]) {
              "fix that.\n",
              __LINE__);
       exit(1);
-   } else {
+   }
+   else {
       Q[0] /= A;
       Q[1] /= A;
       Q[2] /= A;
@@ -527,7 +568,8 @@ void UNITQ(double Q[4]) {
 }
 /**********************************************************************/
 /*  Rectify a quaternion, forcing q[3] to be positive                 */
-void RECTIFYQ(double Q[4]) {
+void RECTIFYQ(double Q[4])
+{
    if (Q[3] < 0.0) {
       Q[0] = -Q[0];
       Q[1] = -Q[1];
@@ -537,7 +579,8 @@ void RECTIFYQ(double Q[4]) {
 }
 /*********************************************************************/
 /* Given vector A, find vectors B, C to form orthogonal basis        */
-void PerpBasis(double A[3], double B[3], double C[3]) {
+void PerpBasis(double A[3], double B[3], double C[3])
+{
    long i;
    double V[3] = {0.0, 0.0, 0.0};
    double Amin;
@@ -559,7 +602,8 @@ void PerpBasis(double A[3], double B[3], double C[3]) {
    UNITV(C);
 }
 /**********************************************************************/
-double fact(long n) {
+double fact(long n)
+{
    double F = 1.0;
    long i;
 
@@ -569,7 +613,8 @@ double fact(long n) {
    return F;
 }
 /**********************************************************************/
-double oddfact(long n) {
+double oddfact(long n)
+{
    double F = 1.0;
    long i;
 
@@ -586,7 +631,8 @@ double oddfact(long n) {
 /*  in SphericalHarmonics.                                            */
 #define NMAX 18
 void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
-              double sdP[NMAX + 1][NMAX + 1]) {
+              double sdP[NMAX + 1][NMAX + 1])
+{
 
    double Ps[NMAX + 1][NMAX + 1];
    long n, m;
@@ -644,7 +690,8 @@ void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
 /* gradV[2] = Longitudinal (positive east)                            */
 void SphericalHarmonics(long N, long M, double r, double phi, double theta,
                         double Re, double K, double C[NMAX + 1][NMAX + 1],
-                        double S[NMAX + 1][NMAX + 1], double gradV[3]) {
+                        double S[NMAX + 1][NMAX + 1], double gradV[3])
+{
 
    double P[NMAX + 1][NMAX + 1], sdP[NMAX + 1][NMAX + 1];
    long n, m;
@@ -707,7 +754,8 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
 #undef NMAX
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
-void MxMG(double **A, double **B, double **C, long N, long K, long M) {
+void MxMG(double **A, double **B, double **C, long N, long K, long M)
+{
    long i, j, k;
 
    for (i = 0; i < N; i++) {
@@ -721,7 +769,8 @@ void MxMG(double **A, double **B, double **C, long N, long K, long M) {
 }
 /**********************************************************************/
 /*  A is NxK, B is MxK, C is NxM                                      */
-void MxMTG(double **A, double **B, double **C, long N, long K, long M) {
+void MxMTG(double **A, double **B, double **C, long N, long K, long M)
+{
    long i, j, k;
 
    for (i = 0; i < N; i++) {
@@ -735,7 +784,8 @@ void MxMTG(double **A, double **B, double **C, long N, long K, long M) {
 }
 /**********************************************************************/
 /*  A is KxN, B is KxM, C is NxM                                      */
-void MTxMG(double **A, double **B, double **C, long N, long K, long M) {
+void MTxMG(double **A, double **B, double **C, long N, long K, long M)
+{
    long i, j, k;
 
    for (i = 0; i < N; i++) {
@@ -748,7 +798,8 @@ void MTxMG(double **A, double **B, double **C, long N, long K, long M) {
    }
 }
 /**********************************************************************/
-void MxVG(double **M, double *v, double *w, long n, long m) {
+void MxVG(double **M, double *v, double *w, long n, long m)
+{
    long i, j;
 
    for (i = 0; i < n; i++) {
@@ -760,7 +811,8 @@ void MxVG(double **M, double *v, double *w, long n, long m) {
 }
 /**********************************************************************/
 /*  Product of scalar S with NxM matrix A                             */
-void SxMG(double s, double **A, double **B, long N, long M) {
+void SxMG(double s, double **A, double **B, long N, long M)
+{
    long i, j;
 
    for (i = 0; i < N; i++) {
@@ -772,7 +824,8 @@ void SxMG(double s, double **A, double **B, long N, long M) {
 /**********************************************************************/
 /*                  GENERAL MATRIX INVERSE                            */
 /* Inverse of an NxN matrix                                           */
-void MINVG(double **A, double **AI, long N) {
+void MINVG(double **A, double **AI, long N)
+{
    long I, J, ROW;
    long IPIVOT = 0;
    double **M;
@@ -840,7 +893,8 @@ void MINVG(double **A, double **AI, long N) {
 /******************************************************************************/
 /* For Order-N dynamics, we need to invert matrices of size 1 <= N <= 6       */
 /* This specialized function avoids mallocs to save time                      */
-void FastMINV6(double A[6][6], double AI[6][6], long N) {
+void FastMINV6(double A[6][6], double AI[6][6], long N)
+{
    long I, J, ROW;
    long IPIVOT = 0;
    double M[6][6];
@@ -899,13 +953,15 @@ void FastMINV6(double A[6][6], double AI[6][6], long N) {
 }
 /**********************************************************************/
 /*  Find the pseudo-inverse of an n-by-m matrix A                     */
-void PINVG(double **A, double **Ai, long n, long m) {
+void PINVG(double **A, double **Ai, long n, long m)
+{
    double **AtA, **AtAi;
    double **AAt, **AAti;
 
    if (n == m) {
       MINVG(A, Ai, n);
-   } else if (n > m) {
+   }
+   else if (n > m) {
       AtA  = CreateMatrix(m, m);
       AtAi = CreateMatrix(m, m);
       MTxMG(A, A, AtA, m, n, m);
@@ -913,7 +969,8 @@ void PINVG(double **A, double **Ai, long n, long m) {
       MxMTG(AtAi, A, Ai, m, m, n);
       DestroyMatrix(AtA);
       DestroyMatrix(AtAi);
-   } else {
+   }
+   else {
       AAt  = CreateMatrix(n, n);
       AAti = CreateMatrix(n, n);
       MxMTG(A, A, AAt, n, m, n);
@@ -924,7 +981,8 @@ void PINVG(double **A, double **Ai, long n, long m) {
    }
 }
 /**********************************************************************/
-double **CreateMatrix(long n, long m) {
+double **CreateMatrix(long n, long m)
+{
    double **A;
    long i;
 
@@ -950,7 +1008,8 @@ double **CreateMatrix(long n, long m) {
    return (A);
 }
 /**********************************************************************/
-void DestroyMatrix(double **A) {
+void DestroyMatrix(double **A)
+{
    if (A == NULL)
       return;
    free(A[0]);
@@ -960,7 +1019,8 @@ void DestroyMatrix(double **A) {
 /**********************************************************************/
 /*   Solution of NxN system      A * x = b                            */
 /*   by Gaussian Elimination and Back Substitution, with pivoting     */
-void LINSOLVE(double **A, double *x, double *b, long n) {
+void LINSOLVE(double **A, double *x, double *b, long n)
+{
    long i, j, k, l, m;
    double mm, *a1, b1;
 
@@ -993,7 +1053,8 @@ void LINSOLVE(double **A, double *x, double *b, long n) {
             A[l][i] = a1[i];
          }
          b[l] = b1;
-      } else {
+      }
+      else {
          b[j] = b[j] / A[j][j];
          for (i = n - 1; i >= j; i--) {
             A[j][i] = A[j][i] / A[j][j];
@@ -1025,7 +1086,8 @@ void LINSOLVE(double **A, double *x, double *b, long n) {
 /*  Elimination.                                                      */
 /*  In testing, this didn't live up to the hype, being slightly       */
 /*  slower than LINSOLVE.  I must have an inefficiency.               */
-void CholeskySolve(double **A, double *x, double *b, long n) {
+void CholeskySolve(double **A, double *x, double *b, long n)
+{
    double **L, *D, **LD;
    double *y;
    long i, j, k;
@@ -1079,7 +1141,8 @@ void CholeskySolve(double **A, double *x, double *b, long n) {
 /* See "An Introduction to the Conjugate Gradient Method              */
 /* Without the Agonizing Pain", by Jonathan Richard Shewchuk          */
 void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
-                   long maxiter) {
+                   long maxiter)
+{
    double *r, *d, *q;
    double DeltaNew, DeltaOld, Err2D0, alpha, Beta, dq;
    long i, j, Iter;
@@ -1124,7 +1187,8 @@ void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
             for (j = 0; j < n; j++)
                r[i] -= A[i][j] * x[j];
          }
-      } else {
+      }
+      else {
          for (i = 0; i < n; i++)
             r[i] -= alpha * q[i];
       }
@@ -1155,7 +1219,8 @@ void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
 /*  a = Coefficients of polynomial (length n+1)                         */
 /*  Real = Real parts of roots (length n)                               */
 /*  Imag = Imaginary parts of roots (length n)                          */
-void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
+void Bairstow(long n, double *a, double Tol, double *Real, double *Imag)
+{
 #define MAX(x, y) (x > y ? x : y)
 
    double *b, *c;
@@ -1172,7 +1237,8 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
       if (a[n - 2] != 0.0) {
          r = -a[n - 1] / a[n - 2];
          s = -a[n] / a[n - 2];
-      } else {
+      }
+      else {
          r = -a[1] / a[0];
          s = -a[2] / a[0];
       }
@@ -1206,7 +1272,8 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
          Imag[n - 1] = 0.5 * sqrt(-Disc);
          Real[n - 2] = Real[n - 1];
          Imag[n - 2] = -Imag[n - 1];
-      } else {
+      }
+      else {
          Real[n - 1] = 0.5 * (r + sqrt(Disc));
          Imag[n - 1] = 0.0;
          Real[n - 2] = 0.5 * (r - sqrt(Disc));
@@ -1224,7 +1291,8 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
    if (n == 1) {
       Real[0] = -a[1] / a[0];
       Imag[0] = 0.0;
-   } else {
+   }
+   else {
       r    = -a[1] / a[0];
       s    = -a[2] / a[0];
       Disc = r * r + 4 * s;
@@ -1233,7 +1301,8 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
          Imag[1] = 0.5 * sqrt(-Disc);
          Real[0] = Real[1];
          Imag[0] = -Imag[1];
-      } else {
+      }
+      else {
          Real[1] = 0.5 * (r + sqrt(Disc));
          Imag[1] = 0.0;
          Real[0] = 0.5 * (r - sqrt(Disc));
@@ -1256,7 +1325,8 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag) {
 /*  scale = Size of initial amoeba                                    */
 /*  Tol = Tolerance on cost function to declare convergence           */
 double Amoeba(long N, double *P, double CostFunction(double *p, double *Parm),
-              double *CostParm, double scale, double Tol) {
+              double *CostParm, double scale, double Tol)
+{
 
    long Converged = 0;
    double **p, *pc, *f;
@@ -1344,8 +1414,9 @@ double Amoeba(long N, double *P, double CostFunction(double *p, double *Parm),
                p[high][j]  = pn[j];
             }
          }
-      } else if (f[high] >
-                 f[nexthigh]) { /* Worked not so well, so try contraction */
+      }
+      else if (f[high] >
+               f[nexthigh]) { /* Worked not so well, so try contraction */
          StepSize = 0.5;
          Coef1    = (N + 1.0) / N * (1.0 - StepSize);
          Coef2    = -(1.0 - (N + 1.0) * StepSize) / N;
@@ -1416,7 +1487,8 @@ double Amoeba(long N, double *P, double CostFunction(double *p, double *Parm),
 }
 /**********************************************************************/
 /*  Find unit normal vector to plane defined by points V1, V2, V3     */
-void FindNormal(double V1[3], double V2[3], double V3[3], double N[3]) {
+void FindNormal(double V1[3], double V2[3], double V3[3], double N[3])
+{
    long i;
    double D1[3], D2[3];
 
@@ -1429,7 +1501,8 @@ void FindNormal(double V1[3], double V2[3], double V3[3], double N[3]) {
 }
 /**********************************************************************/
 /*  Output clamped at ends of interval                                */
-double LinInterp(double *X, double *Y, double x, long n) {
+double LinInterp(double *X, double *Y, double x, long n)
+{
    double dx, dxn, y;
    long i, i1, i2;
 
@@ -1438,10 +1511,12 @@ double LinInterp(double *X, double *Y, double x, long n) {
    if (fabs(dxn) < fabs(dx)) {
       printf("LinInterp clamped to 'right' end of interval\n");
       y = Y[n - 1];
-   } else if (dx * dxn < 0.0) {
+   }
+   else if (dx * dxn < 0.0) {
       printf("LinInterp clamped to 'left' end of interval\n");
       y = Y[0];
-   } else {
+   }
+   else {
       /* Binary Search */
       i1 = 0;
       i2 = n - 1;
@@ -1461,7 +1536,8 @@ double LinInterp(double *X, double *Y, double x, long n) {
 /*  A constant-rate interpolation for quaternions                     */
 /*  Ref: Ken Shoemake, "Animating Rotation with Quaternion Curves"    */
 /*  q(u=0.0) = q1, q(u=1.0) = q2                                      */
-void SphereInterp(double q1[4], double q2[4], double u, double q[4]) {
+void SphereInterp(double q1[4], double q2[4], double u, double q[4])
+{
    double Theta, CosTheta, SinTheta;
    double SinU, Sin1mU;
    long k;
@@ -1470,7 +1546,8 @@ void SphereInterp(double q1[4], double q2[4], double u, double q[4]) {
    if (CosTheta >= 1.0) {
       for (k = 0; k < 4; k++)
          q[k] = q1[k];
-   } else {
+   }
+   else {
       SinTheta = sqrt(1.0 - CosTheta * CosTheta);
       Theta    = asin(SinTheta);
       SinU     = sin(u * Theta);
@@ -1480,13 +1557,15 @@ void SphereInterp(double q1[4], double q2[4], double u, double q[4]) {
    }
 }
 /**********************************************************************/
-double CubicInterp1D(double f0, double f1, double x) {
+double CubicInterp1D(double f0, double f1, double x)
+{
    double x1 = 1.0 - x;
    return ((3.0 - 2.0 * x1) * x1 * x1 * f0 + (3.0 - 2.0 * x) * x * x * f1);
 }
 /**********************************************************************/
 double CubicInterp2D(double f00, double f10, double f01, double f11, double x,
-                     double y) {
+                     double y)
+{
    double f0 = CubicInterp1D(f00, f10, x);
    double f1 = CubicInterp1D(f01, f11, x);
    return (CubicInterp1D(f0, f1, y));
@@ -1494,14 +1573,16 @@ double CubicInterp2D(double f00, double f10, double f01, double f11, double x,
 /**********************************************************************/
 double CubicInterp3D(double f000, double f100, double f010, double f110,
                      double f001, double f101, double f011, double f111,
-                     double x, double y, double z) {
+                     double x, double y, double z)
+{
    double f0 = CubicInterp2D(f000, f100, f010, f110, x, y);
    double f1 = CubicInterp2D(f001, f101, f011, f111, x, y);
    return (CubicInterp1D(f0, f1, z));
 }
 /**********************************************************************/
 double DistanceToLine(double LineEnd1[3], double LineEnd2[3], double Point[3],
-                      double VecToLine[3]) {
+                      double VecToLine[3])
+{
    double Axis[3], Vec[3], VoA;
    long i;
 
@@ -1518,7 +1599,8 @@ double DistanceToLine(double LineEnd1[3], double LineEnd2[3], double Point[3],
 }
 /**********************************************************************/
 long ProjectPointOntoPoly(double Point[3], double DirVec[3], double **Vtx,
-                          long Nvtx, double ProjPoint[3], double *Distance) {
+                          long Nvtx, double ProjPoint[3], double *Distance)
+{
    double Axis[3], a1[3], a2[3];
    static double **COEF, *RHS, *x;
    double SumAng, s1[3], s2[3], S1xS2[3], Norm[3], SinAng, CosAng;
@@ -1595,7 +1677,8 @@ long ProjectPointOntoPoly(double Point[3], double DirVec[3], double **Vtx,
 /* Pt = Bary[0]*A + Bary[1]*B + Bary[2]*C + Bary[3]*DirVec           */
 long ProjectPointOntoTriangle(double A[3], double B[3], double C[3],
                               double DirVec[3], double Pt[3], double ProjPt[3],
-                              double Bary[4]) {
+                              double Bary[4])
+{
    double Den, NumA, NumB, NumC, NumD;
    double AxB[3], CxD[3], PxB[3], AxP[3], CxP[3], PxD[3];
    double M[4][3], Mplus[3][4];
@@ -1621,7 +1704,8 @@ long ProjectPointOntoTriangle(double A[3], double B[3], double C[3],
       Bary[1] = Mplus[1][0] * Pt[0] + Mplus[1][1] * Pt[1] + Mplus[1][2] * Pt[2];
       Bary[2] = Mplus[2][0] * Pt[0] + Mplus[2][1] * Pt[1] + Mplus[2][2] * Pt[2];
       Bary[3] = 0.0;
-   } else {
+   }
+   else {
       VxV(Pt, B, PxB);
       VxV(A, Pt, AxP);
       VxV(C, Pt, CxP);
@@ -1658,7 +1742,8 @@ long ProjectPointOntoTriangle(double A[3], double B[3], double C[3],
    return (InPoly);
 }
 /**********************************************************************/
-double CubicSpline(double x, double X[4], double Y[4]) {
+double CubicSpline(double x, double X[4], double Y[4])
+{
    double DY0, DY2, DY3;
    double Det, u0, u3, u;
    double z0, z3, u02, u32;
@@ -1703,7 +1788,8 @@ double CubicSpline(double x, double X[4], double Y[4]) {
 }
 /******************************************************************************/
 /* Compute Chebyshev polynomials of first kind (T) and second kind (U)        */
-void ChebyPolys(double u, long n, double T[20], double U[20]) {
+void ChebyPolys(double u, long n, double T[20], double U[20])
+{
    long k;
 
    if (u < -1.0 || u > 1.0) {
@@ -1727,7 +1813,8 @@ void ChebyPolys(double u, long n, double T[20], double U[20]) {
 /******************************************************************************/
 /* Using ChebyPolys, find "position" (P) and scaled velocity (dPdu)           */
 void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
-                 double *dPdu) {
+                 double *dPdu)
+{
    long k;
 
    if (n > 20) {
@@ -1743,7 +1830,8 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
    }
 }
 /******************************************************************************/
-void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]) {
+void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
+{
    long i, j, k;
    double T[20], U[20];
    double **AtA, *x, *Atb;
@@ -1777,7 +1865,8 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]) {
    free(Atb);
 }
 /******************************************************************************/
-void VecToLngLat(double A[3], double *lng, double *lat) {
+void VecToLngLat(double A[3], double *lng, double *lat)
+{
    double B[3];
 
    if (MAGV(A) > 0.0) {
@@ -1791,13 +1880,15 @@ void VecToLngLat(double A[3], double *lng, double *lat) {
          *lat = 2.0 * atan(1.0);
       else
          *lat = -2.0 * atan(1.0);
-   } else {
+   }
+   else {
       *lng = 0.0;
       *lat = 0.0;
    }
 }
 /******************************************************************************/
-double WrapTo2Pi(double n) {
+double WrapTo2Pi(double n)
+{
    double OrbVar = n;
    while (OrbVar >= TWOPI) {
       OrbVar = OrbVar - TWOPI;
@@ -1809,7 +1900,8 @@ double WrapTo2Pi(double n) {
 /* Iterates until tolerance or max iterations are reached; maximum stepsize   */
 /* governed by maxStep. Use params to pass parameters to fdf                  */
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
-                     double (*fdf)(double, double *), double *params) {
+                     double (*fdf)(double, double *), double *params)
+{
    if (maxStep < 0)
       maxStep = -maxStep;
    double x = x0;

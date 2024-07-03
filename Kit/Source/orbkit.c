@@ -19,7 +19,8 @@
 */
 
 /**********************************************************************/
-struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb) {
+struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb)
+{
    struct OrbitType *NewOrb;
 
    (*Norb)++;
@@ -33,13 +34,15 @@ struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb) {
    return (NewOrb);
 }
 /**********************************************************************/
-double eccFDF(double E, double params[2]) {
+double eccFDF(double E, double params[2])
+{
    double f  = E - params[0] * sin(E) - params[1];
    double fp = 1.0 - params[0] * cos(E);
    return f / fp;
 }
 /**********************************************************************/
-double MeanAnomToTrueAnom(double MeanAnom, double ecc) {
+double MeanAnomToTrueAnom(double MeanAnom, double ecc)
+{
 #define EPS (1.0E-12)
    double params[2] = {ecc, MeanAnom};
    double E         = NewtonRaphson(MeanAnom, EPS, 100, 0.1, &eccFDF, params);
@@ -47,19 +50,22 @@ double MeanAnomToTrueAnom(double MeanAnom, double ecc) {
 #undef EPS
 }
 /**********************************************************************/
-double circFDF(double x, double B[1]) {
+double circFDF(double x, double B[1])
+{
    double f  = x * (x * x + 3.0) - 2.0 * B[0];
    double fp = 3.0 * x * x + 3.0;
    return f / fp;
 }
 /**********************************************************************/
-double hyperbolFDF(double H, double params[2]) {
+double hyperbolFDF(double H, double params[2])
+{
    double f  = params[0] * sinh(H) - H - params[1];
    double fp = params[0] * cosh(H) - 1.0;
    return f / fp;
 }
 /**********************************************************************/
-double TrueAnomaly(double mu, double p, double e, double t) {
+double TrueAnomaly(double mu, double p, double e, double t)
+{
 #define EPS (1.0E-12)
    double Anom;
    double p3 = p * p * p;
@@ -68,7 +74,8 @@ double TrueAnomaly(double mu, double p, double e, double t) {
       double params[1] = {3.0 * sqrt(mu / p3) * t};
       double x         = NewtonRaphson(0, EPS, 100, 1.0, &circFDF, params);
       Anom             = 2.0 * atan(x);
-   } else if (e > 1.0) {
+   }
+   else if (e > 1.0) {
       double e1        = e * e - 1.0;
       double N         = sqrt(mu * e1 * e1 * e1 / p3) * t;
       double Ne        = N / e;
@@ -77,7 +84,8 @@ double TrueAnomaly(double mu, double p, double e, double t) {
       double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1,
                                &hyperbolFDF, params);
       Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
-   } else {
+   }
+   else {
       double a = p / (1.0 - e * e);
       double M = sqrt(mu / (a * a * a)) * t;
       M        = fmod(M + PI, TWOPI) - PI;
@@ -88,7 +96,8 @@ double TrueAnomaly(double mu, double p, double e, double t) {
 #undef EPS
 }
 /**********************************************************************/
-double hyperradFDF(double r, double params[7]) {
+double hyperradFDF(double r, double params[7])
+{
    double rold = params[5];
    double fold = params[6];
    double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
@@ -107,7 +116,8 @@ double hyperradFDF(double r, double params[7]) {
 /* Sensitivity crossover happens when velocity is more radial than    */
 /* tangential, which happens at about N = e-1 (approximation improves */
 /* as e->inf.                                                         */
-void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R) {
+void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R)
+{
 
    double a, q, sqma, T, Den, alpha, sqX, r, f;
 
@@ -126,14 +136,16 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R) {
    *R = NewtonRaphson(1.1 * p, 1.0E-3, 200, 1.0E6, &hyperradFDF, params);
 }
 /**********************************************************************/
-double atanh(double x) {
+double atanh(double x)
+{
    if (fabs(x) < 1.0)
       return 0.5 * log((1.0 + x) / (1.0 - x));
    else
       return 0.0;
 }
 /**********************************************************************/
-double TimeSincePeriapsis(double mu, double p, double e, double th) {
+double TimeSincePeriapsis(double mu, double p, double e, double th)
+{
    double x, a, B, E, H, dt;
 
    x = tan(0.5 * th);
@@ -141,11 +153,13 @@ double TimeSincePeriapsis(double mu, double p, double e, double th) {
    if (e == 1.0) {
       B  = 0.5 * x * (x * x + 3.0);
       dt = sqrt(p * p * p / mu) / 3.0 * B;
-   } else if (e < 1.0) {
+   }
+   else if (e < 1.0) {
       a  = p / (1.0 - e * e);
       E  = 2.0 * atan(sqrt((1.0 - e) / (1.0 + e)) * x);
       dt = (E - e * sin(E)) * sqrt(a * a * a / mu);
-   } else {
+   }
+   else {
       a  = p / (1.0 - e * e);
       H  = 2.0 * atanh(sqrt((e - 1.0) / (e + 1.0)) * x);
       dt = (e * sinh(H) - H) * sqrt(-a * a * a / mu);
@@ -157,7 +171,8 @@ double TimeSincePeriapsis(double mu, double p, double e, double th) {
 /* true anomaly difference.  This routine good for all orbits.        */
 /* See Battin, p.130                                                  */
 void RV02RV(double mu, double xr0[3], double xv0[3], double anom, double xr[3],
-            double xv[3]) {
+            double xv[3])
+{
    double sqmu, cth, sth, cth1, s0, R0xV0[3], p, r0, sqp, r, F, Ft, G, Gt;
    long i;
 
@@ -194,7 +209,8 @@ void RV02RV(double mu, double xr0[3], double xv0[3], double anom, double xr[3],
 /* circular, elliptical, parabolic and hyperbolic orbits.             */
 
 void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
-            double dt, double r[3], double v[3], double *anom) {
+            double dt, double r[3], double v[3], double *anom)
+{
    double R, th, CPN[3][3], cth, sth, pr[3], pv[3], c2;
    double C1, S1, C2, S2, C3, S3;
 
@@ -245,7 +261,8 @@ void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
 void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
             double *e, double *i, double *RAAN, double *ArgP, double *th,
             double *tp, double *SLR, double *alpha, double *rmin,
-            double *MeanMotion, double *Period) {
+            double *MeanMotion, double *Period)
+{
 #define EPS (1.0E-12)
 
    double xh[3], xe[3], rhat[3], r, v, vxh[3], cth, hxe[3];
@@ -261,7 +278,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
       /* Elliptic orbit */
       *MeanMotion = sqrt(mu * (*alpha) * (*alpha) * (*alpha));
       *Period     = TWOPI / (*MeanMotion);
-   } else {
+   }
+   else {
       /* For hyperbolic orbits, these need special interpretation */
       *MeanMotion = sqrt(-mu * (*alpha) * (*alpha) * (*alpha));
       *Period     = TWOPI / (*MeanMotion);
@@ -306,7 +324,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
          xe[0] = 1.0;
          xe[1] = 0.0;
          xe[2] = 0.0;
-      } else { /* Inclined */
+      }
+      else { /* Inclined */
          /* Arbitrarily set omg = 0 */
          *RAAN = atan2(xh[0], -xh[1]);
          *i    = acos(xh[2]);
@@ -315,7 +334,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
          xe[1] = xh[0] / h;
          xe[2] = 0.0;
       }
-   } else { /* Eccentric */
+   }
+   else { /* Eccentric */
       xe[0] /= *e;
       xe[1] /= *e;
       xe[2] /= *e;
@@ -333,7 +353,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
          cosw   = xe[0] * xn[0] + xe[1] * xn[1];
          sinw   = xe[0] * hxn[0] + xe[1] * hxn[1] + xe[2] * hxn[2];
          *ArgP  = atan2(sinw, cosw);
-      } else { /* Inclined */
+      }
+      else { /* Inclined */
          /* RAAN, omg both well defined */
          xn[0] = -xh[1] / h;
          xn[1] = xh[0] / h;
@@ -367,7 +388,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
 }
 /**********************************************************************/
 void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
-                 double LeapSec, struct OrbitType *O) {
+                 double LeapSec, struct OrbitType *O)
+{
 #define EPS (1.0E-12)
 
    char YearString[3];
@@ -459,7 +481,8 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
       O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
       /* 10.126 */
       O->J2Rw2bya = J2 * Re * Re / O->MeanSMA;
-   } else {
+   }
+   else {
       O->RAANdot  = 0.0;
       O->ArgPdot  = 0.0;
       O->RAAN0    = O->RAAN;
@@ -473,7 +496,8 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
-void MeanEph2RV(struct OrbitType *O, double DynTime) {
+void MeanEph2RV(struct OrbitType *O, double DynTime)
+{
    double e, e2, sin2i, sinw, sin2w, cosnu, g;
    double CPN[3][3], cth, sth, R, pr[3], pv[3];
    double C1, S1, C2, S2, C3, S3;
@@ -541,7 +565,8 @@ void MeanEph2RV(struct OrbitType *O, double DynTime) {
       pv[0] = Rdot * cth - R * AnomDot * sth;
       pv[1] = Rdot * sth + R * AnomDot * cth;
       pv[2] = 0.0;
-   } else {
+   }
+   else {
       double c2 = sqrt(O->mu / O->SLR);
       pv[0]     = -c2 * sth;
       pv[1]     = c2 * (e + cth);
@@ -585,7 +610,8 @@ void MeanEph2RV(struct OrbitType *O, double DynTime) {
 /* TLEs use UTC.  42 orbits use TT.  So LeapSec are needed.           */
 long LoadTleFromFile(const char *Path, const char *TleFileName,
                      const char *TleLabel, double DynTime, double JD,
-                     double LeapSec, struct OrbitType *O) {
+                     double LeapSec, struct OrbitType *O)
+{
    FILE *infile;
    char line[80], line1[80], line2[80];
    char Label[25];
@@ -621,7 +647,8 @@ long LoadTleFromFile(const char *Path, const char *TleFileName,
 /* Periapsis position and velocity might make a useful orbit element  */
 /* set for some applications.  This function finds them from the      */
 /* given position and velocity.                                       */
-double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3]) {
+double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3])
+{
    double magr, magv;
    double E, rxv[3], h, p, e, magrp, magvp, cth, sth;
    double Cer, Cev, Cpr, Cpv, ie[3], ip[3], anom;
@@ -640,7 +667,8 @@ double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3]) {
    if (e == 0.0) {
       cth = 1.0;
       sth = 0.0;
-   } else {
+   }
+   else {
       cth = (p / magr - 1.0) / e;
       sth = sqrt(1.0 - cth * cth);
       if (VoV(r, v) < 0.0)
@@ -675,7 +703,8 @@ double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3]) {
 void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *ArgP, double *tp,
                        double *anom, double *SLR, double *alpha, double *rmin,
-                       double *MeanMotion, double *Period) {
+                       double *MeanMotion, double *Period)
+{
 
    double La0[10] = {0.0,       252.250906, 181.979801, 100.466457, 355.433,
                      34.351519, 50.077444,  314.055005, 304.348665, 238.92881};
@@ -780,7 +809,8 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 /*  This function gives the location of Luna, with respect to the    */
 /*  geocentric ecliptic frame.  Refer to Chap 47 of Meeus,           */
 /*  "Astronomical Algorithms" QB51.3.E43 M42, 1998.                  */
-void LunaPosition(double JD, double r[3]) {
+void LunaPosition(double JD, double r[3])
+{
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
@@ -1115,7 +1145,8 @@ void LunaPosition(double JD, double r[3]) {
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(double JulDay, double CNJ[3][3]) {
+void LunaInertialFrame(double JulDay, double CNJ[3][3])
+{
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
@@ -1190,7 +1221,8 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3]) {
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-double LunaPriMerAng(double JulDay) {
+double LunaPriMerAng(double JulDay)
+{
    double D;
    double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
    double SinE1, SinE2, SinE3, SinE4, SinE5, SinE6, SinE7;
@@ -1236,7 +1268,8 @@ double LunaPriMerAng(double JulDay) {
    return (PriMerAng * D2R);
 }
 /**********************************************************************/
-void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]) {
+void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3])
+{
    double L1[3], L2[3], L3[3], m, h[3], rr, hh;
    long i;
 
@@ -1259,7 +1292,8 @@ void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]) {
 
    if (hh == 0.0) { /* Rectlinear Motion */
       PerpBasis(L3, L1, L2);
-   } else {
+   }
+   else {
       m      = sqrt(L2[0] * L2[0] + L2[1] * L2[1] + L2[2] * L2[2]);
       L2[0] /= m;
       L2[1] /= m;
@@ -1282,7 +1316,8 @@ void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]) {
    }
 }
 /**********************************************************************/
-void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]) {
+void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])
+{
    double Zaxis[3] = {0.0, 0.0, 1.0};
    double East[3], North[3], Up[3];
    long i;
@@ -1302,7 +1337,8 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]) {
    wln[2] = WorldW;
 }
 /**********************************************************************/
-double lagpointFDF(double x, double params[3]) {
+double lagpointFDF(double x, double params[3])
+{
    double rho = params[0], rho1 = params[1];
    double xp  = x - params[0];
    double xp1 = xp + 1.0;
@@ -1334,7 +1370,8 @@ double lagpointFDF(double x, double params[3]) {
 /*  Reference Bong Wie, "Space Vehicle Dynamics and Control"          */
 /*  (TL1050.W52)Sec 3.7.3                                             */
 /*  Also see LagModes.pdf for dimensioned derivations.                */
-void FindLagPtParms(struct LagrangeSystemType *LS) {
+void FindLagPtParms(struct LagrangeSystemType *LS)
+{
    struct LagrangePointType *LP;
    double rho, x, rho1;
    double eps = 2.0E-16;
@@ -1592,8 +1629,8 @@ void FindLagPtParms(struct LagrangeSystemType *LS) {
 /*  Reference Bong Wie, "Space Vehicle Dynamics and Control"          */
 /*  (TL1050.W52)Sec 3.7.3                                             */
 void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
-                     long Ilp, double PosN[3], double VelN[3],
-                     double CLN[3][3]) {
+                     long Ilp, double PosN[3], double VelN[3], double CLN[3][3])
+{
 
    double OnePlusEcosTH, OneMinusE2, R2[3], V2[3], L1[3], L2[3], L3[3];
    double rp[3], rhat[3], magr, thhat[3], vp[3];
@@ -1654,7 +1691,8 @@ void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
 /*  From Lagrange System "modal" description, find position, velocity */
 /*  (m, m/sec) wrt N frame of LagSys Body 1                           */
 void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
-                 struct OrbitType *O, double r[3], double v[3]) {
+                 struct OrbitType *O, double r[3], double v[3])
+{
    struct LagrangePointType *LP;
    double cw1t, sw1t, cw2t, sw2t, ep, em, cwzt, swzt;
    double TimeSinceEpoch;
@@ -1676,7 +1714,8 @@ void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
               LP->sigma * (O->Cx * ep - O->Dx * em);
       vl[1] = LP->w1 * (-O->Ay * sw1t + O->By * cw1t) +
               LP->sigma * (O->Cy * ep - O->Dy * em);
-   } else { /* Triangular LP */
+   }
+   else { /* Triangular LP */
       cw2t  = cos(LP->w2 * TimeSinceEpoch);
       sw2t  = sin(LP->w2 * TimeSinceEpoch);
       rl[0] = O->Ax * cw1t + O->Bx * sw1t + O->Cx * cw2t + O->Dx * sw2t;
@@ -1712,7 +1751,8 @@ void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
 /*  From position, velocity (m, m/sec) wrt N frame of LagSys Body 1,  */
 /*  find Lagrange System "modal" description                          */
 void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
-                 struct OrbitType *O) {
+                 struct OrbitType *O)
+{
    struct LagrangePointType *LP;
    double TimeSinceEpoch;
    double R, Rmin;
@@ -1778,7 +1818,8 @@ void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
       COEF[5][5] = LP->Zw1;
       COEF[6][6] = LP->Zs;
       COEF[7][7] = LP->Zs;
-   } else {
+   }
+   else {
       COEF[0][0] = cw1t;
       COEF[0][1] = sw1t;
       COEF[0][2] = cw2t;
@@ -1849,7 +1890,8 @@ void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
 /*  From position (m) wrt N frame of LagSys Body 1,                   */
 /*  find Lagrange System "modal" description, stable mode only        */
 void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
-                     struct OrbitType *O) {
+                     struct OrbitType *O)
+{
    struct LagrangePointType *LP;
    double TimeSinceEpoch;
    double R, Rmin;
@@ -1895,7 +1937,8 @@ void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
       COEF[3][0] = -2.0 * LS->MeanRate * LP->w1;
       COEF[2][2] = LP->Zw1;
       COEF[3][3] = LP->Zw1;
-   } else {
+   }
+   else {
       COEF[0][0] = cw1t;
       COEF[0][1] = sw1t;
       COEF[1][2] = cw1t;
@@ -1946,7 +1989,8 @@ void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
 /*  From position, velocity (m, m/sec) wrt N frame of LagSys Body 1,  */
 /*  find Lagrange System "modal" description                          */
 void XYZ2LagModes(double TimeSinceEpoch, struct LagrangeSystemType *LS,
-                  struct OrbitType *O) {
+                  struct OrbitType *O)
+{
    struct LagrangePointType *LP;
    double cw1t, sw1t, cw2t, sw2t, ep, em, cwzt, swzt;
    double **COEF, *RHS, *ParmVec;
@@ -1989,7 +2033,8 @@ void XYZ2LagModes(double TimeSinceEpoch, struct LagrangeSystemType *LS,
       COEF[5][5] = LP->Zw1;
       COEF[6][6] = LP->Zs;
       COEF[7][7] = LP->Zs;
-   } else {
+   }
+   else {
       COEF[0][0] = cw1t;
       COEF[0][1] = sw1t;
       COEF[0][2] = cw2t;
@@ -2048,7 +2093,8 @@ void XYZ2LagModes(double TimeSinceEpoch, struct LagrangeSystemType *LS,
 void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
                        double SenseXY1, double AmpXY2, double PhiXY2,
                        double SenseXY2, double AmpZ, double PhiZ,
-                       struct LagrangeSystemType *S, struct OrbitType *O) {
+                       struct LagrangeSystemType *S, struct OrbitType *O)
+{
    double A, B, ca, sa, cphi, sphi;
    struct LagrangePointType *LP;
 
@@ -2076,7 +2122,8 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
       O->Dx = 0.0;
       O->Cy = 0.0;
       O->Dy = 0.0;
-   } else { /* Triangular, two stable modes */
+   }
+   else { /* Triangular, two stable modes */
       A     = AmpXY1;
       B     = SenseXY1 * LP->AR1 * A;
       sa    = LP->sa1;
@@ -2107,7 +2154,8 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
 /*   Notional position and velocities for TDRS satellites             */
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
 void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
-                double vtn[10][3]) {
+                double vtn[10][3])
+{
 
    double Lng[10] = {-49.0,  0.0,    -275.0, -46.0, -171.4,
                      -173.7, -150.0, -271.0, -62.4, -40.9}; /* deg */
@@ -2156,7 +2204,8 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
 /* Find coordinate transformation from True Equator True Equinox      */
 /* (TETE) frame to J2000 frame.  Ref "The Astronomical Almanac",      */
 /* QB8.U5, 2003, p. B18,B20.                                          */
-void TETE2J2000(double JD, double CTJ[3][3]) {
+void TETE2J2000(double JD, double CTJ[3][3])
+{
 
    double d, arg1, arg2, dpsi, deps, eps, CTM[3][3];
    double T, z, theta, zeta, CMJ[3][3];
@@ -2224,7 +2273,8 @@ void TETE2J2000(double JD, double CTJ[3][3]) {
 }
 /**********************************************************************/
 /*  See Battin                                                        */
-double RadiusOfInfluence(double mu1, double mu2, double r) {
+double RadiusOfInfluence(double mu1, double mu2, double r)
+{
    return (r * pow(mu2 / mu1, 0.4));
 }
 /**********************************************************************/
@@ -2232,7 +2282,8 @@ double RadiusOfInfluence(double mu1, double mu2, double r) {
 /*  E-H usually assumes small departures from LVLH.  I'm using        */
 /*  spherical coordinates here to ensure valid solution anywhere.     */
 void RelRV2EHRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
-                double Rrel[3], double Vrel[3], double re[3], double ve[3]) {
+                double Rrel[3], double Vrel[3], double re[3], double ve[3])
+{
    double p[3], magp, b3[3], alpha, beta, CBL[3][3], CBN[3][3], vn[3], vb[3];
    double C1, S1, C2, S2;
    long i;
@@ -2276,7 +2327,8 @@ void RelRV2EHRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
 /*  E-H usually assumes small departures from LVLH.  I'm using        */
 /*  spherical coordinates here to ensure valid solution anywhere.     */
 void EHRV2RelRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
-                double re[3], double ve[3], double Rrel[3], double Vrel[3]) {
+                double re[3], double ve[3], double Rrel[3], double Vrel[3])
+{
    double alpha, beta, magp, CBL[3][3], CBN[3][3], vb[3], vn[3];
    double C1, S1, C2, S2;
    long i;
@@ -2313,7 +2365,8 @@ void EHRV2RelRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
 /*  Given Euler-Hill position and velocity, find parameters of        */
 /*  Drift, Ellipse, Static, and Cross-Track modes                     */
 void EHRV2EHModes(double r[3], double v[3], double n, double nt, double *A,
-                  double *Bc, double *Bs, double *C, double *Dc, double *Ds) {
+                  double *Bc, double *Bs, double *C, double *Dc, double *Ds)
+{
    double s, c, zuterm;
 
    s      = sin(nt);
@@ -2336,7 +2389,8 @@ void EHRV2EHModes(double r[3], double v[3], double n, double nt, double *A,
 }
 /**********************************************************************/
 void EHModes2EHRV(double A, double Bc, double Bs, double C, double Dc,
-                  double Ds, double n, double nt, double r[3], double v[3]) {
+                  double Ds, double n, double nt, double r[3], double v[3])
+{
    double c, s, BCosTheta, BSinTheta, DCosTheta, DSinTheta;
 
    c = cos(nt);
@@ -2359,7 +2413,8 @@ void EHModes2EHRV(double A, double Bc, double Bs, double C, double Dc,
 }
 /**********************************************************************/
 /* See Battin 7.1                                                     */
-double LambertTOF(double mu, double amin, double lambda, double x) {
+double LambertTOF(double mu, double amin, double lambda, double x)
+{
    double y, eta, S1, Q, T;
    double delta = 1.0;
    double u     = 1.0;
@@ -2376,7 +2431,8 @@ double LambertTOF(double mu, double amin, double lambda, double x) {
       if (n % 2) { /* n odd */
          gamma = ((double)((n + 2) * (n + 5))) /
                  ((double)((2 * n + 1) * (2 * n + 3)));
-      } else { /* n even */
+      }
+      else { /* n even */
          gamma =
              ((double)(n * (n - 3))) / ((double)((2 * n + 1) * (2 * n + 3)));
       }
@@ -2396,7 +2452,8 @@ double LambertTOF(double mu, double amin, double lambda, double x) {
 /*  TransferType = -1.0 for Type II (2H, 2A, 2B) transfers            */
 void LambertProblem(double t0, double mu, double xr1[3], double xr2[3],
                     double TOF, double TransferType, double *SLR, double *e,
-                    double *inc, double *RAAN, double *ArgP, double *tp) {
+                    double *inc, double *RAAN, double *ArgP, double *tp)
+{
    double r1, r2, ir1[3], ir2[3], ih[3], th, dr[3], c, s, amin, lambda;
    double xold, Told, x, dx, T;
    double y, eta, ihxir1[3], xv1[3], Coef0, Coef1, Coef2;
@@ -2446,7 +2503,8 @@ void LambertProblem(double t0, double mu, double xr1[3], double xr2[3],
           &rmin, &MeanMotion, &Period);
 }
 /**********************************************************************/
-double RendezvousCostFunction(double *InVec, double *AuxVec) {
+double RendezvousCostFunction(double *InVec, double *AuxVec)
+{
    double t0, TOF, mu, r1e[3], v1e[3], r2e[3], v2e[3];
    double tf, SMA, ecc, inc, RAAN, ArgP, anom, tp, p, alpha, MeanMotion, rmin;
    double r1[3], v1[3], r2[3], v2[3];
@@ -2511,7 +2569,8 @@ double RendezvousCostFunction(double *InVec, double *AuxVec) {
          DV1[i] = DV1I[i];
          DV2[i] = DV2I[i];
       }
-   } else {
+   }
+   else {
       DeltaV = DeltaVII;
       for (i = 0; i < 3; i++) {
          DV1[i] = DV1II[i];
@@ -2541,7 +2600,8 @@ double RendezvousCostFunction(double *InVec, double *AuxVec) {
 /*  rendezvous.                                                       */
 void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
                               double r2e[3], double v2e[3], double *t1,
-                              double *t2, double DV1[3], double DV2[3]) {
+                              double *t2, double DV1[3], double DV2[3])
+{
    double SMA1, SMA2, ecc, inc, RAAN, ArgP, anom1, anom2, tp, p, alpha;
    double AmP[2], AmParm[19], DeltaV;
    double MeanMotion, Period, rmin;
@@ -2583,7 +2643,8 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 /*  Will need more iterations for interplanetary-scale applications.  */
 void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
-                         double FuturePos[3]) {
+                         double FuturePos[3])
+{
    double Vel[3], anom;
    double RelPos[3], dt;
    long i;
@@ -2619,7 +2680,8 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
 /* Osculating elements drift from initial conditions due to J2        */
 /* Use this function to initialize mean eph at sim start              */
 void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
-                     struct OrbitType *O) {
+                     struct OrbitType *O)
+{
    double e, e2, sin2i, sinw, sin2w, cosnu, g, E;
    double a, p, p2, Coef;
 

@@ -19,17 +19,20 @@
 */
 
 /**********************************************************************/
-void FindPDGains(double I, double w, double z, double *Kr, double *Kp) {
+void FindPDGains(double I, double w, double z, double *Kr, double *Kp)
+{
 
    *Kr = 2.0 * I * z * w;
    *Kp = I * w * w;
 }
 /**********************************************************************/
-double Limit(double x, double min, double max) {
+double Limit(double x, double min, double max)
+{
    return (x < min ? min : (x > max ? max : x));
 }
 /**********************************************************************/
-double SpinGainCostFunction(double p[2], double CostParm[2]) {
+double SpinGainCostFunction(double p[2], double CostParm[2])
+{
    double Coef[5], Real[4], Imag[4], Cost;
    double Om, K1;
    long i;
@@ -69,7 +72,8 @@ double SpinGainCostFunction(double p[2], double CostParm[2]) {
 /**********************************************************************/
 void FindSpinnerGains(double J, double It, double Tc, double OrbPer,
                       double alpha, double *SpinRate, double *Knute,
-                      double *Kprec) {
+                      double *Kprec)
+{
    double Ki, K1, Om, p[2];
    double SpinGainCostParm[2];
 
@@ -98,7 +102,8 @@ void FindSpinnerGains(double J, double It, double Tc, double OrbPer,
 /*  Given components of two vectors (V and W) defined in A frame and  */
 /*  in B frame, find the direction cosine matrix CBA.                 */
 void TRIAD(double Va[3], double Wa[3], double Vb[3], double Wb[3],
-           double CBA[3][3]) {
+           double CBA[3][3])
+{
    double u[3], v[3], q[3], r[3], s[3], Ma[3][3], Mb[3][3];
    long i;
 
@@ -149,7 +154,8 @@ void TRIAD(double Va[3], double Wa[3], double Vb[3], double Wb[3],
 /* routine finds the optimal estimate of q, the quaternion expressing */
 /* the rotation from the reference frame (where Ref's are given) to   */
 /* the body frame (where Meas's are given).                           */
-void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4]) {
+void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
+{
    long i, j, k;
 
    double B[3][3], S[3][3];
@@ -266,7 +272,8 @@ void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4]) {
 /*  expressing the rotation from the reference frame (where Ref's are */
 /*  given) to the body frame (where Meas's are given).                */
 void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
-                 double memory, double wbn[3], double qmr[4]) {
+                 double memory, double wbn[3], double qmr[4])
+{
    double *a, **W, **V, rho;
    long i, j, k;
 
@@ -405,7 +412,8 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
 /* a joint's outer body (bvo) parallel to a target vector fixed in    */
 /* the joint's inner body (tvi).                                      */
 void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
-                         double tvi[3], double bvo[3], double GimAngCmd[3]) {
+                         double tvi[3], double bvo[3], double GimAngCmd[3])
+{
 
    double *a1, *a2;
    double a3[3];
@@ -512,7 +520,8 @@ void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
 /*   least Ra away from obstacle at xa.                               */
 void CollisionAvoidanceLaw(double x[3], double v[3], double xg[3], double xa[3],
                            double Ra, double vmax, double amax, double wc,
-                           double zc, double a[3]) {
+                           double zc, double a[3])
+{
 
    double Kx, Kv, d[3], xhat[3], xga[3], magx, dox, zhat[3], magz;
    double yhat[3], cosa, sina, lam1[3], lam2[3], magvcmd, maga, vcmd[3];
@@ -549,7 +558,8 @@ void CollisionAvoidanceLaw(double x[3], double v[3], double xg[3], double xa[3],
       /* Get out! */
       for (i = 0; i < 3; i++)
          a[i] = -Kv * (v[i] - vmax * xhat[i]);
-   } else if (dox > 0.0 || ((Ra / magx * Ra / magx) + dox * dox < 1.0)) {
+   }
+   else if (dox > 0.0 || ((Ra / magx * Ra / magx) + dox * dox < 1.0)) {
       /* Path is clear */
       for (i = 0; i < 3; i++)
          vcmd[i] = -Kx / Kv * (x[i] - xg[i]);
@@ -560,11 +570,13 @@ void CollisionAvoidanceLaw(double x[3], double v[3], double xg[3], double xa[3],
       }
       for (i = 0; i < 3; i++)
          a[i] = -Kv * (v[i] - vcmd[i]);
-   } else if (fabs(magx / Ra - 1.0) < 0.01) {
+   }
+   else if (fabs(magx / Ra - 1.0) < 0.01) {
       /* Turn on avoidance circle */
       for (i = 0; i < 3; i++)
          a[i] = -vmax * vmax / Ra * xhat[i] - Kv * (v[i] - vmax * lam2[i]);
-   } else {
+   }
+   else {
       /* Go to tangent on avoidance circle */
       for (i = 0; i < 3; i++)
          a[i] = -Kv * (v[i] - vmax * lam1[i]);
@@ -578,7 +590,8 @@ void CollisionAvoidanceLaw(double x[3], double v[3], double xg[3], double xa[3],
    }
 }
 /**********************************************************************/
-double BangBangSettle(double x, double v, double w0, double amax, double vmax) {
+double BangBangSettle(double x, double v, double w0, double amax, double vmax)
+{
    double a, vcmd, aswitch;
    double xc, x0, vc;
    double Kr, Kp;
@@ -592,7 +605,8 @@ double BangBangSettle(double x, double v, double w0, double amax, double vmax) {
 
    if (fabs(x) < xc && fabs(v) < vc) {
       a = -Kr * v - Kp * x;
-   } else if (x > x0) {
+   }
+   else if (x > x0) {
       vcmd = -sqrt(2.0 * aswitch * (x - x0));
       if (vcmd < -vmax)
          vcmd = -vmax;
@@ -600,12 +614,14 @@ double BangBangSettle(double x, double v, double w0, double amax, double vmax) {
          a = -(v - vcmd) * w0;
          if (a < -amax)
             a = -amax;
-      } else {
+      }
+      else {
          a = aswitch - (v - vcmd) * w0;
          if (a > amax)
             a = amax;
       }
-   } else if (x < -x0) {
+   }
+   else if (x < -x0) {
       vcmd = sqrt(2.0 * aswitch * (-x - x0));
       if (vcmd > vmax)
          vcmd = vmax;
@@ -613,12 +629,14 @@ double BangBangSettle(double x, double v, double w0, double amax, double vmax) {
          a = -(v - vcmd) * w0;
          if (a > amax)
             a = amax;
-      } else {
+      }
+      else {
          a = -aswitch - (v - vcmd) * w0;
          if (a < -amax)
             a = -amax;
       }
-   } else {
+   }
+   else {
       if (v > 0.0)
          a = -amax;
       else
@@ -633,7 +651,8 @@ double BangBangSettle(double x, double v, double w0, double amax, double vmax) {
 /* with rate limiting.                                                */
 /* Original algorithm by Eric Stoneking.                              */
 /* Corrections by Blair Carter, 2011.                                 */
-double RampCoastGlide(double x, double v, double w0, double amax, double vmax) {
+double RampCoastGlide(double x, double v, double w0, double amax, double vmax)
+{
    double a, vcmd, aswitch;
    double xc, x0;
 
@@ -645,23 +664,27 @@ double RampCoastGlide(double x, double v, double w0, double amax, double vmax) {
       vcmd = -sqrt(2.0 * aswitch * (x - x0));
       if (v < vcmd) {
          a = amax;
-      } else {
+      }
+      else {
          if (vcmd < -vmax)
             vcmd = -vmax;
          a = -(v - vcmd) * w0;
          a = Limit(a, -amax, amax);
       }
-   } else if (x < -xc) {
+   }
+   else if (x < -xc) {
       vcmd = sqrt(2.0 * aswitch * (-x - x0));
       if (v > vcmd) {
          a = -amax;
-      } else {
+      }
+      else {
          if (vcmd > vmax)
             vcmd = vmax;
          a = -(v - vcmd) * w0;
          a = Limit(a, -amax, amax);
       }
-   } else {
+   }
+   else {
       /* PD, Kx = w0*w0, Kv = 2.0*w0 */
       a = -(x * w0 + 2.0 * v) * w0;
       a = Limit(a, -amax, amax);
@@ -670,13 +693,15 @@ double RampCoastGlide(double x, double v, double w0, double amax, double vmax) {
    return (a);
 }
 /**********************************************************************/
-double RateControl(double v, double amax, double w0) {
+double RateControl(double v, double amax, double w0)
+{
    double a = -v * w0;
    return (Limit(a, -amax, amax));
 }
 /**********************************************************************/
 void VectorRampCoastGlide(double Xvec[3], double Vvec[3], double w0,
-                          double amax, double vmax, double Avec[3]) {
+                          double amax, double vmax, double Avec[3])
+{
    double Axis[3], Xaxis[3], Yaxis[3];
    double x, v, a, avx, avy;
    long i;
@@ -693,7 +718,8 @@ void VectorRampCoastGlide(double Xvec[3], double Vvec[3], double w0,
 
       for (i = 0; i < 3; i++)
          Avec[i] = a * Axis[i] + avx * Xaxis[i] + avy * Yaxis[i];
-   } else {
+   }
+   else {
       for (i = 0; i < 3; i++)
          Avec[i] = RateControl(Vvec[i], amax, w0);
    }
@@ -701,7 +727,8 @@ void VectorRampCoastGlide(double Xvec[3], double Vvec[3], double w0,
 /**********************************************************************/
 /* Beta is angle between Sun vector and the orbit plane.              */
 /* It is positive toward the positive orbit normal.                   */
-double SolarBeta(double svn[3], double psn[3], double vsn[3]) {
+double SolarBeta(double svn[3], double psn[3], double vsn[3])
+{
    double h[3];
 
    VxV(psn, vsn, h);
@@ -722,7 +749,8 @@ double SolarBeta(double svn[3], double psn[3], double vsn[3]) {
 /*    subject to (tmax-t)>=0, A*(tmax-t)=A*tmax-f                     */
 /**********************************************************************/
 void MakeTableau(double **A, double *f, double tmax, long m, long n,
-                 long OffPulse, double **T) {
+                 long OffPulse, double **T)
+{
    double At;
    long i, j;
 
@@ -748,7 +776,8 @@ void MakeTableau(double **A, double *f, double tmax, long m, long n,
             At += A[i][j];
          T[i + 1][n] = At * tmax - f[i];
       }
-   } else {
+   }
+   else {
       for (i = 0; i < m; i++)
          T[i + 1][n] = f[i];
    }
@@ -761,7 +790,8 @@ void MakeTableau(double **A, double *f, double tmax, long m, long n,
    T[m + 1][n] = 0.0;
 }
 /**********************************************************************/
-void TableauGaussElim(double **T, long m, long n) {
+void TableauGaussElim(double **T, long m, long n)
+{
    double pivot, temp, K;
    long row, ip, i, j;
 
@@ -798,7 +828,8 @@ void TableauGaussElim(double **T, long m, long n) {
    }
 }
 /**********************************************************************/
-void FindSwap(double **T, long *incoming, long *outgoing, long m, long n) {
+void FindSwap(double **T, long *incoming, long *outgoing, long m, long n)
+{
    double minratio = 1.0E20; /* Arbitrary really big number */
    double ratio;
    long i, j;
@@ -819,7 +850,8 @@ void FindSwap(double **T, long *incoming, long *outgoing, long m, long n) {
    }
 }
 /**********************************************************************/
-void SwapCol(double **T, long j1, long j2, long m) {
+void SwapCol(double **T, long j1, long j2, long m)
+{
    long i;
    double temp;
 
@@ -833,7 +865,8 @@ void SwapCol(double **T, long j1, long j2, long m) {
 }
 /**********************************************************************/
 double InterpretTableau(double **T, double tmax, double *t, long m, long n,
-                        long OffPulse) {
+                        long OffPulse)
+{
    long i, idx;
 
    for (i = 0; i < n; i++)
@@ -851,7 +884,8 @@ double InterpretTableau(double **T, double tmax, double *t, long m, long n,
 }
 /**********************************************************************/
 double ThrusterSelection(double **A, double *f, double *t, double tmax, long m,
-                         long n, long OffPulse) {
+                         long n, long OffPulse)
+{
    double **T;
    long Done, i;
    double Cost;
@@ -891,8 +925,8 @@ double ThrusterSelection(double **A, double *f, double *t, double tmax, long m,
 /*     u[Nu] is control (or other input)                              */
 
 void StateEstimator(double **PHI, double **GAMMA, double **H, double **L,
-                    double *u, double *y, double *x, long Nx, long Nu,
-                    long Ny) {
+                    double *u, double *y, double *x, long Nx, long Nu, long Ny)
+{
    double *Hx, *Lz, *PHIx, *GAMMAu;
    long i, j;
 
@@ -940,7 +974,8 @@ void StateEstimator(double **PHI, double **GAMMA, double **H, double **L,
 /* Ref Bierman, p. 53                                                 */
 /*  Matrix P is input.  Output U is upper triangular, with elements   */
 /*  of D stored on its diagonal.  (Bierman is big on saving space.)   */
-void UDUFactor(double **P, double **U, long N) {
+void UDUFactor(double **P, double **U, long N)
+{
    double alpha, beta;
    long i, j, k;
 
@@ -968,7 +1003,8 @@ void UDUFactor(double **P, double **U, long N) {
 /*                                                                    */
 /*   x = x + K*(y-H*x)                                                */
 void UDMeasUpdate(double *x, double **U, double y, double *H, double Rv,
-                  long Ns) {
+                  long Ns)
+{
    double *a, *b, z, alpha, beta, gamma, lambda;
    long i, j, k;
 
@@ -1019,7 +1055,8 @@ void UDMeasUpdate(double *x, double **U, double y, double *H, double Rv,
 /*  x(k+1)=phi*x(k) + gam*y(k)                                        */
 /*  U(k+1)=Something messy                                            */
 void UDTimeUpdate(double *x, double **U, double **phi, double **gam, double *y,
-                  double *Rw, long Ns, long Nw) {
+                  double *Rw, long Ns, long Nw)
+{
    double **Uaug, *D, *v, *a, *Gy;
    double sigma, Dinv;
    long i, j, k;
@@ -1119,7 +1156,8 @@ void UDTimeUpdate(double *x, double **U, double **phi, double **gam, double *y,
 /*  internal states.                                                          */
 
 /******************************************************************************/
-void AllocKalmanFilterMeasurement(struct KFMeasType *M, long Nx, long Ny) {
+void AllocKalmanFilterMeasurement(struct KFMeasType *M, long Nx, long Ny)
+{
    long i;
 
    if (Ny < 1 || Ny > 3) {
@@ -1157,8 +1195,8 @@ void AllocKalmanFilterMeasurement(struct KFMeasType *M, long Nx, long Ny) {
       M->HPHtRvInv[i] = (double *)calloc(Ny, sizeof(double));
 }
 /******************************************************************************/
-struct KalmanFilterType *CreateKalmanFilter(long Nx, long Nu, long Nw,
-                                            long Nm) {
+struct KalmanFilterType *CreateKalmanFilter(long Nx, long Nu, long Nw, long Nm)
+{
    long i;
 
    struct KalmanFilterType *KF;
@@ -1213,7 +1251,8 @@ struct KalmanFilterType *CreateKalmanFilter(long Nx, long Nu, long Nw,
    return (KF);
 }
 /******************************************************************************/
-void PopulateKalmanFilterWorkspace(struct KalmanFilterType *KF) {
+void PopulateKalmanFilterWorkspace(struct KalmanFilterType *KF)
+{
    double **GRw;
    long i, j, k;
 
@@ -1242,7 +1281,8 @@ void PopulateKalmanFilterWorkspace(struct KalmanFilterType *KF) {
    free(GRw);
 }
 /******************************************************************************/
-void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M) {
+void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M)
+{
    long i, j, k;
    double Det;
 
@@ -1272,7 +1312,8 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M) {
          exit(1);
       }
       M->HPHtRvInv[0][0] = 1.0 / M->HPHtRv[0][0];
-   } else if (M->Ny == 2) {
+   }
+   else if (M->Ny == 2) {
       Det =
           M->HPHtRv[0][0] * M->HPHtRv[1][1] - M->HPHtRv[1][0] * M->HPHtRv[0][1];
       if (Det == 0.0) {
@@ -1284,7 +1325,8 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M) {
       M->HPHtRvInv[1][1] = M->HPHtRv[0][0] / Det;
 
       M->HPHtRvInv[1][0] = M->HPHtRvInv[0][1];
-   } else if (M->Ny == 3) {
+   }
+   else if (M->Ny == 3) {
       Det = M->HPHtRv[0][0] * (M->HPHtRv[1][1] * M->HPHtRv[2][2] -
                                M->HPHtRv[2][1] * M->HPHtRv[1][2]) +
             M->HPHtRv[0][1] * (M->HPHtRv[1][2] * M->HPHtRv[2][0] -
@@ -1319,7 +1361,8 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M) {
       M->HPHtRvInv[1][0] = M->HPHtRvInv[0][1];
       M->HPHtRvInv[2][0] = M->HPHtRvInv[0][2];
       M->HPHtRvInv[2][1] = M->HPHtRvInv[1][2];
-   } else {
+   }
+   else {
       printf("Oops.  This Kalman Filter implementation assumes that \n");
       printf("measurements are of dimension 1, 2, or 3.  Bailing out.\n");
       exit(1);
@@ -1358,7 +1401,8 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M) {
    }
 }
 /******************************************************************************/
-void KalmanFilterTimeUpdate(struct KalmanFilterType *KF) {
+void KalmanFilterTimeUpdate(struct KalmanFilterType *KF)
+{
    long i, j, k;
 
    /* x(k+1) = Phi*x(k) + Gam*u(k) */
@@ -1398,7 +1442,8 @@ void KalmanFilterTimeUpdate(struct KalmanFilterType *KF) {
 /*  Ref Wie, "Singularity Escape/Avoidance Steering Logic for         */
 /*  Control Moment Gyro Systems", JGCD, Sep-Oct 2005                  */
 double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
-                    double h[4], double AngRateCmd[4]) {
+                    double h[4], double AngRateCmd[4])
+{
    double eps0 = 0.1;
    double lam0 = 0.01;
    double mu   = 10.0;
