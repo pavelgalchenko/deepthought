@@ -40,7 +40,8 @@
 */
 
 /**********************************************************************/
-long DecodeString(char *s) {
+long DecodeString(char *s)
+{
 
    unsigned long i;
 
@@ -452,7 +453,8 @@ long DecodeString(char *s) {
    }
 }
 /**********************************************************************/
-void EchoDyn(struct SCType *S) {
+void EchoDyn(struct SCType *S)
+{
    FILE *outfile;
    char OutFileName[80];
    struct DynType *D;
@@ -601,7 +603,8 @@ void EchoDyn(struct SCType *S) {
 }
 /**********************************************************************/
 long LoadTRVfromFile(const char *Path, const char *TrvFileName,
-                     const char *ElemLabel, double Time, struct OrbitType *O) {
+                     const char *ElemLabel, double Time, struct OrbitType *O)
+{
    FILE *infile;
    char line[80], response1[80], response2[80];
    char Label[25];
@@ -645,7 +648,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
                 &O->MeanMotion, &O->Period);
          Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
                 Time - O->Epoch, O->PosN, O->VelN, &O->anom);
-      } else {
+      }
+      else {
          O->Sys   = DecodeString(response2);
          O->Body1 = LagSys[O->Sys].Body1;
          O->Body2 = LagSys[O->Sys].Body2;
@@ -666,7 +670,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    return (Success);
 }
 /*********************************************************************/
-void InitOrbit(struct OrbitType *O) {
+void InitOrbit(struct OrbitType *O)
+{
    FILE *infile;
    char junk[120], newline, response[120];
    double Alt1, Alt2, MaxAnom;
@@ -719,7 +724,8 @@ void InitOrbit(struct OrbitType *O) {
       /* Skip FLIGHT, CENTRAL, THREE_BODY sections */
       for (j = 0; j < 36; j++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else if (O->Regime == ORB_FLIGHT) {
+   }
+   else if (O->Regime == ORB_FLIGHT) {
       /* Skip ZERO section */
       for (j = 0; j < 3; j++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -749,7 +755,8 @@ void InitOrbit(struct OrbitType *O) {
       /* Skip CENTRAL and THREE_BODY sections */
       for (j = 0; j < 33; j++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else if (O->Regime == ORB_CENTRAL) {
+   }
+   else if (O->Regime == ORB_CENTRAL) {
       /* Skip ZERO and FLIGHT sections */
       for (j = 0; j < 6; j++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -787,7 +794,8 @@ void InitOrbit(struct OrbitType *O) {
             O->alpha      = 1.0 / O->SMA;
             O->rmin       = rad + Alt1 * 1.0E3;
             O->MeanMotion = sqrt(O->mu * O->alpha) * O->alpha;
-         } else {
+         }
+         else {
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
             fscanf(infile, "%lf %lf %[^\n] %[\n]", &Alt1, &O->ecc, junk,
                    &newline);
@@ -829,7 +837,8 @@ void InitOrbit(struct OrbitType *O) {
          /* Skip RV and FILE */
          for (j = 0; j < 5; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      } else if (InputType == INP_POSVEL) {
+      }
+      else if (InputType == INP_POSVEL) {
          /* Skip KEPLER section */
          for (j = 0; j < 7; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -850,7 +859,8 @@ void InitOrbit(struct OrbitType *O) {
          /* Skip FILE section */
          for (j = 0; j < 3; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      } else if (InputType == INP_FILE) {
+      }
+      else if (InputType == INP_FILE) {
          /* Skip KEP and RV sections */
          for (j = 0; j < 9; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -873,7 +883,8 @@ void InitOrbit(struct OrbitType *O) {
                exit(1);
             }
             MeanEph2RV(O, DynTime);
-         } else if (ElementType == INP_TRV) {
+         }
+         else if (ElementType == INP_TRV) {
             Success = LoadTRVfromFile(InOutPath, ElementFileName, ElementLabel,
                                       CivilTime, O);
             if (!Success) {
@@ -891,7 +902,8 @@ void InitOrbit(struct OrbitType *O) {
             // Eph2RV(O->mu,O->SLR,O->ecc,O->inc,
             //        O->RAAN,O->ArgP,O->Epoch-O->tp,
             //        O->PosN,O->VelN,&O->anom);
-         } else if (ElementType == INP_SPLINE) {
+         }
+         else if (ElementType == INP_SPLINE) {
             O->SplineFile   = FileOpen(InOutPath, ElementFileName, "rt");
             O->SplineActive = TRUE;
             for (i = 0; i < 4; i++) {
@@ -915,11 +927,13 @@ void InitOrbit(struct OrbitType *O) {
                }
             }
             SplineToPosVel(O);
-         } else {
+         }
+         else {
             printf("Oops.  Unknown ElementType in InitOrbit.\n");
             exit(1);
          }
-      } else {
+      }
+      else {
          printf("Oops.  Unknown InputType in InitOrbit.\n");
          exit(1);
       }
@@ -928,8 +942,8 @@ void InitOrbit(struct OrbitType *O) {
       /* Skip THREE_BODY section */
       for (j = 0; j < 17; j++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-
-   } else if (O->Regime == ORB_THREE_BODY) {
+   }
+   else if (O->Regime == ORB_THREE_BODY) {
       /* Skip ZERO, FLIGHT, and CENTRAL sections */
       for (j = 0; j < 22; j++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -983,7 +997,8 @@ void InitOrbit(struct OrbitType *O) {
          /* Skip XYZ and FILE sections */
          for (j = 0; j < 4; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      } else if (InputType == INP_XYZ) {
+      }
+      else if (InputType == INP_XYZ) {
          /* Skip MODES section */
          for (j = 0; j < 9; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -996,7 +1011,8 @@ void InitOrbit(struct OrbitType *O) {
          /* Skip FILE section */
          for (j = 0; j < 2; j++)
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      } else if (InputType == INP_FILE) {
+      }
+      else if (InputType == INP_FILE) {
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
          O->LP = DecodeString(response);
          /* Skip MODES and XYZ sections */
@@ -1015,7 +1031,8 @@ void InitOrbit(struct OrbitType *O) {
                       ElementFileName);
                exit(1);
             }
-         } else if (ElementType == INP_SPLINE) {
+         }
+         else if (ElementType == INP_SPLINE) {
             O->SplineFile = FileOpen(InOutPath, ElementFileName, "rt");
             for (i = 0; i < 4; i++) {
                fscanf(O->SplineFile,
@@ -1036,11 +1053,13 @@ void InitOrbit(struct OrbitType *O) {
                }
             }
             SplineToPosVel(O);
-         } else {
+         }
+         else {
             printf("Oops.  Unknown ElementType in InitOrbit.\n");
             exit(1);
          }
-      } else {
+      }
+      else {
          printf("Oops.  Unknown Input Type in InitOrbit.\n");
          exit(1);
       }
@@ -1050,7 +1069,8 @@ void InitOrbit(struct OrbitType *O) {
       FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
       O->MeanMotion = LagSys[O->Sys].MeanRate;
       O->Period     = TwoPi / O->MeanMotion;
-   } else {
+   }
+   else {
       printf("Bogus Orbit Regime in file %s\n", O->FileName);
       exit(1);
    }
@@ -1084,7 +1104,8 @@ void InitOrbit(struct OrbitType *O) {
    fclose(infile);
 }
 /**********************************************************************/
-void InitRigidDyn(struct SCType *S) {
+void InitRigidDyn(struct SCType *S)
+{
    long i, j, Ig, Ia, Jg, Jb, Ibody, Ib, u0, x0, c0, Nu, Nx;
    struct JointType *G;
    struct DynType *D;
@@ -1182,7 +1203,8 @@ void InitRigidDyn(struct SCType *S) {
          G->Rotx0   = x0;
          u0        += 3;
          x0        += 4;
-      } else { /* Is Gimbal */
+      }
+      else { /* Is Gimbal */
          D->Nu    += G->RotDOF;
          D->Nx    += G->RotDOF;
          G->Rotu0  = u0;
@@ -1402,7 +1424,8 @@ void InitRigidDyn(struct SCType *S) {
    fclose(outfile);
 }
 /**********************************************************************/
-void InitFlexModes(struct SCType *S) {
+void InitFlexModes(struct SCType *S)
+{
    FILE *infile;
    struct DynType *D;
    struct BodyType *B;
@@ -1841,7 +1864,8 @@ void InitFlexModes(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void InitNodes(struct BodyType *B) {
+void InitNodes(struct BodyType *B)
+{
    struct NodeType *N;
    FILE *infile;
    char junk[80], newline;
@@ -1860,7 +1884,8 @@ void InitNodes(struct BodyType *B) {
                 &N->NomPosB[1], &N->NomPosB[2], N->comment, &newline);
       }
       fclose(infile);
-   } else {
+   }
+   else {
       /* Default to one node at B.cm */
       B->NumNodes = 1;
       B->Node     = (struct NodeType *)calloc(1, sizeof(struct NodeType));
@@ -1870,7 +1895,8 @@ void InitNodes(struct BodyType *B) {
    }
 }
 /**********************************************************************/
-void InitPassiveJoint(struct JointType *G, struct SCType *S) {
+void InitPassiveJoint(struct JointType *G, struct SCType *S)
+{
    FILE *infile;
    char junk[80], newline;
    long i;
@@ -1898,7 +1924,8 @@ void InitPassiveJoint(struct JointType *G, struct SCType *S) {
    }
 }
 /**********************************************************************/
-void InitActuatedJoint(struct JointType *G, struct SCType *S) {
+void InitActuatedJoint(struct JointType *G, struct SCType *S)
+{
    long i;
 
    for (i = 0; i < 3; i++) {
@@ -1911,7 +1938,8 @@ void InitActuatedJoint(struct JointType *G, struct SCType *S) {
    }
 }
 /**********************************************************************/
-void InitShakers(struct SCType *S) {
+void InitShakers(struct SCType *S)
+{
    FILE *infile;
    long Ish, It;
    struct ShakerType *Sh;
@@ -1943,7 +1971,8 @@ void InitShakers(struct SCType *S) {
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-         } else {
+         }
+         else {
             Sh->ToneAmp   = (double *)calloc(Sh->Ntone, sizeof(double));
             Sh->ToneFreq  = (double *)calloc(Sh->Ntone, sizeof(double));
             Sh->TonePhase = (double *)calloc(Sh->Ntone, sizeof(double));
@@ -1966,7 +1995,8 @@ void InitShakers(struct SCType *S) {
             Sh->RandomProc = NULL;
             Sh->Lowpass    = NULL;
             Sh->Highpass   = NULL;
-         } else {
+         }
+         else {
             fscanf(infile, "%lf %lf %[^\n] %[\n]", &Sh->LowBandLimit,
                    &Sh->HighBandLimit, junk, &newline);
             fscanf(infile, "%lf %[^\n] %[\n]", &Sh->RandStd, junk, &newline);
@@ -1987,7 +2017,8 @@ void InitShakers(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void InitWhlDragAndJitter(struct WhlType *W) {
+void InitWhlDragAndJitter(struct WhlType *W)
+{
    FILE *infile;
    struct WhlHarmType *H;
    char junk[80], newline;
@@ -2053,7 +2084,8 @@ void InitWhlDragAndJitter(struct WhlType *W) {
    }
 }
 /**********************************************************************/
-void InitOrderNDynamics(struct SCType *S) {
+void InitOrderNDynamics(struct SCType *S)
+{
    struct BodyType *B;
    struct JointType *G;
    long Ib, Ig, Id, i, j;
@@ -2117,7 +2149,8 @@ void InitOrderNDynamics(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void InitSpacecraft(struct SCType *S) {
+void InitSpacecraft(struct SCType *S)
+{
    FILE *infile;
    char junk[120], newline, response[120];
    char response1[120], response2[120], response3[120];
@@ -2212,7 +2245,8 @@ void InitSpacecraft(struct SCType *S) {
              &qbn[3], junk, &newline);
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       Q2C(qbn, CBN);
-   } else {
+   }
+   else {
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3, &Seq,
              junk, &newline);
@@ -2227,7 +2261,8 @@ void InitSpacecraft(struct SCType *S) {
       }
       MxM(CBL, Orb[S->RefOrb].CLN, CBN);
       C2Q(CBN, qbn);
-   } else if (AttFrame == 'F') {
+   }
+   else if (AttFrame == 'F') {
       /* Adjust CBN */
       for (j = 0; j < 3; j++) {
          for (k = 0; k < 3; k++)
@@ -2344,7 +2379,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Ng == 0) { /* Read and discard template */
       for (i = 0; i < 16; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ig = 0; Ig < S->Ng; Ig++) {
          G = &S->G[Ig];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2463,7 +2499,8 @@ void InitSpacecraft(struct SCType *S) {
                G->RigidRin[j]  = pIn[j];
                G->RigidRout[j] = pOut[j];
             }
-         } else {
+         }
+         else {
             for (j = 0; j < 3; j++) {
                G->RigidRin[j]  = pIn[j] - S->B[Bi].cm[j];
                G->RigidRout[j] = pOut[j] - S->B[Bo].cm[j];
@@ -2494,7 +2531,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nw == 0) {
       for (i = 0; i < 8; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Iw = 0; Iw < S->Nw; Iw++) {
          W = &S->Whl[Iw];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2530,7 +2568,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nmtb == 0) {
       for (i = 0; i < 4; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Im = 0; Im < S->Nmtb; Im++) {
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
          fscanf(infile, "%lf  %[^\n] %[\n]", &S->MTB[Im].Mmax, junk, &newline);
@@ -2557,7 +2596,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nthr == 0) {
       for (i = 0; i < 6; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (It = 0; It < S->Nthr; It++) {
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
@@ -2586,7 +2626,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Ngyro == 0) {
       for (i = 0; i < 11; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ig = 0; Ig < S->Ngyro; Ig++) {
          Gyro = &S->Gyro[Ig];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2643,7 +2684,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nmag == 0) {
       for (i = 0; i < 8; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Im = 0; Im < S->Nmag; Im++) {
          MAG = &S->MAG[Im];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2682,7 +2724,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Ncss == 0) {
       for (i = 0; i < 8; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ic = 0; Ic < S->Ncss; Ic++) {
          CSS = &S->CSS[Ic];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2722,7 +2765,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nfss == 0) {
       for (i = 0; i < 8; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ifss = 0; Ifss < S->Nfss; Ifss++) {
          FSS = &S->FSS[Ifss];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2770,7 +2814,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nst == 0) {
       for (i = 0; i < 8; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ist = 0; Ist < S->Nst; Ist++) {
          ST = &S->ST[Ist];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2826,7 +2871,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Ngps == 0) {
       for (i = 0; i < 6; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ig = 0; Ig < S->Ngps; Ig++) {
          GPS = &S->GPS[Ig];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2859,7 +2905,8 @@ void InitSpacecraft(struct SCType *S) {
    if (S->Nacc == 0) {
       for (i = 0; i < 10; i++)
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   } else {
+   }
+   else {
       for (Ia = 0; Ia < S->Nacc; Ia++) {
          Accel = &S->Accel[Ia];
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2911,14 +2958,17 @@ void InitSpacecraft(struct SCType *S) {
                S->PosR[i] = S->PosEH[i];
                S->VelR[i] = S->VelEH[i];
             }
-         } else if (O->Regime == ORB_FLIGHT) {
+         }
+         else if (O->Regime == ORB_FLIGHT) {
             MTxV(O->CLN, S->PosEH, S->PosR);
             MTxV(O->CLN, S->VelEH, S->VelR);
-         } else {
+         }
+         else {
             EHRV2RelRV(O->SMA, O->MeanMotion, O->CLN, S->PosEH, S->VelEH,
                        S->PosR, S->VelR);
          }
-      } else {
+      }
+      else {
          MTxV(Fr->CN, PosVec, S->PosR);
          MTxV(Fr->CN, VelVec, S->VelR);
          if (O->Regime == ORB_ZERO) {
@@ -2926,10 +2976,12 @@ void InitSpacecraft(struct SCType *S) {
                S->PosEH[i] = S->PosR[i];
                S->VelEH[i] = S->VelR[i];
             }
-         } else if (O->Regime == ORB_FLIGHT) {
+         }
+         else if (O->Regime == ORB_FLIGHT) {
             MxV(O->CLN, S->PosR, S->PosEH);
             MxV(O->CLN, S->VelR, S->VelEH);
-         } else {
+         }
+         else {
             RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR, S->PosEH,
                        S->VelEH);
          }
@@ -2945,7 +2997,8 @@ void InitSpacecraft(struct SCType *S) {
          vsn[j] = S->VelR[j] - wxrn[j];
       }
       MxV(Fr->CN, vsn, S->VelF);
-   } else {
+   }
+   else {
       for (j = 0; j < 3; j++) {
          S->PosF[j] = PosVec[j];
          S->VelF[j] = VelVec[j];
@@ -2968,14 +3021,17 @@ void InitSpacecraft(struct SCType *S) {
                S->PosR[i] = S->PosEH[i];
                S->VelR[i] = S->VelEH[i];
             }
-         } else if (O->Regime == ORB_FLIGHT) {
+         }
+         else if (O->Regime == ORB_FLIGHT) {
             MTxV(O->CLN, S->PosEH, S->PosR);
             MTxV(O->CLN, S->VelEH, S->VelR);
-         } else {
+         }
+         else {
             EHRV2RelRV(O->SMA, MAGV(O->wln), O->CLN, S->PosEH, S->VelEH,
                        S->PosR, S->VelR);
          }
-      } else {
+      }
+      else {
          MTxV(Fr->CN, S->PosF, psn);
          MTxV(Fr->CN, S->VelF, vsn);
          for (j = 0; j < 3; j++) {
@@ -2983,8 +3039,10 @@ void InitSpacecraft(struct SCType *S) {
             S->VelR[j] = wxrn[j] + vsn[j];
          }
          if (O->Regime == ORB_ZERO) {
-         } else if (O->Regime == ORB_FLIGHT) {
-         } else {
+         }
+         else if (O->Regime == ORB_FLIGHT) {
+         }
+         else {
             RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR, S->PosEH,
                        S->VelEH);
          }
@@ -3008,9 +3066,11 @@ void InitSpacecraft(struct SCType *S) {
          S->CLN[i][i] = 1.0;
          S->wln[i]    = 0.0;
       }
-   } else if (O->Regime == ORB_FLIGHT) {
+   }
+   else if (O->Regime == ORB_FLIGHT) {
       FindENU(S->PosN, World[O->World].w, S->CLN, S->wln);
-   } else {
+   }
+   else {
       FindCLN(S->PosN, S->VelN, S->CLN, S->wln);
    }
 
@@ -3086,7 +3146,8 @@ void InitSpacecraft(struct SCType *S) {
    }
 }
 /*********************************************************************/
-void LoadTdrs(void) {
+void LoadTdrs(void)
+{
    FILE *infile;
    char junk[120], newline;
    char response[120];
@@ -3106,7 +3167,8 @@ void LoadTdrs(void) {
    fclose(infile);
 }
 /*********************************************************************/
-void LoadSun(void) {
+void LoadSun(void)
+{
    /* Rumor is, Sun's magfield is highly variable, poorly modeled */
    /* by simple dipole.                                           */
    double DipoleAxis[3]    = {0.0, 0.0, 1.0};
@@ -3186,7 +3248,8 @@ void LoadSun(void) {
    W->qnh[3] = 1.0;
 }
 /*********************************************************************/
-void LoadPlanets(void) {
+void LoadPlanets(void)
+{
 
    struct OrbitType *Eph;
    double Zaxis[3] = {0.0, 0.0, 1.0};
@@ -3385,7 +3448,8 @@ void LoadPlanets(void) {
    strcpy(World[EARTH].BumpTexFileName, "EarthBump.ppm");
 }
 /*********************************************************************/
-void LoadMoonOfEarth(void) {
+void LoadMoonOfEarth(void)
+{
 #define Nm 1
 
    char Name[Nm][40]        = {"Luna"};
@@ -3482,7 +3546,8 @@ void LoadMoonOfEarth(void) {
 }
 /**********************************************************************/
 /*  See JPL web pages MoonEphems and MoonParms in Development folder  */
-void LoadMoonsOfMars(void) {
+void LoadMoonsOfMars(void)
+{
 #define Nm 2
 
    char Name[Nm][40]        = {"Phobos", "Deimos"};
@@ -3574,7 +3639,8 @@ void LoadMoonsOfMars(void) {
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfJupiter(void) {
+void LoadMoonsOfJupiter(void)
+{
 #define Nm 16
 
    char Name[Nm][40]        = {"Io",       "Europa",   "Ganymede", "Callisto",
@@ -3687,7 +3753,8 @@ void LoadMoonsOfJupiter(void) {
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfSaturn(void) {
+void LoadMoonsOfSaturn(void)
+{
 #define Nm 18
 
    char Name[Nm][40] = {
@@ -3801,7 +3868,8 @@ void LoadMoonsOfSaturn(void) {
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfUranus(void) {
+void LoadMoonsOfUranus(void)
+{
 #define Nm 5
 
    char Name[Nm][40] = {"Ariel", "Umbriel", "Titania", "Oberon", "Miranda"};
@@ -3889,7 +3957,8 @@ void LoadMoonsOfUranus(void) {
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfNeptune(void) {
+void LoadMoonsOfNeptune(void)
+{
 #define Nm 2
 
    char Name[Nm][40]        = {"Triton", "Nereid"};
@@ -3977,7 +4046,8 @@ void LoadMoonsOfNeptune(void) {
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfPluto(void) {
+void LoadMoonsOfPluto(void)
+{
 #define Nm 1
 
    char Name[Nm][40]        = {"Charon"};
@@ -4067,7 +4137,8 @@ void LoadMoonsOfPluto(void) {
 #undef Nm
 }
 /**********************************************************************/
-void LoadMinorBodies(void) {
+void LoadMinorBodies(void)
+{
    FILE *infile;
    struct WorldType *W;
    struct OrbitType *E;
@@ -4156,7 +4227,8 @@ void LoadMinorBodies(void) {
    fclose(infile);
 }
 /**********************************************************************/
-void LoadRegions(void) {
+void LoadRegions(void)
+{
    FILE *infile;
    long Ir;
    char Exists[20], WorldID[20], IsPosW[120], junk[120], newline;
@@ -4196,7 +4268,8 @@ void LoadRegions(void) {
          MTxV(W->CWN, R->PosW, R->PosN);
          MxM(R->CW, W->CWN, R->CN);
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      } else {
+      }
+      else {
          fscanf(infile, "%[^\n] %[\n]", junk, &newline);
          fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &R->Lng, &R->Lat, &R->Alt,
                 junk, &newline);
@@ -4225,7 +4298,8 @@ void LoadRegions(void) {
    fclose(infile);
 }
 /**********************************************************************/
-void InitLagrangePoints(void) {
+void InitLagrangePoints(void)
+{
    long i, j;
    char LagsysName[3][20] = {"Earth-Luna", "Sun-Earth", "Sun-Jupiter"};
    struct LagrangeSystemType *LS;
@@ -4272,7 +4346,8 @@ void InitLagrangePoints(void) {
    }
 }
 /******************************************************************************/
-long LoadJplEphems(char EphemPath[80], double JD) {
+long LoadJplEphems(char EphemPath[80], double JD)
+{
    FILE *infile;
    double Block[1020];
    long BlockNum, NumEntries;
@@ -4296,7 +4371,8 @@ long LoadJplEphems(char EphemPath[80], double JD) {
       printf("JD earlier than JPL ephem input files.  Falling back to "
              "lower-precision planetary ephemerides.\n");
       return (1);
-   } else if (JD < 2469808.5) {
+   }
+   else if (JD < 2469808.5) {
       if (EphemOption == EPH_DE430)
          infile = FileOpen(EphemPath, "ascp1950.430", "rt");
       else if (EphemOption == EPH_DE440)
@@ -4305,7 +4381,8 @@ long LoadJplEphems(char EphemPath[80], double JD) {
          printf("Unknown Ephem Option in LoadJplEphems.\n");
          exit(1);
       }
-   } else if (JD < 2506352.5) {
+   }
+   else if (JD < 2506352.5) {
       if (EphemOption == EPH_DE430)
          infile = FileOpen(EphemPath, "ascp2050.430", "rt");
       else if (EphemOption == EPH_DE440)
@@ -4314,7 +4391,8 @@ long LoadJplEphems(char EphemPath[80], double JD) {
          printf("Unknown Ephem Option in LoadJplEphems.\n");
          exit(1);
       }
-   } else if (JD < 2542864.5) {
+   }
+   else if (JD < 2542864.5) {
       if (EphemOption == EPH_DE430)
          infile = FileOpen(EphemPath, "ascp2150.430", "rt");
       else if (EphemOption == EPH_DE440)
@@ -4323,7 +4401,8 @@ long LoadJplEphems(char EphemPath[80], double JD) {
          printf("Unknown Ephem Option in LoadJplEphems.\n");
          exit(1);
       }
-   } else {
+   }
+   else {
       printf("JD later than JPL ephem input files.  Falling back to "
              "lower-precision planetary ephemerides.\n");
       return (1);
@@ -4650,7 +4729,8 @@ long LoadJplEphems(char EphemPath[80], double JD) {
    return (0);
 }
 /**********************************************************************/
-void LoadConstellations(void) {
+void LoadConstellations(void)
+{
 
    FILE *infile;
    char junk[120], newline, response[120];
@@ -4689,7 +4769,8 @@ void LoadConstellations(void) {
    fclose(infile);
 }
 /**********************************************************************/
-void LoadSchatten(void) {
+void LoadSchatten(void)
+{
    FILE *infile;
    char junk[120], newline;
    long i, fileyear, filemonth;
@@ -4707,7 +4788,8 @@ void LoadSchatten(void) {
    fclose(infile);
 }
 /**********************************************************************/
-void InitSim(int argc, char **argv) {
+void InitSim(int argc, char **argv)
+{
    FILE *infile;
    struct OrbitType *Eph;
    char junk[120], newline;
@@ -4804,7 +4886,8 @@ void InitSim(int argc, char **argv) {
       OutDir = opendir(OutPath);
       if (OutDir) {
          closedir(OutDir);
-      } else if (ENOENT == errno) {
+      }
+      else if (ENOENT == errno) {
 #if defined __MINGW32__
          mkdir(OutPath);
 #elif defined _WIN32
@@ -4837,11 +4920,13 @@ void InitSim(int argc, char **argv) {
          ModelDir = opendir(SCModelPath);
          if (ModelDir) {
             closedir(ModelDir);
-         } else if (ENOENT == errno) {
+         }
+         else if (ENOENT == errno) {
             strcpy(SCModelPath, ModelPath);
          }
       }
-   } else { /* Default Directories */
+   }
+   else { /* Default Directories */
       if (CLI_ARGS.indir == NULL) {
          strcpy(InOutPath, ExeDir);
          strcat(InOutPath, "/InOut/");
@@ -4880,14 +4965,16 @@ void InitSim(int argc, char **argv) {
       if (strlen(CLI_ARGS.graphics) != 1) {
          if ((strncasecmp(CLI_ARGS.graphics, "TRUE", 5) == 0)) {
             GLEnable = 1;
-
-         } else if ((strncasecmp(CLI_ARGS.graphics, "FALSE", 6) == 0)) {
+         }
+         else if ((strncasecmp(CLI_ARGS.graphics, "FALSE", 6) == 0)) {
             GLEnable = 0;
-         } else {
+         }
+         else {
             printf("Cannot Parse Override Option. Graphics Enable = %s \n",
                    GLEnable ? "True" : "False");
          }
-      } else
+      }
+      else
          GLEnable = (CLI_ARGS.graphics[0] - '0');
 
       printf("!!!!!!!!!!!!!!!!!!!!!! \n \n");

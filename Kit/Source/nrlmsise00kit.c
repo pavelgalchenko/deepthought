@@ -1121,7 +1121,8 @@ double pavgm[10] = {2.61000E+02, 2.64000E+02, 2.29000E+02, 2.17000E+02,
 /* ------------------------------ TSELEC ----------------------------- */
 /* ------------------------------------------------------------------- */
 
-void tselec(struct nrlmsise_flags *flags) {
+void tselec(struct nrlmsise_flags *flags)
+{
    int i;
    for (i = 0; i < 24; i++) {
       if (i != 9) {
@@ -1133,7 +1134,8 @@ void tselec(struct nrlmsise_flags *flags) {
             flags->swc[i] = 1;
          else
             flags->swc[i] = 0;
-      } else {
+      }
+      else {
          flags->sw[i]  = flags->switches[i];
          flags->swc[i] = flags->switches[i];
       }
@@ -1144,7 +1146,8 @@ void tselec(struct nrlmsise_flags *flags) {
 /* ------------------------------ GLATF ------------------------------ */
 /* ------------------------------------------------------------------- */
 
-void glatf(double lat, double *gv, double *reff) {
+void glatf(double lat, double *gv, double *reff)
+{
    double dgtr = 1.74533E-2;
    double c2;
    c2    = cos(2.0 * dgtr * lat);
@@ -1156,7 +1159,8 @@ void glatf(double lat, double *gv, double *reff) {
 /* ------------------------------ CCOR ------------------------------- */
 /* ------------------------------------------------------------------- */
 
-double ccor(double alt, double r, double h1, double zh) {
+double ccor(double alt, double r, double h1, double zh)
+{
    /*        CHEMISTRY/DISSOCIATION CORRECTION FOR MSIS MODELS
     *         ALT - altitude
     *         R - target ratio
@@ -1179,7 +1183,8 @@ double ccor(double alt, double r, double h1, double zh) {
 /* ------------------------------ CCOR ------------------------------- */
 /* ------------------------------------------------------------------- */
 
-double ccor2(double alt, double r, double h1, double zh, double h2) {
+double ccor2(double alt, double r, double h1, double zh, double h2)
+{
    /*        CHEMISTRY/DISSOCIATION CORRECTION FOR MSIS MODELS
     *         ALT - altitude
     *         R - target ratio
@@ -1206,7 +1211,8 @@ double ccor2(double alt, double r, double h1, double zh, double h2) {
 /* ------------------------------- SCALH ----------------------------- */
 /* ------------------------------------------------------------------- */
 
-double scalh(double alt, double xm, double temp) {
+double scalh(double alt, double xm, double temp)
+{
    double g;
    double rgas = 831.4;
    g           = gsurf / (pow((1.0 + alt / re), 2.0));
@@ -1218,7 +1224,8 @@ double scalh(double alt, double xm, double temp) {
 /* -------------------------------- DNET ----------------------------- */
 /* ------------------------------------------------------------------- */
 
-double dnet(double dd, double dm, double zhm, double xmm, double xm) {
+double dnet(double dd, double dm, double zhm, double xmm, double xm)
+{
    /*       TURBOPAUSE CORRECTION FOR MSIS MODELS
     *        Root mean density
     *         DD - diffusive density
@@ -1253,7 +1260,8 @@ double dnet(double dd, double dm, double zhm, double xmm, double xm) {
 /* ------------------------------- SPLINI ---------------------------- */
 /* ------------------------------------------------------------------- */
 
-void splini(double *xa, double *ya, double *y2a, int n, double x, double *y) {
+void splini(double *xa, double *ya, double *y2a, int n, double x, double *y)
+{
    /*      INTEGRATE CUBIC SPLINE FUNCTION FROM XA(1) TO X
     *       XA,YA: ARRAYS OF TABULATED FUNCTION IN ASCENDING ORDER BY X
     *       Y2A: ARRAY OF SECOND DERIVATIVES
@@ -1293,7 +1301,8 @@ void splini(double *xa, double *ya, double *y2a, int n, double x, double *y) {
 /* ------------------------------- SPLINT ---------------------------- */
 /* ------------------------------------------------------------------- */
 
-void splint(double *xa, double *ya, double *y2a, int n, double x, double *y) {
+void splint(double *xa, double *ya, double *y2a, int n, double x, double *y)
+{
    /*      CALCULATE CUBIC SPLINE INTERP VALUE
     *       ADAPTED FROM NUMERICAL RECIPES BY PRESS ET AL.
     *       XA,YA: ARRAYS OF TABULATED FUNCTION IN ASCENDING ORDER BY X
@@ -1328,7 +1337,8 @@ void splint(double *xa, double *ya, double *y2a, int n, double x, double *y) {
 /* ------------------------------- SPLINE ---------------------------- */
 /* ------------------------------------------------------------------- */
 
-void spline(double *x, double *y, int n, double yp1, double ypn, double *y2) {
+void spline(double *x, double *y, int n, double yp1, double ypn, double *y2)
+{
    /*       CALCULATE 2ND DERIVATIVES OF CUBIC SPLINE INTERP FUNCTION
     *       ADAPTED FROM NUMERICAL RECIPES BY PRESS ET AL
     *       X,Y: ARRAYS OF TABULATED FUNCTION IN ASCENDING ORDER BY X
@@ -1348,7 +1358,8 @@ void spline(double *x, double *y, int n, double yp1, double ypn, double *y2) {
    if (yp1 > 0.99E30) {
       y2[0] = 0;
       u[0]  = 0;
-   } else {
+   }
+   else {
       y2[0] = -0.5;
       u[0]  = (3.0 / (x[1] - x[0])) * ((y[1] - y[0]) / (x[1] - x[0]) - yp1);
    }
@@ -1366,7 +1377,8 @@ void spline(double *x, double *y, int n, double yp1, double ypn, double *y2) {
    if (ypn > 0.99E30) {
       qn = 0;
       un = 0;
-   } else {
+   }
+   else {
       qn = 0.5;
       un = (3.0 / (x[n - 1] - x[n - 2])) *
            (ypn - (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2]));
@@ -1382,13 +1394,15 @@ void spline(double *x, double *y, int n, double yp1, double ypn, double *y2) {
 /* ------------------------------- DENSM ----------------------------- */
 /* ------------------------------------------------------------------- */
 
-__inline_double zeta(double zz, double zl) {
+__inline_double zeta(double zz, double zl)
+{
    return ((zz - zl) * (re + zl) / (re + zz));
 }
 
 double densm(double alt, double d0, double xm, double *tz, int mn3, double *zn3,
              double *tn3, double *tgn3, int mn2, double *zn2, double *tn2,
-             double *tgn2) {
+             double *tgn2)
+{
    /*      Calculate Temperature and Density Profiles for lower atmos.  */
    double xs[10], ys[10], y2out[10];
    double rgas = 831.4;
@@ -1508,7 +1522,8 @@ double densm(double alt, double d0, double xm, double *tz, int mn3, double *zn3,
 
 double densu(double alt, double dlb, double tinf, double tlb, double xm,
              double alpha, double *tz, double zlb, double s2, int mn1,
-             double *zn1, double *tn1, double *tgn1) {
+             double *zn1, double *tn1, double *tgn1)
+{
    /*      Calculate Temperature and Density Profiles for MSIS models
     *      New lower thermo polynomial
     */
@@ -1616,7 +1631,8 @@ double densu(double alt, double dlb, double tinf, double tlb, double xm,
 
 /*    3hr Magnetic activity functions */
 /*    Eq. A24d */
-__inline_double g0(double a, double *p) {
+__inline_double g0(double a, double *p)
+{
    return (a - 4.0 +
            (p[25] - 1.0) * (a - 4.0 +
                             (exp(-sqrt(p[24] * p[24]) * (a - 4.0)) - 1.0) /
@@ -1624,12 +1640,14 @@ __inline_double g0(double a, double *p) {
 }
 
 /*    Eq. A24c */
-__inline_double sumex(double ex) {
+__inline_double sumex(double ex)
+{
    return (1.0 + (1.0 - pow(ex, 19.0)) / (1.0 - ex) * pow(ex, 0.5));
 }
 
 /*    Eq. A24a */
-__inline_double sg0(double ex, double *p, double *ap) {
+__inline_double sg0(double ex, double *p, double *ap)
+{
    return (g0(ap[1], p) +
            (g0(ap[2], p) * ex + g0(ap[3], p) * ex * ex +
             g0(ap[4], p) * pow(ex, 3.0) +
@@ -1639,7 +1657,8 @@ __inline_double sg0(double ex, double *p, double *ap) {
 }
 
 double globe7(double *p, struct nrlmsise_input *input,
-              struct nrlmsise_flags *flags) {
+              struct nrlmsise_flags *flags)
+{
    /*       CALCULATE G(L) FUNCTION
     *       Upper Thermosphere Parameters */
    double t[15];
@@ -1804,7 +1823,8 @@ double globe7(double *p, struct nrlmsise_input *input,
                                  flags->swc[7] * cos(hr * (tloc - p[131])));
          }
       }
-   } else {
+   }
+   else {
       double p44, p45;
       apd = input->ap - 4.0;
       p44 = p[43];
@@ -1875,7 +1895,8 @@ double globe7(double *p, struct nrlmsise_input *input,
                             p[57] * plg[0][5]) *
                            cos(sr * (input->sec - p[58]));
             }
-         } else {
+         }
+         else {
             t[12] = apdf * flags->swc[11] * (1.0 + p[120] * plg[0][1]) *
                         ((p[60] * plg[1][2] + p[61] * plg[1][4] +
                           p[62] * plg[1][6]) *
@@ -1904,7 +1925,8 @@ double globe7(double *p, struct nrlmsise_input *input,
 /* ------------------------------------------------------------------- */
 
 double glob7s(double *p, struct nrlmsise_input *input,
-              struct nrlmsise_flags *flags) {
+              struct nrlmsise_flags *flags)
+{
    /*    VERSION OF GLOBE FOR LOWER ATMOSPHERE 10/26/99
     */
    double pset = 2.0;
@@ -2011,7 +2033,8 @@ double glob7s(double *p, struct nrlmsise_input *input,
 /* ------------------------------------------------------------------- */
 
 void gtd7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
-          struct nrlmsise_output *output) {
+          struct nrlmsise_output *output)
+{
    double xlat;
    double xmm;
    int mn3       = 5;
@@ -2156,7 +2179,8 @@ void gtd7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 /* ------------------------------------------------------------------- */
 
 void gtd7d(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
-           struct nrlmsise_output *output) {
+           struct nrlmsise_output *output)
+{
    gtd7(input, flags, output);
    output->d[5] = 1.66E-24 * (4.0 * output->d[0] + 16.0 * output->d[1] +
                               28.0 * output->d[2] + 32.0 * output->d[3] +
@@ -2169,7 +2193,8 @@ void gtd7d(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 /* ------------------------------------------------------------------- */
 
 void ghp7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
-          struct nrlmsise_output *output, double press) {
+          struct nrlmsise_output *output, double press)
+{
    double bm    = 1.3806E-19;
    double rgas  = 831.4;
    double test  = 0.00043;
@@ -2210,7 +2235,8 @@ void ghp7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
       if ((pl <= -1.11) && (pl > -3))
          ca = (-2.93 - pl) / (-2.93 + 1.11);
       z = zi - 4.87 * cl * cd * ca - 1.64 * cl2 * ca + 0.31 * ca * cl;
-   } else
+   }
+   else
       z = 22.0 * pow((pl + 4.0), 2.0) + 110.0;
 
    /* iteration  loop */
@@ -2252,7 +2278,8 @@ void ghp7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 /* ------------------------------------------------------------------- */
 
 void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
-          struct nrlmsise_output *output) {
+          struct nrlmsise_output *output)
+{
    /*     Thermospheric portion of NRLMSISE-00
     *     See GTD7 for more extensive comments
     *     alt > 72.5 km!
@@ -2326,7 +2353,8 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
           ptm[8] * pma[8][0] *
           (1.0 + flags->sw[18] * flags->sw[20] * glob7s(pma[8], input, flags)) *
           meso_tn1[4] * meso_tn1[4] / (pow((ptm[4] * ptl[3][0]), 2.0));
-   } else {
+   }
+   else {
       meso_tn1[1]  = ptm[6] * ptl[0][0];
       meso_tn1[2]  = ptm[2] * ptl[1][0];
       meso_tn1[3]  = ptm[7] * ptl[2][0];
@@ -2612,7 +2640,8 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 /**********************************************************************/
 /* This wrapper function maps to/from 42, calls gtd7 to find density  */
 double NRLMSISE00(long Year, long DOY, long Hour, long Minute, double Second,
-                  double PosW[3], double F10p7, double AP) {
+                  double PosW[3], double F10p7, double AP)
+{
    static long First = 1;
    double Lat, Lng, Alt;
    long i;

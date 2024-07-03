@@ -29,7 +29,8 @@
 #define RNMX (1.0 - EPS)
 
 /**********************************************************************/
-struct RandomProcessType *CreateRandomProcess(long Seed) {
+struct RandomProcessType *CreateRandomProcess(long Seed)
+{
    long j;
    long k;
    long Value;
@@ -72,7 +73,8 @@ struct RandomProcessType *CreateRandomProcess(long Seed) {
    return (RP);
 }
 /**********************************************************************/
-void DestroyRandomProcess(struct RandomProcessType *RP) {
+void DestroyRandomProcess(struct RandomProcessType *RP)
+{
    free(RP);
 }
 /**********************************************************************/
@@ -80,7 +82,8 @@ void DestroyRandomProcess(struct RandomProcessType *RP) {
 /* Recipes in C, where it is called ran1.  It has been rewritten for  */
 /* readability.                                                       */
 /* It returns a uniform random deviate between 0.0 and 1.0.           */
-double UniformRandom(struct RandomProcessType *RP) {
+double UniformRandom(struct RandomProcessType *RP)
+{
    long k;
    long Value;
    long ReadValue;
@@ -134,13 +137,15 @@ double UniformRandom(struct RandomProcessType *RP) {
 /*  This function returns a Gaussian random deviate with zero mean,   */
 /*  unit variance, using the "UniformRandom" function above to obtain */
 /*  uniform deviates.  Algorithm based on Numerical Recipes Sec. 7-2  */
-double GaussianRandom(struct RandomProcessType *RP) {
+double GaussianRandom(struct RandomProcessType *RP)
+{
    double x, y, r2, a;
 
    if (RP->HaveSavedValue) {
       RP->HaveSavedValue = 0;
       return (RP->SavedValue);
-   } else {
+   }
+   else {
       /* Throw (uniform) darts until hit in unit circle */
       do {
          x  = 2.0 * UniformRandom(RP) - 1.0;
@@ -158,7 +163,8 @@ double GaussianRandom(struct RandomProcessType *RP) {
 /* Returns a uniform deviate in range [-1:1].  No internal states,    */
 /* so suitable for procedural textures and other deterministic        */
 /* applications.                                                      */
-double PRN2D(long x, long y) {
+double PRN2D(long x, long y)
+{
    int n;
    n = x + 57 * y;
    n = (n << 13) ^ n;
@@ -170,7 +176,8 @@ double PRN2D(long x, long y) {
 /* Returns a uniform deviate in range [-1:1].  No internal states,    */
 /* so suitable for procedural textures and other deterministic        */
 /* applications.                                                      */
-double PRN3D(long x, long y, long z) {
+double PRN3D(long x, long y, long z)
+{
    long n;
    n = x + 57 * (y + 57 * z);
    n = (n << 13) ^ n;
@@ -180,17 +187,20 @@ double PRN3D(long x, long y, long z) {
 }
 /**********************************************************************/
 /* 0 if x < a, 1.0 otherwise                                          */
-double Step(double a, double x) {
+double Step(double a, double x)
+{
    return ((double)(x >= a));
 }
 /**********************************************************************/
 /*  a if x < a, b if x > b, else x                                    */
-double Clamp(double a, double b, double x) {
+double Clamp(double a, double b, double x)
+{
    return (x < a ? a : (x > b ? b : x));
 }
 /**********************************************************************/
 /*  0 if x < a, 1 if x > b, linear in between                         */
-double RampStep(double a, double b, double x) {
+double RampStep(double a, double b, double x)
+{
    if (x <= a)
       return (0.0);
    if (x >= b)
@@ -199,7 +209,8 @@ double RampStep(double a, double b, double x) {
 }
 /**********************************************************************/
 /*  0.0 if x < a, 1.0 if x > b, cubic in between                      */
-double CubicStep(double a, double b, double x) {
+double CubicStep(double a, double b, double x)
+{
    if (x <= a)
       return (0.0);
    if (x >= b)
@@ -212,7 +223,8 @@ double CubicStep(double a, double b, double x) {
 /* Y/X = -----------------------------------                          */
 /*        (A[0] + A[1]*z^-1 + A[2]*z^-2...)                           */
 struct FilterType *CreateGeneralFilter(long Ns, double *A, double *B,
-                                       double dxmax, double ymin) {
+                                       double dxmax, double ymin)
+{
    struct FilterType *F;
    long i;
 
@@ -237,7 +249,8 @@ struct FilterType *CreateGeneralFilter(long Ns, double *A, double *B,
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
 struct FilterType *CreateFirstOrderLowpassFilter(double w, double T,
-                                                 double dxmax, double ymin) {
+                                                 double dxmax, double ymin)
+{
    struct FilterType *F;
 
    if (6.28 / w < 10.0 * T) {
@@ -267,7 +280,8 @@ struct FilterType *CreateFirstOrderLowpassFilter(double w, double T,
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
 struct FilterType *CreateFirstOrderHighpassFilter(double w, double T,
-                                                  double dxmax, double ymin) {
+                                                  double dxmax, double ymin)
+{
    struct FilterType *F;
 
    if (6.28 / w < 10.0 * T) {
@@ -297,7 +311,8 @@ struct FilterType *CreateFirstOrderHighpassFilter(double w, double T,
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
 struct FilterType *CreateSecondOrderLowpassFilter(double w, double z, double T,
-                                                  double dxmax, double ymin) {
+                                                  double dxmax, double ymin)
+{
    struct FilterType *F;
    double a;
 
@@ -331,7 +346,8 @@ struct FilterType *CreateSecondOrderLowpassFilter(double w, double z, double T,
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
 struct FilterType *CreateSecondOrderHighpassFilter(double w, double z, double T,
-                                                   double dxmax, double ymin) {
+                                                   double dxmax, double ymin)
+{
    struct FilterType *F;
    double a;
 
@@ -362,7 +378,8 @@ struct FilterType *CreateSecondOrderHighpassFilter(double w, double z, double T,
    return (F);
 }
 /**********************************************************************/
-void DestroyFilter(struct FilterType *F) {
+void DestroyFilter(struct FilterType *F)
+{
    free(F->A);
    free(F->B);
    free(F->x);
@@ -372,7 +389,8 @@ void DestroyFilter(struct FilterType *F) {
 /**********************************************************************/
 /*  y(k) = (B[0]*x(k)+B[1]*x(k-1)+...+B[Ns-1]*x(k-Ns+1)               */
 /*                  - A[1]*y(k-1)-...-A[Ns-1]*y(k-Ns+1))/A[0]         */
-double GeneralFilter(struct FilterType *F, double x) {
+double GeneralFilter(struct FilterType *F, double x)
+{
    double Xmax, Xmin;
    double Bx, Ay;
    long k;
@@ -409,7 +427,8 @@ double GeneralFilter(struct FilterType *F, double x) {
 /**********************************************************************/
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
-double FirstOrderLowpassFilter(struct FilterType *F, double x) {
+double FirstOrderLowpassFilter(struct FilterType *F, double x)
+{
    double Xmax, Xmin;
    long k;
 
@@ -439,7 +458,8 @@ double FirstOrderLowpassFilter(struct FilterType *F, double x) {
 /**********************************************************************/
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
-double FirstOrderHighpassFilter(struct FilterType *F, double x) {
+double FirstOrderHighpassFilter(struct FilterType *F, double x)
+{
    double Xmax, Xmin;
    long k;
 
@@ -469,7 +489,8 @@ double FirstOrderHighpassFilter(struct FilterType *F, double x) {
 /**********************************************************************/
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
-double SecondOrderLowpassFilter(struct FilterType *F, double x) {
+double SecondOrderLowpassFilter(struct FilterType *F, double x)
+{
    double Xmax, Xmin;
    long k;
 
@@ -500,7 +521,8 @@ double SecondOrderLowpassFilter(struct FilterType *F, double x) {
 /**********************************************************************/
 /*  Discrete Filter by Pole-Zero Mapping                              */
 /*  See Franklin and Powell, sec 3.3                                  */
-double SecondOrderHighpassFilter(struct FilterType *F, double x) {
+double SecondOrderHighpassFilter(struct FilterType *F, double x)
+{
    double Xmax, Xmin;
    long k;
 
@@ -529,7 +551,8 @@ double SecondOrderHighpassFilter(struct FilterType *F, double x) {
    return (F->y[0]);
 }
 /**********************************************************************/
-struct DelayType *CreateDelay(double DelayTime, double DT) {
+struct DelayType *CreateDelay(double DelayTime, double DT)
+{
    struct DelayType *D;
 
    D = (struct DelayType *)calloc(1, sizeof(struct DelayType));
@@ -544,7 +567,8 @@ struct DelayType *CreateDelay(double DelayTime, double DT) {
 }
 /**********************************************************************/
 struct DelayType *ResizeDelay(struct DelayType *OldD, double DelayTime,
-                              double DT) {
+                              double DT)
+{
    struct DelayType *D;
    long N, i;
 
@@ -566,12 +590,14 @@ struct DelayType *ResizeDelay(struct DelayType *OldD, double DelayTime,
    return (D);
 }
 /**********************************************************************/
-double Delay(struct DelayType *D, double x) {
+double Delay(struct DelayType *D, double x)
+{
    double y;
 
    if (D->N == 0) {
       y = x;
-   } else {
+   }
+   else {
       y                     = D->CircBuffer[D->Idx];
       D->CircBuffer[D->Idx] = x;
       D->Idx                = (D->Idx + 1) % D->N;

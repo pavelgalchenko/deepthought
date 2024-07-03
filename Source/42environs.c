@@ -24,7 +24,8 @@
 
 /**********************************************************************/
 /* #define _RADBELT_ */
-void Environment(struct SCType *S) {
+void Environment(struct SCType *S)
+{
    struct OrbitType *O;
    struct WorldType *P;
    double Alt;
@@ -50,10 +51,12 @@ void Environment(struct SCType *S) {
    if (MagModel.Type == DIPOLE) {
       DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset, S->PosN,
                      P->PriMerAng, S->bvn);
-   } else if (MagModel.Type == IGRF && O->World == EARTH) {
+   }
+   else if (MagModel.Type == IGRF && O->World == EARTH) {
       IGRFMagField(ModelPath, MagModel.N, MagModel.M, S->PosN, P->PriMerAng,
                    S->bvn);
-   } else {
+   }
+   else {
       S->bvn[0] = 0.0;
       S->bvn[1] = 0.0;
       S->bvn[2] = 0.0;
@@ -68,7 +71,8 @@ void Environment(struct SCType *S) {
              LinInterp(SchattenTable[0], SchattenTable[1], TT.JulDay, 410);
          GeomagIndex =
              LinInterp(SchattenTable[0], SchattenTable[3], TT.JulDay, 410);
-      } else if (AtmoOption == NOMINAL_ATMO) {
+      }
+      else if (AtmoOption == NOMINAL_ATMO) {
          Flux10p7 =
              LinInterp(SchattenTable[0], SchattenTable[2], TT.JulDay, 410);
          GeomagIndex =
@@ -81,7 +85,8 @@ void Environment(struct SCType *S) {
       if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
          S->AtmoDensity = NRLMSISE00(TT.Year, TT.doy, TT.Hour, TT.Minute,
                                      TT.Second, PosW, Flux10p7, GeomagIndex);
-      } else
+      }
+      else
          S->AtmoDensity = 0.0;
    }
 

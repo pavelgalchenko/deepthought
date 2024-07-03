@@ -21,8 +21,8 @@
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3],
-                            double wn[3]) {
+void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3])
+{
    double magp, phat[3], Axis[3], Vpar, Vperp[3], magvp;
    long i;
 
@@ -44,7 +44,8 @@ void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3],
 /*  corresponding to the Sensor Models in 42sensors.c                 */
 /*  Note!  These are simple, sometimes naive.  Use with care.         */
 /**********************************************************************/
-void DSM_GyroProcessing(struct AcType *AC) {
+void DSM_GyroProcessing(struct AcType *AC)
+{
    struct AcGyroType *G;
    double A0xA1[3];
    double A[3][3], b[3], Ai[3][3];
@@ -55,11 +56,13 @@ void DSM_GyroProcessing(struct AcType *AC) {
 
    if (AC->Ngyro == 0) {
       /* AC->wbn populated by true S->B[0].wn in 42sensors.c */
-   } else if (AC->Ngyro == 1) {
+   }
+   else if (AC->Ngyro == 1) {
       G = &AC->Gyro[0];
       for (i = 0; i < 3; i++)
          AC->wbn[i] = G->Rate * G->Axis[i];
-   } else if (AC->Ngyro == 2) {
+   }
+   else if (AC->Ngyro == 2) {
       VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
       for (i = 0; i < 3; i++) {
          A[0][i] = AC->Gyro[0].Axis[i];
@@ -71,7 +74,8 @@ void DSM_GyroProcessing(struct AcType *AC) {
       b[2] = 0.0;
       MINV3(A, Ai);
       MxV(Ai, b, AC->wbn);
-   } else if (AC->Ngyro > 2) {
+   }
+   else if (AC->Ngyro > 2) {
       /* Normal Equations */
       for (Ig = 0; Ig < AC->Ngyro; Ig++) {
          G = &AC->Gyro[Ig];
@@ -87,7 +91,8 @@ void DSM_GyroProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void DSM_MagnetometerProcessing(struct AcType *AC) {
+void DSM_MagnetometerProcessing(struct AcType *AC)
+{
    struct AcMagnetometerType *M;
    double A0xA1[3];
    double A[3][3], b[3], Ai[3][3];
@@ -98,11 +103,13 @@ void DSM_MagnetometerProcessing(struct AcType *AC) {
 
    if (AC->Nmag == 0) {
       /* AC->bvb populated by true S->bvb in 42sensors.c */
-   } else if (AC->Nmag == 1) {
+   }
+   else if (AC->Nmag == 1) {
       M = &AC->MAG[0];
       for (i = 0; i < 3; i++)
          AC->bvb[i] = M->Field * M->Axis[i];
-   } else if (AC->Nmag == 2) {
+   }
+   else if (AC->Nmag == 2) {
       VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
       for (i = 0; i < 3; i++) {
          A[0][i] = AC->MAG[0].Axis[i];
@@ -114,7 +121,8 @@ void DSM_MagnetometerProcessing(struct AcType *AC) {
       b[2] = 0.0;
       MINV3(A, Ai);
       MxV(Ai, b, AC->bvb);
-   } else if (AC->Nmag > 2) {
+   }
+   else if (AC->Nmag > 2) {
       /* Normal Equations */
       for (Im = 0; Im < AC->Nmag; Im++) {
          M = &AC->MAG[Im];
@@ -130,7 +138,8 @@ void DSM_MagnetometerProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void DSM_CssProcessing(struct AcType *AC) {
+void DSM_CssProcessing(struct AcType *AC)
+{
    struct AcCssType *Css;
    double AtA[3][3]  = {{0.0}};
    double Atb[3]     = {0.0};
@@ -143,7 +152,8 @@ void DSM_CssProcessing(struct AcType *AC) {
 
    if (AC->Ncss == 0) {
       /* AC->svb populated by true S->svb in 42sensors.c */
-   } else {
+   }
+   else {
       for (Ic = 0; Ic < AC->Ncss; Ic++) {
          Css = &AC->CSS[Ic];
          if (Css->Valid) {
@@ -170,17 +180,20 @@ void DSM_CssProcessing(struct AcType *AC) {
          MINV3(AtA, AtAi);
          MxV(AtAi, Atb, AC->svb);
          UNITV(AC->svb);
-      } else if (Nvalid == 2) {
+      }
+      else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = b[0] * A[0][i] + b[1] * A[1][i];
          UNITV(AC->svb);
-      } else if (Nvalid == 1) {
+      }
+      else if (Nvalid == 1) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = Atb[i];
          UNITV(AC->svb);
-      } else {
+      }
+      else {
          AC->SunValid = FALSE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = InvalidSVB[i];
@@ -189,7 +202,8 @@ void DSM_CssProcessing(struct AcType *AC) {
 }
 /******************************************************************************/
 /* This function assumes FSS FOVs don't overlap, and FSS overwrites CSS */
-void DSM_FssProcessing(struct AcType *AC) {
+void DSM_FssProcessing(struct AcType *AC)
+{
    struct AcFssType *FSS;
    double tanx, tany, z;
    long Ifss, i;
@@ -212,7 +226,8 @@ void DSM_FssProcessing(struct AcType *AC) {
 }
 /**********************************************************************/
 /* TODO: Weight measurements to reduce impact of "weak" axis */
-void DSM_StarTrackerProcessing(struct AcType *AC) {
+void DSM_StarTrackerProcessing(struct AcType *AC)
+{
    long Ist, i;
    struct AcStarTrackerType *ST;
    long Nvalid = 0;
@@ -221,7 +236,8 @@ void DSM_StarTrackerProcessing(struct AcType *AC) {
    if (AC->Nst == 0) {
       /* AC->qbn populated by true S->B[0].qn in 42sensors.c */
       AC->StValid = TRUE;
-   } else {
+   }
+   else {
       /* Naive averaging */
       for (i = 0; i < 4; i++)
          AC->qbn[i] = 0.0;
@@ -238,14 +254,16 @@ void DSM_StarTrackerProcessing(struct AcType *AC) {
       if (Nvalid > 0) {
          AC->StValid = TRUE;
          UNITQ(AC->qbn);
-      } else {
+      }
+      else {
          AC->StValid = FALSE;
          AC->qbn[3]  = 1.0;
       }
    }
 }
 /**********************************************************************/
-void DSM_GpsProcessing(struct AcType *AC) {
+void DSM_GpsProcessing(struct AcType *AC)
+{
    struct AcGpsType *G;
    double DaysSinceWeek, DaysSinceRollover, DaysSinceEpoch, JD;
    long i;
@@ -253,7 +271,8 @@ void DSM_GpsProcessing(struct AcType *AC) {
    if (AC->Ngps == 0) {
       /* AC->Time, AC->PosN, AC->VelN */
       /* populated in 42sensors.c */
-   } else {
+   }
+   else {
       G = &AC->GPS[0];
       /* GPS Time is seconds since 6 Jan 1980 00:00:00.0, which is JD =
        * 2444244.5 */
@@ -278,7 +297,8 @@ void DSM_AccelProcessing(struct AcType *AC) {}
 /**********************************************************************/
 /*  Some Actuator Processing Functions                                */
 /**********************************************************************/
-void DSM_WheelProcessing(struct AcType *AC) {
+void DSM_WheelProcessing(struct AcType *AC)
+{
    struct AcWhlType *W;
    long Iw;
 
@@ -288,7 +308,8 @@ void DSM_WheelProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void DSM_MtbProcessing(struct AcType *AC) {
+void DSM_MtbProcessing(struct AcType *AC)
+{
    struct AcMtbType *M;
    long Im;
 
