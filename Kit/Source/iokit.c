@@ -54,7 +54,8 @@ long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(yamlSequence, iterNode)
+   {
       if (!fy_node_scanf(iterNode, "/ %lf", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
          printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
@@ -75,7 +76,8 @@ long assignYAMLToFloatArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(yamlSequence, iterNode)
+   {
       if (!fy_node_scanf(iterNode, "/ %f", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
          printf("Problem reading YAML sequence %s in assignYAMLTofloatArray "
@@ -96,7 +98,8 @@ long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(yamlSequence, iterNode)
+   {
       if (!fy_node_scanf(iterNode, "/ %ld", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
          printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
@@ -116,7 +119,8 @@ long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   while (fy_node_sequence_iterate(yamlSequence, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(yamlSequence, iterNode)
+   {
       dest[i] = getYAMLBool(iterNode);
       i++;
       if (i == n)

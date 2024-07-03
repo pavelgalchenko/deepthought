@@ -528,7 +528,8 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
       struct fy_node *cmdNode =
           fy_node_by_path_def(dsmRoot, "/Translation Configurations");
 
-      while (fy_node_sequence_iterate(cmdNode, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(cmdNode, iterNode)
+      {
          long ind = 0;
          fy_node_scanf(iterNode, "/Translation/Index %ld", &ind);
          if (ind == cmdInd) {
@@ -563,8 +564,8 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
           fy_node_by_path_def(dsmRoot, "/Maneuver Configurations");
-
-      while (fy_node_sequence_iterate(cmdNode, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(cmdNode, iterNode)
+      {
          long ind = 0;
          fy_node_scanf(iterNode, "/Maneuver/Index %ld", &ind);
          if (ind == cmdInd) {
@@ -697,8 +698,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
          struct fy_node *searchNode = fy_node_by_path_def(
              dsmRoot, (k == 0) ? ("/Primary Vector Configurations")
                                : ("/Secondary Vector Configurations"));
-         while (fy_node_sequence_iterate(searchNode, (void **)&nodes[k]) !=
-                NULL) {
+         WHILE_FY_ITER(searchNode, nodes[k])
+         {
             long ind = 0;
             fy_node_scanf(nodes[k],
                           (k == 0) ? ("/Primary Vector/Index %ld")
@@ -824,7 +825,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
 
       struct fy_node *searchNode =
           fy_node_by_path_def(dsmRoot, "/Quaternion Configurations");
-      while (fy_node_sequence_iterate(searchNode, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
          long ind = 0;
          fy_node_scanf(iterNode, "/Quaternion/Index %ld", &ind);
          if (ind == *cmdInd) {
@@ -850,7 +852,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
 
       struct fy_node *searchNode =
           fy_node_by_path_def(dsmRoot, "/Mirror Configurations");
-      while (fy_node_sequence_iterate(searchNode, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
          long ind = 0;
          fy_node_scanf(iterNode, "/Mirror/Index %ld", &ind);
          if (ind == *cmdInd) {
@@ -873,7 +876,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
 
       struct fy_node *searchNode =
           fy_node_by_path_def(dsmRoot, "/Detumble Configurations");
-      while (fy_node_sequence_iterate(searchNode, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
          long ind = 0;
          fy_node_scanf(iterNode, "/Detumble/Index %ld", &ind);
          if (ind == *cmdInd) {
@@ -893,7 +897,8 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
 
       struct fy_node *searchNode =
           fy_node_by_path_def(dsmRoot, "/Whl H Manage Configurations");
-      while (fy_node_sequence_iterate(searchNode, (void **)&iterNode) != NULL) {
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
          long ind = 0;
          fy_node_scanf(iterNode, "/Whl H Manage/Index %ld", &ind);
          if (ind == *cmdInd) {
@@ -967,7 +972,8 @@ long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
    fy_node_scanf(actCmdNode, "/Index %ld", &actCmdInd);
    struct fy_node *actConfigNode =
        fy_node_by_path_def(dsmRoot, "/Actuator Cmd Configurations");
-   while (fy_node_sequence_iterate(actConfigNode, (void **)&iterNode)) {
+   WHILE_FY_ITER(actConfigNode, iterNode)
+   {
       long ind = 0;
       fy_node_scanf(iterNode, "/Actuator Cmd/Index %ld", &ind);
       if (ind == actCmdInd) {
@@ -977,7 +983,8 @@ long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
    }
    Cmd->ActNumCmds = fy_node_sequence_item_count(actSeqNode);
    iterNode        = NULL;
-   while (fy_node_sequence_iterate(actSeqNode, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(actSeqNode, iterNode)
+   {
       const char *searchStr =
           "/Type %" STR(FIELDWIDTH) "s /Index %ld /Duty Cycle %lf";
       char type[FIELDWIDTH + 1] = {};
@@ -1051,7 +1058,8 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
    DSM->CmdNum = 0;
    // TODO: preload and presort the command node pointers
 
-   while (fy_node_sequence_iterate(dsmCmds, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(dsmCmds, iterNode)
+   {
       long scInd = 0;
       fy_node_scanf(iterNode, "/SC %ld", &scInd);
       if (scInd == S->ID) {
@@ -1068,9 +1076,9 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
       DSM->CmdTime_f = calloc(DSM->CmdCnt, sizeof(double));
       long i         = 0;
       iterNode       = NULL;
-      while (fy_node_sequence_iterate(scCmdsNode, (void **)&iterNode) != NULL) {
-         fy_node_scanf(iterNode, "/Time %lf", &DSM->CmdTime_f[i]);
-         i++;
+      WHILE_FY_ITER(scCmdsNode, iterNode)
+      {
+         fy_node_scanf(iterNode, "/Time %lf", &DSM->CmdTime_f[i++]);
       }
       qsort(DSM->CmdTime_f, DSM->CmdCnt, sizeof(double), compare);
       DSM->CmdNextTime = DSM->CmdTime_f[0];
@@ -1087,7 +1095,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
 
-   while (fy_node_sequence_iterate(dsmCmds, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(dsmCmds, iterNode)
+   {
       long scInd = 0;
       fy_node_scanf(iterNode, "/SC %ld", &scInd);
       if (scInd == S->ID) {
@@ -1096,7 +1105,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
       }
    }
    iterNode = NULL;
-   while (fy_node_sequence_iterate(scCmdsNode, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(scCmdsNode, iterNode)
+   {
       double cmdTime = 0.0;
       fy_node_scanf(iterNode, "/Time %lf", &cmdTime);
       if (cmdTime == DSM->CmdNextTime) {
@@ -1113,7 +1123,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
    }
 
    iterNode = NULL;
-   while (fy_node_sequence_iterate(cmdsNode, (void **)&iterNode) != NULL) {
+   WHILE_FY_ITER(cmdsNode, iterNode)
+   {
       char typeToken[FIELDWIDTH + 1] = {}, subType[FIELDWIDTH + 1] = {};
 
       const char *searchTypeStr = "/Type %" STR(FIELDWIDTH) "[^\n]";

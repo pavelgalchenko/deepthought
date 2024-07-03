@@ -27,6 +27,7 @@ Time:
   #     Hour:   [[]]
   #     Minute: [[]]
   #     Second: [[]]
+  #     Millisecond: [[]]
   #   Leap Seconds:   [[]]
   Date:
     Month: 1
