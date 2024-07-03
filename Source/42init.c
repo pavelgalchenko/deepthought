@@ -3006,8 +3006,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->DynMethod == DYN_ORDER_N) {
       if (SomeJointsLocked || S->FlexActive || S->ConstraintsRequested) {
          printf("Order-N dynamics doesn't (yet) support flex modes, constraint "
-                "computation, or "
-                "locking joints.\n");
+                "computation, or locking joints.\n");
          printf("Switching over to Gaussian Elimination.\n");
          S->DynMethod = DYN_GAUSS_ELIM;
       }
@@ -3077,7 +3076,7 @@ void InitSpacecraft(struct SCType *S)
 /*********************************************************************/
 void LoadTdrs(void)
 {
-   // TODO: configurable constellation TDRS
+   // TODO: configurable TDRS constellation
 
    /* .. Initialize TDRS */
    struct fy_document *fyd =
