@@ -4940,7 +4940,7 @@ void InitSim(int argc, char **argv)
    Iorb                     = 0;
    WHILE_FY_ITER(node, iterNode)
    {
-      fy_node_scanf(iterNode, "/Name %19[^\n]s", Orb[Iorb].FileName);
+      fy_node_scanf(iterNode, "/Name %39[^\n]s", Orb[Iorb].FileName);
       strcat(Orb[Iorb].FileName, ".yaml");
       Orb[Iorb].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
       Iorb++;
