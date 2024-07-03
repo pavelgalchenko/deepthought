@@ -1,7 +1,7 @@
 <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
 ************************** Simulation Control **************************
 FAST                          !  Time Mode (FAST, REAL, EXTERNAL, or NOS3)
-3600.0  0.02                   !  Sim Duration, Step Size [sec]
+2400.1  0.02                   !  Sim Duration, Step Size [sec]
 0.1                           !  File Output Interval [sec]
 0                             !  RNG Seed
 TRUE                          !  Graphics Front End?

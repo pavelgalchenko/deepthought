@@ -122,6 +122,8 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
+double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+                     double (*fdf)(double, double *), double *params);
 
 void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]);
 void AdjointT(const double C[3][3], const double A[3][3], double CACT[3][3]);
