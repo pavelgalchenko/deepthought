@@ -2177,6 +2177,13 @@ void InitSpacecraft(struct SCType *S) {
    }
    fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
    S->OrbDOF = DecodeString(response);
+   if (S->OrbDOF == ORBDOF_ENCKE && Orb[S->RefOrb].J2DriftEnabled == TRUE) {
+      printf("Spacecraft %li uses Encke propagation while its orbit, Orbit "
+             "%li, has "
+             "J2Drift enabled; these are not compatible. Exiting...\n",
+             S->ID, S->RefOrb);
+      exit(EXIT_FAILURE);
+   }
    fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
    UseCM = DecodeString(response);
    fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &PosVec[0], &PosVec[1],
