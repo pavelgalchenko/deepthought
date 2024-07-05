@@ -2007,11 +2007,11 @@ void FlightSoftWare(struct SCType *S)
             AcFsw(&S->AC);
 #endif
             break;
-#ifdef _ENABLE_RBT_
          case RBT_FSW:
+#ifdef _ENABLE_RBT_
             RbtFSW(S);
-            break;
 #endif
+            break;
       }
    }
 

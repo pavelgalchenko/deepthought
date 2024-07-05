@@ -233,20 +233,6 @@
 #define ASTEROID 3
 #define COMET    4
 
-/* FSW Tags */
-#define PASSIVE_FSW    0
-#define PROTOTYPE_FSW  1
-#define AD_HOC_FSW     2
-#define SPINNER_FSW    3
-#define MOMBIAS_FSW    4
-#define THREE_AXIS_FSW 5
-#define ISS_FSW        6
-#define CMG_FSW        7
-#define THR_FSW        8
-#define CFS_FSW        9
-#define RBT_FSW        10
-#define DSM_FSW        11
-
 /* Command Types */
 #define CMD_DIRECTION 0
 #define CMD_TARGET    1

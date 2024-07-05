@@ -74,7 +74,7 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
          }
       }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Ngyro != 0) {
       double A0xA1[3];
       double A[3][3], b[3], Ai[3][3];
       double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
@@ -144,7 +144,7 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
          }
       }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Nmag != 0) {
       double A0xA1[3];
       double A[3][3], b[3], Ai[3][3];
       double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
@@ -213,7 +213,7 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
          }
       }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Ncss != 0) {
       double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
       double Atb[3]    = {0.0, 0.0, 0.0};
       double AtAi[3][3];
@@ -298,7 +298,7 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
          }
       }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Nfss != 0) {
       double tanx, tany, z;
 
       for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
@@ -350,7 +350,7 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
          }
       }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Nst != 0) {
       long Nvalid = 0;
       double qbn[4];
       /* Naive averaging */
@@ -411,7 +411,7 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
       }
    }
    // Do this to populate AC->Time, AC->PosN, & AC->VelN
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Ngps != 0) {
       // double DaysSinceWeek,DaysSinceRollover,DaysSinceEpoch,JD;
       G = &AC->GPS[0];
       /* GPS Time is seconds since 6 Jan 1980 00:00:00.0, which is JD =

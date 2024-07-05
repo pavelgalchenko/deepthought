@@ -2513,45 +2513,43 @@ void DsmSensorModule(struct SCType *S)
    InitMeasList(measList);
 
    for (enum sensorType sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
-      if (Nav->sensorActive[sensor] == TRUE) {
-         struct DSMMeasListType *newMeasList = NULL;
-         switch (sensor) {
-            case GYRO_SENSOR:
-               newMeasList = DSM_GyroProcessing(AC, DSM);
-               break;
-            case MAG_SENSOR: // maybe add a condition to not run if
-                             // magnetorquers are active??
-               newMeasList = DSM_MagnetometerProcessing(AC, DSM);
-               break;
-            case FSS_SENSOR:
-               newMeasList = DSM_FssProcessing(AC, DSM);
-               if (newMeasList != NULL && newMeasList->head != NULL)
-                  haveFSSMeas = TRUE;
-               break;
-            case CSS_SENSOR: // Fine sun sensors preempt coarse sun sensors
-               if (haveFSSMeas == FALSE)
-                  newMeasList = DSM_CssProcessing(AC, DSM);
-               break;
-            case STARTRACK_SENSOR:
-               newMeasList = DSM_StarTrackerProcessing(AC, DSM);
-               break;
-            case GPS_SENSOR:
-               newMeasList = DSM_GpsProcessing(AC, DSM);
-               break;
-            case ACCEL_SENSOR:
-               newMeasList = DSM_AccelProcessing(AC, DSM);
-               break;
-            default:
-               printf("Invalid Sensor in INIT_SENSOR and FIN_SENSOR interval. "
-                      "Exiting...\n");
-               exit(EXIT_FAILURE);
-               break;
-         }
-         if (newMeasList != NULL) {
-            appendList(measList, newMeasList);
-            free(newMeasList);
-            newMeasList = NULL;
-         }
+      struct DSMMeasListType *newMeasList = NULL;
+      switch (sensor) {
+         case GYRO_SENSOR:
+            newMeasList = DSM_GyroProcessing(AC, DSM);
+            break;
+         case MAG_SENSOR: // maybe add a condition to not run if
+                          // magnetorquers are active??
+            newMeasList = DSM_MagnetometerProcessing(AC, DSM);
+            break;
+         case FSS_SENSOR:
+            newMeasList = DSM_FssProcessing(AC, DSM);
+            if (newMeasList != NULL && newMeasList->head != NULL)
+               haveFSSMeas = TRUE;
+            break;
+         case CSS_SENSOR: // Fine sun sensors preempt coarse sun sensors
+            if (haveFSSMeas == FALSE)
+               newMeasList = DSM_CssProcessing(AC, DSM);
+            break;
+         case STARTRACK_SENSOR:
+            newMeasList = DSM_StarTrackerProcessing(AC, DSM);
+            break;
+         case GPS_SENSOR:
+            newMeasList = DSM_GpsProcessing(AC, DSM);
+            break;
+         case ACCEL_SENSOR:
+            newMeasList = DSM_AccelProcessing(AC, DSM);
+            break;
+         default:
+            printf("Invalid Sensor in INIT_SENSOR and FIN_SENSOR interval. "
+                   "Exiting...\n");
+            exit(EXIT_FAILURE);
+            break;
+      }
+      if (newMeasList != NULL) {
+         appendList(measList, newMeasList);
+         free(newMeasList);
+         newMeasList = NULL;
       }
    }
 
