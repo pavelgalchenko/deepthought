@@ -49,9 +49,9 @@ double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 #undef EPS
 }
 /**********************************************************************/
-void circFDF(const double x, double B[1], double *f, double *fp)
+void parabolFDF(const double x, double params[1], double *f, double *fp)
 {
-   *f  = x * (x * x + 3.0) - 2.0 * B[0];
+   *f  = x * (x * x + 3.0) - 2.0 * params[0];
    *fp = 3.0 * x * x + 3.0;
 }
 /**********************************************************************/
@@ -69,7 +69,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
 
    if (e == 1.0) {
       double params[1] = {3.0 * sqrt(mu / p3) * t};
-      double x         = NewtonRaphson(0, EPS, 100, 1.0, &circFDF, params);
+      double x         = NewtonRaphson(0, EPS, 100, 1.0, &parabolFDF, params);
       Anom             = 2.0 * atan(x);
    }
    else if (e > 1.0) {

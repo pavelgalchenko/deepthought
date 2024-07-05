@@ -13,53 +13,12 @@
 
 #include "mathkit_tests.h"
 
-#define TRUE  1
-#define FALSE 0
-
-#define ASSERT(actual, expected)                                               \
-   if ((actual) != (expected)) {                                               \
-      return (FALSE);                                                          \
-   }
-
-#define TEST(actual, expected) ((actual) == (expected))
-#define TEST_DOUBLE(actual, expected, tol)                                     \
-   (fabs((double)(actual) - (double)(expected)) <= (double)(tol))
-
-long TEST_MAT(const long n, const long m, const double actual[n][m],
-              const double expected[n][m], const double tol)
-{
-   for (long i = 0; i < n; i++) {
-      for (long j = 0; j < m; j++) {
-         if (fabs(actual[i][j] - expected[i][j]) > tol)
-            return FALSE;
-      }
-   }
-   return TRUE;
-}
-long TEST_MATP(const long n, const long m, double **actual, double **expected,
-               const double tol)
-{
-   for (long i = 0; i < n; i++) {
-      for (long j = 0; j < m; j++) {
-         if (fabs(actual[i][j] - expected[i][j]) > tol)
-            return FALSE;
-      }
-   }
-   return TRUE;
-}
-long TEST_VEC(const long n, const double actual[n], const double expected[n],
-              const double tol)
-{
-   for (long i = 0; i < n; i++) {
-      if (fabs(actual[i] - expected[i]) > tol)
-         return FALSE;
-   }
-   return TRUE;
-}
 long TEST_VEC_PARALLEL(double actual[3], double expected[3], const double tol)
 {
-   double cross[3] = {0.0};
-   VxV(actual, expected, cross);
+   double cross[3] = {0.0}, unit_a[3] = {0.0}, unit_e[3] = {0.0};
+   CopyUnitV(actual, unit_a);
+   CopyUnitV(expected, unit_e);
+   VxV(unit_a, unit_e, cross);
    if (MAGV(cross) > tol)
       return FALSE;
    return TRUE;
@@ -355,13 +314,13 @@ long runMathKit_Tests()
 #define N_X0    10
 #define N_TESTS 10
       void eccFDF(const double E, double params[2], double *f, double *fp);
-      void circFDF(const double x, double B[1], double *f, double *fp);
+      void parabolFDF(const double x, double params[1], double *f, double *fp);
       void hyperbolFDF(const double H, double params[2], double *f, double *fp);
       void lagpointFDF(const double x, double params[3], double *f, double *fp);
       void hyperradFDF(const double r, double params[7], double *f, double *fp);
 
       void (*fns[N_FNS])(double, double *, double *, double *) = {
-          &linFDF,      &cubicFDF,    &eccFDF,     &circFDF,
+          &linFDF,      &cubicFDF,    &eccFDF,     &parabolFDF,
           &hyperbolFDF, &lagpointFDF, &hyperradFDF};
       long nParams[N_FNS]    = {2, 3, 2, 1, 2, 3, 7};
       double x0[N_FNS][N_X0] = {
@@ -369,15 +328,17 @@ long runMathKit_Tests()
            0, -0},
           {10, 15, -5, 0.2345, 3.1415926, -5.235, 10000000.0, -400023412.1234,
            0, -0},
-          {0.0},
+          {0.0, 3.1415926535, 6.28, -3.1415926535, 0.4756, -5.12345, 2.56782,
+           0.0034256, -0.000023623724, -0.0},
           {0.0},
           {0.0},
           {0.0},
           {0.0},
       };
-      double eps[7] = {1.0E-12, 1.0E-12, 1.0E-12, 1.0E-12,
-                       1.0E-12, 1.0E-12, 1.0E-12};
-      for (int i = 0; i < 2; i++) {
+      double eps[N_FNS]     = {1.0E-12, 1.0E-12, 1.0E-12, 1.0E-12,
+                               1.0E-12, 1.0E-12, 1.0E-12};
+      double maxStep[N_FNS] = {1.0E9, 1.0E9, 0.1, 1.0E9, 1.0E9, 1.0E9, 1.0E9};
+      for (int i = 0; i < 3; i++) {
          double params[nParams[i]];
          for (int j = 0; j < N_X0; j++) {
             for (int k = 0; k < N_TESTS; k++) {
@@ -493,26 +454,39 @@ long runMathKit_Tests()
                   case 2:
                      switch (k) {
                         case 0:
+                           params[0] = 0.0;
                            break;
                         case 1:
+                           params[0] = 0.7386952935;
                            break;
                         case 2:
+                           params[0] = 0.22346;
                            break;
                         case 3:
+                           params[0] = 0.0023467;
                            break;
                         case 4:
+                           // this can cause errors without reasonable maxStep
+                           params[0] = 0.99999999;
                            break;
                         case 5:
+                           params[0] = 0.89286354;
                            break;
                         case 6:
+                           params[0] = 0.490071;
                            break;
                         case 7:
+                           params[0] = 0.111111111;
                            break;
                         case 8:
+                           params[0] = 0.00000000234723945;
                            break;
                         case 9:
+                           params[0] = 0.9002467598374;
                            break;
                      }
+                     // Kepler's equation is typically initialized with E_0 = M
+                     params[1] = x0[i][j];
                      break;
                   case 3:
                      switch (k) {
@@ -635,16 +609,32 @@ long runMathKit_Tests()
                      }
                      break;
                }
-               double X = NewtonRaphson(x0[i][j], eps[i], 1000000, 1.0E6,
+               double X = NewtonRaphson(x0[i][j], eps[i], 500, maxStep[i],
                                         fns[i], params);
                double f = 0.0, fp = 0.0;
-               fns[i](X, params, &f, &fp);
+               switch (i) {
+                  case 0:
+                  case 1:
+                     fns[i](X, params, &f, &fp);
+                     break;
+                  case 2:
+                     f = params[1] - X + params[0] * sin(X);
+                     break;
+                  case 3:
+                     break;
+                  case 4:
+                     break;
+                  case 5:
+                     break;
+                  case 6:
+                     break;
+               }
                if (!TEST_DOUBLE(f, 0.0, 1.0E-10)) {
                   char trialInfo[40] = {0};
                   snprintf(trialInfo, 39, "%i, %i, %i", i, j, k);
                   long isOkay = FALSE;
                   // TODO: These cases for NewtonRaphson
-                  if (i == 1 && (j == 1 || j == 6) && k == 8)
+                  if ((i == 1 && k == 8 && (j == 1 || j == 6)))
                      isOkay = TRUE;
                   success &= print_result(FALSE, "NewtonRaphson Test", 12, 1,
                                           trialInfo, isOkay);
@@ -655,17 +645,9 @@ long runMathKit_Tests()
 #undef N_FNS
 #undef N_TESTS
    }
-
    return (success);
 }
 
-#undef TRUE
-#undef FALSE
-#undef ASSERT
-#undef TEST
-#undef TEST_DOUBLE
-#undef TEST_LONGDOUBLE
-#undef TEST_MAT
 /* #ifdef __cplusplus
 ** }
 ** #endif

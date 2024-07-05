@@ -18,6 +18,37 @@
 ** #endif
 */
 
+long TEST_MAT(const long n, const long m, const double actual[n][m],
+              const double expected[n][m], const double tol)
+{
+   for (long i = 0; i < n; i++) {
+      for (long j = 0; j < m; j++) {
+         if (fabs(actual[i][j] - expected[i][j]) > tol)
+            return FALSE;
+      }
+   }
+   return TRUE;
+}
+long TEST_MATP(const long n, const long m, double **actual, double **expected,
+               const double tol)
+{
+   for (long i = 0; i < n; i++) {
+      for (long j = 0; j < m; j++) {
+         if (fabs(actual[i][j] - expected[i][j]) > tol)
+            return FALSE;
+      }
+   }
+   return TRUE;
+}
+long TEST_VEC(const long n, const double actual[n], const double expected[n],
+              const double tol)
+{
+   for (long i = 0; i < n; i++) {
+      if (fabs(actual[i] - expected[i]) > tol)
+         return FALSE;
+   }
+   return TRUE;
+}
 char *tab_str(const char *str, long len, int nTabs)
 {
    if (len < 0)
