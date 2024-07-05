@@ -188,7 +188,7 @@ struct DSMCmdType {
    int trn_controller;
    int att_controller;
    int dmp_controller;
-   int ManeuverMode;
+   enum maneuverType ManeuverMode;
    char AttRefScID[6];
    char H_DumpGain[20];
    char H_DumpMode[20];
@@ -197,7 +197,7 @@ struct DSMCmdType {
    double BurnTime;
    double TrgVelR[3];
    double BurnStopTime;
-   int ActTypes[100];
+   enum actuatorType ActTypes[100];
    int ActInds[100];
    int ActNumCmds;
    double ActDuties[100];

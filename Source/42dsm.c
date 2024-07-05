@@ -2430,8 +2430,7 @@ void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr)
                   strcpy(ActuatorCmd, curCommand);
                   if (GetActuatorCmd(S, ActuatorCmd, InpDsmFilePtr) == FALSE) {
                      printf("%s does not match any valid actuator command "
-                            "methods found in "
-                            "Inp_DSM.txt. Exiting...\n",
+                            "methods found in Inp_DSM.txt. Exiting...\n",
                             ActuatorCmd);
                      exit(EXIT_FAILURE);
                   }
@@ -2443,8 +2442,7 @@ void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr)
                   if (GetNavigationCmd(S, NavigationCmd, InpDsmFilePtr) ==
                       FALSE) {
                      printf("%s does not match any valid navigation command "
-                            "methods found in "
-                            "Inp_DSM.txt. Exiting...\n",
+                            "methods found in Inp_DSM.txt. Exiting...\n",
                             NavigationCmd);
                      exit(EXIT_FAILURE);
                   }
@@ -2900,16 +2898,15 @@ void TranslationGuidance(struct SCType *S)
          sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
                 &frame_body); // Decode ref SC ID Number
          if (Isc_Ref >= Nsc) {
-            printf("This mission only has %ld spacecraft, but spacecraft %ld "
-                   "was attempted to be "
-                   "set as the reference frame. Exiting...\n",
-                   Nsc, Isc_Ref);
+            printf(
+                "This mission only has %ld spacecraft, but spacecraft %ld was "
+                "attempted to be set as the reference frame. Exiting...\n",
+                Nsc, Isc_Ref);
             exit(EXIT_FAILURE);
          }
          if (frame_body >= SC[Isc_Ref].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the reference "
-                   "frame was attempted to "
-                   "be set as body %ld. Exiting...\n",
+                   "frame was attempted to be set as body %ld. Exiting...\n",
                    Isc_Ref, SC[Isc_Ref].Nb, frame_body);
             exit(EXIT_FAILURE);
          }
@@ -2935,16 +2932,15 @@ void TranslationGuidance(struct SCType *S)
          sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
                 &origin_body); // Decode ref SC ID Number
          if (Isc_Ref >= Nsc) {
-            printf("This mission only has %ld spacecraft, but spacecraft %ld "
-                   "was attempted to be "
-                   "set as the reference origin. Exiting...\n",
-                   Nsc, Isc_Ref);
+            printf(
+                "This mission only has %ld spacecraft, but spacecraft %ld was "
+                "attempted to be set as the reference origin. Exiting...\n",
+                Nsc, Isc_Ref);
             exit(EXIT_FAILURE);
          }
          if (origin_body >= SC[Isc_Ref].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the reference "
-                   "origin was attempted to "
-                   "be set as body %ld. Exiting...\n",
+                   "origin was attempted to be set as body %ld. Exiting...\n",
                    Isc_Ref, SC[Isc_Ref].Nb, origin_body);
             exit(EXIT_FAILURE);
          }
