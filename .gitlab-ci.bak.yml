@@ -44,7 +44,7 @@ test-format:
     - *update-dependencies
     - apt -y install clang-format
   script:
-    - clang-format --style=file --Werror --verbose -n Kit/**/*.c Source/*.c Kit/**/*.h Include/*.h
+    - clang-format --style=file --Werror --verbose -n Kit/**/*.c Source/*.c Kit/**/*.h Include/*.h Tests/*.c Tests/*.h
 unit-test:
   stage: test
   before_script:

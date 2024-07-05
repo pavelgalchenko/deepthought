@@ -14,7 +14,6 @@
 #ifndef __MATHKIT_TESTS_H__
 #define __MATHKIT_TESTS_H__
 
-
 #include "mathkit.h"
 #include "test_lib.h"
 

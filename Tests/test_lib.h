@@ -20,9 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void print_result(const long result, const char *str,long len, const int nTabs);
-void print_success(const char *str,long len, const int nTabs);
-void print_failure(const char *str,long len, const int nTabs);
-
+int print_result(const long result, const char *str, long len, const int nTabs,
+                 const char *trialInfo, long isOkay);
 
 #endif

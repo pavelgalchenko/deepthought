@@ -34,11 +34,10 @@ struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb)
    return (NewOrb);
 }
 /**********************************************************************/
-double eccFDF(double E, double params[2])
+void eccFDF(const double E, double params[2], double *f, double *fp)
 {
-   double f  = E - params[0] * sin(E) - params[1];
-   double fp = 1.0 - params[0] * cos(E);
-   return f / fp;
+   *f  = E - params[0] * sin(E) - params[1];
+   *fp = 1.0 - params[0] * cos(E);
 }
 /**********************************************************************/
 double MeanAnomToTrueAnom(double MeanAnom, double ecc)
@@ -50,18 +49,16 @@ double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 #undef EPS
 }
 /**********************************************************************/
-double circFDF(double x, double B[1])
+void circFDF(const double x, double B[1], double *f, double *fp)
 {
-   double f  = x * (x * x + 3.0) - 2.0 * B[0];
-   double fp = 3.0 * x * x + 3.0;
-   return f / fp;
+   *f  = x * (x * x + 3.0) - 2.0 * B[0];
+   *fp = 3.0 * x * x + 3.0;
 }
 /**********************************************************************/
-double hyperbolFDF(double H, double params[2])
+void hyperbolFDF(const double H, double params[2], double *f, double *fp)
 {
-   double f  = params[0] * sinh(H) - H - params[1];
-   double fp = params[0] * cosh(H) - 1.0;
-   return f / fp;
+   *f  = params[0] * sinh(H) - H - params[1];
+   *fp = params[0] * cosh(H) - 1.0;
 }
 /**********************************************************************/
 double TrueAnomaly(double mu, double p, double e, double t)
@@ -96,18 +93,17 @@ double TrueAnomaly(double mu, double p, double e, double t)
 #undef EPS
 }
 /**********************************************************************/
-double hyperradFDF(double r, double params[7])
+void hyperradFDF(const double r, double params[7], double *f, double *fp)
 {
    double rold = params[5];
    double fold = params[6];
    double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
-   double f =
-       r * sqX -
-       params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
-       params[4];
+   *f          = r * sqX -
+        params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
+        params[4];
    params[5] = r;
-   params[6] = f;
-   return f * (r - rold) / (f - fold);
+   params[6] = *f;
+   *fp       = (*f - fold) / (r - rold);
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -1337,29 +1333,29 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])
    wln[2] = WorldW;
 }
 /**********************************************************************/
-double lagpointFDF(double x, double params[3])
+void lagpointFDF(const double x, double params[3], double *f, double *fp)
 {
    double rho = params[0], rho1 = params[1];
    double xp  = x - params[0];
    double xp1 = xp + 1.0;
    long lp    = params[2];
-   double f;
-   double fx;
    switch (lp) {
       case 1:
-         f  = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
-         fx = 1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
+         *f = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
+         *fp =
+             1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
          break;
       case 2:
-         f  = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
-         fx = 1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
+         *f = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
+         *fp =
+             1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
          break;
       case 3:
-         f  = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
-         fx = 1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
+         *f = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
+         *fp =
+             1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
          break;
    }
-   return f / fx;
 }
 /**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
