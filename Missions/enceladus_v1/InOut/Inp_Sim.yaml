@@ -210,11 +210,11 @@ Ground Stations:
       World: ENCELADUS
       Longitude: 50.0
       Latitude: -53.0
-      Label: Baghdad
+      Label: Baghdad Geyser
   - Ground Station:
       Index: 1
       Enabled: true
       World: ENCELADUS
       Longitude: 330.0
       Latitude: -87.0
-      Label: South
+      Label: South Geyser

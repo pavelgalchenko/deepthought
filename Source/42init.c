@@ -3332,14 +3332,15 @@ void LoadTdrs(void)
          printf("Could not find TDRS Number. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-      if (i >= 10)
+      if (i > 10)
          continue;
 
-      if (!fy_node_scanf(seqNode, "/Label %39[^\n]s", Tdrs[i].Designation)) {
+      if (!fy_node_scanf(seqNode, "/Label %39[^\n]s",
+                         Tdrs[i - 1].Designation)) {
          printf("Could not find TDRS %ld's Label. Exiting...\n", i);
          exit(EXIT_FAILURE);
       }
-      Tdrs[i].Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
+      Tdrs[i - 1].Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
    }
    fy_document_destroy(fyd);
 }
@@ -5490,7 +5491,7 @@ void InitSim(int argc, char **argv)
       size_t str_len;
       const char *label =
           fy_node_get_scalar(fy_node_by_path_def(seqNode, "/Label"), &str_len);
-      strncpy(GroundStation[Ignd].Label, label, str_len);
+      strncpy(GroundStation[Ignd].Label, label, str_len > 39 ? 39 : str_len);
       GroundStation[Ignd].World = DecodeString(response);
       GroundStation[Ignd].Exists =
           getYAMLBool(fy_node_by_path_def(iterNode, "/Ground Station/Enabled"));

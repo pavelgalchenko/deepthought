@@ -224,7 +224,7 @@ Ground Stations:
       World: EARTH
       Longitude: -155.6
       Latitude: 19.0
-      Label: South
+      Label: South Point
   - Ground Station:
       Index: 2
       Enabled: true
@@ -245,4 +245,4 @@ Ground Stations:
       World: LUNA
       Longitude: 45.0
       Latitude: 45.0
-      Label: Moon
+      Label: Moon Base Alpha

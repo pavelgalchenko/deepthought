@@ -1635,12 +1635,17 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
                 newItem = {"Ground Station": newDict}
                 lineData = line.split("!")[0].strip()
                 strData = lineData.split()
+                splitQuote = line.split('"')
+                if len(splitQuote) == 2:
+                    label = ""
+                else:
+                    label = splitQuote[1]
                 newDict["Index"] = len(gss)
                 newDict["Enabled"] = strData[0].lower() == "true"
                 newDict["World"] = strData[1]
                 newDict["Longitude"] = float(strData[2])
                 newDict["Latitude"] = float(strData[3])
-                newDict["Label"] = strData[4].strip('"')
+                newDict["Label"] = label
                 gss.append(newItem)
 
     sim = convertToYamlAndComment(sim, commentDict)
