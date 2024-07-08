@@ -2244,8 +2244,8 @@ void InitSpacecraft(struct SCType *S)
    node           = fy_node_by_path_def(root, "/Configuration");
    char dummy[50] = {0};
    if (fy_node_scanf(node,
-                     "/Label %41s "
-                     "/Sprite File %41s "
+                     "/Label %39s "
+                     "/Sprite File %39s "
                      "/FSW Identifier %49s "
                      "/FSW Sample Time %lf",
                      S->Label, S->SpriteFileName, dummy,
@@ -2347,7 +2347,7 @@ void InitSpacecraft(struct SCType *S)
    S->RefPt = DecodeString(dummy);
    if (fy_node_scanf(node,
                      "/Drag Coefficient %lf "
-                     "/Shaker File Name %41s",
+                     "/Shaker File Name %39s",
                      &S->DragCoef, S->ShakerFileName) != 2) {
       printf("Could not find Drag Coefficient or Shaker File Name for "
              "spacecraft. Exiting...\n");
@@ -2389,16 +2389,16 @@ void InitSpacecraft(struct SCType *S)
       long Ib;
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Body");
       if (!fy_node_scanf(seqNode, "/Index %ld", &Ib)) {
-         printf("could not find Body index. Exiting...\n");
+         printf("Could not find Body index. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       struct BodyType *B = &S->B[Ib];
       double moi[3], poi[3];
       if (fy_node_scanf(seqNode,
                         "/Mass %lf "
-                        "/Geometry File Name %41s "
-                        "/Node File Name %41s "
-                        "/Flex File Name %41s",
+                        "/Geometry File Name %39s "
+                        "/Node File Name %39s "
+                        "/Flex File Name %39s",
                         &B->mass, B->GeomFileName, B->NodeFileName,
                         B->FlexFileName) != 4) {
          printf("Could not find spacecraft body %ld configuration information. "
@@ -2490,6 +2490,31 @@ void InitSpacecraft(struct SCType *S)
             exit(EXIT_FAILURE);
          }
 
+         if (fy_node_scanf(seqNode,
+                           "/Trn DOF %ld "
+                           "/Trn Sequence %ld",
+                           &G->TrnDOF, &G->TrnSeq) != 2) {
+            printf("Could not find spacecraft Joint %ld's translational "
+                   "information. Exiting...\n",
+                   Ig);
+            exit(EXIT_FAILURE);
+         }
+         if (G->TrnSeq < 100) {
+            printf("Invalid TrnSeq %ld for SC[%ld].G[%ld].  All three axes "
+                   "required.\n",
+                   G->TrnSeq, S->ID, Ig);
+            exit(1);
+         }
+         i3 = G->TrnSeq % 10;         /* Pick off third digit */
+         i2 = (G->TrnSeq % 100) / 10; /* Extract second digit */
+         i1 = G->TrnSeq / 100;        /* Pick off first digit */
+         if (i1 == i2 || i1 == i3 || i2 == i3) {
+            printf("Invalid TrnSeq %ld for SC[%ld].G[%ld].  Repeated indices "
+                   "are not allowed.\n",
+                   G->TrnSeq, S->ID, Ig);
+            exit(1);
+         }
+
          assignYAMLToBoolArray(
              3, fy_node_by_path_def(seqNode, "/Rot DOF Locked"), G->RotLocked);
          assignYAMLToBoolArray(
@@ -2548,7 +2573,7 @@ void InitSpacecraft(struct SCType *S)
                G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
             }
          }
-         if (!fy_node_scanf(seqNode, "/Parm File Name %41[^\n]s",
+         if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]s",
                             G->ParmFileName)) {
             printf("Could not find spacecraft Joint %ld's parameter file name. "
                    "Exiting...\n",
@@ -2593,7 +2618,7 @@ void InitSpacecraft(struct SCType *S)
                            "/Rotor Inertia %lf "
                            "/Body/Index %ld "
                            "/Node %ld "
-                           "/Drag-Jitter File Name %41s",
+                           "/Drag-Jitter File Name %39s",
                            &W->H, &W->Tmax, &W->Hmax, &W->J, &W->Body, &W->Node,
                            W->DragJitterFileName) != 7) {
             printf(
