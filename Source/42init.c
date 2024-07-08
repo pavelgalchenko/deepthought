@@ -4847,7 +4847,7 @@ long LoadSpiceEphems(double JD) {
 
    struct OrbitType *Eph;
    struct WorldType *W;
-   double tmp_state[6];
+   double tmp_state[6], tmp_state2[6];
    double light_time;
 
    double CWH[3][3];
@@ -4891,11 +4891,15 @@ long LoadSpiceEphems(double JD) {
             tmp_state,
             &light_time); // State of major bodies in J2000 wrt Sun center
 
+            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", MajorBodiesNamesState[Ip],
+            tmp_state2,
+            &light_time); // State of major bodies in J2000 wrt their planet's center
+
             for (i = 0; i<3; i++){
-               World[Iw].eph.PosN[i] = tmp_state[i]*1e3 - World[Ip].eph.PosN[i]; // Assign inertial positions (m)
+               World[Iw].eph.PosN[i] = tmp_state2[i]*1e3; // Assign inertial positions (m)
                World[Iw].PosH[i] = tmp_state[i]*1e3;
 
-               World[Iw].eph.VelN[i] = tmp_state[i + 3]*1e3 - World[Ip].eph.VelN[i]; // Assign inertial velocity (m/s)
+               World[Iw].eph.VelN[i] = tmp_state2[i]; // Assign inertial velocity (m/s)
                World[Iw].VelH[i] = tmp_state[i + 3]*1e3;
             }
 
