@@ -704,7 +704,13 @@ void InitOrbit(struct OrbitType *O)
             exit(EXIT_FAILURE);
          }
          O->World = DecodeString(response);
-         O->mu    = World[O->World].mu;
+         if (!World[O->World].Exists) {
+            printf("Oops.  Orbit %ld depends on a World that doesn't exist.\n",
+                   O->Tag);
+            exit(1);
+         }
+
+         O->mu = World[O->World].mu;
          for (j = 0; j < 3; j++) {
             O->PosN[j] = 0.0;
             O->VelN[j] = 0.0;
@@ -4472,6 +4478,7 @@ void LoadRegions(void)
 
       Ir++;
    }
+   fy_document_destroy(fyd);
 }
 /**********************************************************************/
 void InitLagrangePoints(void)
@@ -5489,6 +5496,7 @@ void InitSim(int argc, char **argv)
           getYAMLBool(fy_node_by_path_def(iterNode, "/Ground Station/Enabled"));
    }
 
+   fy_document_destroy(fyd);
    /* .. Load Materials */
    Nmatl = 0;
    Matl  = AddMtlLib(ModelPath, "42.mtl", Matl, &Nmatl);

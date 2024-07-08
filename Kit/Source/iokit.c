@@ -61,8 +61,7 @@ long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
       if (!fy_node_scanf(iterNode, "/ %lf", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
          printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
-                "in %s on line %d. "
-                "Exiting...\n",
+                "in %s on line %d. Exiting...\n",
                 parentAddress, __FILE__, __LINE__);
          exit(EXIT_FAILURE);
       }
