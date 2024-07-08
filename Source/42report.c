@@ -175,6 +175,38 @@ void DSM_InertialReport(void) {
    }
 }
 /*********************************************************************/
+void DSM_HelioReport(void) {
+   static FILE **heliofile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+
+   if (First) {
+      heliofile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_helio_%02li.42", Isc);
+            heliofile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(heliofile[Isc], "PosH_X PosH_Y PosH_Z ");
+            fprintf(heliofile[Isc], "VelH_X VelH_Y VelH_Z ");
+            fprintf(heliofile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         fprintf(heliofile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].PosH[0], SC[Isc].PosH[1], SC[Isc].PosH[2]);
+         fprintf(heliofile[Isc], "%18.12le %18.12le %18.12le ",
+                 SC[Isc].VelH[0], SC[Isc].VelH[1], SC[Isc].VelH[2]);
+         fprintf(heliofile[Isc], "\n");
+      }
+      fflush(heliofile[Isc]);
+   }
+}
+/*********************************************************************/
 void DSM_ATT_ControlReport(void) {
    static FILE **attcontrolfile;
    static long First = 1;
@@ -376,6 +408,46 @@ void DSM_THRReport(void) {
          }
       }
       fflush(THRFile[Isc]);
+   }
+}
+/*********************************************************************/
+void DSM_GroundTrackReport(void) {
+   static FILE **gtrackfile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+   struct WorldType *W;
+   struct SCType *S;
+   double p[3], Lat, Lng;
+
+   if (First) {
+      gtrackfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_groundtrack_%02li.42", Isc);
+            gtrackfile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(gtrackfile[Isc], "Lat Lon ");
+            fprintf(gtrackfile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (SC[Isc].Exists) {
+         W = &World[Orb[S->RefOrb].World];
+
+         MxV(W->CWN, SC[Isc].PosN, p);
+         UNITV(p);
+         Lng = atan2(p[1], p[0]) * R2D;
+         Lat = asin(p[2]) * R2D;
+         
+         fprintf(gtrackfile[Isc], "%18.12le %18.12le ",
+                 Lat, Lng);
+         fprintf(gtrackfile[Isc], "\n");
+      }
+      fflush(gtrackfile[Isc]);
    }
 }
 /*********************************************************************/
@@ -648,11 +720,13 @@ void Report(void) {
          if (SC[0].DSM.Init == 1) {
             DSM_AttitudeReport();
             DSM_InertialReport();
+            DSM_HelioReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();
             DSM_WHLReport();
             DSM_THRReport();
+            DSM_GroundTrackReport();
          }
       }
    }

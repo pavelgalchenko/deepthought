@@ -4849,10 +4849,8 @@ long LoadSpiceEphems(double JD) {
    struct WorldType *W;
    double tmp_state[6];
    double light_time;
-   double twist, dec, ra;
 
    double CWH[3][3];
-   double ang[3];
 
    // Read all planets
 
@@ -4873,16 +4871,14 @@ long LoadSpiceEphems(double JD) {
 
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-      pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
+      pxform_c("ECLIPJ2000", frame_name, JS, CWH); // transform from heliocentric to world rotating frame
+      pxform_c("ECLIPJ2000", frame_name, 0.0, World[Iw].CNH); // transform from heliocentric to world inertial frame (nonrotating, J2000)
 
-      m2eul_c(CWH, 3, 1, 3, &ang[0], &ang[1], &ang[2]);
-      twist = ang[2];
-      dec   = halfpi_c() + ang[1];
-      ra    = ang[0] - halfpi_c();
-
-      eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
-      eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
+      // CNH @ CWN = CWH, i.e. Body inertial * body rotation = transform to heliocentric
+      // CWN = CNH^T@CWH
+      MTxM(World[Iw].CNH, CWH, World[Iw].CWN);
    }
+   
    // Read all moons
    for (Ip = EARTH; Ip <= PLUTO; Ip++) {
       if (World[Ip].Exists) {
@@ -4905,15 +4901,12 @@ long LoadSpiceEphems(double JD) {
 
             char frame_name[25] = "IAU_";
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-            pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
+            pxform_c("ECLIPJ2000", frame_name, JS, CWH); // transform from heliocentric to world rotating frame
+            pxform_c("ECLIPJ2000", frame_name, 0.0, World[Iw].CNH); // transform from heliocentric to world inertial frame (nonrotating, J2000)
 
-            m2eul_c(CWH, 3, 1, 3, &ang[0], &ang[1], &ang[2]);
-            twist = ang[2];
-            dec   = halfpi_c() + ang[1];
-            ra    = ang[0] - halfpi_c();
-
-            eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
-            eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
+            // CNH @ CWN = CWH, i.e. Body inertial * body rotation = transform to heliocentric
+            // CWN = CNH^T@CWH
+            MTxM(World[Iw].CNH, CWH, World[Iw].CWN);
          }
       }
    }
