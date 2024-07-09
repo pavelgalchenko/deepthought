@@ -288,10 +288,10 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
 //------------------------------------------------------------------------------
 // Acceleration perturbation functions
 //------------------------------------------------------------------------------
-void SphericalHarmonicsJacobian(long N, long M, double r, double pbe[3],
-                                double phi, double theta, double Re, double K,
-                                double C[19][19], double S[19][19],
-                                double HV[3][3])
+void SphericalHarmonicsJacobian(const long N, const long M, const double r,
+                                const double trigs[4], const double Re,
+                                const double K, double C[19][19],
+                                double S[19][19], double HV[3][3])
 {
    double P[19][19], sdP[19][19];
    long n, m;
@@ -305,28 +305,22 @@ void SphericalHarmonicsJacobian(long N, long M, double r, double pbe[3],
    }
 
    /* .. Find Legendre functions */
-   cth          = pbe[2] / r;
-   double sth2  = 1.0 - cth * cth;
-   sth          = sqrt(sth2); // sin(theta);
+   cth          = trigs[0];
+   sth          = trigs[1]; // sin(theta);
+   double sth2  = sth * sth;
    double cotth = cth / sth;
-   double rsth2 = r * r - pbe[2] * pbe[2];
    double r2 = r * r, rsth = r * sth;
+   double rsth2 = rsth * rsth;
    Legendre(N, M, cth, P, sdP);
 
    /* .. Build cos(m*phi) and sin(m*phi) */
-   double rxy2  = pbe[1] * pbe[1] + pbe[0] * pbe[0];
-   double denom = sqrt(rxy2);
-   cphi[0]      = 1.0;
-   sphi[0]      = 0.0;
-   cphi[1]      = pbe[0] / denom; // cos(phi);
-   sphi[1]      = pbe[1] / denom; // sin(phi);
-   if (M >= 2) {
-      cphi[2] = (pbe[0] * pbe[0] - pbe[1] * pbe[1]) / rxy2;
-      sphi[2] = (2.0 * pbe[0] * pbe[1]) / rxy2;
-      for (m = 3; m <= M; m++) {
-         cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
-         sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
-      }
+   cphi[0] = 1.0;
+   sphi[0] = 0.0;
+   cphi[1] = trigs[2]; // cos(phi);
+   sphi[1] = trigs[3]; // sin(phi);
+   for (m = 2; m <= M; m++) {
+      cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
+      sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
    }
 
    double d2Vdr2 = 0.0, d2Vdphi2 = 0.0, d2Vdtheta2 = 0.0, d2Vdrdphi = 0.0,
@@ -400,7 +394,7 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
                                double HgeoN[3][3])
 {
    double CEN[3][3] = {{0.0}}, cth, sth, cph, sph, pbe[3], HV[3][3] = {{0.0}};
-   double r, rr, theta, phi;
+   double r;
    long i, j, k;
    struct SphereHarmType *GravModel = getGravModel(W - World);
 
@@ -414,42 +408,35 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    CEN[1][0] = -CEN[0][1];
    MxV(CEN, pbn, pbe);
 
-   rr           = pbe[0] * pbe[0] + pbe[1] * pbe[1] + pbe[2] * pbe[2];
-   r            = sqrt(rr);
-   cth          = pbe[2] / r;          // cos(theta);
-   sth          = sqrt(1 - cth * cth); // sin(theta);
-   theta        = acos(cth);
-   double rxy2  = pbe[1] * pbe[1] + pbe[0] * pbe[0];
-   double denom = sqrt(rxy2);
-   sph          = pbe[1] / denom; // sin(phi);
-   cph          = pbe[0] / denom; // cos(phi);
-   phi          = atan2(pbe[1], pbe[0]);
+   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   double trigs[4] = {cth, sth, cph, sph};
 
    double MSE[3][3] = {{pbe[0] / r, pbe[1] / r, cth},
                        {cth * cph, cth * sph, -sth},
                        {-sph, cph, 0.0}};
 
    /*    Find Jacobian */
-   SphericalHarmonicsJacobian(N, M, r, pbe, phi, theta, W->rad, W->mu / W->rad,
+   SphericalHarmonicsJacobian(N, M, r, trigs, W->rad, W->mu / W->rad,
                               GravModel->C, GravModel->S, HV);
 
-   /*    Calculate scaled Christoffel Symbols */
-   /*      sCS^k_{ij} = CS^k_{ij} * sqrt(g_{kk}) / (sqrt(g_{ii})*sqrt(g_{jj}))
-    */
-   /*      due to scaling of gradV and scaling in polar transform */
+   /*   Calculate scaled Christoffel Symbols */
+   /*     sCS^k_{ij} = CS^k_{ij} * sqrt(g_{kk}) / (sqrt(g_{ii})*sqrt(g_{jj})) */
+   /*     due to scaling of gradV and scaling in polar transform */
    double sCS[3][3][3] = {{{0.0}}};
-   sCS[0][1][1]        = -1.0 / r;      // -r * 1 / (r*r) = -1 / r
-   sCS[0][2][2]        = sCS[0][1][1];  // -rsth*sth * 1 / (rsth*rsth) = -1/r
-   sCS[1][0][1]        = -sCS[0][1][1]; // 1/r * r / (1*r) = 1/r
-   sCS[1][1][0]        = sCS[1][0][1];
+
+   sCS[0][1][1] = -1.0 / r;      // -r * 1 / (r*r) = -1 / r
+   sCS[0][2][2] = sCS[0][1][1];  // -rsth*sth * 1 / (rsth*rsth) = -1/r
+   sCS[1][0][1] = -sCS[0][1][1]; // 1/r * r / (1*r) = 1/r
+   sCS[1][1][0] = sCS[1][0][1];
    sCS[1][2][2] =
-       -pbe[2] / (r * sqrt(rxy2)); // -sth*cth * r / (rsth*rsth) = -cth / rsth
-   sCS[2][0][2] = sCS[1][0][1];    // 1/r * rsth / (1*rsth) = 1 / r
-   sCS[2][1][2] = -sCS[1][2][2];   // cth/sth * rsth / (r*rsth) = cth / rsth
+       -pbe[2] / (r * denom);    // -sth*cth * r / (rsth*rsth) = -cth / rsth
+   sCS[2][0][2] = sCS[1][0][1];  // 1/r * rsth / (1*rsth) = 1 / r
+   sCS[2][1][2] = -sCS[1][2][2]; // cth/sth * rsth / (r*rsth) = cth / rsth
    sCS[2][2][0] = sCS[2][0][2];
    sCS[2][2][1] = sCS[2][1][2];
 
-   SphericalHarmonics(N, M, r, pbe, W->rad, W->mu / W->rad, GravModel->C,
+   SphericalHarmonics(N, M, r, trigs, W->rad, W->mu / W->rad, GravModel->C,
                       GravModel->S, gradV);
    for (k = 0; k < 3; k++)
       for (i = 0; i < 3; i++)

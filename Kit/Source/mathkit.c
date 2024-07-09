@@ -689,7 +689,7 @@ void Legendre(const long N, const long M, const double x,
 /* gradV[1] = Latitudinal (positive south)                            */
 /* gradV[2] = Longitudinal (positive east)                            */
 void SphericalHarmonics(const long N, const long M, const double r,
-                        const double pbe[3], const double Re, const double K,
+                        const double trigs[4], const double Re, const double K,
                         const double C[NMAX + 1][NMAX + 1],
                         const double S[NMAX + 1][NMAX + 1], double gradV[3])
 {
@@ -706,17 +706,16 @@ void SphericalHarmonics(const long N, const long M, const double r,
       exit(1);
    }
 
-   double cth = pbe[2] / r;
-   double sth = sqrt(1 - cth * cth); // sin(theta);
+   double cth = trigs[0];
+   double sth = trigs[1];
    /* .. Find Legendre functions */
    Legendre(N, M, cth, P, sdP);
 
    /* .. Build cos(m*phi) and sin(m*phi) */
-   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
-   cphi[0]      = 1.0;
-   sphi[0]      = 0.0;
-   cphi[1]      = pbe[0] / denom; // cos(phi);
-   sphi[1]      = pbe[1] / denom; // sin(phi);
+   cphi[0] = 1.0;
+   sphi[0] = 0.0;
+   cphi[1] = trigs[2];
+   sphi[1] = trigs[3];
    for (m = 2; m <= M; m++) {
       cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
       sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
@@ -1931,6 +1930,20 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
       x -= dx;
    } while ((!breakOnZeroF || fabs(f) > tol) && fabs(dx) > tol && k++ < nMax);
    return x;
+}
+/******************************************************************************/
+/* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
+/* vector                                                                     */
+void getTrigSphericalCoords(double pbe[3], double *cth, double *sth,
+                            double *cph, double *sph, double *r)
+
+{
+   *r           = MAGV(pbe);
+   *cth         = pbe[2] / (*r);
+   *sth         = sqrt(1 - (*cth) * (*cth)); // sin(theta);
+   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
+   *cph         = pbe[0] / denom; // cos(phi);
+   *sph         = pbe[1] / denom; // sin(phi);
 }
 /******************************************************************************/
 // Calculate SO(3) adjoint operation: for rotation matrix C and matrix A,

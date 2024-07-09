@@ -27,7 +27,7 @@ void EGM96(const char *ModelPath, long N, long M, double C[19][19],
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
-   double r, theta, phi, Fr, Fth, Fph, Fe[3];
+   double r, Fr, Fth, Fph, Fe[3];
    double dum1, dum2;
    double Re = 6378.145E3;
    double mu = 3.986004E14;
@@ -68,16 +68,11 @@ void EGM96(const char *ModelPath, long N, long M, double C[19][19],
    CEN[2][0] = 0.0;
    CEN[2][1] = 0.0;
    MxV(CEN, pbn, pbe);
-   r     = MAGV(pbe);
-   theta = acos(pbe[2] / r);
-   phi   = atan2(pbe[1], pbe[0]);
-   sth   = sin(theta);
-   cth   = cos(theta);
-   sph   = sin(phi);
-   cph   = cos(phi);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   double trigs[4] = {cth, sth, cph, sph};
 
    /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, pbe, Re, mu / Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, trigs, Re, mu / Re, C, S, gradV);
    Fr  = mass * gradV[0];
    Fth = mass * gradV[1];
    Fph = mass * gradV[2];
@@ -99,7 +94,7 @@ void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
-   double r, theta, phi, Fr, Fth, Fph, Fe[3];
+   double r, Fr, Fth, Fph, Fe[3];
    double dum1, dum2;
    double Re = 3397.0E3;
    double mu = 4.28283719E13;
@@ -140,16 +135,11 @@ void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
    CEN[2][0] = 0.0;
    CEN[2][1] = 0.0;
    MxV(CEN, pbn, pbe);
-   r     = MAGV(pbe);
-   theta = acos(pbe[2] / r);
-   phi   = atan2(pbe[1], pbe[0]);
-   sth   = sin(theta);
-   cth   = cos(theta);
-   sph   = sin(phi);
-   cph   = cos(phi);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   double trigs[4] = {cth, sth, cph, sph};
 
    /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, pbe, Re, mu / Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, trigs, Re, mu / Re, C, S, gradV);
    Fr  = mass * gradV[0];
    Fth = mass * gradV[1];
    Fph = mass * gradV[2];
@@ -173,7 +163,7 @@ void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
    double Cbar[19][19], Sbar[19][19];
    double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
-   double r, theta, phi, Fr, Fth, Fph, Fe[3];
+   double r, Fr, Fth, Fph, Fe[3];
    double dum1, dum2;
    double Re = 1738.0E3;
    double mu = 4.903E12;
@@ -214,16 +204,11 @@ void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
    CEN[2][0] = 0.0;
    CEN[2][1] = 0.0;
    MxV(CEN, pbn, pbe);
-   r     = MAGV(pbe);
-   theta = acos(pbe[2] / r);
-   phi   = atan2(pbe[1], pbe[0]);
-   sth   = sin(theta);
-   cth   = cos(theta);
-   sph   = sin(phi);
-   cph   = cos(phi);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   double trigs[4] = {cth, sth, cph, sph};
 
    /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, pbe, Re, mu / Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, trigs, Re, mu / Re, C, S, gradV);
    Fr  = mass * gradV[0];
    Fth = mass * gradV[1];
    Fph = mass * gradV[2];
@@ -244,7 +229,7 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
    double ReNorm;
    static double C[19][19], S[19][19];
    double cth, sth, cph, sph, pbe[3], gradV[3];
-   double r, theta, phi, Br, Bth, Bph, BVE[3];
+   double r, Br, Bth, Bph, BVE[3];
    double dum1, dum2;
    double AXIS[3] = {0.0, 0.0, 1.0};
    double CEN[3][3];
@@ -283,16 +268,11 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
 
    /*    Transform p to spherical coords in Earth frame */
    MxV(CEN, pbn, pbe);
-   r     = MAGV(pbe);
-   theta = acos(pbe[2] / r);
-   phi   = atan2(pbe[1], pbe[0]);
-   sth   = sin(theta);
-   cth   = cos(theta);
-   sph   = sin(phi);
-   cph   = cos(phi);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   double trigs[4] = {cth, sth, cph, sph};
 
    /*    Find Br, Bth, Bph */
-   SphericalHarmonics(N, M, r, pbe, Re, Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, trigs, Re, Re, C, S, gradV);
    Br  = -gradV[0];
    Bth = -gradV[1];
    Bph = -gradV[2];

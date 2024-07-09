@@ -74,7 +74,7 @@ double oddfact(const long n);
 void Legendre(const long N, const long M, const double x, double P[19][19],
               double sdP[19][19]);
 void SphericalHarmonics(const long N, const long M, double r,
-                        const double pbe[3], const double Re, const double K,
+                        const double trigs[4], const double Re, const double K,
                         const double C[19][19], const double S[19][19],
                         double gradV[3]);
 void MxMG(double **A, double **B, double **C, const long N, const long K,
@@ -126,7 +126,8 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      long breakOnZero,
                      void (*fdf)(const double, double *, double *, double *),
                      double *params);
-
+void getTrigSphericalCoords(double pbe[3], double *cth, double *sth,
+                            double *cph, double *sph, double *r);
 void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]);
 void AdjointT(const double C[3][3], const double A[3][3], double CACT[3][3]);
 void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m]);
