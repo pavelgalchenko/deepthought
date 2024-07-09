@@ -44,7 +44,7 @@ double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 {
 #define EPS (1.0E-12)
    double params[2] = {ecc, MeanAnom};
-   double E         = NewtonRaphson(MeanAnom, EPS, 100, 0.1, &eccFDF, params);
+   double E = NewtonRaphson(MeanAnom, EPS, 100, 0.1, 0, &eccFDF, params);
    return (2.0 * atan(sqrt((1.0 + ecc) / (1.0 - ecc)) * tan(0.5 * E)));
 #undef EPS
 }
@@ -69,8 +69,8 @@ double TrueAnomaly(double mu, double p, double e, double t)
 
    if (e == 1.0) {
       double params[1] = {3.0 * sqrt(mu / p3) * t};
-      double x         = NewtonRaphson(0, EPS, 100, 1.0, &parabolFDF, params);
-      Anom             = 2.0 * atan(x);
+      double x = NewtonRaphson(0, EPS, 100, 1.0, 0, &parabolFDF, params);
+      Anom     = 2.0 * atan(x);
    }
    else if (e > 1.0) {
       double e1        = e * e - 1.0;
@@ -78,7 +78,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
       double Ne        = N / e;
       double params[2] = {e, N};
       /* H0 = arcsinh(N/e); */
-      double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1,
+      double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1, 0,
                                &hyperbolFDF, params);
       Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
    }
@@ -129,7 +129,7 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R)
    f   = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
 
    double params[7] = {p, alpha, sqma, Den, T, r, f};
-   *R = NewtonRaphson(1.1 * p, 1.0E-3, 200, 1.0E6, &hyperradFDF, params);
+   *R = NewtonRaphson(1.1 * p, 1.0E-3, 500, 1.0E9, 0, &hyperradFDF, params);
 }
 /**********************************************************************/
 double atanh(double x)
@@ -1385,7 +1385,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
 
    /* .. L1 */
    LP     = &LS->LP[0];
-   x      = NewtonRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -1430,9 +1430,9 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    /* .. L2 */
    LP          = &LS->LP[1];
    lpParams[2] = 2;
-   x           = NewtonRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
-   LP->X0      = x * D;
-   LP->Y0      = 0.0;
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
+   LP->X0 = x * D;
+   LP->Y0 = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;
@@ -1475,7 +1475,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    /* .. L3 */
    LP          = &LS->LP[2];
    lpParams[2] = 3;
-   x           = NewtonRaphson(1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   x           = NewtonRaphson(1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
    LP->X0      = x * D;
    LP->Y0      = 0.0;
 

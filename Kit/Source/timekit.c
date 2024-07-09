@@ -286,10 +286,9 @@ double Date2GMST(const struct DateType *Date)
    // /* .. Convert to days */
    GMST0 /= 360.0;
 
-   GMST       = GMST0 + 1.00273790935 * JDmJD0;
-   double out = modf(GMST, &integer);
+   GMST = GMST0 + 1.00273790935 * JDmJD0;
 
-   return (out);
+   return (modf(GMST, &integer));
 }
 /**********************************************************************/
 /* GPS Epoch is 6 Jan 1980 00:00:00.0 UTC                             */

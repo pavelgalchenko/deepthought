@@ -609,7 +609,7 @@ long runMathKit_Tests()
                      }
                      break;
                }
-               double X = NewtonRaphson(x0[i][j], eps[i], 500, maxStep[i],
+               double X = NewtonRaphson(x0[i][j], eps[i], 500, maxStep[i], 0,
                                         fns[i], params);
                double f = 0.0, fp = 0.0;
                switch (i) {

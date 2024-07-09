@@ -1911,6 +1911,7 @@ double WrapTo2Pi(double n)
 // "other" side of a section of a function with zero derivative. E.g
 // function 12.23459071*x^3 + 54.9176*x^2 - 23.39456*x + 97.1235 and x0 = 15
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+                     long breakOnZeroF,
                      void (*fdf)(const double, double *, double *, double *),
                      double *params)
 {
@@ -1923,14 +1924,12 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
    long k = 0;
    do {
       fdf(x, params, &f, &fp);
-      if (fabs(f) < tol)
-         break;
       // TODO: what to do if fp=f' is small? break or perturb??
       dx = f / fp;
       if (fabs(dx) > maxStep)
          dx = signum(dx) * maxStep;
       x -= dx;
-   } while (fabs(dx) > tol && k++ < nMax);
+   } while ((!breakOnZeroF || fabs(f) > tol) && fabs(dx) > tol && k++ < nMax);
    return x;
 }
 /******************************************************************************/

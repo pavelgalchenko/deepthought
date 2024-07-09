@@ -123,6 +123,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+                     long breakOnZero,
                      void (*fdf)(const double, double *, double *, double *),
                      double *params);
 
