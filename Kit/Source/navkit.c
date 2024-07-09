@@ -245,7 +245,7 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
       case EARTH: {
          struct DateType dateUTC = *date;
          updateNavTime(&dateUTC, -(32.184 + (double)LeapSec));
-         PriMerAng = TwoPi * Date2GMST(&dateUTC);
+         PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
       } break;
       case LUNA: {
          PriMerAng = LunaPriMerAng(date->JulDay);

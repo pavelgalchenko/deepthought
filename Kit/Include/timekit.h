@@ -55,7 +55,6 @@ void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
 long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
 double JD2GMST(double JD);
-double Date2GMST(const struct DateType *Date);
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);

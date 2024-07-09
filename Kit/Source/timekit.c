@@ -248,7 +248,7 @@ void DOY2MD(long Year, long DayOfYear, long *Month, long *Day)
 /*  This function requires JD in UTC                                  */
 double JD2GMST(double JD)
 {
-   double T, JD0, GMST0, GMST, integer;
+   double T, JD0, GMST0, GMST;
 
    JD0 = floor(JD) + 0.5;
 
@@ -261,34 +261,9 @@ double JD2GMST(double JD)
    /* .. Convert to days */
    GMST0 /= 360.0;
 
-   GMST = GMST0 + 1.00273790935 * (JD - JD0);
-
-   return ((double)modf(GMST, &integer));
-}
-/**********************************************************************/
-/*  Find Greenwich Mean Sidereal Time (GMST)                          */
-/*  This function requires Date in UTC                                */
-double Date2GMST(const struct DateType *Date)
-{
-   double GMST0, GMST, integer;
-
-   double JDmJD0 = (Date->Hour) / 24.0 + Date->Minute / 1440.0 +
-                   (double)Date->Second / 86400.0;
-
-   double JD0 = DateToJD(Date->Year, Date->Month, Date->Day, 0, 0, 0);
-
-   double T = (JD0 - 2451545.0) / 36525.0;
-
-   // /* .. GMST at UT=0h, in deg */
-   GMST0 =
-       100.46061837 + T * (36000.770053608 + T * (3.87933E-4 - T / 3.871E7));
-
-   // /* .. Convert to days */
-   GMST0 /= 360.0;
-
-   GMST = GMST0 + 1.00273790935 * JDmJD0;
-
-   return (modf(GMST, &integer));
+   GMST  = GMST0 + 1.00273790935 * (JD - JD0);
+   GMST -= (long)GMST;
+   return (GMST);
 }
 /**********************************************************************/
 /* GPS Epoch is 6 Jan 1980 00:00:00.0 UTC                             */

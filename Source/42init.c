@@ -3438,7 +3438,7 @@ void LoadPlanets(void)
       }
    }
    /* .. Earth rotation is a special case */
-   GMST                   = Date2GMST(&UTC);
+   GMST                   = JD2GMST(UTC.JulDay);
    World[EARTH].PriMerAng = TwoPi * GMST;
    HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
    SimpRot(Zaxis, World[EARTH].PriMerAng, C_W_TETE);
