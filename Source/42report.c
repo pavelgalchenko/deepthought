@@ -175,35 +175,35 @@ void DSM_InertialReport(void) {
    }
 }
 /*********************************************************************/
-void DSM_HelioReport(void) {
-   static FILE **heliofile;
+void DSM_PlanEphemReport(void) {
+   static FILE **ephemfile;
    static long First = 1;
-   long Isc;
+   long Iw;
    char s[40];
 
    if (First) {
-      heliofile = (FILE **)calloc(Nsc, sizeof(FILE *));
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         if (SC[Isc].Exists) {
-            sprintf(s, "DSM_helio_%02li.42", Isc);
-            heliofile[Isc] = FileOpen(OutPath, s, "wt");
-            fprintf(heliofile[Isc], "PosH_X PosH_Y PosH_Z ");
-            fprintf(heliofile[Isc], "VelH_X VelH_Y VelH_Z ");
-            fprintf(heliofile[Isc], "\n");
+      ephemfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Iw = 0; Iw < NWORLD; Iw++) {
+         if (World[Iw].Exists) {
+            sprintf(s, "ephem/DSM_ephem_%s.42", World[Iw].Name);
+            ephemfile[Iw] = FileOpen(OutPath, s, "wt");
+            fprintf(ephemfile[Iw], "PosH_X PosH_Y PosH_Z ");
+            fprintf(ephemfile[Iw], "VelH_X VelH_Y VelH_Z ");
+            fprintf(ephemfile[Iw], "\n");
          }
       }
       First = 0;
    }
 
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      if (SC[Isc].Exists) {
-         fprintf(heliofile[Isc], "%18.12le %18.12le %18.12le ",
-                 SC[Isc].PosH[0], SC[Isc].PosH[1], SC[Isc].PosH[2]);
-         fprintf(heliofile[Isc], "%18.12le %18.12le %18.12le ",
-                 SC[Isc].VelH[0], SC[Isc].VelH[1], SC[Isc].VelH[2]);
-         fprintf(heliofile[Isc], "\n");
+   for (Iw = 0; Iw < NWORLD; Iw++) {
+      if (World[Iw].Exists) {
+         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
+                 World[Iw].PosH[0], World[Iw].PosH[1], World[Iw].PosH[2]);
+         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
+                 World[Iw].VelH[0], World[Iw].VelH[1], World[Iw].VelH[2]);
+         fprintf(ephemfile[Iw], "\n");
       }
-      fflush(heliofile[Isc]);
+      fflush(ephemfile[Iw]);
    }
 }
 /*********************************************************************/
@@ -720,7 +720,7 @@ void Report(void) {
          if (SC[0].DSM.Init == 1) {
             DSM_AttitudeReport();
             DSM_InertialReport();
-            DSM_HelioReport();
+            DSM_PlanEphemReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();

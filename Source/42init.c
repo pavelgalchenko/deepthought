@@ -4804,7 +4804,7 @@ long LoadSpiceKernels(char SpicePath[80]) {
 
 long LoadSpiceEphems(double JD) {
    double JS =
-       (JD - j2000_c()) * spd_c(); // convert Julian days to seconds past J2000
+       (JD - j2000_c()) * spd_c(); // convert Julian days to seconds past J2000. Offset of .5 is because 42 defines Julian day from 00:00
    double ZAxis[3] = {0.0, 0.0, 1.0};
 
    long Iw, Ip, Im;
@@ -4871,12 +4871,10 @@ long LoadSpiceEphems(double JD) {
 
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-      pxform_c("ECLIPJ2000", frame_name, JS, CWH); // transform from heliocentric to world rotating frame
-      pxform_c("ECLIPJ2000", frame_name, 0.0, World[Iw].CNH); // transform from heliocentric to world inertial frame (nonrotating, J2000)
+      pxform_c(frame_name, "ECLIPJ2000", JS, CWH); 
+      pxform_c(frame_name, "ECLIPJ2000", 0.0, World[Iw].CNH);
 
-      // CNH @ CWN = CWH, i.e. Body inertial * body rotation = transform to heliocentric
-      // CWN = CNH^T@CWH
-      MTxM(World[Iw].CNH, CWH, World[Iw].CWN);
+      MTxM(CWH, World[Iw].CNH, World[Iw].CWN);
    }
    
    // Read all moons
@@ -4893,7 +4891,7 @@ long LoadSpiceEphems(double JD) {
 
             spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", MajorBodiesNamesState[Ip],
             tmp_state2,
-            &light_time); // State of major bodies in J2000 wrt their planet's center
+            &light_time); // State of major bodies in J2000 wrt Sun center
 
             for (i = 0; i<3; i++){
                World[Iw].eph.PosN[i] = tmp_state2[i]*1e3; // Assign inertial positions (m)
@@ -4905,45 +4903,13 @@ long LoadSpiceEphems(double JD) {
 
             char frame_name[25] = "IAU_";
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-            pxform_c("ECLIPJ2000", frame_name, JS, CWH); // transform from heliocentric to world rotating frame
-            pxform_c("ECLIPJ2000", frame_name, 0.0, World[Iw].CNH); // transform from heliocentric to world inertial frame (nonrotating, J2000)
+            pxform_c(frame_name, "ECLIPJ2000", JS, CWH); 
+            pxform_c(frame_name, "ECLIPJ2000", 0.0, World[Iw].CNH);
 
-            // CNH @ CWN = CWH, i.e. Body inertial * body rotation = transform to heliocentric
-            // CWN = CNH^T@CWH
-            MTxM(World[Iw].CNH, CWH, World[Iw].CWN);
+            MTxM(CWH, World[Iw].CNH, World[Iw].CWN);
          }
       }
    }
-
-   // for (Iw = 0; Iw < 55; Iw++) {
-   //    W   = &World[Iw];
-   //    Eph = &World[Iw].eph;
-
-   //    spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-   //             tmp_state,
-   //             &light_time); // State of major bodies in J2000 wrt Sun center
-
-   //    for (i = 0; i<3; i++)
-   //       World[Iw].eph.PosN[i] = tmp_state[i]*1e3; // Assign inertial positions
-   //    for (i = 0; i<3; i++)
-   //       World[Iw].eph.VelN[i] = tmp_state[i + 3]*1e3/spd_c(); // Assign inertial velocity
-
-   //    RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-   //           &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
-   //           &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
-
-   //    char frame_name[25] = "IAU_";
-   //    strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-   //    pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
-
-   //    m2eul_c(CWH, 3, 1, 3, &ang[0], &ang[1], &ang[2]);
-   //    twist = ang[2];
-   //    dec   = halfpi_c() + ang[1];
-   //    ra    = ang[0] - halfpi_c();
-
-   //    eul2m_c(0.0, halfpi_c() - dec, halfpi_c() + ra, 3, 1, 3, World[Iw].CNH);
-   //    eul2m_c(-twist, 0.0, 0.0, 3, 1, 3, World[Iw].CWN);
-   // }
    return (0);
 }
 /**********************************************************************/
