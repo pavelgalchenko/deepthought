@@ -12,6 +12,7 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "42.h"
+#include "SpiceUsr.h"
 
 /* #ifdef __cplusplus
 ** namespace _42 {
@@ -431,7 +432,7 @@ void DSM_GroundTrackReport(void)
    char s[40];
    struct WorldType *W;
    struct SCType *S;
-   double p[3], Lat, Lng;
+   double p[3], Lat, Lng, junk;
 
    if (First) {
       gtrackfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -452,11 +453,9 @@ void DSM_GroundTrackReport(void)
          W = &World[Orb[S->RefOrb].World];
 
          MxV(W->CWN, SC[Isc].PosN, p);
-         UNITV(p);
-         Lng = atan2(p[1], p[0]) * R2D;
-         Lat = asin(p[2]) * R2D;
+         reclat_c(p, &junk, &Lng, &Lat);
 
-         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat, Lng);
+         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat*R2D, Lng*R2D);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);

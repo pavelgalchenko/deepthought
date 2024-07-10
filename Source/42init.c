@@ -4898,11 +4898,21 @@ long LoadSpiceKernels(char SpicePath[80])
    return (0);
 }
 
-long LoadSpiceEphems(double sec_since_J2000)
+long LoadSpiceEphems(struct DateType curUTC)
 {
-   double JS;
-   JS              = sec_since_J2000 - .5;
    double ZAxis[3] = {0.0, 0.0, 1.0};
+   double JS, CNJ[3][3], ang[3];
+   char day[6], month[6], year[6], hour[6], min[6], sec[8];
+   char UTC_string[30] = "";
+
+   sprintf(day, "%ld ", curUTC.Day); strcat(UTC_string, day);
+   sprintf(month, "%ld ", curUTC.Month); strcat(UTC_string, month);
+   sprintf(year, "%ld ", curUTC.Year); strcat(UTC_string, year);
+   sprintf(hour, "%ld:", curUTC.Hour); strcat(UTC_string, hour);
+   sprintf(min, "%ld:", curUTC.Minute); strcat(UTC_string, min);
+   sprintf(sec, "%.3f", curUTC.Second); strcat(UTC_string, sec);
+   strcat(UTC_string, " (UTC)");
+   str2et_c(UTC_string, &JS);
 
    long Iw, Ip, Im;
    int i;
@@ -4947,8 +4957,7 @@ long LoadSpiceEphems(double sec_since_J2000)
    double tmp_state[6], tmp_state2[6];
    double light_time;
 
-   double CWH[3][3];
-
+   double CWH[3][3], tmp_rot[3][3], CWN_tmp[3][3];
    // Read all planets
 
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
@@ -4974,10 +4983,16 @@ long LoadSpiceEphems(double sec_since_J2000)
 
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-      pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
-      pxform_c(frame_name, "ECLIPJ2000", 0.0, World[Iw].CNH);
 
-      MTxM(CWH, World[Iw].CNH, World[Iw].CWN);
+      pxform_c("ECLIPJ2000", frame_name, JS, CWH); // matrix from ECLIPJ2000 -> body fixed
+      
+      m2eul_c(CWH, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+
+      SimpRot(ZAxis, ang[2], World[Iw].CWN);
+      A2C(312, ang[0], ang[1], 0.0, CNJ);
+      MxM(CNJ, World[Iw].CNH, World[Iw].CNH);
+      C2Q(World[Iw].CNH, World[Iw].qnh);
+
    }
 
    // Read all moons
@@ -5010,10 +5025,15 @@ long LoadSpiceEphems(double sec_since_J2000)
 
             char frame_name[25] = "IAU_";
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-            pxform_c(frame_name, "ECLIPJ2000", JS, CWH);
-            pxform_c(frame_name, "ECLIPJ2000", 0.0, World[Iw].CNH);
+            
+            pxform_c("ECLIPJ2000", frame_name, JS, CWH); // matrix from ECLIPJ2000 -> body fixed
+      
+            m2eul_c(CWH, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
 
-            MTxM(CWH, World[Iw].CNH, World[Iw].CWN);
+            SimpRot(ZAxis, ang[2], World[Iw].CWN);
+            A2C(312, ang[0], ang[1], 0.0, CNJ);
+            MxM(CNJ, World[Iw].CNH, World[Iw].CNH);
+            C2Q(World[Iw].CNH, World[Iw].qnh);
          }
       }
    }
@@ -5449,7 +5469,7 @@ void InitSim(int argc, char **argv)
    if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440)
       LoadJplEphems(ModelPath, TT.JulDay);
    else if (EphemOption == EPH_SPICE_REC) {
-      LoadSpiceEphems(TT.JulDay);
+      LoadSpiceEphems(UTC);
    }
    /* .. Load Moons */
    if (World[EARTH].Exists)

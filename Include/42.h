@@ -228,7 +228,7 @@ void InitSpacecraft(struct SCType *S);
 void LoadPlanets(void);
 long LoadJplEphems(char EphemPath[80], double JD);
 long LoadSpiceKernels(char SpicePath[80]);
-long LoadSpiceEphems(double JD);
+long LoadSpiceEphems(struct DateType cur_UTC);
 long DecodeString(char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);

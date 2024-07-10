@@ -17,6 +17,7 @@ KERNELS_TO_LOAD = ( '$SPICE_DIR/de440.bsp',
 		    '$SPICE_DIR/nep101.bsp',
 		    '$SPICE_DIR/plu060.bsp',
 		    '$SPICE_DIR/pck00010.tpc',
-		    '$SPICE_DIR/Gravity.tpc')
+		    '$SPICE_DIR/Gravity.tpc',
+		    '$SPICE_DIR/naif0011.tls')
  
 \begintext

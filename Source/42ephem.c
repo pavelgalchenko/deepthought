@@ -689,7 +689,7 @@ void Ephemerides(void)
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
    }
    else if (EphemOption == EPH_SPICE_REC) {
-      LoadSpiceEphems(DynTime);
+      LoadSpiceEphems(UTC);
    }
    else {
       printf("Bogus Ephem Option in Ephemerides.  Bailing out.\n");
