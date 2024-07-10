@@ -240,177 +240,147 @@ void InitDSM(struct SCType *S)
 //                           COMMAND INTERPRETER
 //------------------------------------------------------------------------------
 
+#define FIELDWIDTH 63
 //------------------------------------ GAINS -----------------------------------
-long GetGains(struct SCType *S, const char GainCmdName[255],
-              enum ctrlState controllerState, FILE *InpDsmFilePtr)
+long GetGains(struct SCType *S, struct fy_node *gainsNode,
+              enum ctrlState controllerState)
 {
    long GainsProcessed = FALSE;
-   int gainNum;
-   char DsmCmdLine[255] = "";
-   char GainMode[30], GainCmd[255];
-   long i;
-   double omega, zeta, alpha, k_lya, limit;
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
    struct AcType *AC;
-   double kp[3], kr[3], ki[3], limit_vec[3];
-   enum ctrlType controller = -1;
+   int controller = -1;
 
-   DSM = &S->DSM;
-   Cmd = &DSM->Cmd;
-   AC  = &S->AC;
-
-   strcpy(GainCmd, GainCmdName);
-   if (sscanf(GainCmd, "Gains_[%d]", &gainNum) != 1) {
-      GainsProcessed = FALSE;
-      return (GainsProcessed);
-   }
+   DSM        = &S->DSM;
+   Cmd        = &DSM->Cmd;
+   AC         = &S->AC;
+   double *kp = NULL, *kr = NULL, *ki = NULL, *limit_vec = NULL;
 
    switch (controllerState) {
       case TRN_STATE:
          controller = Cmd->trn_controller;
+         kp         = Cmd->trn_kp;
+         kr         = Cmd->trn_kr;
+         ki         = Cmd->trn_ki;
+         limit_vec  = Cmd->trn_kilimit;
          break;
       case ATT_STATE:
          controller = Cmd->att_controller;
+         kp         = Cmd->att_kp;
+         kr         = Cmd->att_kr;
+         ki         = Cmd->att_ki;
+         limit_vec  = Cmd->att_kilimit;
          break;
       case FULL_STATE:
          // PLACEHOLDER
          break;
       case DMP_STATE:
-         // PLACEHOLDER
+         kp = Cmd->dmp_kp;
          break;
       default:
          break;
    }
-
-   strcat(GainCmd, " %s");
-   rewind(InpDsmFilePtr);
-   while (fgets(DsmCmdLine, 255, InpDsmFilePtr)) {
-      if (sscanf(DsmCmdLine, GainCmd, &GainMode) == 1) {
-         if (!strcmp(GainMode, "PID")) {
-            strcat(GainCmd, " Kp %lf %lf %lf Kr %lf %lf %lf Ki %lf %lf %lf "
-                            "Ki_Limit %lf %lf %lf");
-            if (sscanf(DsmCmdLine, GainCmd, GainMode, &kp[0], &kp[1], &kp[2],
-                       &kr[0], &kr[1], &kr[2], &ki[0], &ki[1], &ki[2],
-                       &limit_vec[0], &limit_vec[1], &limit_vec[2]) == 13)
-               if (controller == PID_CNTRL)
-                  GainsProcessed = TRUE;
+   long i;
+   char gainMode[31] = {0};
+   double omega, zeta, alpha, k_lya, limit;
+   fy_node_scanf(gainsNode, "/Type %30s", gainMode);
+   struct fy_node *gainsDataNode = fy_node_by_path_def(gainsNode, "/Gains");
+   if (!strcmp(gainMode, "PID")) {
+      const char gainPaths[4][20] = {"/Kp", "/Kr", "/Ki", "/Ki_Limit"};
+      double *const gains[4]      = {kp, kr, ki, limit_vec};
+      long gainsGood              = TRUE;
+      for (i = 0; i < 4; i++)
+         gainsGood &= assignYAMLToDoubleArray(
+                          3, fy_node_by_path_def(gainsDataNode, gainPaths[i]),
+                          gains[i]) == 3;
+      if (gainsGood && controller == PID_CNTRL)
+         GainsProcessed = TRUE;
+   }
+   else if (!strcmp(gainMode, "PID_WN")) {
+      if (fy_node_scanf(gainsDataNode,
+                        "/Omega %lf /Zeta %lf /Alpha %lf /Ki_Limit %lf", &omega,
+                        &zeta, &alpha, &limit) == 4 &&
+          controller == PID_CNTRL) {
+         GainsProcessed = TRUE;
+         for (i = 0; i < 3; i++) {
+            kp[i]        = (2 * zeta * alpha + 1) * omega * omega;
+            kr[i]        = (2 * zeta + alpha) * omega;
+            ki[i]        = alpha * omega * omega * omega;
+            limit_vec[i] = limit;
          }
-         else if (!strcmp(GainMode, "PID_WN")) {
-            strcat(GainCmd, " %lf %lf %lf %lf");
-            if (sscanf(DsmCmdLine, GainCmd, &GainMode, &omega, &zeta, &alpha,
-                       &limit) == 5) {
+         switch (controllerState) {
+            case TRN_STATE:
                for (i = 0; i < 3; i++) {
-                  kp[i]        = (2 * zeta * alpha + 1) * pow(omega, 2);
-                  kr[i]        = (2 * zeta + alpha) * omega;
-                  ki[i]        = alpha * pow(omega, 3);
-                  limit_vec[i] = limit;
+                  kp[i] *= AC->mass;
+                  kr[i] *= AC->mass;
+                  ki[i] *= AC->mass;
                }
-               if (controller == PID_CNTRL)
-                  GainsProcessed = TRUE;
-               switch (controllerState) {
-                  case TRN_STATE:
-                     for (i = 0; i < 3; i++) {
-                        kp[i] *= AC->mass;
-                        kr[i] *= AC->mass;
-                        ki[i] *= AC->mass;
-                     }
-                     break;
-                  case ATT_STATE:
-                     for (i = 0; i < 3; i++) {
-                        kp[i] *= AC->MOI[i][i];
-                        kr[i] *= AC->MOI[i][i];
-                        ki[i] *= AC->MOI[i][i];
-                     }
-                     break;
-                  case FULL_STATE:
-                     // PLACEHOLDER
-                     break;
-                  case DMP_STATE:
-                     // shouldn't get here
-                     break;
-                  default:
-                     break;
+               break;
+            case ATT_STATE:
+               for (i = 0; i < 3; i++) {
+                  kp[i] *= AC->MOI[i][i];
+                  kr[i] *= AC->MOI[i][i];
+                  ki[i] *= AC->MOI[i][i];
                }
-            }
+               break;
+            case FULL_STATE:
+               // PLACEHOLDER
+               break;
+            case DMP_STATE:
+               // shouldn't get here
+               break;
+            default:
+               break;
          }
-         else if (!strcmp(GainMode, "FC_LYA")) {
-            switch (controller) {
-               case LYA_2BODY_CNTRL:
-                  strcat(GainCmd, " %lf %lf");
-                  if (sscanf(DsmCmdLine, GainCmd, GainMode, &omega, &zeta) ==
-                      3) {
-                     for (i = 0; i < 3; i++) {
-                        kp[i] = pow(omega, 2) * AC->mass;
-                        kr[i] = 2 * zeta * omega * AC->mass;
-                     }
-                     GainsProcessed = TRUE;
-                  }
-                  break;
-               case LYA_ATT_CNTRL:
-                  strcat(GainCmd, " %lf");
-                  if (sscanf(DsmCmdLine, GainCmd, GainMode, &k_lya) == 2) {
-                     for (i = 0; i < 3; i++) {
-                        kp[i] = k_lya;
-                        kr[i] = sqrt(2.0 * k_lya * AC->MOI[i][i]);
-                     }
-                     GainsProcessed = TRUE;
-                  }
-                  break;
-               default:
-                  break;
-            }
-         }
-         else if (!strcmp(GainMode, "MomentumDump")) {
-            if (controllerState != DMP_STATE) {
-               printf("%s gain sets can only be used for momentum dumping. "
-                      "Exiting...",
-                      GainMode);
-               exit(EXIT_FAILURE);
-            }
-            strcat(GainCmd, " %lf %lf %lf");
-            if (sscanf(DsmCmdLine, GainCmd, GainMode, &kp[0], &kp[1], &kp[2]) ==
-                4)
-               GainsProcessed = TRUE;
-         }
-         break;
       }
    }
-
-   switch (controllerState) {
-      case TRN_STATE:
-         Cmd->trn_controller = controller;
-         for (i = 0; i < 3; i++) {
-            Cmd->trn_kp[i]      = kp[i];
-            Cmd->trn_kr[i]      = kr[i];
-            Cmd->trn_ki[i]      = ki[i];
-            Cmd->trn_kilimit[i] = limit_vec[i];
-         }
-         break;
-      case ATT_STATE:
-         Cmd->att_controller = controller;
-         for (i = 0; i < 3; i++) {
-            Cmd->att_kp[i]      = kp[i];
-            Cmd->att_kr[i]      = kr[i];
-            Cmd->att_ki[i]      = ki[i];
-            Cmd->att_kilimit[i] = limit;
-         }
-         break;
-      case FULL_STATE:
-         // PLACEHOLDER
-         break;
-      case DMP_STATE:
-         for (i = 0; i < 3; i++) {
-            Cmd->dmp_kp[i] = kp[i];
-         }
-         break;
-      default:
-         break;
+   else if (!strcmp(gainMode, "FC_LYA")) {
+      struct fy_node *kNode = fy_node_by_path_def(gainsDataNode, "/K_lya");
+      switch (controller) {
+         case LYA_2BODY_CNTRL:
+            if (fy_node_sequence_item_count(kNode) == 2) {
+               fy_node_scanf(fy_node_sequence_get_by_index(kNode, 0), "/ %lf",
+                             &omega);
+               fy_node_scanf(fy_node_sequence_get_by_index(kNode, 1), "/ %lf",
+                             &zeta);
+               for (i = 0; i < 3; i++) {
+                  kp[i] = omega * omega * AC->mass;
+                  kr[i] = 2 * zeta * omega * AC->mass;
+               }
+               GainsProcessed = TRUE;
+            }
+            break;
+         case LYA_ATT_CNTRL:
+            if (fy_node_sequence_item_count(kNode) == 2) {
+               fy_node_scanf(fy_node_sequence_get_by_index(kNode, 0), "/ %lf",
+                             &k_lya);
+               for (i = 0; i < 3; i++) {
+                  kp[i] = k_lya;
+                  kr[i] = sqrt(2.0 * k_lya * AC->MOI[i][i]);
+               }
+               GainsProcessed = TRUE;
+            }
+            break;
+         default:
+            break;
+      }
+   }
+   else if (!strcmp(gainMode, "MomentumDump")) {
+      if (controllerState != DMP_STATE) {
+         printf(
+             "Gain alias %s gain sets can only be used for momentum dumping. "
+             "Exiting...",
+             fy_anchor_get_text(fy_node_get_anchor(gainsNode), NULL));
+         exit(EXIT_FAILURE);
+      }
+      struct fy_node *kpNode = fy_node_by_path_def(gainsDataNode, "/Kp");
+      if (assignYAMLToDoubleArray(3, kpNode, kp) == 3)
+         GainsProcessed = TRUE;
    }
 
-   if (GainsProcessed ==
-       TRUE) { // Set GainsProcessed flag for relevant controller
+   // Set GainsProcessed flag for relevant controller
+   if (GainsProcessed == TRUE) {
       if (controllerState == TRN_STATE) {
          Cmd->NewTrnGainsProcessed = TRUE;
       }
@@ -418,261 +388,204 @@ long GetGains(struct SCType *S, const char GainCmdName[255],
          Cmd->NewAttGainsProcessed = TRUE;
       }
    }
-
    return (GainsProcessed);
 }
 //----------------------------------- LIMITS -----------------------------------
-long GetLimits(struct SCType *S, const char LimitCmdName[255],
-               enum ctrlState controllerState, FILE *InpDsmFilePtr)
+long GetLimits(struct SCType *S, struct fy_node *limsNode,
+               enum ctrlState controllerState)
 {
    long LimitsProcessed = FALSE;
-   int limitNum;
-   char LimitCmd[255], DsmCmdLine[255] = "";
-   long i;
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
-   double fMax[3], vMax[3];
+   double *fMax = NULL, *vMax = NULL;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
-
-   strcpy(LimitCmd, LimitCmdName);
-   if (sscanf(LimitCmd, "Limits_[%d]", &limitNum) != 1) {
-      LimitsProcessed = FALSE;
-      return (LimitsProcessed);
-   }
-
-   strcat(LimitCmd, " %lf %lf %lf %lf %lf %lf");
-   rewind(InpDsmFilePtr);
-   while (fgets(DsmCmdLine, 255, InpDsmFilePtr)) {
-      if (sscanf(DsmCmdLine, LimitCmd, &fMax[0], &fMax[1], &fMax[2], &vMax[0],
-                 &vMax[1], &vMax[2]) == 6) {
-         LimitsProcessed = TRUE;
-         if (controllerState == ATT_STATE) {
-            for (i = 0; i < 3; i++)
-               vMax[i] *= D2R;
-         }
-         break;
-      }
-   }
-
    switch (controllerState) {
       case TRN_STATE:
-         for (i = 0; i < 3; i++) {
-            Cmd->FrcB_max[i] = fMax[i];
-            Cmd->vel_max[i]  = vMax[i];
-         }
+         fMax = Cmd->FrcB_max;
+         vMax = Cmd->vel_max;
          break;
       case ATT_STATE:
-         for (i = 0; i < 3; i++) {
-            Cmd->Trq_max[i] = fMax[i];
-            Cmd->w_max[i]   = vMax[i];
-         }
+         fMax = Cmd->Trq_max;
+         vMax = Cmd->w_max;
          break;
       case FULL_STATE:
          // PLACEHOLDER
          break;
       case DMP_STATE:
-         for (i = 0; i < 3; i++) {
-            Cmd->dTrq_max[i] = fMax[i];
-         }
+         fMax = Cmd->dTrq_max;
          break;
       default:
          break;
    }
-
+   if (assignYAMLToDoubleArray(3, fy_node_by_path_def(limsNode, "/Force Max"),
+                               fMax) == 3 &&
+       (controllerState == H_DUMP_CNTRL ||
+        assignYAMLToDoubleArray(
+            3, fy_node_by_path_def(limsNode, "/Velocity Max"), vMax) == 3))
+      LimitsProcessed = TRUE;
+   if (controllerState == ATT_STATE) {
+      for (long i = 0; i < 3; i++)
+         vMax[i] *= D2R;
+   }
    return (LimitsProcessed);
 }
 //--------------------------------- CONTROLLER ---------------------------------
-long GetController(struct SCType *S, const char CtrlCmdName[255],
-                   enum ctrlState controllerState, FILE *InpDsmFilePtr)
+long GetController(struct SCType *S, struct fy_node *ctrlNode,
+                   enum ctrlState controllerState)
 {
-   long CntrlProcessed = FALSE;
-   int cntrlNum;
+   struct fy_node *gainNode = NULL, *limNode = NULL;
 
-   char CtrlCmd[255], DsmCmdLine[255] = "";
-   char CtrlGainCmd[255], CtrlLimitCmd[255];
-   char ControllerCmdMode[20];
+   long CntrlProcessed = FALSE;
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
-   enum ctrlType controller = -1;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
 
-   strcpy(CtrlCmd, CtrlCmdName);
-   if (sscanf(CtrlCmd, "Controller_[%d]", &cntrlNum) != 1) {
-      CntrlProcessed = FALSE;
-      return (CntrlProcessed);
-   }
-
-   strcat(CtrlCmd, " %s %s %s");
-   rewind(InpDsmFilePtr);
-   while (fgets(DsmCmdLine, 255, InpDsmFilePtr)) {
-      if (sscanf(DsmCmdLine, CtrlCmd, &ControllerCmdMode, &CtrlGainCmd,
-                 &CtrlLimitCmd) == 3) {
-         if (!strcmp(ControllerCmdMode, "PID_CNTRL"))
-            controller = PID_CNTRL;
-         else if (!strcmp(ControllerCmdMode, "LYA_ATT_CNTRL"))
-            controller = LYA_ATT_CNTRL;
-         else if (!strcmp(ControllerCmdMode, "LYA_2BODY_CNTRL"))
-            controller = LYA_2BODY_CNTRL;
-         else if (!strcmp(ControllerCmdMode, "H_DUMP_CNTRL"))
-            controller = H_DUMP_CNTRL;
-         else {
-            printf("%s is an invalid control type. Exiting...\n",
-                   ControllerCmdMode);
-            exit(EXIT_FAILURE);
-         }
-         // There should be a nicer way to handle this that doesn't require
-         // hardcoding for things...
-         if (controller == LYA_ATT_CNTRL && controllerState != ATT_STATE) {
-            printf(
-                "%s\n",
-                "Can only use LYA_ATT_CNTRL for attitude control. Exiting...");
-            exit(EXIT_FAILURE);
-         }
-         if (controller == H_DUMP_CNTRL && controllerState != DMP_STATE) {
-            printf("%s\n", "Can only use H_DUMP_CNTRL for momentum dumping "
-                           "control. Exiting...");
-            exit(EXIT_FAILURE);
-         }
-         if (controller == LYA_2BODY_CNTRL && controllerState != TRN_STATE) {
-            printf("%s\n", "Can only use LYA_2BODY_CNTRL for translation "
-                           "control. Exiting...");
-            exit(EXIT_FAILURE);
-         }
-         CntrlProcessed = TRUE;
-         break;
+   long controller;
+   char ctrlType[40] = {0};
+   if (fy_node_scanf(ctrlNode, "/Type %41s", ctrlType) == 1) {
+      gainNode = fy_node_by_path_def(ctrlNode, "/Gains");
+      limNode  = fy_node_by_path_def(ctrlNode, "/Limits");
+      if (!strcmp(ctrlType, "PID_CNTRL"))
+         controller = PID_CNTRL;
+      else if (!strcmp(ctrlType, "LYA_ATT_CNTRL"))
+         controller = LYA_ATT_CNTRL;
+      else if (!strcmp(ctrlType, "LYA_2BODY_CNTRL"))
+         controller = LYA_2BODY_CNTRL;
+      else if (!strcmp(ctrlType, "H_DUMP_CNTRL"))
+         controller = H_DUMP_CNTRL;
+      else {
+         printf("%s is an invalid control type. Exiting...\n", ctrlType);
+         exit(EXIT_FAILURE);
       }
-   }
-
-   switch (controllerState) {
-      case TRN_STATE:
-         Cmd->trn_controller = controller;
-         break;
-      case ATT_STATE:
-         Cmd->att_controller = controller;
-         break;
-      case FULL_STATE:
-         // PLACEHOLDER
-         break;
-      case DMP_STATE:
-         Cmd->dmp_controller = controller;
-         break;
-      default:
-         break;
-   }
-
-   if (GetGains(S, CtrlGainCmd, controllerState, InpDsmFilePtr) == FALSE) {
-      printf("For %s, could not find %s or invalid format. Exiting.g..\n",
-             CtrlCmdName, CtrlGainCmd);
-      exit(EXIT_FAILURE);
-   }
-   if (GetLimits(S, CtrlLimitCmd, controllerState, InpDsmFilePtr) == FALSE) {
-      printf("For %s, could not find %s or invalid format. Exiting.d..\n",
-             CtrlCmdName, CtrlLimitCmd);
-      exit(EXIT_FAILURE);
+      // There should be a nicer way to handle this that doesn't require
+      // hardcoding for things...
+      if (controller == LYA_ATT_CNTRL && controllerState != ATT_STATE) {
+         printf(
+             "%s\n",
+             "Can only use LYA_ATT_CNTRL for attitude control. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      if (controller == H_DUMP_CNTRL && controllerState != DMP_STATE) {
+         printf("%s\n", "Can only use H_DUMP_CNTRL for momentum dumping "
+                        "control. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      if (controller == LYA_2BODY_CNTRL && controllerState != TRN_STATE) {
+         printf("%s\n", "Can only use LYA_2BODY_CNTRL for translation control. "
+                        "Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      CntrlProcessed = TRUE;
+      switch (controllerState) {
+         case TRN_STATE:
+            Cmd->trn_controller = controller;
+            break;
+         case ATT_STATE:
+            Cmd->att_controller = controller;
+            break;
+         case FULL_STATE:
+            // PLACEHOLDER
+            break;
+         case DMP_STATE:
+            Cmd->dmp_controller = controller;
+            break;
+         default:
+            break;
+      }
+      if (GetGains(S, gainNode, controllerState) == FALSE) {
+         printf("For Controller alias %s, could not find Gain alias %s or "
+                "invalid format."
+                " Exiting...\n",
+                fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
+                fy_anchor_get_text(fy_node_get_anchor(gainNode), NULL));
+         exit(EXIT_FAILURE);
+      }
+      if (GetLimits(S, limNode, controllerState) == FALSE) {
+         printf("For Controller alias %s, could not find Limit alias %s or "
+                "invalid format."
+                " Exiting...\n",
+                fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
+                fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
+         exit(EXIT_FAILURE);
+      }
    }
 
    return (CntrlProcessed);
 }
 //---------------------------------- ACTUATORS ---------------------------------
-long GetActuators(struct SCType *S, const char ActuatorCmdName[255],
-                  enum ctrlState controllerState, FILE *InpDsmFilePtr)
+long GetActuators(struct SCType *S, struct fy_node *actNode,
+                  enum ctrlState controllerState)
 {
    long ActuatorsProcessed = FALSE;
-   int actuatorNum, H_DumpCmdMode;
-   char ActuatorCmd[255], DsmCmdLine[255] = "";
-   char ActuatorName[20];
-   char actuator[20];
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
    struct AcType *AC;
 
-   DSM = &S->DSM;
-   Cmd = &DSM->Cmd;
-   AC  = &S->AC;
+   DSM              = &S->DSM;
+   Cmd              = &DSM->Cmd;
+   AC               = &S->AC;
+   char actName[40] = {0};
+   if (fy_node_scanf(actNode, "/Type %39s", actName) == 1) {
+      strcpy(Cmd->dmp_actuator,
+             ""); // Null it out if no dumping to avoid other errors
+      if (controllerState == ATT_STATE)
+         Cmd->H_DumpActive = FALSE;
+      ActuatorsProcessed = TRUE;
+      // This handles invalid actuator names
+      if (!strcmp(actName, "WHL")) {
+         if (controllerState == TRN_STATE || controllerState == DMP_STATE)
+            ActuatorsProcessed = FALSE;
+      }
+      else if (!strcmp(actName, "MTB")) {
+         if (controllerState == TRN_STATE)
+            ActuatorsProcessed = FALSE;
+      }
+      else if (!strcmp(actName, "THR_3DOF")) {
+         InitThrDistVecs(AC, 3, controllerState);
+      }
+      else if (!strcmp(actName, "THR_6DOF")) {
+         InitThrDistVecs(AC, 6, controllerState);
+      }
+      else if (!strcmp(actName, "Ideal")) {
+         // Ideal do what it wants
+      }
+      else {
+         ActuatorsProcessed = FALSE;
+      }
 
-   strcpy(ActuatorCmd, ActuatorCmdName);
-   if (sscanf(ActuatorCmd, "Actuators_[%d]", &actuatorNum) != 1) {
-      ActuatorsProcessed = FALSE;
-      return (ActuatorsProcessed);
-   }
-
-   strcat(ActuatorCmd, " %s");
-   rewind(InpDsmFilePtr);
-   while (fgets(DsmCmdLine, 255, InpDsmFilePtr)) {
-      if (sscanf(DsmCmdLine, ActuatorCmd, &ActuatorName) == 1) {
-         if (sscanf(ActuatorName, "WHL_[%d]", &H_DumpCmdMode) == 1) {
-            strcpy(actuator, "WHL");
-         }
-         else {
-            strcpy(actuator, ActuatorName);
-            strcpy(Cmd->dmp_actuator,
-                   ""); // Null it out if no dumping to avoid other errors
-            if (controllerState == ATT_STATE)
-               Cmd->H_DumpActive = FALSE;
-         }
-         ActuatorsProcessed = TRUE;
-         break;
+      switch (controllerState) {
+         case TRN_STATE:
+            strcpy(Cmd->trn_actuator, actName);
+            break;
+         case ATT_STATE:
+            strcpy(Cmd->att_actuator, actName);
+            break;
+         case FULL_STATE:
+            // PLACEHOLDER
+            break;
+         case DMP_STATE:
+            strcpy(Cmd->dmp_actuator, actName);
+            break;
+         default:
+            break;
       }
    }
-   // This handles invalid actuator names
-   if (!strcmp(actuator, "WHL")) {
-      if (controllerState == TRN_STATE || controllerState == DMP_STATE)
-         ActuatorsProcessed = FALSE;
-   }
-   else if (!strcmp(actuator, "MTB")) {
-      if (controllerState == TRN_STATE)
-         ActuatorsProcessed = FALSE;
-   }
-   else if (!strcmp(actuator, "THR_3DOF")) {
-      InitThrDistVecs(AC, 3, controllerState);
-   }
-   else if (!strcmp(actuator, "THR_6DOF")) {
-      InitThrDistVecs(AC, 6, controllerState);
-   }
-   else if (!strcmp(actuator, "Ideal")) {
-      // Ideal do what it wants
-   }
-   else {
-      ActuatorsProcessed = FALSE;
-   }
-
-   switch (controllerState) {
-      case TRN_STATE:
-         strcpy(Cmd->trn_actuator, actuator);
-         break;
-      case ATT_STATE:
-         strcpy(Cmd->att_actuator, actuator);
-         break;
-      case FULL_STATE:
-         // PLACEHOLDER
-         break;
-      case DMP_STATE:
-         strcpy(Cmd->dmp_actuator, actuator);
-         break;
-      default:
-         break;
-   }
-
    return (ActuatorsProcessed);
 }
 //------------------------- TRANSLATIONAL CMD ----------------------------------
-long GetTranslationCmd(struct SCType *S, char TranslationCmd[255],
-                       double DsmCmdTime, FILE *InpDsmFilePtr)
+long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
+                       const double DsmCmdTime, struct fy_node *dsmRoot)
 {
-   char DsmCmdLine[255] = "";
-   char ActuatorCmd[255];
-   char TranslationCmdName[255];
+   struct fy_node *iterNode = NULL, *ctrlNode = NULL, *actNode = NULL,
+                  *limNode      = NULL;
    long TranslationCmdProcessed = FALSE;
-   char CtrlLimitCmd[255], ManeuverCmdMode[20];
-
-   char ControllerCmd[255];
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
@@ -680,91 +593,129 @@ long GetTranslationCmd(struct SCType *S, char TranslationCmd[255],
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
 
-   strcpy(TranslationCmdName, TranslationCmd);
-
-   if (!strcmp(TranslationCmd, "NO_CHANGE")) {
+   char subType[FIELDWIDTH + 1] = {};
+   long cmdInd;
+   const char *searchStr = "/Subtype %" STR(FIELDWIDTH) "s /Index %ld";
+   fy_node_scanf(trnCmdNode, searchStr, subType, &cmdInd);
+   if (!strcmp(subType, "NO_CHANGE")) {
       TranslationCmdProcessed = TRUE;
       return (TranslationCmdProcessed);
    }
-   else if (!strcmp(TranslationCmd, "PASSIVE_TRN")) {
+   else if (!strcmp(subType, "Passive")) {
       Cmd->TranslationCtrlActive = FALSE;
       TranslationCmdProcessed    = TRUE;
       return (TranslationCmdProcessed);
    }
-   else if (!strncmp(TranslationCmd, "TranslationCmd", 14)) {
+   else if (!strcmp(subType, "Translation")) {
       Cmd->TranslationCtrlActive = TRUE;
-      strcat(TranslationCmd, " %lf %lf %lf %s %s %s %s");
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         // Extract Translation Command
-         if (sscanf(DsmCmdLine, TranslationCmd, &Cmd->Pos[0], &Cmd->Pos[1],
-                    &Cmd->Pos[2], &Cmd->RefOrigin, &Cmd->RefFrame,
-                    &ControllerCmd, &ActuatorCmd) == 7) {
-            TranslationCmdProcessed = TRUE;
-            Cmd->ManeuverMode       = INACTIVE;
-            break;
-         }
-      }
-      if (TranslationCmdProcessed == FALSE) {
-         printf("Could not find %s or invalid format. Exiting...\n",
-                TranslationCmdName);
-         exit(EXIT_FAILURE);
-      }
-   }
-   else if (!strncmp(TranslationCmd, "ManeuverCmd", 11)) {
-      Cmd->TranslationCtrlActive = TRUE;
-      strcat(TranslationCmd, " %lf %lf %lf %s %s %lf %s %s");
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         // Extract Maneuver Command
-         if (sscanf(DsmCmdLine, TranslationCmd, &Cmd->DeltaV[0],
-                    &Cmd->DeltaV[1], &Cmd->DeltaV[2], &Cmd->RefFrame,
-                    &ManeuverCmdMode, &Cmd->BurnTime, &CtrlLimitCmd,
-                    &ActuatorCmd) == 8) {
-            TranslationCmdProcessed = TRUE;
-            Cmd->BurnStopTime       = DsmCmdTime + Cmd->BurnTime;
-            if (!strcmp(ManeuverCmdMode, "CONSTANT"))
-               Cmd->ManeuverMode = CONSTANT;
-            else if (!strcmp(ManeuverCmdMode, "SMOOTHED"))
-               Cmd->ManeuverMode = SMOOTHED;
-            else {
-               printf("%s is an invalid maneuver mode for %s. Exiting...",
-                      ManeuverCmdMode, TranslationCmdName);
-               exit(EXIT_FAILURE);
+      struct fy_node *cmdNode =
+          fy_node_by_path_def(dsmRoot, "/Translation Configurations");
+
+      WHILE_FY_ITER(cmdNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Translation/Index %ld", &ind);
+         if (ind == cmdInd) {
+            iterNode     = fy_node_by_path_def(iterNode, "/Translation");
+            long isGood  = fy_node_scanf(iterNode,
+                                         "/Origin %19s "
+                                          "/Frame %19s",
+                                         Cmd->RefOrigin, Cmd->RefFrame) == 2;
+            ctrlNode     = fy_node_by_path_def(iterNode, "/Controller");
+            actNode      = fy_node_by_path_def(iterNode, "/Actuator");
+            isGood      &= ctrlNode != NULL && actNode != NULL;
+
+            isGood &= assignYAMLToDoubleArray(
+                          3, fy_node_by_path_def(iterNode, "/Position"),
+                          Cmd->Pos) == 3;
+            if (isGood) {
+               TranslationCmdProcessed = TRUE;
+               Cmd->ManeuverMode       = INACTIVE;
             }
             break;
          }
       }
       if (TranslationCmdProcessed == FALSE) {
-         printf("Could not find %s or invalid format. Exiting...\n",
-                TranslationCmdName);
+         printf(
+             "Could not find Translation Command index %ld or invalid format. "
+             "Exiting...\n",
+             cmdInd);
+         exit(EXIT_FAILURE);
+      }
+   }
+   else if (!strcmp(subType, "Maneuver")) {
+      Cmd->TranslationCtrlActive = TRUE;
+      struct fy_node *cmdNode =
+          fy_node_by_path_def(dsmRoot, "/Maneuver Configurations");
+      WHILE_FY_ITER(cmdNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Maneuver/Index %ld", &ind);
+         if (ind == cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Maneuver");
+            char manType[FIELDWIDTH + 1] = {};
+            const char *searchManStr =
+                "/Type %" STR(FIELDWIDTH) "s /Frame %19s /Duration %lf";
+
+            long isGood  = fy_node_scanf(iterNode, searchManStr, manType,
+                                         Cmd->RefFrame, &Cmd->BurnTime) == 3;
+            limNode      = fy_node_by_path_def(iterNode, "/Limits");
+            actNode      = fy_node_by_path_def(iterNode, "/Actuator");
+            isGood      &= assignYAMLToDoubleArray(
+                          3, fy_node_by_path_def(iterNode, "/Delta V"),
+                          Cmd->DeltaV) == 3;
+            if (isGood) {
+               TranslationCmdProcessed = TRUE;
+               Cmd->BurnStopTime       = DsmCmdTime + Cmd->BurnTime;
+               if (!strcmp(manType, "CONSTANT"))
+                  Cmd->ManeuverMode = CONSTANT;
+               else if (!strcmp(manType, "SMOOTHED"))
+                  Cmd->ManeuverMode = SMOOTHED;
+               else {
+                  printf(
+                      "%s is an invalid maneuver mode for Maneuver index %ld. "
+                      "Exiting...",
+                      manType, cmdInd);
+                  exit(EXIT_FAILURE);
+               }
+            }
+            break;
+         }
+      }
+      if (TranslationCmdProcessed == FALSE) {
+         printf(
+             "Could not find Translation Command index %ld or invalid format. "
+             "Exiting...\n",
+             cmdInd);
          exit(EXIT_FAILURE);
       }
    }
 
    if (TranslationCmdProcessed == TRUE && Cmd->TranslationCtrlActive == TRUE) {
       if (Cmd->ManeuverMode == INACTIVE) {
-         if (GetController(S, ControllerCmd, TRN_STATE, InpDsmFilePtr) ==
-             FALSE) {
-            printf("For %s, could not find %s or invalid format. Exiting...\n",
-                   TranslationCmdName, ControllerCmd);
+         if (GetController(S, ctrlNode, TRN_STATE) == FALSE) {
+            printf("For %s index %ld, could not find Controller alias %s or "
+                   "invalid format. Exiting...\n",
+                   subType, cmdInd,
+                   fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
             exit(EXIT_FAILURE);
          }
       }
       else {
-         if (GetLimits(S, CtrlLimitCmd, TRN_STATE, InpDsmFilePtr) == FALSE) {
-            printf("For %s, could not find %s or invalid format. Exiting...\n",
-                   TranslationCmdName, CtrlLimitCmd);
+         if (GetLimits(S, limNode, TRN_STATE) == FALSE) {
+            printf("For %s index %ld, could not find Limit alias %s or invalid "
+                   "format. "
+                   "Exiting...\n",
+                   subType, cmdInd,
+                   fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
             exit(EXIT_FAILURE);
          }
       }
-      if (GetActuators(S, ActuatorCmd, TRN_STATE, InpDsmFilePtr) == FALSE) {
-         printf("For %s, could not find %s or invalid format. Exiting...\n",
-                TranslationCmdName, ActuatorCmd);
+      if (GetActuators(S, actNode, TRN_STATE) == FALSE) {
+         printf("For %s index %ld, could not find Actuator alias %s or invalid "
+                "format. Exiting...\n",
+                subType, cmdInd,
+                fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
@@ -772,619 +723,411 @@ long GetTranslationCmd(struct SCType *S, char TranslationCmd[255],
    return (TranslationCmdProcessed);
 }
 //-----------------------ATTITUDE CMD ---------------------------------------
-long GetAttitudeCmd(struct SCType *S, char AttitudeCmd[255],
-                    FILE *InpDsmFilePtr)
+long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
+                    struct fy_node *dsmRoot)
 {
-   char Junk[50], PriTrgType[20], SecTrgType[20], OnOff[20];
-   char PriTargetCmd[255], SecTargetCmd[255], DsmCmdLine[255] = "";
-   char ActuatorCmd[255];
-   char AttCmdMethod[30], Target[50];
-   char AttitudeCmdName[255];
-   char PriTargetCmdName[255], SecTargetCmdName[255], GroundStationCmd[30];
-   int AttPriCmdMode, AttSecCmdMode, AttCmdMode;
+   struct fy_node *iterNode = NULL, *ctrlNode = NULL, *actNode = NULL;
    long AttitudeCmdProcessed = FALSE, AttPriCmdProcessed = FALSE,
         AttSecCmdProcessed = FALSE;
-   long Isc_trgt, PriTrgTypeFlag = 0, SecTrgTypeFlag = 0, GroundStationNum,
-                  target_num;
+   char GroundStationCmd[30];
+   long AttPriCmdMode, AttSecCmdMode, AttCmdMode;
+   long *cmdInd;
+
    int state = ATT_STATE;
-
-   char ControllerCmd[255];
-
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
-   struct DSMCmdVecType *PV, *SV;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
-   PV  = &Cmd->PriVec;
-   SV  = &Cmd->SecVec;
 
-   strcpy(AttitudeCmdName, AttitudeCmd);
-
-   // Decode Attitude Command Method/Mode
-   // TO DO: can we make it read %s_[%d]_[%d] instead of hard coded str??
-   if (!strcmp(AttitudeCmd, "NO_CHANGE")) {
+   char subType[FIELDWIDTH + 1] = {};
+   const char *searchStr        = "/Subtype %" STR(FIELDWIDTH) "[^\n]";
+   fy_node_scanf(attCmdNode, searchStr, subType);
+   if (!strcmp(subType, "NO_CHANGE")) {
       AttitudeCmdProcessed = TRUE;
-      return (AttitudeCmdProcessed);
    }
-   else if (!strcmp(AttitudeCmd, "PASSIVE_ATT")) {
+   else if (!strcmp(subType, "Passive")) {
       Cmd->AttitudeCtrlActive = FALSE;
       AttitudeCmdProcessed    = TRUE;
-      return (AttitudeCmdProcessed);
    }
-   else if (sscanf(AttitudeCmd, "AttitudeCmd_PV[%d]_SV[%d]", &AttPriCmdMode,
-                   &AttSecCmdMode) == 2 ||
-            sscanf(AttitudeCmd, "AttitudeCmd_SV[%d]_PV[%d]", &AttSecCmdMode,
-                   &AttPriCmdMode) ==
-                2) { // Decode Cmd into Method and Mode for setting params
-      strcpy(AttCmdMethod, "AttitudeCmd");
-      Cmd->AttitudeCtrlActive = TRUE;
-   }
-   else if (sscanf(AttitudeCmd, "AttitudeCmd_PV[%d]", &AttCmdMode) ==
-            1) { // Decode Cmd into Method and Mode for setting params
-      strcpy(AttCmdMethod, "UnitVectorCmd");
-      Cmd->AttitudeCtrlActive = TRUE;
-   }
-   else if (sscanf(AttitudeCmd, "QuaternionCmd_[%d]", &AttCmdMode) == 1) {
-      strcpy(AttCmdMethod, "QuaternionCmd");
-      Cmd->AttitudeCtrlActive = TRUE;
-   }
-   else if (sscanf(AttitudeCmd, "MirrorCmd_[%d]", &AttCmdMode) == 1) {
-      strcpy(AttCmdMethod, "MirrorCmd");
-      Cmd->AttitudeCtrlActive = TRUE;
-   }
-   else if (sscanf(AttitudeCmd, "DetumbleCmd_[%d]", &AttCmdMode) == 1) {
-      strcpy(AttCmdMethod, "DetumbleCmd");
-      Cmd->AttitudeCtrlActive = TRUE;
-   }
-   else if (sscanf(AttitudeCmd, "WhlHManageCmd_[%d]", &AttCmdMode) == 1) {
-      strcpy(AttCmdMethod, "WhlHManageCmd");
-   }
-   else {
-      AttitudeCmdProcessed = FALSE;
-      return (AttitudeCmdProcessed);
-   }
+   else if (!strcmp(subType, "Two Vector Pointing") ||
+            !strcmp(subType, "One Vector Pointing")) {
+      long kMax;
+      long inds[2]                 = {0};
+      struct DSMCmdVecType *vecs[] = {&Cmd->PriVec, NULL};
+      long *cmdModes[]             = {&AttPriCmdMode, &AttSecCmdMode};
+      struct fy_node *nodes[]      = {NULL, NULL};
+      char *cmdRefFrm[]            = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
+      long *attcmdProc[]           = {&AttPriCmdProcessed, &AttSecCmdProcessed};
+      struct fy_node *indNode      = fy_node_by_path_def(attCmdNode, "/Index");
 
-   // Check Attitude Command Method
-   if (!strcmp(AttCmdMethod, "AttitudeCmd")) {
-      Cmd->Method = PARM_VECTORS;
-      PV          = &Cmd->PriVec;
-      SV          = &Cmd->SecVec;
-      // Reconstruct Primary Axis Cmd
-      sprintf(PriTargetCmd, "AttitudeCmd_PV[%d]", AttPriCmdMode);
-      strcpy(PriTargetCmdName, PriTargetCmd);
-      strcat(PriTargetCmd, " %s");
-      // Reconstruct Secondary Axis Cmd
-      sprintf(SecTargetCmd, "AttitudeCmd_SV[%d]", AttSecCmdMode);
-      strcpy(SecTargetCmdName, SecTargetCmd);
-      strcat(SecTargetCmd, " %s");
+      if (!strcmp(subType, "Two Vector Pointing")) {
+         kMax    = 2;
+         vecs[1] = &Cmd->SecVec;
+         assignYAMLToLongArray(2, indNode, inds);
+         for (int k = 0; k < kMax; k++)
+            *cmdModes[k] = inds[k];
+         Cmd->Method = PARM_VECTORS;
+      }
+      else {
+         kMax        = 1;
+         Cmd->Method = PARM_UNITVECTOR;
+         cmdModes[0] = &AttCmdMode;
+         fy_node_scanf(indNode, "/ %ld", cmdModes[0]);
+      }
+      for (int k = 0; k < kMax; k++) {
+         struct fy_node *searchNode = fy_node_by_path_def(
+             dsmRoot, (k == 0) ? ("/Primary Vector Configurations")
+                               : ("/Secondary Vector Configurations"));
+         WHILE_FY_ITER(searchNode, nodes[k])
+         {
+            long ind = 0;
+            fy_node_scanf(nodes[k],
+                          (k == 0) ? ("/Primary Vector/Index %ld")
+                                   : ("/Secondary Vector/Index %ld"),
+                          &ind);
+            if (ind == *cmdModes[k]) {
+               nodes[k] = fy_node_by_path_def(nodes[k],
+                                              (k == 0) ? ("/Primary Vector")
+                                                       : ("/Secondary Vector"));
+               break;
+            }
+         }
+      }
+      if (nodes[0] != NULL &&
+          (Cmd->Method == PARM_UNITVECTOR || nodes[1] != NULL)) {
+         struct fy_node *tgtNode = NULL;
+         ctrlNode                = fy_node_by_path_def(nodes[0], "/Controller");
+         actNode                 = fy_node_by_path_def(nodes[0], "/Actuator");
+         for (int k = 0; k < kMax; k++) {
+            tgtNode = fy_node_by_path_def(nodes[k], "/Target");
+            assignYAMLToDoubleArray(3, fy_node_by_path_def(nodes[k], "/Axis"),
+                                    vecs[k]->cmd_axis);
+            char tgtType[50] = {};
+            fy_node_scanf(tgtNode, "/Type %49s", tgtType);
 
-      // Find Primary & Secondary Axis Cmd Target Type
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         if (sscanf(DsmCmdLine, PriTargetCmd, &PriTrgType) == 1) {
-            PriTrgTypeFlag = 1;
-         }
-         else if (sscanf(DsmCmdLine, SecTargetCmd, &SecTrgType) == 1) {
-            SecTrgTypeFlag = 1;
-         }
-         if (PriTrgTypeFlag == 1 && SecTrgTypeFlag == 1) {
-            break;
-         }
-      }
-      if (PriTrgTypeFlag == 0) {
-         printf("For %s, could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName, PriTargetCmdName);
-         exit(EXIT_FAILURE);
-      }
-      if (SecTrgTypeFlag == 0) {
-         printf("For %s, could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName, SecTargetCmdName);
-         exit(EXIT_FAILURE);
-      }
-      // Check Primary Target Type
-      if (!strcmp(PriTrgType, "BODY") || !strcmp(PriTrgType, "SC")) {
-         PV->CmdMode = CMD_TARGET;
-         strcat(PriTargetCmd, " %lf %lf %lf %s %s %s");
-         rewind(InpDsmFilePtr);
-         while (fgets(
-             DsmCmdLine, 255,
-             InpDsmFilePtr)) { // Start Looping through file until reach EOF
-            if (sscanf(DsmCmdLine, PriTargetCmd, Junk, &PV->cmd_axis[0],
-                       &PV->cmd_axis[1], &PV->cmd_axis[2], &Target,
-                       &ControllerCmd, &ActuatorCmd) == 7) {
-               if (!strcmp(PriTrgType, "BODY")) {
-                  PV->TrgType = TARGET_WORLD;
+            if (!strcmp(tgtType, "BODY") || !strcmp(tgtType, "SC")) {
+               vecs[k]->CmdMode = CMD_TARGET;
+               char target[50]  = {};
+               fy_node_scanf(tgtNode, "/Target %51s", target);
+               if (!strcmp(tgtType, "BODY")) {
+                  vecs[k]->TrgType = TARGET_WORLD;
+                  long gsNum;
                   strcpy(GroundStationCmd, "GroundStation_[%ld]");
-                  if (sscanf(Target, GroundStationCmd, &GroundStationNum) ==
-                      1) {
-                     PV->TrgWorld = GroundStation[GroundStationNum].World;
+                  if (sscanf(target, GroundStationCmd, &gsNum) == 1) {
+                     vecs[k]->TrgWorld = GroundStation[gsNum].World;
                      for (int i = 0; i < 3; i++)
-                        PV->W[i] = GroundStation[GroundStationNum].PosW[i];
+                        vecs[k]->W[i] = GroundStation[gsNum].PosW[i];
                   }
                   else {
-                     PV->TrgWorld = DecodeString(Target);
+                     vecs[k]->TrgWorld = DecodeString(target);
                      for (int i = 0; i < 3; i++)
-                        PV->W[i] = 0.0;
+                        vecs[k]->W[i] = 0.0;
                   }
                }
-               else if (!strcmp(PriTrgType, "SC")) {
-                  if (sscanf(Target, "SC[%ld].B[%ld]", &Isc_trgt,
-                             &target_num) == 2) { // Decode Current SC ID Number
-                     if (Isc_trgt >= Nsc) {
+               else if (!strcmp(tgtType, "SC")) {
+                  vecs[k]->TrgType = TARGET_SC;
+                  if (sscanf(target, "SC[%ld].B[%ld]", &vecs[k]->TrgSC,
+                             &vecs[k]->TrgBody) ==
+                      2) { // Decode Current SC ID Number
+                     if (vecs[k]->TrgSC >= Nsc) {
                         printf("This mission only has %ld spacecraft, but "
-                               "spacecraft %ld was attempted to be set as the "
-                               "primary target vector. Exiting...\n",
-                               Nsc, Isc_trgt);
+                               "spacecraft %ld was "
+                               "attempted to be set as the primary target "
+                               "vector. Exiting...\n",
+                               Nsc, vecs[k]->TrgSC);
                         exit(EXIT_FAILURE);
                      }
-                     if (target_num >= SC[Isc_trgt].Nb) {
+                     if (vecs[k]->TrgBody >= SC[vecs[k]->TrgSC].Nb) {
                         printf("Spacecraft %ld only has %ld bodies, but the "
-                               "primary target was attempted to be set as body "
-                               "%ld. Exiting...\n",
-                               Isc_trgt, SC[Isc_trgt].Nb, target_num);
+                               "primary target was "
+                               "attempted to be set as body %ld. Exiting...\n",
+                               vecs[k]->TrgSC, SC[vecs[k]->TrgSC].Nb,
+                               vecs[k]->TrgBody);
                         exit(EXIT_FAILURE);
                      }
-                     PV->TrgType = TARGET_SC;
-                     PV->TrgSC   = Isc_trgt;
-                     PV->TrgBody = target_num;
                   }
                   else {
-                     printf("%s is in incorrect format. Exiting...", Target);
+                     printf("%s is in incorrect format. Exiting...", target);
                      exit(EXIT_FAILURE);
                   }
                }
-               AttPriCmdProcessed = TRUE;
-               break;
+               else {
+                  printf("%s Vector index %ld has improper format for SC or "
+                         "BODY targeting. "
+                         "Exiting...\n",
+                         (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
+                  exit(EXIT_FAILURE);
+               }
+               *attcmdProc[k] = TRUE;
             }
-         }
-         if (AttPriCmdProcessed == FALSE) {
-            printf(
-                "%s has improper format for SC or BODY targeting. Exiting...\n",
-                PriTargetCmdName);
-            exit(EXIT_FAILURE);
-         }
-      }
-      else if (!strcmp(PriTrgType, "VEC")) {
-         PV->CmdMode = CMD_DIRECTION;
-         PV->TrgType = TARGET_VEC;
-         strcat(PriTargetCmd, " %lf %lf %lf %s %lf %lf %lf %s %s");
-         rewind(InpDsmFilePtr);
-         while (fgets(
-             DsmCmdLine, 255,
-             InpDsmFilePtr)) { // Start Looping through file until reach EOF
-            if (sscanf(DsmCmdLine, PriTargetCmd, Junk, &PV->cmd_axis[0],
-                       &PV->cmd_axis[1], &PV->cmd_axis[2], &Cmd->PriAttRefFrame,
-                       &PV->cmd_vec[0], &PV->cmd_vec[1], &PV->cmd_vec[2],
-                       &ControllerCmd, &ActuatorCmd) == 10) {
-               AttPriCmdProcessed = TRUE;
-               break;
+            else if (!strcmp(tgtType, "VEC")) {
+               vecs[k]->CmdMode = CMD_DIRECTION;
+               vecs[k]->TrgType = TARGET_VEC;
+               *attcmdProc[k] =
+                   fy_node_scanf(tgtNode, "/Frame %c", cmdRefFrm[k]);
+               *attcmdProc[k] &= assignYAMLToDoubleArray(
+                                     3, fy_node_by_path_def(tgtNode, "/Axis"),
+                                     vecs[k]->cmd_vec) == 3;
+               if (*attcmdProc[k] == FALSE) {
+                  printf("%s Vector index %ld has improper format for VEC "
+                         "targeting. "
+                         "Exiting...\n",
+                         (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
+                  exit(EXIT_FAILURE);
+               }
             }
-         }
-         if (AttPriCmdProcessed == FALSE) {
-            printf("%s has improper format for VEC targeting. Exiting...\n",
-                   PriTargetCmdName);
-            exit(EXIT_FAILURE);
+            else {
+               printf(
+                   "For %s Vector index %ld, %s is an invalid targeting type. "
+                   "Exiting...\n",
+                   (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k],
+                   tgtType);
+               exit(EXIT_FAILURE);
+            }
          }
       }
       else {
-         printf("For %s, %s is an invalid targeting type. Exiting...\n",
-                PriTargetCmdName, PriTrgType);
-         exit(EXIT_FAILURE);
-      }
-      // Check Secondary Target Type
-      if (!strcmp(SecTrgType, "BODY") || !strcmp(SecTrgType, "SC")) {
-         SV->CmdMode = CMD_TARGET;
-         strcat(SecTargetCmd, " %lf %lf %lf %s");
-         rewind(InpDsmFilePtr);
-         while (fgets(
-             DsmCmdLine, 255,
-             InpDsmFilePtr)) { // Start Looping through file until reach EOF
-            if (fscanf(InpDsmFilePtr, SecTargetCmd, Junk, &SV->cmd_axis[0],
-                       &SV->cmd_axis[1], &SV->cmd_axis[2], &Target) == 5) {
-               if (!strcmp(SecTrgType, "BODY")) {
-                  SV->TrgType = TARGET_WORLD;
-                  strcpy(GroundStationCmd, "GroundStation_[%ld]");
-                  if (sscanf(Target, GroundStationCmd, &GroundStationNum) ==
-                      1) {
-                     SV->TrgWorld = GroundStation[GroundStationNum].World;
-                     for (int i = 0; i < 3; i++)
-                        SV->W[i] = GroundStation[GroundStationNum].PosW[i];
-                  }
-                  else {
-                     SV->TrgWorld = DecodeString(Target);
-                     for (int i = 0; i < 3; i++)
-                        SV->W[i] = 0.0;
-                  }
-               }
-               else if (!strcmp(SecTrgType, "SC")) {
-                  if (sscanf(Target, "SC[%ld].B[%ld]", &Isc_trgt,
-                             &target_num) == 2) { // Decode Current SC ID Number
-                     if (Isc_trgt >= Nsc) {
-                        printf("This mission only has %ld spacecraft, but "
-                               "spacecraft %ld was attempted to be set as the "
-                               "secondary target vector. Exiting...\n",
-                               Nsc, Isc_trgt);
-                        exit(EXIT_FAILURE);
-                     }
-                     if (target_num >= SC[Isc_trgt].Nb) {
-                        printf("Spacecraft %ld only has %ld bodies, but the "
-                               "secondary target was attempted to be set as "
-                               "body %ld. Exiting...\n",
-                               Isc_trgt, SC[Isc_trgt].Nb, target_num);
-                        exit(EXIT_FAILURE);
-                     }
-                     SV->TrgType = TARGET_SC;
-                     SV->TrgSC   = Isc_trgt;
-                     SV->TrgBody = target_num;
-                  }
-                  else {
-                     printf("%s is in incorrect format. Exiting...", Target);
-                     exit(EXIT_FAILURE);
-                  }
-               }
-               AttSecCmdProcessed = TRUE;
-               break;
-            }
-         }
-         if (AttSecCmdProcessed == FALSE) {
-            printf(
-                "%s has improper format for SC or BODY targeting. Exiting...\n",
-                SecTargetCmdName);
-            exit(EXIT_FAILURE);
-         }
-      }
-      else if (!strcmp(SecTrgType, "VEC")) {
-         SV->CmdMode = CMD_DIRECTION;
-         SV->TrgType = TARGET_VEC;
-         strcat(SecTargetCmd, " %lf %lf %lf %s %lf %lf %lf");
-         rewind(InpDsmFilePtr);
-         while (fgets(
-             DsmCmdLine, 255,
-             InpDsmFilePtr)) { // Start Looping through file until reach EOF
-            if (fscanf(InpDsmFilePtr, SecTargetCmd, Junk, &SV->cmd_axis[0],
-                       &SV->cmd_axis[1], &SV->cmd_axis[2], &Cmd->SecAttRefFrame,
-                       &SV->cmd_vec[0], &SV->cmd_vec[1],
-                       &SV->cmd_vec[2]) == 8) {
-               AttSecCmdProcessed = TRUE;
-               break;
-            }
-         }
-         if (AttSecCmdProcessed == FALSE) {
-            printf("%s has improper format for VEC targeting. Exiting...\n",
-                   SecTargetCmdName);
-            exit(EXIT_FAILURE);
-         }
-      }
-      else {
-         printf("For %s, %s is an invalid targeting type. Exiting...\n",
-                SecTargetCmdName, SecTrgType);
+         printf("Could not find either Primary Vector command index %ld or "
+                "Secondary Vector "
+                "command index %ld. "
+                "Exiting...\n",
+                *cmdModes[0], *cmdModes[1]);
          exit(EXIT_FAILURE);
       }
       if (AttPriCmdProcessed == TRUE && AttSecCmdProcessed == TRUE) {
          AttitudeCmdProcessed = TRUE;
       }
    }
-   else if (!strcmp(AttCmdMethod, "UnitVectorCmd")) {
-      Cmd->Method = PARM_UNITVECTOR;
-      PV          = &Cmd->PriVec;
-      // Reconstruct Primary Axis Cmd
-      sprintf(PriTargetCmd, "AttitudeCmd_PV[%d]", AttCmdMode);
-      strcpy(PriTargetCmdName, PriTargetCmd);
-      strcat(PriTargetCmd, " %s");
+   else if (!strcmp(subType, "Quaternion")) {
+      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
+      cmdInd      = &AttCmdMode;
+      Cmd->Method = PARM_QUATERNION;
 
-      // Find Primary & Secondary Axis Cmd Target Type
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         if (sscanf(DsmCmdLine, PriTargetCmd, &PriTrgType) == 1) {
-            PriTrgTypeFlag = 1;
+      struct fy_node *searchNode =
+          fy_node_by_path_def(dsmRoot, "/Quaternion Configurations");
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Quaternion/Index %ld", &ind);
+         if (ind == *cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Quaternion");
             break;
          }
       }
+      searchNode = fy_node_by_path_def(iterNode, "/Quaternion");
+      AttitudeCmdProcessed =
+          assignYAMLToDoubleArray(4, searchNode, Cmd->q) == 4;
+      AttitudeCmdProcessed &=
+          fy_node_scanf(iterNode, "/Frame %19s", Cmd->AttRefFrame) == 1;
+      ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
+      actNode               = fy_node_by_path_def(iterNode, "/Actuator");
+      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
-      if (PriTrgTypeFlag == 0) {
-         printf("For %s, could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName, PriTargetCmdName);
-         exit(EXIT_FAILURE);
-      }
-
-      // Check Primary Target Type
-      if (!strcmp(PriTrgType, "BODY") || !strcmp(PriTrgType, "SC")) {
-         PV->CmdMode = CMD_TARGET;
-         strcat(PriTargetCmd, " %lf %lf %lf %s %s %s");
-         rewind(InpDsmFilePtr);
-         while (fgets(
-             DsmCmdLine, 255,
-             InpDsmFilePtr)) { // Start Looping through file until reach EOF
-            if (sscanf(DsmCmdLine, PriTargetCmd, Junk, &PV->cmd_axis[0],
-                       &PV->cmd_axis[1], &PV->cmd_axis[2], &Target,
-                       &ControllerCmd, &ActuatorCmd) == 7) {
-               if (!strcmp(PriTrgType, "BODY")) {
-                  PV->TrgType = TARGET_WORLD;
-                  strcpy(GroundStationCmd, "GroundStation_[%ld]");
-                  if (sscanf(Target, GroundStationCmd, &GroundStationNum) ==
-                      1) {
-                     PV->TrgWorld = GroundStation[GroundStationNum].World;
-                     for (int i = 0; i < 3; i++)
-                        PV->W[i] = GroundStation[GroundStationNum].PosW[i];
-                  }
-                  else {
-                     PV->TrgWorld = DecodeString(Target);
-                     for (int i = 0; i < 3; i++)
-                        PV->W[i] = 0.0;
-                  }
-               }
-               else if (!strcmp(PriTrgType, "SC")) {
-                  if (sscanf(Target, "SC[%ld].B[%ld]", &Isc_trgt,
-                             &target_num) == 2) { // Decode Current SC ID Number
-                     if (Isc_trgt >= Nsc) {
-                        printf("This mission only has %ld spacecraft, but "
-                               "spacecraft %ld was attempted to be set as the "
-                               "primary target vector. Exiting...\n",
-                               Nsc, Isc_trgt);
-                        exit(EXIT_FAILURE);
-                     }
-                     if (target_num >= SC[Isc_trgt].Nb) {
-                        printf("Spacecraft %ld only has %ld bodies, but the "
-                               "primary target was attempted to be set as body "
-                               "%ld. Exiting...\n",
-                               Isc_trgt, SC[Isc_trgt].Nb, target_num);
-                        exit(EXIT_FAILURE);
-                     }
-                     PV->TrgType = TARGET_SC;
-                     PV->TrgSC   = Isc_trgt;
-                     PV->TrgBody = target_num;
-                  }
-                  else {
-                     printf("%s is in incorrect format. Exiting...", Target);
-                     exit(EXIT_FAILURE);
-                  }
-               }
-               AttitudeCmdProcessed = TRUE;
-               break;
-            }
-         }
-         if (AttitudeCmdProcessed == FALSE) {
-            printf(
-                "%s has improper format for SC or BODY targeting. Exiting...\n",
-                PriTargetCmdName);
-            exit(EXIT_FAILURE);
-         }
-      }
-      else if (!strcmp(PriTrgType, "VEC")) {
-         PV->CmdMode = CMD_DIRECTION;
-         PV->TrgType = TARGET_VEC;
-         strcat(PriTargetCmd, " %lf %lf %lf %s %lf %lf %lf %s %s");
-         rewind(InpDsmFilePtr);
-         while (fgets(
-             DsmCmdLine, 255,
-             InpDsmFilePtr)) { // Start Looping through file until reach EOF
-            if (sscanf(DsmCmdLine, PriTargetCmd, Junk, &PV->cmd_axis[0],
-                       &PV->cmd_axis[1], &PV->cmd_axis[2], &Cmd->PriAttRefFrame,
-                       &PV->cmd_vec[0], &PV->cmd_vec[1], &PV->cmd_vec[2],
-                       &ControllerCmd, &ActuatorCmd) == 10) {
-               AttitudeCmdProcessed = TRUE;
-               break;
-            }
-         }
-         if (AttitudeCmdProcessed == FALSE) {
-            printf("%s has improper format for VEC targeting. Exiting...\n",
-                   PriTargetCmdName);
-            exit(EXIT_FAILURE);
-         }
-      }
-      else {
-         printf("For %s, %s is an invalid targeting type. Exiting...\n",
-                PriTargetCmdName, PriTrgType);
-         exit(EXIT_FAILURE);
-      }
+      Cmd->AttitudeCtrlActive = TRUE;
    }
-   else if (!strcmp(AttCmdMethod, "QuaternionCmd")) {
-      strcat(AttitudeCmd, " %lf %lf %lf %lf %s %s %s");
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         if (sscanf(DsmCmdLine, AttitudeCmd, &Cmd->q[0], &Cmd->q[1], &Cmd->q[2],
-                    &Cmd->q[3], &Cmd->AttRefFrame, &ControllerCmd,
-                    &ActuatorCmd) == 7) {
-            Cmd->Method          = PARM_QUATERNION;
-            AttitudeCmdProcessed = TRUE;
+   else if (!strcmp(subType, "Mirror")) {
+      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
+      cmdInd      = &AttCmdMode;
+      Cmd->Method = PARM_MIRROR;
+
+      struct fy_node *searchNode =
+          fy_node_by_path_def(dsmRoot, "/Mirror Configurations");
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Mirror/Index %ld", &ind);
+         if (ind == *cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Mirror");
             break;
          }
       }
-      if (AttitudeCmdProcessed == FALSE) {
-         printf("Could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName);
-         exit(EXIT_FAILURE);
-      }
-   }
-   else if (!strcmp(AttCmdMethod, "MirrorCmd")) {
-      strcat(AttitudeCmd, " %s %s %s");
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         if (sscanf(DsmCmdLine, AttitudeCmd, &Cmd->AttRefScID, &ControllerCmd,
-                    &ActuatorCmd) == 3) {
-            Cmd->Method          = PARM_MIRROR;
-            AttitudeCmdProcessed = TRUE;
-            break;
-         }
-      }
-      if (AttitudeCmdProcessed == FALSE) {
-         printf("Could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName);
-         exit(EXIT_FAILURE);
-      }
-   }
-   else if (!strcmp(AttCmdMethod, "DetumbleCmd")) {
-      strcat(AttitudeCmd, " %s %s");
-      rewind(InpDsmFilePtr);
-      while (
-          fgets(DsmCmdLine, 255,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-         if (sscanf(DsmCmdLine, AttitudeCmd, &ControllerCmd, &ActuatorCmd) ==
-             2) {
-            Cmd->Method          = PARM_DETUMBLE;
-            AttitudeCmdProcessed = TRUE;
-            break;
-         }
-      }
-      if (AttitudeCmdProcessed == FALSE) {
-         printf("Could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName);
-         exit(EXIT_FAILURE);
-      }
-   }
-   else if (!strcmp(AttCmdMethod, "WhlHManageCmd")) {
-      strcat(AttitudeCmd, " %s %lf %lf %s %s");
-      rewind(InpDsmFilePtr);
-      while (fgets(DsmCmdLine, 255, InpDsmFilePtr)) {
-         if (sscanf(DsmCmdLine, AttitudeCmd, &OnOff, &Cmd->H_DumpLims[0],
-                    &Cmd->H_DumpLims[1], &ControllerCmd, &ActuatorCmd) == 5) {
-            state = DMP_STATE;
-            if (!strcmp(OnOff, "ON"))
-               Cmd->H_DumpActive = TRUE;
-            else
-               Cmd->H_DumpActive = FALSE;
-            AttitudeCmdProcessed = TRUE;
-            if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
-               printf("Maximum momentum dump limit must be more than the "
-                      "minimum for %s. Exiting...\n",
-                      AttitudeCmdName);
-               exit(EXIT_FAILURE);
-            }
-         }
-      }
-      if (AttitudeCmdProcessed == FALSE) {
-         printf("Could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName);
-         exit(EXIT_FAILURE);
-      }
-   }
+      AttitudeCmdProcessed =
+          fy_node_scanf(iterNode, "/Target %5s", Cmd->AttRefScID) == 1;
+      ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
+      actNode               = fy_node_by_path_def(iterNode, "/Actuator");
+      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
-   // Extract Controllers, Gains, Limits, & Actuators Corresponding to the Ctrl
-   // mode commanded
+      Cmd->AttitudeCtrlActive = TRUE;
+   }
+   else if (!strcmp(subType, "Detumble")) {
+      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
+      cmdInd      = &AttCmdMode;
+      Cmd->Method = PARM_DETUMBLE;
+
+      struct fy_node *searchNode =
+          fy_node_by_path_def(dsmRoot, "/Detumble Configurations");
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Detumble/Index %ld", &ind);
+         if (ind == *cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Detumble");
+            break;
+         }
+      }
+      ctrlNode             = fy_node_by_path_def(iterNode, "/Controller");
+      actNode              = fy_node_by_path_def(iterNode, "/Actuator");
+      AttitudeCmdProcessed = ctrlNode != NULL && actNode != NULL;
+
+      Cmd->AttitudeCtrlActive = TRUE;
+   }
+   else if (!strcmp(subType, "Whl H Manage")) {
+      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
+      cmdInd = &AttCmdMode;
+
+      struct fy_node *searchNode =
+          fy_node_by_path_def(dsmRoot, "/Whl H Manage Configurations");
+      WHILE_FY_ITER(searchNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Whl H Manage/Index %ld", &ind);
+         if (ind == *cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Whl H Manage");
+            break;
+         }
+      }
+      AttitudeCmdProcessed =
+          fy_node_scanf(iterNode,
+                        "/Minimum H_norm %lf "
+                        "/Maximum H_norm %lf",
+                        &Cmd->H_DumpLims[0], &Cmd->H_DumpLims[1]) == 2;
+
+      ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
+      actNode               = fy_node_by_path_def(iterNode, "/Actuator");
+      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
+
+      struct fy_node *dumpNode  = fy_node_by_path_def(iterNode, "/Dumping");
+      AttitudeCmdProcessed     &= dumpNode != NULL;
+      Cmd->H_DumpActive         = fy_node_compare_string(dumpNode, "true", -1);
+      state                     = DMP_STATE;
+      if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
+         printf("Maximum momentum dump limit must be more than the minimum for "
+                "Whl H Manage "
+                "Command index %ld. "
+                "Exiting...\n",
+                *cmdInd);
+         exit(EXIT_FAILURE);
+      }
+   }
+   else {
+      AttitudeCmdProcessed = FALSE;
+   }
    if (AttitudeCmdProcessed == TRUE && Cmd->AttitudeCtrlActive == TRUE) {
-      if (GetController(S, ControllerCmd, state, InpDsmFilePtr) == FALSE) {
-         printf("For %s, could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName, ControllerCmd);
+      if (GetController(S, ctrlNode, state) == FALSE) {
+         printf("For %s index %ld, could not find Controller alias %s or "
+                "invalid format. "
+                "Exiting...\n",
+                subType, *cmdInd,
+                fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
          exit(EXIT_FAILURE);
       }
 
-      if (GetActuators(S, ActuatorCmd, state, InpDsmFilePtr) == FALSE) {
-         printf("For %s, could not find %s or invalid format. Exiting...\n",
-                AttitudeCmdName, ActuatorCmd);
+      if (GetActuators(S, actNode, state) == FALSE) {
+         printf("For %s index %ld, could not find Actuator alias %s or invalid "
+                "format. "
+                "Exiting...\n",
+                subType, *cmdInd,
+                fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
-
    return (AttitudeCmdProcessed);
 }
 //-------------------------------- ACTUATOR CMD --------------------------------
-long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255],
-                    FILE *InpDsmFilePtr)
+long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
+                    struct fy_node *dsmRoot)
 {
-   char DsmCmdLine[2048] = "";
-   char SubCommands[2048];
-   char *each_command[20];
-   int DsmCmdLinelength = 2048;
-   char *token;
-   int NumCommands;
-   int i;
+   struct fy_node *iterNode = NULL, *actSeqNode = NULL;
    long ActuatorCmdProcessed = FALSE;
+   long i = 0, actCmdInd = 0;
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
    struct AcType *AC;
 
+   AC  = &S->AC;
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
-   AC  = &S->AC;
 
-   rewind(InpDsmFilePtr);
-   strcat(
-       ActuatorCmd,
-       " NUM_CMD[%d] %[\040-\377]"); // First, find the number of subcommands in
-                                     // the appropriate line and following cmnds
-
-   while (fgets(DsmCmdLine, DsmCmdLinelength,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-      // Extract number of commands
-      if (sscanf(DsmCmdLine, ActuatorCmd, &NumCommands, &SubCommands) == 2) {
-         Cmd->ActNumCmds = NumCommands;
-         i               = 0;
-         token           = strtok(SubCommands, " ");
-         while (token != NULL) {
-            each_command[i++] = token;
-            token             = strtok(NULL, " ");
-         }
-         if (i < NumCommands) {
-            printf("Declared NUM_CMD[%d], but cound only find [%d] commands. "
-                   "Exiting...\n",
-                   NumCommands, i);
-            exit(EXIT_FAILURE);
-         }
-         for (i = 0; i < NumCommands; i++) {
-            if (sscanf(each_command[i], "WHL_[%d]_[%lf]", &Cmd->ActInds[i],
-                       &Cmd->ActDuties[i]) == 2)
-               Cmd->ActTypes[i] = WHL_TYPE;
-            else if (sscanf(each_command[i], "THR_[%d]_[%lf]", &Cmd->ActInds[i],
-                            &Cmd->ActDuties[i]) == 2)
-               Cmd->ActTypes[i] = THR_TYPE;
-            else if (sscanf(each_command[i], "MTB_[%d]_[%lf]", &Cmd->ActInds[i],
-                            &Cmd->ActDuties[i]) == 2)
-               Cmd->ActTypes[i] = MTB_TYPE;
-            else {
-               printf("The command %s is not a valid command. Exiting...\n",
-                      each_command[i]);
-               exit(EXIT_FAILURE);
-            }
-            if (Cmd->ActTypes[i] == WHL_TYPE && Cmd->ActInds[i] > AC->Nwhl) {
-               printf("SC[%ld] only has %ld wheels, but an actuator command "
-                      "was sent to wheel %d. Exiting...\n",
-                      AC->ID, AC->Nwhl, Cmd->ActInds[i]);
-               exit(EXIT_FAILURE);
-            }
-            if (Cmd->ActTypes[i] == THR_TYPE && Cmd->ActInds[i] > AC->Nthr) {
-               printf("SC[%ld] only has %ld thrusters, but an actuator command "
-                      "was sent to thruster %d. Exiting...\n",
-                      AC->ID, AC->Nthr, Cmd->ActInds[i]);
-               exit(EXIT_FAILURE);
-            }
-            if (Cmd->ActTypes[i] == MTB_TYPE && Cmd->ActInds[i] > AC->Nmtb) {
-               printf("SC[%ld] only has %ld MTBs, but an actuator command was "
-                      "sent to MTB %d. Exiting...\n",
-                      AC->ID, AC->Nmtb, Cmd->ActInds[i]);
-               exit(EXIT_FAILURE);
-            }
-         }
-         ActuatorCmdProcessed = TRUE;
+   fy_node_scanf(actCmdNode, "/Index %ld", &actCmdInd);
+   struct fy_node *actConfigNode =
+       fy_node_by_path_def(dsmRoot, "/Actuator Cmd Configurations");
+   WHILE_FY_ITER(actConfigNode, iterNode)
+   {
+      long ind = 0;
+      fy_node_scanf(iterNode, "/Actuator Cmd/Index %ld", &ind);
+      if (ind == actCmdInd) {
+         actSeqNode = fy_node_by_path_def(iterNode, "/Actuator Cmd/Actuators");
          break;
       }
-      else if (sscanf(DsmCmdLine, ActuatorCmd, &NumCommands) == 1) {
-         if (NumCommands == 0) {
-            Cmd->ActNumCmds      = NumCommands;
-            ActuatorCmdProcessed = TRUE;
-            break;
-         }
+   }
+   Cmd->ActNumCmds = fy_node_sequence_item_count(actSeqNode);
+   iterNode        = NULL;
+   WHILE_FY_ITER(actSeqNode, iterNode)
+   {
+      const char *searchStr =
+          "/Type %" STR(FIELDWIDTH) "s /Index %ld /Duty Cycle %lf";
+      char type[FIELDWIDTH + 1] = {};
+      if (fy_node_scanf(iterNode, searchStr, type, &Cmd->ActInds[i],
+                        &Cmd->ActDuties[i]) == 3) {
+         if (!strcmp(type, "WHL"))
+            Cmd->ActTypes[i] = WHL_TYPE;
+         else if (!strcmp(type, "THR"))
+            Cmd->ActTypes[i] = THR_TYPE;
+         else if (!strcmp(type, "MTB"))
+            Cmd->ActTypes[i] = MTB_TYPE;
          else {
-            printf("%d sub-commands were specified, but no subcommands were "
-                   "found. Exiting...\n",
-                   NumCommands);
+            printf("Actuator Command index %ld has improper actuator type %s. "
+                   "Exiting...",
+                   actCmdInd, type);
             exit(EXIT_FAILURE);
          }
       }
+      else {
+         printf(
+             "Actuator Command index %ld is impropertly formatted. Exiting...",
+             actCmdInd);
+         exit(EXIT_FAILURE);
+      }
+      if (Cmd->ActTypes[i] == WHL_TYPE && Cmd->ActInds[i] > AC->Nwhl) {
+         printf("SC[%ld] only has %ld wheels, but an actuator command was sent "
+                "to wheel %d. "
+                "Exiting...\n",
+                AC->ID, AC->Nwhl, Cmd->ActInds[i]);
+         exit(EXIT_FAILURE);
+      }
+      if (Cmd->ActTypes[i] == THR_TYPE && Cmd->ActInds[i] > AC->Nthr) {
+         printf("SC[%ld] only has %ld thrusters, but an actuator command was "
+                "sent to thruster %d. "
+                "Exiting...\n",
+                AC->ID, AC->Nthr, Cmd->ActInds[i]);
+         exit(EXIT_FAILURE);
+      }
+      if (Cmd->ActTypes[i] == MTB_TYPE && Cmd->ActInds[i] > AC->Nmtb) {
+         printf("SC[%ld] only has %ld MTBs, but an actuator command was sent "
+                "to MTB %d. Exiting...\n",
+                AC->ID, AC->Nmtb, Cmd->ActInds[i]);
+         exit(EXIT_FAILURE);
+      }
+      i++;
    }
+   if (i == Cmd->ActNumCmds)
+      ActuatorCmdProcessed = TRUE;
 
    return (ActuatorCmdProcessed);
 }
 
+// the compare function for double values
+static int compare(const void *a, const void *b)
+{
+   if (*(double *)a > *(double *)b)
+      return 1;
+   else if (*(double *)a < *(double *)b)
+      return -1;
+   else
+      return 0;
+}
 //--------------------------------- STATE NAMES --------------------------------
 enum navState GetStateValue(const char *string)
 {
@@ -1484,18 +1227,13 @@ void ConfigureMeas(struct DSMMeasType *meas, enum sensorType sensor)
       meas->N[i][i] = 1.0;
 }
 
-long ConfigureNavigationSensors(struct SCType *const S, char SensorSetName[255],
-                                FILE *InpDsmFilePtr)
+long ConfigureNavigationSensors(struct SCType *const S,
+                                struct fy_node *senSetNode)
 {
-   long DataProcessed = FALSE, numSensors[FIN_SENSOR + 1] = {0.0};
-   enum sensorType sensor;
-   char sensorSet[255], sensorData[255], sensorType[255], junk[255];
-   char DsmCmdLine[1024] = "";
-   char SensorSetDef[1024];
-   char *token;
-   int setNum, sensorItemNum, sensorNum, junkInt;
+   struct fy_node *iterNode = NULL;
+   long DataProcessed = FALSE, numSensors[FIN_SENSOR + 1] = {0};
    long i, j;
-   double sensorUnderWeight, sensorProbGate;
+   enum sensorType sensor;
 
    struct DSMType *DSM;
    struct DSMNavType *Nav;
@@ -1552,243 +1290,137 @@ long ConfigureNavigationSensors(struct SCType *const S, char SensorSetName[255],
       }
    }
 
-   strcpy(sensorSet, SensorSetName);
-   if (sscanf(sensorSet, "SensorSet_[%d]", &setNum) != 1) {
-      return (DataProcessed);
-   }
-
-   strcat(sensorSet, " %[\040-\377]");
-   rewind(InpDsmFilePtr);
-   while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
-      if (sscanf(DsmCmdLine, sensorSet, &SensorSetDef) == 1) {
-         DataProcessed = TRUE;
-         token         = strtok(SensorSetDef, " ");
-         while (token != NULL) {
-            struct DSMMeasType *meas = NULL;
-            if (sscanf(token, "Sensor_[%d]", &sensorItemNum)) {
-               strcpy(sensorData, token);
-               strcat(sensorData, " %s %d");
-               rewind(InpDsmFilePtr);
-               while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
-                  if (sscanf(DsmCmdLine, sensorData, &sensorType, &sensorNum) ==
-                      2) {
-                     sensor = GetSensorValue(sensorType);
-                     meas   = &Nav->measTypes[sensor][sensorNum];
-                     ConfigureMeas(meas, sensor);
-                     switch (sensor) {
-                        case STARTRACK_SENSOR: {
-                           double sensorNoise[3] = {0.0};
-                           if (sensorNum >= S->Nst) {
-                              printf("Sensor Set %s has requested more "
-                                     "startrackers than "
-                                     "spacecraft SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, " %lf %lf %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise[0], &sensorNoise[1],
-                                      &sensorNoise[2], &sensorUnderWeight,
-                                      &sensorProbGate) != 7) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           for (j = 0; j < meas->errDim; j++) {
-                              meas->N[j][j] = 1.0;
-                              meas->R[j]    = sensorNoise[j] / 3600.0 * D2R;
-                           }
-                        } break;
-                        case GPS_SENSOR: {
-                           double sensorNoise[2] = {0.0};
-                           if (sensorNum >= S->Ngps) {
-                              printf("Sensor Set %s has requested more GPS "
-                                     "sensors than spacecraft "
-                                     "SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, "  %lf %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise[0], &sensorNoise[1],
-                                      &sensorUnderWeight,
-                                      &sensorProbGate) != 6) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           for (j = 0; j < meas->errDim; j++) {
-                              meas->N[j][j] = 1.0;
-                              if (j < 3)
-                                 meas->R[j] = sensorNoise[0];
-                              else
-                                 meas->R[j] = sensorNoise[1];
-                           }
-                        } break;
-                        case FSS_SENSOR: {
-                           double sensorNoise;
-                           if (sensorNum >= S->Nfss) {
-                              printf("Sensor Set %s has requested more fine "
-                                     "Sun sensors than "
-                                     "spacecraft SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, "  %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise, &sensorUnderWeight,
-                                      &sensorProbGate) != 5) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           meas->R = calloc(meas->errDim, sizeof(double));
-                           meas->N = CreateMatrix(meas->errDim, meas->errDim);
-                           for (j = 0; j < meas->errDim; j++) {
-                              meas->N[j][j] = 1.0;
-                              meas->R[j]    = sensorNoise * D2R;
-                           }
-                        } break;
-                        case CSS_SENSOR: {
-                           double sensorNoise;
-                           if (sensorNum >= S->Ncss) {
-                              printf("Sensor Set %s has requested more coarse "
-                                     "Sun sensors than "
-                                     "spacecraft SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, "  %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise, &sensorUnderWeight,
-                                      &sensorProbGate) != 5) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           meas->N[0][0] = 1.0;
-                           meas->R[0]    = sensorNoise;
-                        } break;
-                        case GYRO_SENSOR: {
-                           double sensorNoise;
-                           if (sensorNum >= S->Ngyro) {
-                              printf("Sensor Set %s has requested more "
-                                     "gyroscope sensors than "
-                                     "spacecraft SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, "  %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise, &sensorUnderWeight,
-                                      &sensorProbGate) != 5) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           meas->N[0][0] = 1.0;
-                           meas->R[0]    = sensorNoise;
-                        } break;
-                        case MAG_SENSOR: {
-                           double sensorNoise;
-                           if (sensorNum >= S->Nmag) {
-                              printf("Sensor Set %s has requested more "
-                                     "magnetometers than "
-                                     "spacecraft SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, "  %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise, &sensorUnderWeight,
-                                      &sensorProbGate) != 5) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           meas->N[0][0] = 1.0;
-                           meas->R[0]    = sensorNoise;
-                        } break;
-                        case ACCEL_SENSOR: {
-                           double sensorNoise;
-                           if (sensorNum >= S->Nacc) {
-                              printf("Sensor Set %s has requested more "
-                                     "accelerometers than "
-                                     "spacecraft SC_[%ld] has. Exiting...\n",
-                                     SensorSetName, S->ID);
-                              exit(EXIT_FAILURE);
-                           }
-                           strcat(sensorData, "  %lf %lf %lf");
-                           if (sscanf(DsmCmdLine, sensorData, &junk, &junkInt,
-                                      &sensorNoise, &sensorUnderWeight,
-                                      &sensorProbGate) != 5) {
-                              printf("%s is of invalid format for sensor type "
-                                     "%s. Exiting...\n",
-                                     token, sensorType);
-                              exit(EXIT_FAILURE);
-                           }
-                           meas->N[0][0] = 1.0;
-                           meas->R[0]    = sensorNoise;
-                        } break;
-                        default:
-                           printf("%s in %s is of invalid sensor type %s. "
-                                  "Exiting..\n",
-                                  token, SensorSetName, sensorType);
-                           exit(EXIT_FAILURE);
-                           break;
-                     }
-
-                     meas->underWeighting = sensorUnderWeight;
-                     meas->probGate       = sensorProbGate;
-                     meas->nextMeas       = NULL;
-                     meas->data           = NULL;
-                     meas->time           = 0.0;
-                     meas->sensorNum      = sensorNum;
-                     meas->type           = sensor;
-                     numSensors[sensor]++;
-                     Nav->residuals[sensor][sensorNum] =
-                         calloc(meas->errDim, sizeof(double));
-                     break;
-                  }
-               }
-            }
-            token = strtok(NULL, " ");
-         }
-
-         for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++)
-            Nav->sensorActive[sensor] = (numSensors[sensor] > 0 ? TRUE : FALSE);
-         break;
+   char sensorSetName[1024] = {0};
+   fy_node_scanf(senSetNode, "/Description %1023s", sensorSetName);
+   WHILE_FY_ITER(fy_node_by_path_def(senSetNode, "/Sensors"), iterNode)
+   {
+      DataProcessed = TRUE;
+      char sensorType[FIELDWIDTH + 1];
+      long sensorNum;
+      fy_node_scanf(iterNode,
+                    "/Type %" STR(FIELDWIDTH) "s "
+                                              "/Sensor Index %ld",
+                    sensorType, &sensorNum);
+      sensor                   = GetSensorValue(sensorType);
+      struct DSMMeasType *meas = NULL;
+      char sensorName[1024]    = {0};
+      fy_node_scanf(iterNode, "/Description %1023s", sensorName);
+      long maxSensors = 0;
+      switch (sensor) {
+         case GPS_SENSOR:
+            maxSensors = S->Ngps;
+            strcpy(sensorType, "GPS");
+            break;
+         case STARTRACK_SENSOR:
+            maxSensors = S->Nst;
+            strcpy(sensorType, "Startracker");
+            break;
+         case FSS_SENSOR:
+            maxSensors = S->Nfss;
+            strcpy(sensorType, "Fine Sun Sensor");
+            break;
+         case CSS_SENSOR:
+            maxSensors = S->Ncss;
+            strcpy(sensorType, "Coarse Sun Sensor");
+            break;
+         case GYRO_SENSOR:
+            maxSensors = S->Ngyro;
+            strcpy(sensorType, "Gyro");
+            break;
+         case MAG_SENSOR:
+            maxSensors = S->Nmag;
+            strcpy(sensorType, "Magnetometer");
+            break;
+         case ACCEL_SENSOR:
+            maxSensors = S->Nacc;
+            strcpy(sensorType, "Accelerometer");
+            break;
+         default:
+            break;
       }
+      if (sensorNum >= maxSensors) {
+         printf("Sensor Set %s has requested more %ss than "
+                "spacecraft SC_[%ld] has. Exiting...\n",
+                sensorSetName, sensorType, S->ID);
+         exit(EXIT_FAILURE);
+      }
+      meas = &Nav->measTypes[sensor][sensorNum];
+      ConfigureMeas(meas, sensor);
+      long isGood;
+      switch (sensor) {
+         case STARTRACK_SENSOR: {
+            isGood = assignYAMLToDoubleArray(
+                         3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
+                         meas->R) == 3;
+            for (j = 0; j < meas->errDim; j++)
+               meas->R[j] *= D2R / 3600.0;
+         } break;
+         case GPS_SENSOR: {
+            isGood = assignYAMLToDoubleArray(
+                         2, fy_node_by_path_def(iterNode, "/Sensor Noise"),
+                         meas->R) == 2;
+            for (j = meas->errDim - 1; j >= 0; j--) {
+               if (j < 3)
+                  meas->R[j] = meas->R[0];
+               else
+                  meas->R[j] = meas->R[1];
+            }
+         } break;
+         case FSS_SENSOR: {
+            isGood = assignYAMLToDoubleArray(
+                         1, fy_node_by_path_def(iterNode, "/Sensor Noise"),
+                         meas->R) == 1;
+            for (j = 0; j < meas->errDim; j++)
+               meas->R[j] = meas->R[0] * D2R;
+         } break;
+         case CSS_SENSOR:
+         case GYRO_SENSOR:
+         case MAG_SENSOR:
+         case ACCEL_SENSOR: {
+            isGood = assignYAMLToDoubleArray(
+                         1, fy_node_by_path_def(iterNode, "/Sensor Noise"),
+                         meas->R) == 1;
+         } break;
+         default:
+            printf("%s in %s is of invalid sensor type %s. Exiting..\n",
+                   sensorName, sensorSetName, sensorType);
+            exit(EXIT_FAILURE);
+            break;
+      }
+      isGood &= fy_node_scanf(iterNode,
+                              "/Underweighting Factor %lf "
+                              "/Residual Editing Gate %lf",
+                              &meas->underWeighting, &meas->probGate) == 2;
+      if (!isGood) {
+         printf("%s is of invalid format for sensor type %s. Exiting...\n",
+                sensorName, sensorType);
+         exit(EXIT_FAILURE);
+      }
+
+      meas->nextMeas  = NULL;
+      meas->data      = NULL;
+      meas->time      = 0.0;
+      meas->step      = 0;
+      meas->sensorNum = sensorNum;
+      meas->type      = sensor;
+      numSensors[sensor]++;
+      Nav->residuals[sensor][sensorNum] = calloc(meas->errDim, sizeof(double));
    }
+   for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++)
+      Nav->sensorActive[sensor] = (numSensors[sensor] > 0 ? TRUE : FALSE);
+
    return (DataProcessed);
 }
 
 //------------------------------- NAVIGATION DATA ------------------------------
-long GetNavigationData(struct DSMNavType *const Nav,
-                       char NavigationDataName[255], FILE *InpDsmFilePtr,
+long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                        enum matType type)
 {
    long DataProcessed = FALSE, (*inds)[] = NULL, (*sizes)[] = NULL;
    enum navState state;
-   char NavigationData[255];
    double *dataDest;
-   long dataDim;
-   char DsmCmdLine[1024] = "";
-   char data[1024];
-   char *token;
-   int datNum;
+   long dataDim = 0;
    long i, maxI, startInd;
-
-   strcpy(NavigationData, NavigationDataName);
-   if (sscanf(NavigationData, "Dat_[%d]", &datNum) != 1) {
-      return (DataProcessed);
-   }
 
    switch (type) {
       case Q_DAT:
@@ -1806,12 +1438,6 @@ long GetNavigationData(struct DSMNavType *const Nav,
          inds    = &Nav->stateInd;
          sizes   = &Nav->stateSize;
          break;
-      default:
-         printf("Invalid matType %d in GetNavigationData. How did that "
-                "happen? Exiting...\n",
-                type);
-         exit(EXIT_FAILURE);
-         break;
    }
    dataDest = calloc(dataDim, sizeof(double));
 
@@ -1827,54 +1453,37 @@ long GetNavigationData(struct DSMNavType *const Nav,
       }
    }
 
-   strcat(NavigationData, " %[\040-\377]");
-   rewind(InpDsmFilePtr);
-   while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
-      if (sscanf(DsmCmdLine, NavigationData, &data) == 1) {
-         token = strtok(data, " ");
-         while (token != NULL) {
-            state = GetStateValue(token);
-            if (state != NULL_STATE) {
-               if (state == ATTITUDE_STATE) {
-                  if (Nav->stateActive[ROTMAT_STATE] == TRUE)
-                     state = ROTMAT_STATE;
-                  else
-                     state = QUAT_STATE;
-               }
-               // Nesting the ifs so default initial values can be used for ICs
-               // and sqrQ
-               if (Nav->stateActive[state] == TRUE) {
-                  maxI     = (*sizes)[state];
-                  startInd = (*inds)[state];
-                  if (type == IC_DAT &&
-                      (state == ROTMAT_STATE || state == QUAT_STATE)) {
-                     double tmpV[3] = {0.0};
-                     long SEQ;
-                     for (i = 0; i < 3; i++) {
-                        token = strtok(NULL, " ");
-                        sscanf(token, "%lf", &tmpV[i]);
-                     }
-                     token = strtok(NULL, " ");
-                     sscanf(token, "%ld", &SEQ);
-                     A2C(SEQ, tmpV[0], tmpV[1], tmpV[2], Nav->CRB);
-                  }
-                  else {
-                     for (i = 0; i < maxI; i++) {
-                        token = strtok(NULL, " ");
-                        sscanf(token, "%lf", &dataDest[startInd + i]);
-                     }
-                  }
-               }
+   const char stateNames[4][20] = {"/Attitude", "/Position", "/Velocity",
+                                   "/Omega"};
+
+   for (int k = 0; k < 4; k++) {
+      struct fy_node *tmpNode = fy_node_by_path_def(datNode, stateNames[k]);
+      if (tmpNode != NULL) {
+         // You can do neat things with null terminated strings
+         state = GetStateValue(&stateNames[k][1]);
+         if (state != NULL_STATE) {
+            if (state == ATTITUDE_STATE) {
+               if (Nav->stateActive[ROTMAT_STATE] == TRUE)
+                  state = ROTMAT_STATE;
+               else
+                  state = QUAT_STATE;
             }
-            else {
-               printf("%s is an invalid state for navigation data %s. "
-                      "Exiting...\n",
-                      token, NavigationDataName);
-               exit(EXIT_FAILURE);
+            // Nesting the ifs so default initial values can be used for ICs and
+            // sqrQ
+            if (Nav->stateActive[state] == TRUE) {
+               maxI     = (*sizes)[state];
+               startInd = (*inds)[state];
+               if (type == IC_DAT &&
+                   (state == ROTMAT_STATE || state == QUAT_STATE)) {
+                  double ang[3] = {0.0};
+                  long SEQ;
+                  getYAMLEulerAngles(tmpNode, ang, &SEQ);
+                  A2C(SEQ, ang[0], ang[1], ang[2], Nav->CRB);
+               }
+               else
+                  assignYAMLToDoubleArray(maxI, tmpNode, &dataDest[startInd]);
             }
-            token = strtok(NULL, " ");
          }
-         break;
       }
    }
 
@@ -1888,9 +1497,10 @@ long GetNavigationData(struct DSMNavType *const Nav,
          for (i = 0; i < Nav->navDim; i++) {
             if (dataDest[i] < 0.0) {
                printf("The initial estimation error covariance matrix in "
-                      "navigation data %s is not positive definite. Ensure "
-                      "that all states are supplied. Exiting...\n",
-                      NavigationDataName);
+                      "navigation data %s is not "
+                      "positive definite. Ensure that all states are supplied. "
+                      "Exiting...\n",
+                      fy_node_get_parent_address(datNode));
                exit(EXIT_FAILURE);
             }
             Nav->S[i][i] = fabs(dataDest[i]);
@@ -1941,17 +1551,18 @@ long GetNavigationData(struct DSMNavType *const Nav,
 }
 
 //------------------------------- NAVIGATION CMD -------------------------------
-long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
-                      FILE *InpDsmFilePtr)
+long GetNavigationCmd(struct SCType *S, struct fy_node *navCmdNode,
+                      struct fy_node *dsmRoot)
 {
-   char DsmCmdLine[1024] = "";
-   char NavigationCmdName[255];
-   char navType[255], batchingType[255], refOri[255], refFrame;
-   char QDat[255], P0Dat[255], ICDat[255], sensorSet[255];
-   char states[1024];
+   char navType[FIELDWIDTH + 1] = {}, batchingType[FIELDWIDTH + 1] = {},
+                             refOri[FIELDWIDTH + 1] = {}, refFrame = 0;
+   struct fy_node *iterNode    = NULL;
    long NavigationCmdProcessed = FALSE;
    enum navState state;
    long i, j;
+   long cmdInd;
+   struct fy_node *qNode = NULL, *pNode = NULL, *x0Node = NULL,
+                  *senSetNode = NULL, *statesNode = NULL;
 
    struct AcType *AC;
    struct DSMType *DSM;
@@ -1961,26 +1572,48 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
    DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
-   strcpy(NavigationCmdName, NavigationCmd);
-   if (!strcmp(NavigationCmd, "NO_CHANGE")) {
-      NavigationCmdProcessed = TRUE;
-      return (NavigationCmdProcessed);
+   char subType[FIELDWIDTH + 1] = {};
+   if (fy_node_scanf(navCmdNode, "/Subtype %" STR(FIELDWIDTH) "s", subType)) {
+      if (!strcmp(subType, "NO_CHANGE")) {
+         NavigationCmdProcessed = TRUE;
+         return (NavigationCmdProcessed);
+      }
+      else if (!strcmp(subType, "PASSIVE_NAV")) {
+         Nav->NavigationActive  = FALSE;
+         NavigationCmdProcessed = TRUE;
+         return (NavigationCmdProcessed);
+      }
    }
-   else if (!strcmp(NavigationCmd, "PASSIVE_NAV")) {
-      Nav->NavigationActive  = FALSE;
-      NavigationCmdProcessed = TRUE;
-      return (NavigationCmdProcessed);
-   }
-   else if (!strncmp(NavigationCmd, "NavigationCmd", 13)) {
+   else {
       Nav->NavigationActive = TRUE;
-      strcat(NavigationCmd, " %s %s %c %s %s %s %s %s %[\040-\377]");
-
-      rewind(InpDsmFilePtr);
-      while (fgets(DsmCmdLine, 1024, InpDsmFilePtr)) {
-         if (sscanf(DsmCmdLine, NavigationCmd, &navType, &batchingType,
-                    &refFrame, &refOri, &QDat, &P0Dat, &ICDat, &sensorSet,
-                    &states) == 9) {
-            NavigationCmdProcessed = TRUE;
+      struct fy_node *cmdNode =
+          fy_node_by_path_def(dsmRoot, "/Navigation Configurations");
+      fy_node_scanf(navCmdNode, "/Index %ld", &cmdInd);
+      WHILE_FY_ITER(cmdNode, iterNode)
+      {
+         long ind = 0;
+         fy_node_scanf(iterNode, "/Navigation/Index %ld", &ind);
+         if (ind == cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Navigation");
+            NavigationCmdProcessed =
+                fy_node_scanf(
+                    iterNode,
+                    "/Type %" STR(
+                        FIELDWIDTH) "s "
+                                    "/Batching %" STR(
+                                        FIELDWIDTH) "s "
+                                                    "/Frame %c "
+                                                    "/Reference Origin %" STR(
+                                                        FIELDWIDTH) "s",
+                    navType, batchingType, &refFrame, refOri) == 4;
+            qNode      = fy_node_by_path_def(iterNode, "/Data/Q");
+            pNode      = fy_node_by_path_def(iterNode, "/Data/P");
+            x0Node     = fy_node_by_path_def(iterNode, "/Data/x0");
+            senSetNode = fy_node_by_path_def(iterNode, "/Sensor Set");
+            statesNode = fy_node_by_path_def(iterNode, "/States");
+            NavigationCmdProcessed &= qNode != NULL && pNode != NULL &&
+                                      x0Node != NULL && senSetNode != NULL &&
+                                      statesNode != NULL;
             break;
          }
       }
@@ -2034,8 +1667,9 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
          Nav->type = MEKF_NAV;
       }
       else {
-         printf("%s is an invalid filter type for filter %s. Exiting...\n",
-                navType, NavigationCmdName);
+         printf(
+             "%s is an invalid filter type for filter index %ld. Exiting...\n",
+             navType, cmdInd);
          exit(EXIT_FAILURE);
       }
 
@@ -2049,8 +1683,9 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
          Nav->batching = TIME_BATCH;
       }
       else {
-         printf("%s is an invalid batching type for filter %s. Exiting...\n",
-                batchingType, NavigationCmdName);
+         printf("%s is an invalid batching type for filter index %ld. "
+                "Exiting...\n",
+                batchingType, cmdInd);
          exit(EXIT_FAILURE);
       }
 
@@ -2063,8 +1698,8 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
       }
       else {
          printf("Frame %c is an invalid navigation reference frame for filter "
-                "%s. Exiting...\n",
-                refFrame, NavigationCmdName);
+                "index %ld. Exiting...\n",
+                refFrame, cmdInd);
          exit(EXIT_FAILURE);
       }
 
@@ -2076,15 +1711,15 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
          sscanf(refOri, "SC[%ld].B[%ld]", &Nav->refOriType, &Nav->refOri);
          if (Nav->refOriType >= Nsc) {
             printf("This mission only has %ld spacecraft, but spacecraft %ld "
-                   "was attempted to be set as the navigation reference frame. "
-                   "Exiting...\n",
+                   "was attempted to be "
+                   "set as the navigation reference frame. Exiting...\n",
                    Nsc, Nav->refOriType);
             exit(EXIT_FAILURE);
          }
          if (Nav->refOri >= SC[Nav->refOriType].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the navigation "
-                   "reference frame was attempted to be set as body %ld. "
-                   "Exiting...\n",
+                   "reference frame was "
+                   "attempted to be set as body %ld. Exiting...\n",
                    Nav->refOriType, SC[Nav->refOriType].Nb, Nav->refOri);
             exit(EXIT_FAILURE);
          }
@@ -2098,26 +1733,29 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
       for (i = INIT_STATE; i <= FIN_STATE; i++)
          Nav->stateActive[i] = FALSE;
 
-      char *p = strtok(states, " ");
-      while (p != NULL) {
+      iterNode = NULL;
+      WHILE_FY_ITER(statesNode, iterNode)
+      {
+         char p[FIELDWIDTH + 1] = {};
+         fy_node_scanf(iterNode, "/ %" STR(FIELDWIDTH) "s", p);
          state = GetStateValue(p);
          if (state == -1 || (state == ROTMAT_STATE && Nav->type == MEKF_NAV) ||
              (state == QUAT_STATE && Nav->type != MEKF_NAV)) {
             printf("%s is an invalid state to estimate for navigation filter "
-                   "%s of type %s. "
+                   "index %ld of type %s. "
                    "Exiting...\n",
-                   p, NavigationCmdName, navType);
+                   p, cmdInd, navType);
             exit(EXIT_FAILURE);
          }
          else {
             Nav->stateActive[state] = TRUE;
          }
-         p = strtok(NULL, " ");
       }
 
       if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[QUAT_STATE]) {
          printf("Cannot filter the Rotation Matrix and the attitude Quaternion "
-                "simultaneously. Exiting...\n");
+                "simultaneously. "
+                "Exiting...\n");
          exit(EXIT_FAILURE);
       }
 
@@ -2202,11 +1840,10 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
       for (i = 0; i < Nav->navDim; i++)
          Nav->STM[i][i] = 1.0;
 
-      if (GetNavigationData(Nav, ICDat, InpDsmFilePtr, IC_DAT) == FALSE) {
-         printf("%s is an invalid data set for the initial estimation states "
-                "for Navigation "
-                "command %s. Exiting...\n",
-                ICDat, NavigationCmdName);
+      if (GetNavigationData(Nav, x0Node, IC_DAT) == FALSE) {
+         printf("Navigation data is an invalid data set for the initial "
+                "estimation states for Navigation index %ld. Exiting...\n",
+                cmdInd);
          exit(EXIT_FAILURE);
       }
 
@@ -2230,22 +1867,25 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
                test += fabs(testM[i][j]); // 1-norm of vec(testM)
          if (test >= EPS_DSM) {
             printf("The supplied initial rotation matrix for Navigation "
-                   "Command %s is not a valid Rotation Matrix. Exiting...\n",
-                   NavigationCmdName);
+                   "Command index %ld is not a valid Rotation Matrix. "
+                   "Exiting...\n",
+                   cmdInd);
             exit(EXIT_FAILURE);
          }
       }
 
-      if (GetNavigationData(Nav, QDat, InpDsmFilePtr, Q_DAT) == FALSE) {
-         sprintf("%s is an invalid data set for the process noise covariance "
-                 "matrix for Navigation command %s. Exiting...\n",
-                 QDat, NavigationCmdName);
+      if (GetNavigationData(Nav, qNode, Q_DAT) == FALSE) {
+         printf("Navigation data is an invalid data set for the process noise "
+                "covariance matrix for Navigation command %ld. Exiting...\n",
+                cmdInd);
          exit(EXIT_FAILURE);
       }
-      if (GetNavigationData(Nav, P0Dat, InpDsmFilePtr, P0_DAT) == FALSE) {
-         sprintf("%s is an invalid data set for the inital estimation error "
-                 "covariance matrix for Navigation command %s. Exiting...",
-                 P0Dat, NavigationCmdName);
+      if (GetNavigationData(Nav, pNode, P0_DAT) == FALSE) {
+         printf(
+             "Navigation data is an invalid data set for the inital estimation "
+             "error covariance matrix for Navigation command index %ld. "
+             "Exiting...",
+             cmdInd);
          exit(EXIT_FAILURE);
       }
 
@@ -2262,7 +1902,7 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
 
       DestroyMatrix(linTForm);
 
-      ConfigureNavigationSensors(S, sensorSet, InpDsmFilePtr);
+      ConfigureNavigationSensors(S, senSetNode);
       AssignNavFunctions(S, Nav->type);
 
       double avgArea = 0.0;
@@ -2284,218 +1924,181 @@ long GetNavigationCmd(struct SCType *const S, char NavigationCmd[255],
    return (NavigationCmdProcessed);
 }
 //------------------------ INTERPRETER (FIRST ITERATION) -----------------------
-void DsmCmdInterpreterMrk1(struct SCType *S, FILE *InpDsmFilePtr)
+void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
 {
-   char DSM_FileLine[1024] = "";
-   char DSM_CmdLine[255];
-   char Junk[50], ScID[50];
-   int DSM_CmdLineLength = 1024;
-   long i;
-   long Isc;
-   double DSM_CmdTime;
-
    struct DSMType *DSM;
+   struct fy_node *iterNode = NULL, *scCmdsNode = NULL;
 
-   DSM = &S->DSM;
-
+   DSM         = &S->DSM;
    DSM->CmdCnt = 0;
-   for (i = 0; i < 100; i++)
-      DSM->CmdTime_f[i] = 0.0;
+   DSM->CmdNum = 0;
+   // TODO: preload and presort the command node pointers
 
-   rewind(InpDsmFilePtr);
-   while (fgets(DSM_FileLine, DSM_CmdLineLength,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-      // Read Spacecraft Command------------------------------------------------
-      strcpy(DSM_CmdLine, "DSM_Cmd %s %s %lf");
-      if (sscanf(DSM_FileLine, DSM_CmdLine, &ScID, Junk, &DSM_CmdTime) == 3) {
-         // Decode Current SC ID Number
-         if (sscanf(ScID, "SC[%ld]", &Isc) != 1) {
-            printf("%s is not a valid Spacecraft Identifier. Exiting...\n",
-                   ScID);
-            exit(EXIT_FAILURE);
-         }
-         if (S->ID == Isc) {
-            DSM->CmdCnt++;
-            DSM->CmdTime_f[DSM->CmdCnt - 1] = DSM_CmdTime;
-         }
-      }
-      else if (!strncmp(DSM_FileLine, " ", 1) ||
-               !strncmp(DSM_FileLine, "//", 2) ||
-               !strncmp(DSM_FileLine, "#", 1) ||
-               !strncmp(DSM_FileLine, "<", 1) ||
-               !strncmp(DSM_FileLine, "\n", 1) ||
-               !strncmp(DSM_FileLine, "\r", 1) ||
-               !strncmp(DSM_FileLine, "%", 1)) {
-      }
-      else if (!strncmp(DSM_FileLine, "End_Of_File", 11)) {
-         break;
-      }
-      else {
-         printf("%s from Inp_DSM.txt is not being interpreted. Exiting...\n",
-                DSM_FileLine);
+   WHILE_FY_ITER(dsmCmds, iterNode)
+   {
+      long scInd = 0;
+      if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
+         printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
          exit(EXIT_FAILURE);
       }
+      if (scInd == S->ID) {
+         scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
+         break;
+      }
    }
-
-   DSM->CmdNextTime = DSM->CmdTime_f[0];
-   DSM->CmdNum      = 0;
+   if (scCmdsNode == NULL) {
+      DSM->CmdTime_f   = NULL;
+      DSM->CmdNextTime = 0.0;
+   }
+   else {
+      DSM->CmdCnt    = fy_node_sequence_item_count(scCmdsNode);
+      DSM->CmdTime_f = calloc(DSM->CmdCnt, sizeof(double));
+      long i         = 0;
+      iterNode       = NULL;
+      WHILE_FY_ITER(scCmdsNode, iterNode)
+      {
+         if (!fy_node_scanf(iterNode, "/Time %lf", &DSM->CmdTime_f[i++])) {
+            printf("Bad DSM command time. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
+      }
+      qsort(DSM->CmdTime_f, DSM->CmdCnt, sizeof(double), compare);
+      DSM->CmdNextTime = DSM->CmdTime_f[0];
+   }
 }
-
 //--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
-
-void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr)
+void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
+                           struct fy_node *dsmCmds)
 {
-   char DSM_FileLine[1024] = "";
-   char DSM_CmdLine[255];
-   char Junk[50], ScID[50];
-   char TranslationCmd[255], AttitudeCmd[255], ActuatorCmd[255],
-       NavigationCmd[255];
-   int DsmCmdLinelength = 1024;
-   long Isc;
-   double DSM_CmdTime;
-   char *token;
-   char SubCommands[2048];
-   char *each_command[40];
-   int NumCommands;
-   char curCommand[40];
-   long i;
-
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
+   struct fy_node *iterNode = NULL, *scCmdsNode = NULL, *cmdsNode = NULL;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
 
-   rewind(InpDsmFilePtr);
-   while (fgets(DSM_FileLine, DsmCmdLinelength,
-                InpDsmFilePtr)) { // Start Looping through file until reach EOF
-      // Read Spacecraft Command------------------------------------------------
-      strcpy(DSM_CmdLine, "DSM_Cmd %s %s %lf");
-      if (sscanf(DSM_FileLine, DSM_CmdLine, &ScID, Junk, &DSM_CmdTime) == 3) {
-         if (sscanf(ScID, "SC[%ld]", &Isc) !=
-             1) { // Decode Current SC ID Number
-            printf("%s is not a valid Spacecraft Identifier. Exiting...\n",
-                   ScID);
-            exit(EXIT_FAILURE);
-         }
-         if (S->ID == Isc && DSM->CmdNextTime == DSM_CmdTime) {
-            strcat(DSM_CmdLine, " NUM_CMD[%d] %[\040-\377]");
-            if (sscanf(DSM_FileLine, DSM_CmdLine, Junk, Junk, Junk,
-                       &NumCommands, &SubCommands) == 5) {
-               i     = 0;
-               token = strtok(SubCommands, " ");
-               while (token != NULL) {
-                  each_command[i++] = token;
-                  token             = strtok(NULL, " ");
-               }
-            }
-
-            // Set Attitude and Translation as NO_CHANGE - will get overwritten
-            // if there is a change
-            strcpy(AttitudeCmd, "NO_CHANGE");
-            strcpy(TranslationCmd, "NO_CHANGE");
-
-            for (i = 0; i < NumCommands; i++) {
-               strcpy(curCommand, each_command[i]);
-               // Parse Attitude Commands
-               if (!strncmp(curCommand, "DetumbleCmd", 11) ||
-                   !strncmp(curCommand, "AttitudeCmd", 11) ||
-                   !strncmp(curCommand, "QuaternionCmd", 13) ||
-                   !strncmp(curCommand, "MirrorCmd", 9) ||
-                   !strncmp(curCommand, "WhlHManageCmd", 13) ||
-                   !strcmp(curCommand, "PASSIVE_ATT")) {
-                  strcpy(AttitudeCmd, curCommand);
-                  if (GetAttitudeCmd(S, AttitudeCmd, InpDsmFilePtr) == FALSE) {
-                     printf("%s does not match any valid attitude command "
-                            "methods found in Inp_DSM.txt. Exiting...\n",
-                            AttitudeCmd);
-                     exit(EXIT_FAILURE);
-                  }
-               }
-               // Parse Translation Commands
-               else if (!strncmp(curCommand, "TranslationCmd", 14) ||
-                        !strncmp(curCommand, "ManeuverCmd", 11) ||
-                        !strcmp(curCommand, "PASSIVE_TRN")) {
-                  strcpy(TranslationCmd, each_command[i]);
-                  if (GetTranslationCmd(S, TranslationCmd, DSM_CmdTime,
-                                        InpDsmFilePtr) == FALSE) {
-                     printf("%s does not match any valid translational command "
-                            "methods found in Inp_DSM.txt. Exiting...\n",
-                            TranslationCmd);
-                     exit(EXIT_FAILURE);
-                  }
-               }
-               // Parse Actuator Commands
-               else if (!strncmp(curCommand, "ActuatorCmd", 11)) {
-                  strcpy(ActuatorCmd, curCommand);
-                  if (GetActuatorCmd(S, ActuatorCmd, InpDsmFilePtr) == FALSE) {
-                     printf("%s does not match any valid actuator command "
-                            "methods found in Inp_DSM.txt. Exiting...\n",
-                            ActuatorCmd);
-                     exit(EXIT_FAILURE);
-                  }
-               }
-               // Parse Navigation Commands
-               else if (!strncmp(curCommand, "NavigationCmd", 13) ||
-                        strcmp(curCommand, "PASSIVE_NAV")) {
-                  strcpy(NavigationCmd, curCommand);
-                  if (GetNavigationCmd(S, NavigationCmd, InpDsmFilePtr) ==
-                      FALSE) {
-                     printf("%s does not match any valid navigation command "
-                            "methods found in Inp_DSM.txt. Exiting...\n",
-                            NavigationCmd);
-                     exit(EXIT_FAILURE);
-                  }
-               }
-               else {
-                  printf("%s is not a supported command. Exiting...\n",
-                         curCommand);
-                  exit(EXIT_FAILURE);
-               }
-            }
-            // This sure is one of the if() statements of all time. I feel like
-            // it can be reduced...
-            if ((Cmd->TranslationCtrlActive && Cmd->AttitudeCtrlActive) &&
-                ((!strcmp(Cmd->trn_actuator, "THR_3DOF") &&
-                  (!strcmp(Cmd->att_actuator, "THR_6DOF") ||
-                   !strcmp(Cmd->dmp_actuator, "THR_6DOF"))) ||
-                 (!strcmp(Cmd->trn_actuator, "THR_6DOF") &&
-                  (!strcmp(Cmd->att_actuator, "THR_3DOF") ||
-                   !strcmp(Cmd->dmp_actuator, "THR_3DOF"))) ||
-                 (!strcmp(Cmd->trn_actuator, "THR_3DOF") &&
-                  (!strcmp(Cmd->att_actuator, "THR_3DOF") ||
-                   !strcmp(Cmd->dmp_actuator, "THR_3DOF"))))) {
-               printf(
-                   "If the Translation actuator is 6DOF Thruster and Attitude "
-                   "actuator is Thruster, then it must be 6DOF (and vice "
-                   "versa).\nAdditionally, if the translation actuator is 3DOF "
-                   "thruster, then Attitude cannot also be 3DOF. Exiting...\n");
-               exit(EXIT_FAILURE);
-            }
-            break;
-         }
-      }
-      else if (!strncmp(DSM_FileLine, " ", 1) ||
-               !strncmp(DSM_FileLine, "//", 2) ||
-               !strncmp(DSM_FileLine, "#", 1) ||
-               !strncmp(DSM_FileLine, "<", 1) ||
-               !strncmp(DSM_FileLine, "\n", 1) ||
-               !strncmp(DSM_FileLine, "\r", 1) ||
-               !strncmp(DSM_FileLine, "%", 1)) {
-      }
-      else if (!strncmp(DSM_FileLine, "End_Of_File", 11)) {
-         printf("Reached End_Of_File without finding "
-                "'DSM_Cmd\tSC[%li]\tCmdTime\t%e'. Exiting...\n",
-                S->ID, DSM->CmdNextTime);
+   WHILE_FY_ITER(dsmCmds, iterNode)
+   {
+      long scInd = 0;
+      if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
+         printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
          exit(EXIT_FAILURE);
       }
+      if (scInd == S->ID) {
+         scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
+         break;
+      }
+   }
+   iterNode = NULL;
+   WHILE_FY_ITER(scCmdsNode, iterNode)
+   {
+      double cmdTime = 0.0;
+      if (!fy_node_scanf(iterNode, "/Time %lf", &cmdTime)) {
+         printf("Bad DSM command time. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      if (cmdTime == DSM->CmdNextTime) {
+         cmdsNode = fy_node_by_path_def(iterNode, "/Commands");
+         break;
+      }
+   }
+
+   if (cmdsNode == NULL) {
+      printf("Could not find command for SC[%ld] at time %lf. "
+             "How did this happen? Exiting...\n",
+             S->ID, DSM->CmdNextTime);
+      exit(EXIT_FAILURE);
+   }
+
+   iterNode = NULL;
+   WHILE_FY_ITER(cmdsNode, iterNode)
+   {
+      char typeToken[FIELDWIDTH + 1] = {}, subType[FIELDWIDTH + 1] = {};
+
+      const char *searchTypeStr = "/Type %" STR(FIELDWIDTH) "[^\n]";
+      const char *searchSubtypeIndexStr =
+          "/Subtype %" STR(FIELDWIDTH) "[^\n] /Index %ld";
+      fy_node_scanf(iterNode, searchTypeStr, typeToken);
+      if (!strcmp(typeToken, "Translation")) {
+         if (GetTranslationCmd(S, iterNode, DSM->CmdNextTime, dsmRoot) ==
+             FALSE) {
+            long index;
+            fy_node_scanf(iterNode, searchSubtypeIndexStr, subType, &index);
+            printf("Translational command of subtype %*s and index %ld "
+                   "cannot be found in Inp_DSM.yaml. Exiting...\n",
+                   FIELDWIDTH, subType, index);
+            exit(EXIT_FAILURE);
+         }
+      }
+      else if (!strcmp(typeToken, "Attitude")) {
+         if (GetAttitudeCmd(S, iterNode, dsmRoot) == FALSE) {
+            const char *searchSubtypeStr = "/Sub Type %" STR(FIELDWIDTH) "s";
+            fy_node_scanf(iterNode, searchSubtypeStr, subType);
+            if (!strncmp(subType, "Two", 3)) {
+               long indicies[2];
+               assignYAMLToLongArray(2, fy_node_by_path_def(iterNode, "/Index"),
+                                     indicies);
+               printf("Actuator command of subtype %*s and indicies [%ld %ld]"
+                      "cannot be found in Inp_DSM.yaml. Exiting...\n",
+                      FIELDWIDTH, subType, indicies[0], indicies[1]);
+            }
+            else {
+               long index;
+               fy_node_scanf(iterNode, "/Index %ld", &index);
+               printf("Actuator command of subtype %*s and index %ld "
+                      "cannot method found in Inp_DSM.yaml. Exiting...\n",
+                      FIELDWIDTH, subType, index);
+            }
+            exit(EXIT_FAILURE);
+         }
+      }
+      else if (!strcmp(typeToken, "Actuator")) {
+         if (GetActuatorCmd(S, iterNode, dsmRoot) == FALSE) {
+            long index;
+            fy_node_scanf(iterNode, "/Index %ld", &index);
+            printf("Actuator command of index %ld "
+                   "cannot be found in Inp_DSM.yaml. Exiting...\n",
+                   index);
+            exit(EXIT_FAILURE);
+         }
+      }
+      else if (!strcmp(typeToken, "Navigation")) {
+         if (GetNavigationCmd(S, iterNode, dsmRoot) == FALSE) {
+            long index;
+            fy_node_scanf(iterNode, "/Index %ld", &index);
+            printf("Navigation command of index %ld cannot be found in "
+                   "Inp_DSM.yaml. Exiting...\n",
+                   index);
+            exit(EXIT_FAILURE);
+         }
+      }
       else {
-         printf("%s from Inp_DSM.txt is not being interpreted. Exiting...\n",
-                DSM_FileLine);
+         printf("%s is not a supported command type. Exiting...\n", typeToken);
+         exit(EXIT_FAILURE);
+      }
+      // This sure is one of the if() statements of all time. I feel like it can
+      // be reduced...
+      if ((Cmd->TranslationCtrlActive && Cmd->AttitudeCtrlActive) &&
+          ((!strcmp(Cmd->trn_actuator, "THR_3DOF") &&
+            (!strcmp(Cmd->att_actuator, "THR_6DOF") ||
+             !strcmp(Cmd->dmp_actuator, "THR_6DOF"))) ||
+           (!strcmp(Cmd->trn_actuator, "THR_6DOF") &&
+            (!strcmp(Cmd->att_actuator, "THR_3DOF") ||
+             !strcmp(Cmd->dmp_actuator, "THR_3DOF"))) ||
+           (!strcmp(Cmd->trn_actuator, "THR_3DOF") &&
+            (!strcmp(Cmd->att_actuator, "THR_3DOF") ||
+             !strcmp(Cmd->dmp_actuator, "THR_3DOF"))))) {
+         printf("If the Translation actuator is 6DOF Thruster and Attitude "
+                "actuator is Thruster, "
+                "then it must be 6DOF (and vice versa).\nAdditionally, if the "
+                "translation actuator "
+                "is 3DOF thruster, then Attitude cannot also be 3DOF. "
+                "Exiting...\n");
          exit(EXIT_FAILURE);
       }
    }
 }
+#undef FIELDWIDTH
 //------------------------------------------------------------------------------
 //                                SENSORS
 //------------------------------------------------------------------------------
@@ -3645,6 +3248,11 @@ void MomentumDumpCtrl(struct SCType *S)
             for (i = 0; i < 3; i++)
                CTRL->dTcmd[i] = -CTRL->dmp_kp[i] * TotalWhlH[i];
             break;
+         default:
+            printf("Invalid Control type in dump controller. How did that "
+                   "happen? Exiting...\n");
+            exit(EXIT_FAILURE);
+            break;
       }
 
       for (i = 0; i < 3; i++) {
@@ -3666,8 +3274,20 @@ void MomentumDumpCtrl(struct SCType *S)
 //------------------------------------------------------------------------------
 void DsmFSW(struct SCType *S)
 {
-
-   FILE *dsm_in;
+   // load the DSM file statically so that all DsmFSW calls have access to same
+   // object
+   static struct fy_node *dsmRoot = NULL, *dsmCmds = NULL;
+   if (dsmRoot == NULL) {
+      FILE *dsm_in            = FileOpen(InOutPath, "Inp_DSM.yaml", "r");
+      struct fy_document *fyd = fy_document_build_from_fp(NULL, dsm_in);
+      fclose(dsm_in);
+      if (fy_document_resolve(fyd)) {
+         printf("Unable to resolve links in Inp_DSM.yaml. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      dsmRoot = fy_document_root(fyd);
+      dsmCmds = fy_node_by_path_def(dsmRoot, "/DSM Commands");
+   }
 
    struct DSMType *DSM;
 
@@ -3676,13 +3296,11 @@ void DsmFSW(struct SCType *S)
    // Run Command Interperter
    if (DSM->CmdInit) {
       DSM->CmdInit = 0;
-      dsm_in       = FileOpen(InOutPath, "Inp_DSM.txt", "r");
-      DsmCmdInterpreterMrk1(S, dsm_in);
-      fclose(dsm_in);
+      DsmCmdInterpreterMrk1(S, dsmCmds);
 
       for (int i = 0; i < 3;
-           i++) { // put place holders in integrator "old" values, set ei values
-                  // to zero to initialize integrated error
+           i++) { // put place holders in integrator "old" values, set ei
+                  // values to zero to initialize integrated error
          DSM->Oldtherr[i] = 0.0;
          DSM->Oldperr[i]  = 0.0;
 
@@ -3691,12 +3309,11 @@ void DsmFSW(struct SCType *S)
       }
    }
 
-   if (SimTime >= DSM->CmdNextTime && DSM->CmdNum < DSM->CmdCnt) {
-      dsm_in = FileOpen(InOutPath, "Inp_DSM.txt", "r");
-      DsmCmdInterpreterMrk2(S, dsm_in);
-      fclose(dsm_in);
+   if (DSM->CmdNum < DSM->CmdCnt && SimTime >= DSM->CmdNextTime) {
+      DsmCmdInterpreterMrk2(S, dsmRoot, dsmCmds);
       DSM->CmdNum++;
-      DSM->CmdNextTime = DSM->CmdTime_f[DSM->CmdNum];
+      if (DSM->CmdNum < DSM->CmdCnt)
+         DSM->CmdNextTime = DSM->CmdTime_f[DSM->CmdNum];
    }
 
    // Generate Data From Sensors

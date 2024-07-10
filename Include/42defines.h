@@ -113,20 +113,6 @@
 #define DIR_CW  0
 #define DIR_CCW 1
 
-#define ORB_ZERO       0
-#define ORB_FLIGHT     1
-#define ORB_CENTRAL    2
-#define ORB_THREE_BODY 3
-
-#define INP_KEPLER 0
-#define INP_POSVEL 1
-#define INP_FILE   2
-#define INP_TLE    3
-#define INP_TRV    4
-#define INP_MODES  5
-#define INP_XYZ    6
-#define INP_SPLINE 7
-
 #define EARTHMOON  0
 #define SUNEARTH   1
 #define SUNJUPITER 2

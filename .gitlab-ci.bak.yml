@@ -7,7 +7,7 @@
 # This specific template is located at:
 # https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/C++.gitlab-ci.yml
 
-image: gcc
+image: fedora
 
 stages:
   - build
@@ -16,7 +16,7 @@ stages:
 build:
   stage: build
   before_script:
-    - &update-dependencies apt -y update && apt -y install make freeglut3-dev
+    - &update-dependencies dnf -y update && dnf -y install make freeglut-devel gcc libfyaml-devel pkg-config
   script:
     - make GUIFLAG=
   artifacts:
@@ -41,8 +41,7 @@ test-dsm-demo:
 test-format:
   stage: test
   before_script:
-    - *update-dependencies
-    - apt -y install clang-format
+    - dnf -y update && dnf -y install clang-format
   script:
     - clang-format --style=file --Werror --verbose -n Kit/**/*.c Source/*.c Kit/**/*.h Include/*.h Tests/*.c Tests/*.h
 unit-test:

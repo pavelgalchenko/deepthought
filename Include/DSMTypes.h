@@ -415,7 +415,7 @@ struct DSMType {
    double wbn[3];      // Angular Velocity in the SC Body Frame
    double qbn[4];      // Quarternion from B to N
 
-   double CmdTime_f[100];
+   double *CmdTime_f;
    long CmdNum;
    long CmdInit;
    long CmdCnt;

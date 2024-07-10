@@ -1,0 +1,830 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<<<<<<<<<<<  42:  DSM Command Script File  >>>>>>>>>>>>>>>>>>>>>>>>
+Gains Configurations:
+  # ------------------Translational / Attitude Control Parameters------------------
+  # ((Sequence; one element for unique Actuator Definition))
+  #   - Gains:          &{Anchor}
+  #       Description:    {Optional}
+  #       Type:           [[PID/PID_WN/MomentumDump/FC_LYA/CUSTOM]]
+  #       Gains:
+  #         Kp:         [[kp_1, kp_2, kp_3]]    ((Needed only for PID, MomementumDump))
+  #         Kr:         [[kr_1, kr_2, kr_3]]    ((Needed only for PID))
+  #         Ki:         [[ki_1, ki_2, ki_3]]    ((Needed only for PID))
+  #         Ki_Limit:   [[ki_limit_1, ki_limit_2, ki_limit_3]]  ((Needed only for PID, PID_WN; only ki_limit_1 needed for PID_WN))
+  #         Omega:      [[omega]]   ((Needed only for PID_WN))
+  #         Zeta:       [[zeta]]    ((Needed only for PID_WN))
+  #         Alpha:      [[alpha]]   ((Needed only for PID_WN))
+  #         K_lya:      [[k_lya_1, k_lya_2]]    ((Needed only for FC_LYA; only k_lya_1 used by Translation control))
+  - Gains: &Gains_0
+      Description: Gains_[0]
+      Type: PID_WN
+      Gains:
+        Omega: 0.24
+        Zeta: 0.7
+        Alpha: 0.0
+        Ki_Limit: 0.0
+  - Gains: &Gains_1
+      Description: Gains_[1]
+      Type: PID
+      Gains:
+        Kp: [0.0, 0.0, 0.0]
+        Kr: [0.1, 0.1, 0.1]
+        Ki: [0.0, 0.0, 0.0]
+        Ki_Limit: [0.0, 0.0, 0.0]
+  - Gains: &Gains_2
+      Description: Gains_[2]
+      Type: MomentumDump
+      Gains:
+        Kp: [1.3, 1.3, 1.3]
+  - Gains: &Gains_3
+      Description: Gains_[3]
+      Type: PID_WN
+      Gains:
+        Omega: 2.4
+        Zeta: 0.4
+        Alpha: 0.0
+        Ki_Limit: 0.0
+  - Gains: &Gains_4
+      Description: Gains_[4]
+      Type: PID
+      Gains:
+        Kp: [20.0, 20.0, 20.0]
+        Kr: [200.0, 200.0, 200.0]
+        Ki: [0.0, 0.0, 0.0]
+        Ki_Limit: [0.0, 0.0, 0.0]
+  - Gains: &Gains_5
+      Description: Gains_[5]
+      Type: PID_WN
+      Gains:
+        Omega: 0.2
+        Zeta: 1.0
+        Alpha: 0.0
+        Ki_Limit: 0.0
+  - Gains: &Gains_6
+      Description: Gains_[6]
+      Type: FC_LYA
+      Gains:
+        K_lya: [0.01, 3.0]
+  - Gains: &Gains_7
+      Description: Gains_[7]
+      Type: FC_LYA
+      Gains:
+        K_lya: [0.2, 1.0]
+  - Gains: &Gains_8
+      Description: Gains_[8]
+      Type: MomentumDump
+      Gains:
+        Kp: [0.1, 0.1, 0.1]
+Limits Configurations:
+  # --------------------Translational / Attitude Control Limits--------------------
+  # ((Sequence; one element for unique Limit Definition))
+  #   - Limits:         &{Anchor}
+  #       Description:    {Optional}
+  #       Force Max:      [[X, Y, Z]] frc_max/trq_max [[N, Nm]]
+  #       Velocity Max:   [[X, Y, Z]] vel_max/w_max [[m/s, deg/s]]
+  - Limits: &Limits_0
+      Description: Limits_[0]
+      Force Max: [0.0, 0.0, 0.0]
+      Velocity Max: [0.0, 0.0, 0.0]
+  - Limits: &Limits_1
+      Description: Limits_[1]
+      Force Max: [0.001, 0.001, 0.001]
+      Velocity Max: [0.0, 0.0, 0.0]
+  - Limits: &Limits_2
+      Description: Limits_[2]
+      Force Max: [0.001, 0.001, 0.001]
+      Velocity Max: [0.5, 0.5, 0.5]
+  - Limits: &Limits_3
+      Description: Limits_[3]
+      Force Max: [0.004, 0.004, 0.004]
+      Velocity Max: [0.0, 0.0, 0.0]
+Actuator Configurations:
+  # -------------------------------Control Actuators-------------------------------
+  # ((Sequence; one element for unique Actuator Definition))
+  #   - Actuator:       &{Anchor}
+  #         Description:    {Optional}
+  #         Type:           [[WHL/MTB/THR_3DOF/THR_6DOF]]
+  - Actuator: &Actuator_0
+      Description: Actuators_[0]
+      Type: Ideal
+  - Actuator: &Actuator_1
+      Description: Actuators_[1]
+      Type: Ideal
+  - Actuator: &Actuator_2
+      Description: Actuators_[2]
+      Type: WHL
+  - Actuator: &Actuator_3
+      Description: Actuators_[3]
+      Type: THR_3DOF
+  - Actuator: &Actuator_4
+      Description: Actuators_[4]
+      Type: MTB
+  - Actuator: &Actuator_5
+      Description: Actuators_[5]
+      Type: THR_6DOF
+Controller Configurations:
+  # ----------------------------------Controllers----------------------------------
+  # ((Sequence; one element for unique Controller Definition))
+  #   - Controller:     &{Anchor}
+  #       Description:    {Optional}
+  #       Gains:          [[Configuration or *{Alias}]]
+  #       Limits:         [[Configuration or *{Alias}]]
+  - Controller: &Controller_0
+      Description: Controller_[0]
+      Type: PID_CNTRL
+      Gains: *Gains_5
+      Limits: *Limits_0
+  - Controller: &Controller_1
+      Description: Controller_[1]
+      Type: PID_CNTRL
+      Gains: *Gains_0
+      Limits: *Limits_1
+  - Controller: &Controller_2
+      Description: Controller_[2]
+      Type: PID_CNTRL
+      Gains: *Gains_5
+      Limits: *Limits_2
+  - Controller: &Controller_3
+      Description: Controller_[3]
+      Type: PID_CNTRL
+      Gains: *Gains_1
+      Limits: *Limits_0
+  - Controller: &Controller_4
+      Description: Controller_[4]
+      Type: LYA_ATT_CNTRL
+      Gains: *Gains_6
+      Limits: *Limits_1
+  - Controller: &Controller_5
+      Description: Controller_[5]
+      Type: LYA_2BODY_CNTRL
+      Gains: *Gains_7
+      Limits: *Limits_0
+  - Controller: &Controller_6
+      Description: Controller_[6]
+      Type: PID_CNTRL
+      Gains: *Gains_0
+      Limits: *Limits_0
+  - Controller: &Controller_7
+      Description: Controller_[7]
+      Type: H_DUMP_CNTRL
+      Gains: *Gains_2
+      Limits: *Limits_3
+  - Controller: &Controller_8
+      Description: Controller_[8]
+      Type: H_DUMP_CNTRL
+      Gains: *Gains_8
+      Limits: *Limits_3
+Translation Configurations:
+  # ------------------------------Translation Command------------------------------
+  # ((Sequence; one element for unique Translation Command))
+  #   - Translation:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Position:       [[X, Y, Z]] [[meters]]
+  #       Origin:         [[OP/SC[#].B[#]]]
+  #       Frame:          [[N/F/L/SC[#].B[#]]]
+  #       Controller:     [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  - Translation:
+      Index: 0
+      Description: TranslationCmd_[0]
+      Position: [2.0, 0.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Translation:
+      Index: 1
+      Description: TranslationCmd_[1]
+      Position: [2.0, 0.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_5
+  - Translation:
+      Index: 2
+      Description: TranslationCmd_[2]
+      Position: [0.0, 2.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Translation:
+      Index: 3
+      Description: TranslationCmd_[3]
+      Position: [-2.0, 0.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_5
+  - Translation:
+      Index: 4
+      Description: TranslationCmd_[4]
+      Position: [0.0, 0.0, -2.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Translation:
+      Index: 5
+      Description: TranslationCmd_[5]
+      Position: [1.0, 0.0, 0.0]
+      Origin: SC[0].B[0]
+      Frame: SC[0].B[0]
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+Primary Vector Configurations:
+  # -------------------------------Primary Axis Cmd--------------------------------
+  # ((Sequence; one element for unique Primary Axis Command))
+  # - Primary Vector:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Axis:           [[X, Y, Z]] ((Body Pointing Vector))
+  #       Controller:     [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  #       Target: ((Describes pointing target))
+  #         Type:   [[VEC/BODY/SC]]
+  #         ((Frame and Axis are only if Type is VEC))
+  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
+  #         ((Target is used if BODY or SC))
+  #        Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
+  - Primary Vector:
+      Index: 0
+      Description: AttitudeCmd_PV[0]
+      Target:
+        Type: VEC
+        Frame: L
+        Axis: [1.0, 0.0, 0.0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 1
+      Description: AttitudeCmd_PV[1]
+      Target:
+        Type: VEC
+        Frame: L
+        Axis: [0.0, -1.0, 0.0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 2
+      Description: AttitudeCmd_PV[2]
+      Target:
+        Type: VEC
+        Frame: L
+        Axis: [-1.0, 0.0, 0.0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 3
+      Description: AttitudeCmd_PV[3]
+      Target:
+        Type: VEC
+        Frame: L
+        Axis: [0.0, 1.0, 0.0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 4
+      Description: AttitudeCmd_PV[4]
+      Target:
+        Type: SC
+        Target: SC[0].B[0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 5
+      Description: AttitudeCmd_PV[5]
+      Target:
+        Type: VEC
+        Frame: N
+        Axis: [0.0, 0.0, -1.0]
+      Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 6
+      Description: AttitudeCmd_PV[6]
+      Target:
+        Type: VEC
+        Frame: N
+        Axis: [-1.0, 0.0, 0.0]
+      Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_2
+      Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 7
+      Description: AttitudeCmd_PV[7]
+      Target:
+        Type: VEC
+        Frame: N
+        Axis: [0.0, -1.0, 0.0]
+      Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_2
+      Actuator: *Actuator_2
+Secondary Vector Configurations:
+  # ------------------------------Secondary Axis Cmd-------------------------------
+  # ((Sequence; one element for unique Secondary Axis Command))
+  #   - Secondary Vector:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Axis:       [[X, Y, Z]] ((Body Pointing Vector))
+  #       Target: ((Describes pointing target))
+  #         Type:   [[VEC, BODY, SC]]
+  #         ((Frame and Axis are only if Type is VEC))
+  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
+  #         ((Target is used if BODY or SC))
+  #         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
+  - Secondary Vector:
+      Index: 0
+      Description: AttitudeCmd_SV[0]
+      Target:
+        Type: BODY
+        Target: EARTH
+      Axis: [-1.0, 0.0, 0.0]
+  - Secondary Vector:
+      Index: 1
+      Description: AttitudeCmd_SV[1]
+      Target:
+        Type: BODY
+        Target: EARTH
+      Axis: [-1.0, 0.0, 0.0]
+  - Secondary Vector:
+      Index: 2
+      Description: AttitudeCmd_SV[2]
+      Target:
+        Type: BODY
+        Target: EARTH
+      Axis: [-1.0, 0.0, 0.0]
+  - Secondary Vector:
+      Index: 3
+      Description: AttitudeCmd_SV[3]
+      Target:
+        Type: BODY
+        Target: EARTH
+      Axis: [-1.0, 0.0, 0.0]
+  - Secondary Vector:
+      Index: 4
+      Description: AttitudeCmd_SV[4]
+      Target:
+        Type: BODY
+        Target: SUN
+      Axis: [1.0, 0.0, 0.0]
+  - Secondary Vector:
+      Index: 5
+      Description: AttitudeCmd_SV[5]
+      Target:
+        Type: VEC
+        Frame: N
+        Axis: [0.0, 1.0, 0.0]
+      Axis: [0.0, 0.0, 1.0]
+  - Secondary Vector:
+      Index: 6
+      Description: AttitudeCmd_SV[6]
+      Target:
+        Type: VEC
+        Frame: N
+        Axis: [0.0, 0.0, 1.0]
+      Axis: [0.0, 1.0, 0.0]
+Quaternion Configurations:
+  # ------------------------Quaternion Attitude Cmd--------------------------------
+  # ((Sequence; one element for unique Quaternion Command))
+  #   - Quaternion:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Quaternion:     [[q_x, q_y, q_z, q_s]]
+  #       Frame:          [[(N, F, L)]] ((Quaternion Reference Frame))
+  #       Controller:     [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  - Quaternion:
+      Index: 0
+      Description: QuaternionCmd_[0]
+      Quaternion: [0.0, 0.0, 0.0, 1.0]
+      Frame: L
+      Controller: *Controller_6
+      Actuator: *Actuator_2
+Mirror Configurations:
+  # ----------------------------Mirror Attitude Cmd--------------------------------
+  # ((Sequence; one element for unique Mirror Command))
+  #   - Mirror:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Target:         [[SC[#]]]
+  #       Controller:     [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  - Mirror:
+      Index: 0
+      Description: MirrorCmd_[0]
+      Target: SC[0]
+      Controller: *Controller_6
+      Actuator: *Actuator_0
+Detumble Configurations:
+  # ---------------------------Detumble Attitude Cmd-------------------------------
+  # ((Sequence; one element for unique Detumble Command))
+  #   - Detumble:
+  #       Index:          [[Index]]
+  #       Controller:     [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  - Detumble:
+      Index: 0
+      Description: DetumbleCmd_[0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Detumble:
+      Index: 1
+      Description: DetumbleCmd_[1]
+      Controller: *Controller_3
+      Actuator: *Actuator_4
+Whl H Manage Configurations:
+  # ---------------------------Wheel Momentum Management Cmd-------------------------------
+  # ((Sequence; one element for unique Whl H Manage Command))
+  #   - Whl H Manage:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Dumping:        [[true/false]]
+  #       Minimum H_norm: [[Minimum Angular Momentum]] [[Nms]]
+  #       Maximum H_norm: [[Maximum Angular Momentum]] [[Nms]]
+  #       Controller:     [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  - Whl H Manage:
+      Index: 0
+      Description: WhlHManageCmd_[0]
+      Dumping: true
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_7
+      Actuator: *Actuator_4
+  - Whl H Manage:
+      Index: 1
+      Description: WhlHManageCmd_[1]
+      Dumping: true
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_8
+      Actuator: *Actuator_5
+  - Whl H Manage:
+      Index: 2
+      Description: WhlHManageCmd_[2]
+      Dumping: false
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_7
+      Actuator: *Actuator_4
+  - Whl H Manage:
+      Index: 3
+      Description: WhlHManageCmd_[3]
+      Dumping: false
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_8
+      Actuator: *Actuator_5
+Actuator Cmd Configurations:
+  # --------------------------------Actuator Command-------------------------------
+  # ((Sequence; one element for unique Actuator Command))
+  #   - Index:          [[Index]]
+  #     Description:    {Optional}
+  #     Acutators: ((Sequence; one element for each))
+  #       - Type:       [[THR/WHL/MTB]]
+  #         Index:      [[Index]]
+  #         Duty Cycle: [[Duty Cycle]]
+  - Actuator Cmd:
+      Index: 0
+      Description: ActuatorCmd_[0]
+      Actuators:
+        - Type: THR
+          Index: 13
+          Duty Cycle: 100.0
+        - Type: THR
+          Index: 16
+          Duty Cycle: 100.0
+  - Actuator Cmd:
+      Index: 1
+      Description: ActuatorCmd_[1]
+      Actuators: []
+Maneuver Configurations:
+  # --------------------------------Maneuver Command-------------------------------
+  # ((Sequence; one element for unique Actuator Definition))
+  #   - Maneuver:
+  #       Index:          [[Index]]
+  #       Description:    {Optional}
+  #       Type:           [[WHL/MTB/THR_3DOF/THR_6DOF]]
+  #       Delta V:        [[X, Y, Z]] [[m/s]]
+  #       Frame:          [[N/B]]
+  #       Origin:         [[CONSTANT/SMOOTHED]] ((SMOOTHED must start at half desired burn duration))
+  #       Duration:       [[Duration]] [[s]]
+  #       Limits:         [[Configuration or *{Alias}]]
+  #       Actuator:       [[Configuration or *{Alias}]]
+  - Maneuver:
+      Index: 0
+      Description: ManeuverCmd_[0]
+      Delta V: [0.0, 0.0, 0.1]
+      Frame: B
+      Type: CONSTANT
+      Duration: 30.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+  - Maneuver:
+      Index: 1
+      Description: ManeuverCmd_[1]
+      Delta V: [0.0, 0.0, 0.1]
+      Frame: B
+      Type: CONSTANT
+      Duration: 15.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+  - Maneuver:
+      Index: 2
+      Description: ManeuverCmd_[2]
+      Delta V: [0.0, 0.0, 0.1]
+      Frame: B
+      Type: CONSTANT
+      Duration: 15.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+  - Maneuver:
+      Index: 3
+      Description: ManeuverCmd_[3]
+      Delta V: [0.0, 0.0, -0.2]
+      Frame: B
+      Type: CONSTANT
+      Duration: 90.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+Sensor Configurations:
+  # ------------------------------Sensor Configuration------------------------------
+  # ((Sequence; one element for unique Sensor Definition))
+  # - Sensor:             &{Anchor}
+  #       Description:        {Optional}
+  #       Type:               [[STARTRACK/GPS/FSS/CSS/GYRO/MAG/ACCEL]]
+  #       Sensor Index:       [[Index]]
+  #       ((Sequence of noise parameters))
+  #       ((Sensor Noise: STARTRACK, [3] arcsec RMS; GPS, [2] m RMS, m/s RMS; FSS, [1] deg RMS; CSS, [1] nQuantization; GYRO, [1] deg/s RMS; MAG, [1] mg RMS; ACCEL, [1] m/s^2 rms))
+  #       Sensor Noise:       [[]]
+  #       Underweighting Factor:  [[Underweighting parameter]]
+  #       Residual Editing Gate:  [[Residual Editing Gate]]
+  - Sensor: &Sensor_0
+      Description: Sensor_[0]
+      Type: GYRO
+      Sensor Index: 0
+      Sensor Noise: [0.01414213562373095]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_1
+      Description: Sensor_[1]
+      Type: GYRO
+      Sensor Index: 1
+      Sensor Noise: [0.01414213562373095]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_2
+      Description: Sensor_[2]
+      Type: GYRO
+      Sensor Index: 2
+      Sensor Noise: [0.01414213562373095]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_3
+      Description: Sensor_[3]
+      Type: MAG
+      Sensor Index: 0
+      Sensor Noise: [0.16]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_4
+      Description: Sensor_[4]
+      Type: MAG
+      Sensor Index: 1
+      Sensor Noise: [0.16]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_5
+      Description: Sensor_[5]
+      Type: MAG
+      Sensor Index: 2
+      Sensor Noise: [0.16]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_6
+      Description: Sensor_[6]
+      Type: CSS
+      Sensor Index: 0
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_7
+      Description: Sensor_[7]
+      Type: CSS
+      Sensor Index: 1
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_8
+      Description: Sensor_[8]
+      Type: CSS
+      Sensor Index: 2
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_9
+      Description: Sensor_[9]
+      Type: CSS
+      Sensor Index: 3
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_10
+      Description: Sensor_[10]
+      Type: CSS
+      Sensor Index: 4
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_11
+      Description: Sensor_[11]
+      Type: CSS
+      Sensor Index: 5
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_12
+      Description: Sensor_[12]
+      Type: CSS
+      Sensor Index: 6
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_13
+      Description: Sensor_[13]
+      Type: CSS
+      Sensor Index: 7
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_14
+      Description: Sensor_[14]
+      Type: FSS
+      Sensor Index: 0
+      Sensor Noise: [0.2]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_15
+      Description: Sensor_[15]
+      Type: FSS
+      Sensor Index: 1
+      Sensor Noise: [0.2]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_16
+      Description: Sensor_[16]
+      Type: STARTRACK
+      Sensor Index: 0
+      Sensor Noise: [40.0, 6.0, 6.0]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Sensor_17
+      Description: Sensor_[17]
+      Type: GPS
+      Sensor Index: 0
+      Sensor Noise: [0.63282032, 0.0173]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+Sensor Set Configurations:
+  # -----------------------------------Sensor Set-----------------------------------
+  # ((Sequence; one element for unique Sensor Set Definition))
+  # - Sensor Set:         &{Anchor}
+  #       Description:        {Optional}
+  #       ((Sequence of Sensor configurations or *{Alias}s))
+  #       Sensors:            [[]]
+  - Sensor Set: &Sensor_Set_0
+      Description: SensorSet_[0]
+      Sensors:
+        - *Sensor_0
+        - *Sensor_1
+        - *Sensor_2
+        - *Sensor_3
+        - *Sensor_4
+        - *Sensor_5
+        - *Sensor_16
+        - *Sensor_17
+Navigation Data Configurations:
+  # ---------------------------------Navigation Data--------------------------------
+  # ((Sequence; one element for unique Navigation Data Definition))
+  # - Navigation Data:    &{Anchor}
+  #       Description:        {Optional}
+  #       ((Each of Position/Velocity/Omega/Attitude are optional fields))
+  #       Position:           [[pos_X, pos_Y, pos_Z]]         [[m]]
+  #       Velocity:           [[vel_X, vel_Y, vel_Z]]         [[m/s]]
+  #       Omega:              [[omega_X, omega_Y, omega_Z]]   [[rad/s]]
+  #       ((If this data is used for Q/P, then is sequence of 3 floats))
+  #       Attitude:           [[att_X, att_Y, att_Z]]
+  #       ((If this data is used for x0, then is Euler Angle mapping))
+  #       Attitude:
+  #         Angles:             [[angle_1, angle_2, angle_3]]
+  #         Sequence:           [[Sequence]]
+  - Navigation Data: &Navigation_Data_0
+      Description: Dat_[0]
+      Velocity: [0.0001, 0.0001, 0.0001]
+      Omega: [3e-06, 3e-06, 3e-06]
+  - Navigation Data: &Navigation_Data_1
+      Description: Dat_[1]
+      Attitude: [1.0, 1.0, 1.0]
+      Position: [50.0, 50.0, 50.0]
+      Velocity: [10.0, 10.0, 10.0]
+      Omega: [0.4, 0.4, 0.4]
+  - Navigation Data: &Navigation_Data_2
+      Description: Dat_[2]
+      Attitude:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 213
+      Position: [0.0, 0.0, 0.0]
+      Velocity: [0.0, 0.0, 0.0]
+      Omega: [0.0, 0.0, 0.0]
+Navigation Configurations:
+  # -------------------------------Navigation Command-------------------------------
+  # ((Sequence; one element for unique Navigation Command Definition))
+  # - Navigation:
+  #       Index:              [[Index]]
+  #       Description:        {Optional}
+  #       Type:               [[RIEKF/LIEKF/MEKF]]
+  #       Batching:           [[None/Sensor/Time]]
+  #       Frame:              [[N]]
+  #       Reference Origin:   [[OP/WORLD/SC[#].B[#]]]
+  #       Sensor Set:         [[Configuration or *{Alias}]]
+  #       ((Sequence of some combination of RotMat, Quat, Pos, Vel, Omega))
+  #       States:             [[]] ((RotMat and Quat are mutually exclusive))
+  #       Data:
+  #         Q:  [[Configuration or *{Alias}]]
+  #         P:  [[Configuration or *{Alias}]]
+  #         x0: [[Configuration or *{Alias}]]
+  - Navigation:
+      Index: 0
+      Description: NavigationCmd_[0]
+      Type: RIEKF
+      Batching: Time
+      Frame: N
+      Reference Origin: OP
+      Data:
+        Q: *Navigation_Data_0
+        P: *Navigation_Data_1
+        x0: *Navigation_Data_2
+      Sensor Set: *Sensor_Set_0
+      States: [RotMat, Pos, Vel, Omega]
+DSM Commands:
+  # ------------------------------Spacecraft Commands------------------------------
+  # ((Sequence; one element for each spacecraft))
+  #   - SC: [[Index]]
+  #     Command Sequence: ((Sequence; one element for each command time))
+  #       - Time: [[Command Time]]
+  #         Commands: ((Sequence; describes all commands at a particular time))
+  #           - Type:       [[Attitude/Translation/Actuator]]
+  #             ((Both Attitude & Translation can be Passive or NO_CHANGE Subtype))
+  #             ((IF Translation: Translation, Maneuver))
+  #             ((IF Attitude:    One Vector Pointing, Two Vector Pointing, Quaternion, Mirror, Detumble, Whl H Manage))
+  #             Index:      [[Index, {SV Index for Two Vector}]] ((needed if not Passive or NO_CHANGE))
+  #             Subtype:    [[Subtype]] ((Needed if not Actuator))
+  - SC: 0
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Passive
+          - Type: Translation
+            Subtype: Passive
+          - Type: Navigation
+            Index: 0
+      - Time: 2100.0
+        Commands:
+          - Type: Attitude
+            Subtype: Quaternion
+            Index: 0
+      - Time: 2740.0
+        Commands:
+          - Type: Translation
+            Subtype: Translation
+            Index: 4
+          - Type: Attitude
+            Subtype: Quaternion
+            Index: 0
+      - Time: 2820.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [5, 5]
+      - Time: 3100.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [6, 5]
+      - Time: 3900.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [7, 6]

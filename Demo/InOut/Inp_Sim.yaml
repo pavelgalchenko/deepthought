@@ -1,0 +1,248 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
+Simulation Control:
+  # -------------------------------Simulation Control------------------------------
+  #   Mode: [[FAST/REAL/EXTERNAL/NOS3]]
+  #   Duration: [[sec]]
+  #   Step Size: [[sec]]
+  #   File Interval: [[sec]]
+  #   RNG Seed:
+  #   Enable Graphics: [[true/false]]
+  #   Command File:
+  Mode: FAST
+  Duration: 20000.0
+  Step Size: 0.1
+  File Interval: 10.0
+  RNG Seed: 0
+  Enable Graphics: true
+  Command File: Inp_Cmd.txt
+Time:
+  # -------------------------------Time Configuration------------------------------
+  #   Date:
+  #     Month:  [[]]
+  #     Day:    [[]]
+  #     Year:   [[]]
+  #   Time:
+  #     Hour:   [[]]
+  #     Minute: [[]]
+  #     Second: [[]]
+  #     Millisecond: [[]]
+  #   Leap Seconds:   [[]]
+  Date:
+    Month: 9
+    Day: 29
+    Year: 2016
+  Time:
+    Hour: 10
+    Minute: 16
+    Second: 0
+    Millisecond: 0
+  Leap Seconds: 37.0
+Orbits:
+  # ------------------------------Orbit Configurations-----------------------------
+  #   - Name:
+  #     Enabled: [[true/false]]
+  - Name: Orb_EOS
+    Enabled: true
+  - Name: Orb_ISS
+    Enabled: true
+  - Name: Orb_67P
+    Enabled: true
+  - Name: Orb_Saturn
+    Enabled: true
+  - Name: Orb_Jupiter
+    Enabled: true
+  - Name: Orb_Cube
+    Enabled: true
+  - Name: Orb_EarthEscape
+    Enabled: true
+  - Name: Orb_LEO
+    Enabled: true
+SCs:
+  # ------------------------------SC Configurations-----------------------------
+  #   - Name:
+  #     Orbit:
+  #     Enabled: [[true/false]]
+  - Name: SC_Voyager
+    Orbit: Orb_Saturn
+    Enabled: true
+  - Name: SC_BBM
+    Orbit: Orb_Jupiter
+    Enabled: true
+  - Name: SC_Moai
+    Orbit: Orb_Jupiter
+    Enabled: true
+  - Name: SC_Aura
+    Orbit: Orb_EOS
+    Enabled: true
+  - Name: SC_ISS
+    Orbit: Orb_ISS
+    Enabled: true
+  - Name: SC_Shuttle
+    Orbit: Orb_ISS
+    Enabled: true
+  - Name: SC_IonCruiser
+    Orbit: Orb_67P
+    Enabled: true
+  - Name: SC_Cubesat1U
+    Orbit: Orb_Cube
+    Enabled: true
+  - Name: SC_Cubesat3U
+    Orbit: Orb_Cube
+    Enabled: true
+  - Name: SC_Cubesat6U
+    Orbit: Orb_Cube
+    Enabled: true
+  - Name: SC_CMG
+    Orbit: Orb_EarthEscape
+    Enabled: true
+  - Name: SC_ThrDemo
+    Orbit: Orb_LEO
+    Enabled: true
+Perturbation Models:
+  # ---------------------------Perturbation Configuration--------------------------
+  #   Atmosphere:
+  #     Enabled: [[true/false]]
+  #     Shadows: [[true/false]]
+  #     Models:
+  #     ((Sequence; one element for unique Atmospere Model Definition))
+  #       - World: [[EARTH]]
+  #         Method: [[USER/NOMINAL/TWOSIGMA]]
+  #         F10.7: (Only used if USER)
+  #         Ap: (Only used if USER)
+  #   Magnetic:
+  #     Residual Mag Moment: [[true/false]]
+  #     Models:
+  #     ((Sequence; one element for unique Magnetic Model Definition))
+  #       - World: [[EARTH]]
+  #         Method: [[NONE/IGRF/DIPOLE]]
+  #         Degree: [[0-10]] (Only used if IGRF)
+  #         Order: [[0-Degree]] (Only used if IGRF)
+  #   Gravitation:
+  #     Enabled: [[true/false]]
+  #     Gravity Gradient: [[true/false]]
+  #     ((Sequence; one element for unique Gravitation Model Definition))
+  #       - World: [[EARTH/MARS/LUNA]]
+  #         Degree: [[0-18]]
+  #         Order: [[0-Degree]]
+  #   SRP:
+  #     Enabled: [[true/false]]
+  #     Shadows: [[true/false]]
+  #   Thruster Plume: [[true/false]]
+  #   Contact: [[true/false]]
+  #   CFD Slosh: [[true/false]]
+  #   Albedo on CSS: [[true/false]]
+  #   Output Env Torques to File: [[true/false]]
+  Atmosphere:
+    Enabled: false
+    Shadows: false
+    Models:
+      - World: EARTH
+        Method: USER
+        F10.7: 230.0
+        Ap: 100.0
+  Magnetic:
+    Residual Mag Moment: false
+    Models:
+      - World: EARTH
+        Method: IGRF
+        Degree: 8
+        Order: 8
+  Gravitation:
+    Enabled: false
+    Gravity Gradient: false
+    Models:
+      - World: EARTH
+        Degree: 2
+        Order: 0
+      - World: MARS
+        Degree: 2
+        Order: 0
+      - World: LUNA
+        Degree: 2
+        Order: 0
+  SRP:
+    Enabled: false
+    Shadows: false
+  Thruster Plume: false
+  Contact: false
+  CFD Slosh: false
+  Albedo on CSS: false
+  Output Env Torques to File: false
+Ephem Type: MEAN
+Celestial Bodies:
+  # --------------------------Celestial Body Configuration-------------------------
+  #   Mercury: [[true/false]]
+  #   Venus: [[true/false]]
+  #   Earth and Luna: [[true/false]]
+  #   Mars and its moons: [[true/false]]
+  #   Jupiter and its moons: [[true/false]]
+  #   Saturn and its moons: [[true/false]]
+  #   Uranus and its moons: [[true/false]]
+  #   Neptune and its moons: [[true/false]]
+  #   Pluto and its moons: [[true/false]]
+  #   Asteroids and Comets: [[true/false]]
+  Mercury: true
+  Venus: true
+  Earth and Luna: true
+  Mars and its moons: true
+  Jupiter and its moons: true
+  Saturn and its moons: true
+  Uranus and its moons: true
+  Neptune and its moons: true
+  Pluto and its moons: true
+  Asteroids and Comets: true
+Lagrange Systems:
+  # -------------------------Lagrange System Configuration-------------------------
+  #   Earth-Moon: [[true/false]]
+  #   Sun-Earth: [[true/false]]
+  #   Sun-Jupiter: [[true/false]]
+  Earth-Moon: true
+  Sun-Earth: true
+  Sun-Jupiter: false
+Ground Stations:
+  # --------------------------Ground Station Configuration-------------------------
+  # ((Sequence; one element for unique Ground Station Definition))
+  #   - Ground Station:
+  #       Index:
+  #       Enabled: [[true/false]]
+  #       World:
+  #       Longitude:
+  #       Latitude:
+  #       Label:
+  - Ground Station:
+      Index: 0
+      Enabled: true
+      World: EARTH
+      Longitude: -77.0
+      Latitude: 37.0
+      Label: GSFC
+  - Ground Station:
+      Index: 1
+      Enabled: true
+      World: EARTH
+      Longitude: -155.6
+      Latitude: 19.0
+      Label: South Point
+  - Ground Station:
+      Index: 2
+      Enabled: true
+      World: EARTH
+      Longitude: 115.4
+      Latitude: -29.0
+      Label: Dongara
+  - Ground Station:
+      Index: 3
+      Enabled: true
+      World: EARTH
+      Longitude: -71.0
+      Latitude: -33.0
+      Label: Santiago
+  - Ground Station:
+      Index: 4
+      Enabled: true
+      World: LUNA
+      Longitude: 45.0
+      Latitude: 45.0
+      Label: Moon Base Alpha
