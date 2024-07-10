@@ -20,7 +20,8 @@
 */
 
 /**********************************************************************/
-void AssignScToOrbit(struct SCType *S, long Iorb) {
+void AssignScToOrbit(struct SCType *S, long Iorb)
+{
    struct OrbitType *OldOrb, *NewOrb;
    long i;
 
@@ -51,7 +52,8 @@ void AssignScToOrbit(struct SCType *S, long Iorb) {
    S->RefOrb = Iorb;
 }
 /**********************************************************************/
-void FindSCinFormation(struct SCType *S) {
+void FindSCinFormation(struct SCType *S)
+{
 
    double psn[3], pcmn[3];
    double wxr[3], wxrn[3], vsn[3];
@@ -95,7 +97,8 @@ void FindSCinFormation(struct SCType *S) {
 #endif
 }
 /**********************************************************************/
-void CheckOrbitRectification(struct OrbitType *O) {
+void CheckOrbitRectification(struct OrbitType *O)
+{
    long Isc, i;
    double m     = 0.0;
    double mr[3] = {0.0, 0.0, 0.0};
@@ -147,7 +150,8 @@ void CheckOrbitRectification(struct OrbitType *O) {
 /*  variables are referenced.  Changing orbit Worlds changes the N   */
 /*  frame being used.  To avoid discontinuities in actual positions   */
 /*  or attitudes, several dynamical variables must be adjusted.       */
-void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld) {
+void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld)
+{
    double CN1H[3][3], CN2H[3][3], CL1H[3][3], CL2H[3][3], CH[3][3], VH[3];
    double CBN1[3][3], CBN2[3][3];
    struct FormationType *F;
@@ -173,7 +177,8 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld) {
       MxM(F->CL, CL1H, CH);
       MxMT(CH, CL2H, F->CL);
       MxM(F->CL, O->CLN, F->CN);
-   } else {
+   }
+   else {
       MxM(F->CN, CN1H, CH);
       MxMT(CH, CN2H, F->CN);
       MxMT(F->CN, O->CLN, F->CL);
@@ -235,18 +240,21 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld) {
             for (j = 0; j < 3; j++)
                POV.C[i][j] = POV.CN[i][j];
          }
-      } else if (POV.Frame == FRAME_L) {
+      }
+      else if (POV.Frame == FRAME_L) {
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
                POV.C[i][j] = POV.CL[i][j];
          }
-      } else if (POV.Frame == FRAME_F) {
+      }
+      else if (POV.Frame == FRAME_F) {
          /* Still needs work */
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
                POV.C[i][j] = POV.CF[i][j];
          }
-      } else if (POV.Frame == FRAME_S || POV.Frame == FRAME_B) {
+      }
+      else if (POV.Frame == FRAME_S || POV.Frame == FRAME_B) {
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
                POV.C[i][j] = POV.CB[i][j];
@@ -256,7 +264,8 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld) {
    }
 }
 /**********************************************************************/
-void CheckChangeOfOrbitWorld(struct OrbitType *O) {
+void CheckChangeOfOrbitWorld(struct OrbitType *O)
+{
 #define NO_TRANSITION         0
 #define CENTRAL1_TO_THREEBODY 1
 #define CENTRAL2_TO_THREEBODY 2
@@ -288,7 +297,8 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O) {
          Body1      = World[O->World].Parent;
          Body2      = O->World;
       }
-   } else { /* ORB_THREE_BODY */
+   }
+   else { /* ORB_THREE_BODY */
       /* Falling "in" from 3-body to Body 2-centered */
       Iw = O->Body2;
       for (i = 0; i < 3; i++)
@@ -297,7 +307,8 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O) {
          Transition = THREEBODY_TO_CENTRAL2;
          Body1      = O->Body1;
          Body2      = O->Body2;
-      } else {
+      }
+      else {
          /* Falling "out" from 3-body to Body 1-centered */
          for (i = 0; i < 3; i++)
             dr[i] = O->PosN[i] - World[Iw].eph.PosN[i];
@@ -382,7 +393,8 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O) {
 #undef THREEBODY_TO_CENTRAL2
 }
 /**********************************************************************/
-void SplineToPosVel(struct OrbitType *O) {
+void SplineToPosVel(struct OrbitType *O)
+{
    long NodeYear, NodeMonth, NodeDay, NodeHour, NodeMin;
    double NodeSec;
    char newline;
@@ -438,20 +450,23 @@ void SplineToPosVel(struct OrbitType *O) {
              &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha, &O->rmin,
              &O->MeanMotion, &O->Period);
       O->tp += SimTime;
-   } else if (O->Regime == ORB_THREE_BODY) {
+   }
+   else if (O->Regime == ORB_THREE_BODY) {
       MTxV(LagSys[O->Sys].CLN, x, xn);
       MTxV(LagSys[O->Sys].CLN, v, vn);
       for (j = 0; j < 3; j++) {
          O->PosN[j] = xn[j] + LagSys[O->Sys].LP[O->LP].PosN[j];
          O->VelN[j] = vn[j] + LagSys[O->Sys].LP[O->LP].VelN[j];
       }
-   } else {
+   }
+   else {
       printf("Invalid Orbit Regime in SplineToPosVel.\n");
       exit(1);
    }
 }
 /**********************************************************************/
-void OrbitMotion(double Time) {
+void OrbitMotion(double Time)
+{
    long Iorb, i, j;
    struct OrbitType *O;
    struct RegionType *R;
@@ -476,14 +491,17 @@ void OrbitMotion(double Time) {
          if (O->Regime == ORB_THREE_BODY) {
             if (O->LagDOF == LAGDOF_MODES) {
                LagModes2RV(Time, &LagSys[O->Sys], O, O->PosN, O->VelN);
-            } else if (O->LagDOF == LAGDOF_COWELL) {
+            }
+            else if (O->LagDOF == LAGDOF_COWELL) {
                ThreeBodyOrbitRK4(O);
                RV2LagModes(Time, &LagSys[O->Sys], O);
                O->Epoch = Time;
-            } else if (O->LagDOF == LAGDOF_SPLINE) {
+            }
+            else if (O->LagDOF == LAGDOF_SPLINE) {
                SplineToPosVel(O);
             }
-         } else if (O->Regime == ORB_CENTRAL) {
+         }
+         else if (O->Regime == ORB_CENTRAL) {
             if (O->SplineActive)
                SplineToPosVel(O);
             else if (O->J2DriftEnabled)
@@ -531,14 +549,16 @@ void OrbitMotion(double Time) {
          /* Update Formation Frame */
          if (Frm[Iorb].FixedInFrame == 'L') {
             MxM(Frm[Iorb].CL, O->CLN, Frm[Iorb].CN);
-         } else {
+         }
+         else {
             MxMT(Frm[Iorb].CN, O->CLN, Frm[Iorb].CL);
          }
       }
    }
 }
 /**********************************************************************/
-void Ephemerides(void) {
+void Ephemerides(void)
+{
 
    struct OrbitType *Eph;
    struct OrbitType *O;
@@ -601,7 +621,8 @@ void Ephemerides(void) {
             World[LUNA].VelH[j] = vh[j] + World[EARTH].VelH[j];
          }
       }
-   } else if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440) {
+   }
+   else if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440) {
       /* Update DE430 block if needed */
       if (TT.JulDay > World[SOL].eph.Cheb[1].JD2)
          LoadJplEphems(ModelPath, TT.JulDay);
@@ -666,9 +687,11 @@ void Ephemerides(void) {
       QxV(qJ2000H, vh, World[LUNA].eph.VelN);
       World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
-   } else if (EphemOption == EPH_SPICE_REC) {
+   }
+   else if (EphemOption == EPH_SPICE_REC) {
       LoadSpiceEphems(DynTime);
-   } else {
+   }
+   else {
       printf("Bogus Ephem Option in Ephemerides.  Bailing out.\n");
       exit(1);
    }
@@ -772,19 +795,22 @@ void Ephemerides(void) {
                S->CLN[i][i] = 1.0;
                S->wln[i]    = 0.0;
             }
-         } else if (O->Regime == ORB_FLIGHT) {
+         }
+         else if (O->Regime == ORB_FLIGHT) {
             for (j = 0; j < 3; j++) {
                S->PosR[j] = S->PosN[j] - O->PosN[j];
                S->VelR[j] = S->VelN[j] - O->VelN[j];
             }
             FindENU(S->PosN, W->w, S->CLN, S->wln);
-         } else if (O->Regime == ORB_CENTRAL) {
+         }
+         else if (O->Regime == ORB_CENTRAL) {
             if (S->OrbDOF == ORBDOF_COWELL) {
                for (j = 0; j < 3; j++) {
                   S->PosR[j] = S->PosN[j] - O->PosN[j];
                   S->VelR[j] = S->VelN[j] - O->VelN[j];
                }
-            } else {
+            }
+            else {
                for (j = 0; j < 3; j++) {
                   S->PosN[j] = O->PosN[j] + S->PosR[j];
                   S->VelN[j] = O->VelN[j] + S->VelR[j];
@@ -793,7 +819,8 @@ void Ephemerides(void) {
             FindCLN(S->PosN, S->VelN, S->CLN, S->wln);
             RelRV2EHRV(O->SMA, O->MeanMotion, O->CLN, S->PosR, S->VelR,
                        S->PosEH, S->VelEH);
-         } else { /* ORB_THREE_BODY */
+         }
+         else { /* ORB_THREE_BODY */
             for (j = 0; j < 3; j++) {
                S->PosN[j] = O->PosN[j] + S->PosR[j];
                S->VelN[j] = O->VelN[j] + S->VelR[j];

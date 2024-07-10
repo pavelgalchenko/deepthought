@@ -62,7 +62,7 @@ BraceWrapping:
     AfterStruct: false
     AfterUnion: false
     BeforeCatch: false
-    BeforeElse: false
+    BeforeElse: true
     BeforeLambdaBody: false
     BeforeWhile: false
     IndentBraces: false
@@ -74,7 +74,7 @@ BreakAfterJavaFieldAnnotations: false
 BreakArrays: false
 BreakBeforeBinaryOperators: None
 BreakBeforeConceptDeclarations: Always
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Stroustrup
 BreakBeforeInlineASMColon: OnlyMultiline
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon

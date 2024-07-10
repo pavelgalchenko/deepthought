@@ -20,7 +20,8 @@
 
 /**********************************************************************/
 struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
-                           struct MatlType *OldMatl, long *Nmatl) {
+                           struct MatlType *OldMatl, long *Nmatl)
+{
    FILE *MtlLib;
    char line[512];
    long i;
@@ -130,7 +131,8 @@ struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
    return (NewMatl);
 }
 /**********************************************************************/
-void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl) {
+void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl)
+{
    long Im;
    double Tot;
    struct MatlType *M;
@@ -146,7 +148,8 @@ void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl) {
    }
 }
 /*********************************************************************/
-void SurfaceForceProps(struct GeomType *G) {
+void SurfaceForceProps(struct GeomType *G)
+{
    double **uv;
    double uhat[3], v2[3], nhat[3], vhat[3];
    double C[3][3];
@@ -228,7 +231,8 @@ void SurfaceForceProps(struct GeomType *G) {
 }
 /*********************************************************************/
 /* Ref Werner and Scheeres, "Exterior Gravitation of a Polyhedron ..." */
-void EdgeAndPolyDyads(struct GeomType *G) {
+void EdgeAndPolyDyads(struct GeomType *G)
+{
    struct EdgeType *E;
    struct PolyType *P1, *P2, *P;
    double *V1, *V2;
@@ -268,7 +272,8 @@ void EdgeAndPolyDyads(struct GeomType *G) {
    }
 }
 /*********************************************************************/
-double PolyhedronVolume(struct GeomType *G) {
+double PolyhedronVolume(struct GeomType *G)
+{
    double Vol;
    struct PolyType *P;
    double *V1, *V2, *V3;
@@ -287,7 +292,8 @@ double PolyhedronVolume(struct GeomType *G) {
    return (Vol);
 }
 /*********************************************************************/
-long PolyIsDegenerate(struct PolyType *P, double **V) {
+long PolyIsDegenerate(struct PolyType *P, double **V)
+{
 #define EPS (1.0E-6)
    long ZeroArea;
    long Iv, I1, I2, I3, i;
@@ -311,8 +317,8 @@ long PolyIsDegenerate(struct PolyType *P, double **V) {
 #undef EPS
 }
 /**********************************************************************/
-long RayHitsBBox(double Source[3], double DirVec[3],
-                 struct BoundingBoxType *BB) {
+long RayHitsBBox(double Source[3], double DirVec[3], struct BoundingBoxType *BB)
+{
    double dx, dy, dz, x, y, z;
 
    /* Check +X face */
@@ -381,7 +387,8 @@ long RayHitsBBox(double Source[3], double DirVec[3],
 /**********************************************************************/
 long KDRayHitsLeaf(double Source[3], double DirVec[3], struct KDNodeType *KD,
                    struct GeomType *G, long *HitPoly, double HitPoint[3],
-                   double *HitDist) {
+                   double *HitDist)
+{
    struct PolyType *P;
    double **Vtx;
    long Hit, Ip, Iv, i;
@@ -413,14 +420,16 @@ long KDRayHitsLeaf(double Source[3], double DirVec[3], struct KDNodeType *KD,
 /**********************************************************************/
 long KDRayHitsNode(double Source[3], double DirVec[3], struct KDNodeType *KD,
                    struct GeomType *G, long *HitPoly, double HitPoint[3],
-                   double *HitDist) {
+                   double *HitDist)
+{
    long HitLow, HitHigh;
    long Hit = 0;
 
    if (RayHitsBBox(Source, DirVec, &KD->BB)) {
       if (KD->IsLeaf) {
          Hit = KDRayHitsLeaf(Source, DirVec, KD, G, HitPoly, HitPoint, HitDist);
-      } else { /* Recursively check child nodes */
+      }
+      else { /* Recursively check child nodes */
          HitLow  = KDRayHitsNode(Source, DirVec, KD->LowChild, G, HitPoly,
                                  HitPoint, HitDist);
          HitHigh = KDRayHitsNode(Source, DirVec, KD->HighChild, G, HitPoly,
@@ -433,8 +442,8 @@ long KDRayHitsNode(double Source[3], double DirVec[3], struct KDNodeType *KD,
 /**********************************************************************/
 /* Source and DirVec must be expressed in G's coordinate system       */
 long KDProjectRayOntoGeom(double Source[3], double DirVec[3],
-                          struct GeomType *G, long *HitPoly,
-                          double HitPoint[3]) {
+                          struct GeomType *G, long *HitPoly, double HitPoint[3])
+{
    double HitDist = 1.0E12; /* Absurd large value */
    long RayHitsGeom;
 
@@ -445,7 +454,8 @@ long KDProjectRayOntoGeom(double Source[3], double DirVec[3],
 }
 /**********************************************************************/
 long KDPartition(long *P, long LowEnd, long HighEnd, long Axis,
-                 struct GeomType *G) {
+                 struct GeomType *G)
+{
    long PivotIdx, TempIdx;
    long LowIdx;
    double PivotVal;
@@ -461,13 +471,15 @@ long KDPartition(long *P, long LowEnd, long HighEnd, long Axis,
          P[LowIdx]       = P[PivotIdx - 1];
          P[PivotIdx - 1] = TempIdx;
          PivotIdx--;
-      } else
+      }
+      else
          LowIdx++;
    }
    return (PivotIdx);
 }
 /**********************************************************************/
-long KDSelectMedian(long *P, long N, long Axis, struct GeomType *G) {
+long KDSelectMedian(long *P, long N, long Axis, struct GeomType *G)
+{
    long LowEnd, HighEnd, PivotIdx;
 
    LowEnd  = 0;
@@ -484,7 +496,8 @@ long KDSelectMedian(long *P, long N, long Axis, struct GeomType *G) {
    return (PivotIdx);
 }
 /**********************************************************************/
-long KDCompare(long P1, long P2, long Axis, struct GeomType *G) {
+long KDCompare(long P1, long P2, long Axis, struct GeomType *G)
+{
    if (G->Poly[P1].Centroid[Axis] < G->Poly[P2].Centroid[Axis])
       return (-1);
    else if (G->Poly[P1].Centroid[Axis] > G->Poly[P2].Centroid[Axis])
@@ -493,7 +506,8 @@ long KDCompare(long P1, long P2, long Axis, struct GeomType *G) {
       return (0);
 }
 /**********************************************************************/
-void KDFormHeap(long *P, long L, long Axis, struct GeomType *G) {
+void KDFormHeap(long *P, long L, long Axis, struct GeomType *G)
+{
    long Done, k, Temp;
 
    do {
@@ -519,7 +533,8 @@ void KDFormHeap(long *P, long L, long Axis, struct GeomType *G) {
    } while (!Done);
 }
 /**********************************************************************/
-void KDHeapSort(long *Poly, long Npoly, long Axis, struct GeomType *G) {
+void KDHeapSort(long *Poly, long Npoly, long Axis, struct GeomType *G)
+{
    long HeapLength;
    long Temp;
 
@@ -540,7 +555,8 @@ void KDHeapSort(long *Poly, long Npoly, long Axis, struct GeomType *G) {
    }
 }
 /**********************************************************************/
-void SplitKDNode(struct KDNodeType *KD, struct GeomType *G) {
+void SplitKDNode(struct KDNodeType *KD, struct GeomType *G)
+{
    struct KDNodeType *LC, *HC;
    struct PolyType *P;
    double MedVal;
@@ -610,22 +626,27 @@ void SplitKDNode(struct KDNodeType *KD, struct GeomType *G) {
    /* Recurse until termination conditions met */
    if (LC->Npoly < 20) {
       LC->IsLeaf = 1;
-   } else if (LC->Depth > 20) {
+   }
+   else if (LC->Depth > 20) {
       /*printf("Depth exceeds 20.  Npoly = %ld\n",LC->Npoly);*/
       LC->IsLeaf = 1;
-   } else
+   }
+   else
       SplitKDNode(LC, G);
 
    if (HC->Npoly < 20) {
       HC->IsLeaf = 1;
-   } else if (HC->Depth > 20) {
+   }
+   else if (HC->Depth > 20) {
       /*printf("Depth exceeds 20.  Npoly = %ld\n",HC->Npoly);*/
       HC->IsLeaf = 1;
-   } else
+   }
+   else
       SplitKDNode(HC, G);
 }
 /**********************************************************************/
-void LoadKDTree(struct GeomType *G) {
+void LoadKDTree(struct GeomType *G)
+{
 
    struct KDNodeType *KD;
    long i, Ip;
@@ -651,7 +672,8 @@ void LoadKDTree(struct GeomType *G) {
    SplitKDNode(KD, G);
 }
 /**********************************************************************/
-void LoadOctree(struct GeomType *G) {
+void LoadOctree(struct GeomType *G)
+{
    struct OctreeType *O;
    struct OctreeCellType *OC, *C;
    struct BoundingBoxType *BB;
@@ -751,33 +773,40 @@ void LoadOctree(struct GeomType *G) {
                if (AllPos[2]) {
                   Ic            = 7;
                   NoChildHasAll = 0;
-               } else if (AllNeg[2]) {
+               }
+               else if (AllNeg[2]) {
                   Ic            = 6;
                   NoChildHasAll = 0;
                }
-            } else if (AllNeg[1]) {
+            }
+            else if (AllNeg[1]) {
                if (AllPos[2]) {
                   Ic            = 5;
                   NoChildHasAll = 0;
-               } else if (AllNeg[2]) {
+               }
+               else if (AllNeg[2]) {
                   Ic            = 4;
                   NoChildHasAll = 0;
                }
             }
-         } else if (AllNeg[0]) {
+         }
+         else if (AllNeg[0]) {
             if (AllPos[1]) {
                if (AllPos[2]) {
                   Ic            = 3;
                   NoChildHasAll = 0;
-               } else if (AllNeg[2]) {
+               }
+               else if (AllNeg[2]) {
                   Ic            = 2;
                   NoChildHasAll = 0;
                }
-            } else if (AllNeg[1]) {
+            }
+            else if (AllNeg[1]) {
                if (AllPos[2]) {
                   Ic            = 1;
                   NoChildHasAll = 0;
-               } else if (AllNeg[2]) {
+               }
+               else if (AllNeg[2]) {
                   Ic            = 0;
                   NoChildHasAll = 0;
                }
@@ -818,7 +847,8 @@ void LoadOctree(struct GeomType *G) {
 /*********************************************************************/
 /* Point and DirVec have already been transformed into Geom frame      */
 long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
-                          double ProjPoint[3], long *ClosestPoly) {
+                          double ProjPoint[3], long *ClosestPoly)
+{
    struct OctreeType *O;
    struct PolyType *P;
    struct OctreeCellType *OC;
@@ -877,17 +907,22 @@ long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
             /* Next Cell on Hit */
             if (OC->NextOnHit == 0) {
                Exhausted = 1;
-            } else {
+            }
+            else {
                OC = &O->OctCell[OC->NextOnHit];
             }
-         } else if (OC->NextOnMiss == 0) {
+         }
+         else if (OC->NextOnMiss == 0) {
             Exhausted = 1;
-         } else {
+         }
+         else {
             OC = &O->OctCell[OC->NextOnMiss];
          }
-      } else if (OC->NextOnMiss == 0) {
+      }
+      else if (OC->NextOnMiss == 0) {
          Exhausted = 1;
-      } else {
+      }
+      else {
          OC = &O->OctCell[OC->NextOnMiss];
       }
    }
@@ -899,7 +934,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
                                   const char ObjFilename[40],
                                   struct MatlType **MatlPtr, long *Nmatl,
                                   struct GeomType *Geom, long *Ngeom,
-                                  long *GeomTag, long EdgesEnabled) {
+                                  long *GeomTag, long EdgesEnabled)
+{
 #define D2R (0.0174532925199433)
    FILE *infile, *outfile;
    FILE *TmpFile;
@@ -977,14 +1013,18 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
       if (sscanf(line, "# Nv = %ld  Nvt = %ld  Nvn = %ld  Npoly = %ld", &G->Nv,
                  &G->Nvt, &G->Nvn, &G->Npoly) == 4) {
          NoArraySizesFound = 0;
-      } else if (sscanf(line, "v  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      }
+      else if (sscanf(line, "v  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
          G->Nv++;
-      } else if (sscanf(line, "vt %lf %lf", &V[0], &V[1]) == 2 ||
-                 sscanf(line, "vt %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      }
+      else if (sscanf(line, "vt %lf %lf", &V[0], &V[1]) == 2 ||
+               sscanf(line, "vt %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
          G->Nvt++;
-      } else if (sscanf(line, "vn  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      }
+      else if (sscanf(line, "vn  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
          G->Nvn++;
-      } else if (line[0] == 'f') {
+      }
+      else if (line[0] == 'f') {
          G->Npoly++;
       }
       sprintf(line, "Flush");
@@ -1031,35 +1071,42 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
       fgets(line, 512, infile);
       if (sscanf(line, "# Scale up by %lf to actual size", &Value) == 1) {
          Scale = Value;
-      } else if (sscanf(line, "# Scale down by %lf to actual size", &Value) ==
-                 1) {
+      }
+      else if (sscanf(line, "# Scale down by %lf to actual size", &Value) ==
+               1) {
          Scale = 1.0 / Value;
-      } else if (sscanf(line, "# Units = %s", response) == 1) {
+      }
+      else if (sscanf(line, "# Units = %s", response) == 1) {
          if (!strncmp(response, "mm", 2))
             Scale = 0.001;
          else if (!strncmp(response, "in", 2))
             Scale = 0.0254;
          else if (!strncmp(response, "ft", 2))
             Scale = 0.3048;
-      } else if (sscanf(line, "# Translate by [%lf %lf %lf]", &Val1, &Val2,
-                        &Val3) == 3) {
+      }
+      else if (sscanf(line, "# Translate by [%lf %lf %lf]", &Val1, &Val2,
+                      &Val3) == 3) {
          TransVec[0] = Val1;
          TransVec[1] = Val2;
          TransVec[2] = Val3;
-      } else if (sscanf(line, "# Rotate via Seq = %ld by [%lf %lf %lf] deg",
-                        &Seq, &Val1, &Val2, &Val3) == 4) {
+      }
+      else if (sscanf(line, "# Rotate via Seq = %ld by [%lf %lf %lf] deg", &Seq,
+                      &Val1, &Val2, &Val3) == 4) {
          A2C(Seq, Val1 * D2R, Val2 * D2R, Val3 * D2R, RotM);
-      } else if (sscanf(line, "v  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      }
+      else if (sscanf(line, "v  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
          MTxV(RotM, V, Vr);
          for (i = 0; i < 3; i++)
             G->V[Ivtx][i] = Scale * Vr[i] + TransVec[i];
          Ivtx++;
-      } else if (sscanf(line, "vt %lf %lf", &V[0], &V[1]) == 2 ||
-                 sscanf(line, "vt %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      }
+      else if (sscanf(line, "vt %lf %lf", &V[0], &V[1]) == 2 ||
+               sscanf(line, "vt %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
          G->Vt[Ivt][0] = V[0];
          G->Vt[Ivt][1] = (1.0 - V[1]); /* Flip about horizontal axis */
          Ivt++;
-      } else if (sscanf(line, "vn  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      }
+      else if (sscanf(line, "vn  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
          if (V[0] == 0 && V[1] == 0 && V[2] == 0) {
             for (i = 0; i < 3; i++) {
                V[i] = 1.0; /* Kludge.  Who defines a zero-length normal?? */
@@ -1070,7 +1117,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
          for (i = 0; i < 3; i++)
             G->Vn[Ivn][i] = V[i];
          Ivn++;
-      } else if (line[0] == 'f') {
+      }
+      else if (line[0] == 'f') {
          P       = &G->Poly[Ipoly];
          P->Nv   = 0;
          P->Matl = MatlIdx;
@@ -1104,19 +1152,22 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
                P->Vn[P->Nv - 1] = In - 1;
                P->HasTex        = 1;
                P->HasNorm       = 1;
-            } else if (sscanf(vtxtoken, "%ld/%ld", &I, &It) == 2) {
+            }
+            else if (sscanf(vtxtoken, "%ld/%ld", &I, &It) == 2) {
                P->V[P->Nv - 1]  = I - 1;
                P->Vt[P->Nv - 1] = It - 1;
                P->Vn[P->Nv - 1] = 0;
                P->HasTex        = 1;
                P->HasNorm       = 0;
-            } else if (sscanf(vtxtoken, "%ld//%ld", &I, &In) == 2) {
+            }
+            else if (sscanf(vtxtoken, "%ld//%ld", &I, &In) == 2) {
                P->V[P->Nv - 1]  = I - 1;
                P->Vt[P->Nv - 1] = 0;
                P->Vn[P->Nv - 1] = In - 1;
                P->HasTex        = 0;
                P->HasNorm       = 1;
-            } else if (sscanf(vtxtoken, "%ld", &I) == 1) {
+            }
+            else if (sscanf(vtxtoken, "%ld", &I) == 1) {
                P->V[P->Nv - 1]  = I - 1;
                P->Vt[P->Nv - 1] = 0;
                P->Vn[P->Nv - 1] = 0;
@@ -1130,14 +1181,17 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
             free(P->Vt);
             free(P->Vn);
             G->Npoly--;
-         } else {
+         }
+         else {
             Ipoly++;
          }
-      } else if (sscanf(line, "mtllib %s", MtlLibName) == 1) {
+      }
+      else if (sscanf(line, "mtllib %s", MtlLibName) == 1) {
          Matl     = AddMtlLib(ModelPath, MtlLibName, Matl, Nmatl);
          *MatlPtr = Matl;
          ScaleSpecDiffFrac(Matl, *Nmatl);
-      } else if (sscanf(line, "usemtl %s", MatlName) == 1) {
+      }
+      else if (sscanf(line, "usemtl %s", MatlName) == 1) {
          MatlIdx = 0;
          while (MatlIdx < *Nmatl && strcmp(MatlName, Matl[MatlIdx].Label))
             MatlIdx++;
@@ -1233,7 +1287,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
                      printf("Realloc failed in LoadWingsObjFile\n");
                      exit(1);
                   }
-               } else {
+               }
+               else {
                   Ptr = realloc(G->Edge, G->Nedge * sizeof(struct EdgeType));
                   if (Ptr == NULL) {
                      printf("Realloc failed in LoadWingsObjFile\n");
@@ -1282,7 +1337,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
 }
 /*********************************************************************/
 void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
-                        const char Path[80], const char FileName[40]) {
+                        const char Path[80], const char FileName[40])
+{
    char MtlFileName[80], ObjFileName[80];
    FILE *MtlFile, *ObjFile;
    long Im, Iv, Ip;

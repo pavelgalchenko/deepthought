@@ -66,7 +66,8 @@ GLuint KernelToTexTag(void)
 }
 #endif
 /**********************************************************************/
-double CubicKernel(double r, double h, long Ndim) {
+double CubicKernel(double r, double h, long Ndim)
+{
    double K;
    double q = fabs(r / h);
    double q1, q2;
@@ -90,14 +91,17 @@ double CubicKernel(double r, double h, long Ndim) {
       q2 = 2.0 - q;
       q1 = 1.0 - q;
       return (K * (q2 * q2 * q2 - 4.0 * q1 * q1 * q1));
-   } else if (q < 2.0) {
+   }
+   else if (q < 2.0) {
       q2 = 2.0 - q;
       return (K * q2 * q2 * q2);
-   } else
+   }
+   else
       return (0.0);
 }
 /**********************************************************************/
-double CubicGradKernel(double r, double h, long Ndim) {
+double CubicGradKernel(double r, double h, long Ndim)
+{
    double K;
    double q = fabs(r / h);
    double q1, q2;
@@ -121,14 +125,17 @@ double CubicGradKernel(double r, double h, long Ndim) {
       q2 = 2.0 - q;
       q1 = 1.0 - q;
       return (K * (q2 * q2 - 4.0 * q1 * q1));
-   } else if (q < 2.0) {
+   }
+   else if (q < 2.0) {
       q2 = 2.0 - q;
       return (K * q2 * q2);
-   } else
+   }
+   else
       return (0.0);
 }
 /**********************************************************************/
-double Poly6Kernel(double r, double h, long Ndim) {
+double Poly6Kernel(double r, double h, long Ndim)
+{
    double K;
    double q = fabs(r / h);
    double d;
@@ -151,11 +158,13 @@ double Poly6Kernel(double r, double h, long Ndim) {
    if (q < 2.0) {
       d = 4.0 - q * q;
       return (K * d * d * d);
-   } else
+   }
+   else
       return (0.0);
 }
 /**********************************************************************/
-double Poly6GradKernel(double r, double h, long Ndim) {
+double Poly6GradKernel(double r, double h, long Ndim)
+{
    double K;
    double q = fabs(r / h);
    double d;
@@ -178,11 +187,13 @@ double Poly6GradKernel(double r, double h, long Ndim) {
    if (q < 2.0) {
       d = 4.0 - q * q;
       return (K * q * d * d);
-   } else
+   }
+   else
       return (0.0);
 }
 /**********************************************************************/
-double SpikyKernel(double r, double h, long Ndim) {
+double SpikyKernel(double r, double h, long Ndim)
+{
    double K;
    double q = fabs(r / h);
    double d = 2.0 - q;
@@ -208,7 +219,8 @@ double SpikyKernel(double r, double h, long Ndim) {
       return (0.0);
 }
 /**********************************************************************/
-double SpikyGradKernel(double r, double h, long Ndim) {
+double SpikyGradKernel(double r, double h, long Ndim)
+{
    double K;
    double q = fabs(r / h);
    double d = 2.0 - q;
@@ -234,7 +246,8 @@ double SpikyGradKernel(double r, double h, long Ndim) {
       return (0.0);
 }
 /**********************************************************************/
-double Unwrap(double dx, double Span) {
+double Unwrap(double dx, double Span)
+{
    if (dx < -0.5 * Span)
       return (dx + Span);
    else if (dx > 0.5 * Span)

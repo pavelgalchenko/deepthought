@@ -20,7 +20,8 @@
 */
 
 /**********************************************************************/
-void PassiveJoint(struct JointType *G, struct SCType *S) {
+void PassiveJoint(struct JointType *G, struct SCType *S)
+{
    long i;
    double a[3];
 
@@ -30,7 +31,8 @@ void PassiveJoint(struct JointType *G, struct SCType *S) {
          G->Trq[i] =
              -G->RotDampCoef[i] * G->AngRate[i] - G->RotSpringCoef[i] * a[i];
       }
-   } else {
+   }
+   else {
       for (i = 0; i < G->RotDOF; i++) {
          G->Trq[i] = -G->RotDampCoef[i] * G->AngRate[i] -
                      G->RotSpringCoef[i] * G->Ang[i];
@@ -44,7 +46,8 @@ void PassiveJoint(struct JointType *G, struct SCType *S) {
 }
 /**********************************************************************/
 /* Simple actively-controlled joint.                                  */
-void ActuatedJoint(struct JointType *G, struct SCType *S) {
+void ActuatedJoint(struct JointType *G, struct SCType *S)
+{
    double RateCmd;
    long i;
 
@@ -72,13 +75,15 @@ void SloshJoint(struct JointType *G, struct SCType *S) {}
 void SteeringMirrorJoint(struct JointType *G, struct SCType *S) {}
 /**********************************************************************/
 /* A good place for you to implement a quick-and-dirty model          */
-void AdHocJoint(struct JointType *G, struct SCType *S) {
+void AdHocJoint(struct JointType *G, struct SCType *S)
+{
    long i;
 
    if (G->IsSpherical) {
       for (i = 0; i < 3; i++)
          G->Trq[i] = 0.0;
-   } else {
+   }
+   else {
       for (i = 0; i < G->RotDOF; i++)
          G->Trq[i] = 0.0;
    }
@@ -87,7 +92,8 @@ void AdHocJoint(struct JointType *G, struct SCType *S) {
       G->Frc[i] = 0.0;
 }
 /**********************************************************************/
-void JointFrcTrq(struct JointType *G, struct SCType *S) {
+void JointFrcTrq(struct JointType *G, struct SCType *S)
+{
 
    switch (G->Type) {
       case PASSIVE_JOINT:

@@ -20,7 +20,8 @@
 */
 /*********************************************************************/
 /* Generic force/torque source, with tones or spread-spectrum    */
-void ShakerJitter(struct ShakerType *Sh, struct SCType *S) {
+void ShakerJitter(struct ShakerType *Sh, struct SCType *S)
+{
    long It;
    double Signal;
 
@@ -40,7 +41,8 @@ void ShakerJitter(struct ShakerType *Sh, struct SCType *S) {
 }
 /*********************************************************************/
 /* Ref "Wheel Jitter.ipynb" */
-void WheelJitter(struct WhlType *W, struct SCType *S) {
+void WheelJitter(struct WhlType *W, struct SCType *S)
+{
    struct WhlHarmType *H;
    double OM, OM2, nOM, nOM2;
    double Fx, Fy, Tx, Ty;

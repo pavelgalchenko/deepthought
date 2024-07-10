@@ -30,7 +30,8 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled);
 */
 
 /**********************************************************************/
-long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
+long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
+{
    long NewCmdProcessed = FALSE;
    long Isc, Ib, Ig, Iw, It, i, Isct, Ibt, Ithr;
    char response[80];
@@ -110,7 +111,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -137,7 +139,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -169,7 +172,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -198,7 +202,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -227,7 +232,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -255,7 +261,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -279,7 +286,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -294,43 +302,57 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       if (!strcmp(TargetString, "EARTH")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = EARTH;
-      } else if (!strcmp(TargetString, "MOON")) {
+      }
+      else if (!strcmp(TargetString, "MOON")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = LUNA;
-      } else if (!strcmp(TargetString, "LUNA")) {
+      }
+      else if (!strcmp(TargetString, "LUNA")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = LUNA;
-      } else if (!strcmp(TargetString, "MERCURY")) {
+      }
+      else if (!strcmp(TargetString, "MERCURY")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = MERCURY;
-      } else if (!strcmp(TargetString, "VENUS")) {
+      }
+      else if (!strcmp(TargetString, "VENUS")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = VENUS;
-      } else if (!strcmp(TargetString, "MARS")) {
+      }
+      else if (!strcmp(TargetString, "MARS")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = MARS;
-      } else if (!strcmp(TargetString, "JUPITER")) {
+      }
+      else if (!strcmp(TargetString, "JUPITER")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = JUPITER;
-      } else if (!strcmp(TargetString, "SATURN")) {
+      }
+      else if (!strcmp(TargetString, "SATURN")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = SATURN;
-      } else if (!strcmp(TargetString, "URANUS")) {
+      }
+      else if (!strcmp(TargetString, "URANUS")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = URANUS;
-      } else if (!strcmp(TargetString, "NEPTUNE")) {
+      }
+      else if (!strcmp(TargetString, "NEPTUNE")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = NEPTUNE;
-      } else if (!strcmp(TargetString, "PLUTO")) {
+      }
+      else if (!strcmp(TargetString, "PLUTO")) {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = PLUTO;
-      } else if (!strcmp(TargetString, "VELOCITY")) {
+      }
+      else if (!strcmp(TargetString, "VELOCITY")) {
          CV->TrgType = TARGET_VELOCITY;
-      } else if (!strcmp(TargetString, "MAGFIELD")) {
+      }
+      else if (!strcmp(TargetString, "MAGFIELD")) {
          CV->TrgType = TARGET_MAGFIELD;
-      } else if (!strcmp(TargetString, "TDRS")) {
+      }
+      else if (!strcmp(TargetString, "TDRS")) {
          CV->TrgType = TARGET_TDRS;
-      } else {
+      }
+      else {
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = SOL;
       }
@@ -349,7 +371,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -382,11 +405,13 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
          for (i = 0; i < 3; i++)
             VecH[i] = Vec[i];
          MxV(World[Orb[SC[Isc].RefOrb].World].CNH, VecH, Vec);
-      } else
+      }
+      else
          Frame = FRAME_N;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
-      } else {
+      }
+      else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
       }
@@ -404,7 +429,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
       if (Frame == FRAME_L) {
          for (i = 0; i < 3; i++)
             CV->L[i] = Vec[i];
-      } else {
+      }
+      else {
          for (i = 0; i < 3; i++)
             CV->N[i] = Vec[i];
       }
@@ -436,9 +462,10 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
          for (i = 0; i < 4; i++)
             Cmd->qrl[i] = q[i];
       }
-   } else if (sscanf(CmdLine,
-                     "Event Eclipse Exit SC[%ld] qrl = [%lf %lf %lf %lf]", &Isc,
-                     &q[0], &q[1], &q[2], &q[3]) == 5) {
+   }
+   else if (sscanf(CmdLine,
+                   "Event Eclipse Exit SC[%ld] qrl = [%lf %lf %lf %lf]", &Isc,
+                   &q[0], &q[1], &q[2], &q[3]) == 5) {
       *CmdTime =
           SimTime + DTSIM;    /* Allows exiting while loop in CmdInterpreter */
       if (!SC[Isc].Eclipse) { /* Will pend on this command until this condition
@@ -529,7 +556,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime) {
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-void RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3]) {
+void RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3])
+{
    double magp, phat[3], Axis[3], Vpar, Vperp[3], magvp;
    long i;
 
@@ -546,7 +574,8 @@ void RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3]) {
       wn[i] = magvp / magp * Axis[i];
 }
 /**********************************************************************/
-void FindCmdVecN(struct SCType *S, struct CmdVecType *CV) {
+void FindCmdVecN(struct SCType *S, struct CmdVecType *CV)
+{
    struct WorldType *W;
    double RelPosB[3], vb[3];
    double RelPosN[3], RelPosH[3], RelVelN[3], RelVelH[3];
@@ -571,7 +600,8 @@ void FindCmdVecN(struct SCType *S, struct CmdVecType *CV) {
                RelPosN[i] = pn[i] - S->PosN[i];
                RelVelN[i] = vn[i] - S->VelN[i];
             }
-         } else {
+         }
+         else {
             MTxV(W->CNH, pn, ph);
             MTxV(W->CNH, vn, vh);
             for (i = 0; i < 3; i++) {
@@ -590,12 +620,14 @@ void FindCmdVecN(struct SCType *S, struct CmdVecType *CV) {
                RelPosN[i] = SC[CV->TrgSC].PosR[i] - S->PosR[i];
                RelVelN[i] = SC[CV->TrgSC].VelR[i] - S->VelR[i];
             }
-         } else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
+         }
+         else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = SC[CV->TrgSC].PosN[i] - S->PosN[i];
                RelVelN[i] = SC[CV->TrgSC].VelN[i] - S->VelN[i];
             }
-         } else {
+         }
+         else {
             for (i = 0; i < 3; i++) {
                RelPosH[i] = SC[CV->TrgSC].PosH[i] - S->PosH[i];
                RelVelH[i] = SC[CV->TrgSC].VelH[i] - S->VelH[i];
@@ -622,12 +654,14 @@ void FindCmdVecN(struct SCType *S, struct CmdVecType *CV) {
                RelPosN[i] = SC[CV->TrgSC].PosR[i] + pn[i] - S->PosR[i];
                RelVelN[i] = SC[CV->TrgSC].VelR[i] + vn[i] - S->VelR[i];
             }
-         } else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
+         }
+         else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = SC[CV->TrgSC].PosN[i] + pn[i] - S->PosN[i];
                RelVelN[i] = SC[CV->TrgSC].VelN[i] + vn[i] - S->VelN[i];
             }
-         } else {
+         }
+         else {
             MTxV(World[Orb[SC[CV->TrgSC].RefOrb].World].CNH, pn, ph);
             MTxV(World[Orb[SC[CV->TrgSC].RefOrb].World].CNH, vn, vh);
             for (i = 0; i < 3; i++) {
@@ -678,7 +712,8 @@ void FindCmdVecN(struct SCType *S, struct CmdVecType *CV) {
    }
 }
 /**********************************************************************/
-void ThreeAxisAttitudeCommand(struct SCType *S) {
+void ThreeAxisAttitudeCommand(struct SCType *S)
+{
    struct JointType *G;
    struct BodyType *B;
    struct CmdType *Cmd;
@@ -712,11 +747,13 @@ void ThreeAxisAttitudeCommand(struct SCType *S) {
          else if (PV->Frame == FRAME_N) {
             for (i = 0; i < 3; i++)
                PV->wn[i] = 0.0;
-         } else if (PV->Frame == FRAME_L) {
+         }
+         else if (PV->Frame == FRAME_L) {
             MTxV(S->CLN, PV->L, PV->N);
             for (i = 0; i < 3; i++)
                PV->wn[i] = S->wln[i];
-         } else if (PV->Frame == FRAME_B) {
+         }
+         else if (PV->Frame == FRAME_B) {
             MTxV(SC[PV->TrgSC].B[PV->TrgBody].CN, PV->T, PV->N);
             MTxV(SC[PV->TrgSC].B[PV->TrgBody].CN,
                  SC[PV->TrgSC].B[PV->TrgBody].wn, PV->wn);
@@ -727,11 +764,13 @@ void ThreeAxisAttitudeCommand(struct SCType *S) {
          else if (SV->Frame == FRAME_N) {
             for (i = 0; i < 3; i++)
                SV->wn[i] = 0.0;
-         } else if (SV->Frame == FRAME_L) {
+         }
+         else if (SV->Frame == FRAME_L) {
             MTxV(S->CLN, SV->L, SV->N);
             for (i = 0; i < 3; i++)
                SV->wn[i] = S->wln[i];
-         } else if (SV->Frame == FRAME_B) {
+         }
+         else if (SV->Frame == FRAME_B) {
             MTxV(SC[SV->TrgSC].B[SV->TrgBody].CN, SV->T, SV->N);
             MTxV(SC[SV->TrgSC].B[SV->TrgBody].CN,
                  SC[SV->TrgSC].B[SV->TrgBody].wn, SV->wn);
@@ -786,7 +825,8 @@ void ThreeAxisAttitudeCommand(struct SCType *S) {
             MTxV(G->CBoGo, SV->R, SecVecGo);
             TRIAD(PriVecGi, SecVecGi, PriVecGo, SecVecGo, CGoGi);
             C2A(G->RotSeq, CGoGi, &Cmd->Ang[0], &Cmd->Ang[1], &Cmd->Ang[2]);
-         } else {
+         }
+         else {
             MxV(B->CN, PV->N, PriVecBi);
             PointGimbalToTarget(G->RotSeq, G->CGiBi, G->CBoGo, PriVecBi, PV->R,
                                 Cmd->Ang);
@@ -795,7 +835,8 @@ void ThreeAxisAttitudeCommand(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void SpinnerCommand(struct SCType *S) {
+void SpinnerCommand(struct SCType *S)
+{
    struct CmdType *Cmd;
    struct CmdVecType *PV;
    double MagH;
@@ -822,7 +863,8 @@ void SpinnerCommand(struct SCType *S) {
 /**********************************************************************/
 /* This function copies needed parameters from the SC structure to    */
 /* the AC structure.                                                 */
-void InitAC(struct SCType *S) {
+void InitAC(struct SCType *S)
+{
    long Ib, Ig, i, j, k;
    struct AcType *AC;
    double **A, **Aplus;
@@ -982,7 +1024,8 @@ void InitAC(struct SCType *S) {
       if (S->Nw == 1) {
          for (i = 0; i < 3; i++)
             AC->Whl[0].DistVec[i] = AC->Whl[0].Axis[i];
-      } else if (S->Nw >= 2) {
+      }
+      else if (S->Nw >= 2) {
          PINVG(A, Aplus, 3, S->Nw);
          for (i = 0; i < AC->Nwhl; i++) {
             for (j = 0; j < 3; j++) {
@@ -1014,7 +1057,8 @@ void InitAC(struct SCType *S) {
       if (S->Nmtb == 1) {
          for (i = 0; i < 3; i++)
             AC->MTB[0].DistVec[i] = AC->MTB[0].Axis[i];
-      } else if (S->Nmtb >= 2) {
+      }
+      else if (S->Nmtb >= 2) {
          PINVG(A, Aplus, 3, S->Nmtb);
          for (i = 0; i < AC->Nmtb; i++) {
             for (j = 0; j < 3; j++) {
@@ -1073,7 +1117,8 @@ void InitAC(struct SCType *S) {
 /* inertia of the appendage depending from the joint (that is, all    */
 /* bodies for which that joint is in the JointPathTable) about that   */
 /* joint, with all joints undeflected.                                */
-void FindAppendageInertia(long Ig, struct SCType *S, double Iapp[3]) {
+void FindAppendageInertia(long Ig, struct SCType *S, double Iapp[3])
+{
    struct DynType *D;
    struct JointType *G;
    double rho[3], CBoBi[3][3], Coi[3][3], Cr[3], rhog[3], Csofar[3][3];
@@ -1124,7 +1169,8 @@ void FindAppendageInertia(long Ig, struct SCType *S, double Iapp[3]) {
    }
 }
 /**********************************************************************/
-void MapCmdsToActuators(struct SCType *S) {
+void MapCmdsToActuators(struct SCType *S)
+{
    struct IdealActType *I;
    struct WhlType *W;
    struct MTBType *M;
@@ -1158,7 +1204,8 @@ void MapCmdsToActuators(struct SCType *S) {
             T->ThrustLevelCmd =
                 Delay(T->Delay, S->LoopGain * AC->Thr[It].ThrustLevelCmd);
       }
-   } else if (S->FswSampleCounter == 0) {
+   }
+   else if (S->FswSampleCounter == 0) {
       for (i = 0; i < 3; i++) {
          S->IdealAct[i].Fcmd = AC->IdealFrc[i];
          S->IdealAct[i].Tcmd = AC->IdealTrq[i];
@@ -1180,7 +1227,8 @@ void MapCmdsToActuators(struct SCType *S) {
 }
 /**********************************************************************/
 /*  This simple control law is suitable for rapid prototyping.        */
-void PrototypeFSW(struct SCType *S) {
+void PrototypeFSW(struct SCType *S)
+{
    struct AcType *AC;
    struct AcPrototypeCtrlType *C;
    struct BodyType *B;
@@ -1216,8 +1264,8 @@ void PrototypeFSW(struct SCType *S) {
          }
          AC->IdealTrq[i] = Limit(C->Tcmd[i], -0.1, 0.1);
       }
-
-   } else {
+   }
+   else {
       if (C->Init) {
          C->Init = 0;
 
@@ -1249,7 +1297,8 @@ void PrototypeFSW(struct SCType *S) {
 }
 /**********************************************************************/
 /*  SC_Spinner is a one-body spin-stabilized inertial pointer         */
-void SpinnerFSW(struct SCType *S) {
+void SpinnerFSW(struct SCType *S)
+{
 
    double B1, B2, magb, magb2;
    double x = 0.0;
@@ -1318,7 +1367,8 @@ void SpinnerFSW(struct SCType *S) {
                    C->Kprec * (C->Itrans * w2 - C->Ispin * C->SpinRate * y);
       C->xold = x;
       C->yold = y;
-   } else {
+   }
+   else {
       C->Tcmd[0] = 0.0;
       C->Tcmd[1] = 0.0;
    }
@@ -1340,7 +1390,8 @@ void SpinnerFSW(struct SCType *S) {
 }
 /**********************************************************************/
 /* Notional two-body momentum-biased Earth pointer                    */
-void MomBiasFSW(struct SCType *S) {
+void MomBiasFSW(struct SCType *S)
+{
 
    double PitchRateError, PitchTcmd;
    double Tcmd[3], magb2, Mcmd[3];
@@ -1377,8 +1428,8 @@ void MomBiasFSW(struct SCType *S) {
          AC->G[0].Cmd.Ang[i]     = 0.0;
          AC->G[0].Cmd.AngRate[i] = 0.0;
       }
-
-   } else { /* Nadir Point */
+   }
+   else { /* Nadir Point */
 
       /* Pitch Loop */
       PitchRateError  = AC->wbn[1] - PitchRateCmd;
@@ -1406,7 +1457,8 @@ void MomBiasFSW(struct SCType *S) {
       if (AC->SunValid) {
          PointGimbalToTarget(AC->G[0].RotSeq, AC->G[0].CGiBi, AC->G[0].CBoGo,
                              AC->svb, Zvec, AC->G[0].Cmd.Ang);
-      } else {
+      }
+      else {
          AC->G[0].Cmd.Ang[0] += PitchRateCmd * AC->DT;
       }
       if (AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0] > Pi)
@@ -1417,7 +1469,8 @@ void MomBiasFSW(struct SCType *S) {
 }
 /**********************************************************************/
 /* SC_Aura is a three-body three-axis stabilized S/C                */
-void ThreeAxisFSW(struct SCType *S) {
+void ThreeAxisFSW(struct SCType *S)
+{
    double wln[3], CRN[3][3];
    double qrn[4], qbr[4], svr[3];
    double Herr[3], HxB[3];
@@ -1476,7 +1529,8 @@ void ThreeAxisFSW(struct SCType *S) {
    if (AC->SunValid) {
       PointGimbalToTarget(AC->G[0].RotSeq, AC->G[0].CGiBi, AC->G[0].CBoGo,
                           AC->svb, Zvec, AC->G[0].Cmd.Ang);
-   } else {
+   }
+   else {
       AC->G[0].Cmd.Ang[0] += wln[1] * AC->DT;
    }
    if (AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0] > Pi)
@@ -1492,7 +1546,8 @@ void ThreeAxisFSW(struct SCType *S) {
              AC->G[0].MaxAngRate[0]);
 }
 /**********************************************************************/
-void IssFSW(struct SCType *S) {
+void IssFSW(struct SCType *S)
+{
    long Ig, i, j;
    struct AcType *AC;
    struct AcIssCtrlType *C;
@@ -1605,7 +1660,8 @@ void IssFSW(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void CmgFSW(struct SCType *S) {
+void CmgFSW(struct SCType *S)
+{
    struct AcType *AC;
    struct AcCmgCtrlType *C;
    double CBL[3][3], qbl[4], qbr[4];
@@ -1670,7 +1726,8 @@ void CmgFSW(struct SCType *S) {
    }
 }
 /**********************************************************************/
-void ThrFSW(struct SCType *S) {
+void ThrFSW(struct SCType *S)
+{
    struct AcType *AC;
    struct AcThrType *T;
    struct AcThrCtrlType *C;
@@ -1827,7 +1884,8 @@ void CfsFSW(struct AcType *AC)
 #endif
 /**********************************************************************/
 /* Put your custom controller here                                    */
-void AdHocFSW(struct SCType *S) {
+void AdHocFSW(struct SCType *S)
+{
    struct AcType *AC;
    struct AcAdHocCtrlType *C;
    double CLN[3][3], CRN[3][3], qrn[4], wln[3];
@@ -1874,7 +1932,8 @@ void AdHocFSW(struct SCType *S) {
 /*  and failure detection and correction all fall within the scope of */
 /*  this file.                                                        */
 /**********************************************************************/
-void FlightSoftWare(struct SCType *S) {
+void FlightSoftWare(struct SCType *S)
+{
 #ifdef _AC_STANDALONE_
    struct IpcType *I;
    long Iipc;
@@ -1931,7 +1990,8 @@ void FlightSoftWare(struct SCType *S) {
 
                      S->AC.ParmLoadEnabled = 0;
                      S->AC.ParmDumpEnabled = 0;
-                  } else {
+                  }
+                  else {
                      WriteToSocket(I->Socket, I->Prefix, I->Nprefix,
                                    I->EchoEnabled);
                      ReadFromSocket(I->Socket, I->EchoEnabled);

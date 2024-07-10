@@ -27,12 +27,14 @@ const char usage_pattern[] = "Usage:\n"
                              "  42 -h | --help\n"
                              "  42 [options]";
 
-Tokens tokens_new(int argc, char **argv) {
+Tokens tokens_new(int argc, char **argv)
+{
    Tokens ts = {argc, argv, 0, argv[0]};
    return ts;
 }
 
-Tokens *tokens_move(Tokens *ts) {
+Tokens *tokens_move(Tokens *ts)
+{
    if (ts->i < ts->argc) {
       ts->current = ts->argv[++ts->i];
    }
@@ -46,7 +48,8 @@ Tokens *tokens_move(Tokens *ts) {
  * ARGV parsing functions
  */
 
-int parse_doubledash(Tokens *ts, Elements *elements) {
+int parse_doubledash(Tokens *ts, Elements *elements)
+{
    // int n_commands = elements->n_commands;
    // int n_arguments = elements->n_arguments;
    // Command *commands = elements->commands;
@@ -57,7 +60,8 @@ int parse_doubledash(Tokens *ts, Elements *elements) {
    return 0;
 }
 
-int parse_long(Tokens *ts, Elements *elements) {
+int parse_long(Tokens *ts, Elements *elements)
+{
    int i;
    int len_prefix;
    int n_options = elements->n_options;
@@ -85,10 +89,12 @@ int parse_long(Tokens *ts, Elements *elements) {
          }
          option->argument = ts->current;
          tokens_move(ts);
-      } else {
+      }
+      else {
          option->argument = eq + 1;
       }
-   } else {
+   }
+   else {
       if (eq != NULL) {
          fprintf(stderr, "%s must not have an argument\n", option->olong);
          return 1;
@@ -98,7 +104,8 @@ int parse_long(Tokens *ts, Elements *elements) {
    return 0;
 }
 
-int parse_shorts(Tokens *ts, Elements *elements) {
+int parse_shorts(Tokens *ts, Elements *elements)
+{
    char *raw;
    int i;
    int n_options = elements->n_options;
@@ -121,7 +128,8 @@ int parse_shorts(Tokens *ts, Elements *elements) {
       raw++;
       if (!option->argcount) {
          option->value = true;
-      } else {
+      }
+      else {
          if (raw[0] == '\0') {
             if (ts->current == NULL) {
                fprintf(stderr, "%s requires argument\n", option->oshort);
@@ -137,7 +145,8 @@ int parse_shorts(Tokens *ts, Elements *elements) {
    return 0;
 }
 
-int parse_argcmd(Tokens *ts, Elements *elements) {
+int parse_argcmd(Tokens *ts, Elements *elements)
+{
    int i;
    int n_commands = elements->n_commands;
    // int n_arguments = elements->n_arguments;
@@ -164,7 +173,8 @@ int parse_argcmd(Tokens *ts, Elements *elements) {
    return 0;
 }
 
-int parse_args(Tokens *ts, Elements *elements) {
+int parse_args(Tokens *ts, Elements *elements)
+{
    int ret;
 
    while (ts->current != NULL) {
@@ -172,11 +182,14 @@ int parse_args(Tokens *ts, Elements *elements) {
          ret = parse_doubledash(ts, elements);
          if (!ret)
             break;
-      } else if (ts->current[0] == '-' && ts->current[1] == '-') {
+      }
+      else if (ts->current[0] == '-' && ts->current[1] == '-') {
          ret = parse_long(ts, elements);
-      } else if (ts->current[0] == '-' && ts->current[1] != '\0') {
+      }
+      else if (ts->current[0] == '-' && ts->current[1] != '\0') {
          ret = parse_shorts(ts, elements);
-      } else
+      }
+      else
          ret = parse_argcmd(ts, elements);
       if (ret)
          return ret;
@@ -184,7 +197,8 @@ int parse_args(Tokens *ts, Elements *elements) {
    return 0;
 }
 
-int elems_to_args(Elements *elements, DocoptArgs *args, bool help) {
+int elems_to_args(Elements *elements, DocoptArgs *args, bool help)
+{
    Command *command;
    Argument *argument;
    Option *option;
@@ -200,21 +214,27 @@ int elems_to_args(Elements *elements, DocoptArgs *args, bool help) {
       if (help && option->value && !strcmp(option->olong, "--help")) {
          printf("%s", args->help_message);
          return 1;
-      } else if (!strcmp(option->olong, "--help")) {
+      }
+      else if (!strcmp(option->olong, "--help")) {
          args->help = option->value;
-      } else if (!strcmp(option->olong, "--defaultdir")) {
+      }
+      else if (!strcmp(option->olong, "--defaultdir")) {
          if (option->argument)
             args->defaultdir = option->argument;
-      } else if (!strcmp(option->olong, "--graphics")) {
+      }
+      else if (!strcmp(option->olong, "--graphics")) {
          if (option->argument)
             args->graphics = option->argument;
-      } else if (!strcmp(option->olong, "--indir")) {
+      }
+      else if (!strcmp(option->olong, "--indir")) {
          if (option->argument)
             args->indir = option->argument;
-      } else if (!strcmp(option->olong, "--modeldir")) {
+      }
+      else if (!strcmp(option->olong, "--modeldir")) {
          if (option->argument)
             args->modeldir = option->argument;
-      } else if (!strcmp(option->olong, "--outdir")) {
+      }
+      else if (!strcmp(option->olong, "--outdir")) {
          if (option->argument)
             args->outdir = option->argument;
       }
@@ -234,7 +254,8 @@ int elems_to_args(Elements *elements, DocoptArgs *args, bool help) {
  * Main docopt function
  */
 
-DocoptArgs docopt(int argc, char *argv[], bool help) {
+DocoptArgs docopt(int argc, char *argv[], bool help)
+{
    DocoptArgs args = {0,    0,    NULL,          NULL,        NULL,
                       NULL, NULL, usage_pattern, help_message};
    Tokens ts;

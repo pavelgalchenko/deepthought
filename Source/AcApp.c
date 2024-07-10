@@ -32,7 +32,8 @@ extern void ReadFromSocket(SOCKET Socket, struct AcType *AC);
 /* the AC structure.  This is a crude first pass.  It only allocates  */
 /* memory for the structures, and counts on the data to be filled in  */
 /* via messages.                                                      */
-void AllocateAC(struct AcType *AC) {
+void AllocateAC(struct AcType *AC)
+{
 
    /* Bodies */
    AC->Nb = 2;
@@ -108,7 +109,8 @@ void AllocateAC(struct AcType *AC) {
    /* Accelerometer Axes */
 }
 /**********************************************************************/
-void InitAC(struct AcType *AC) {
+void InitAC(struct AcType *AC)
+{
    AC->Init = 1;
 
    AC->EchoEnabled = 1;
@@ -122,7 +124,8 @@ void InitAC(struct AcType *AC) {
 /*  corresponding to the Sensor Models in 42sensors.c                 */
 /*  Note!  These are simple, sometimes naive.  Use with care.         */
 /**********************************************************************/
-void GyroProcessing(struct AcType *AC) {
+void GyroProcessing(struct AcType *AC)
+{
    struct AcGyroType *G;
    double A0xA1[3];
    double A[3][3], b[3], Ai[3][3];
@@ -133,11 +136,13 @@ void GyroProcessing(struct AcType *AC) {
 
    if (AC->Ngyro == 0) {
       /* AC->wbn populated by true S->B[0].wn in 42sensors.c */
-   } else if (AC->Ngyro == 1) {
+   }
+   else if (AC->Ngyro == 1) {
       G = &AC->Gyro[0];
       for (i = 0; i < 3; i++)
          AC->wbn[i] = G->Rate * G->Axis[i];
-   } else if (AC->Ngyro == 2) {
+   }
+   else if (AC->Ngyro == 2) {
       VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
       for (i = 0; i < 3; i++) {
          A[0][i] = AC->Gyro[0].Axis[i];
@@ -149,7 +154,8 @@ void GyroProcessing(struct AcType *AC) {
       b[2] = 0.0;
       MINV3(A, Ai);
       MxV(Ai, b, AC->wbn);
-   } else if (AC->Ngyro > 2) {
+   }
+   else if (AC->Ngyro > 2) {
       /* Normal Equations */
       for (Ig = 0; Ig < AC->Ngyro; Ig++) {
          G = &AC->Gyro[Ig];
@@ -165,7 +171,8 @@ void GyroProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void MagnetometerProcessing(struct AcType *AC) {
+void MagnetometerProcessing(struct AcType *AC)
+{
    struct AcMagnetometerType *M;
    double A0xA1[3];
    double A[3][3], b[3], Ai[3][3];
@@ -176,11 +183,13 @@ void MagnetometerProcessing(struct AcType *AC) {
 
    if (AC->Nmag == 0) {
       /* AC->bvb populated by true S->bvb in 42sensors.c */
-   } else if (AC->Nmag == 1) {
+   }
+   else if (AC->Nmag == 1) {
       M = &AC->MAG[0];
       for (i = 0; i < 3; i++)
          AC->bvb[i] = M->Field * M->Axis[i];
-   } else if (AC->Nmag == 2) {
+   }
+   else if (AC->Nmag == 2) {
       VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
       for (i = 0; i < 3; i++) {
          A[0][i] = AC->MAG[0].Axis[i];
@@ -192,7 +201,8 @@ void MagnetometerProcessing(struct AcType *AC) {
       b[2] = 0.0;
       MINV3(A, Ai);
       MxV(Ai, b, AC->bvb);
-   } else if (AC->Nmag > 2) {
+   }
+   else if (AC->Nmag > 2) {
       /* Normal Equations */
       for (Im = 0; Im < AC->Nmag; Im++) {
          M = &AC->MAG[Im];
@@ -208,7 +218,8 @@ void MagnetometerProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void CssProcessing(struct AcType *AC) {
+void CssProcessing(struct AcType *AC)
+{
    struct AcCssType *Css;
    double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
    double Atb[3]    = {0.0, 0.0, 0.0};
@@ -221,7 +232,8 @@ void CssProcessing(struct AcType *AC) {
 
    if (AC->Ncss == 0) {
       /* AC->svb populated by true S->svb in 42sensors.c */
-   } else {
+   }
+   else {
       for (Ic = 0; Ic < AC->Ncss; Ic++) {
          Css = &AC->CSS[Ic];
          if (Css->Valid) {
@@ -248,17 +260,20 @@ void CssProcessing(struct AcType *AC) {
          MINV3(AtA, AtAi);
          MxV(AtAi, Atb, AC->svb);
          UNITV(AC->svb);
-      } else if (Nvalid == 2) {
+      }
+      else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = b[0] * A[0][i] + b[1] * A[1][i];
          UNITV(AC->svb);
-      } else if (Nvalid == 1) {
+      }
+      else if (Nvalid == 1) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = Atb[i];
          UNITV(AC->svb);
-      } else {
+      }
+      else {
          AC->SunValid = FALSE;
          for (i = 0; i < 3; i++)
             AC->svb[i] = InvalidSVB[i];
@@ -267,7 +282,8 @@ void CssProcessing(struct AcType *AC) {
 }
 /******************************************************************************/
 /* This function assumes FSS FOVs don't overlap, and FSS overwrites CSS */
-void FssProcessing(struct AcType *AC) {
+void FssProcessing(struct AcType *AC)
+{
    struct AcFssType *FSS;
    double tanx, tany, z;
    long Ifss, i;
@@ -290,7 +306,8 @@ void FssProcessing(struct AcType *AC) {
 }
 /**********************************************************************/
 /* TODO: Weight measurements to reduce impact of "weak" axis */
-void StarTrackerProcessing(struct AcType *AC) {
+void StarTrackerProcessing(struct AcType *AC)
+{
    long Ist, i;
    struct AcStarTrackerType *ST;
    long Nvalid = 0;
@@ -299,7 +316,8 @@ void StarTrackerProcessing(struct AcType *AC) {
    if (AC->Nst == 0) {
       /* AC->qbn populated by true S->B[0].qn in 42sensors.c */
       AC->StValid = TRUE;
-   } else {
+   }
+   else {
       /* Naive averaging */
       for (i = 0; i < 4; i++)
          AC->qbn[i] = 0.0;
@@ -316,14 +334,16 @@ void StarTrackerProcessing(struct AcType *AC) {
       if (Nvalid > 0) {
          AC->StValid = TRUE;
          UNITQ(AC->qbn);
-      } else {
+      }
+      else {
          AC->StValid = FALSE;
          AC->qbn[3]  = 1.0;
       }
    }
 }
 /**********************************************************************/
-void GpsProcessing(struct AcType *AC) {
+void GpsProcessing(struct AcType *AC)
+{
    struct AcGpsType *G;
    double DaysSinceWeek, DaysSinceRollover, DaysSinceEpoch, JD;
    long i;
@@ -331,7 +351,8 @@ void GpsProcessing(struct AcType *AC) {
    if (AC->Ngps == 0) {
       /* AC->Time, AC->PosN, AC->VelN */
       /* populated in 42sensors.c */
-   } else {
+   }
+   else {
       G = &AC->GPS[0];
       /* GPS Time is seconds since 6 Jan 1980 00:00:00.0, which is JD =
        * 2444244.5 */
@@ -356,7 +377,8 @@ void AccelProcessing(struct AcType *AC) {}
 /**********************************************************************/
 /*  Some Actuator Processing Functions                                */
 /**********************************************************************/
-void WheelProcessing(struct AcType *AC) {
+void WheelProcessing(struct AcType *AC)
+{
    struct AcWhlType *W;
    long Iw;
 
@@ -366,7 +388,8 @@ void WheelProcessing(struct AcType *AC) {
    }
 }
 /**********************************************************************/
-void MtbProcessing(struct AcType *AC) {
+void MtbProcessing(struct AcType *AC)
+{
    struct AcMtbType *M;
    long Im;
 
@@ -378,7 +401,8 @@ void MtbProcessing(struct AcType *AC) {
 /**********************************************************************/
 /*  End Actuator Processing Functions                                 */
 /**********************************************************************/
-void AcFsw(struct AcType *AC) {
+void AcFsw(struct AcType *AC)
+{
    struct AcCfsCtrlType *C;
    struct AcJointType *G;
    double L1[3], L2[3], L3[3];
@@ -428,7 +452,8 @@ void AcFsw(struct AcType *AC) {
       AC->wln[0] = 0.0;
       AC->wln[1] = -MAGV(AC->VelN) / MAGV(AC->PosN);
       AC->wln[2] = 0.0;
-   } else {
+   }
+   else {
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
             AC->CLN[i][j] = 0.0;
@@ -444,7 +469,8 @@ void AcFsw(struct AcType *AC) {
    if (AC->StValid) {
       QxQT(AC->qbn, AC->qln, AC->qbr);
       RECTIFYQ(AC->qbr);
-   } else {
+   }
+   else {
       for (i = 0; i < 3; i++)
          AC->qbr[i] = 0.0;
       AC->qbr[3] = 1.0;
@@ -482,7 +508,8 @@ void AcFsw(struct AcType *AC) {
 }
 #ifdef _AC_STANDALONE_
 /**********************************************************************/
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
    FILE *ParmDumpFile;
    char FileName[120];
    struct AcType AC;

@@ -49,7 +49,8 @@ static real c_b79       = 2.f;
 /* Subroutine */ int gts5_0_(int n__, integer *iyd, real *sec, real *alt,
                              real *glat, real *glong, real *stl, real *f107a,
                              real *f107, real *ap, integer *mass, real *d__,
-                             real *t, logical *meter) {
+                             real *t, logical *meter)
+{
    /* Initialized data */
 
    static integer mt[10] = {48, 0, 4, 16, 28, 32, 40, 1, 49, 14};
@@ -368,7 +369,8 @@ L35:
                    &gts3c_1.za, &gts3c_1.z0, &tr12);
    if (*mass == 49) {
       gts3c_1.dd += d__[4] * 2.f;
-   } else {
+   }
+   else {
       gts3c_1.dd = d__[4];
    }
    if (*alt > altl[3] || csw_1.sw[14] == 0.f) {
@@ -555,13 +557,15 @@ L_meters:
 /**********************************************************************/
 /* Subroutine */ int gts5_(integer *iyd, real *sec, real *alt, real *glat,
                            real *glong, real *stl, real *f107a, real *f107,
-                           real *ap, integer *mass, real *d__, real *t) {
+                           real *ap, integer *mass, real *d__, real *t)
+{
    return gts5_0_(0, iyd, sec, alt, glat, glong, stl, f107a, f107, ap, mass,
                   d__, t, (logical *)0);
 }
 
 /**********************************************************************/
-/* Subroutine */ int meters_86(logical *meter) {
+/* Subroutine */ int meters_86(logical *meter)
+{
    return gts5_0_(1, (integer *)0, (real *)0, (real *)0, (real *)0, (real *)0,
                   (real *)0, (real *)0, (real *)0, (real *)0, (integer *)0,
                   (real *)0, (real *)0, meter);
@@ -570,7 +574,8 @@ L_meters:
 /**********************************************************************/
 doublereal denss_(real *alt, real *dlb, real *tinf, real *tlb, real *xm,
                   real *alpha, real *tz, real *zlb, real *s2, real *t0,
-                  real *za, real *z0, real *tr12) {
+                  real *za, real *z0, real *tr12)
+{
    /* Initialized data */
 
    static real rgas = 831.4f;
@@ -675,7 +680,8 @@ L50:
 
 /**********************************************************************/
 doublereal globe5_(real *yrd, real *sec, real *lat, real *long__, real *tloc,
-                   real *f107a, real *f107, real *ap, real *p) {
+                   real *f107a, real *f107, real *ap, real *p)
+{
    /* Initialized data */
 
    static integer nsw = 14;
@@ -1086,7 +1092,8 @@ L49:
 } /* globe5_ */
 
 /**********************************************************************/
-/* Subroutine */ int tselec_0_86(int n__, real *sv, real *svv) {
+/* Subroutine */ int tselec_0_86(int n__, real *sv, real *svv)
+{
    /* System generated locals */
    real r__1;
 
@@ -1117,7 +1124,8 @@ L49:
       csw_1.sw[i__ - 1] = fmod(sv[i__], c_b79);
       if ((r__1 = sv[i__], dabs(r__1)) > 0.f) {
          csw_1.swc[i__ - 1] = 1.f;
-      } else {
+      }
+      else {
          csw_1.swc[i__ - 1] = 0.f;
       }
       /* L100: */
@@ -1134,17 +1142,20 @@ L_tretrv:
 } /* tselec_ */
 
 /**********************************************************************/
-/* Subroutine */ int tselec_86(real *sv) {
+/* Subroutine */ int tselec_86(real *sv)
+{
    return tselec_0_86(0, sv, (real *)0);
 }
 
 /**********************************************************************/
-/* Subroutine */ int tretrv_86(real *svv) {
+/* Subroutine */ int tretrv_86(real *svv)
+{
    return tselec_0_86(1, (real *)0, svv);
 }
 
 /**********************************************************************/
-doublereal glob5l_(real *p) {
+doublereal glob5l_(real *p)
+{
    /* Initialized data */
 
    static real dr    = .0172142f;
@@ -1220,7 +1231,8 @@ doublereal glob5l_(real *p) {
 } /* glob5l_ */
 
 /**********************************************************************/
-doublereal dnet_86(real *dd, real *dm, real *zhm, real *xmm, real *xm) {
+doublereal dnet_86(real *dd, real *dm, real *zhm, real *xmm, real *xm)
+{
    /* System generated locals */
    real ret_val;
    doublereal d__1, d__2;
@@ -1259,7 +1271,8 @@ L50:
 } /* dnet_ */
 
 /**********************************************************************/
-doublereal ccor_86(real *alt, real *r__, real *h1, real *zh) {
+doublereal ccor_86(real *alt, real *r__, real *h1, real *zh)
+{
    /* System generated locals */
    real ret_val;
 
@@ -1293,7 +1306,8 @@ L50:
 } /* ccor_86 */
 
 /**********************************************************************/
-/* Subroutine */ int prmsg5_(void) {
+/* Subroutine */ int prmsg5_(void)
+{
    static integer i__;
 
    /*          CIRA     11-FEB-86 */
@@ -1330,7 +1344,8 @@ L50:
 /*  f2c implementation generated some compiler warnings in declaring  */
 /*  and initializing these structures in the preamble.  This function */
 /*  circumvents the warnings.                                         */
-void InitMSIS86(void) {
+void InitMSIS86(void)
+{
    real parmb_86_e1[2] = {980.665f, 6356.77f};
 
    real lower5_e1[64] = {
@@ -1635,7 +1650,8 @@ void InitMSIS86(void) {
       parm5_.e_1[i] = parm5_e1[i];
 }
 /**********************************************************************/
-void MSIS_ECEFToWGS84(double p[3], double *glat, double *glong, double *alt) {
+void MSIS_ECEFToWGS84(double p[3], double *glat, double *glong, double *alt)
+{
    double a   = 6378137.0;
    double f   = 1.0 / 298.257222101;
    double b   = a * (1.0 - f);
@@ -1771,7 +1787,8 @@ C Dieter Bilitza !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! March 87
 C **********************************************************************
 */
 double MSIS86(long Year, long DOY, long Hour, long Minute, double Second,
-              double pbn[3], double PriMerAng, double F107, double AP) {
+              double pbn[3], double PriMerAng, double F107, double AP)
+{
    integer IYD;
    real SEC, ALT, GLAT, GLONG, STL, F107A;
    real D[8], T[2];
