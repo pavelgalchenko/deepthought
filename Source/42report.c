@@ -182,7 +182,7 @@ void DSM_PlanEphemReport(void) {
    char s[40];
 
    if (First) {
-      ephemfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      ephemfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
       for (Iw = 0; Iw < NWORLD; Iw++) {
          if (World[Iw].Exists) {
             sprintf(s, "ephem/DSM_ephem_%s.42", World[Iw].Name);
