@@ -442,9 +442,8 @@ void DSM_GroundTrackReport(void) {
          UNITV(p);
          Lng = atan2(p[1], p[0]) * R2D;
          Lat = asin(p[2]) * R2D;
-         
-         fprintf(gtrackfile[Isc], "%18.12le %18.12le ",
-                 Lat, Lng);
+
+         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat, Lng);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);

@@ -1246,7 +1246,7 @@ long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255],
 }
 
 //----------------------------- INTERPRETER (FIRST
-//ITERATION)---------------------------------------
+// ITERATION)---------------------------------------
 void DsmCmdInterpreterMrk1(struct SCType *S, FILE *InpDsmFilePtr) {
    char DSM_FileLine[1024] = "";
    char DSM_CmdLine[255];
