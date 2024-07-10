@@ -4804,7 +4804,7 @@ long LoadSpiceKernels(char SpicePath[80]) {
 
 long LoadSpiceEphems(double JD) {
    double JS =
-       (JD - j2000_c()) * spd_c(); // convert Julian days to seconds past J2000. Offset of .5 is because 42 defines Julian day from 00:00
+       (JD - j2000_c() - .5) * spd_c(); // convert Julian days to seconds past J2000. Offset of .5 is because 42 defines Julian day from 00:00
    double ZAxis[3] = {0.0, 0.0, 1.0};
 
    long Iw, Ip, Im;
