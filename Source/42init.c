@@ -4901,7 +4901,6 @@ long LoadSpiceKernels(char SpicePath[80])
 long LoadSpiceEphems(double JS)
 {
    double ZAxis[3] = {0.0, 0.0, 1.0};
-   double CNJ[3][3], ang[3];
 
    long Iw, Ip, Im;
    int i;
@@ -4946,7 +4945,7 @@ long LoadSpiceEphems(double JS)
    double tmp_state[6], tmp_state2[6];
    double light_time;
 
-   double CWH[3][3], CNH_wROT[3][3], ang[3];
+   double CWH[3][3], CNJ[3][3], ang[3];
    // Read all planets
 
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
@@ -4973,8 +4972,14 @@ long LoadSpiceEphems(double JS)
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
-      pxform_c("ECLIPJ2000", frame_name, 0.0, World[Iw].CNH);
-      pxfrm2_c("ECLIPJ2000", frame_name, 0.0, JS , World[Iw].CWN);
+      pxform_c("ECLIPJ2000", frame_name, JS, CWH); // matrix from ECLIPJ2000 -> body fixed
+      
+      m2eul_c(CWH, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+
+      SimpRot(ZAxis, ang[2], World[Iw].CWN);
+      A2C(312, ang[0], ang[1], 0.0, CNJ);
+      MxM(CNJ, World[Iw].CNH, World[Iw].CNH);
+      C2Q(World[Iw].CNH, World[Iw].qnh);
 
       C2Q(World[Iw].CNH, World[Iw].qnh);
       C2Q(World[Iw].CWN, World[Iw].qwn);
@@ -5011,8 +5016,14 @@ long LoadSpiceEphems(double JS)
             char frame_name[25] = "IAU_";
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
             
-            pxform_c("ECLIPJ2000", frame_name, 0.0, World[Iw].CNH);
-            pxfrm2_c("ECLIPJ2000", frame_name, 0.0, JS , World[Iw].CWN);
+            pxform_c("ECLIPJ2000", frame_name, JS, CWH); // matrix from ECLIPJ2000 -> body fixed
+      
+            m2eul_c(CWH, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+
+            SimpRot(ZAxis, ang[2], World[Iw].CWN);
+            A2C(312, ang[0], ang[1], 0.0, CNJ);
+            MxM(CNJ, World[Iw].CNH, World[Iw].CNH);
+            C2Q(World[Iw].CNH, World[Iw].qnh);
 
             C2Q(World[Iw].CNH, World[Iw].qnh);
             C2Q(World[Iw].CWN, World[Iw].qwn);
