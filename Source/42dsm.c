@@ -1498,9 +1498,8 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
          for (i = 0; i < Nav->navDim; i++) {
             if (dataDest[i] < 0.0) {
                printf("The initial estimation error covariance matrix in "
-                      "navigation data %s is not "
-                      "positive definite. Ensure that all states are supplied. "
-                      "Exiting...\n",
+                      "navigation data %s is not positive definite. Ensure "
+                      "that all states are supplied. Exiting...\n",
                       fy_node_get_parent_address(datNode));
                exit(EXIT_FAILURE);
             }
@@ -1577,13 +1576,12 @@ long GetNavigationCmd(struct SCType *S, struct fy_node *navCmdNode,
    if (fy_node_scanf(navCmdNode, "/Subtype %" STR(FIELDWIDTH) "s", subType)) {
       if (!strcmp(subType, "NO_CHANGE")) {
          NavigationCmdProcessed = TRUE;
-         return (NavigationCmdProcessed);
       }
       else if (!strcmp(subType, "PASSIVE_NAV")) {
          Nav->NavigationActive  = FALSE;
          NavigationCmdProcessed = TRUE;
-         return (NavigationCmdProcessed);
       }
+      return (NavigationCmdProcessed);
    }
    else {
       Nav->NavigationActive = TRUE;
@@ -1712,15 +1710,15 @@ long GetNavigationCmd(struct SCType *S, struct fy_node *navCmdNode,
          sscanf(refOri, "SC[%ld].B[%ld]", &Nav->refOriType, &Nav->refOri);
          if (Nav->refOriType >= Nsc) {
             printf("This mission only has %ld spacecraft, but spacecraft %ld "
-                   "was attempted to be "
-                   "set as the navigation reference frame. Exiting...\n",
+                   "was attempted to be set as the navigation reference frame. "
+                   "Exiting...\n",
                    Nsc, Nav->refOriType);
             exit(EXIT_FAILURE);
          }
          if (Nav->refOri >= SC[Nav->refOriType].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the navigation "
-                   "reference frame was "
-                   "attempted to be set as body %ld. Exiting...\n",
+                   "reference frame was attempted to be set as body %ld. "
+                   "Exiting...\n",
                    Nav->refOriType, SC[Nav->refOriType].Nb, Nav->refOri);
             exit(EXIT_FAILURE);
          }
@@ -1737,14 +1735,13 @@ long GetNavigationCmd(struct SCType *S, struct fy_node *navCmdNode,
       iterNode = NULL;
       WHILE_FY_ITER(statesNode, iterNode)
       {
-         char p[FIELDWIDTH + 1] = {};
+         char p[FIELDWIDTH + 1] = {0};
          fy_node_scanf(iterNode, "/ %" STR(FIELDWIDTH) "s", p);
          state = GetStateValue(p);
          if (state == -1 || (state == ROTMAT_STATE && Nav->type == MEKF_NAV) ||
              (state == QUAT_STATE && Nav->type != MEKF_NAV)) {
             printf("%s is an invalid state to estimate for navigation filter "
-                   "index %ld of type %s. "
-                   "Exiting...\n",
+                   "index %ld of type %s. Exiting...\n",
                    p, cmdInd, navType);
             exit(EXIT_FAILURE);
          }
@@ -1755,8 +1752,7 @@ long GetNavigationCmd(struct SCType *S, struct fy_node *navCmdNode,
 
       if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[QUAT_STATE]) {
          printf("Cannot filter the Rotation Matrix and the attitude Quaternion "
-                "simultaneously. "
-                "Exiting...\n");
+                "simultaneously. Exiting...\n");
          exit(EXIT_FAILURE);
       }
 
