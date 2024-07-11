@@ -812,9 +812,10 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                 *cmdModes[0], *cmdModes[1]);
          exit(EXIT_FAILURE);
       }
-      if (AttPriCmdProcessed == TRUE && AttSecCmdProcessed == TRUE) {
+      if (AttPriCmdProcessed == TRUE && AttSecCmdProcessed == TRUE)
          AttitudeCmdProcessed = TRUE;
-      }
+
+      Cmd->AttitudeCtrlActive = TRUE;
    }
    else if (!strcmp(subType, "Quaternion")) {
       fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
