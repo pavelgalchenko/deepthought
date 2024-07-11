@@ -1354,7 +1354,7 @@ long ConfigureNavigationSensors(struct SCType *const S,
                          3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                          meas->R) == 3;
             for (j = 0; j < meas->errDim; j++)
-               meas->R[j] *= D2R / 3600.0;
+               meas->R[j] = meas->R[j] / 3600.0 * D2R;
          } break;
          case GPS_SENSOR: {
             isGood = assignYAMLToDoubleArray(
