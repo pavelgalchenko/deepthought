@@ -3424,7 +3424,7 @@ void LoadPlanets(void)
    World[MARS].Atmo.MieG         = 0.76;
    World[MARS].Atmo.MaxHt        = 8.0 * World[MARS].Atmo.RayScaleHt;
    World[MARS].Atmo.rad          = World[MARS].rad + World[MARS].Atmo.MaxHt;
-
+   
    /* .. Load planetary orbit elements for date of interest */
    for (i = MERCURY; i <= PLUTO; i++) {
       PlanetEphemerides(i, TT.JulDay, World[i].eph.mu, &World[i].eph.SMA,
@@ -4944,10 +4944,25 @@ long LoadSpiceEphems(double JS)
    struct WorldType *W;
    double tmp_state[6], tmp_state2[6];
    double light_time;
+   double ang[3];
 
-   double CWH[3][3], CNJ[3][3], ang[3];
+   double dim = 3;
+
+   double CWH[3][3], CNJ[3][3];
+   double GMST;
+   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
+
+   A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
+
+   /* .. Earth rotation is a special case */
+   GMST                   = JD2GMST(UTC.JulDay);
+   World[EARTH].PriMerAng = TwoPi * GMST;
+   HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
+   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
+   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
+   C2Q(World[EARTH].CWN, World[EARTH].qwn);
+
    // Read all planets
-
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
       W   = &World[Iw];
       Eph = &W->eph;
@@ -4969,20 +4984,18 @@ long LoadSpiceEphems(double JS)
              1e3; // Assign suncentric velocity = inertial velocity (m/s)
       }
 
-      char frame_name[25] = "IAU_";
-      strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+      if (Iw != EARTH){
+         char frame_name[25] = "IAU_";
+         strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
-      pxform_c("ECLIPJ2000", frame_name, JS, CWH); // matrix from ECLIPJ2000 -> body fixed
-      
-      m2eul_c(CWH, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
-
-      SimpRot(ZAxis, ang[2], World[Iw].CWN);
-      A2C(312, ang[0], ang[1], 0.0, CNJ);
-      MxM(CNJ, World[Iw].CNH, World[Iw].CNH);
-      C2Q(World[Iw].CNH, World[Iw].qnh);
-
-      C2Q(World[Iw].CNH, World[Iw].qnh);
-      C2Q(World[Iw].CWN, World[Iw].qwn);
+         pxform_c("J2000", frame_name, JS, CNJ); // matrix from ECLIPJ2000 -> body fixed
+         
+         m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+         
+         MxM(CNJ, World[EARTH].CNH, World[i].CNH);
+         SimpRot(ZAxis, ang[2], World[Iw].CWN);
+         A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
+      }
    }
 
    // Read all moons
@@ -5015,18 +5028,14 @@ long LoadSpiceEphems(double JS)
 
             char frame_name[25] = "IAU_";
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+
+            pxform_c("J2000", frame_name, JS, CNJ); // matrix from ECLIPJ2000 -> body fixed
             
-            pxform_c("ECLIPJ2000", frame_name, JS, CWH); // matrix from ECLIPJ2000 -> body fixed
-      
-            m2eul_c(CWH, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
-
+            m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+            
+            MxM(CNJ, World[EARTH].CNH, World[i].CNH);
             SimpRot(ZAxis, ang[2], World[Iw].CWN);
-            A2C(312, ang[0], ang[1], 0.0, CNJ);
-            MxM(CNJ, World[Iw].CNH, World[Iw].CNH);
-            C2Q(World[Iw].CNH, World[Iw].qnh);
-
-            C2Q(World[Iw].CNH, World[Iw].qnh);
-            C2Q(World[Iw].CWN, World[Iw].qwn);
+            A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
          }
       }
    }
