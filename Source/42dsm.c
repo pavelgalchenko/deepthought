@@ -123,8 +123,8 @@ void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState)
          }
       }
    }
-   DestroyMatrix(A, DOF);
-   DestroyMatrix(APlus, AC->Nthr);
+   DestroyMatrix(A);
+   DestroyMatrix(APlus);
 }
 //------------------------------------------------------------------------------
 //                           Initialize DSM Structure
@@ -159,7 +159,7 @@ void InitDSM(struct SCType *S)
 
 //----------------------------------- GAINS -----------------------------------
 long GetGains(struct SCType *S, const char GainCmdName[255],
-              long controllerState, FILE *InpDsmFilePtr)
+              enum ctrlState controllerState, FILE *InpDsmFilePtr)
 {
    long GainsProcessed = FALSE;
    int gainNum;
@@ -172,7 +172,7 @@ long GetGains(struct SCType *S, const char GainCmdName[255],
    struct DSMCmdType *Cmd;
    struct AcType *AC;
    double kp[3], kr[3], ki[3], limit_vec[3];
-   int controller;
+   enum ctrlType controller = -1;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
@@ -340,7 +340,7 @@ long GetGains(struct SCType *S, const char GainCmdName[255],
 }
 //----------------------------------- LIMITS -----------------------------------
 long GetLimits(struct SCType *S, const char LimitCmdName[255],
-               long controllerState, FILE *InpDsmFilePtr)
+               enum ctrlState controllerState, FILE *InpDsmFilePtr)
 {
    long LimitsProcessed = FALSE;
    int limitNum;
@@ -404,7 +404,7 @@ long GetLimits(struct SCType *S, const char LimitCmdName[255],
 //----------------------------------- CONTROLLER
 //-----------------------------------
 long GetController(struct SCType *S, const char CtrlCmdName[255],
-                   long controllerState, FILE *InpDsmFilePtr)
+                   enum ctrlState controllerState, FILE *InpDsmFilePtr)
 {
    long CntrlProcessed = FALSE;
    int cntrlNum;
@@ -415,7 +415,7 @@ long GetController(struct SCType *S, const char CtrlCmdName[255],
 
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
-   int controller;
+   enum ctrlType controller = -1;
 
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
@@ -500,7 +500,7 @@ long GetController(struct SCType *S, const char CtrlCmdName[255],
 //----------------------------------- ACTUATORS
 //-----------------------------------
 long GetActuators(struct SCType *S, const char ActuatorCmdName[255],
-                  long controllerState, FILE *InpDsmFilePtr)
+                  enum ctrlState controllerState, FILE *InpDsmFilePtr)
 {
    long ActuatorsProcessed = FALSE;
    int actuatorNum, H_DumpCmdMode;
@@ -1304,8 +1304,7 @@ long GetActuatorCmd(struct SCType *S, char ActuatorCmd[255],
    return (ActuatorCmdProcessed);
 }
 
-//----------------------------- INTERPRETER (FIRST
-// ITERATION)---------------------------------------
+//------------------------ INTERPRETER (FIRST ITERATION) -----------------------
 void DsmCmdInterpreterMrk1(struct SCType *S, FILE *InpDsmFilePtr)
 {
    char DSM_FileLine[1024] = "";
@@ -1363,8 +1362,8 @@ void DsmCmdInterpreterMrk1(struct SCType *S, FILE *InpDsmFilePtr)
    DSM->CmdNum      = 0;
 }
 
-//----------------------------- INTERPRETER (SUBSEQUENT ITERATIONS)
-//---------------------------------------
+//--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
+
 void DsmCmdInterpreterMrk2(struct SCType *S, FILE *InpDsmFilePtr)
 {
    char DSM_FileLine[1024] = "";

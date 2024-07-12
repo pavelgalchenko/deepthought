@@ -34,83 +34,80 @@ struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb)
    return (NewOrb);
 }
 /**********************************************************************/
+double eccFDF(double E, double params[2])
+{
+   double f  = E - params[0] * sin(E) - params[1];
+   double fp = 1.0 - params[0] * cos(E);
+   return f / fp;
+}
+/**********************************************************************/
 double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 {
 #define EPS (1.0E-12)
-   double E, f, fp, dE;
-   long i = 0;
-
-   E = MeanAnom;
-   do {
-      i++;
-      f  = E - ecc * sin(E) - MeanAnom;
-      fp = 1.0 - ecc * cos(E);
-      dE = f / fp;
-      if (dE > 0.1)
-         dE = 0.1;
-      if (dE < -0.1)
-         dE = -0.1;
-      E -= dE;
-   } while (fabs(f) > EPS && fabs(dE) > EPS && i < 100);
+   double params[2] = {ecc, MeanAnom};
+   double E         = NewtonRaphson(MeanAnom, EPS, 100, 0.1, &eccFDF, params);
    return (2.0 * atan(sqrt((1.0 + ecc) / (1.0 - ecc)) * tan(0.5 * E)));
 #undef EPS
 }
 /**********************************************************************/
+double circFDF(double x, double B[1])
+{
+   double f  = x * (x * x + 3.0) - 2.0 * B[0];
+   double fp = 3.0 * x * x + 3.0;
+   return f / fp;
+}
+/**********************************************************************/
+double hyperbolFDF(double H, double params[2])
+{
+   double f  = params[0] * sinh(H) - H - params[1];
+   double fp = params[0] * cosh(H) - 1.0;
+   return f / fp;
+}
+/**********************************************************************/
 double TrueAnomaly(double mu, double p, double e, double t)
 {
-#define EPS   (1.0E-12)
-#define PI    (3.141592653589793)
-#define TWOPI (6.283185307179586)
-
-   double p3, B, x, f, fp, e1, N, H, M, a;
-   double Ne, dx, dH, Anom;
-   long i;
-
-   p3 = p * p * p;
+#define EPS (1.0E-12)
+   double Anom;
+   double p3 = p * p * p;
 
    if (e == 1.0) {
-      i = 0;
-      B = 3.0 * sqrt(mu / p3) * t;
-      x = 0.0;
-      do {
-         i++;
-         f   = x * (x * x + 3.0) - 2.0 * B;
-         fp  = 3.0 * x * x + 3.0;
-         dx  = f / fp;
-         x  -= dx;
-      } while (fabs(f) > EPS && fabs(dx) > EPS && i < 100);
-      Anom = 2.0 * atan(x);
+      double params[1] = {3.0 * sqrt(mu / p3) * t};
+      double x         = NewtonRaphson(0, EPS, 100, 1.0, &circFDF, params);
+      Anom             = 2.0 * atan(x);
    }
    else if (e > 1.0) {
-      i  = 0;
-      e1 = e * e - 1.0;
-      N  = sqrt(mu * e1 * e1 * e1 / p3) * t;
-      Ne = N / e;
-      H  = log(Ne + sqrt(Ne * Ne + 1.0)); /* H = arcsinh(N/e); */
-      do {
-         i++;
-         f  = e * sinh(H) - H - N;
-         fp = e * cosh(H) - 1.0;
-         dH = f / fp;
-         if (dH > 0.1)
-            dH = 0.1;
-         if (dH < -0.1)
-            dH = -0.1;
-         H -= dH;
-      } while (fabs(f) > EPS && fabs(dH) > EPS && i < 100);
-      Anom = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
+      double e1        = e * e - 1.0;
+      double N         = sqrt(mu * e1 * e1 * e1 / p3) * t;
+      double Ne        = N / e;
+      double params[2] = {e, N};
+      /* H0 = arcsinh(N/e); */
+      double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1,
+                               &hyperbolFDF, params);
+      Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
    }
    else {
-      a    = p / (1.0 - e * e);
-      M    = sqrt(mu / (a * a * a)) * t;
-      M    = fmod(M + PI, TWOPI) - PI;
-      Anom = MeanAnomToTrueAnom(M, e);
+      double a = p / (1.0 - e * e);
+      double M = sqrt(mu / (a * a * a)) * t;
+      M        = fmod(M + PI, TWOPI) - PI;
+      Anom     = MeanAnomToTrueAnom(M, e);
    }
 
    return (Anom);
 #undef EPS
-#undef PI
-#undef TWOPI
+}
+/**********************************************************************/
+double hyperradFDF(double r, double params[7])
+{
+   double rold = params[5];
+   double fold = params[6];
+   double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
+   double f =
+       r * sqX -
+       params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
+       params[4];
+   params[5] = r;
+   params[6] = f;
+   return f * (r - rold) / (f - fold);
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -122,7 +119,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
 void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R)
 {
 
-   double a, q, sqma, T, Den, alpha, r, sqX, f, rold, fold, dr;
+   double a, q, sqma, T, Den, alpha, sqX, r, f;
 
    a     = p / (1.0 - e * e);
    q     = p / (1.0 + e);
@@ -131,24 +128,12 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R)
    Den   = q / sqma + sqma;
    alpha = 1.0 / a;
 
-   r    = p;
-   sqX  = sqrt((2.0 - p / r) / r - alpha);
-   f    = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
-   rold = r;
-   fold = f;
+   r   = p;
+   sqX = sqrt((2.0 - p / r) / r - alpha);
+   f   = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
 
-   r = 1.1 * p;
-   do {
-      sqX   = sqrt((2.0 - p / r) / r - alpha);
-      f     = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
-      dr    = -f * (r - rold) / (f - fold);
-      rold  = r;
-      fold  = f;
-      r    += dr;
-
-   } while (fabs(dr) > 1.0E-3);
-
-   *R = r;
+   double params[7] = {p, alpha, sqma, Den, T, r, f};
+   *R = NewtonRaphson(1.1 * p, 1.0E-3, 200, 1.0E6, &hyperradFDF, params);
 }
 /**********************************************************************/
 double atanh(double x)
@@ -278,9 +263,7 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
             double *tp, double *SLR, double *alpha, double *rmin,
             double *MeanMotion, double *Period)
 {
-#define EPS   (1.0E-12)
-#define PI    (3.141592653589793)
-#define TWOPI (6.283185307179586)
+#define EPS (1.0E-12)
 
    double xh[3], xe[3], rhat[3], r, v, vxh[3], cth, hxe[3];
    double rohxe, h, dt;
@@ -402,16 +385,12 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
    dt  = TimeSincePeriapsis(mu, *SLR, *e, *th);
    *tp = time - dt;
 #undef EPS
-#undef PI
-#undef TWOPI
 }
 /**********************************************************************/
 void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
                  double LeapSec, struct OrbitType *O)
 {
-#define EPS   (1.0E-12)
-#define TWOPI (6.283185307179586)
-#define D2R   (1.74532925199E-2)
+#define EPS (1.0E-12)
 
    char YearString[3];
    char DOYstring[13];
@@ -512,9 +491,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
       /* 10.122 */
       O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
    }
-
-#undef TWOPI
-#undef D2R
+#undef EPS
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
@@ -522,7 +499,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 void MeanEph2RV(struct OrbitType *O, double DynTime)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g;
-   double CPN[3][3], cth, sth, R, c2, pr[3], pv[3];
+   double CPN[3][3], cth, sth, R, pr[3], pv[3];
    double C1, S1, C2, S2, C3, S3;
    long i;
 
@@ -533,7 +510,9 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
    }
 
    /* 10.122 */
-   O->MeanAnom = O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch);
+   O->MeanAnom =
+       fmod(O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch) - PI, TWOPI) +
+       PI;
 
    O->anom = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
 
@@ -542,10 +521,12 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
    sin2i = sin(O->inc) * sin(O->inc);
 
    /* 10.127 */
-   sinw  = sin(O->ArgP + O->anom);
-   sin2w = sinw * sinw;
-   cosnu = cos(O->anom);
-   g = pow((1.0 + e * cosnu) / (1.0 - e2), 3.0) * (1.0 - 3.0 * sin2i * sin2w);
+   sinw          = sin(O->ArgP + O->anom);
+   sin2w         = sinw * sinw;
+   cosnu         = cos(O->anom);
+   double gTerm  = (1.0 + e * cosnu) / (1.0 - e2);
+   double gTerm2 = gTerm * gTerm;
+   g             = (gTerm2 * gTerm) * (1.0 - 3.0 * sin2i * sin2w);
 
    /* 10.126 */
    O->SMA = O->MeanSMA + O->J2Rw2bya * g;
@@ -558,13 +539,39 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
    cth = cos(O->anom);
    R   = O->SLR / (1.0 + e * cth);
 
-   c2    = sqrt(O->mu / O->SLR);
    pr[0] = R * cth;
    pr[1] = R * sth;
    pr[2] = 0.0;
-   pv[0] = -c2 * sth;
-   pv[1] = c2 * (e + cth);
-   pv[2] = 0.0;
+   if (O->J2DriftEnabled) {
+      // TODO: double/triple check the pv calculations here, there is notable
+      // difference between pv and finite differencing of pr, mostly in
+      // periapsis direction but that may just happen (due to, ya know, finite
+      // differencing)
+      // TODO: this only works for elliptical orbits
+      double sqrterat   = sqrt((1.0 - e) / (1.0 + e));
+      double EccAnom    = 2.0 * atan(sqrterat * tan(0.5 * O->anom));
+      double cE         = cos(EccAnom);
+      double EccAnomDot = O->MeanMotion / (1.0 - e * cE);
+      double AnomDot    = (1.0 + cth) / (1.0 + cE) * EccAnomDot / sqrterat;
+      double gdot =
+          -3.0 * gTerm2 *
+          ((e * AnomDot * sth / (1.0 - e2)) * (1.0 - 3.0 * sin2i * sin2w) +
+           2.0 * gTerm * sin2i * sinw * cos(O->ArgP + O->anom) *
+               (O->ArgPdot + AnomDot));
+      double SMAdot = O->J2Rw2bya * gdot;
+      double Rdot =
+          SMAdot * (1 - e * cE) + O->SMA * e * sin(EccAnom) * EccAnomDot;
+
+      pv[0] = Rdot * cth - R * AnomDot * sth;
+      pv[1] = Rdot * sth + R * AnomDot * cth;
+      pv[2] = 0.0;
+   }
+   else {
+      double c2 = sqrt(O->mu / O->SLR);
+      pv[0]     = -c2 * sth;
+      pv[1]     = c2 * (e + cth);
+      pv[2]     = 0.0;
+   }
 
    C1 = cos(O->RAAN);
    S1 = sin(O->RAAN);
@@ -586,6 +593,17 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
    for (i = 0; i < 3; i++) {
       O->PosN[i] = pr[0] * CPN[0][i] + pr[1] * CPN[1][i];
       O->VelN[i] = pv[0] * CPN[0][i] + pv[1] * CPN[1][i];
+   }
+   if (O->J2DriftEnabled) {
+      double wxr[3]  = {0.0};
+      wxr[0]        += (-pr[0] * CPN[0][1] - pr[1] * CPN[1][1]) * O->RAANdot;
+      wxr[1]        += (+pr[0] * CPN[0][0] + pr[1] * CPN[1][0]) * O->RAANdot;
+
+      for (i = 0; i < 3; i++)
+         wxr[i] += (+pr[0] * CPN[1][i] - pr[1] * CPN[0][i]) * O->ArgPdot;
+
+      for (i = 0; i < 3; i++)
+         O->VelN[i] += wxr[i];
    }
 }
 /**********************************************************************/
@@ -687,7 +705,6 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                        double *anom, double *SLR, double *alpha, double *rmin,
                        double *MeanMotion, double *Period)
 {
-#define TWOPI (6.283185307179586)
 
    double La0[10] = {0.0,       252.250906, 181.979801, 100.466457, 355.433,
                      34.351519, 50.077444,  314.055005, 304.348665, 238.92881};
@@ -745,7 +762,6 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                      -4.464E-6, 4.928E-6, 4.34E-7,   2.0E-8,  0.0};
    double T, L, Pi, M, dt, SecSinceJ2000;
 
-   double D2R  = atan(1.0) / 45.0;
    double AU2m = 149597870000.0;
 
    /* .. Time since J2000, in Julian centuries */
@@ -788,8 +804,6 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 
    *MeanMotion = sqrt(mu / (*SMA) / (*SMA) / (*SMA));
    *Period     = TWOPI / (*MeanMotion);
-
-#undef TWOPI
 }
 /*********************************************************************/
 /*  This function gives the location of Luna, with respect to the    */
@@ -800,7 +814,6 @@ void LunaPosition(double JD, double r[3])
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
-   double D2R = atan(1.0) / 45.0;
 
    T = (JD - 2451545.0) / 36525.0;
 
@@ -1134,7 +1147,6 @@ void LunaPosition(double JD, double r[3])
 /*  Finds Lunar Inertial Frame wrt J2000                              */
 void LunaInertialFrame(double JulDay, double CNJ[3][3])
 {
-#define D2R (1.74532925199E-2)
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
@@ -1205,14 +1217,12 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
       CNJ[1][i] = YVec[i];
       CNJ[2][i] = PoleVec[i];
    }
-#undef D2R
 }
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 double LunaPriMerAng(double JulDay)
 {
-#define D2R (1.74532925199E-2)
    double D;
    double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
    double SinE1, SinE2, SinE3, SinE4, SinE5, SinE6, SinE7;
@@ -1256,7 +1266,6 @@ double LunaPriMerAng(double JulDay)
                0.0040 * SinE11 + 0.0019 * SinE12 - 0.0044 * SinE13;
 
    return (PriMerAng * D2R);
-#undef D2R
 }
 /**********************************************************************/
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3])
@@ -1328,6 +1337,31 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])
    wln[2] = WorldW;
 }
 /**********************************************************************/
+double lagpointFDF(double x, double params[3])
+{
+   double rho = params[0], rho1 = params[1];
+   double xp  = x - params[0];
+   double xp1 = xp + 1.0;
+   long lp    = params[2];
+   double f;
+   double fx;
+   switch (lp) {
+      case 1:
+         f  = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
+         fx = 1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
+         break;
+      case 2:
+         f  = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
+         fx = 1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
+         break;
+      case 3:
+         f  = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
+         fx = 1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
+         break;
+   }
+   return f / fx;
+}
+/**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
 /*  massive bodies (masses m1 and m2, m2 < m1) and a body of          */
 /*  negligible mass.  The locations of the Lagrange points are        */
@@ -1339,31 +1373,23 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])
 void FindLagPtParms(struct LagrangeSystemType *LS)
 {
    struct LagrangePointType *LP;
-   double rho, x, dx, f, fx;
+   double rho, x, rho1;
    double eps = 2.0E-16;
-   double rho1, xp, xp1;
    double n, D, X0rD, X0r1D, MuSum, a, b, c, s2;
    double R13, R15;
    double R23, R25;
    double alpha;
 
-   rho   = LS->rho;
-   rho1  = 1.0 - rho;
-   MuSum = LS->mu1 + LS->mu2;
-   n     = LS->MeanRate;
-   D     = LS->SMA;
+   rho                = LS->rho;
+   rho1               = 1.0 - rho;
+   double lpParams[3] = {rho, rho1, 1};
+   MuSum              = LS->mu1 + LS->mu2;
+   n                  = LS->MeanRate;
+   D                  = LS->SMA;
 
    /* .. L1 */
-   LP = &LS->LP[0];
-   x  = -1.0;
-   do {
-      xp   = x - rho;
-      xp1  = xp + 1.0;
-      f    = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
-      fx   = 1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-      dx   = -f / fx;
-      x   += dx;
-   } while (fabs(dx) > eps);
+   LP     = &LS->LP[0];
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -1406,18 +1432,11 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    LP->AR2 = 0.0;
 
    /* .. L2 */
-   LP = &LS->LP[1];
-   x  = -1.0;
-   do {
-      xp   = x - rho;
-      xp1  = xp + 1.0;
-      f    = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
-      fx   = 1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
-      dx   = -f / fx;
-      x   += dx;
-   } while (fabs(dx) > eps);
-   LP->X0 = x * D;
-   LP->Y0 = 0.0;
+   LP          = &LS->LP[1];
+   lpParams[2] = 2;
+   x           = NewtonRaphson(-1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   LP->X0      = x * D;
+   LP->Y0      = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;
@@ -1458,18 +1477,11 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    LP->AR2 = 0.0;
 
    /* .. L3 */
-   LP = &LS->LP[2];
-   x  = 1.0;
-   do {
-      xp   = x - rho;
-      xp1  = xp + 1.0;
-      f    = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
-      fx   = 1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-      dx   = -f / fx;
-      x   += dx;
-   } while (fabs(dx) > eps);
-   LP->X0 = x * D;
-   LP->Y0 = 0.0;
+   LP          = &LS->LP[2];
+   lpParams[2] = 3;
+   x           = NewtonRaphson(1.0, eps, 200, 100.0, &lagpointFDF, lpParams);
+   LP->X0      = x * D;
+   LP->Y0      = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;
@@ -1870,7 +1882,7 @@ void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
    O->Az = cwzt * rl[2] - swzt * vl[2] / LP->wz;
    O->Bz = swzt * rl[2] + cwzt * vl[2] / LP->wz;
 
-   DestroyMatrix(COEF, 8);
+   DestroyMatrix(COEF);
    free(RHS);
    free(ParmVec);
 }
@@ -1969,7 +1981,7 @@ void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
    O->Az = cwzt * rl[2] - swzt * vl[2] / LP->wz;
    O->Bz = swzt * rl[2] + cwzt * vl[2] / LP->wz;
 
-   DestroyMatrix(COEF, 4);
+   DestroyMatrix(COEF);
    free(RHS);
    free(ParmVec);
 }
@@ -2073,7 +2085,7 @@ void XYZ2LagModes(double TimeSinceEpoch, struct LagrangeSystemType *LS,
    O->Az = cwzt * O->z - swzt * O->zdot / LP->wz;
    O->Bz = swzt * O->z + cwzt * O->zdot / LP->wz;
 
-   DestroyMatrix(COEF, 8);
+   DestroyMatrix(COEF);
    free(RHS);
    free(ParmVec);
 }
@@ -2144,7 +2156,6 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
 void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
                 double vtn[10][3])
 {
-#define D2R (1.74532925199E-2)
 
    double Lng[10] = {-49.0,  0.0,    -275.0, -46.0, -171.4,
                      -173.7, -150.0, -271.0, -62.4, -40.9}; /* deg */
@@ -2188,7 +2199,6 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
       Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, time, ptn[j], vtn[j],
              &anom);
    }
-#undef D2R
 }
 /**********************************************************************/
 /* Find coordinate transformation from True Equator True Equinox      */
@@ -2196,7 +2206,6 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
 /* QB8.U5, 2003, p. B18,B20.                                          */
 void TETE2J2000(double JD, double CTJ[3][3])
 {
-#define D2R (1.74532925199E-2)
 
    double d, arg1, arg2, dpsi, deps, eps, CTM[3][3];
    double T, z, theta, zeta, CMJ[3][3];
@@ -2261,8 +2270,6 @@ void TETE2J2000(double JD, double CTJ[3][3])
        CTM[2][0] * CMJ[0][1] + CTM[2][1] * CMJ[1][1] + CTM[2][2] * CMJ[2][1];
    CTJ[2][2] =
        CTM[2][0] * CMJ[0][2] + CTM[2][1] * CMJ[1][2] + CTM[2][2] * CMJ[2][2];
-
-#undef D2R
 }
 /**********************************************************************/
 /*  See Battin                                                        */
@@ -2638,7 +2645,6 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
                          double FuturePos[3])
 {
-#define SPEED_OF_LIGHT 299792458.0
    double Vel[3], anom;
    double RelPos[3], dt;
    long i;
@@ -2668,8 +2674,6 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
           Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
-
-#undef SPEED_OF_LIGHT
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
@@ -2678,7 +2682,6 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
 void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
                      struct OrbitType *O)
 {
-#define TWOPI (6.283185307179586)
    double e, e2, sin2i, sinw, sin2w, cosnu, g, E;
    double a, p, p2, Coef;
 
@@ -2716,8 +2719,6 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    E = atan2(sqrt(1.0 - O->ecc * O->ecc) * sin(O->anom), O->ecc + cos(O->anom));
    O->MeanAnom  = E - O->ecc * sin(E);
    O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
-
-#undef TWOPI
 }
 /* #ifdef __cplusplus
 ** }

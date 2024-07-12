@@ -64,9 +64,9 @@ int parse_long(Tokens *ts, Elements *elements)
 {
    int i;
    int len_prefix;
-   int n_options = elements->n_options;
-   char *eq      = strchr(ts->current, '=');
-   Option *option;
+   int n_options   = elements->n_options;
+   char *eq        = strchr(ts->current, '=');
+   Option *option  = NULL;
    Option *options = elements->options;
 
    len_prefix = (eq - (ts->current)) / sizeof(char);
@@ -108,8 +108,8 @@ int parse_shorts(Tokens *ts, Elements *elements)
 {
    char *raw;
    int i;
-   int n_options = elements->n_options;
-   Option *option;
+   int n_options   = elements->n_options;
+   Option *option  = NULL;
    Option *options = elements->options;
 
    raw = &ts->current[1];

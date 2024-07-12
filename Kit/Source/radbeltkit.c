@@ -445,10 +445,11 @@ float TRARA2(int *SUBMAP, float IL, float IB)
 /******************************************************************************/
 void TRARA1(float FL, float BB0, float *E, float *F, int N, int *DESCR)
 {
-   int S0, S1, S2;
-   int I2, I3, L3, IE, I0;
-   float ESCALE, FSCALE;
-   float XNL, NL, NB, E0, E1, E2, F0, F1, F2;
+   int S0 = 0, S1 = 0, S2 = 0;
+   int I2 = 0, I3 = 0, L3 = 0, IE = 0, I0 = 0;
+   float ESCALE = 0.0, FSCALE = 0.0;
+   float XNL = 0.0, NL = 0.0, NB = 0.0, E0 = 0.0, E1 = 0.0, E2 = 0.0, F0 = 0.0,
+         F1 = 0.0, F2 = 0.0;
    F1 = 1.001;
    F2 = 1.002;
 

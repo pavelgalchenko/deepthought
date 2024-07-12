@@ -226,7 +226,7 @@ void SurfaceForceProps(struct GeomType *G)
       P->UnshadedCtr[1] = P->Centroid[1];
       P->UnshadedCtr[2] = P->Centroid[2];
 
-      DestroyMatrix(uv, P->Nv + 1);
+      DestroyMatrix(uv);
    }
 }
 /*********************************************************************/
@@ -936,7 +936,6 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
                                   struct GeomType *Geom, long *Ngeom,
                                   long *GeomTag, long EdgesEnabled)
 {
-#define D2R (0.0174532925199433)
    FILE *infile, *outfile;
    FILE *TmpFile;
    char *txtptr;
@@ -1333,7 +1332,6 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
    *Ngeom   = Ng;
    *GeomTag = Ng - 1;
    return (Geom);
-#undef D2R
 }
 /*********************************************************************/
 void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,

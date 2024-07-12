@@ -1776,7 +1776,7 @@ void InitFlexModes(struct SCType *S)
             B->Rf[IDX3(2, i, 1, B->Nf, 3)] = L[1][2][i];
          }
          for (i = 0; i < 3; i++)
-            DestroyMatrix(L[i], 3);
+            DestroyMatrix(L[i]);
          free(L);
 
          /* Non-zero Elements of Angular Modal Integral, N, 3 x 3 x Nf x Nf*/
@@ -1826,7 +1826,7 @@ void InitFlexModes(struct SCType *S)
          }
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
-               DestroyMatrix(N[i][j], B->Nf);
+               DestroyMatrix(N[i][j]);
             free(N[i]);
          }
          free(N);
@@ -2214,6 +2214,13 @@ void InitSpacecraft(struct SCType *S)
    }
    fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
    S->OrbDOF = DecodeString(response);
+   if (S->OrbDOF == ORBDOF_ENCKE && Orb[S->RefOrb].J2DriftEnabled == TRUE) {
+      printf("Spacecraft %li uses Encke propagation while its orbit, Orbit "
+             "%li, has "
+             "J2Drift enabled; these are not compatible. Exiting...\n",
+             S->ID, S->RefOrb);
+      exit(EXIT_FAILURE);
+   }
    fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
    UseCM = DecodeString(response);
    fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &PosVec[0], &PosVec[1],
@@ -2729,7 +2736,7 @@ void InitSpacecraft(struct SCType *S)
          fscanf(infile, "%lf %[^\n] %[\n]", &CSS->SampleTime, junk, &newline);
          CSS->MaxCounter = (long)(CSS->SampleTime / DTSIM + 0.5);
          if (CSS->SampleTime < DTSIM) {
-            printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ic);
             exit(1);
          }
          CSS->SampleCounter = CSS->MaxCounter;
@@ -2770,7 +2777,7 @@ void InitSpacecraft(struct SCType *S)
          fscanf(infile, "%lf %[^\n] %[\n]", &FSS->SampleTime, junk, &newline);
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
-            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", Ifss);
             exit(1);
          }
          FSS->SampleCounter = FSS->MaxCounter;
@@ -2819,7 +2826,7 @@ void InitSpacecraft(struct SCType *S)
          fscanf(infile, "%lf %[^\n] %[\n]", &ST->SampleTime, junk, &newline);
          ST->MaxCounter = (long)(ST->SampleTime / DTSIM + 0.5);
          if (ST->SampleTime < DTSIM) {
-            printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ist);
             exit(1);
          }
          ST->SampleCounter = ST->MaxCounter;
@@ -3259,7 +3266,6 @@ void LoadPlanets(void)
    char MapFileName[10][20] = {
        "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
-
    double Mu[10]  = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
                      1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
    double J2[10]  = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
@@ -4888,164 +4894,6 @@ long LoadJplEphems(char EphemPath[80], double JD)
 
    return (0);
 }
-long LoadSpiceKernels(char SpicePath[80])
-{
-   char MetaKernelPath[80];
-   strcpy(MetaKernelPath, SpicePath);
-   strcat(MetaKernelPath, "spice_kernels/kernels.txt");
-
-   furnsh_c(MetaKernelPath);
-   return (0);
-}
-
-long LoadSpiceEphems(double JS)
-{
-   double ZAxis[3] = {0.0, 0.0, 1.0};
-
-   long Iw, Ip, Im;
-   int i;
-
-   char MajorBodiesNamesState[55][15] = {
-       "SUN",        "MERCURY",  "VENUS",     "EARTH",
-       "MARS",       "JUPITER",  "SATURN",    "URANUS",
-       "NEPTUNE",    "PLUTO",    "MOON",      "PHOBOS",
-       "DEIMOS",     "IO",       "EUROPA",    "GANYMEDE",
-       "CALLISTO",   "AMALTHEA", "HIMALIA",   "ELARA",
-       "PASIPHAE",   "SINOPE",   "LYSITHEA",  "CARME",
-       "ANANKE",     "LEDA",     "THEBE",     "ADRASTEA",
-       "METIS",      "MIMAS",    "ENCELADUS", "TETHYS",
-       "DIONE",      "RHEA",     "TITAN",     "HYPERION",
-       "IAPETUS",    "PHOEBE",   "JANUS",     "EPIMETHEUS",
-       "HELENE",     "TELESTO",  "CALYPSO",   "ATLAS",
-       "PROMETHEUS", "PANDORA",  "PAN",       "ARIEL",
-       "UMBRIEL",    "TITANIA",  "OBERON",    "MIRANDA",
-       "TRITON",     "NEREID",   "CHARON"}; // names of "major" bodies
-
-   // Some smaller moons do not have valid orientation data.
-   // We replace these with the orientation of their planet
-
-   char MajorBodiesNamesOrientation[55][15] = {
-       "SUN",       "MERCURY",  "VENUS",    "EARTH",   "MARS",
-       "JUPITER",   "SATURN",   "URANUS",   "NEPTUNE", "PLUTO",
-       "MOON",      "PHOBOS",   "DEIMOS",   "IO",      "EUROPA",
-       "GANYMEDE",  "CALLISTO", "AMALTHEA", "JUPITER", "JUPITER",
-       "JUPITER",   "JUPITER",  "JUPITER",  "JUPITER", "JUPITER",
-       "JUPITER",   "THEBE",    "ADRASTEA", "METIS",   "MIMAS",
-       "ENCELADUS", "TETHYS",   "DIONE",    "RHEA",    "TITAN",
-       "SATURN",    "IAPETUS",  "PHOEBE",   "JANUS",   "EPIMETHEUS",
-       "HELENE",    "TELESTO",  "CALYPSO",  "ATLAS",   "PROMETHEUS",
-       "PANDORA",   "PAN",      "ARIEL",    "UMBRIEL", "TITANIA",
-       "OBERON",    "MIRANDA",  "TRITON",   "NEPTUNE", "CHARON"};
-
-   // Substitutions:
-   // HIMALIA, ELARA, PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA -> JUPITER
-   // HYPERION -> SATURN
-   // NEREID -> NEPTUNE
-
-   struct OrbitType *Eph;
-   struct WorldType *W;
-   double Nstate[6], Hstate[6];
-   double light_time;
-   double ang[3];
-
-   double dim = 3;
-
-   double CWH[3][3], CNJ[3][3];
-   double GMST;
-   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
-
-   A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
-
-   /* .. Earth rotation is a special case - on which World[i].CNH, CWN depend!
-    */
-   GMST                   = JD2GMST(UTC.JulDay);
-   World[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
-   C2Q(World[EARTH].CWN, World[EARTH].qwn);
-
-   // Read all planets
-   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      W   = &World[Iw];
-      Eph = &W->eph;
-      spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-               Nstate,
-               &light_time); // State of major bodies in J2000 wrt Sun center
-
-      for (i = 0; i < 3; i++) {
-         World[Iw].eph.PosN[i] =
-             Nstate[i] * 1e3; // Assign inertial positions (m)
-         World[Iw].PosH[i] =
-             Nstate[i] *
-             1e3; // Assign suncentric positions = inertial position (m)
-
-         World[Iw].eph.VelN[i] =
-             Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
-         World[Iw].VelH[i] =
-             Nstate[i + 3] *
-             1e3; // Assign suncentric velocity = inertial velocity (m/s)
-      }
-
-      if (Iw != EARTH) {
-         char frame_name[25] = "IAU_";
-         strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-
-         pxform_c("J2000", frame_name, JS,
-                  CNJ); // matrix from J2000 (ICRF) -> body fixed
-
-         m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
-
-         MxM(CNJ, World[EARTH].CNH, World[i].CNH);
-         SimpRot(ZAxis, ang[2], World[Iw].CWN);
-         A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
-      }
-   }
-
-   // Read all moons
-   for (Ip = EARTH; Ip <= PLUTO; Ip++) {
-      if (World[Ip].Exists) {
-         for (Im = 0; Im < World[Ip].Nsat; Im++) {
-            Iw  = World[Ip].Sat[Im];
-            W   = &World[Iw];
-            Eph = &W->eph;
-
-            spkezr_c(
-                MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-                Hstate,
-                &light_time); // State of major bodies in J2000 wrt Sun center
-
-            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE",
-                     MajorBodiesNamesState[Ip], Nstate,
-                     &light_time); // State of major bodies in J2000 wrt Planet
-                                   // center
-
-            for (i = 0; i < 3; i++) {
-               World[Iw].eph.PosN[i] =
-                   Nstate[i] * 1e3; // Assign inertial positions (m)
-               World[Iw].PosH[i] = Hstate[i] * 1e3;
-
-               World[Iw].eph.VelN[i] =
-                   Nstate[i + 3]; // Assign inertial velocity (m/s)
-               World[Iw].VelH[i] = Nstate[i + 3] * 1e3;
-            }
-
-            char frame_name[25] = "IAU_";
-            strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-
-            pxform_c("J2000", frame_name, JS,
-                     CNJ); // matrix from J2000 (ICRF) -> body fixed
-
-            m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
-
-            MxM(CNJ, World[EARTH].CNH, World[i].CNH);
-            SimpRot(ZAxis, ang[2], World[Iw].CWN);
-            A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
-         }
-      }
-   }
-   return (0);
-}
 /**********************************************************************/
 void LoadConstellations(void)
 {
@@ -5123,14 +4971,12 @@ void InitSim(int argc, char **argv)
        {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
    double CJ2000H[3][3];
 
-   Pi          = 4.0 * atan(1.0);
-   TwoPi       = 2.0 * Pi;
-   HalfPi      = 0.5 * Pi;
-   SqrtTwo     = sqrt(2.0);
-   SqrtHalf    = sqrt(0.5);
-   R2D         = 180.0 / Pi;
-   D2R         = Pi / 180.0;
-   GoldenRatio = (1.0 + sqrt(5.0)) / 2.0;
+   Pi          = PI;
+   TwoPi       = TWOPI;
+   HalfPi      = HALFPI;
+   SqrtTwo     = SQRTTWO;
+   SqrtHalf    = SQRTHALF;
+   GoldenRatio = GOLDENRATIO;
 
    qJ2000H[0] = -0.203123038887;
    qJ2000H[1] = 0.0;

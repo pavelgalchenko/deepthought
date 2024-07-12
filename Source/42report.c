@@ -182,39 +182,6 @@ void DSM_InertialReport(void)
    }
 }
 /*********************************************************************/
-void DSM_PlanEphemReport(void)
-{
-   static FILE **ephemfile;
-   static long First = 1;
-   long Iw;
-   char s[40];
-
-   if (First) {
-      ephemfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
-      for (Iw = 0; Iw < NWORLD; Iw++) {
-         if (World[Iw].Exists) {
-            sprintf(s, "ephem/DSM_ephem_%s.42", World[Iw].Name);
-            ephemfile[Iw] = FileOpen(OutPath, s, "wt");
-            fprintf(ephemfile[Iw], "PosH_X PosH_Y PosH_Z ");
-            fprintf(ephemfile[Iw], "VelH_X VelH_Y VelH_Z ");
-            fprintf(ephemfile[Iw], "\n");
-         }
-      }
-      First = 0;
-   }
-
-   for (Iw = 0; Iw < NWORLD; Iw++) {
-      if (World[Iw].Exists) {
-         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
-                 World[Iw].PosH[0], World[Iw].PosH[1], World[Iw].PosH[2]);
-         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
-                 World[Iw].VelH[0], World[Iw].VelH[1], World[Iw].VelH[2]);
-         fprintf(ephemfile[Iw], "\n");
-      }
-      fflush(ephemfile[Iw]);
-   }
-}
-/*********************************************************************/
 void DSM_ATT_ControlReport(void)
 {
    static FILE **attcontrolfile;
@@ -421,44 +388,6 @@ void DSM_THRReport(void)
          }
       }
       fflush(THRFile[Isc]);
-   }
-}
-/*********************************************************************/
-void DSM_GroundTrackReport(void)
-{
-   static FILE **gtrackfile;
-   static long First = 1;
-   long Isc;
-   char s[40];
-   struct WorldType *W;
-   struct SCType *S;
-   double p[3], Lat, Lng, junk;
-
-   if (First) {
-      gtrackfile = (FILE **)calloc(Nsc, sizeof(FILE *));
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         if (SC[Isc].Exists) {
-            sprintf(s, "DSM_groundtrack_%02li.42", Isc);
-            gtrackfile[Isc] = FileOpen(OutPath, s, "wt");
-            fprintf(gtrackfile[Isc], "Lat Lon ");
-            fprintf(gtrackfile[Isc], "\n");
-         }
-      }
-      First = 0;
-   }
-
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (SC[Isc].Exists) {
-         W = &World[Orb[S->RefOrb].World];
-
-         MxV(W->CWN, SC[Isc].PosN, p);
-         reclat_c(p, &junk, &Lng, &Lat);
-
-         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat * R2D, Lng * R2D);
-         fprintf(gtrackfile[Isc], "\n");
-      }
-      fflush(gtrackfile[Isc]);
    }
 }
 /*********************************************************************/
@@ -735,13 +664,11 @@ void Report(void)
          if (SC[0].DSM.Init == 1) {
             DSM_AttitudeReport();
             DSM_InertialReport();
-            DSM_PlanEphemReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();
             DSM_WHLReport();
             DSM_THRReport();
-            DSM_GroundTrackReport();
          }
       }
    }

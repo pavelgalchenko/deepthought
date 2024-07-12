@@ -14,6 +14,7 @@
 #ifndef __ENVKIT_H__
 #define __ENVKIT_H__
 
+#include "42constants.h"
 #include "dcmkit.h"
 #include "geomkit.h"
 #include "iokit.h"
