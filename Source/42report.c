@@ -455,7 +455,7 @@ void DSM_GroundTrackReport(void)
          MxV(W->CWN, SC[Isc].PosN, p);
          reclat_c(p, &junk, &Lng, &Lat);
 
-         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat*R2D, Lng*R2D);
+         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat * R2D, Lng * R2D);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);

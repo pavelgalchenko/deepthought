@@ -1,23 +1,26 @@
 KPL/MK
 \begindata
 
-PATH_VALUES = ( './Model/spice_kernels')
+PATH_VALUES = ( './Model/spice_kernels/lsk',
+				'./Model/spice_kernels/spk/planets',
+				'./Model/spice_kernels/spk/satellites',
+				'./Model/spice_kernels/pck' )
 
-PATH_SYMBOLS = ( 'SPICE_DIR' )
- 
-KERNELS_TO_LOAD = ( '$SPICE_DIR/de440.bsp',
-                    '$SPICE_DIR/de430.bsp',
-		    '$SPICE_DIR/mar097.bsp',
-		    '$SPICE_DIR/jup344.bsp',
-	            '$SPICE_DIR/jup365.bsp',
-	            '$SPICE_DIR/sat415.bsp',
-		    '$SPICE_DIR/sat441.bsp', 
-                    '$SPICE_DIR/ura111l.bsp',
-                    '$SPICE_DIR/nep097.bsp',
-		    '$SPICE_DIR/nep101.bsp',
-		    '$SPICE_DIR/plu060.bsp',
-		    '$SPICE_DIR/pck00010.tpc',
-		    '$SPICE_DIR/Gravity.tpc',
-		    '$SPICE_DIR/naif0011.tls')
- 
+PATH_SYMBOLS = ( 'LSK', 'SPK_PLANETS', 'SPK_SATS', 'PCK' )
+
+KERNELS_TO_LOAD = ( '$LSK/naif0012.tls'
+					'$SPK_PLANETS/de440.bsp',
+                    '$SPK_PLANETS/de430.bsp',
+					'$SPK_SATS/mar097.bsp',
+					'$SPK_SATS/jup344.bsp',
+					'$SPK_SATS/jup365.bsp',
+					'$SPK_SATS/sat415.bsp',
+					'$SPK_SATS/sat441.bsp',
+					'$SPK_SATS/ura111l.bsp',
+					'$SPK_SATS/nep097.bsp',
+					'$SPK_SATS/a_old_versions/nep101.bsp',
+					'$SPK_SATS/plu060.bsp',
+					'$PCK/pck00010.tpc',
+					'$PCK/Gravity.tpc')
+
 \begintext
