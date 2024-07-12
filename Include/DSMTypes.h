@@ -124,9 +124,9 @@ struct DSMCmdType {
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
-   int trn_controller;
-   int att_controller;
-   int dmp_controller;
+   enum ctrlType trn_controller;
+   enum ctrlType att_controller;
+   enum ctrlType dmp_controller;
    enum maneuverType ManeuverMode;
    char AttRefScID[6];
    char H_DumpGain[20];
