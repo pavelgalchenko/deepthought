@@ -79,6 +79,7 @@ CSPICEINC = $(CSPICEDIR)include/
 CSPICESRC = $(CSPICEDIR)src/
 CSPICELIB = $(CSPICEDIR)lib/
 
+
 ifeq ($(42PLATFORM),__APPLE__)
    # Mac Macros
    CINC = -I /usr/include -I /usr/local/include
@@ -267,7 +268,7 @@ LFLAGS+= `pkg-config --libs libfyaml`
 ##########################  Rules to link 42  #############################
 
 42 : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
-	$(CC) $(LFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) -L $(CSPICELIB) -lcspice
+	$(CC) $(LFLAGS) $(LDFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) -L $(CSPICELIB) -lcspice
 
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
