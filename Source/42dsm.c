@@ -96,7 +96,7 @@ void ThrProcessingMinPower(struct SCType *S)
 // This does the heavy lifting for figuring out how to allocate Thrusters for a
 // given Force/Torque Command for use in ThrProcessingMinPower()
 //------------------------------------------------------------------------------
-void InitThrDistVecs(struct AcType *AC, int DOF, long controllerState)
+void InitThrDistVecs(struct AcType *AC, int DOF, enum ctrlState controllerState)
 {
    double **A, **APlus;
    long i, j;
@@ -250,7 +250,7 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
    struct DSMType *DSM;
    struct DSMCmdType *Cmd;
    struct AcType *AC;
-   int controller = -1;
+   enum ctrlType *controller = NULL;
 
    DSM        = &S->DSM;
    Cmd        = &DSM->Cmd;
@@ -259,14 +259,14 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
 
    switch (controllerState) {
       case TRN_STATE:
-         controller = Cmd->trn_controller;
+         controller = &Cmd->trn_controller;
          kp         = Cmd->trn_kp;
          kr         = Cmd->trn_kr;
          ki         = Cmd->trn_ki;
          limit_vec  = Cmd->trn_kilimit;
          break;
       case ATT_STATE:
-         controller = Cmd->att_controller;
+         controller = &Cmd->att_controller;
          kp         = Cmd->att_kp;
          kr         = Cmd->att_kr;
          ki         = Cmd->att_ki;
@@ -276,7 +276,8 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
          // PLACEHOLDER
          break;
       case DMP_STATE:
-         kp = Cmd->dmp_kp;
+         controller = &Cmd->dmp_controller;
+         kp         = Cmd->dmp_kp;
          break;
       default:
          break;
@@ -294,14 +295,14 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
          gainsGood &= assignYAMLToDoubleArray(
                           3, fy_node_by_path_def(gainsDataNode, gainPaths[i]),
                           gains[i]) == 3;
-      if (gainsGood && controller == PID_CNTRL)
+      if (gainsGood && *controller == PID_CNTRL)
          GainsProcessed = TRUE;
    }
    else if (!strcmp(gainMode, "PID_WN")) {
       if (fy_node_scanf(gainsDataNode,
                         "/Omega %lf /Zeta %lf /Alpha %lf /Ki_Limit %lf", &omega,
                         &zeta, &alpha, &limit) == 4 &&
-          controller == PID_CNTRL) {
+          *controller == PID_CNTRL) {
          GainsProcessed = TRUE;
          for (i = 0; i < 3; i++) {
             kp[i]        = (2 * zeta * alpha + 1) * omega * omega;
@@ -337,7 +338,7 @@ long GetGains(struct SCType *S, struct fy_node *gainsNode,
    }
    else if (!strcmp(gainMode, "FC_LYA")) {
       struct fy_node *kNode = fy_node_by_path_def(gainsDataNode, "/K_lya");
-      switch (controller) {
+      switch (*controller) {
          case LYA_2BODY_CNTRL:
             if (fy_node_sequence_item_count(kNode) == 2) {
                fy_node_scanf(fy_node_sequence_get_by_index(kNode, 0), "/ %lf",
@@ -446,7 +447,7 @@ long GetController(struct SCType *S, struct fy_node *ctrlNode,
    DSM = &S->DSM;
    Cmd = &DSM->Cmd;
 
-   long controller;
+   enum ctrlType controller;
    char ctrlType[40] = {0};
    if (fy_node_scanf(ctrlNode, "/Type %41s", ctrlType) == 1) {
       gainNode = fy_node_by_path_def(ctrlNode, "/Gains");
@@ -500,16 +501,14 @@ long GetController(struct SCType *S, struct fy_node *ctrlNode,
       }
       if (GetGains(S, gainNode, controllerState) == FALSE) {
          printf("For Controller alias %s, could not find Gain alias %s or "
-                "invalid format."
-                " Exiting...\n",
+                "invalid format. Exiting...\n",
                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
                 fy_anchor_get_text(fy_node_get_anchor(gainNode), NULL));
          exit(EXIT_FAILURE);
       }
       if (GetLimits(S, limNode, controllerState) == FALSE) {
          printf("For Controller alias %s, could not find Limit alias %s or "
-                "invalid format."
-                " Exiting...\n",
+                "invalid format. Exiting...\n",
                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
                 fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
          exit(EXIT_FAILURE);
@@ -704,8 +703,7 @@ long GetTranslationCmd(struct SCType *S, struct fy_node *trnCmdNode,
       else {
          if (GetLimits(S, limNode, TRN_STATE) == FALSE) {
             printf("For %s index %ld, could not find Limit alias %s or invalid "
-                   "format. "
-                   "Exiting...\n",
+                   "format. Exiting...\n",
                    subType, cmdInd,
                    fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
             exit(EXIT_FAILURE);
@@ -832,16 +830,15 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                       2) { // Decode Current SC ID Number
                      if (vecs[k]->TrgSC >= Nsc) {
                         printf("This mission only has %ld spacecraft, but "
-                               "spacecraft %ld was "
-                               "attempted to be set as the primary target "
-                               "vector. Exiting...\n",
+                               "spacecraft %ld was attempted to be set as the "
+                               "primary target vector. Exiting...\n",
                                Nsc, vecs[k]->TrgSC);
                         exit(EXIT_FAILURE);
                      }
                      if (vecs[k]->TrgBody >= SC[vecs[k]->TrgSC].Nb) {
                         printf("Spacecraft %ld only has %ld bodies, but the "
-                               "primary target was "
-                               "attempted to be set as body %ld. Exiting...\n",
+                               "primary target was attempted to be set as body "
+                               "%ld. Exiting...\n",
                                vecs[k]->TrgSC, SC[vecs[k]->TrgSC].Nb,
                                vecs[k]->TrgBody);
                         exit(EXIT_FAILURE);
@@ -854,8 +851,7 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                }
                else {
                   printf("%s Vector index %ld has improper format for SC or "
-                         "BODY targeting. "
-                         "Exiting...\n",
+                         "BODY targeting. Exiting...\n",
                          (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
                   exit(EXIT_FAILURE);
                }
@@ -871,8 +867,7 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
                                      vecs[k]->cmd_vec) == 3;
                if (*attcmdProc[k] == FALSE) {
                   printf("%s Vector index %ld has improper format for VEC "
-                         "targeting. "
-                         "Exiting...\n",
+                         "targeting. Exiting...\n",
                          (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
                   exit(EXIT_FAILURE);
                }
@@ -889,9 +884,7 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
       }
       else {
          printf("Could not find either Primary Vector command index %ld or "
-                "Secondary Vector "
-                "command index %ld. "
-                "Exiting...\n",
+                "Secondary Vector command index %ld. Exiting...\n",
                 *cmdModes[0], *cmdModes[1]);
          exit(EXIT_FAILURE);
       }
@@ -1004,9 +997,7 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
       state                     = DMP_STATE;
       if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
          printf("Maximum momentum dump limit must be more than the minimum for "
-                "Whl H Manage "
-                "Command index %ld. "
-                "Exiting...\n",
+                "Whl H Manage Command index %ld. Exiting...\n",
                 *cmdInd);
          exit(EXIT_FAILURE);
       }
@@ -1017,8 +1008,7 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
    if (AttitudeCmdProcessed == TRUE && Cmd->AttitudeCtrlActive == TRUE) {
       if (GetController(S, ctrlNode, state) == FALSE) {
          printf("For %s index %ld, could not find Controller alias %s or "
-                "invalid format. "
-                "Exiting...\n",
+                "invalid format. Exiting...\n",
                 subType, *cmdInd,
                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
          exit(EXIT_FAILURE);
@@ -1026,8 +1016,7 @@ long GetAttitudeCmd(struct SCType *S, struct fy_node *attCmdNode,
 
       if (GetActuators(S, actNode, state) == FALSE) {
          printf("For %s index %ld, could not find Actuator alias %s or invalid "
-                "format. "
-                "Exiting...\n",
+                "format. Exiting...\n",
                 subType, *cmdInd,
                 fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
@@ -1093,15 +1082,13 @@ long GetActuatorCmd(struct SCType *S, struct fy_node *actCmdNode,
       }
       if (Cmd->ActTypes[i] == WHL_TYPE && Cmd->ActInds[i] > AC->Nwhl) {
          printf("SC[%ld] only has %ld wheels, but an actuator command was sent "
-                "to wheel %d. "
-                "Exiting...\n",
+                "to wheel %d. Exiting...\n",
                 AC->ID, AC->Nwhl, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
       if (Cmd->ActTypes[i] == THR_TYPE && Cmd->ActInds[i] > AC->Nthr) {
          printf("SC[%ld] only has %ld thrusters, but an actuator command was "
-                "sent to thruster %d. "
-                "Exiting...\n",
+                "sent to thruster %d. Exiting...\n",
                 AC->ID, AC->Nthr, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
@@ -2021,8 +2008,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
              FALSE) {
             long index;
             fy_node_scanf(iterNode, searchSubtypeIndexStr, subType, &index);
-            printf("Translational command of subtype %*s and index %ld "
-                   "cannot be found in Inp_DSM.yaml. Exiting...\n",
+            printf("Translational command of subtype %*s and index %ld cannot "
+                   "be found in Inp_DSM.yaml. Exiting...\n",
                    FIELDWIDTH, subType, index);
             exit(EXIT_FAILURE);
          }
@@ -2042,8 +2029,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
             else {
                long index;
                fy_node_scanf(iterNode, "/Index %ld", &index);
-               printf("Actuator command of subtype %*s and index %ld "
-                      "cannot method found in Inp_DSM.yaml. Exiting...\n",
+               printf("Actuator command of subtype %*s and index %ld cannot "
+                      "method found in Inp_DSM.yaml. Exiting...\n",
                       FIELDWIDTH, subType, index);
             }
             exit(EXIT_FAILURE);
@@ -2053,8 +2040,8 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
          if (GetActuatorCmd(S, iterNode, dsmRoot) == FALSE) {
             long index;
             fy_node_scanf(iterNode, "/Index %ld", &index);
-            printf("Actuator command of index %ld "
-                   "cannot be found in Inp_DSM.yaml. Exiting...\n",
+            printf("Actuator command of index %ld cannot be found in "
+                   "Inp_DSM.yaml. Exiting...\n",
                    index);
             exit(EXIT_FAILURE);
          }
@@ -2086,11 +2073,9 @@ void DsmCmdInterpreterMrk2(struct SCType *S, struct fy_node *dsmRoot,
             (!strcmp(Cmd->att_actuator, "THR_3DOF") ||
              !strcmp(Cmd->dmp_actuator, "THR_3DOF"))))) {
          printf("If the Translation actuator is 6DOF Thruster and Attitude "
-                "actuator is Thruster, "
-                "then it must be 6DOF (and vice versa).\nAdditionally, if the "
-                "translation actuator "
-                "is 3DOF thruster, then Attitude cannot also be 3DOF. "
-                "Exiting...\n");
+                "actuator is Thruster, then it must be 6DOF (and vice "
+                "versa).\nAdditionally, if the translation actuator is 3DOF "
+                "thruster, then Attitude cannot also be 3DOF. Exiting...\n");
          exit(EXIT_FAILURE);
       }
    }
@@ -3246,7 +3231,7 @@ void MomentumDumpCtrl(struct SCType *S)
                CTRL->dTcmd[i] = -CTRL->dmp_kp[i] * TotalWhlH[i];
             break;
          default:
-            printf("Invalid Control type in dump controller. How did that "
+            printf("Invalid controller type for Momentum Dumping. How did this "
                    "happen? Exiting...\n");
             exit(EXIT_FAILURE);
             break;
@@ -3272,16 +3257,11 @@ void MomentumDumpCtrl(struct SCType *S)
 void DsmFSW(struct SCType *S)
 {
    // load the DSM file statically so that all DsmFSW calls have access to same
-   // object
+   // object. Document is destroyed at program exit
    static struct fy_node *dsmRoot = NULL, *dsmCmds = NULL;
    if (dsmRoot == NULL) {
-      FILE *dsm_in            = FileOpen(InOutPath, "Inp_DSM.yaml", "r");
-      struct fy_document *fyd = fy_document_build_from_fp(NULL, dsm_in);
-      fclose(dsm_in);
-      if (fy_document_resolve(fyd)) {
-         printf("Unable to resolve links in Inp_DSM.yaml. Exiting...\n");
-         exit(EXIT_FAILURE);
-      }
+      struct fy_document *fyd =
+          fy_document_build_and_check(NULL, InOutPath, "Inp_DSM.yaml");
       dsmRoot = fy_document_root(fyd);
       dsmCmds = fy_node_by_path_def(dsmRoot, "/DSM Commands");
    }
