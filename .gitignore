@@ -9,3 +9,5 @@ a.out
 deepthought
 vgcore*
 Test
+Missions/*/MCRUN*
+Missions/*_sim_*

@@ -2490,8 +2490,8 @@ void TranslationGuidance(struct SCType *S)
          goodOriginFrame = TRUE;
       }
       else if (!strncmp(Cmd->RefFrame, "SC",
-                        2)) { // Specify disp from OP, in SC B frame
-                              // directions, control to OP
+                        2)) { // Specify disp from OP, in SC B frame directions,
+                              // control to OP
          sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
                 &frame_body); // Decode ref SC ID Number
          if (Isc_Ref >= Nsc) {
