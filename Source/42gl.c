@@ -5330,206 +5330,268 @@ void LoadMapShaders(void)
 /*********************************************************************/
 void ReadGraphicsInpFile(void)
 {
-   FILE *infile;
-   char junk[120], newline;
-   char response[120];
-   long i;
-   char Frame;
-   long Host, Target;
-
    /* .. Initialize POV */
-   infile = FileOpen(InOutPath, "Inp_Graphics.txt", "r");
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, "Inp_Graphics.yaml");
+   struct fy_node *root = fy_document_root(fyd);
+   char response[120]   = {0};
+
    /* .. 42 Graphics Configuration File */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+   struct fy_node *node = fy_node_by_path_def(root, "/Configuration");
    /* .. GL Output Interval */
-   fscanf(infile, "%lf %[^\n] %[\n]", &DTOUTGL, junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", StarCatFileName, junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   MapWindowExists = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   OrreryWindowExists = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   SphereWindowExists = DecodeString(response);
+   if (fy_node_scanf(node, "/Output Interval %lf /Star Catalog File %79[^\n]s",
+                     &DTOUTGL, StarCatFileName) != 2) {
+      printf("Invalid graphics output interval or star catalog file. "
+             "Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+
+   MapWindowExists = getYAMLBool(fy_node_by_path_def(node, "/Map Exists"));
+   OrreryWindowExists =
+       getYAMLBool(fy_node_by_path_def(node, "/Orrery Exists"));
+   SphereWindowExists =
+       getYAMLBool(fy_node_by_path_def(node, "/Unit Sphere Exists"));
+   PauseFlag = getYAMLBool(fy_node_by_path_def(node, "/Pause on Startup"));
    /* .. POV */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   PauseFlag = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+   char Frame = 0;
+   node       = fy_node_by_path_def(root, "/POV");
+   if (fy_node_scanf(node,
+                     "/Mode %119s "
+                     "/Host/SC %ld "
+                     "/Host/Body %ld "
+                     "/Target/SC %ld "
+                     "/Target/Body %ld "
+                     "/Target/Frame %c "
+                     "/POV Range %lf "
+                     "/POV Vertical Angle %lf",
+                     response, &POV.Host.SC, &POV.Host.Body, &POV.Target.SC,
+                     &POV.Target.Body, &Frame, &POV.Range, &POV.Angle) != 8) {
+      printf("Improperly formatted POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.Mode = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+
+   if (!fy_node_scanf(node, "/Host/Type %119s", response)) {
+      printf("Could not find Host Type for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.Host.Type = DecodeString(response);
-   fscanf(infile, "%ld %ld %c %[^\n] %[\n]", &Host, &POV.Host.Body, &Frame,
-          junk, &newline);
-   if (Host >= Nsc || !SC[Host].Exists) {
-      printf("POV Host SC %ld doesn't exist.\n", Host);
-      exit(1);
+   if (!fy_node_scanf(node, "/Target/Type %119s", response)) {
+      printf(
+          "Could not find Target Type for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
    }
-   POV.Host.SC     = Host;
-   POV.Host.RefOrb = SC[Host].RefOrb;
-   POV.Host.World  = Orb[POV.Host.RefOrb].World;
-   POV.Frame       = DecodeString(response);
-   if (Frame == 'N')
-      POV.Frame = FRAME_N;
-   else if (Frame == 'L')
-      POV.Frame = FRAME_L;
-   else if (Frame == 'F')
-      POV.Frame = FRAME_F;
-   else if (Frame == 'S')
-      POV.Frame = FRAME_S;
-   else if (Frame == 'B')
-      POV.Frame = FRAME_B;
-   else {
-      printf("Nonsense frame in Inp_Graphics.txt\n");
-      exit(1);
-   }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
    POV.Target.Type = DecodeString(response);
-   fscanf(infile, "%ld %ld %c %[^\n] %[\n]", &Target, &POV.Target.Body, &Frame,
-          junk, &newline);
-   if (Target >= Nsc || !SC[Target].Exists) {
-      printf("POV Target SC %ld doesn't exist.\n", Target);
+
+   if (POV.Host.SC >= Nsc || !SC[POV.Host.SC].Exists) {
+      printf("POV Host SC %ld doesn't exist.\n", POV.Host.SC);
       exit(1);
    }
-   POV.Target.SC     = Target;
-   POV.Target.RefOrb = SC[Target].RefOrb;
+   POV.Host.RefOrb = SC[POV.Host.SC].RefOrb;
+   POV.Host.World  = Orb[POV.Host.RefOrb].World;
+   if (POV.Target.SC >= Nsc || !SC[POV.Target.SC].Exists) {
+      printf("POV Target SC %ld doesn't exist.\n", POV.Target.SC);
+      exit(1);
+   }
+   POV.Target.RefOrb = SC[POV.Target.SC].RefOrb;
    POV.Target.World  = Orb[POV.Target.RefOrb].World;
-   POV.Frame         = DecodeString(response);
-   if (Frame == 'N')
-      POV.Frame = FRAME_N;
-   else if (Frame == 'L')
-      POV.Frame = FRAME_L;
-   else if (Frame == 'F')
-      POV.Frame = FRAME_F;
-   else if (Frame == 'S')
-      POV.Frame = FRAME_S;
-   else if (Frame == 'B')
-      POV.Frame = FRAME_B;
-   else {
-      printf("Nonsense frame in Inp_Graphics.txt\n");
-      exit(1);
+
+   // The Target Frame overrode the Host frame for the .txt version of this
+   // function
+   switch (Frame) {
+      case 'N':
+         POV.Frame = FRAME_N;
+         break;
+      case 'L':
+         POV.Frame = FRAME_L;
+         break;
+      case 'F':
+         POV.Frame = FRAME_F;
+         break;
+      case 'S':
+         POV.Frame = FRAME_S;
+         break;
+      case 'B':
+         POV.Frame = FRAME_B;
+         break;
+      default:
+         printf("Nonsense frame in Inp_Graphics.txt\n");
+         exit(1);
+         break;
    }
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+
+   if (!fy_node_scanf(node, "/Boresight Axis %119s", response)) {
+      printf("Could not find Boresight Axis for POV in Inp_Graphics. "
+             "Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.BoreAxis = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+   if (!fy_node_scanf(node, "/Up Axis %119s", response)) {
+      printf("Could not find Up Axis for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.UpAxis = DecodeString(response);
-   fscanf(infile, "%lf %[^\n] %[\n]", &POV.Range, junk, &newline);
-   fscanf(infile, "%lf %[^\n] %[\n]", &POV.Angle, junk, &newline);
-   fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &POV.PosB[0], &POV.PosB[1],
-          &POV.PosB[2], junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+   if (!fy_node_scanf(node, "/POV View %119s", response)) {
+      printf("Could not find POV View for POV in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
    POV.View = DecodeString(response);
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/POV Host Position"),
+                           POV.PosB);
 
    /* .. CAM Parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", CamTitle, junk, &newline);
-   fscanf(infile, "%ld %ld %[^\n] %[\n]", &CamWidth, &CamHeight, junk,
-          &newline);
-   fscanf(infile, "%lf  %[^\n] %[\n]", &MouseScaleFactor, junk, &newline);
-   POV.AR = ((double)CamWidth) / ((double)CamHeight);
-   fscanf(infile, "%lf  %[^\n] %[\n]", &GammaCorrection, junk, &newline);
-   /* .. Cam Show/Hide */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   for (i = 0; i < CAM_MENU_SIZE; i++) {
-      fscanf(infile, "%s \"%[^\"]\" %[^\n] %[\n]", response, CamShowLabel[i],
-             junk, &newline);
-      CamShow[i] = DecodeString(response);
+   node = fy_node_by_path_def(root, "/Cam");
+   if (fy_node_scanf(node,
+                     "/Title %79[^\n]s "
+                     "/Dimensions/Width %ld "
+                     "/Dimensions/Height %ld "
+                     "/Mouse Scale Factor %lf "
+                     "/Gamma Exposure %lf",
+                     CamTitle, &CamWidth, &CamHeight, &MouseScaleFactor,
+                     &GammaCorrection) != 5) {
+      printf("Improperly configured Cam field in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   const char camShowFields[CAM_MENU_SIZE][20] = {
+       {"/N Axes"},         {"/L Axes"},       {"/F Axes"},
+       {"/B Axes"},         {"/N Grid"},       {"/L Grid"},
+       {"/F Grid"},         {"/B Grid"},       {"/G Grid"},
+       {"/Fields of View"}, {"/Prox Ops"},     {"/TDRS Satellites"},
+       {"/Shadows"},        {"/Astro Labels"}, {"/Truth Vectors"},
+       {"/FSW Vectors"},    {"/Milky Way"},    {"/Fermi Sky"}};
+
+   node = fy_node_by_path_def(node, "/Cam Show");
+   for (int i = 0; i < CAM_MENU_SIZE; i++) {
+      char show[50] = {0}, label[50] = {0};
+      strcat(show, camShowFields[i]);
+      strcat(show, "/Show");
+      strcat(label, camShowFields[i]);
+      strcat(label, "/Label %39[^\n]s");
+      CamShow[i] = getYAMLBool(fy_node_by_path_def(node, show));
+      if (!fy_node_scanf(node, label, CamShowLabel[i])) {
+         printf("Could not find label for Cam configuration %s. Exiting...\n",
+                &camShowFields[i][1]);
+      }
    }
    ShadowsEnabled = CamShow[CAM_SHADOWS];
 
    /* .. MAP Parameters */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", MapTitle, junk, &newline);
-   fscanf(infile, "%ld %ld %[^\n] %[\n]", &MapWidth, &MapHeight, junk,
-          &newline);
-   /* .. Map Show/Hide */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   for (i = 0; i < MAP_MENU_SIZE; i++) {
-      fscanf(infile, "%s \"%[^\"]\" %[^\n] %[\n]", response, MapShowLabel[i],
-             junk, &newline);
-      MapShow[i] = DecodeString(response);
+   node = fy_node_by_path_def(root, "/Map");
+   if (fy_node_scanf(node,
+                     "/Title %79[^\n]s "
+                     "/Dimensions/Width %ld "
+                     "/Dimensions/Height %ld",
+                     MapTitle, &MapWidth, &MapHeight) != 3) {
+      printf("Improperly configured Map field in Inp_Graphics. Exiting...\n");
+      exit(EXIT_FAILURE);
    }
-   /* .. Sphere Window */
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   ShowConstellations[MAJOR_CONSTELL] = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   ShowConstellations[ZODIAC_CONSTELL] = DecodeString(response);
-   fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-   ShowConstellations[MINOR_CONSTELL] = DecodeString(response);
-
-   fclose(infile);
+   const char mapShowFields[MAP_MENU_SIZE][20] = {
+       {"/Clock"}, {"/Tlm Clock"}, {"/Credits"}, {"/Night"}};
+   node = fy_node_by_path_def(node, "/Map Show");
+   for (int i = 0; i < MAP_MENU_SIZE; i++) {
+      char show[50] = {0}, label[50] = {0};
+      strcat(show, mapShowFields[i]);
+      strcat(show, "/Show");
+      strcat(label, mapShowFields[i]);
+      strcat(label, "/Label %39[^\n]s");
+      MapShow[i] = getYAMLBool(fy_node_by_path_def(node, show));
+      if (!fy_node_scanf(node, label, MapShowLabel[i])) {
+         printf("Could not find label for Map configuration %s. Exiting...\n",
+                &camShowFields[i][1]);
+      }
+   }
+   node = fy_node_by_path_def(root, "/Constellations Show");
+   ShowConstellations[MAJOR_CONSTELL] =
+       getYAMLBool(fy_node_by_path_def(node, "/Major"));
+   ShowConstellations[ZODIAC_CONSTELL] =
+       getYAMLBool(fy_node_by_path_def(node, "/Zodiac"));
+   ShowConstellations[MINOR_CONSTELL] =
+       getYAMLBool(fy_node_by_path_def(node, "/Minor"));
+   fy_document_destroy(fyd);
 }
 /*********************************************************************/
 void LoadFOVs(void)
 {
-   FILE *infile;
-   char junk[120], newline;
-   char response[120], response1[120], response2[120];
-   double Ang1, Ang2, Ang3;
-   long Seq;
-   long i;
-
-   infile = FileOpen(InOutPath, "Inp_FOV.txt", "r");
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%ld %[^\n] %[\n]", &Nfov, junk, &newline);
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, "Inp_FOV.yaml");
+   struct fy_node *root = fy_document_root(fyd);
+   struct fy_node *node = fy_node_by_path_def(root, "/FOVs");
+   Nfov                 = fy_node_sequence_item_count(node);
    FOV = (struct FovType *)calloc(Nfov, sizeof(struct FovType));
-   for (i = 0; i < Nfov; i++) {
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", FOV[i].Label, junk, &newline);
-      fscanf(infile, "%ld %lf %[^\n] %[\n]", &FOV[i].Nv, &FOV[i].Length, junk,
-             &newline);
-      fscanf(infile, "%lf %lf %[^\n] %[\n]", &FOV[i].Width, &FOV[i].Height,
-             junk, &newline);
-      if (FOV[i].Width >= 180.0) {
+   struct fy_node *iterNode = NULL;
+   long Ifov                = 0;
+   WHILE_FY_ITER(node, iterNode)
+   {
+      struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FOV");
+      char response1[120] = {0}, response2[120] = {0};
+      if (fy_node_scanf(seqNode,
+                        "/Label %39[^\n]s "
+                        "/Sides/Number %ld "
+                        "/Sides/Length %lf "
+                        "/Width %lf "
+                        "/Height %lf "
+                        "/Color/Alpha %f "
+                        "/Type %119s "
+                        "/SC %ld "
+                        "/Body %ld "
+                        "/Boresight %119s",
+                        FOV[Ifov].Label, &FOV[Ifov].Nv, &FOV[Ifov].Length,
+                        &FOV[Ifov].Width, &FOV[Ifov].Height,
+                        &FOV[Ifov].Color[3], response1, &FOV[Ifov].SC,
+                        &FOV[Ifov].Body, response2) != 10) {
+         printf("Bad FOV Configuration. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+
+      if (FOV[Ifov].Width >= 180.0) {
          printf(
              "FOV[%ld] Width >= 180 deg.  This is not allowed.  Bailing out.\n",
-             i);
+             Ifov);
          exit(1);
       }
-      if (FOV[i].Height >= 180.0) {
+      if (FOV[Ifov].Height >= 180.0) {
          printf("FOV[%ld] Height >= 180 deg.  This is not allowed.  Bailing "
                 "out.\n",
-                i);
+                Ifov);
          exit(1);
       }
-      FOV[i].Width  *= D2R;
-      FOV[i].Height *= D2R;
-      fscanf(infile, "%f %f %f %f %[^\n] %[\n]", &FOV[i].Color[0],
-             &FOV[i].Color[1], &FOV[i].Color[2], &FOV[i].Color[3], junk,
-             &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-      FOV[i].Type = DecodeString(response);
-      fscanf(infile, "%s %s %[^\n] %[\n]", response1, response2, junk,
-             &newline);
-      FOV[i].NearExists = DecodeString(response1);
-      FOV[i].FarExists  = DecodeString(response2);
-      fscanf(infile, "%ld %ld %[^\n] %[\n]", &FOV[i].SC, &FOV[i].Body, junk,
-             &newline);
-      if (FOV[i].SC >= Nsc) {
-         printf("FOV[%ld].SC is out of range.\n", i);
+      FOV[Ifov].Width  *= D2R;
+      FOV[Ifov].Height *= D2R;
+      FOV[Ifov].Type    = DecodeString(response1);
+      if (FOV[Ifov].SC >= Nsc) {
+         printf("FOV[%ld].SC is out of range.\n", Ifov);
          exit(1);
       }
-      if (SC[FOV[i].SC].Exists && FOV[i].Body >= SC[FOV[i].SC].Nb) {
-         printf("FOV[%ld].Body is out of range.\n", i);
+      if (SC[FOV[Ifov].SC].Exists && FOV[Ifov].Body >= SC[FOV[Ifov].SC].Nb) {
+         printf("FOV[%ld].Body is out of range.\n", Ifov);
          exit(1);
       }
-      FOV[i].RefOrb = SC[FOV[i].SC].RefOrb;
-      if (!SC[FOV[i].SC].Exists) {
-         FOV[i].NearExists = FALSE;
-         FOV[i].FarExists  = FALSE;
-      }
+      assignYAMLToFloatArray(3, fy_node_by_path_def(seqNode, "/Color/RGB"),
+                             FOV[Ifov].Color);
 
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &FOV[i].pb[0], &FOV[i].pb[1],
-             &FOV[i].pb[2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %ld %[^\n] %[\n]", &Ang1, &Ang2, &Ang3, &Seq,
-             junk, &newline);
-      A2C(Seq, Ang1 * D2R, Ang2 * D2R, Ang3 * D2R, FOV[i].CB);
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-      FOV[i].BoreAxis = DecodeString(response);
-      FOV[i].H_Axis   = (FOV[i].BoreAxis + 1) % 3;
-      FOV[i].V_Axis   = (FOV[i].BoreAxis + 2) % 3;
+      FOV[Ifov].NearExists =
+          getYAMLBool(fy_node_by_path_def(seqNode, "/Near Field"));
+      FOV[Ifov].FarExists =
+          getYAMLBool(fy_node_by_path_def(seqNode, "/Far Field"));
+      FOV[Ifov].RefOrb = SC[FOV[Ifov].SC].RefOrb;
+      if (!SC[FOV[Ifov].SC].Exists) {
+         FOV[Ifov].NearExists = FALSE;
+         FOV[Ifov].FarExists  = FALSE;
+      }
+      assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Position"),
+                              FOV[Ifov].pb);
+      double ang[3] = {0.0};
+      long seq      = 0;
+      getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Euler Angles"), ang,
+                         &seq);
+      A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FOV[Ifov].CB);
+
+      FOV[Ifov].BoreAxis = DecodeString(response2);
+      FOV[Ifov].H_Axis   = (FOV[Ifov].BoreAxis + 1) % 3;
+      FOV[Ifov].V_Axis   = (FOV[Ifov].BoreAxis + 2) % 3;
+      Ifov++;
    }
-   fclose(infile);
+   fy_document_destroy(fyd);
 }
 /*********************************************************************/
 void InitColors(void)

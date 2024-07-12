@@ -1,0 +1,151 @@
+%YAML 1.2
+---
+SOF: "<<<<<<<<<<<<<<<<<<<<<<<<  42:  DSM Command Script File  >>>>>>>>>>>>>>>>>>>>>>>>"
+DSM Commands: |
+  ------------------------------Spacecraft Commands------------------------------
+  ((Sequence; one element for each spacecraft))
+    - SC: [[Index]]
+      Command Sequence: ((Sequence; one element for each command time))
+        - Time: [[Command Time]]
+          Commands: ((Sequence; describes all commands at a particular time))
+            - Type:       [[Attitude/Translation/Actuator]]
+              ((Both Attitude & Translation can be Passive or NO_CHANGE Subtype))
+              ((IF Translation: Translation, Maneuver))
+              ((IF Attitude:    One Vector Pointing, Two Vector Pointing, Quaternion, Mirror, Detumble, Whl H Manage))
+              Index:      [[Index, {SV Index for Two Vector}]] ((needed if not Passive or NO_CHANGE))
+              Subtype:    [[Subtype]] ((Needed if not Actuator))
+Translation Configurations: |
+  ------------------------------Translation Command------------------------------
+  ((Sequence; one element for unique Translation Command))
+    - Translation:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Position:       [[X, Y, Z]] [[meters]]
+        Origin:         [[OP/SC[#].B[#]]]
+        Frame:          [[N/F/L/SC[#].B[#]]]
+        Controller:     [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]
+Primary Vector Configurations: |
+  -------------------------------Primary Axis Cmd--------------------------------
+  ((Sequence; one element for unique Primary Axis Command))
+  - Primary Vector:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Axis:           [[X, Y, Z]] ((Body Pointing Vector))
+        Controller:     [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]
+        Target: ((Describes pointing target))
+          Type:   [[VEC/BODY/SC]]
+          ((Frame and Axis are only if Type is VEC))
+          Frame:  [[N/F/L]] ((Pointing Vector Frame))
+          Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
+          ((Target is used if BODY or SC))
+         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
+Secondary Vector Configurations: |
+  ------------------------------Secondary Axis Cmd-------------------------------
+  ((Sequence; one element for unique Secondary Axis Command))
+    - Secondary Vector:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Axis:       [[X, Y, Z]] ((Body Pointing Vector))
+        Target: ((Describes pointing target))
+          Type:   [[VEC, BODY, SC]]
+          ((Frame and Axis are only if Type is VEC))
+          Frame:  [[N/F/L]] ((Pointing Vector Frame))
+          Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
+          ((Target is used if BODY or SC))
+          Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
+Quaternion Configurations: |
+  ------------------------Quaternion Attitude Cmd--------------------------------
+  ((Sequence; one element for unique Quaternion Command))
+    - Quaternion:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Quaternion:     [[q_x, q_y, q_z, q_s]]
+        Frame:          [[(N, F, L)]] ((Quaternion Reference Frame))
+        Controller:     [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]
+Mirror Configurations: |
+  ----------------------------Mirror Attitude Cmd--------------------------------
+  ((Sequence; one element for unique Mirror Command))
+    - Mirror:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Target:         [[SC[#]]]
+        Controller:     [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]
+Detumble Configurations: |
+  ---------------------------Detumble Attitude Cmd-------------------------------
+  ((Sequence; one element for unique Detumble Command))
+    - Detumble:
+        Index:          [[Index]]
+        Controller:     [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]
+Whl H Manage Configurations: |
+  ---------------------------Wheel Momentum Management Cmd-------------------------------
+  ((Sequence; one element for unique Whl H Manage Command))
+    - Whl H Manage:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Dumping:        [[true/false]]
+        Minimum H_norm: [[Minimum Angular Momentum]] [[Nms]]
+        Maximum H_norm: [[Maximum Angular Momentum]] [[Nms]]
+        Controller:     [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]
+Actuator Cmd Configurations: |
+  --------------------------------Actuator Command-------------------------------
+  ((Sequence; one element for unique Actuator Command))
+    - Index:          [[Index]]
+      Description:    {Optional}
+      Acutators: ((Sequence; one element for each))
+        - Type:       [[THR/WHL/MTB]]
+          Index:      [[Index]]
+          Duty Cycle: [[Duty Cycle]]
+Controller Configurations: |
+  ----------------------------------Controllers----------------------------------
+  ((Sequence; one element for unique Controller Definition))
+    - Controller:     &{Anchor}
+        Description:    {Optional}
+        Gains:          [[Configuration or *{Alias}]]
+        Limits:         [[Configuration or *{Alias}]]
+Actuator Configurations: |
+  -------------------------------Control Actuators-------------------------------
+  ((Sequence; one element for unique Actuator Definition))
+    - Actuator:       &{Anchor}
+          Description:    {Optional}
+          Type:           [[WHL/MTB/THR_3DOF/THR_6DOF]]
+Gains Configurations: |
+  ------------------Translational / Attitude Control Parameters------------------
+  ((Sequence; one element for unique Actuator Definition))
+    - Gains:          &{Anchor}
+        Description:    {Optional}
+        Type:           [[PID/PID_WN/MomentumDump/FC_LYA/CUSTOM]]
+        Gains:
+          Kp:         [[kp_1, kp_2, kp_3]]    ((Needed only for PID, MomementumDump))
+          Kr:         [[kr_1, kr_2, kr_3]]    ((Needed only for PID))
+          Ki:         [[ki_1, ki_2, ki_3]]    ((Needed only for PID))
+          Ki_Limit:   [[ki_limit_1, ki_limit_2, ki_limit_3]]  ((Needed only for PID, PID_WN; only ki_limit_1 needed for PID_WN))
+          Omega:      [[omega]]   ((Needed only for PID_WN))
+          Zeta:       [[zeta]]    ((Needed only for PID_WN))
+          Alpha:      [[alpha]]   ((Needed only for PID_WN))
+          K_lya:      [[k_lya_1, k_lya_2]]    ((Needed only for FC_LYA; only k_lya_1 used by Translation control))
+Limits Configurations: |
+  --------------------Translational / Attitude Control Limits--------------------
+  ((Sequence; one element for unique Limit Definition))
+    - Limits:         &{Anchor}
+        Description:    {Optional}
+        Force Max:      [[X, Y, Z]] frc_max/trq_max [[N, Nm]]
+        Velocity Max:   [[X, Y, Z]] vel_max/w_max [[m/s, deg/s]]
+Maneuver Configurations: |
+  --------------------------------Maneuver Command-------------------------------
+  ((Sequence; one element for unique Actuator Definition))
+    - Maneuver:
+        Index:          [[Index]]
+        Description:    {Optional}
+        Type:           [[WHL/MTB/THR_3DOF/THR_6DOF]]
+        Delta V:        [[X, Y, Z]] [[m/s]]
+        Frame:          [[N/B]]
+        Origin:         [[CONSTANT/SMOOTHED]] ((SMOOTHED must start at half desired burn duration))
+        Duration:       [[Duration]] [[s]]
+        Limits:         [[Configuration or *{Alias}]]
+        Actuator:       [[Configuration or *{Alias}]]

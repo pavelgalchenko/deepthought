@@ -1,0 +1,121 @@
+%YAML 1.2
+---
+SOF: "<<<<<<<<<<<<<<<<<<<  42 Graphics Configuration File  >>>>>>>>>>>>>>>>>>>"
+Configuration: |
+  -----------------------------Graphics Configuration----------------------------
+    Name: [[]]
+    Output Interval:
+    Star Catalog File:
+    Map Exists: [[true/false]]
+    Orrery Exists: [[true/false]]
+    Unit Sphere Exists: [[true/false]]
+    Pause on Startup: [[true/false]]
+POV: |
+  -------------------------------POV Configuration-------------------------------
+    Mode: [[]]
+    Host:
+      Type: [[]]
+      SC: [[]]
+      Body: [[]]
+      Frame: [[]]   ((Unused))
+    Target:
+      Type: [[]]
+      SC: [[]]
+      Body: [[]]
+      Frame: [[]]
+    Boresight Axis: [[]]
+    Up Axis: [[]]
+    POV Range: [[]]
+    POV Vertical Angle: [[]]
+    POV Host Position: [[x, y, z]]
+    POV View: [[]]
+Cam: |
+  -----------------------------Camera Configuration------------------------------
+    Title: [[]]
+    Dimensions:
+      Width: [[pixels]]
+      Height [[pixels]]
+    Mouse Scale Factor: [[]]
+    Gamma Exponent: [[]]
+    Cam Show:
+      N Axes:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      L Axes:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      F Axes:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      B Axes:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      N Grid:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      L Grid:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      F Grid:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      B Grid:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      G Grid:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Fields of View:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Prox Ops:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      TDRS Satellites:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Shadows:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Astro Labels:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Truth Vectors:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      FSW Vectors:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Milky Way:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+      Fermi Sky:
+        Show: [[true/false]]
+        Label: [[]]   ((Unused))
+Map: |
+  -------------------------------Map Configuration-------------------------------
+    Title: [[]]
+    Dimensions:
+      Width: [[pixels]]
+      Height [[pixels]]
+    Map Show:
+      Clock:
+        Show: [[true/false]]
+        Label: [[]]
+      Tlm Clock:
+        Show: [[true/false]]
+        Label: [[]]
+      Credits:
+        Show: [[true/false]]
+        Label: [[]]
+      Night:
+        Show: [[true/false]]
+        Label: [[]]
+Constellations Show: |
+  -----------------------Constellations Show Configuration-----------------------
+    Major:
+      Show: [[true/false]]
+    Zodiac:
+      Show: [[true/false]]
+    Minor:
+      Show: [[true/false]]

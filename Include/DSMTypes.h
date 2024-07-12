@@ -124,9 +124,9 @@ struct DSMCmdType {
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
-   int trn_controller;
-   int att_controller;
-   int dmp_controller;
+   enum ctrlType trn_controller;
+   enum ctrlType att_controller;
+   enum ctrlType dmp_controller;
    enum maneuverType ManeuverMode;
    char AttRefScID[6];
    char H_DumpGain[20];
@@ -224,7 +224,7 @@ struct DSMType {
    double wbn[3];      // Angular Velocity in the SC Body Frame
    double qbn[4];      // Quarternion from B to N
 
-   double CmdTime_f[100];
+   double *CmdTime_f;
    long CmdNum;
    long CmdInit;
    long CmdCnt;

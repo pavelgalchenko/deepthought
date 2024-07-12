@@ -1,0 +1,7 @@
+%YAML 1.2
+---
+SOF: "<<<<<<<<<<<<<<<<<<  42 NOS3 Time Configuration File  >>>>>>>>>>>>>>>>>>>"
+Configuration: |
+  -------------------------------NOS3 Configuration------------------------------
+    Bus:
+    Connection String: [[tcp://(hostname):(port)]]

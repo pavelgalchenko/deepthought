@@ -1,0 +1,75 @@
+%YAML 1.2
+---
+SOF: "<<<<<<<<<<<<<<<<<  42: Orbit Description File   >>>>>>>>>>>>>>>>>"
+Configuration: |
+  -----------------------------General Configuration-----------------------------
+    Name: [[]]
+    Description: [[]]
+Orbit: |
+  -------------------------Orbit Parameter Configuration-------------------------
+    Type: [[ZERO/FLIGHT/CENTRAL/THREE_BODY]]
+    ((Additional fields depend on Type))
+    ((Type: ZERO))
+    World:
+    Polyhedron Grav:
+    ((Type: FLIGHT))
+    Region:
+    Polyhedron Grav:
+    ((Type: CENTRAL))
+    World:
+    J2 Secular Drift: [[true/false]]
+    Init:
+      Method: [[KEP/RV/FILE]]
+      ((Additional fields depend on Method))
+      ((Method: KEP))
+      Inclination: [[deg]]
+      RAAN: [[deg]]
+      Arg of Periapsis: [[deg]]
+      True Anomaly: [[deg]]
+      SMA Parameterization: [PA/AE]
+      ((Additional fields depend on SMA Parameterization))
+      ((SMA Parameterization: PA))
+      Periapsis: [[km]]
+      Apoapsis: [[km]]
+      ((SMA Parameterization: AE))
+      Minimum Altitude:  [[km]]
+      Eccentricity:
+      ((Method: RV))
+      Position: [[pos_x, pos_y, pos_z]] [[km]]
+      Velocity: [[vel_x, vel_y, vel_z]] [km/sec]
+      ((Method: FILE))
+      File Type: [[TLE/TRV/SPLINE]]
+      File Name:
+      Label in File:
+    ((Type: THREE_BODY))
+    Lagrange System: [[EARTHMOON/SUNEARTH/SUNJUPITER]]
+    Propagation Method: [[LAGDOF_MODES/LAGDOF_COWELL/LAGDOF_SPLINE]]
+    Init:
+      Method: [[MODES/XYZ/FILE]]
+      ((Additional fields depend on Method))
+      ((Method: MODES))
+      Lagrange Point: [[L1/L2/L3/L4/L5]]
+      XY SMA: [[km]]
+      XY Phase: [[deg]]
+      Sense:  [[CW/CCW]]
+      Z SMA:  [[km]]
+      Z Phase:  [[deg]]
+      ((If Lagrange Point is L4 or L5))
+      XY 2nd SMA: [[km]]
+      XY 2nd Phase: [[deg]]
+      2nd Sense:  [[CW/CCW]]
+      ((Method: XYZ))
+      Position: [[pos_x, pos_y, pos_z]] [[nondimensional]]
+      Velocity: [[vel_x, vel_y, vel_z]] [[nondimensional]]
+      ((Method: FILE))
+      File Type: [[TLE/TRV/SPLINE]]
+      File Name:
+      Label in File:
+Formation: |
+  ----------------------------Formation Configuration----------------------------
+    Fixed Frame:  [[N/L]]
+    Euler Angles:
+      Angles:                 [[angle_1, angle_2, angle_3]]       [[deg]]
+      Sequence:               [[Sequence]]
+    Expression Frame: [[N/L]]
+    Position: [[pos_x, pos_y, pos_z]] [[m]]

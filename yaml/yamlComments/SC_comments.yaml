@@ -1,0 +1,209 @@
+%YAML 1.2
+---
+SOF: "<<<<<<<<<<<<<<<<<  42: Spacecraft Description File   >>>>>>>>>>>>>>>>>>>"
+Configuration: |
+  ----------------------------Spacecraft Configuration---------------------------
+    Description:      [[]]
+    Label:            [[]]
+    Sprite File:      [[]]
+    FSW Identifier:   [[PASSIVE_FSW/PROTOTYPE_FSW/AD_HOC_FSW/SPINNER_FSW/MOMBIAS_FSW/THREE_AXIS_FSW/ISS_FSW/CMG_FSW/THR_FSW/CFS_FSW/RBT_FSW/DSM_FSW]]
+    FSW Sample Time:  [[]]    [[sec]]
+Orbit: |
+  -------------------------------Orbit Parameters--------------------------------
+    Prop Type:      [[FIXED/EULER_HILL/ENCKE/COWELL]]
+    Pos Specifier   [[CM/ORIGIN]]
+    Pos wrt F:      [[pos_X, pos_Y, pos_Z]]         [[m]]
+    Vel wrt F:      [[vel_X, vel_Y, vel_Z]]         [[m/s]]
+Attitude: |
+  -------------------------------Initial Attitude--------------------------------
+    Ang Vel Frame:        [[N/L]]
+    Att Representation:   [[Q/A]]
+    Att Frame:            [[N/L/F]]
+    Ang Vel:              [[angvel_x, angvel_y, angvel_z]]        [[rad/s]]
+    ((Quaternion used if Att Representation is Q, Euler Angles used if Att Representation is A))
+    Quaternion:           [[q_x, q_y, q_z, q_s]]
+    Euler Angles:
+      Angles:                 [[angle_1, angle_2, angle_3]]       [[deg]]
+      Sequence:               [[Sequence]]
+Dynamics Flags: |
+  --------------------------------Dynamics Flags---------------------------------
+    Method:               [[GAUSS_ELIM/ORDER_N]]
+    Compute Constraints:  [[true/false]]
+    Mass Reference Point: [[REFPT_CM/REFPT_JOINT]]
+    Flex Active:          [[true/false]]
+    2nd Order Flex:       [[true/false]]
+    Shaker File Name:     [[NONE/((Filename))]]
+    Drag Coefficient:     [[Drag Coefficient]]
+Bodies: |
+  --------------------------------Body Parameters--------------------------------
+  ((Sequence; one element for each body))
+    - Body:
+        Index:                [[Index]]
+        Mass:                 [[Mass]]
+        MOI:                  [[moi_x, moi_y, moi_z]]
+        POI:                  [[poi_x, poi_y, poi_z]]
+        Pos of CM:            [[cm_x, cm_y, cm_z]]
+        Constant Momentum:    [[momentum_x, momentum_y, momentum_z]]
+        Constant Dipole:      [[dipole_x, dipole_y, dipole_z]]
+        Geometry File Name:   [[Filename]]
+        Node File Name:       [[Filename]]
+        Flex File Name:       [[NONE/Filename]]
+Joints: |
+  -------------------------------Joint Parameters--------------------------------
+  ((Sequence; one element for each joint, one less than number of bodies))
+    - Joint:
+        Index:                      [[Index]]
+        Body Indicies:              [[Inner Body Index, Outer Body Index]]
+        Joint Type:                 [[PASSIVE, ACTUATED, others]]
+        Rot DOF:                    [[Rotation DOF]]
+        Rot Sequence:               [[Sequence]]
+        Rot Type:                   [[GIMBAL/SPHERICAL]]
+        Trn DOF:                    [[Translation DOF]]
+        Trn Sequence:               [[Sequence]]
+        Rot DOF Locked:             [[true/false, true/false, true/false]]
+        Trn DOF Locked:             [[true/false, true/false, true/false]]
+        Init Angles:                [[angle_1, angle_2, angle_3]]           [[deg]]
+        Init Angle Rates:           [[angrate_1, angrate_2, angrate_3]]     [[deg/s]]
+        Init Displacement:          [[disp_x, disp_y, disp_z]]              [[m]]
+        Init Displacement Rates:    [[disprate_x, disprate_y, disprate_z]]  [[m/s]]
+        Bi-Gi Angles:
+          Angles:                       [[angle_1, angle_2, angle_3]]       [[deg]]
+          Sequence:                     [[Sequence]]
+        Bo-Go Angles:
+          Angles:                       [[angle_1, angle_2, angle_3]]       [[deg]]
+          Sequence:                     [[Sequence]]
+        Pos wrt Inner Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
+        Pos wrt Outer Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
+        Parm File Name:             [[NONE/filename]]
+Wheel Params: |
+  -------------------------------Wheel Parameters--------------------------------
+    Drag:     [[true/false]]
+    Jitter:   [[true/false]]
+Wheels: |
+  ------------------------------------Wheels-------------------------------------
+  ((Sequence, one element for each wheel))
+    - Wheel:
+        Index:                  [[Index]]
+        Initial Momentum:       [[]]
+        Axis:                   [[axis_x, axis_y, axis_z]]
+        Max Torque:             [[]]
+        Max Momentum:           [[]]
+        Rotor Inertia:          [[]]
+        Body:                   [[Configuration or *{Alias}]]
+        Node:                   [[Node Index]]
+        Drag-Jitter File Name:  [[NONE/filename]]
+MTBs: |
+  -------------------------------------MTBs--------------------------------------
+  ((Sequence, one element for each mtb))
+    - MTB:
+        Index:      [[Index]]
+        Saturation: [[]]
+        Axis:       [[axis_x, axis_y, axis_z]]
+        Node:       [[Node Index]]
+Thrusters: |
+  -----------------------------------Thrusters-----------------------------------
+  ((Sequence, one element for each thruster))
+    - Thruster:
+        Index:  [[Index]]
+        Mode:   [[PULSED/PROPORTIONAL]]
+        Force:  [[Max Force]]
+        Axis:   [[axis_x, axis_y, axis_z]]
+        Body:   [[Configuration or *{Alias}]]
+        Node:   [[Node Index]]
+Gyros: |
+  -------------------------------------Gyro--------------------------------------
+  ((Sequence, one element for each gyro))
+    - Gyro:
+        Index:                      [[Index]]
+        Sample Time:                [[]]    [[sec]]
+        Axis:                       [[axis_x, axis_y, axis_z]]
+        Max Rate:                   [[]]    [[deg/s]]
+        Scale Factor:               [[]]    [[ppm]]
+        Quantization:               [[]]    [[arcsec]]
+        Angle Random Walk:          [[]]    [[deg/rt-hr]]
+        Bias Stability:             [[]]    [[deg/hr]]
+        Bias Stability Timespan:    [[]]    [[hr]]
+        Angle Noise:                [[]]    [[arcsec RMS]]
+        Initial Bias:               [[]]    [[deg/hr]]
+        Node:                       [[Node Index]]
+Magnetometers: |
+  ----------------------------------Magnetometer---------------------------------
+  ((Sequence, one element for each magnetometer))
+    - Magnetometer:
+        Index:          [[Index]]
+        Sample Time:    [[]]    [[sec]]
+        Axis:           [[axis_x, axis_y, axis_z]]
+        Saturation:     [[]]    [[Tesla]]
+        Scale Factor:   [[]]    [[ppm]]
+        Quantization:   [[]]    [[Tesla]]
+        Noise:          [[]]    [[Tesla RMS]]
+        Node:           [[Node Index]]
+CSSs: |
+  --------------------------------------CSS--------------------------------------
+  ((Sequence, one element for each coarse sun sensor))
+    - CSS:
+        Index:              [[Index]]
+        Sample Time:        [[]]    [[sec]]
+        Axis:               [[axis_x, axis_y, axis_z]]
+        Half Cone Angle:    [[]]    [[deg]]
+        Scale Factor:       [[]]    [[ppm]]
+        Quantization:       [[]]
+        Body:               [[Configuration or *{Alias}]]
+        Node:               [[Node Index]]
+FSSs: |
+  --------------------------------------FSS--------------------------------------
+  ((Sequence, one element for each fine sun sensor))
+    - FSS:
+        Index:                  [[Index]]
+        Sample Time:            [[]]    [[sec]]
+        Mounting Angles:
+          Angles:                   [[angle_1, angle_2, angle_3]]       [[deg]]
+          Sequence:                 [[Sequence]]
+        Boresight Axis:         [[X_AXIS/Y_AXIS/Z_AXIS]]
+        FOV Size:               [[H FOV Size, V FOV Size]]  [[deg]]
+        Noise Equivalent Angle: [[]]    [[deg RMS]]
+        Quantization:           [[]]    [[deg]]
+        Node:                   [[Node Index]]
+STs: |
+  --------------------------------------ST---------------------------------------
+  ((Sequence, one element for each startracker))
+    - ST:
+        Index:                  [[Index]]
+        Sample Time:            [[]]    [[sec]]
+        Mounting Angles:
+          Angles:                   [[angle_1, angle_2, angle_3]]       [[deg]]
+          Sequence:                 [[Sequence]]
+        Boresight Axis:         [[X_AXIS/Y_AXIS/Z_AXIS]]
+        FOV Size:               [[H FOV Size, V FOV Size]]  [[deg]]
+        Exclusion Angles:
+          Sun:                      [[]]    [[deg]]
+          Earth:                    [[]]    [[deg]]
+          Luna:                     [[]]    [[deg]]
+        Noise Equivalent Angle: [[Boresight Noise, H Noise, V Noise]]   [[deg]]
+        Node:                   [[Node Index]]
+GPSs: |
+  --------------------------------------GPS--------------------------------------
+  ((Sequence, one element for each GPS))
+    - GPS:
+        Index:          [[Index]]
+        Sample Time:    [[]]    [[sec]]
+        Position Noise: [[]]    [[m RMS]]
+        Velocity Noise: [[]]    [[m/s RMS]]
+        Time Noise:     [[]]    [sec RMS]
+        Node:           [[Node Index]]
+Accelerometers: |
+  ---------------------------------Accelerometer---------------------------------
+  ((Sequence, one element for each accelerometer))
+    - Accelerometer:
+        Index:                      [[Index]]
+        Sample Time:                [[]]    [[sec]]
+        Axis:                       [[axis_x, axis_y, axis_z]]
+        Max Acceleration:           [[]]    [[m/s^2]]
+        Scale Factor:               [[]]    [[ppm]]
+        Quantization:               [[]]    [[m/s^2]]
+        DV Random Walk:             [[]]    [[m/s/rt-hr]]
+        Bias Stability:             [[]]    [[m/s^2]]
+        Bias Stability Timespan:    [[]]    [[hr]]
+        DV Noise:                   [[]]    [[m/s]]
+        Initial Bias:               [[]]    [[m/s^2]]
+        Node:                       [[Node Index]]""",
