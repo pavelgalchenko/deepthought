@@ -1,0 +1,92 @@
+%YAML 1.2
+---
+#  This file must be edited by the user to specify which parameters to vary
+#  and which data to save. Plase refer to code comments. The most critical
+#  portion of code to modify is between the BEGIN USER SETUP PARAMATERS block
+#  and the END USER SETUP PARAMATERS code comment block. To vary what
+#  parameters the monte carlo simulation will vary, you must edit code within
+#  the BEGIN MONTE CARLO VARIATION PARAMATERS block and the
+#  END MONTE CARLO VARIATION PARAMATERS block.
+
+##############################
+# BEGIN USER RUN DESCRIPTION #
+##############################
+
+# settings to configure YAML translators
+
+############################
+# EMD USER RUN DESCRIPTION #
+############################
+
+###############################
+# BEGIN USER SETUP PARAMATERS #
+###############################
+
+###########################################
+# BEGIN 42 Input Configuration Parameters #
+###########################################
+
+# Line Definitions in InpSim
+line_simt_num: 4
+line_fout_num: 5
+line_orb_num: 11
+line_sc_num: 14
+line_date_num: 16
+line_time_num: 17
+
+# Line Definitions in Orb File
+line_alt_num: 15
+line_inc_num: 17
+line_raan_num: 18
+
+# Line Definitions in IPC File
+line_port_num: 8
+
+# Line Definitions in SC File
+line_angr_num: 14
+line_angp_num: 16
+line_nbdy_num: 28
+line_mass_num: 30
+line_pmoi_num: 31
+line_cmoi_num: 32
+line_cm_num: 33
+
+# Data Locations from Num Decleration
+delta_whl_num: 4
+delta_whl_axs: 3
+delta_whl_moi: 5
+delta_whl_bdy: 6
+delta_mtb_axs: 3
+delta_thr_axs: 4
+delta_gyr_axs: 3
+delta_mag_axs: 3
+delta_css_axs: 3
+delta_fss_axs: 3
+delta_str_axs: 3
+delta_gps_axs: 3 # ?????????????????
+delta_acl_pos: 3 # need to modify node position :(
+delta_acl_axs: 3
+
+# Length Definitions in SC File
+lngth_header: 3
+lngth_tinyhdr: 2
+lngth_body: 10
+lngth_joint: 16
+
+lngth_wheel: 8
+lngth_mtb: 4
+lngth_thrstrs: 6
+lngth_gyro: 11
+lngth_mag: 8
+lngth_css: 8
+lngth_fss: 8
+lngth_strckr: 8
+lngth_gps: 6
+lngth_accel: 11
+#########################################
+# END 42 Input Configuration Parameters #
+#########################################
+
+#######################################
+# END MONTE CARLO ANALYSIS PARAMATERS #
+#######################################

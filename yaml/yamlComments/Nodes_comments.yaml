@@ -1,0 +1,14 @@
+%YAML 1.2
+---
+SOF: "<<<<<<<<<<<<<<<<  Body Node Inputs for 42  >>>>>>>>>>>>>>>>>>>>>"
+Configuration: |
+  ---------------------------------Configuration---------------------------------
+    Name:
+    Description:
+Nodes: |
+  -------------------------------Node Configuration------------------------------
+  ((Sequence; one element for unique Atmospere Model Definition))
+    - Node:
+        Index:
+        Location: [[x, y, z]] [[m]]
+        Comment:

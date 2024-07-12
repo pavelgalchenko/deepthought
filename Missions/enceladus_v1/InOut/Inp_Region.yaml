@@ -1,0 +1,42 @@
+%YAML 1.2
+---
+# ***************************  Regions for 42  ***************************
+Regions:
+  # ------------------------------Region Configuration-----------------------------
+  # ((Sequence; one element for unique Region Definition))
+  #   - Region:
+  #       Exists: [[true/false]]
+  #       Name: [[]]
+  #       World: [[]]
+  #       Location:
+  #         Type: [[POSW/LLA]]
+  #         Position: [[x, y, z](POSW)/[Lat, Long, Alt](LLA)]  [[m, m, m](POSW)/[deg, deg, m](LLA)]
+  #       Coefficients:
+  #         Elasticity: [[]]
+  #         Damping: [[]]
+  #         Friction: [[]]
+  #       Geometry File Name: [[]]
+  - Region:
+      Exists: true
+      Name: LZ
+      World: EARTH
+      Location:
+        Type: LLA
+        Position: [-80.53, 28.46, 1000.0]
+      Coefficients:
+        Elasticity: 1000000.0
+        Damping: 10000.0
+        Friction: 0.1
+      Geometry File Name: Rgn_Terrain.obj
+  - Region:
+      Exists: true
+      Name: TAG
+      World: MINORBODY_2
+      Location:
+        Type: POSW
+        Position: [2400.9966, -1074.41895, 439.1271]
+      Coefficients:
+        Elasticity: 1000000.0
+        Damping: 10000.0
+        Friction: 0.1
+      Geometry File Name: Rgn_TAG.obj

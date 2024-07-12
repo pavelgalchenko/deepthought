@@ -40,37 +40,55 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled);
 /*********************************************************************/
 void InitInterProcessComm(void)
 {
-   FILE *infile;
-   char junk[120], newline, response[120];
-   struct IpcType *I;
-   long Iipc, Ipx;
-   char FileName[80], Prefix[80];
+   struct fy_document *fyd =
+       fy_document_build_and_check(NULL, InOutPath, "Inp_IPC.yaml");
+   struct fy_node *root = fy_document_root(fyd);
+   char response[120] = {0}, FileName[80] = {0};
 
-   infile = FileOpen(InOutPath, "Inp_IPC.txt", "rt");
-   fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   fscanf(infile, "%ld %[^\n] %[\n]", &Nipc, junk, &newline);
+   struct fy_node *node = fy_node_by_path_def(root, "/IPCs");
+   Nipc                 = fy_node_sequence_item_count(node);
    IPC = (struct IpcType *)calloc(Nipc, sizeof(struct IpcType));
-   for (Iipc = 0; Iipc < Nipc; Iipc++) {
-      I = &IPC[Iipc];
-      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+
+   long Iipc                = 0;
+   struct fy_node *iterNode = NULL;
+   WHILE_FY_ITER(node, iterNode)
+   {
+      struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/IPC");
+      struct IpcType *I       = &IPC[Iipc];
+
+      if (fy_node_scanf(seqNode,
+                        "/Mode %119s "
+                        "/AC ID %ld "
+                        "/File Name %79[^\n]s "
+                        "/Socket/Host/Name %39[^\n]s "
+                        "/Socket/Host/Port %ld",
+                        response, &I->AcsID, FileName, I->HostName,
+                        &I->Port) != 5) {
+         printf("IPC is improperly configured. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       I->Mode = DecodeString(response);
-      fscanf(infile, "%ld %[^\n] %[\n]", &I->AcsID, junk, &newline);
-      fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", FileName, junk, &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+      if(!fy_node_scanf(seqNode, "/Socket/Role %119s", response)){
+         printf("Could not find Socket Role for IPC. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
       I->SocketRole = DecodeString(response);
-      fscanf(infile, "%s %ld %[^\n] %[\n]", I->HostName, &I->Port, junk,
-             &newline);
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-      I->AllowBlocking = DecodeString(response);
-      fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
-      I->EchoEnabled = DecodeString(response);
-      fscanf(infile, "%ld %[^\n] %[\n]", &I->Nprefix, junk, &newline);
-      I->Prefix = (char **)calloc(I->Nprefix, sizeof(char *));
-      for (Ipx = 0; Ipx < I->Nprefix; Ipx++) {
-         fscanf(infile, "\"%[^\"]\" %[^\n] %[\n]", Prefix, junk, &newline);
-         I->Prefix[Ipx] = (char *)calloc(strlen(Prefix) + 1, sizeof(char));
-         strcpy(I->Prefix[Ipx], Prefix);
+      I->AllowBlocking =
+          getYAMLBool(fy_node_by_path_def(seqNode, "/Socket/Blocking"));
+      I->EchoEnabled =
+          getYAMLBool(fy_node_by_path_def(seqNode, "/Echo to stdout"));
+      struct fy_node *prefixNode = fy_node_by_path_def(seqNode, "/Prefixes");
+      I->Nprefix                 = fy_node_sequence_item_count(prefixNode);
+      I->Prefix                  = (char **)calloc(I->Nprefix, sizeof(char *));
+      struct fy_node *prefixIterNode = NULL;
+      long Ipx                       = 0;
+      WHILE_FY_ITER(prefixNode, prefixIterNode)
+      {
+         size_t prefLen     = 0;
+         const char *prefix = fy_node_get_scalar(prefixIterNode, &prefLen);
+         I->Prefix[Ipx]     = (char *)calloc(prefLen + 1, sizeof(char));
+         strncpy(I->Prefix[Ipx], prefix, prefLen);
+         Ipx++;
       }
 
       I->Init = 1;
@@ -160,8 +178,9 @@ void InitInterProcessComm(void)
          I->SocketRole = IPC_CLIENT; /* Spirent is Host */
          I->Socket = InitSocketClient(I->HostName, I->Port, I->AllowBlocking);
       }
+      Iipc++;
    }
-   fclose(infile);
+   fy_document_destroy(fyd);
 }
 /*********************************************************************/
 void InterProcessComm(void)
