@@ -91,7 +91,7 @@ ifeq ($(42PLATFORM),__APPLE__)
    ifeq (,$(shell which conda))
       LDFLAGS =
    else
-      CONDA_DIR=$(shell conda info --base)
+      CONDA_DIR=$(shell echo $(CONDA_PREFIX))
       CONDA_LIB_DIR = $(CONDA_DIR)/lib
       LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
    endif
