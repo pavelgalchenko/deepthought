@@ -2902,17 +2902,17 @@ void InitSpacecraft(struct SCType *S)
                                  FSS->FovHalfAng);
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
-                           "/Boresight Axis %ld "
+                           "/Boresight Axis %49s "
                            "/Noise Equivalent Angle %lf "
                            "/Quantization %lf "
                            "/Node %ld",
-                           &FSS->SampleTime, &FSS->BoreAxis, &FSS->NEA,
-                           &FSS->Quant, &FSS->Node) != 5) {
+                           &FSS->SampleTime, dummy, &FSS->NEA, &FSS->Quant,
+                           &FSS->Node) != 5) {
             printf("Spacecraft FSS %ld is improperly configured. Exiting...\n",
                    If);
             exit(EXIT_FAILURE);
          }
-
+         FSS->BoreAxis   = DecodeString(dummy);
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
             printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", If);
@@ -2974,15 +2974,15 @@ void InitSpacecraft(struct SCType *S)
 
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
-                           "/Boresight Axis %ld "
+                           "/Boresight Axis %49s "
                            "/Node %ld",
-                           &ST->SampleTime, &ST->BoreAxis, &ST->Node) != 3) {
+                           &ST->SampleTime, dummy, &ST->Node) != 3) {
             printf("Spacecraft Startracker %ld is improperly configured. "
                    "Exiting...\n",
                    Ist);
             exit(EXIT_FAILURE);
          }
-
+         ST->BoreAxis   = DecodeString(dummy);
          ST->MaxCounter = (long)(ST->SampleTime / DTSIM + 0.5);
          if (ST->SampleTime < DTSIM) {
             printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ist);

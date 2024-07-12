@@ -5446,7 +5446,7 @@ void ReadGraphicsInpFile(void)
                      "/Dimensions/Width %ld "
                      "/Dimensions/Height %ld "
                      "/Mouse Scale Factor %lf "
-                     "/Gamma Exposure %lf",
+                     "/Gamma Exponent %lf",
                      CamTitle, &CamWidth, &CamHeight, &MouseScaleFactor,
                      &GammaCorrection) != 5) {
       printf("Improperly configured Cam field in Inp_Graphics. Exiting...\n");
