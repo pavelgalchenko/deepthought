@@ -4894,6 +4894,164 @@ long LoadJplEphems(char EphemPath[80], double JD)
 
    return (0);
 }
+long LoadSpiceKernels(char SpicePath[80])
+{
+   char MetaKernelPath[80];
+   strcpy(MetaKernelPath, SpicePath);
+   strcat(MetaKernelPath, "spice_kernels/kernels.txt");
+
+   furnsh_c(MetaKernelPath);
+   return (0);
+}
+
+long LoadSpiceEphems(double JS)
+{
+   double ZAxis[3] = {0.0, 0.0, 1.0};
+
+   long Iw, Ip, Im;
+   int i;
+
+   char MajorBodiesNamesState[55][15] = {
+       "SUN",        "MERCURY",  "VENUS",     "EARTH",
+       "MARS",       "JUPITER",  "SATURN",    "URANUS",
+       "NEPTUNE",    "PLUTO",    "MOON",      "PHOBOS",
+       "DEIMOS",     "IO",       "EUROPA",    "GANYMEDE",
+       "CALLISTO",   "AMALTHEA", "HIMALIA",   "ELARA",
+       "PASIPHAE",   "SINOPE",   "LYSITHEA",  "CARME",
+       "ANANKE",     "LEDA",     "THEBE",     "ADRASTEA",
+       "METIS",      "MIMAS",    "ENCELADUS", "TETHYS",
+       "DIONE",      "RHEA",     "TITAN",     "HYPERION",
+       "IAPETUS",    "PHOEBE",   "JANUS",     "EPIMETHEUS",
+       "HELENE",     "TELESTO",  "CALYPSO",   "ATLAS",
+       "PROMETHEUS", "PANDORA",  "PAN",       "ARIEL",
+       "UMBRIEL",    "TITANIA",  "OBERON",    "MIRANDA",
+       "TRITON",     "NEREID",   "CHARON"}; // names of "major" bodies
+
+   // Some smaller moons do not have valid orientation data.
+   // We replace these with the orientation of their planet
+
+   char MajorBodiesNamesOrientation[55][15] = {
+       "SUN",       "MERCURY",  "VENUS",    "EARTH",   "MARS",
+       "JUPITER",   "SATURN",   "URANUS",   "NEPTUNE", "PLUTO",
+       "MOON",      "PHOBOS",   "DEIMOS",   "IO",      "EUROPA",
+       "GANYMEDE",  "CALLISTO", "AMALTHEA", "JUPITER", "JUPITER",
+       "JUPITER",   "JUPITER",  "JUPITER",  "JUPITER", "JUPITER",
+       "JUPITER",   "THEBE",    "ADRASTEA", "METIS",   "MIMAS",
+       "ENCELADUS", "TETHYS",   "DIONE",    "RHEA",    "TITAN",
+       "SATURN",    "IAPETUS",  "PHOEBE",   "JANUS",   "EPIMETHEUS",
+       "HELENE",    "TELESTO",  "CALYPSO",  "ATLAS",   "PROMETHEUS",
+       "PANDORA",   "PAN",      "ARIEL",    "UMBRIEL", "TITANIA",
+       "OBERON",    "MIRANDA",  "TRITON",   "NEPTUNE", "CHARON"};
+
+   // Substitutions:
+   // HIMALIA, ELARA, PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA -> JUPITER
+   // HYPERION -> SATURN
+   // NEREID -> NEPTUNE
+
+   struct OrbitType *Eph;
+   struct WorldType *W;
+   double Nstate[6], Hstate[6];
+   double light_time;
+   double ang[3];
+
+   double dim = 3;
+
+   double CWH[3][3], CNJ[3][3];
+   double GMST;
+   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
+
+   A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
+
+   /* .. Earth rotation is a special case - on which World[i].CNH, CWN depend!
+    */
+   GMST                   = JD2GMST(UTC.JulDay);
+   World[EARTH].PriMerAng = TwoPi * GMST;
+   HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
+   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
+   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
+   C2Q(World[EARTH].CWN, World[EARTH].qwn);
+
+   // Read all planets
+   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
+      W   = &World[Iw];
+      Eph = &W->eph;
+      spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+               Nstate,
+               &light_time); // State of major bodies in J2000 wrt Sun center
+
+      for (i = 0; i < 3; i++) {
+         World[Iw].eph.PosN[i] =
+             Nstate[i] * 1e3; // Assign inertial positions (m)
+         World[Iw].PosH[i] =
+             Nstate[i] *
+             1e3; // Assign suncentric positions = inertial position (m)
+
+         World[Iw].eph.VelN[i] =
+             Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+         World[Iw].VelH[i] =
+             Nstate[i + 3] *
+             1e3; // Assign suncentric velocity = inertial velocity (m/s)
+      }
+
+      if (Iw != EARTH) {
+         char frame_name[25] = "IAU_";
+         strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+
+         pxform_c("J2000", frame_name, JS,
+                  CNJ); // matrix from J2000 (ICRF) -> body fixed
+
+         m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+
+         MxM(CNJ, World[EARTH].CNH, World[i].CNH);
+         SimpRot(ZAxis, ang[2], World[Iw].CWN);
+         A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
+      }
+   }
+
+   // Read all moons
+   for (Ip = EARTH; Ip <= PLUTO; Ip++) {
+      if (World[Ip].Exists) {
+         for (Im = 0; Im < World[Ip].Nsat; Im++) {
+            Iw  = World[Ip].Sat[Im];
+            W   = &World[Iw];
+            Eph = &W->eph;
+
+            spkezr_c(
+                MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+                Hstate,
+                &light_time); // State of major bodies in J2000 wrt Sun center
+
+            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE",
+                     MajorBodiesNamesState[Ip], Nstate,
+                     &light_time); // State of major bodies in J2000 wrt Planet
+                                   // center
+
+            for (i = 0; i < 3; i++) {
+               World[Iw].eph.PosN[i] =
+                   Nstate[i] * 1e3; // Assign inertial positions (m)
+               World[Iw].PosH[i] = Hstate[i] * 1e3;
+
+               World[Iw].eph.VelN[i] =
+                   Nstate[i + 3]; // Assign inertial velocity (m/s)
+               World[Iw].VelH[i] = Nstate[i + 3] * 1e3;
+            }
+
+            char frame_name[25] = "IAU_";
+            strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+
+            pxform_c("J2000", frame_name, JS,
+                     CNJ); // matrix from J2000 (ICRF) -> body fixed
+
+            m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+
+            MxM(CNJ, World[EARTH].CNH, World[i].CNH);
+            SimpRot(ZAxis, ang[2], World[Iw].CWN);
+            A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
+         }
+      }
+   }
+   return (0);
+}
 /**********************************************************************/
 void LoadConstellations(void)
 {

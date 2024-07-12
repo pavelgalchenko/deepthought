@@ -14,6 +14,7 @@
 #ifndef __MATHKIT_H__
 #define __MATHKIT_H__
 
+#include "42constants.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,7 +84,7 @@ void MINVG(double **A, double **AI, long N);
 void FastMINV6(double A[6][6], double AI[6][6], long N);
 void PINVG(double **A, double **Ai, long n, long m);
 double **CreateMatrix(long n, long m);
-void DestroyMatrix(double **A, long n);
+void DestroyMatrix(double **A);
 void LINSOLVE(double **A, double *x, double *b, long n);
 void CholeskySolve(double **A, double *x, double *b, long n);
 void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
@@ -114,6 +115,8 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
+double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+                     double (*fdf)(double, double *), double *params);
 
 /*
 ** #ifdef __cplusplus

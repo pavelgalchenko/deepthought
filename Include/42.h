@@ -32,7 +32,6 @@
 #include "geomkit.h"
 #include "iokit.h"
 #include "mathkit.h"
-#include "msis86kit.h"
 #include "orbkit.h"
 #include "sigkit.h"
 #include "sphkit.h"
@@ -70,7 +69,7 @@ EXTERN char CmdFileName[BUFSIZE];
 EXTERN struct DocoptArgs CLI_ARGS;
 
 /* Math Basics */
-EXTERN double Pi, TwoPi, HalfPi, SqrtTwo, SqrtHalf, D2R, R2D, GoldenRatio;
+EXTERN double Pi, TwoPi, HalfPi, SqrtTwo, SqrtHalf, GoldenRatio;
 
 /* Simulation Control */
 EXTERN long TimeMode; /* FAST_TIME, REAL_TIME, EXTERNAL_SYNCH, NOS3_TIME */

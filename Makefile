@@ -251,6 +251,7 @@ ANSIFLAGS =
 
 CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) -I $(CSPICEDIR) -I $(CSPICEINC) -I $(CSPICESRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG)
 
+
 ##########################  Rules to link 42  #############################
 
 42 : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
@@ -301,7 +302,7 @@ $(OBJ)42glut.o      : $(SRC)42glut.c $(INC)42.h $(INC)42gl.h $(INC)42glut.h
 $(OBJ)42gpgpu.o      : $(SRC)42gpgpu.c $(INC)42.h $(INC)42gl.h $(INC)42glut.h
 	$(CC) $(CFLAGS) -c $(SRC)42gpgpu.c -o $(OBJ)42gpgpu.o
 
-$(OBJ)42init.o      : $(SRC)42init.c $(INC)42.h 
+$(OBJ)42init.o      : $(SRC)42init.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42init.c -o $(OBJ)42init.o
 
 $(OBJ)42ipc.o       : $(SRC)42ipc.c $(INC)42.h
