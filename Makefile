@@ -290,7 +290,7 @@ $(OBJ)tests.o       : $(TESTS)tests.c $(TESTS)mathkit_tests.h
 $(OBJ)mathkit_tests.o: $(TESTS)mathkit_tests.c $(KITINC)mathkit.h
 	$(CC) $(CFLAGS) -c $(TESTS)mathkit_tests.c -o $(OBJ)mathkit_tests.o
 
-$(OBJ)test_lib.o: $(TESTS)test_lib.c 
+$(OBJ)test_lib.o: $(TESTS)test_lib.c
 	$(CC) $(CFLAGS) -c $(TESTS)test_lib.c -o $(OBJ)test_lib.o
 
 $(OBJ)42main.o      : $(SRC)42main.c

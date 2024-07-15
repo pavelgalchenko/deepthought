@@ -401,10 +401,10 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    double gradV[3] = {0.0};
 
    /*    Transform p to ECEF */
-   CEN[0][0] = cosl(PriMerAng);
+   CEN[0][0] = cos(PriMerAng);
    CEN[1][1] = CEN[0][0];
    CEN[2][2] = 1.0;
-   CEN[0][1] = sinl(PriMerAng);
+   CEN[0][1] = sin(PriMerAng);
    CEN[1][0] = -CEN[0][1];
    MxV(CEN, pbn, pbe);
 
