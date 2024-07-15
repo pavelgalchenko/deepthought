@@ -74,6 +74,14 @@ INOUT = $(PROJDIR)InOut/
 GSFCSRC = $(PROJDIR)/GSFC/Source/
 IPCSRC = $(SRC)IPC/
 
+# Use conda if we got it
+ifeq (,$(shell which conda))
+   LDFLAGS =
+else
+   CONDA_DIR=$(shell echo $(CONDA_PREFIX))
+   CONDA_LIB_DIR = $(CONDA_DIR)/lib
+   LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
+endif
 
 ifeq ($(42PLATFORM),__APPLE__)
    # Mac Macros
@@ -87,14 +95,6 @@ ifeq ($(42PLATFORM),__APPLE__)
    # OSX fixed their hires GLUT issue.  Keep GLFW around just in case.
    #GLUT_OR_GLFW = _USE_GLFW_
    GLUT_OR_GLFW = _USE_GLUT_
-
-   ifeq (,$(shell which conda))
-      LDFLAGS =
-   else
-      CONDA_DIR=$(shell echo $(CONDA_PREFIX))
-      CONDA_LIB_DIR = $(CONDA_DIR)/lib
-      LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
-   endif
 
    LFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
@@ -128,7 +128,6 @@ ifeq ($(42PLATFORM),__linux__)
    #GLUT_OR_GLFW = _USE_GLFW_
    GLUT_OR_GLFW = _USE_GLUT_
 
-   LDFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
       ifeq ($(strip $(GLUT_OR_GLFW)),_USE_GLUT_)
          GUIOBJ = $(OBJ)42gl.o $(OBJ)42glut.o $(OBJ)glkit.o $(OBJ)42gpgpu.o
@@ -161,7 +160,6 @@ ifeq ($(42PLATFORM),__MSYS__)
    #GLUT_OR_GLFW = _USE_GLFW_
    GLUT_OR_GLFW = _USE_GLUT_
 
-   LDFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
       # TODO: Option to use GLFW instead of GLUT?
       GLEW = $(EXTERNDIR)GLEW/
