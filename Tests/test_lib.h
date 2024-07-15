@@ -38,7 +38,9 @@ long TEST_MATP(const long n, const long m, double **actual, double **expected,
                const double tol);
 long TEST_VEC(const long n, const double actual[n], const double expected[n],
               const double tol);
+void print_hdr(const char *str, long len, const int nTabs);
 int print_result(const long result, const char *str, long len, const int nTabs,
-                 const char *trialInfo, long isOkay);
+                 const char *trialInfo, const long isOkay,
+                 const long printIfPass);
 
 #endif

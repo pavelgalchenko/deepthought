@@ -19,7 +19,7 @@ int main()
 
    printf("\n\e[0mMathkit Tests:\e[0m\n");
    successful &= runMathKit_Tests();
-   print_result(successful, "Mathkit Tests", 14, 0, "", 0);
+   print_result(successful, "Mathkit Tests", 14, 0, "", 0, 1);
 
    printf("\n");
    return (successful ? EXIT_SUCCESS : EXIT_FAILURE);

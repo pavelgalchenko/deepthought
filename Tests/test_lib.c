@@ -29,6 +29,7 @@ long TEST_MAT(const long n, const long m, const double actual[n][m],
    }
    return TRUE;
 }
+
 long TEST_MATP(const long n, const long m, double **actual, double **expected,
                const double tol)
 {
@@ -40,6 +41,7 @@ long TEST_MATP(const long n, const long m, double **actual, double **expected,
    }
    return TRUE;
 }
+
 long TEST_VEC(const long n, const double actual[n], const double expected[n],
               const double tol)
 {
@@ -49,6 +51,7 @@ long TEST_VEC(const long n, const double actual[n], const double expected[n],
    }
    return TRUE;
 }
+
 char *tab_str(const char *str, long len, int nTabs)
 {
    if (len < 0)
@@ -64,27 +67,40 @@ char *tab_str(const char *str, long len, int nTabs)
    return outStr;
 }
 
-int print_result(const long result, const char *str, long len, const int nTabs,
-                 const char *trialInfo, long isOkay)
+void print_hdr(const char *str, long len, const int nTabs)
 {
    char outStr[1024] = {0};
    char *tabstr      = tab_str(str, len, nTabs);
    strcat(outStr, tabstr);
    free(tabstr);
-
-   if (result)
-      strcat(outStr, " \e[32mPASSED\e[0m");
-   else
-      strcat(outStr, " \e[1;31mFAILED\e[0m");
-   if (trialInfo[0] != 0) {
-      char trialStr[256] = {0};
-      snprintf(trialStr, 255, " on trial %s", trialInfo);
-      strcat(outStr, trialStr);
-   }
-   if (isOkay)
-      strcat(outStr, "  \e[1;33m~~OKAY~~\e[0m");
    strcat(outStr, "\n");
    printf("%s", outStr);
+}
+
+int print_result(const long result, const char *str, long len, const int nTabs,
+                 const char *trialInfo, const long isOkay,
+                 const long printIfPass)
+{
+   if (!result || printIfPass) {
+      char outStr[1024] = {0};
+      char *tabstr      = tab_str(str, len, nTabs);
+      strcat(outStr, tabstr);
+      free(tabstr);
+
+      if (result)
+         strcat(outStr, " \e[32mPASSED\e[0m");
+      else
+         strcat(outStr, " \e[1;31mFAILED\e[0m");
+      if (trialInfo[0] != 0) {
+         char trialStr[256] = {0};
+         snprintf(trialStr, 255, " on trial %s", trialInfo);
+         strcat(outStr, trialStr);
+      }
+      if (isOkay)
+         strcat(outStr, "  \e[1;33m~~OKAY~~\e[0m");
+      strcat(outStr, "\n");
+      printf("%s", outStr);
+   }
    return result | isOkay;
 }
 

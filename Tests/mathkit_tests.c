@@ -40,6 +40,7 @@ long runMathKit_Tests()
 {
    long success = TRUE;
 
+   // TODO: better cholesky test matricies
    double magic5[5][5] = {{17, 24, 1, 8, 15},
                           {23, 5, 7, 14, 16},
                           {4, 6, 13, 20, 22},
@@ -97,18 +98,21 @@ long runMathKit_Tests()
                   break;
             }
    }
-
+   long testSuccess        = TRUE;
+   long cholDownDateTested = FALSE;
+   print_hdr("Cholesky Tests:", 16, 1);
    for (int i = 0; i < NMATS; i++) {
       if (n[i] == m[i] && isPD[i]) {
          double **S = CreateMatrix(n[i], n[i]);
          chol(mats[i], S, n[i]);
          double **SST = CreateMatrix(n[i], n[i]);
          MxMTG(S, S, SST, n[i], n[i], n[i]);
-         if (!TEST_MATP(n[i], n[i], mats[i], SST, 1e-10)) {
+         {
             char trialInfo[40] = {0};
             snprintf(trialInfo, 39, "%i", i);
-            success &=
-                print_result(FALSE, "chol Test", 10, 1, trialInfo, FALSE);
+            testSuccess &=
+                print_result(TEST_MATP(n[i], n[i], mats[i], SST, 1e-10),
+                             "chol Test", 10, 2, trialInfo, FALSE, FALSE);
          }
          double **S_copy = CreateMatrix(n[i], n[i]);
          double **AmA0   = CreateMatrix(n[i], n[i]);
@@ -124,12 +128,14 @@ long runMathKit_Tests()
          }
 
          if (cholDowndate(S_copy, u, n[i])) {
+            cholDownDateTested = TRUE;
             MxMTG(S_copy, S_copy, SST, n[i], n[i], n[i]);
-            if (!TEST_MATP(n[i], n[i], SST, AmA0, 1e-10)) {
+            {
                char trialInfo[40] = {0};
                snprintf(trialInfo, 39, "%i", i);
-               success &= print_result(FALSE, "cholDowndate Test", 18, 1,
-                                       trialInfo, FALSE);
+               testSuccess &= print_result(
+                   TEST_MATP(n[i], n[i], SST, AmA0, 1e-10), "cholDowndate Test",
+                   18, 2, trialInfo, FALSE, FALSE);
             }
          }
 
@@ -138,6 +144,16 @@ long runMathKit_Tests()
          DestroyMatrix(AmA0);
          DestroyMatrix(SST);
       }
+   }
+   if (!cholDownDateTested) {
+      print_hdr("\e[1;31mcholDowndate is never tested!\e[0m", 41, 2);
+   }
+   cholDownDateTested = FALSE;
+   success &=
+       print_result(testSuccess, "Cholesky Tests:", 16, 2, "", FALSE, TRUE);
+   testSuccess = TRUE;
+   print_hdr("Cholesky AAT Tests:", 20, 1);
+   for (int i = 0; i < NMATS; i++) {
       if (n[i] == m[i] && isInv[i]) {
          double **AAT = CreateMatrix(n[i], n[i]);
          MxMTG(mats[i], mats[i], AAT, n[i], n[i], n[i]);
@@ -146,12 +162,14 @@ long runMathKit_Tests()
          chol(AAT, S, n[i]);
          double **SST = CreateMatrix(n[i], n[i]);
          MxMTG(S, S, SST, n[i], n[i], n[i]);
-         if (!TEST_MATP(n[i], n[i], AAT, SST, 1e-10)) {
+         {
             char trialInfo[40] = {0};
             snprintf(trialInfo, 39, "%i", i);
-            success &=
-                print_result(FALSE, "chol AAT Test", 14, 1, trialInfo, FALSE);
+            testSuccess &=
+                print_result(TEST_MATP(n[i], n[i], AAT, SST, 1e-10),
+                             "chol AAT Test", 14, 2, trialInfo, FALSE, FALSE);
          }
+
          double **S_copy = CreateMatrix(n[i], n[i]);
          double **AmA0   = CreateMatrix(n[i], n[i]);
 
@@ -165,14 +183,16 @@ long runMathKit_Tests()
             }
          }
 
-         // TODO: find  some better downdates, I think this is only tested once
+         // TODO: find some better downdates, I think this is only tested once
          if (cholDowndate(S_copy, u, n[i])) {
+            cholDownDateTested = TRUE;
             MxMTG(S_copy, S_copy, SST, n[i], n[i], n[i]);
-            if (!TEST_MATP(n[i], n[i], SST, AmA0, 1e-10)) {
+            {
                char trialInfo[40] = {0};
                snprintf(trialInfo, 39, "%i", i);
-               success &= print_result(FALSE, "cholDowndate AAT Test", 22, 1,
-                                       trialInfo, FALSE);
+               testSuccess &= print_result(
+                   TEST_MATP(n[i], n[i], SST, AmA0, 1e-10),
+                   "cholDowndate AAT Test", 22, 2, trialInfo, FALSE, FALSE);
             }
          }
 
@@ -182,7 +202,17 @@ long runMathKit_Tests()
          DestroyMatrix(AAT);
          DestroyMatrix(SST);
       }
-      for (int kk = 0; kk < 2; kk++) {
+   }
+   if (!cholDownDateTested) {
+      print_hdr("\e[1;31mcholDowndate is never tested!\e[0m", 41, 2);
+   }
+   cholDownDateTested = FALSE;
+   success &=
+       print_result(testSuccess, "Cholesky AAT Tests:", 20, 2, "", FALSE, TRUE);
+   for (int kk = 0; kk < 2; kk++) {
+      testSuccess = TRUE;
+      print_hdr(kk == 0 ? "hqrd Tests:" : "bhqrd Tests:", kk == 0 ? 12 : 13, 1);
+      for (int i = 0; i < NMATS; i++) {
          double **QR       = CreateMatrix(n[i], m[i]);
          double **mat_copy = CreateMatrix(n[i], m[i]);
 
@@ -228,18 +258,19 @@ long runMathKit_Tests()
                DestroyMatrix(QH);
             }
             MxMG(Q, R, QR, n[i], m[i], m[i]);
-            if (!TEST_MATP(m[i], m[i], QR, mats[i], 1e-10)) {
+            {
                char trialInfo[40] = {0};
                snprintf(trialInfo, 39, "%i, %i", i, j);
                // TODO: bhqrd 2<j<n fails for the magic matricies, interesting
                long isOkay = FALSE;
-               if (kk == 1 || ((i == 0 && (j >= 3 && j <= 4)) ||
+               if (kk == 1 && ((i == 0 && (j >= 3 && j <= 4)) ||
                                (i == 1 && (j >= 3 && j <= 7)) ||
                                (i == 2 && (j >= 3 && j <= 11))))
                   isOkay = TRUE;
                success &=
-                   print_result(FALSE, kk == 0 ? "hqrd Test" : "bhqrd Test",
-                                kk == 0 ? 10 : 11, 1, trialInfo, isOkay);
+                   print_result(TEST_MATP(m[i], m[i], QR, mats[i], 1e-10),
+                                kk == 0 ? "hqrd Test" : "bhqrd Test",
+                                kk == 0 ? 10 : 11, 2, trialInfo, isOkay, FALSE);
             }
             DestroyMatrix(U);
             DestroyMatrix(Q);
@@ -248,8 +279,13 @@ long runMathKit_Tests()
          DestroyMatrix(QR);
          DestroyMatrix(mat_copy);
       }
+      success &=
+          print_result(testSuccess, kk == 0 ? "hqrd Tests:" : "bhqrd Tests:",
+                       kk == 0 ? 12 : 13, 2, "", FALSE, TRUE);
    }
 
+   testSuccess = TRUE;
+   print_hdr("expmso3 and logmso3 Tests:", 27, 1);
    /* Generated from expm(SSCPM(test3[i][j])) in MATLAB */
    double RTests[9][3][3] = {
        {{-0.694920557641312, 0.713520990527788, 0.089292858861912},
@@ -284,11 +320,12 @@ long runMathKit_Tests()
          double R[3][3]  = {{0.0}};
          double theta[3] = {0.0};
          expmso3(test3[i][j], R);
-         if (!TEST_MAT(3, 3, RTests[i * 3 + j], R, 1e-12)) {
+         {
             char trialInfo[40] = {0};
             snprintf(trialInfo, 39, "%i, %i", i, j);
-            success &=
-                print_result(FALSE, "expmso3 Test", 13, 1, trialInfo, FALSE);
+            testSuccess &=
+                print_result(TEST_MAT(3, 3, RTests[i * 3 + j], R, 1e-12),
+                             "expmso3 Test", 13, 2, trialInfo, FALSE, FALSE);
          }
          logso3(R, theta);
          double unitTest[3] = {0.0};
@@ -296,19 +333,24 @@ long runMathKit_Tests()
          magTest            = (double)(fmod(magTest + PI, TWOPI) - PI);
          SxV(magTest, unitTest, unitTest);
          // TODO: fails on tighter tolerance
-         if (!TEST_VEC(3, unitTest, theta, 1e-10)) {
+         {
             char trialInfo[40] = {0};
             snprintf(trialInfo, 39, "%i, %i", i, j);
-            success &=
-                print_result(FALSE, "logso3 Test", 12, 1, trialInfo, FALSE);
+            testSuccess &=
+                print_result(TEST_VEC(3, unitTest, theta, 1e-10), "logso3 Test",
+                             12, 2, trialInfo, FALSE, FALSE);
          }
       }
    }
+   success &= print_result(testSuccess, "expmso3 and logmso3 Tests:", 27, 2, "",
+                           FALSE, TRUE);
 
    for (int i = 0; i < NMATS; i++)
       DestroyMatrix(mats[i]);
 #undef NMATS
+   testSuccess = TRUE;
 
+   print_hdr("NewtonRaphson Tests:", 21, 1);
    { // Test NewtonRaphson()
 #define N_FNS   7
 #define N_X0    10
@@ -339,6 +381,30 @@ long runMathKit_Tests()
                                1.0E-12, 1.0E-12, 1.0E-12};
       double maxStep[N_FNS] = {1.0E9, 1.0E9, 0.1, 1.0E9, 1.0E9, 1.0E9, 1.0E9};
       for (int i = 0; i < 3; i++) {
+         long subTestSuccess = TRUE;
+         switch (i) {
+            case 0:
+               print_hdr("linFDF Tests:", 14, 2);
+               break;
+            case 1:
+               print_hdr("cubicFDF Tests:", 16, 2);
+               break;
+            case 2:
+               print_hdr("eccFDF Tests:", 14, 2);
+               break;
+            case 3:
+               print_hdr("parabolFDF Tests:", 18, 2);
+               break;
+            case 4:
+               print_hdr("hyperbolFDF Tests:", 19, 2);
+               break;
+            case 5:
+               print_hdr("lagpointFDF Tests:", 19, 2);
+               break;
+            case 6:
+               print_hdr("hyperradFDF Tests:", 19, 2);
+               break;
+         }
          double params[nParams[i]];
          for (int j = 0; j < N_X0; j++) {
             for (int k = 0; k < N_TESTS; k++) {
@@ -584,30 +650,6 @@ long runMathKit_Tests()
                            break;
                      }
                      break;
-                  case 7:
-                     switch (k) {
-                        case 0:
-                           break;
-                        case 1:
-                           break;
-                        case 2:
-                           break;
-                        case 3:
-                           break;
-                        case 4:
-                           break;
-                        case 5:
-                           break;
-                        case 6:
-                           break;
-                        case 7:
-                           break;
-                        case 8:
-                           break;
-                        case 9:
-                           break;
-                     }
-                     break;
                }
                double X = NewtonRaphson(x0[i][j], eps[i], 500, maxStep[i], 0,
                                         fns[i], params);
@@ -629,22 +671,58 @@ long runMathKit_Tests()
                   case 6:
                      break;
                }
-               if (!TEST_DOUBLE(f, 0.0, 1.0E-10)) {
+               {
                   char trialInfo[40] = {0};
                   snprintf(trialInfo, 39, "%i, %i, %i", i, j, k);
                   long isOkay = FALSE;
                   // TODO: These cases for NewtonRaphson
                   if ((i == 1 && k == 8 && (j == 1 || j == 6)))
                      isOkay = TRUE;
-                  success &= print_result(FALSE, "NewtonRaphson Test", 12, 1,
-                                          trialInfo, isOkay);
+                  subTestSuccess &= print_result(TEST_DOUBLE(f, 0.0, 1.0E-10),
+                                                 "NewtonRaphson Test", 19, 3,
+                                                 trialInfo, isOkay, FALSE);
                }
             }
+         }
+         switch (i) {
+            case 0:
+               testSuccess = print_result(subTestSuccess, "linFDF Tests:", 14,
+                                          3, "", FALSE, TRUE);
+               break;
+            case 1:
+               testSuccess = print_result(subTestSuccess, "cubicFDF Tests:", 16,
+                                          3, "", FALSE, TRUE);
+               break;
+            case 2:
+               testSuccess = print_result(subTestSuccess, "eccFDF Tests:", 14,
+                                          3, "", FALSE, TRUE);
+               break;
+            case 3:
+               testSuccess = print_result(
+                   subTestSuccess, "parabolFDF Tests:", 18, 3, "", FALSE, TRUE);
+               break;
+            case 4:
+               testSuccess =
+                   print_result(subTestSuccess, "hyperbolFDF Tests:", 19, 3, "",
+                                FALSE, TRUE);
+               break;
+            case 5:
+               testSuccess =
+                   print_result(subTestSuccess, "lagpointFDF Tests:", 19, 3, "",
+                                FALSE, TRUE);
+               break;
+            case 6:
+               testSuccess =
+                   print_result(subTestSuccess, "hyperradFDF Tests:", 19, 3, "",
+                                FALSE, TRUE);
+               break;
          }
       }
 #undef N_FNS
 #undef N_TESTS
    }
+   success &= print_result(testSuccess, "NewtonRaphson Tests:", 21, 2, "",
+                           FALSE, TRUE);
    return (success);
 }
 
