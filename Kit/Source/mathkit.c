@@ -1508,7 +1508,7 @@ void FindNormal(const double V1[3], const double V2[3], const double V3[3],
 }
 /**********************************************************************/
 /*  Output clamped at ends of interval                                */
-double LinInterp(double *X, double *Y, const double x, const long n)
+double LinInterp(const double *X, const double *Y, const double x, const long n)
 {
    double dx, dxn, y;
    long i, i1, i2;
@@ -2214,6 +2214,256 @@ void expmTFG(double theta[3], long const n, long const m, double x[n][3],
    }
 }
 /******************************************************************************/
+// Calculate the induced matrix 1-norm of nxm matrix A
+double M1NormG(double **A, long const n, long const m)
+{
+   double p1Norm = 0.0;
+   long i, j;
+
+   for (i = 0; i < n; i++) {
+      double colSum = 0.0;
+      for (j = 0; j < m; j++)
+         colSum += fabs(A[i][j]);
+
+      if (colSum > p1Norm)
+         p1Norm = colSum;
+   }
+   return (p1Norm);
+}
+/******************************************************************************/
+// Calculate the square of the induced matrix 2-norm of th nxm matrix A by
+// calculation of the largest eigenvalue of ATA or AAT, depending on which is
+// smaller dimension
+double M2Norm2G(double **A, long const n, long const m)
+{
+   double **ATA;
+   double d[n];
+   const long maxIter = 100;
+
+   long majDim = n, minDim = m;
+
+   if (m > n) {
+      majDim = m;
+      minDim = n;
+   }
+   ATA = CreateMatrix(minDim, minDim);
+
+   if (minDim == n)
+      MxMTG(A, A, ATA, minDim, majDim, minDim);
+   else
+      MTxMG(A, A, ATA, minDim, majDim, minDim);
+
+   jacobiEValue(ATA, minDim, maxIter, d);
+   DestroyMatrix(ATA);
+
+   double p2Norm2 = d[0];
+   for (int i = 0; i < minDim; i++)
+      if (d[i] > p2Norm2)
+         p2Norm2 = d[i];
+   return (p2Norm2);
+}
+/******************************************************************************/
+// Downdates the nxn, lower triangular, Cholesky matrix S by the vector u.
+// Returns 0 if failure, 1 if success
+int cholDowndate(double **S, double u[], long const n)
+{
+   long i, k;
+
+   for (k = 0; k < n; k++) {
+      double r = S[k][k] * S[k][k] - u[k] * u[k];
+      if (r < 0.0)
+         return 0;
+      r        = sqrt(r);
+      double c = r / S[k][k];
+      double s = u[k] / S[k][k];
+      S[k][k]  = r;
+      for (i = k + 1; i < n; i++) {
+         S[i][k] = (S[i][k] - s * u[i]) / c;
+         u[i]    = c * u[i] - s * S[i][k];
+      }
+   }
+   return 1;
+}
+/******************************************************************************/
+// Calculates the nxn, lower triangular, Cholesky matrix S from nxn, real,
+// positive definite matrix A
+void chol(double **A, double **S, long const n)
+{
+   long i, j, k;
+
+   for (i = 0; i < n; i++) {
+      for (j = 0; j <= i; j++) {
+         double s = 0.0;
+         for (k = 0; k < j; k++)
+            s += S[i][k] * S[j][k];
+         S[i][j] = (i == j) ? sqrt(A[i][i] - s) : ((A[i][j] - s) / S[j][j]);
+      }
+   }
+}
+/******************************************************************************/
+double houseGen(double x[], double u[], long const n)
+{
+   long i;
+   double nu        = 0.0;
+   double const rt2 = SQRTTWO;
+   for (i = 0; i < n; i++)
+      nu += x[i] * x[i];
+   if (nu < __DBL_EPSILON__) {
+      nu   = 0.0;
+      u[0] = rt2;
+   }
+   else {
+      nu = sqrt(nu);
+      for (i = 0; i < n; i++)
+         u[i] = x[i] / (nu);
+      if (u[0] >= 0.0) {
+         u[0] += 1.0;
+         nu    = -nu;
+      }
+      else {
+         u[0] -= 1.0;
+      }
+      double a = sqrt(fabs(u[0]));
+      for (i = 0; i < n; i++)
+         u[i] /= a;
+   }
+   return (nu);
+}
+/******************************************************************************/
+// QR decomposition of nxm matrix A by Householder transformations
+void hqrd(double **A, double **U, double **R, long const n, long const m)
+{
+   double X[n][m];
+   long k, i, j;
+
+   for (i = 0; i < n; i++) {
+      for (j = 0; j < m; j++) {
+         X[i][j] = A[i][j];
+      }
+   }
+
+   for (k = 0; k < ((n < m) ? n : m); k++) {
+      long size = n - k;
+      double x[size], u[size], v[m - k - 1];
+      for (i = 0; i < size; i++) {
+         x[i] = X[k + i][k];
+         u[i] = 0.0;
+      }
+
+      R[k][k] = houseGen(x, u, size);
+
+      for (j = k + 1; j < m; j++) {
+         v[j - k - 1] = 0.0;
+         for (i = 0; i < size; i++)
+            v[j - k - 1] += u[i] * X[k + i][j];
+      }
+      for (i = 0; i < size; i++) {
+         U[i + k][k] = u[i];
+         for (j = k + 1; j < m; j++) {
+            X[k + i][j] -= u[i] * v[j - k - 1];
+         }
+      }
+      for (j = k + 1; j < m; j++) {
+         R[k][j] = X[k][j];
+      }
+   }
+   for (i = 0; i < n; i++) {
+      for (j = 0; j < m; j++) {
+         A[i][j] = X[i][j];
+      }
+   }
+}
+/******************************************************************************/
+// Helper function for bhqrd
+void utu(double **U, double **T, long const n, long const m)
+{
+   long i, j, k;
+   for (k = 0; k < m; k++) {
+      T[k][k] = 1.0;
+
+      for (j = 0; j < k; j++) {
+         T[j][k] = 0.0;
+         for (i = 0; i < n; i++)
+            T[j][k] += U[i][j] * U[i][k];
+         double a = 0.0;
+         for (i = 0; i < k; i++)
+            a -= T[j][i] * T[i][k];
+         T[j][k] = a;
+      }
+   }
+}
+/******************************************************************************/
+// QR decomposition of nxm matrix A by blocked Householder transforms, using
+// blocksize bSize (WIP)
+// TODO: fix
+void bhqrd(double **A, double **U, double **R, long const n, long const m,
+           long const bSize)
+{
+   // long q = 0;
+   long i, j, k;
+   double **Xb = NULL, **Ub = NULL, **Rb = NULL, **Tq = NULL, **V = NULL,
+          **tmp = NULL;
+   for (k = 0; k < ((n < m) ? n : m); k += bSize) {
+      // q++;
+      long ell = ((m < (k + bSize)) ? m : (k + bSize));
+      long a = n - k, b = ell - k;
+      Xb = CreateMatrix(a, b);
+      Ub = CreateMatrix(a, b);
+      Rb = CreateMatrix(b, b);
+      Tq = CreateMatrix(b, b);
+      for (j = 0; j < b; j++) {
+         for (i = 0; i < a; i++)
+            Xb[i][j] = A[k + i][k + j];
+      }
+      hqrd(Xb, Ub, Rb, a, b);
+      for (j = 0; j < b; j++) {
+         for (i = 0; i < a; i++) {
+            A[k + i][k + j] = Xb[i][j];
+            U[k + i][k + j] = Ub[i][j];
+         }
+      }
+      for (i = 0; i < b; i++) {
+         for (j = 0; j < b; j++)
+            R[k + i][k + j] = Rb[i][j];
+      }
+      utu(Ub, Tq, a, b);
+      if (ell < m) {
+         V   = CreateMatrix(b, m - ell);
+         tmp = CreateMatrix(a, m - ell);
+         for (i = 0; i < a; i++) {
+            for (j = 0; j < (m - ell); j++)
+               tmp[i][j] = A[k + i][ell + j];
+         }
+         MTxMG(Ub, tmp, V, b, a, m - ell);
+         DestroyMatrix(tmp);
+         tmp = CreateMatrix(b, m - ell);
+         MTxMG(Tq, V, tmp, b, b, m - ell);
+         for (i = 0; i < b; i++) {
+            for (j = 0; j < m - ell; j++)
+               V[i][j] = tmp[i][j];
+         }
+         DestroyMatrix(tmp);
+         tmp = CreateMatrix(a, m - ell);
+         MxMG(Ub, V, tmp, a, b, m - ell);
+         for (i = k; i < n; i++) {
+            for (j = ell; j < m; j++)
+               A[i][j] -= tmp[i - k][j - ell];
+         }
+         for (i = k; i < ell; i++) {
+            for (j = ell; j < m; j++)
+               R[i][j] = A[i][j];
+         }
+         DestroyMatrix(V);
+         DestroyMatrix(tmp);
+      }
+
+      DestroyMatrix(Xb);
+      DestroyMatrix(Ub);
+      DestroyMatrix(Rb);
+      DestroyMatrix(Tq);
+   }
+}
+/******************************************************************************/
 // Taylor series method for Matrix Exponential, adapted from John Burkardt
 // https://people.sc.fsu.edu/~jburkardt
 void expm(double **A, double **e, long const n)
@@ -2264,55 +2514,6 @@ long isSignificant(int const m, int const n, double **A, double **B)
    }
 
    return (isSignificant);
-}
-/******************************************************************************/
-// Calculate the induced matrix 1-norm of nxm matrix A
-double M1NormG(double **A, long const n, long const m)
-{
-   double p1Norm = 0.0;
-   long i, j;
-
-   for (i = 0; i < n; i++) {
-      double colSum = 0.0;
-      for (j = 0; j < m; j++)
-         colSum += fabs(A[i][j]);
-
-      if (colSum > p1Norm)
-         p1Norm = colSum;
-   }
-   return (p1Norm);
-}
-/******************************************************************************/
-// Calculate the square of the induced matrix 2-norm of th nxm matrix A by
-// calculation of the largest eigenvalue of ATA or AAT, depending on which is
-// smaller dimension
-double M2Norm2G(double **A, long const n, long const m)
-{
-   double **ATA;
-   double d[n];
-   const long maxIter = 100;
-
-   long majDim = n, minDim = m;
-
-   if (m > n) {
-      majDim = m;
-      minDim = n;
-   }
-   ATA = CreateMatrix(minDim, minDim);
-
-   if (minDim == n)
-      MxMTG(A, A, ATA, minDim, majDim, minDim);
-   else
-      MTxMG(A, A, ATA, minDim, majDim, minDim);
-
-   jacobiEValue(ATA, minDim, maxIter, d);
-   DestroyMatrix(ATA);
-
-   double p2Norm2 = d[0];
-   for (int i = 0; i < minDim; i++)
-      if (d[i] > p2Norm2)
-         p2Norm2 = d[i];
-   return (p2Norm2);
 }
 /******************************************************************************/
 // Calculates eigenvalues of real symmetric matrix by Jacobi iteration,
@@ -2608,207 +2809,6 @@ void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
 
    free(bw);
    free(zw);
-}
-/******************************************************************************/
-// Downdates the nxn, lower triangular, Cholesky matrix S by the vector u.
-// Returns 0 if failure, 1 if success
-int cholDowndate(double **S, double u[], long const n)
-{
-   long i, k;
-
-   for (k = 0; k < n; k++) {
-      double r = S[k][k] * S[k][k] - u[k] * u[k];
-      if (r < 0.0)
-         return 0;
-      r        = sqrt(r);
-      double c = r / S[k][k];
-      double s = u[k] / S[k][k];
-      S[k][k]  = r;
-      for (i = k + 1; i < n; i++) {
-         S[i][k] = (S[i][k] - s * u[i]) / c;
-         u[i]    = c * u[i] - s * S[i][k];
-      }
-   }
-   return 1;
-}
-/******************************************************************************/
-// Calculates the nxn, lower triangular, Cholesky matrix S from nxn, real,
-// positive definite matrix A
-void chol(double **A, double **S, long const n)
-{
-   long i, j, k;
-
-   for (i = 0; i < n; i++) {
-      for (j = 0; j <= i; j++) {
-         double s = 0.0;
-         for (k = 0; k < j; k++)
-            s += S[i][k] * S[j][k];
-         S[i][j] = (i == j) ? sqrt(A[i][i] - s) : ((A[i][j] - s) / S[j][j]);
-      }
-   }
-}
-/******************************************************************************/
-double houseGen(double x[], double u[], long const n)
-{
-   long i;
-   double nu        = 0.0;
-   double const rt2 = SQRTTWO;
-   for (i = 0; i < n; i++)
-      nu += x[i] * x[i];
-   if (nu < __DBL_EPSILON__) {
-      nu   = 0.0;
-      u[0] = rt2;
-   }
-   else {
-      nu = sqrt(nu);
-      for (i = 0; i < n; i++)
-         u[i] = x[i] / (nu);
-      if (u[0] >= 0.0) {
-         u[0] += 1.0;
-         nu    = -nu;
-      }
-      else {
-         u[0] -= 1.0;
-      }
-      double a = sqrt(fabs(u[0]));
-      for (i = 0; i < n; i++)
-         u[i] /= a;
-   }
-   return (nu);
-}
-/******************************************************************************/
-// QR decomposition of nxm matrix A by Householder transformations
-void hqrd(double **A, double **U, double **R, long const n, long const m)
-{
-   double X[n][m];
-   long k, i, j;
-
-   for (i = 0; i < n; i++) {
-      for (j = 0; j < m; j++) {
-         X[i][j] = A[i][j];
-      }
-   }
-
-   for (k = 0; k < ((n < m) ? n : m); k++) {
-      long size = n - k;
-      double x[size], u[size], v[m - k - 1];
-      for (i = 0; i < size; i++) {
-         x[i] = X[k + i][k];
-         u[i] = 0.0;
-      }
-
-      R[k][k] = houseGen(x, u, size);
-
-      for (j = k + 1; j < m; j++) {
-         v[j - k - 1] = 0.0;
-         for (i = 0; i < size; i++)
-            v[j - k - 1] += u[i] * X[k + i][j];
-      }
-      for (i = 0; i < size; i++) {
-         U[i + k][k] = u[i];
-         for (j = k + 1; j < m; j++) {
-            X[k + i][j] -= u[i] * v[j - k - 1];
-         }
-      }
-      for (j = k + 1; j < m; j++) {
-         R[k][j] = X[k][j];
-      }
-   }
-   for (i = 0; i < n; i++) {
-      for (j = 0; j < m; j++) {
-         A[i][j] = X[i][j];
-      }
-   }
-}
-/******************************************************************************/
-// Helper function for bhqrd
-void utu(double **U, double **T, long const n, long const m)
-{
-   long i, j, k;
-   for (k = 0; k < m; k++) {
-      T[k][k] = 1.0;
-
-      for (j = 0; j < k; j++) {
-         T[j][k] = 0.0;
-         for (i = 0; i < n; i++)
-            T[j][k] += U[i][j] * U[i][k];
-         double a = 0.0;
-         for (i = 0; i < k; i++)
-            a -= T[j][i] * T[i][k];
-         T[j][k] = a;
-      }
-   }
-}
-/******************************************************************************/
-// QR decomposition of nxm matrix A by blocked Householder transforms, using
-// blocksize bSize (WIP)
-// TODO: fix
-void bhqrd(double **A, double **U, double **R, long const n, long const m,
-           long const bSize)
-{
-   // long q = 0;
-   long i, j, k;
-   double **Xb = NULL, **Ub = NULL, **Rb = NULL, **Tq = NULL, **V = NULL,
-          **tmp = NULL;
-   for (k = 0; k < ((n < m) ? n : m); k += bSize) {
-      // q++;
-      long ell = ((m < (k + bSize)) ? m : (k + bSize));
-      long a = n - k, b = ell - k;
-      Xb = CreateMatrix(a, b);
-      Ub = CreateMatrix(a, b);
-      Rb = CreateMatrix(b, b);
-      Tq = CreateMatrix(b, b);
-      for (j = 0; j < b; j++) {
-         for (i = 0; i < a; i++)
-            Xb[i][j] = A[k + i][k + j];
-      }
-      hqrd(Xb, Ub, Rb, a, b);
-      for (j = 0; j < b; j++) {
-         for (i = 0; i < a; i++) {
-            A[k + i][k + j] = Xb[i][j];
-            U[k + i][k + j] = Ub[i][j];
-         }
-      }
-      for (i = 0; i < b; i++) {
-         for (j = 0; j < b; j++)
-            R[k + i][k + j] = Rb[i][j];
-      }
-      utu(Ub, Tq, a, b);
-      if (ell < m) {
-         V   = CreateMatrix(b, m - ell);
-         tmp = CreateMatrix(a, m - ell);
-         for (i = 0; i < a; i++) {
-            for (j = 0; j < (m - ell); j++)
-               tmp[i][j] = A[k + i][ell + j];
-         }
-         MTxMG(Ub, tmp, V, b, a, m - ell);
-         DestroyMatrix(tmp);
-         tmp = CreateMatrix(b, m - ell);
-         MTxMG(Tq, V, tmp, b, b, m - ell);
-         for (i = 0; i < b; i++) {
-            for (j = 0; j < m - ell; j++)
-               V[i][j] = tmp[i][j];
-         }
-         DestroyMatrix(tmp);
-         tmp = CreateMatrix(a, m - ell);
-         MxMG(Ub, V, tmp, a, b, m - ell);
-         for (i = k; i < n; i++) {
-            for (j = ell; j < m; j++)
-               A[i][j] -= tmp[i - k][j - ell];
-         }
-         for (i = k; i < ell; i++) {
-            for (j = ell; j < m; j++)
-               R[i][j] = A[i][j];
-         }
-         DestroyMatrix(V);
-         DestroyMatrix(tmp);
-      }
-
-      DestroyMatrix(Xb);
-      DestroyMatrix(Ub);
-      DestroyMatrix(Rb);
-      DestroyMatrix(Tq);
-   }
 }
 
 /* #ifdef __cplusplus

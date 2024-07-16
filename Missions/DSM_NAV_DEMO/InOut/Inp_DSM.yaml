@@ -394,6 +394,13 @@ Secondary Vector Configurations:
         Frame: N
         Axis: [0.0, 0.0, 1.0]
       Axis: [0.0, 1.0, 0.0]
+  - Secondary Vector:
+      Index: 7
+      Description: ST zenithal
+      Target:
+        Type: BODY
+        Target: EARTH
+      Axis: [-1.0, -1.0, 0.0]
 Quaternion Configurations:
   # ------------------------Quaternion Attitude Cmd--------------------------------
   # ((Sequence; one element for unique Quaternion Command))
@@ -570,126 +577,126 @@ Sensor Configurations:
   #       Sensor Noise:       [[]]
   #       Underweighting Factor:  [[Underweighting parameter]]
   #       Residual Editing Gate:  [[Residual Editing Gate]]
-  - Sensor: &Sensor_0
+  - Sensor: &Gyro_x
       Description: Sensor_[0]
       Type: GYRO
       Sensor Index: 0
       Sensor Noise: [0.01414213562373095]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_1
+  - Sensor: &Gyro_y
       Description: Sensor_[1]
       Type: GYRO
       Sensor Index: 1
       Sensor Noise: [0.01414213562373095]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_2
+  - Sensor: &Gyro_z
       Description: Sensor_[2]
       Type: GYRO
       Sensor Index: 2
       Sensor Noise: [0.01414213562373095]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_3
+  - Sensor: &Mag_x
       Description: Sensor_[3]
       Type: MAG
       Sensor Index: 0
       Sensor Noise: [0.16]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_4
+  - Sensor: &Mag_y
       Description: Sensor_[4]
       Type: MAG
       Sensor Index: 1
       Sensor Noise: [0.16]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_5
+  - Sensor: &Mag_z
       Description: Sensor_[5]
       Type: MAG
       Sensor Index: 2
       Sensor Noise: [0.16]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_6
+  - Sensor: &CSS_0
       Description: Sensor_[6]
       Type: CSS
       Sensor Index: 0
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_7
+  - Sensor: &CSS_1
       Description: Sensor_[7]
       Type: CSS
       Sensor Index: 1
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_8
+  - Sensor: &CSS_2
       Description: Sensor_[8]
       Type: CSS
       Sensor Index: 2
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_9
+  - Sensor: &CSS_3
       Description: Sensor_[9]
       Type: CSS
       Sensor Index: 3
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_10
+  - Sensor: &CSS_4
       Description: Sensor_[10]
       Type: CSS
       Sensor Index: 4
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_11
+  - Sensor: &CSS_5
       Description: Sensor_[11]
       Type: CSS
       Sensor Index: 5
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_12
+  - Sensor: &CSS_6
       Description: Sensor_[12]
       Type: CSS
       Sensor Index: 6
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_13
+  - Sensor: &CSS_7
       Description: Sensor_[13]
       Type: CSS
       Sensor Index: 7
       Sensor Noise: [0.5]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_14
+  - Sensor: &FSS_0
       Description: Sensor_[14]
       Type: FSS
       Sensor Index: 0
       Sensor Noise: [0.2]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_15
+  - Sensor: &FSS_1
       Description: Sensor_[15]
       Type: FSS
       Sensor Index: 1
       Sensor Noise: [0.2]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_16
+  - Sensor: &ST_0
       Description: Sensor_[16]
       Type: STARTRACK
       Sensor Index: 0
       Sensor Noise: [40.0, 6.0, 6.0]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
-  - Sensor: &Sensor_17
+  - Sensor: &GPS_0
       Description: Sensor_[17]
       Type: GPS
       Sensor Index: 0
@@ -699,21 +706,31 @@ Sensor Configurations:
 Sensor Set Configurations:
   # -----------------------------------Sensor Set-----------------------------------
   # ((Sequence; one element for unique Sensor Set Definition))
-  # - Sensor Set:         &{Anchor}
+  #  - Sensor Set:         &{Anchor}
   #       Description:        {Optional}
   #       ((Sequence of Sensor configurations or *{Alias}s))
   #       Sensors:            [[]]
   - Sensor Set: &Sensor_Set_0
       Description: SensorSet_[0]
       Sensors:
-        - *Sensor_0
-        - *Sensor_1
-        - *Sensor_2
-        - *Sensor_3
-        - *Sensor_4
-        - *Sensor_5
-        - *Sensor_16
-        - *Sensor_17
+        - *Gyro_x
+        - *Gyro_y
+        - *Gyro_z
+        - *Mag_x
+        - *Mag_y
+        - *Mag_z
+        # - *CSS_0
+        # - *CSS_1
+        # - *CSS_2
+        # - *CSS_3
+        # - *CSS_4
+        # - *CSS_5
+        # - *CSS_6
+        # - *CSS_7
+        # - *FSS_0
+        # - *FSS_1
+        - *ST_0
+        - *GPS_0
 Navigation Data Configurations:
   # ---------------------------------Navigation Data--------------------------------
   # ((Sequence; one element for unique Navigation Data Definition))
@@ -729,18 +746,18 @@ Navigation Data Configurations:
   #       Attitude:
   #         Angles:             [[angle_1, angle_2, angle_3]]
   #         Sequence:           [[Sequence]]
-  - Navigation Data: &Navigation_Data_0
+  - Navigation Data: &Navigation_Data_Q
       Description: Dat_[0]
-      Attitude: [0.0001, 0.0001, 0.0001]
-      Velocity: [0.0001, 0.0001, 0.0001]
+      Attitude: [1e-4, 1e-4, 1e-4]
+      Velocity: [7e-05, 7e-05, 7e-05]
       Omega: [3e-06, 3e-06, 3e-06]
-  - Navigation Data: &Navigation_Data_1
+  - Navigation Data: &Navigation_Data_P
       Description: Dat_[1]
       Attitude: [1.0, 1.0, 1.0]
       Position: [50.0, 50.0, 50.0]
-      Velocity: [10.0, 10.0, 10.0]
+      Velocity: [1.0, 1.0, 1.0]
       Omega: [0.4, 0.4, 0.4]
-  - Navigation Data: &Navigation_Data_2
+  - Navigation Data: &Navigation_Data_x0
       Description: Dat_[2]
       Attitude:
         Angles: [0.0, 0.0, 0.0]
@@ -757,6 +774,7 @@ Navigation Configurations:
   #       Type:               [[RIEKF/LIEKF/MEKF]]
   #       Batching:           [[None/Sensor/Time]]
   #       Frame:              [[N]]
+  #       ((if using SC Ref Origin, ensure that SC's nav is started before you initialize this nav))
   #       Reference Origin:   [[OP/WORLD/SC[#].B[#]]]
   #       Sensor Set:         [[Configuration or *{Alias}]]
   #       ((Sequence of some combination of RotMat, Quat, Pos, Vel, Omega))
@@ -773,9 +791,9 @@ Navigation Configurations:
       Frame: N
       Reference Origin: OP
       Data:
-        Q: *Navigation_Data_0
-        P: *Navigation_Data_1
-        x0: *Navigation_Data_2
+        Q: *Navigation_Data_Q
+        P: *Navigation_Data_P
+        x0: *Navigation_Data_x0
       Sensor Set: *Sensor_Set_0
       States: [RotMat, Pos, Vel, Omega]
   - Navigation:
@@ -786,9 +804,9 @@ Navigation Configurations:
       Frame: N
       Reference Origin: SC[4].B[0]
       Data:
-        Q: *Navigation_Data_0
-        P: *Navigation_Data_1
-        x0: *Navigation_Data_2
+        Q: *Navigation_Data_Q
+        P: *Navigation_Data_P
+        x0: *Navigation_Data_x0
       Sensor Set: *Sensor_Set_0
       States: [RotMat, Pos, Vel, Omega]
 DSM Commands:
@@ -825,23 +843,17 @@ DSM Commands:
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [0, 0]
+            Index: [0, 7]
       - Time: 120.0
         Commands:
           - Type: Translation
             Subtype: Maneuver
             Index: 0
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [0, 0]
       - Time: 180.0
         Commands:
           - Type: Translation
             Subtype: Translation
             Index: 0
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [0, 0]
       - Time: 550.0
         Commands:
           - Type: Translation
@@ -849,7 +861,7 @@ DSM Commands:
             Index: 1
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [4, 4]
+            Index: [4, 7]
       - Time: 600.0
         Commands:
           - Type: Attitude
@@ -881,28 +893,22 @@ DSM Commands:
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [1, 1]
+            Index: [1, 7]
       - Time: 420.0
         Commands:
           - Type: Translation
             Subtype: Translation
             Index: 2
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [1, 1]
       - Time: 550.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [4, 4]
+            Index: [4, 7]
       - Time: 840.0
         Commands:
           - Type: Translation
             Subtype: Translation
             Index: 5
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [4, 4]
   - SC: 2
     Command Sequence:
       - Time: 0.0
@@ -924,20 +930,17 @@ DSM Commands:
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [2, 2]
+            Index: [2, 7]
       - Time: 420.0
         Commands:
           - Type: Translation
             Subtype: Translation
             Index: 3
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [2, 2]
       - Time: 550.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [4, 4]
+            Index: [4, 7]
       - Time: 600.0
         Commands:
           - Type: Attitude
@@ -969,12 +972,9 @@ DSM Commands:
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [3, 3]
+            Index: [3, 7]
       - Time: 320.0
         Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [3, 3]
           - Type: Actuator
             Index: 0
       - Time: 400.0
@@ -1002,14 +1002,14 @@ DSM Commands:
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [5, 5]
+            Index: [5, 7]
       - Time: 1000.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [6, 5]
+            Index: [6, 7]
       - Time: 1800.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [7, 6]
+            Index: [7, 7]

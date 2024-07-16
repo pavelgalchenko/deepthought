@@ -100,7 +100,8 @@ double Amoeba(const long N, double *P,
               const double scale, const double Tol);
 void FindNormal(const double V1[3], const double V2[3], const double V3[3],
                 double N[3]);
-double LinInterp(double *X, double *Y, const double x, const long n);
+double LinInterp(const double *X, const double *Y, const double x,
+                 const long n);
 void SphereInterp(double q1[4], double q2[4], const double u, double q[4]);
 double CubicInterp1D(double f0, double f1, double x);
 double CubicInterp2D(double f00, double f10, double f01, double f11, double x,
@@ -137,19 +138,19 @@ void expmso3(double theta[3], double R[3][3]);
 void logso3(double const R[3][3], double theta[3]);
 void expmTFG(double theta[3], long const n, long const m, double x[n][3],
              double xbar[m][3], double R[3][3]);
-void expm(double **A, double **e, long const n);
-long isSignificant(int const m, int const n, double **A, double **B);
 double M1NormG(double **A, long const n, long const m);
 double M2Norm2G(double **A, long const n, long const m);
-void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);
-void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
-                         double d[n]);
 int cholDowndate(double **S, double u[], long const n);
 void chol(double **A, double **S, long const n);
 void hqrd(double **A, double **U, double **R, long const n, long const m);
 void bhqrd(double **A, double **U, double **R, long const n, long const m,
            long const bSize);
 
+void expm(double **A, double **e, long const n);
+long isSignificant(int const m, int const n, double **A, double **B);
+void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);
+void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
+                         double d[n]);
 /*
 ** #ifdef __cplusplus
 ** }

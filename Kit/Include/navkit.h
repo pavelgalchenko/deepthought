@@ -119,7 +119,7 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav);
 /******************************************************************************/
 void subMatAdd(double **A, double **B, long const iN, long const iM,
                long const n, long const M);
-double mahalonobis2(double **A, double *x, long const n);
+double mahalonobis2(double **A, double *x, double *y, long const n);
 double chi2InvLookup(double const pGate, long const dim);
 
 /*

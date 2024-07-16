@@ -17,6 +17,6 @@
 #include "mathkit.h"
 #include "test_lib.h"
 
-long runMathKit_Tests();
+long RunMathKit_Tests();
 
 #endif

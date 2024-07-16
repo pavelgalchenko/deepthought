@@ -36,7 +36,7 @@ void cubicFDF(const double x, double params[4], double *f, double *fp)
    *fp = 3.0 * params[0] * x * x + 2 * params[1] * x + params[2];
 }
 
-long runMathKit_Tests()
+long RunMathKit_Tests()
 {
    long success = TRUE;
 
