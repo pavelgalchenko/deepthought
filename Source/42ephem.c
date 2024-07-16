@@ -688,7 +688,7 @@ void Ephemerides(void)
       World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
    }
-   else if (EphemOption == EPH_SPICE_REC) {
+   else if (EphemOption == EPH_SPICE) {
       LoadSpiceEphems(DynTime);
    }
    else {
@@ -713,7 +713,7 @@ void Ephemerides(void)
       }
 
    if (EphemOption !=
-       EPH_SPICE_REC) { // If we use SPICE, all rotations are handled via SPICE
+       EPH_SPICE) { // If we use SPICE, all rotations are handled via SPICE
       /* .. Earth rotation is a special case */
       GMST                   = JD2GMST(UTC.JulDay);
       World[EARTH].PriMerAng = TwoPi * GMST;

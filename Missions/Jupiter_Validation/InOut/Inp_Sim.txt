@@ -37,7 +37,7 @@ FALSE                         !  CFD Slosh Forces and Torques
 FALSE                         !  Albedo Effect on CSS Measurements
 FALSE                         !  Output Environmental Torques to Files
 ********************* Celestial Bodies of Interest *********************
-SPICE_REC                              !  Ephem Option (MEAN, DE430, DE440)
+SPICE                              !  Ephem Option (MEAN, DE430, DE440)
 TRUE                          !  Mercury
 TRUE                          !  Venus
 TRUE                          !  Earth and Luna

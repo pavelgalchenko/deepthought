@@ -414,8 +414,8 @@ long DecodeString(char *s)
       return EPH_DE430;
    else if (!strcmp(s, "DE440"))
       return EPH_DE440;
-   else if (!strcmp(s, "SPICE_REC"))
-      return EPH_SPICE_REC;
+   else if (!strcmp(s, "SPICE"))
+      return EPH_SPICE;
 
    else if (!strcmp(s, "MAJOR"))
       return MAJOR_CONSTELL;
@@ -3464,7 +3464,7 @@ void LoadPlanets(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       for (int i = 0; i < 10; i++) {
          dim = 1;
@@ -3704,7 +3704,7 @@ void LoadMoonOfEarth(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       dim = 1;
       bodvrd_c("Moon", "GM", 1, &dim, &tmp_holder);
@@ -3814,7 +3814,7 @@ void LoadMoonsOfMars(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       for (i = 0; i < 2; i++) {
          dim = 1;
@@ -3952,7 +3952,7 @@ void LoadMoonsOfJupiter(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       for (i = 0; i < 2; i++) {
          dim = 1;
@@ -4087,7 +4087,7 @@ void LoadMoonsOfSaturn(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       for (i = 0; i < 2; i++) {
          dim = 1;
@@ -4196,7 +4196,7 @@ void LoadMoonsOfUranus(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       for (i = 0; i < 2; i++) {
          dim = 1;
@@ -4305,7 +4305,7 @@ void LoadMoonsOfNeptune(void)
    double tmp_holder3[3];
    int dim;
 
-   if (EphemOption == EPH_SPICE_REC) { // If we are using SPICE, replace the
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                        // hardcoded values with SPICE values
       for (i = 0; i < 2; i++) {
          dim = 1;
@@ -5856,7 +5856,7 @@ void InitSim(int argc, char **argv)
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
    /* .. Load Sun and Planets */
-   if (EphemOption == EPH_SPICE_REC)
+   if (EphemOption == EPH_SPICE)
       LoadSpiceKernels(
           ModelPath); // Load SPICE to get SPICE-provided values for mu, J2, etc
 
@@ -5866,7 +5866,7 @@ void InitSim(int argc, char **argv)
    /* JPL planetary ephems */
    if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440)
       LoadJplEphems(ModelPath, TT.JulDay);
-   else if (EphemOption == EPH_SPICE_REC) {
+   else if (EphemOption == EPH_SPICE) {
       LoadSpiceEphems(DynTime);
    }
    /* .. Load Moons */
