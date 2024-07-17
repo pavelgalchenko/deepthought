@@ -135,6 +135,9 @@ struct AcFssType {
    /*~ Parameters ~*/
    double qb[4];
    double CB[3][3];
+   long H_Axis;
+   long V_Axis;
+   long BoreAxis;
 
    /*~ Internal Variables ~*/
    long Valid;       /* [~>~] */

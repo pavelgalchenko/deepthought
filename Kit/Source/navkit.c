@@ -493,15 +493,13 @@ void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3])
 }
 
 void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
-                      double PosR[3], double mass, long RefOrb,
+                      double PosR[3], double mass, struct OrbitType const *O,
                       double VelRdot[3])
 {
-   struct OrbitType *O;
    double ph[3], pn[3], pr[3], s[3], accelR[3];
    long Iw, Im, j;
    long OrbCenter, SecCenter;
 
-   O = &Orb[RefOrb];
    if (O->Regime == ORB_CENTRAL) {
       OrbCenter = O->World;
       SecCenter = -1; /* Nonsense value */
@@ -598,14 +596,13 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
 }
 
 void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
-                           double PosR[3], long RefOrb, double dGravDPos[3][3])
+                           double PosR[3], struct OrbitType const *O,
+                           double dGravDPos[3][3])
 {
-   struct OrbitType *O;
    double ph[3], pn[3], pr[3], s[3], dGdR[3][3];
    long Iw, Im, i, j;
    long OrbCenter, SecCenter;
 
-   O = &Orb[RefOrb];
    if (O->Regime == ORB_CENTRAL) {
       OrbCenter = O->World;
       SecCenter = -1; /* Nonsense value */
@@ -694,191 +691,68 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
    }
 }
 
-void getAeroForceAndTorque(struct SCType *const S, double const CRB[3][3],
-                           double const VrelR[3], double frcR[3], double trq[3],
-                           double AtmoDensity)
+void getAeroForceAndTorque(struct DSMType *const DSM, double const CRB[3][3],
+                           double const PosR[3], double const VelR[3],
+                           double const worldW, double const AtmoDensity,
+                           double frcR[3], double trq[3])
 {
-   struct BodyType *B;
-   struct GeomType *G;
-   struct PolyType *P;
-   long Ib, Ipoly, i;
-   double WoN, PolyArea, Area, WindSpeed, Coef1, Coef2;
-   double cp[3], Vrelb[3], fb[3], fR[3], trqB[3], VrelRHat[3];
-
-   WindSpeed = CopyUnitV(VrelR, VrelRHat);
-   // TODO: don't use S->AtmoDensity (and maybe S->DragCoef?)
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
    // change much if torque is trivial
+   // Higher fidelity model requires information only in SCType
 
-   // Coef1 = -0.5 * AtmoDensity * WindSpeed * WindSpeed * AC->mass /
-   // Nav->ballisticCoef; for (i = 0; i < 3; i++)
-   //    frcR[i] = Coef1 * VrelRHat[i];
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   double worldWR[3] = {0.0}, VrelR[3] = {0.0};
+   double PosRWorld[3] = {0.0};
+   for (int i = 0; i < 3; i++)
+      PosRWorld[i] = PosR[i] + Nav->refPos[i];
+   for (int i = 0; i < 3; i++)
+      worldWR[i] = -Nav->refCRN[i][2] * worldW;
+   VxV(worldWR, PosRWorld, VrelR);
+   for (int i = 0; i < 3; i++)
+      VrelR[i] += VelR[i] + Nav->refVel[i];
 
-   Coef1 = -0.5 * AtmoDensity * S->DragCoef * WindSpeed * WindSpeed;
-
-   /* Find Force and Torque on each Body, in that body's frame */
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-
-      double CBb[3][3] = {{1.0, 0.0, 0.0},
-                          {0.0, 1.0, 0.0},
-                          {0.0, 0.0, 1.0}}; // rotation from Ib to zeroth body
-      double CRb[3][3];                     // rotation from Ib to Nav ref frame
-      if (Ib != 0) {
-         MxMT(S->B[0].CN, B->CN, CBb);
-      }
-      MxM(CRB, CBb, CRb);
-
-      /* Transform Rel Wind to B */
-      MTxV(CRb, VrelRHat, Vrelb);
-
-      /* Find total projected area and cp for Body */
-      Area = 0.0;
-      for (i = 0; i < 3; i++)
-         cp[i] = 0.0;
-      G = &Geom[B->GeomTag];
-      for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
-         P   = &G->Poly[Ipoly];
-         WoN = VoV(Vrelb, P->Norm);
-         if (WoN > 0.0) {
-            PolyArea  = WoN * P->Area;
-            Area     += PolyArea;
-            for (i = 0; i < 3; i++)
-               cp[i] += PolyArea * (P->Centroid[i] - B->cm[i]);
-         }
-      }
-      if (Area > 0.0) {
-         for (i = 0; i < 3; i++)
-            cp[i] /= Area;
-      }
-
-      /* Compute force and torque exerted on B */
-      Coef2 = Coef1 * Area;
-      for (i = 0; i < 3; i++)
-         fb[i] = Coef2 * Vrelb[i];
-      MxV(CRb, fb, fR);
-      for (i = 0; i < 3; i++) {
-         frcR[i] += fR[i];
-      }
-      VxV(cp, fb, trqB);
-      for (i = 0; i < 3; i++)
-         trq[i] += trqB[i];
+   double WindSpeed = 0, Coef1 = 0, VrelRHat[3] = {0.0};
+   WindSpeed = CopyUnitV(VrelR, VrelRHat);
+   Coef1     = -0.5 * AtmoDensity * WindSpeed * WindSpeed * DSM->mass /
+           Nav->ballisticCoef;
+   for (int i = 0; i < 3; i++) {
+      frcR[i] = Coef1 * VrelRHat[i];
+      trq[i]  = 0.0;
    }
 }
 
-void getDAeroFrcAndTrqDVRel(struct SCType *const S, double const CRB[3][3],
-                            double const VrelR[3], double dAeroFrcdVRel[3][3],
-                            double dAeroTrqdVRel[3][3], double AtmoDensity)
+void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
+                            double const PosR[3], double const VelR[3],
+                            double const worldW, double const AtmoDensity,
+                            double dAeroFrcdVRel[3][3],
+                            double dAeroTrqdVRel[3][3])
 {
-   struct BodyType *B;
-   struct GeomType *G;
-   struct PolyType *P;
-   long Ib, Ipoly, i, j;
-   double WoN, PolyArea, Area, WindSpeed, Coef;
-   double Vrelb[3], cp[3], VrelRHat[3];
-
-   double AiniT[3] = {0.0};
-   WindSpeed       = CopyUnitV(VrelR, VrelRHat);
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
    // change much if torque is trivial
+   // Higher fidelity model requires information only in SCType
 
-   Coef = -0.5 * AtmoDensity * S->DragCoef * WindSpeed;
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++) {
-         dAeroFrcdVRel[i][j] = 0.0;
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   double worldWR[3] = {0.0}, VrelR[3] = {0.0};
+   double PosRWorld[3] = {0.0};
+   for (int i = 0; i < 3; i++)
+      PosRWorld[i] = PosR[i] + Nav->refPos[i];
+   for (int i = 0; i < 3; i++)
+      worldWR[i] = -Nav->refCRN[i][2] * worldW;
+   VxV(worldWR, PosRWorld, VrelR);
+   for (int i = 0; i < 3; i++)
+      VrelR[i] += VelR[i] + Nav->refVel[i];
+
+   double WindSpeed = 0, Coef1 = 0, VrelRHat[3] = {0.0};
+   WindSpeed = CopyUnitV(VrelR, VrelRHat);
+   Coef1     = -0.5 * AtmoDensity * WindSpeed * DSM->mass / Nav->ballisticCoef;
+   for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+         dAeroFrcdVRel[i][j] = VrelRHat[i] * VrelRHat[j] * Coef1;
          dAeroTrqdVRel[i][j] = 0.0;
       }
-   }
-
-   /* .. Find Force and Torque on each Body, in that body's frame */
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-
-      double CBb[3][3] = {{1.0, 0.0, 0.0},
-                          {0.0, 1.0, 0.0},
-                          {0.0, 0.0, 1.0}}; // rotation from Ib to zeroth body
-      double CRb[3][3];                     // rotation from Ib to Nav ref frame
-      if (Ib != 0) {
-         MxMT(S->B[0].CN, B->CN, CBb);
-      }
-      MxM(CRB, CBb, CRb);
-
-      /* Transform Rel Wind to B */
-      MTxV(CRb, VrelRHat, Vrelb);
-
-      double AiciniT[3][3] = {{0.0}}, Ajvjnj[3][3] = {{0.0}};
-      /* Find total projected area and cp for Body */
-      Area = 0.0;
-      for (i = 0; i < 3; i++)
-         cp[i] = 0.0;
-      G = &Geom[B->GeomTag];
-      for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
-         P   = &G->Poly[Ipoly];
-         WoN = VoV(Vrelb, P->Norm);
-         if (WoN > 0.0) {
-            PolyArea         = WoN * P->Area;
-            Area            += PolyArea;
-            double CRbni[3]  = {0.0};
-            MxV(CRb, P->Norm, CRbni);
-            double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}};
-            for (i = 0; i < 3; i++) {
-               double ci  = P->Centroid[i] - B->cm[i];
-               AiniT[i]  += P->Area * CRbni[i];
-               cp[i]     += PolyArea * ci;
-
-               tmpM[i][i] += P->Area * WoN;
-               for (j = 0; j < 3; j++) {
-                  AiciniT[i][j] += P->Area * ci * P->Norm[j];
-                  tmpM[i][j]    -= P->Area * Vrelb[i] * P->Norm[j];
-               }
-            }
-            MxMT(tmpM, CRb, tmpM2);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  Ajvjnj[i][j] += tmpM2[i][j];
-         }
-      }
-      if (Area > 0.0) {
-         for (i = 0; i < 3; i++) {
-            cp[i] /= Area;
-            for (j = 0; j < 3; j++) {
-               AiciniT[i][j] /= Area;
-               Ajvjnj[i][j]  /= Area;
-            }
-         }
-
-         double dAeroFrcdVRelIb[3][3] = {{0.0}};
-         for (i = 0; i < 3; i++) {
-            dAeroFrcdVRelIb[i][i] += Area;
-            for (j = 0; j < 3; j++) {
-               dAeroFrcdVRelIb[i][j] += VrelRHat[i] * AiniT[j];
-               dAeroFrcdVRelIb[i][j] *= Coef;
-               dAeroFrcdVRel[i][j]   += dAeroFrcdVRelIb[i][j];
-            }
-         }
-         /* Compute torque exerted on B */
-         double tmpM[3][3], tmpM2[3][3], cpX[3][3];
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               tmpM[i][j] = Vrelb[i] * Vrelb[j];
-            tmpM[i][i] += 1.0;
-         }
-
-         MxM(Ajvjnj, tmpM, tmpM2);
-         MxM(AiciniT, tmpM2, tmpM);
-         V2CrossM(Vrelb, AiciniT);
-         MxM(AiciniT, tmpM, tmpM2);
-
-         V2CrossM(cp, cpX);
-         AdjointT(CRb, dAeroFrcdVRelIb, tmpM);
-         MxM(cpX, tmpM, dAeroFrcdVRelIb);
-         double ACoef = Area * Coef;
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               dAeroTrqdVRel[i][j] += tmpM[i][j] - tmpM2[i][j] * ACoef;
-      }
+      dAeroFrcdVRel[i][i] += Coef1;
    }
 }
 
@@ -886,24 +760,19 @@ void getDAeroFrcAndTrqDVRel(struct SCType *const S, double const CRB[3][3],
 //                               NAV FUNCTIONS
 //------------------------------------------------------------------------------
 
-double **gyroJacobianFun(struct SCType *const S, const long Igyro)
+double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                         const long Igyro)
 {
-   double Axis[3] = {0.0}, tmp[3] = {0.0}, tmp2[3] = {0.0};
+   double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    double **jacobian;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    struct AcGyroType *gyro;
-   struct NodeType *N;
    long i;
 
-   AC   = &S->AC;
-   DSM  = &S->DSM;
    Nav  = &DSM->DsmNav;
    gyro = &AC->Gyro[Igyro];
-   N    = &S->B[0].Node[S->Gyro[Igyro].Node];
 
    if (B == NULL)
       B = CreateMatrix(1, 3);
@@ -915,36 +784,33 @@ double **gyroJacobianFun(struct SCType *const S, const long Igyro)
          MTxV(Nav->CRB, Nav->refOmega, tmp);
          for (i = 0; i < 3; i++)
             tmp[i] += Nav->wbr[i];
-         QTxV(N->qb, gyro->Axis, Axis);
-         VxV(tmp, Axis, tmp2);
+         VxV(tmp, gyro->Axis, tmp2);
 
          for (i = 0; i < 3; i++)
             B[0][i] = tmp2[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          for (i = 0; i < 3; i++)
-            B[0][i] = -Axis[i] * R2D;
+            B[0][i] = -gyro->Axis[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
          break;
       case RIEKF_NAV:
-         QTxV(N->qb, gyro->Axis, tmp);
-         MxV(Nav->CRB, tmp, Axis);
+         MxV(Nav->CRB, tmp, gyro->Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = -Axis[i] * R2D;
+            B[0][i] = -gyro->Axis[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
 
-         VxV(Nav->refOmega, Axis, tmp2);
+         VxV(Nav->refOmega, gyro->Axis, tmp2);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp2[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
       case MEKF_NAV:
-         QTxV(N->qb, gyro->Axis, Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = -Axis[i] * R2D;
+            B[0][i] = -gyro->Axis[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
          if (Nav->refFrame != FRAME_N) {
             QxV(Nav->qbr, Nav->refOmega, tmp);
-            VxV(tmp, Axis, tmp2);
+            VxV(tmp, gyro->Axis, tmp2);
 
             for (i = 0; i < 3; i++)
                B[0][i] = tmp2[i] * R2D;
@@ -960,24 +826,19 @@ double **gyroJacobianFun(struct SCType *const S, const long Igyro)
    return (jacobian);
 }
 
-double **magJacobianFun(struct SCType *const S, const long Imag)
+double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long Imag)
 {
-   double **jacobian, tmp[3] = {0.0}, tmp2[3] = {0.0}, Axis[3] = {0.0};
+   double **jacobian, tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    struct AcMagnetometerType *mag;
-   struct NodeType *N;
    const double T2mG = 1.0e7; // tesla to milligauss
    long i;
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
    mag = &AC->MAG[Imag];
-   N   = &S->B[0].Node[S->MAG[Imag].Node];
 
    if (B == NULL)
       B = CreateMatrix(1, 3);
@@ -988,17 +849,15 @@ double **magJacobianFun(struct SCType *const S, const long Imag)
       case LIEKF_NAV:
          MxV(Nav->refCRN, AC->bvn, tmp);
          MTxV(Nav->CRB, tmp, tmp2);
-         QTxV(N->qb, mag->Axis, Axis);
-         VxV(tmp2, Axis, tmp);
+         VxV(tmp2, mag->Axis, tmp);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
       case RIEKF_NAV:
          MxV(Nav->refCRN, AC->bvn, tmp2);
-         QTxV(N->qb, mag->Axis, tmp);
-         MxV(Nav->CRB, tmp, Axis);
-         VxV(tmp2, Axis, tmp);
+         MxV(Nav->CRB, tmp, mag->Axis);
+         VxV(tmp2, mag->Axis, tmp);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
@@ -1006,8 +865,7 @@ double **magJacobianFun(struct SCType *const S, const long Imag)
       case MEKF_NAV:
          MxV(Nav->refCRN, AC->bvn, tmp);
          QxV(Nav->qbr, tmp, tmp2);
-         QTxV(N->qb, mag->Axis, Axis);
-         VxV(tmp2, Axis, tmp);
+         VxV(tmp2, mag->Axis, tmp);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[QUAT_STATE], 1, 3);
@@ -1021,19 +879,16 @@ double **magJacobianFun(struct SCType *const S, const long Imag)
    return (jacobian);
 }
 
-double **cssJacobianFun(struct SCType *const S, const long Icss)
+double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long Icss)
 {
    double **jacobian, tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    struct AcCssType *css;
    long i;
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
    css = &AC->CSS[Icss];
 
@@ -1076,13 +931,12 @@ double **cssJacobianFun(struct SCType *const S, const long Icss)
    return (jacobian);
 }
 
-double **fssJacobianFun(struct SCType *const S, const long Ifss)
+double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long Ifss)
 {
    double **jacobian, B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
    struct AcFssType *fss;
    static double **tmpAssign = NULL;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    double svb[3], svs[3], CBN[3][3];
    double bhat[3] = {0.0}, hhat[3] = {0.0}, vhat[3] = {0.0};
@@ -1091,13 +945,11 @@ double **fssJacobianFun(struct SCType *const S, const long Ifss)
    long H_Axis, V_Axis, BoreAxis;
    long i, j;
 
-   AC       = &S->AC;
-   DSM      = &S->DSM;
    Nav      = &DSM->DsmNav;
    fss      = &AC->FSS[Ifss];
-   H_Axis   = S->FSS[Ifss].H_Axis;
-   V_Axis   = S->FSS[Ifss].V_Axis;
-   BoreAxis = S->FSS[Ifss].BoreAxis;
+   H_Axis   = fss->H_Axis;
+   V_Axis   = fss->V_Axis;
+   BoreAxis = fss->BoreAxis;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(2, 3);
@@ -1158,31 +1010,24 @@ double **fssJacobianFun(struct SCType *const S, const long Ifss)
    return (jacobian);
 }
 
-double **startrackJacobianFun(struct SCType *const S, const long Ist)
+double **startrackJacobianFun(struct AcType *const AC,
+                              struct DSMType *const DSM, const long Ist)
 {
-   double **jacobian, tmpM[3][3] = {{0.0}}, qsb[4], CSB[3][3];
+   double **jacobian, tmpM[3][3] = {{0.0}}, CSB[3][3];
    static double **tmpAssign = NULL;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    struct AcStarTrackerType *st;
    long i, j;
 
-   struct NodeType *N;
-
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
    st  = &AC->ST[Ist];
-   N   = &S->B[0].Node[S->ST[Ist].Node];
 
    jacobian =
        CreateMatrix(Nav->measTypes[STARTRACK_SENSOR][Ist].errDim, Nav->navDim);
-   QxQ(st->qb, N->qb, qsb);
-   Q2C(qsb, CSB);
+   Q2C(st->qb, CSB);
 
    switch (Nav->type) {
       case LIEKF_NAV:
@@ -1211,17 +1056,16 @@ double **startrackJacobianFun(struct SCType *const S, const long Ist)
    return (jacobian);
 }
 
-double **gpsJacobianFun(struct SCType *const S, const long Igps)
+double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long Igps)
 {
    double **jacobian, tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}},
                       tmp3[3][3] = {{0.0}}, tmpX[3][3] = {{0.0}},
                       tmpV[3] = {0.0};
    static double **tmpAssign  = NULL;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    long i, j;
 
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
@@ -1321,13 +1165,12 @@ double **gpsJacobianFun(struct SCType *const S, const long Igps)
    return (jacobian);
 }
 
-double **accelJacobianFun(struct SCType *const S, const long Iaccel)
+double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                          const long Iaccel)
 {
    double **jacobian;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
 
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
    jacobian =
@@ -1349,50 +1192,39 @@ double **accelJacobianFun(struct SCType *const S, const long Iaccel)
    return (jacobian);
 }
 
-double *gyroFun(struct SCType *const S, const long Ig)
+double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
+                const long Ig)
 {
    struct AcGyroType *G;
-   struct NodeType *N;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
-   double axis[3], wbn[3], wrn[3], *gyroEst;
+   double wbn[3], wrn[3], *gyroEst;
    long i;
 
    gyroEst = calloc(1, sizeof(double));
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
    G   = &AC->Gyro[Ig];
-   N   = &S->B[0].Node[S->Gyro[Ig].Node];
 
-   QTxV(N->qb, G->Axis, axis);
    MTxV(Nav->CRB, Nav->refOmega, wrn);
    for (i = 0; i < 3; i++)
       wbn[i] = Nav->wbr[i] + wrn[i];
-   gyroEst[0] = VoV(axis, wbn) * R2D;
+   gyroEst[0] = VoV(G->Axis, wbn) * R2D;
    return (gyroEst);
 }
 
-double *magFun(struct SCType *const S, const long Imag)
+double *magFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long Imag)
 {
    struct AcMagnetometerType *MAG;
-   struct NodeType *N;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
-   double axis[3], bvb[3], bvn[3], CBN[3][3], *magEst;
+   double bvb[3], bvn[3], CBN[3][3], *magEst;
    const double T2mG = 1.0e7; // tesla to milligauss
    long i;
 
    magEst = calloc(1, sizeof(double));
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
    MAG = &AC->MAG[Imag];
-   N   = &S->B[0].Node[S->MAG[Imag].Node];
 
    // Not to really be used.
    for (i = 0; i < 3; i++)
@@ -1400,24 +1232,20 @@ double *magFun(struct SCType *const S, const long Imag)
 
    MTxM(Nav->CRB, Nav->refCRN, CBN);
    MxV(CBN, bvn, bvb);
-   QTxV(N->qb, MAG->Axis, axis);
-   magEst[0] = VoV(axis, bvb) * T2mG;
+   magEst[0] = VoV(MAG->Axis, bvb) * T2mG;
 
    return (magEst);
 }
 
-double *cssFun(struct SCType *const S, const long Icss)
+double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long Icss)
 {
    struct AcCssType *css;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    double *IllumEst, svb[3], CBN[3][3];
 
    IllumEst = calloc(1, sizeof(double));
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
    css = &AC->CSS[Icss];
 
@@ -1428,24 +1256,21 @@ double *cssFun(struct SCType *const S, const long Icss)
    return (IllumEst);
 }
 
-double *fssFun(struct SCType *const S, const long Ifss)
+double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long Ifss)
 {
    struct AcFssType *fss;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    double *SunAngEst, svb[3], svs[3], CBN[3][3];
    long H_Axis, V_Axis, BoreAxis;
 
-   SunAngEst = calloc(2, sizeof(double));
+   SunAngEst = calloc(3, sizeof(double));
 
-   AC       = &S->AC;
-   DSM      = &S->DSM;
    Nav      = &DSM->DsmNav;
    fss      = &AC->FSS[Ifss];
-   H_Axis   = S->FSS[Ifss].H_Axis;
-   V_Axis   = S->FSS[Ifss].V_Axis;
-   BoreAxis = S->FSS[Ifss].BoreAxis;
+   H_Axis   = fss->H_Axis;
+   V_Axis   = fss->V_Axis;
+   BoreAxis = fss->BoreAxis;
 
    MTxM(Nav->CRB, Nav->refCRN, CBN);
    MxV(CBN, AC->svn, svb);
@@ -1457,39 +1282,32 @@ double *fssFun(struct SCType *const S, const long Ifss)
    return (SunAngEst);
 }
 
-double *startrackFun(struct SCType *const S, const long Ist)
+double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
+                     const long Ist)
 {
    struct AcStarTrackerType *st;
-   struct NodeType *N;
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
-   double qsb[4], qbn[4], qrn[4], *qsnEst;
+   double qbn[4], qrn[4], *qsnEst;
 
    qsnEst = calloc(4, sizeof(double));
-   AC     = &S->AC;
-   DSM    = &S->DSM;
    Nav    = &DSM->DsmNav;
    st     = &AC->ST[Ist];
-   N      = &S->B[0].Node[S->ST[Ist].Node];
 
-   QxQ(st->qb, N->qb, qsb);
    C2Q(Nav->refCRN, qrn);
    QxQ(Nav->qbr, qrn, qbn);
-   QxQ(qsb, qbn, qsnEst);
+   QxQ(st->qb, qbn, qsnEst);
 
    return (qsnEst);
 }
 
-double *gpsFun(struct SCType *const S, const long Igps)
+double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long Igps)
 {
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    double *posNVelNEst, tmp3V[3], tmpPosN[3], tmpVelN[3];
    long i;
 
    posNVelNEst = calloc(6, sizeof(double));
-   DSM         = &S->DSM;
    Nav         = &DSM->DsmNav;
 
    for (i = 0; i < 3; i++)
@@ -1515,7 +1333,8 @@ double *gpsFun(struct SCType *const S, const long Igps)
 }
 
 // don't need this at the moment, WIP
-double *accelFun(struct SCType *const S, const long Ia)
+double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
+                 const long Ia)
 {
    return (NULL);
 } /*{
@@ -1614,24 +1433,20 @@ void getEarthAtmoParams(const double JD, double *NavFlux10p7,
 /*                          RIEKF functions                           */
 /*--------------------------------------------------------------------*/
 
-void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
-                         double const CRB[3][3], double const qbr[4],
-                         double const PosR[3], double const VelR[3],
-                         double const wbr[3], double const whlH[S->AC.Nwhl],
-                         const double AtmoDensity)
+void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                         const struct DateType *date, double const CRB[3][3],
+                         double const qbr[4], double const PosR[3],
+                         double const VelR[3], double const wbr[3],
+                         double const whlH[AC->Nwhl], const double AtmoDensity)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
    double wrnd[3]            = {0.0};
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    long i, j, rowInd;
    enum navState state;
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
@@ -1688,8 +1503,8 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   for (i = 0; i < 3; i++)
                      tmpV3[i] += wbr[i];
                   V2CrossM(tmpV3, tmpM2);
-                  MxM(tmpM2, AC->MOI, tmpM3);
-                  MxV(AC->MOI, tmpV3, tmpV2);
+                  MxM(tmpM2, DSM->MOI, tmpM3);
+                  MxV(DSM->MOI, tmpV3, tmpV2);
                   for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                      for (i = 0; i < 3; i++)
                         tmpV2[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
@@ -1699,7 +1514,7 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      for (j = 0; j < 3; j++)
                         tmpM[i][j] -= tmpM3[i][j];
 
-                  MINVxM3(AC->MOI, 3, tmpM, tmpM2);
+                  MINVxM3(DSM->MOI, 3, tmpM, tmpM2);
                   Adjoint(CRB, tmpM2, tmpM);
                   // use tmpM = dwbn_dot/dwbn to calc a few derivs
                   if (Nav->refFrame != FRAME_N) {
@@ -1801,21 +1616,16 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
             }
          }
       }
-      if (Orb[S->RefOrb].Regime == ORB_CENTRAL) {
-         long orbCenter             = Orb[S->RefOrb].World;
+      if (DSM->refOrb->Regime == ORB_CENTRAL) {
+         long orbCenter             = DSM->refOrb->World;
          double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
          double worldWR[3] = {0.0};
          if (AeroActive) {
-            double VrelR[3] = {0.0}, PosRWorld[3] = {0.0};
+            double worldW = World[orbCenter].w;
             for (i = 0; i < 3; i++)
-               PosRWorld[i] = PosR[i] + Nav->refPos[i];
-            for (i = 0; i < 3; i++)
-               worldWR[i] = -Nav->refCRN[i][2] * World[orbCenter].w;
-            VxV(worldWR, PosRWorld, VrelR);
-            for (i = 0; i < 3; i++)
-               VrelR[i] += VelR[i] + Nav->refVel[i];
-            getDAeroFrcAndTrqDVRel(S, CRB, VrelR, dAeroFrcdVRel, dAeroTrqdVRel,
-                                   AtmoDensity);
+               worldWR[i] = -Nav->refCRN[i][2] * worldW;
+            getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
+                                   dAeroFrcdVRel, dAeroTrqdVRel);
             MxM(Nav->CRB, dAeroTrqdVRel, tmpM);
             for (i = 0; i < 3; i++)
                for (j = 0; j < 3; j++)
@@ -1832,14 +1642,14 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                            double accelR[3] = {0.0};
                            for (i = 0; i < 3; i++)
                               tmpV[i] = PosR[i] + Nav->refPos[i];
-                           NavGravPertAccel(Nav, date, tmpV, 1.0, S->RefOrb,
+                           NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb,
                                             accelR);
                            for (i = 0; i < 3; i++)
                               VelRdot[i] += accelR[i];
                         }
                         for (i = 0; i < 3; i++)
                            tmpV[i] = PosR[i] + Nav->refPos[i];
-                        getGravAccel(Orb[S->RefOrb].mu, tmpV, tmpV2);
+                        getGravAccel(DSM->refOrb->mu, tmpV, tmpV2);
                         for (i = 0; i < 3; i++)
                            VelRdot[i] += tmpV2[i];
                         if (Nav->refOriType != ORI_WORLD) {
@@ -1860,7 +1670,7 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      if (GravPertActive) {
                         for (i = 0; i < 3; i++)
                            tmpV2[i] = PosR[i] + Nav->refPos[i];
-                        NavDGravPertAccelDPos(Nav, date, tmpV2, S->RefOrb,
+                        NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
                                               tmpM);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
@@ -1882,7 +1692,7 @@ void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++) {
-                              dAeroFrcdVRel[i][j] /= AC->mass;
+                              dAeroFrcdVRel[i][j] /= DSM->mass;
                               tmpAssign[i][j]      = dAeroFrcdVRel[i][j];
                            }
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
@@ -2036,24 +1846,20 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*                          LIEKF functions                           */
 /*--------------------------------------------------------------------*/
 
-void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
-                         double const CRB[3][3], double const qbr[4],
-                         double const PosR[3], double const VelR[3],
-                         double const wbr[3], double const whlH[S->AC.Nwhl],
-                         const double AtmoDensity)
+void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                         const struct DateType *date, double const CRB[3][3],
+                         double const qbr[4], double const PosR[3],
+                         double const VelR[3], double const wbr[3],
+                         double const whlH[AC->Nwhl], const double AtmoDensity)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
    double wrnd[3]            = {0.0};
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    long i, j, rowInd;
    enum navState state;
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
@@ -2111,33 +1917,25 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   MTxV(CRB, Nav->refOmega, tmpV3);
                   for (i = 0; i < 3; i++)
                      tmpV3[i] += wbr[i];
-                  MxV(AC->MOI, tmpV3, tmpV);
+                  MxV(DSM->MOI, tmpV3, tmpV);
                   for (long Iw = 0; Iw < AC->Nwhl; Iw++) {
                      for (i = 0; i < 3; i++)
                         tmpV[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
                   }
                   VxV(tmpV, tmpV3, tmpV2);
                   if (AeroActive) {
-                     long orbCenter    = Orb[S->RefOrb].World;
-                     double aeroTrq[3] = {0.0}, worldWR[3] = {0.0},
-                            VrelR[3]     = {0.0};
-                     double PosRWorld[3] = {0.0};
-                     for (i = 0; i < 3; i++)
-                        PosRWorld[i] = PosR[i] + Nav->refPos[i];
-                     for (i = 0; i < 3; i++)
-                        worldWR[i] = -Nav->refCRN[i][2] * World[orbCenter].w;
-                     VxV(worldWR, PosRWorld, VrelR);
-                     for (i = 0; i < 3; i++)
-                        VrelR[i] += VelR[i] + Nav->refVel[i];
-                     getAeroForceAndTorque(S, CRB, VrelR, tmpV, aeroTrq,
-                                           AtmoDensity);
+                     long orbCenter    = DSM->refOrb->World;
+                     double aeroTrq[3] = {0.0};
+                     getAeroForceAndTorque(DSM, CRB, PosR, VelR,
+                                           World[orbCenter].w, AtmoDensity,
+                                           tmpV, aeroTrq);
                      for (i = 0; i < 3; i++)
                         tmpV2[i] += aeroTrq[i];
                   }
                   for (i = 0; i < 3; i++) {
                      tmpV2[i] += Nav->torqueB[i];
                      for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = AC->MOI[i][j];
+                        tmpAssign[i][j] = DSM->MOI[i][j];
                   }
                   LINSOLVE(tmpAssign, tmpV, tmpV2,
                            3); // tmpV = wbn_dot (expressed in B, wrt N)
@@ -2161,8 +1959,8 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   for (i = 0; i < 3; i++)
                      tmpV3[i] += wbr[i];
                   V2CrossM(tmpV3, tmpM2);
-                  MxM(tmpM2, AC->MOI, tmpM3);
-                  MxV(AC->MOI, tmpV3, tmpV2);
+                  MxM(tmpM2, DSM->MOI, tmpM3);
+                  MxV(DSM->MOI, tmpV3, tmpV2);
                   for (long Iw = 0; Iw < AC->Nwhl; Iw++) {
                      for (i = 0; i < 3; i++)
                         tmpV2[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
@@ -2171,7 +1969,7 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpM[i][j] -= tmpM3[i][j];
-                  MINVxM3(AC->MOI, 3, tmpM, tmpM2);
+                  MINVxM3(DSM->MOI, 3, tmpM, tmpM2);
                   // use tmpM2=dwbn_dot/dwbn to calc a few derivs
                   MTxV(CRB, Nav->refOmega, tmpV);
                   V2CrossM(tmpV, tmpM);
@@ -2218,7 +2016,7 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                         tmpAssign[i][j] = -tmpM[i][j];
                   subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   for (i = 0; i < 3; i++) {
-                     tmpV[i] = Nav->forceB[i] / AC->mass;
+                     tmpV[i] = Nav->forceB[i] / DSM->mass;
                   }
                   V2CrossM(tmpV, tmpM);
                   MxM(CRB, tmpM, tmpM2);
@@ -2258,22 +2056,16 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
             }
          }
       }
-      if (Orb[S->RefOrb].Regime == ORB_CENTRAL) {
-         long orbCenter             = Orb[S->RefOrb].World;
+      if (DSM->refOrb->Regime == ORB_CENTRAL) {
+         long orbCenter             = DSM->refOrb->World;
          double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
          double worldWR[3] = {0.0};
          if (AeroActive) {
-            double VrelR[3]     = {0.0};
-            double PosRWorld[3] = {0.0};
+            double worldW = World[orbCenter].w;
             for (i = 0; i < 3; i++)
-               PosRWorld[i] = PosR[i] + Nav->refPos[i];
-            for (i = 0; i < 3; i++)
-               worldWR[i] = -Nav->refCRN[i][2] * World[orbCenter].w;
-            VxV(worldWR, PosRWorld, VrelR);
-            for (i = 0; i < 3; i++)
-               VrelR[i] += VelR[i] + Nav->refVel[i];
-            getDAeroFrcAndTrqDVRel(S, CRB, VrelR, dAeroFrcdVRel, dAeroTrqdVRel,
-                                   AtmoDensity);
+               worldWR[i] = -Nav->refCRN[i][2] * worldW;
+            getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
+                                   dAeroFrcdVRel, dAeroTrqdVRel);
          }
          for (state = INIT_STATE; state <= FIN_STATE; state++) {
             if (Nav->stateActive[state] == TRUE) {
@@ -2286,7 +2078,7 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      if (GravPertActive) {
                         for (i = 0; i < 3; i++)
                            tmpV2[i] = PosR[i] + Nav->refPos[i];
-                        NavDGravPertAccelDPos(Nav, date, tmpV2, S->RefOrb,
+                        NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
                                               tmpM);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
@@ -2301,7 +2093,7 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
-                              dAeroFrcdVRel[i][j] /= AC->mass;
+                              dAeroFrcdVRel[i][j] /= DSM->mass;
                         AdjointT(CRB, dAeroFrcdVRel, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
@@ -2309,8 +2101,8 @@ void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
                                   3);
                         V2CrossM(worldWR, tmpM2);
-                        MxM(tmpM, tmpM2, tmpM3);
-                        MxM(tmpM3, CRB, tmpM);
+                        MxM(tmpM3, tmpM2, tmpM);
+                        MxM(tmpM, CRB, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM[i][j];
@@ -2432,24 +2224,20 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*                          MEKF functions                           */
 /*--------------------------------------------------------------------*/
 
-void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
-                        double const CRB[3][3], double const qbr[4],
-                        double const PosR[3], double const VelR[3],
-                        double const wbr[3], double const whlH[S->AC.Nwhl],
-                        const double AtmoDensity)
+void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const struct DateType *date, double const CRB[3][3],
+                        double const qbr[4], double const PosR[3],
+                        double const VelR[3], double const wbr[3],
+                        double const whlH[AC->Nwhl], const double AtmoDensity)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
    double wrnd[3]            = {0.0};
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
    long i, j, rowInd;
    enum navState state;
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
@@ -2504,8 +2292,8 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   for (i = 0; i < 3; i++)
                      tmpV3[i] += wbr[i];
                   V2CrossM(tmpV3, tmpM2);
-                  MxM(tmpM2, AC->MOI, tmpM3);
-                  MxV(AC->MOI, tmpV3, tmpV2);
+                  MxM(tmpM2, DSM->MOI, tmpM3);
+                  MxV(DSM->MOI, tmpV3, tmpV2);
                   for (long Iw = 0; Iw < AC->Nwhl; Iw++) {
                      for (i = 0; i < 3; i++)
                         tmpV2[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
@@ -2514,8 +2302,8 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpM[i][j] -= tmpM3[i][j];
-                  MINVxM3(AC->MOI, 3, tmpM, tmpM2);
-                  // MINV3(AC->MOI, tmpM3);
+                  MINVxM3(DSM->MOI, 3, tmpM, tmpM2);
+                  // MINV3(DSM->MOI, tmpM3);
                   // MxM(tmpM3, tmpM, tmpM2);
                   for (i = 0; i < 3; i++) {
                      for (j = 0; j < 3; j++)
@@ -2534,7 +2322,7 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                   break;
                case VEL_STATE:
                   for (i = 0; i < 3; i++) {
-                     tmpV[i] = Nav->forceB[i] / AC->mass;
+                     tmpV[i] = Nav->forceB[i] / DSM->mass;
                   }
                   V2CrossM(tmpV, tmpM);
                   MxM(CRB, tmpM, tmpM2);
@@ -2574,22 +2362,16 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
             }
          }
       }
-      if (Orb[S->RefOrb].Regime == ORB_CENTRAL) {
-         long orbCenter             = Orb[S->RefOrb].World;
+      if (DSM->refOrb->Regime == ORB_CENTRAL) {
+         long orbCenter             = DSM->refOrb->World;
          double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
          double worldWR[3] = {0.0};
          if (AeroActive) {
-            double VrelR[3]     = {0.0};
-            double PosRWorld[3] = {0.0};
+            double worldW = World[orbCenter].w;
             for (i = 0; i < 3; i++)
-               PosRWorld[i] = PosR[i] + Nav->refPos[i];
-            for (i = 0; i < 3; i++)
-               worldWR[i] = -Nav->refCRN[i][2] * World[orbCenter].w;
-            VxV(worldWR, PosRWorld, VrelR);
-            for (i = 0; i < 3; i++)
-               VrelR[i] += VelR[i] + Nav->refVel[i];
-            getDAeroFrcAndTrqDVRel(S, CRB, VrelR, dAeroFrcdVRel, dAeroTrqdVRel,
-                                   AtmoDensity);
+               worldWR[i] = -Nav->refCRN[i][2] * worldW;
+            getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
+                                   dAeroFrcdVRel, dAeroTrqdVRel);
          }
          for (state = INIT_STATE; state <= FIN_STATE; state++) {
             if (Nav->stateActive[state] == TRUE) {
@@ -2602,7 +2384,7 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      if (GravPertActive) {
                         for (i = 0; i < 3; i++)
                            tmpV2[i] = PosR[i] + Nav->refPos[i];
-                        NavDGravPertAccelDPos(Nav, date, tmpV2, S->RefOrb,
+                        NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
                                               tmpM);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
@@ -2616,7 +2398,7 @@ void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++) {
-                              dAeroFrcdVRel[i][j] /= AC->mass;
+                              dAeroFrcdVRel[i][j] /= DSM->mass;
                               tmpAssign[i][j]      = dAeroFrcdVRel[i][j];
                            }
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
@@ -2691,16 +2473,11 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav)
 /******************************************************************************/
 //                            Navigation Functions
 /******************************************************************************/
-double **GetStateLinTForm(struct SCType *const S)
+double **GetStateLinTForm(struct DSMNavType *const Nav)
 {
    double **tForm, tmpM[3][3] = {{0.0}};
    static double **tmpAssign = NULL;
-   struct DSMType *DSM;
-   struct DSMNavType *Nav;
    long i, j;
-
-   DSM = &S->DSM;
-   Nav = &DSM->DsmNav;
 
    tForm = CreateMatrix(Nav->navDim, Nav->navDim);
    if (tmpAssign == NULL)
@@ -2789,7 +2566,8 @@ double **GetStateLinTForm(struct SCType *const S)
    return (tForm);
 }
 
-void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
+void configureRefFrame(struct DSMNavType *const Nav,
+                       const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset)
 {
    // set up reference frame. Not a fan of effectively using truth data for it
@@ -2797,11 +2575,6 @@ void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
    double targetPosN[3] = {0.0};
    double targetVelN[3] = {0.0};
 
-   struct DSMType *DSM;
-   struct DSMNavType *Nav;
-
-   DSM = &S->DSM;
-   Nav = &DSM->DsmNav;
    if (reset == TRUE)
       Nav->refLerpAlpha = 1.0;
    else
@@ -2818,21 +2591,23 @@ void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
 
    // Set the position and velocity of reference frame in N frame
    switch (Nav->refOriType) {
-      case ORI_WORLD:
-         if (Nav->refOri != Orb[S->RefOrb].World) {
+      case ORI_WORLD: {
+         struct WorldType const *W = Nav->refOriPtr;
+         if (&World[refOrb->World] != W) {
             // TODO: No reason can't do this, just WIP
-            printf("Navigation reference world %ld is not equal to the central "
-                   "body of the SC's orbit, %ld. Exiting...\n",
-                   Nav->refOri, Orb[S->RefOrb].World);
+            printf(
+                "Navigation reference world %19s is not equal to the central "
+                "body of the SC's orbit, %19s. Exiting...\n",
+                W->Name, World[refOrb->World].Name);
             exit(EXIT_FAILURE);
          }
          for (i = 0; i < 3; i++) {
             targetPosN[i] = 0.0;
             targetVelN[i] = 0.0;
          }
-         break;
+      } break;
       case ORI_OP: {
-         struct OrbitType *O = &Orb[S->RefOrb];
+         struct OrbitType const *O = Nav->refOriPtr;
          for (i = 0; i < 3; i++) {
             targetPosN[i] = O->PosN[i];
             targetVelN[i] = O->VelN[i];
@@ -2840,12 +2615,13 @@ void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
       } break;
       default: {
          // make sure if you do sc relative nav, you initialize that sc's nav
-         // before you start this sc's nav
-         struct SCType *sTarget  = &SC[Nav->refOriType];
-         struct AcType *acTarget = &sTarget->AC;
+         // before you start this sc's
+         // TODO: make this right, see TARGET_BODY in FindDsmCmdVecN()
+         struct DSMType *dsmTarget = Nav->refOriPtr;
+         struct BodyType *bTarget  = Nav->refBodyPtr;
          for (i = 0; i < 3; i++) {
-            targetPosN[i] = acTarget->PosN[i] + sTarget->B[Nav->refOri].pn[i];
-            targetVelN[i] = acTarget->VelN[i] + sTarget->B[Nav->refOri].vn[i];
+            targetPosN[i] = dsmTarget->PosN[i] + bTarget->pn[i];
+            targetVelN[i] = dsmTarget->VelN[i] + bTarget->vn[i];
          }
       } break;
    }
@@ -3027,36 +2803,23 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
    }
 }
 
-void NavEOMs(struct SCType *const S, const struct DateType *date,
-             double const CRB[3][3], double const qbr[4], double const PosR[3],
-             double const VelR[3], double const wbr[3], double const *whlH,
-             double CRBdot[3][3], double qbrdot[4], double PosRdot[3],
-             double VelRdot[3], double wbrdot[3], double *whlHdot,
-             const long refOrb, const double AtmoDensity)
+void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
+             const struct DateType *date, double const CRB[3][3],
+             double const qbr[4], double const PosR[3], double const VelR[3],
+             double const wbr[3], double const *whlH, double CRBdot[3][3],
+             double qbrdot[4], double PosRdot[3], double VelRdot[3],
+             double wbrdot[3], double *whlHdot, const double AtmoDensity)
 {
    long i, j, iState;
 
-   struct AcType *AC;
-   struct DSMType *DSM;
-   struct DSMNavType *Nav;
-
-   AC  = &S->AC;
-   DSM = &S->DSM;
-   Nav = &DSM->DsmNav;
+   struct DSMNavType *Nav = &DSM->DsmNav;
 
    double aeroFrc[3] = {0.0}, aeroTrq[3] = {0.0};
-   long orbCenter = Orb[refOrb].World;
-   if (AeroActive && Orb[refOrb].Regime == ORB_CENTRAL) {
-      double worldWR[3] = {0.0}, VrelR[3] = {0.0};
-      double PosRWorld[3] = {0.0};
-      for (i = 0; i < 3; i++)
-         PosRWorld[i] = PosR[i] + Nav->refPos[i];
-      for (i = 0; i < 3; i++)
-         worldWR[i] = -Nav->refCRN[i][2] * World[orbCenter].w;
-      VxV(worldWR, PosRWorld, VrelR);
-      for (i = 0; i < 3; i++)
-         VrelR[i] += VelR[i] + Nav->refVel[i];
-      getAeroForceAndTorque(S, CRB, VrelR, aeroFrc, aeroTrq, AtmoDensity);
+   const long orbCenter          = DSM->refOrb->World;
+   enum orbitRegime const regime = DSM->refOrb->Regime;
+   if (AeroActive && regime == ORB_CENTRAL) {
+      getAeroForceAndTorque(DSM, CRB, PosR, VelR, World[orbCenter].w,
+                            AtmoDensity, aeroFrc, aeroTrq);
    }
    getForceAndTorque(AC, Nav, CRB, whlH);
 
@@ -3083,7 +2846,7 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
                   for (i = 0; i < 3; i++)
                      wbn[i] += tmpV[i];
                }
-               MxV(AC->MOI, wbn, Hb);
+               MxV(DSM->MOI, wbn, Hb);
 
                for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                   for (i = 0; i < 3; i++)
@@ -3092,14 +2855,14 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
 
                for (i = 0; i < 3; i++) {
                   tmpV[i] += Nav->torqueB[i];
-                  if (AeroActive && Orb[refOrb].Regime == ORB_CENTRAL)
+                  if (AeroActive && regime == ORB_CENTRAL)
                      tmpV[i] += aeroTrq[i];
                }
 
                pM3x3 = CreateMatrix(3, 3);
                for (i = 0; i < 3; i++)
                   for (j = 0; j < 3; j++)
-                     pM3x3[i][j] = AC->MOI[i][j];
+                     pM3x3[i][j] = DSM->MOI[i][j];
                LINSOLVE(pM3x3, wbrdot, tmpV, 3);
                DestroyMatrix(pM3x3);
                if (Nav->refFrame != FRAME_N) {
@@ -3115,7 +2878,7 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
             case VEL_STATE:
                MxV(CRB, Nav->forceB, VelRdot);
                for (i = 0; i < 3; i++)
-                  VelRdot[i] /= AC->mass;
+                  VelRdot[i] /= DSM->mass;
                if (Nav->refFrame != FRAME_N) {
                   printf("Frame types other than Inertial are still in "
                          "development for filtering. "
@@ -3127,16 +2890,16 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
                   double accelR[3] = {0.0};
                   for (i = 0; i < 3; i++)
                      tmpV[i] = PosR[i] + Nav->refPos[i];
-                  NavGravPertAccel(Nav, date, tmpV, 1.0, refOrb, accelR);
+                  NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb, accelR);
                   for (i = 0; i < 3; i++)
                      VelRdot[i] += accelR[i];
                }
 
-               switch (Orb[refOrb].Regime) {
+               switch (regime) {
                   case ORB_CENTRAL: {
                      for (i = 0; i < 3; i++)
                         tmpV[i] = PosR[i] + Nav->refPos[i];
-                     getGravAccel(Orb[S->RefOrb].mu, tmpV, tmpV2);
+                     getGravAccel(DSM->refOrb->mu, tmpV, tmpV2);
                      for (i = 0; i < 3; i++)
                         VelRdot[i] += tmpV2[i];
                      if (Nav->refOriType != ORI_WORLD) {
@@ -3146,7 +2909,7 @@ void NavEOMs(struct SCType *const S, const struct DateType *date,
 
                      if (AeroActive)
                         for (i = 0; i < 3; i++)
-                           VelRdot[i] += aeroFrc[i] / AC->mass;
+                           VelRdot[i] += aeroFrc[i] / DSM->mass;
                      break;
                   }
                   default:
@@ -3209,27 +2972,22 @@ void updateNavTime(struct DateType *Time, const double dSeconds)
    }
 }
 
-void PropagateNav(struct SCType *const S, const long dSubStep, const long dStep)
+void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
+                  const long dSubStep, const long dStep)
 {
    double lerpAlphaState, AtmoDensity = 0.0;
 
    long i, j, k;
    enum navState Istate;
 
-   struct AcType *AC;
-   struct DSMType *DSM;
-   struct DSMNavType *Nav;
-
-   AC              = &S->AC;
-   DSM             = &S->DSM;
-   Nav             = &DSM->DsmNav;
-   lerpAlphaState  = Nav->refLerpAlpha;
-   const double DT = (dSubStep * Nav->subStepSize) + (dStep * Nav->DT);
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   lerpAlphaState         = Nav->refLerpAlpha;
+   const double DT        = (dSubStep * Nav->subStepSize) + (dStep * Nav->DT);
 
    GetM(AC, Nav, Nav->CRB, Nav->qbr, Nav->PosR, Nav->VelR, Nav->wbr);
    if (Nav->subStep == 0) {
       if (AeroActive) {
-         long orbCenter    = Orb[S->RefOrb].World;
+         long orbCenter    = DSM->refOrb->World;
          double worldWR[3] = {0.0};
          double VrelR[3] = {0.0}, PosN[3] = {0.0}, PosRWorld[3] = {0.0};
          for (i = 0; i < 3; i++)
@@ -3265,7 +3023,7 @@ void PropagateNav(struct SCType *const S, const long dSubStep, const long dStep)
          else
             AtmoDensity = 0.0;
       }
-      (*Nav->EOMJacobianFun)(S, &Nav->Date, Nav->CRB, Nav->qbr, Nav->PosR,
+      (*Nav->EOMJacobianFun)(AC, DSM, &Nav->Date, Nav->CRB, Nav->qbr, Nav->PosR,
                              Nav->VelR, Nav->wbr, Nav->whlH, AtmoDensity);
       for (i = 0; i < Nav->navDim; i++)
          for (j = 0; j < Nav->navDim; j++)
@@ -3351,10 +3109,10 @@ void PropagateNav(struct SCType *const S, const long dSubStep, const long dStep)
             whlH[i] = Limit(Nav->whlH[i] + whlHk[k - 1][i] * DTk[k],
                             -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
       }
-      configureRefFrame(S, dLerpAlpha, FALSE);
+      configureRefFrame(Nav, DSM->refOrb, dLerpAlpha, FALSE);
       getForceAndTorque(AC, Nav, CRB, whlH);
-      NavEOMs(S, &date, CRB, qbr, PosR, VelR, wbr, whlH, CRBk[k], qbrk[k],
-              PosRk[k], VelRk[k], wbrk[k], whlHk[k], S->RefOrb, AtmoDensity);
+      NavEOMs(AC, DSM, &date, CRB, qbr, PosR, VelR, wbr, whlH, CRBk[k], qbrk[k],
+              PosRk[k], VelRk[k], wbrk[k], whlHk[k], AtmoDensity);
    }
 
    for (Istate = INIT_STATE; Istate <= FIN_STATE; Istate++) {
@@ -3473,25 +3231,20 @@ void PropagateNav(struct SCType *const S, const long dSubStep, const long dStep)
                            -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
 
    Nav->refLerpAlpha = lerpAlphaState;
-   configureRefFrame(S, DT / Nav->DT, FALSE);
+   configureRefFrame(Nav, DSM->refOrb, DT / Nav->DT, FALSE);
 }
 
-void KalmanFilt(struct SCType *const S)
+void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 {
    long i, j;
-
-   struct AcType *AC;
-   struct DSMType *DSM;
    struct DSMNavType *Nav;
 
-   AC  = &S->AC;
-   DSM = &S->DSM;
    Nav = &DSM->DsmNav;
 
    // TODO: will maybe need to do something to preserve information if a new Nav
    // filter is called
    if (Nav->Init == FALSE)
-      configureRefFrame(S, 0.0, TRUE);
+      configureRefFrame(Nav, DSM->refOrb, 0.0, TRUE);
 
    // Accumulate information from measurements based upon batching method.
    Nav->subStep                     = 0;
@@ -3499,7 +3252,7 @@ void KalmanFilt(struct SCType *const S)
    if (measList->head == NULL) {
       // TODO: problems might occur if Nav->DT is not a whole number multiple of
       // Nav->subStepSize
-      PropagateNav(S, Nav->subStepMax, 0.0);
+      PropagateNav(AC, DSM, Nav->subStepMax, 0.0);
       Nav->step++;
       Nav->subStep = 0;
    }
@@ -3549,7 +3302,7 @@ void KalmanFilt(struct SCType *const S)
 #endif
             // TODO: investigate only prop once per Kalman filt call and use STM
             // and linearization to prop measurements through time
-            PropagateNav(S, dSubStep, dStep);
+            PropagateNav(AC, DSM, dSubStep, dStep);
             Nav->step    = measStep;
             Nav->subStep = measSubStep;
 #if REPORT_RESIDUALS == TRUE
@@ -3586,8 +3339,8 @@ void KalmanFilt(struct SCType *const S)
                dim = meas->errDim;
 
             double resid[dim];
-            measEstData  = (*meas->measFun)(S, meas->sensorNum);
-            measJacobian = (*meas->measJacobianFun)(S, meas->sensorNum);
+            measEstData  = (*meas->measFun)(AC, DSM, meas->sensorNum);
+            measJacobian = (*meas->measJacobianFun)(AC, DSM, meas->sensorNum);
 
             if (meas->type == STARTRACK_SENSOR) {
                double tmpq[4];
@@ -3715,14 +3468,14 @@ void KalmanFilt(struct SCType *const S)
          free(bigR);
       }
       if (Nav->subStep < Nav->subStepMax)
-         PropagateNav(S, Nav->subStepMax - Nav->subStep, 0.0);
+         PropagateNav(AC, DSM, Nav->subStepMax - Nav->subStep, 0.0);
 
       Nav->step++;
       Nav->subStep = 0;
    }
    Nav->Date = Nav->Date0;
    updateNavTime(&Nav->Date, Nav->step * Nav->DT);
-   configureRefFrame(S, 1.0 - Nav->refLerpAlpha, TRUE);
+   configureRefFrame(Nav, DSM->refOrb, 1.0 - Nav->refLerpAlpha, TRUE);
    for (i = 0; i < AC->Nwhl; i++)
       Nav->whlH[i] = AC->Whl[i].H;
 

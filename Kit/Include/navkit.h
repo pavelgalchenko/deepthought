@@ -53,65 +53,80 @@ double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
 /*--------------------------------------------------------------------*/
 /*                    Navigation Filter Functions                     */
 /*--------------------------------------------------------------------*/
-double **GetStateLinTForm(struct SCType *const S);
-void configureRefFrame(struct SCType *const S, const double dLerpAlpha,
+double **GetStateLinTForm(struct DSMNavType *const Nav);
+void configureRefFrame(struct DSMNavType *const Nav,
+                       const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset);
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
                        double const CRB[3][3], double const *whlH);
-void PropagateNav(struct SCType *const S, const long dSubStep,
-                  const long dStep);
-void KalmanFilt(struct SCType *const S);
+void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
+                  const long dSubStep, const long dStep);
+void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 
 /*--------------------------------------------------------------------*/
 /*                       Measurement Jacobians                        */
 /*--------------------------------------------------------------------*/
-double **gyroJacobianFun(struct SCType *const S, const long sensorNum);
-double **magJacobianFun(struct SCType *const S, const long sensorNum);
-double **cssJacobianFun(struct SCType *const S, const long sensorNum);
-double **fssJacobianFun(struct SCType *const S, const long sensorNum);
-double **startrackJacobianFun(struct SCType *const S, const long sensorNum);
-double **gpsJacobianFun(struct SCType *const S, const long sensorNum);
-double **accelJacobianFun(struct SCType *const S, const long sensorNum);
+double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                         const long sensorNum);
+double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long sensorNum);
+double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long sensorNum);
+double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long sensorNum);
+double **startrackJacobianFun(struct AcType *const AC,
+                              struct DSMType *const DSM, const long sensorNum);
+double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const long sensorNum);
+double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                          const long sensorNum);
 
-double *gyroFun(struct SCType *const S, const long sensorNum);
-double *magFun(struct SCType *const S, const long sensorNum);
-double *cssFun(struct SCType *const S, const long sensorNum);
-double *fssFun(struct SCType *const S, const long sensorNum);
-double *startrackFun(struct SCType *const S, const long sensorNum);
-double *gpsFun(struct SCType *const S, const long sensorNum);
-double *accelFun(struct SCType *const S, const long sensorNum);
+double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
+                const long sensorNum);
+double *magFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long sensorNum);
+double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long sensorNum);
+double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long sensorNum);
+double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
+                     const long sensorNum);
+double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
+               const long sensorNum);
+double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
+                 const long sensorNum);
 
 /*--------------------------------------------------------------------*/
 /*                          RIEKF functions                           */
 /*--------------------------------------------------------------------*/
 
-void eomRIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
-                         double const CRB[3][3], double const qbr[4],
-                         double const PosR[3], double const VelR[3],
-                         double const wbr[3], double const whlH[S->AC.Nwhl],
-                         const double AtmoDensity);
+void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                         const struct DateType *date, double const CRB[3][3],
+                         double const qbr[4], double const PosR[3],
+                         double const VelR[3], double const wbr[3],
+                         double const whlH[AC->Nwhl], const double AtmoDensity);
 void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
 /*                          LIEKF functions                           */
 /*--------------------------------------------------------------------*/
 
-void eomLIEKFJacobianFun(struct SCType *const S, const struct DateType *date,
-                         double const CRB[3][3], double const qbr[4],
-                         double const PosR[3], double const VelR[3],
-                         double const wbr[3], double const whlH[S->AC.Nwhl],
-                         const double AtmoDensity);
+void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                         const struct DateType *date, double const CRB[3][3],
+                         double const qbr[4], double const PosR[3],
+                         double const VelR[3], double const wbr[3],
+                         double const whlH[AC->Nwhl], const double AtmoDensity);
 void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
 /*                          MEKF functions                           */
 /*--------------------------------------------------------------------*/
 
-void eomMEKFJacobianFun(struct SCType *const S, const struct DateType *date,
-                        double const CRB[3][3], double const qbr[4],
-                        double const PosR[3], double const VelR[3],
-                        double const wbr[3], double const whlH[S->AC.Nwhl],
-                        const double AtmoDensity);
+void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
+                        const struct DateType *date, double const CRB[3][3],
+                        double const qbr[4], double const PosR[3],
+                        double const VelR[3], double const wbr[3],
+                        double const whlH[AC->Nwhl], const double AtmoDensity);
 void MEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /******************************************************************************/

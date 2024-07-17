@@ -972,6 +972,9 @@ void InitAC(struct SCType *S)
          }
          for (i = 0; i < 4; i++)
             AC->FSS[k].qb[i] = S->FSS[k].qb[i];
+         AC->FSS[k].H_Axis   = S->FSS[k].H_Axis;
+         AC->FSS[k].V_Axis   = S->FSS[k].V_Axis;
+         AC->FSS[k].BoreAxis = S->FSS[k].BoreAxis;
       }
    }
 
@@ -1941,7 +1944,7 @@ void FlightSoftWare(struct SCType *S)
    if (S->FswTag == DSM_FSW) {
       if (S->DSM.DsmNav.NavigationActive == TRUE)
          S->DSM.DsmNav.subStep++;
-      DsmSensorModule(S);
+      DsmSensorModule(&S->AC, &S->DSM);
    }
 
    S->FswSampleCounter++;

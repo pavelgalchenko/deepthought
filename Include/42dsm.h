@@ -27,6 +27,6 @@
 #include <stdlib.h>
 
 void DsmFSW(struct SCType *S);
-void DsmSensorModule(struct SCType *S);
+void DsmSensorModule(struct AcType *const AC, struct DSMType *const DSM);
 
 #endif /* __42DSM_H__ */

@@ -434,7 +434,7 @@ void DSM_NAV_StateReport(void)
          }
 
          long navDim       = Nav->navDim;
-         double **linTForm = GetStateLinTForm(&SC[Isc]);
+         double **linTForm = GetStateLinTForm(&SC[Isc].DSM.DsmNav);
 
          MxMTG(Nav->S, Nav->S, Nav->P, navDim, navDim, navDim);
          MxMG(linTForm, Nav->P, Nav->NxN, navDim, navDim, navDim);

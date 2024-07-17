@@ -247,7 +247,8 @@ struct DSMCtrlType {
    double CmdVelN[3]; // Commanded Velocity in the Inertial frame (N)
    double CmdVelR[3]; // Commanded Velocity in the Inertial frame (R)
 };
-
+struct DSMType;
+struct AcType;
 struct DSMMeasType {
    /*~ Parameters ~*/
    double time;
@@ -257,8 +258,9 @@ struct DSMMeasType {
 
    /*~ Internal Variables ~*/
    long sensorNum;
-   double *(*measFun)(struct SCType *const, const long);
-   double **(*measJacobianFun)(struct SCType *const, const long);
+   double *(*measFun)(struct AcType *const, struct DSMType *const, const long);
+   double **(*measJacobianFun)(struct AcType *const, struct DSMType *const,
+                               const long);
    enum sensorType type;
    int dim;
    int errDim;
@@ -287,13 +289,15 @@ struct DSMNavType {
    enum batchType batching;
 
    // These need to be figured out still
-   long refFrame;       // nav reference frame
-   long refOriType;     // nav reference origin type
-   long refOri;         // nav reference origin
-   double refPos[3];    // PosN of nav origin
-   double refVel[3];    // VelN of nav origin
-   double refCRN[3][3]; // rotation from body to nav reference frame
-   double refOmega[3];  // angular velocity of nav reference frame
+   long refFrame;   // nav reference frame
+   long refOriType; // nav reference origin type
+   void *refOriPtr; // pointer to object of nav reference origin, can be NULL,
+   // ACType, WorldType, or OrbitType
+   struct BodyType *refBodyPtr; // pointer to reference body, NULL if not used
+   double refPos[3];            // PosN of nav origin
+   double refVel[3];            // VelN of nav origin
+   double refCRN[3][3];         // rotation from body to nav reference frame
+   double refOmega[3];          // angular velocity of nav reference frame
    double refOmegaDot[3];
 
    double oldRefPos[3]; // PosN of nav origin
@@ -350,11 +354,10 @@ struct DSMNavType {
    double **STM;      // state transition matrix
    double **M;        // dynamics noise mapping matrix
    double *sqrQ;      // Diagonal elements of noise covariance
-   void (*EOMJacobianFun)(struct SCType *const, const struct DateType *date,
-                          double const CRB[3][3], double const qbr[4],
-                          double const PosR[3], double const VelR[3],
-                          double const wbr[3], double const *whlH,
-                          const double AtmoDensity);
+   void (*EOMJacobianFun)(struct AcType *const, struct DSMType *const,
+                          const struct DateType *, double const[3][3],
+                          double const[4], double const[3], double const[3],
+                          double const[3], double const[], const double);
    void (*updateLaw)(struct DSMNavType *const);
    // TODO: calculate the number of measurements per step and allocate an array
    // for measurements
@@ -433,6 +436,7 @@ struct DSMType {
    double bvb[3];
 
    /*~ Internal Variables ~*/
+   struct OrbitType *refOrb; // spacecraft's reference orbit
    long Init;
 
    /*~ Structures ~*/
