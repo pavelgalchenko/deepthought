@@ -291,6 +291,7 @@ struct DSMNavType {
    // These need to be figured out still
    long refFrame;   // nav reference frame
    long refOriType; // nav reference origin type
+   long refOriBody; // nav reference origin type
    void *refOriPtr; // pointer to object of nav reference origin, can be NULL,
    // ACType, WorldType, or OrbitType
    struct BodyType *refBodyPtr; // pointer to reference body, NULL if not used

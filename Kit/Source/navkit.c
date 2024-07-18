@@ -712,10 +712,10 @@ void getAeroForceAndTorque(struct DSMType *const DSM, double const CRB[3][3],
    for (int i = 0; i < 3; i++)
       VrelR[i] += VelR[i] + Nav->refVel[i];
 
-   double WindSpeed = 0, Coef1 = 0, VrelRHat[3] = {0.0};
-   WindSpeed = CopyUnitV(VrelR, VrelRHat);
-   Coef1     = -0.5 * AtmoDensity * WindSpeed * WindSpeed * DSM->mass /
-           Nav->ballisticCoef;
+   double VrelRHat[3] = {0.0};
+   double WindSpeed   = CopyUnitV(VrelR, VrelRHat);
+   double Coef1       = -0.5 * AtmoDensity * WindSpeed * WindSpeed * DSM->mass /
+                  Nav->ballisticCoef;
    for (int i = 0; i < 3; i++) {
       frcR[i] = Coef1 * VrelRHat[i];
       trq[i]  = 0.0;
@@ -2616,12 +2616,12 @@ void configureRefFrame(struct DSMNavType *const Nav,
       default: {
          // make sure if you do sc relative nav, you initialize that sc's nav
          // before you start this sc's
-         // TODO: make this right, see TARGET_BODY in FindDsmCmdVecN()
-         struct DSMType *dsmTarget = Nav->refOriPtr;
-         struct BodyType *bTarget  = Nav->refBodyPtr;
+         struct DSMType *TrgDSM = Nav->refOriPtr;
+         struct BodyType *TrgSB = Nav->refBodyPtr;
          for (i = 0; i < 3; i++) {
-            targetPosN[i] = dsmTarget->PosN[i] + bTarget->pn[i];
-            targetVelN[i] = dsmTarget->VelN[i] + bTarget->vn[i];
+            // TODO: pn is position of body origin relative to sc origin or cm??
+            targetPosN[i] = TrgDSM->PosN[i] + TrgSB[Nav->refOriBody].pn[i];
+            targetVelN[i] = TrgDSM->VelN[i] + TrgSB[Nav->refOriBody].vn[i];
          }
       } break;
    }

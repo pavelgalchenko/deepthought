@@ -234,6 +234,8 @@ void InitDSM(struct SCType *S)
    Nav->NxN        = NULL;
    Nav->NxN2       = NULL;
    Nav->whlH       = NULL;
+   Nav->refOriBody = 0;
+   Nav->refOriType = 0;
    Nav->refOriPtr  = NULL;
    Nav->refBodyPtr = NULL;
    for (int i = 0; i < 3; i++) {
@@ -247,7 +249,6 @@ void InitDSM(struct SCType *S)
       Nav->forceB[i]         = 0.0;
       Nav->torqueB[i]        = 0.0;
    }
-   Nav->ballisticCoef    = 0.0;
    Nav->reportConfigured = FALSE;
 }
 //------------------------------------------------------------------------------
@@ -1660,12 +1661,12 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       if (!strcmp(refOri, "OP")) {
          Nav->refOriType = ORI_OP;
+         Nav->refOriBody = 0;
          Nav->refOriPtr  = DSM->refOrb;
          Nav->refBodyPtr = NULL;
       }
       else if (!strncmp(refOri, "SC", 2)) {
-         long bodyNum = 0;
-         sscanf(refOri, "SC[%ld].B[%ld]", &Nav->refOriType, &bodyNum);
+         sscanf(refOri, "SC[%ld].B[%ld]", &Nav->refOriType, &Nav->refOriBody);
          if (Nav->refOriType >= Nsc) {
             printf("This mission only has %ld spacecraft, but spacecraft %ld "
                    "was attempted to be set as the navigation reference frame. "
@@ -1673,19 +1674,24 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
                    Nsc, Nav->refOriType);
             exit(EXIT_FAILURE);
          }
-         if (bodyNum >= SC[Nav->refOriType].Nb) {
+         if (Nav->refOriBody >= SC[Nav->refOriType].Nb) {
             printf("Spacecraft %ld only has %ld bodies, but the navigation "
                    "reference frame was attempted to be set as body %ld. "
                    "Exiting...\n",
-                   Nav->refOriType, SC[Nav->refOriType].Nb, bodyNum);
+                   Nav->refOriType, SC[Nav->refOriType].Nb, Nav->refOriBody);
             exit(EXIT_FAILURE);
          }
          // This is all to avoid calling SC[] directly in Nav
-         Nav->refOriPtr  = &SC[Nav->refOriType].DSM;
-         Nav->refBodyPtr = &SC[Nav->refOriType].B[bodyNum];
+         {
+            // TODO: do I need the Body array? for body 0 and this body
+            struct SCType *TrgS = &SC[Nav->refOriType];
+            Nav->refOriPtr      = &TrgS->DSM;
+            Nav->refBodyPtr     = TrgS->B;
+         }
       }
       else {
          Nav->refOriType = ORI_WORLD;
+         Nav->refOriBody = 0;
          long wID        = DecodeString(refOri);
          Nav->refOriPtr  = &World[wID];
          Nav->refBodyPtr = NULL;
@@ -2315,28 +2321,30 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
       } break;
       case TARGET_BODY: {
          struct DSMType *TrgDSM = NULL;
+         struct BodyType *TrgSB = NULL;
+         double pcmn[3]         = {0.0};
          {
             // Limit the scope where SC is accessed
-            // TODO: make this better
-            double CBb[3][3]      = {{0.0}};
-            double CbN[3][3]      = {{0.0}};
-            double pcmn[3]        = {0.0};
-            struct SCType *TrgS   = &SC[CV->TrgSC];
-            struct BodyType *TrgB = &TrgS->B[CV->TrgBody];
-            TrgDSM                = &TrgS->DSM;
-            MxMT(TrgS->B[0].CN, TrgB->CN, CBb);
-            MTxM(CBb, TrgDSM->CBN, CbN);
+            struct SCType *TrgS = &SC[CV->TrgSC];
+            TrgSB               = TrgS->B;
+            TrgDSM              = &TrgS->DSM;
+            // TODO: don't like accessing SCType::cm
             MTxV(TrgDSM->CBN, TrgS->cm, pcmn);
-            for (i = 0; i < 3; i++)
-               RelPosB[i] = CV->T[i] - TrgB->cm[i];
-            VxV(TrgB->wn, RelPosB, vb);
-            MTxV(CbN, CV->T, pn);
-            MTxV(CbN, vb, vn);
-            for (i = 0; i < 3; i++) {
-               pn[i] += TrgB->pn[i] - pcmn[i];
-               vn[i] += TrgB->vn[i];
-            }
          }
+         // TODO: make this better
+         double qBb[4] = {0.0}, qbN[4] = {0.0};
+         QxQT(TrgSB[0].qn, TrgSB[CV->TrgBody].qn, qBb);
+         QTxQ(qBb, TrgDSM->qbn, qbN);
+         for (i = 0; i < 3; i++)
+            RelPosB[i] = CV->T[i] - TrgSB[CV->TrgBody].cm[i];
+         VxV(TrgSB[CV->TrgBody].wn, RelPosB, vb);
+         QTxV(qbN, CV->T, pn);
+         QTxV(qbN, vb, vn);
+         for (i = 0; i < 3; i++) {
+            pn[i] += TrgSB[CV->TrgBody].pn[i] - pcmn[i];
+            vn[i] += TrgSB[CV->TrgBody].vn[i];
+         }
+
          if (TrgDSM->refOrb == RefOrb) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = TrgDSM->PosR[i] + pn[i] - DSM->PosR[i];
@@ -2466,27 +2474,36 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          }
          // TODO: don't use other sc truth
          double qbn[4] = {0.0}, wbn[3] = {0.0};
+         struct BodyType *TrgSB = NULL;
+         struct DSMType *TrgDSM = NULL;
+         {
+            // Limit scope where we need SCType
+            struct SCType *TrgS = &SC[Isc_Ref];
+            TrgSB               = TrgS->B;
+            TrgDSM              = &TrgS->DSM;
+         }
          if (frame_body != 0) {
             // get relative orientation of body to B[0] then apply this to
             // AC.qbn
             double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
-            QxQT(SC[Isc_Ref].B[frame_body].qn, SC[Isc_Ref].B[0].qn, qbB);
-            QxQ(qbB, SC[Isc_Ref].AC.qbn, qbn);
+            QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
+            QxQ(qbB, TrgDSM->qbn, qbn);
 
-            // get relative angular velocity of body to B[0], then apply this to
+            // get angular velocity of body relative to B[0], then apply this to
             // AC.wbn; all in B[frame_body] frame
-            QxV(qbB, SC[Isc_Ref].B[0].wn, wBnb);
-            QxV(qbB, SC[Isc_Ref].AC.wbn, wBnbAC);
+            QxV(qbB, TrgSB[0].wn, wBnb);
+            QxV(qbB, TrgDSM->wbn, wBnbAC);
             for (i = 0; i < 3; i++) {
-               wbn[i] = wBnbAC[i] + (SC[Isc_Ref].B[frame_body].wn[i] - wBnb[i]);
+               // TODO: double check what BodyType::wn actually is
+               wbn[i] = wBnbAC[i] + (TrgSB[frame_body].wn[i] - wBnb[i]);
             }
          }
          else {
             for (i = 0; i < 3; i++) {
-               qbn[i] = SC[Isc_Ref].AC.qbn[i];
-               wbn[i] = SC[Isc_Ref].AC.wbn[i];
+               qbn[i] = TrgDSM->qbn[i];
+               wbn[i] = TrgDSM->wbn[i];
             }
-            qbn[3] = SC[Isc_Ref].AC.qbn[3];
+            qbn[3] = TrgDSM->qbn[3];
          }
          QTxV(qbn, Cmd->Pos, CTRL->CmdPosR); // Convert SC# B to R Inertial
          QTxV(qbn, wbn, wcn);                // SC rotates wrt R
@@ -2519,12 +2536,17 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             exit(EXIT_FAILURE);
          }
          VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
-         // TODO: don't use other sc truth, other sc may not have DSM
+         struct BodyType *TrgSB = NULL;
+         struct DSMType *TrgDSM = NULL;
+         {
+            // Limit scope where we need SCType
+            struct SCType *TrgS = &SC[Isc_Ref];
+            TrgSB               = TrgS->B;
+            TrgDSM              = &TrgS->DSM;
+         }
          for (i = 0; i < 3; i++) {
-            CTRL->CmdPosR[i] +=
-                SC[Isc_Ref].PosR[i] + SC[Isc_Ref].B[origin_body].pn[i];
-            CTRL->CmdVelR[i] +=
-                SC[Isc_Ref].VelR[i] + SC[Isc_Ref].B[origin_body].vn[i];
+            CTRL->CmdPosR[i] += TrgDSM->PosR[i] + TrgSB[origin_body].pn[i];
+            CTRL->CmdVelR[i] += TrgDSM->VelR[i] + TrgSB[origin_body].vn[i];
          }
          goodOriginFrame = TRUE;
       }
@@ -2755,31 +2777,39 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          }
          // TODO: not truth of other body
          double qbn[4] = {0.0}, wbn[3] = {0.0};
+         struct BodyType *TrgSB = NULL;
+         struct DSMType *TrgDSM = NULL;
+         {
+            // Limit scope where we need SCType
+            struct SCType *TrgS = &SC[Isc_Ref];
+            TrgSB               = TrgS->B;
+            TrgDSM              = &TrgS->DSM;
+         }
          if (target_num != 0) {
             // get relative orientation of body to B[0] then apply this to
             // AC.qbn
             double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
-            QxQT(SC[Isc_Ref].B[target_num].qn, SC[Isc_Ref].B[0].qn, qbB);
-            QxQ(qbB, SC[Isc_Ref].AC.qbn, qbn);
+            QxQT(TrgSB[target_num].qn, TrgSB[0].qn, qbB);
+            QxQ(qbB, TrgDSM->qbn, qbn);
 
             // get relative angular velocity of body to B[0], then apply this to
             // AC.wbn; all in B[frame_body] frame
             // TODO: other SC.AC refs to SC.DSM?
-            QxV(qbB, SC[Isc_Ref].B[0].wn, wBnb);
-            QxV(qbB, SC[Isc_Ref].AC.wbn, wBnbAC);
+            QxV(qbB, TrgSB[0].wn, wBnb);
+            QxV(qbB, TrgDSM->wbn, wBnbAC);
             for (i = 0; i < 3; i++) {
-               wbn[i] = wBnbAC[i] + (SC[Isc_Ref].B[target_num].wn[i] - wBnb[i]);
+               wbn[i] = wBnbAC[i] + (TrgSB[target_num].wn[i] - wBnb[i]);
             }
          }
          else {
             for (i = 0; i < 3; i++) {
-               qbn[i] = SC[Isc_Ref].AC.qbn[i];
-               wbn[i] = SC[Isc_Ref].AC.wbn[i];
+               qbn[i] = TrgDSM->qbn[i];
+               wbn[i] = TrgDSM->wbn[i];
             }
-            qbn[3] = SC[Isc_Ref].AC.qbn[3];
+            qbn[3] = TrgDSM->qbn[3];
          }
          QxQT(DSM->qbn, qbn, Cmd->qbr);
-         QTxV(SC[Isc_Ref].AC.qbn, wbn, Cmd->wrn);
+         QTxV(TrgDSM->qbn, wbn, Cmd->wrn);
       }
       else if (Cmd->Method == PARM_DETUMBLE) {
          for (i = 0; i < 3; i++)
@@ -2821,6 +2851,11 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
             DSM->CBN[i][j] = AC->CBN[i][j];
          DSM->qbn[i] = AC->qbn[i];
          DSM->wbn[i] = AC->wbn[i];
+
+         DSM->svb[i] = AC->svb[i];
+         DSM->svn[i] = AC->svn[i];
+         DSM->bvb[i] = AC->bvb[i];
+         DSM->bvn[i] = AC->bvn[i];
       }
       DSM->qbn[3] = AC->qbn[3];
       return;
@@ -2968,7 +3003,7 @@ void TranslationCtrl(struct DSMType *DSM)
 
          double r_norm  = MAGV(DSM->PosN);
          double r_cntrl = MAGV(CTRL->CmdPosN);
-         double mu      = Orb[SC->RefOrb].mu;
+         double mu      = DSM->refOrb->mu;
 
          double dg[3];
          for (i = 0; i < 3; i++)
