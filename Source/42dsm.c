@@ -407,28 +407,32 @@ long GetLimits(struct DSMType *const DSM, struct fy_node *limsNode,
    long LimitsProcessed = FALSE;
 
    double *fMax = NULL, *vMax = NULL;
-   struct DSMCmdType *Cmd = &DSM->Cmd;
+   struct DSMCmdType *Cmd    = &DSM->Cmd;
+   enum ctrlType *controller = NULL;
    switch (controllerState) {
       case TRN_STATE:
-         fMax = Cmd->FrcB_max;
-         vMax = Cmd->vel_max;
+         controller = &Cmd->trn_controller;
+         fMax       = Cmd->FrcB_max;
+         vMax       = Cmd->vel_max;
          break;
       case ATT_STATE:
-         fMax = Cmd->Trq_max;
-         vMax = Cmd->w_max;
+         controller = &Cmd->att_controller;
+         fMax       = Cmd->Trq_max;
+         vMax       = Cmd->w_max;
          break;
       case FULL_STATE:
          // PLACEHOLDER
          break;
       case DMP_STATE:
-         fMax = Cmd->dTrq_max;
+         controller = &Cmd->dmp_controller;
+         fMax       = Cmd->dTrq_max;
          break;
       default:
          break;
    }
    if (assignYAMLToDoubleArray(3, fy_node_by_path_def(limsNode, "/Force Max"),
                                fMax) == 3 &&
-       (controllerState == H_DUMP_CNTRL ||
+       (*controller == H_DUMP_CNTRL ||
         assignYAMLToDoubleArray(
             3, fy_node_by_path_def(limsNode, "/Velocity Max"), vMax) == 3))
       LimitsProcessed = TRUE;
