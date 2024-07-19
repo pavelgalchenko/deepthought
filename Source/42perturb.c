@@ -451,12 +451,13 @@ void GravPertForce(struct SCType *S)
       SecCenter = O->Body2;
    }
 
+   struct WorldType *WCenter = &World[OrbCenter];
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
          for (j = 0; j < 3; j++)
-            ph[j] = World[Iw].PosH[j] - World[OrbCenter].PosH[j];
-         MxV(World[OrbCenter].CNH, ph, p);
+            ph[j] = World[Iw].PosH[j] - WCenter->PosH[j];
+         MxV(WCenter->CNH, ph, p);
          for (j = 0; j < 3; j++)
             s[j] = p[j] - S->PosN[j];
          ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcN);
@@ -466,8 +467,8 @@ void GravPertForce(struct SCType *S)
    }
    /* Moons of OrbCenter (but not SecCenter) */
    if (OrbCenter != SOL) {
-      for (Im = 0; Im < World[OrbCenter].Nsat; Im++) {
-         Iw = World[OrbCenter].Sat[Im];
+      for (Im = 0; Im < WCenter->Nsat; Im++) {
+         Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
             for (j = 0; j < 3; j++) {
                p[j] = World[Iw].eph.PosN[j];
@@ -486,7 +487,7 @@ void GravPertForce(struct SCType *S)
          for (j = 0; j < 3; j++)
             p[j] = World[Iw].eph.PosN[j];
          MTxV(World[SecCenter].CNH, p, ph);
-         MxV(World[OrbCenter].CNH, ph, p);
+         MxV(WCenter->CNH, ph, p);
          for (j = 0; j < 3; j++) {
             p[j] += World[SecCenter].eph.PosN[j];
             s[j]  = p[j] - S->PosN[j];

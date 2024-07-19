@@ -2713,8 +2713,9 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    O->J2Rw2bya = J2 * Rw * Rw / O->MeanSMA;
 
    E = atan2(sqrt(1.0 - O->ecc * O->ecc) * sin(O->anom), O->ecc + cos(O->anom));
-   O->MeanAnom  = E - O->ecc * sin(E);
-   O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
+   O->MeanAnom = E - O->ecc * sin(E);
+   O->MeanAnom0 =
+       fmod(O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch), TWOPI);
 }
 /* #ifdef __cplusplus
 ** }

@@ -659,10 +659,12 @@ void Legendre(const long N, const long M, const double x,
       sdP[n][0] = x * sdP[n - 1][0] + n * s * P[n - 1][0];
    }
 
+   double powsm  = s;
+   double powsm1 = 1.0;
    /* .. Then there are the rest... */
    for (m = 1; m <= M; m++) {
-      P[m][m]   = oddfact(2 * m - 1) * pow(s, m);
-      Ps[m][m]  = oddfact(2 * m - 1) * pow(s, m - 1);
+      P[m][m]   = oddfact(2 * m - 1) * powsm;
+      Ps[m][m]  = oddfact(2 * m - 1) * powsm1;
       sdP[m][m] = m * (x * Ps[m][m] - 2.0 * P[m][m - 1]);
       if (m < N) {
          P[m + 1][m]  = x * (2.0 * m + 1.0) * P[m][m];
@@ -677,8 +679,10 @@ void Legendre(const long N, const long M, const double x,
          Ps[n][m] = (x * (2.0 * n - 1.0) * Ps[n - 1][m] -
                      (n + m - 1.0) * Ps[n - 2][m]) /
                     (n - m);
-         sdP[n][m] = m * x * Ps[n][m] - (n + m) * (n - m + 1.0) * P[n][m - 1];
+         sdP[n][m] = m * x * Ps[n][m] - (n + m) * (n - m + 1) * P[n][m - 1];
       }
+      powsm1  = powsm;
+      powsm  *= s;
    }
 }
 /**********************************************************************/
@@ -1896,10 +1900,9 @@ void VecToLngLat(double A[3], double *lng, double *lat)
 /******************************************************************************/
 double WrapTo2Pi(double n)
 {
-   double OrbVar = n;
-   while (OrbVar >= TWOPI) {
-      OrbVar = OrbVar - TWOPI;
-   }
+   double OrbVar = fmod(n, TWOPI);
+   if (OrbVar < 0.0)
+      OrbVar += TWOPI;
    return (OrbVar);
 }
 /******************************************************************************/
