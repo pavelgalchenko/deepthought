@@ -727,7 +727,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    long AttPriCmdMode, AttSecCmdMode, AttCmdMode;
    long *cmdInd;
 
-   int state              = ATT_STATE;
+   enum ctrlState state   = ATT_STATE;
    struct DSMCmdType *Cmd = &DSM->Cmd;
 
    char subType[FIELDWIDTH + 1] = {};
@@ -1274,6 +1274,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
       char sensorName[1024]    = {0};
       fy_node_scanf(iterNode, "/Description %1023s", sensorName);
       long maxSensors = 0;
+      // the strcpys are here just for error reporting later
       switch (sensor) {
          case GPS_SENSOR:
             maxSensors = AC->Ngps;
@@ -1307,8 +1308,8 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             break;
       }
       if (sensorNum >= maxSensors) {
-         printf("Sensor Set %s has requested more %ss than "
-                "spacecraft SC_[%ld] has. Exiting...\n",
+         printf("Sensor Set %s has requested more %ss than spacecraft SC_[%ld] "
+                "has. Exiting...\n",
                 sensorSetName, sensorType, AC->ID);
          exit(EXIT_FAILURE);
       }
@@ -2127,17 +2128,13 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
 
    // Zero out all actuators first, so that they will be set nonzero only if
    // desired
-   for (i = 0; i < 3; i++)
-      AC->IdealFrc[i] = 0.0;
    if (AC->Nthr > 0) {
-      for (i = 0; i < AC->Nthr; i++)
-         AC->Thr[i].PulseWidthCmd = 0.0;
-      for (i = 0; i < AC->Nthr; i++)
+      for (i = 0; i < AC->Nthr; i++) {
+         AC->Thr[i].PulseWidthCmd  = 0.0;
          AC->Thr[i].ThrustLevelCmd = 0.0;
+      }
    }
 
-   for (i = 0; i < 3; i++)
-      AC->IdealTrq[i] = 0.0;
    if (AC->Nwhl > 0)
       for (i = 0; i < AC->Nwhl; i++)
          AC->Whl[i].Tcmd = 0.0;
@@ -2146,9 +2143,11 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
          AC->MTB[i].Mcmd = 0.0;
 
    for (i = 0; i < 3; i++) {
-      AC->Fcmd[i] = 0.0;
-      AC->Tcmd[i] = 0.0;
-      AC->Mcmd[i] = 0.0;
+      AC->IdealFrc[i] = 0.0;
+      AC->IdealTrq[i] = 0.0;
+      AC->Fcmd[i]     = 0.0;
+      AC->Tcmd[i]     = 0.0;
+      AC->Mcmd[i]     = 0.0;
    }
 
    // Translation
@@ -2290,9 +2289,11 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
             MTxV(TrgW->CNH, pn, ph);
             MTxV(TrgW->CNH, vn, vh);
             struct WorldType *W = &World[RefOrb->World];
+            MTxV(W->CNH, DSM->PosN, RelPosH);
+            MTxV(W->CNH, DSM->VelN, RelVelH);
             for (i = 0; i < 3; i++) {
-               RelPosH[i] = (TrgW->PosH[i] - W->PosH[i]) + ph[i] - DSM->PosN[i];
-               RelVelH[i] = (TrgW->VelH[i] - W->VelH[i]) + vh[i] - DSM->VelN[i];
+               RelPosH[i] = (TrgW->PosH[i] - W->PosH[i]) + (ph[i] - RelPosH[i]);
+               RelVelH[i] = (TrgW->VelH[i] - W->VelH[i]) + (vh[i] - RelVelH[i]);
             }
             MxV(W->CNH, RelPosH, RelPosN);
             MxV(W->CNH, RelVelH, RelVelN);
@@ -2318,11 +2319,15 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          else {
             struct WorldType *TrgW = &World[TrgDSM->refOrb->World];
             struct WorldType *W    = &World[RefOrb->World];
+            MTxV(TrgW->CNH, TrgDSM->PosN, RelPosH);
+            MTxV(TrgW->CNH, TrgDSM->VelN, RelVelH);
+            MTxV(TrgW->CNH, DSM->PosN, ph);
+            MTxV(TrgW->CNH, DSM->VelN, vh);
             for (i = 0; i < 3; i++) {
-               RelPosH[i] = (TrgW->PosH[i] - W->PosH[i]) +
-                            (TrgDSM->PosN[i] - DSM->PosN[i]);
-               RelVelH[i] = (TrgW->VelH[i] - W->VelH[i]) +
-                            (TrgDSM->VelN[i] - DSM->VelN[i]);
+               RelPosH[i] -= ph[i];
+               RelVelH[i] -= vh[i];
+               RelPosH[i] += (TrgW->PosH[i] - W->PosH[i]);
+               RelVelH[i] += (TrgW->VelH[i] - W->VelH[i]);
             }
             MxV(W->CNH, RelPosH, RelPosN);
             MxV(W->CNH, RelVelH, RelVelN);
@@ -2369,15 +2374,21 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
             }
          }
          else {
-            struct WorldType *TrgW = &World[TrgDSM->refOrb->World];
-            MTxV(TrgW->CNH, pn, ph);
-            MTxV(TrgW->CNH, vn, vh);
-            struct WorldType *W = &World[RefOrb->World];
             for (i = 0; i < 3; i++) {
-               RelPosH[i] = (TrgW->PosH[i] - W->PosH[i]) + ph[i] +
-                            (TrgDSM->PosN[i] - DSM->PosN[i]);
-               RelVelH[i] = (TrgW->VelH[i] - W->VelH[i]) + vh[i] +
-                            (TrgDSM->VelN[i] - DSM->VelN[i]);
+               pn[i] += TrgDSM->PosN[i];
+               vn[i] += TrgDSM->VelN[i];
+            }
+            struct WorldType *TrgW = &World[TrgDSM->refOrb->World];
+            MTxV(TrgW->CNH, pn, RelPosH);
+            MTxV(TrgW->CNH, vn, RelVelH);
+            struct WorldType *W = &World[RefOrb->World];
+            MTxV(W->CNH, DSM->PosN, ph);
+            MTxV(W->CNH, DSM->VelN, ph);
+            for (i = 0; i < 3; i++) {
+               RelPosH[i] -= ph[i];
+               RelVelH[i] -= vh[i];
+               RelPosH[i] += (TrgW->PosH[i] - W->PosH[i]);
+               RelVelH[i] += (TrgW->VelH[i] - W->VelH[i]);
             }
             MxV(W->CNH, RelPosH, RelPosN);
             MxV(W->CNH, RelVelH, RelVelN);
@@ -2799,18 +2810,16 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          if (target_num != 0) {
             // get relative orientation of body to B[0] then apply this to
             // AC.qbn
-            double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
+            double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbDSM[3] = {0.0};
             QxQT(TrgSB[target_num].qn, TrgSB[0].qn, qbB);
             QxQ(qbB, TrgDSM->qbn, qbn);
 
             // get relative angular velocity of body to B[0], then apply this to
             // AC.wbn; all in B[frame_body] frame
-            // TODO: other SC.AC refs to SC.DSM?
             QxV(qbB, TrgSB[0].wn, wBnb);
-            QxV(qbB, TrgDSM->wbn, wBnbAC);
-            for (i = 0; i < 3; i++) {
-               wbn[i] = wBnbAC[i] + (TrgSB[target_num].wn[i] - wBnb[i]);
-            }
+            QxV(qbB, TrgDSM->wbn, wBnbDSM);
+            for (i = 0; i < 3; i++)
+               wbn[i] = wBnbDSM[i] + (TrgSB[target_num].wn[i] - wBnb[i]);
          }
          else {
             for (i = 0; i < 3; i++) {
@@ -3066,22 +3075,22 @@ void TranslationCtrl(struct DSMType *DSM)
                  CTRL->FcmdN); // Converting back to Inertial from body frame
          }
          else if (Cmd->ManeuverMode == SMOOTHED) {
-            double sharp =
-                -2 * atanh(-.99998) /
-                Cmd->BurnTime; // .99998 corresponds to capturing 99.999%
-                               // of the burn since tanh has an asymptote
+            const double coef =
+                -2 * atanh(-0.99998); // .99998 corresponds to capturing 99.999%
+                                      // of the burn since tanh has an asymptote
+            double sharp = coef / Cmd->BurnTime;
             double t_mid = Cmd->BurnStopTime - Cmd->BurnTime / 2.0;
             double t_since_mid =
                 SimTime - t_mid; // Time elapsed since middle of burn
+            double coshSharp  = cosh(sharp * t_since_mid);
+            double coshSharp2 = coshSharp * coshSharp;
 
             if (!strcmp(Cmd->RefFrame, "N")) {
                for (i = 0; i < 3; i++) {
-                  CTRL->FcmdN[i] = DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) /
-                                   ((cosh(sharp * t_since_mid)) *
-                                    (cosh(sharp * t_since_mid)));
-                  CTRL->FcmdN[i] = DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) /
-                                   ((cosh(sharp * t_since_mid)) *
-                                    (cosh(sharp * t_since_mid)));
+                  CTRL->FcmdN[i] =
+                      DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) / coshSharp2;
+                  CTRL->FcmdN[i] =
+                      DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) / coshSharp2;
                }
                QxV(DSM->qbn, CTRL->FcmdN,
                    CTRL->FcmdB); // Converting from Inertial to body frame for
@@ -3089,9 +3098,8 @@ void TranslationCtrl(struct DSMType *DSM)
             }
             else if (!strcmp(Cmd->RefFrame, "B")) {
                for (i = 0; i < 3; i++) {
-                  CTRL->FcmdB[i] = DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) /
-                                   ((cosh(sharp * t_since_mid)) *
-                                    (cosh(sharp * t_since_mid)));
+                  CTRL->FcmdB[i] =
+                      DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) / coshSharp2;
                }
             }
             for (i = 0; i < 3; i++) {
@@ -3219,9 +3227,7 @@ void MomentumDumpCtrl(struct DSMType *DSM, double TotalWhlH[3])
    Cmd  = &DSM->Cmd;
    CTRL = &DSM->DsmCtrl;
 
-   for (i = 0; i < 3; i++)
-      whlHNorm += TotalWhlH[i] * TotalWhlH[i];
-   whlHNorm = sqrt(whlHNorm);
+   whlHNorm = MAGV(TotalWhlH);
 
    if (Cmd->H_DumpActive == FALSE ||
        ((CTRL->H_DumpActive == TRUE) && (whlHNorm < Cmd->H_DumpLims[0])))

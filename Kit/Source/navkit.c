@@ -793,17 +793,18 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
             B[0][i] = -gyro->Axis[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
          break;
-      case RIEKF_NAV:
-         MxV(Nav->CRB, tmp, gyro->Axis);
+      case RIEKF_NAV: {
+         double axisR[3] = {0.0};
+         MxV(Nav->CRB, gyro->Axis, axisR);
          for (i = 0; i < 3; i++)
-            B[0][i] = -gyro->Axis[i] * R2D;
+            B[0][i] = -axisR[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
 
-         VxV(Nav->refOmega, gyro->Axis, tmp2);
+         VxV(Nav->refOmega, axisR, tmp2);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp2[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
-         break;
+      } break;
       case MEKF_NAV:
          for (i = 0; i < 3; i++)
             B[0][i] = -gyro->Axis[i] * R2D;
@@ -854,14 +855,15 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
             B[0][i] = tmp[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
-      case RIEKF_NAV:
+      case RIEKF_NAV: {
+         double axisR[3] = {0.0};
          MxV(Nav->refCRN, AC->bvn, tmp2);
-         MxV(Nav->CRB, tmp, mag->Axis);
-         VxV(tmp2, mag->Axis, tmp);
+         MxV(Nav->CRB, mag->Axis, axisR);
+         VxV(tmp2, axisR, tmp);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
-         break;
+      } break;
       case MEKF_NAV:
          MxV(Nav->refCRN, AC->bvn, tmp);
          QxV(Nav->qbr, tmp, tmp2);
@@ -2593,17 +2595,13 @@ void configureRefFrame(struct DSMNavType *const Nav,
    switch (Nav->refOriType) {
       case ORI_WORLD: {
          struct WorldType const *W = Nav->refOriPtr;
-         if (&World[refOrb->World] != W) {
+         if (&World[refOrb->World] != Nav->refOriPtr) {
             // TODO: No reason can't do this, just WIP
             printf(
                 "Navigation reference world %19s is not equal to the central "
                 "body of the SC's orbit, %19s. Exiting...\n",
                 W->Name, World[refOrb->World].Name);
             exit(EXIT_FAILURE);
-         }
-         for (i = 0; i < 3; i++) {
-            targetPosN[i] = 0.0;
-            targetVelN[i] = 0.0;
          }
       } break;
       case ORI_OP: {
