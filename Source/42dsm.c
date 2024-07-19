@@ -1045,7 +1045,12 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
    DSM->CmdCnt = 0;
    DSM->CmdNum = 0;
    // TODO: preload and presort the command node pointers
-
+   DSM->CmdCnt      = 0;
+   DSM->CmdNextTime = 0.0;
+   if (DSM->CmdTime_f != NULL) {
+      free(DSM->CmdTime_f);
+      DSM->CmdTime_f = NULL;
+   }
    WHILE_FY_ITER(dsmCmds, iterNode)
    {
       long scInd = 0;
@@ -1053,29 +1058,31 @@ void DsmCmdInterpreterMrk1(struct SCType *S, struct fy_node *dsmCmds)
          printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-      if (scInd == S->ID) {
+      if (scInd == DSM->ID) {
          scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
-         break;
-      }
-   }
-   if (scCmdsNode == NULL) {
-      DSM->CmdTime_f   = NULL;
-      DSM->CmdNextTime = 0.0;
-   }
-   else {
-      DSM->CmdCnt    = fy_node_sequence_item_count(scCmdsNode);
-      DSM->CmdTime_f = calloc(DSM->CmdCnt, sizeof(double));
-      long i         = 0;
-      iterNode       = NULL;
-      WHILE_FY_ITER(scCmdsNode, iterNode)
-      {
-         if (!fy_node_scanf(iterNode, "/Time %lf", &DSM->CmdTime_f[i++])) {
-            printf("Bad DSM command time. Exiting...\n");
+         if (scCmdsNode == NULL) {
+            printf("Could not find Command Sequence for SC[%li]. Exiting...\n",
+                   DSM->ID);
             exit(EXIT_FAILURE);
          }
+         long i       = DSM->CmdCnt;
+         DSM->CmdCnt += fy_node_sequence_item_count(scCmdsNode);
+         if (DSM->CmdCnt != i) {
+            DSM->CmdTime_f =
+                realloc(DSM->CmdTime_f, DSM->CmdCnt * sizeof(double));
+            struct fy_node *cmdIterNode = NULL;
+            WHILE_FY_ITER(scCmdsNode, cmdIterNode)
+            {
+               if (!fy_node_scanf(cmdIterNode, "/Time %lf",
+                                  &DSM->CmdTime_f[i++])) {
+                  printf("Bad DSM command time. Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
+            }
+            qsort(DSM->CmdTime_f, DSM->CmdCnt, sizeof(double), &compare);
+            DSM->CmdNextTime = DSM->CmdTime_f[0];
+         }
       }
-      qsort(DSM->CmdTime_f, DSM->CmdCnt, sizeof(double), compare);
-      DSM->CmdNextTime = DSM->CmdTime_f[0];
    }
 }
 //--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
