@@ -5138,21 +5138,11 @@ long LoadSpiceEphems(double JS)
    double light_time;
    double ang[3];
 
-   double dim = 3;
-
-   double CWH[3][3], CNJ[3][3];
+   double CNJ[3][3];
    double GMST;
    double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
 
    A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
-
-   /* .. Earth rotation is a special case - on which World[i].CNH, CWN depend!
-    */
-   GMST                   = JD2GMST(UTC.JulDay);
-   World[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
    C2Q(World[EARTH].CWN, World[EARTH].qwn);
 
    // Read all planets
@@ -5186,9 +5176,11 @@ long LoadSpiceEphems(double JS)
 
          m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
 
-         MxM(CNJ, World[EARTH].CNH, World[i].CNH);
-         SimpRot(ZAxis, ang[2], World[Iw].CWN);
-         A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
+         SimpRot(ZAxis, ang[2], World[Iw].CWN); 
+         C2Q(World[Iw].CWN, World[Iw].qwn);
+         World[Iw].PriMerAng = ang[2];
       }
    }
 
@@ -5217,7 +5209,7 @@ long LoadSpiceEphems(double JS)
 
                World[Iw].eph.VelN[i] =
                    Nstate[i + 3]; // Assign inertial velocity (m/s)
-               World[Iw].VelH[i] = Nstate[i + 3] * 1e3;
+               World[Iw].VelH[i] = Hstate[i + 3] * 1e3;
             }
 
             char frame_name[25] = "IAU_";
@@ -5228,9 +5220,10 @@ long LoadSpiceEphems(double JS)
 
             m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
 
-            MxM(CNJ, World[EARTH].CNH, World[i].CNH);
+            MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+            C2Q(World[Iw].CNH, World[Iw].qnh);
             SimpRot(ZAxis, ang[2], World[Iw].CWN);
-            A2C(312, ang[0], ang[1], 0.0, World[Iw].CNH);
+            C2Q(World[Iw].CWN, World[Iw].qwn);
          }
       }
    }

@@ -1,7 +1,7 @@
 <<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
 ************************** Simulation Control **************************
 FAST                          !  Time Mode (FAST, REAL, EXTERNAL, or NOS3)
-777600  1.0                   !  Sim Duration, Step Size [sec]
+77760  1.0                   !  Sim Duration, Step Size [sec]
 60                            !  File Output Interval [sec]
 0                             !  RNG Seed
 TRUE                          !  Graphics Front End?
@@ -51,7 +51,7 @@ FALSE                         !  CFD Slosh Forces and Torques
 FALSE                         !  Albedo Effect on CSS Measurements
 FALSE                         !  Output Environmental Torques to Files
 ********************* Celestial Bodies of Interest *********************
-SPICE                     !  Ephem Option (MEAN, DE430, DE440)
+SPICE                          !  Ephem Option (MEAN, DE430, DE440)
 FALSE                         !  Mercury
 FALSE                         !  Venus
 FALSE                         !  Earth and Luna
