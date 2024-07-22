@@ -195,6 +195,9 @@ struct DSMType {
 
    /*~ Inputs ~*/
    double Time; /* Time since J2000 [[sec]] */
+   double DT;
+   double mass;
+   double MOI[3][3];
    long Mode;
 
    /*~ Outputs ~*/
@@ -205,6 +208,8 @@ struct DSMType {
    double FcmdB[3]; // Force Command in SC B Frame
    double VelR[3];  // Velocity in R Frame
    double PosR[3];  // Position in R Frame
+   double VelN[3];  // Velocity in N Frame
+   double PosN[3];  // Position in N Frame
 
    double therr[3]; // Angular Position Error
    double werr[3];  // Angular Velocity Error
@@ -222,15 +227,22 @@ struct DSMType {
    double IdealTrq[3]; // Ideal Torque
    double IdealFrc[3]; // Ideal Force
    double wbn[3];      // Angular Velocity in the SC Body Frame
-   double qbn[4];      // Quarternion from B to N
+   double qbn[4];      // Quarternion from N to B
+   double CBN[3][3];   // Rotation Matrix from N to B
 
-   double *CmdTime_f;
+   struct fy_node **CmdArray;
    long CmdNum;
    long CmdInit;
    long CmdCnt;
    double CmdNextTime;
 
+   double svn[3];
+   double svb[3];
+   double bvn[3];
+   double bvb[3];
+
    /*~ Internal Variables ~*/
+   struct OrbitType *refOrb; // spacecraft's reference orbit
    long Init;
 
    /*~ Structures ~*/
