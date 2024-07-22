@@ -5138,12 +5138,10 @@ long LoadSpiceEphems(double JS)
    double light_time;
    double ang[3];
 
-   double CNJ[3][3];
-   double GMST;
-   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
+   double CNJ[3][3], CRJ[3][3];
 
    A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
-   C2Q(World[EARTH].CWN, World[EARTH].qwn);
+   C2Q(World[EARTH].CNH, World[EARTH].qnh);
 
    // Read all planets
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
@@ -5172,13 +5170,15 @@ long LoadSpiceEphems(double JS)
          strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
          pxform_c("J2000", frame_name, JS,
-                  CNJ); // matrix from J2000 (ICRF) -> body fixed
+                     CRJ); // matrix from J2000 (ICRF) -> body fixed
 
-         m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+         m2eul_c(CRJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
 
+         A2C(312, ang[0], ang[1], 0.0, CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
          C2Q(World[Iw].CNH, World[Iw].qnh);
-         SimpRot(ZAxis, ang[2], World[Iw].CWN); 
+         
+         SimpRot(ZAxis, ang[2], World[Iw].CWN);
          C2Q(World[Iw].CWN, World[Iw].qwn);
          World[Iw].PriMerAng = ang[2];
       }
@@ -5216,14 +5216,17 @@ long LoadSpiceEphems(double JS)
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
             pxform_c("J2000", frame_name, JS,
-                     CNJ); // matrix from J2000 (ICRF) -> body fixed
+                     CRJ); // matrix from J2000 (ICRF) -> body fixed
 
-            m2eul_c(CNJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+            m2eul_c(CRJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
 
+            A2C(312, ang[0], ang[1], 0.0, CNJ);
             MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
             C2Q(World[Iw].CNH, World[Iw].qnh);
+
             SimpRot(ZAxis, ang[2], World[Iw].CWN);
             C2Q(World[Iw].CWN, World[Iw].qwn);
+            World[Iw].PriMerAng = ang[2];
          }
       }
    }

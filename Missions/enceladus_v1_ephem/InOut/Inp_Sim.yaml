@@ -11,7 +11,7 @@ Simulation Control:
   #   Enable Graphics: [[true/false]]
   #   Command File:
   Mode: FAST
-  Duration: 777600.0
+  Duration: 77760.0
   Step Size: 1.0
   File Interval: 60.0
   RNG Seed: 0
