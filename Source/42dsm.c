@@ -191,6 +191,7 @@ void InitDSM(struct SCType *S)
    /* Controllers */
    DSM->DsmCtrl.Init         = 1;
    DSM->DsmCtrl.H_DumpActive = FALSE;
+   DSM->CmdArray             = NULL;
 
    Cmd->TranslationCtrlActive = FALSE;
    Cmd->AttitudeCtrlActive    = FALSE;
@@ -1091,16 +1092,6 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
 
    return (ActuatorCmdProcessed);
 }
-// the compare function for double values
-static int compare(const void *a, const void *b)
-{
-   if (*(double *)a > *(double *)b)
-      return 1;
-   else if (*(double *)a < *(double *)b)
-      return -1;
-   else
-      return 0;
-}
 //--------------------------------- STATE NAMES --------------------------------
 enum navState GetStateValue(const char *string)
 {
@@ -1688,7 +1679,6 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          }
          // This is all to avoid calling SC[] directly in Nav
          {
-            // TODO: do I need the Body array? for body 0 and this body
             struct SCType *TrgS = &SC[Nav->refOriType];
             Nav->refOriPtr      = &TrgS->DSM;
             Nav->refBodyPtr     = TrgS->B;
@@ -1881,19 +1871,31 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
    return (NavigationCmdProcessed);
 }
+// the compare function for sorting command time array
+static int compareCmdNodes(const void *a, const void *b)
+{
+   double timeA = 0.0, timeB = 0.0;
+   fy_node_scanf(*((struct fy_node **)a), "/Time %lf", &timeA);
+   fy_node_scanf(*((struct fy_node **)b), "/Time %lf", &timeB);
+   if (timeA > timeB)
+      return 1;
+   else if (timeA < timeB)
+      return -1;
+   else
+      return 0;
+}
 //------------------------ INTERPRETER (FIRST ITERATION) -----------------------
 void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
 {
    struct fy_node *iterNode = NULL, *scCmdsNode = NULL;
 
-   DSM->CmdCnt = 0;
-   DSM->CmdNum = 0;
-   // TODO: preload and presort the command node pointers
+   DSM->CmdCnt      = 0;
+   DSM->CmdNum      = 0;
    DSM->CmdCnt      = 0;
    DSM->CmdNextTime = 0.0;
-   if (DSM->CmdTime_f != NULL) {
-      free(DSM->CmdTime_f);
-      DSM->CmdTime_f = NULL;
+   if (DSM->CmdArray != NULL) {
+      free(DSM->CmdArray);
+      DSM->CmdArray = NULL;
    }
    WHILE_FY_ITER(dsmCmds, iterNode)
    {
@@ -1912,57 +1914,28 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
          long i       = DSM->CmdCnt;
          DSM->CmdCnt += fy_node_sequence_item_count(scCmdsNode);
          if (DSM->CmdCnt != i) {
-            DSM->CmdTime_f =
-                realloc(DSM->CmdTime_f, DSM->CmdCnt * sizeof(double));
+            DSM->CmdArray =
+                realloc(DSM->CmdArray, DSM->CmdCnt * sizeof(struct fy_node *));
             struct fy_node *cmdIterNode = NULL;
             WHILE_FY_ITER(scCmdsNode, cmdIterNode)
             {
-               if (!fy_node_scanf(cmdIterNode, "/Time %lf",
-                                  &DSM->CmdTime_f[i++])) {
-                  printf("Bad DSM command time. Exiting...\n");
-                  exit(EXIT_FAILURE);
-               }
+               DSM->CmdArray[i++] = cmdIterNode;
             }
-            qsort(DSM->CmdTime_f, DSM->CmdCnt, sizeof(double), &compare);
-            DSM->CmdNextTime = DSM->CmdTime_f[0];
+            fy_node_scanf(DSM->CmdArray[0], "/Time %lf", &DSM->CmdNextTime);
+            qsort(DSM->CmdArray, DSM->CmdCnt, sizeof(struct fy_node *),
+                  &compareCmdNodes);
+            fy_node_scanf(DSM->CmdArray[0], "/Time %lf", &DSM->CmdNextTime);
          }
       }
    }
 }
 //--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
 void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
-                           struct fy_node *dsmRoot, struct fy_node *dsmCmds)
+                           struct fy_node *dsmRoot)
 {
-   struct DSMCmdType *Cmd;
-   struct fy_node *iterNode = NULL, *scCmdsNode = NULL, *cmdsNode = NULL;
-
-   Cmd = &DSM->Cmd;
-
-   WHILE_FY_ITER(dsmCmds, iterNode)
-   {
-      long scInd = 0;
-      if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
-         printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
-         exit(EXIT_FAILURE);
-      }
-      if (scInd == DSM->ID) {
-         scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
-         break;
-      }
-   }
-   iterNode = NULL;
-   WHILE_FY_ITER(scCmdsNode, iterNode)
-   {
-      double cmdTime = 0.0;
-      if (!fy_node_scanf(iterNode, "/Time %lf", &cmdTime)) {
-         printf("Bad DSM command time. Exiting...\n");
-         exit(EXIT_FAILURE);
-      }
-      if (cmdTime == DSM->CmdNextTime) {
-         cmdsNode = fy_node_by_path_def(iterNode, "/Commands");
-         break;
-      }
-   }
+   struct DSMCmdType *Cmd = &DSM->Cmd;
+   struct fy_node *cmdsNode =
+       fy_node_by_path_def(DSM->CmdArray[DSM->CmdNum], "/Commands");
 
    if (cmdsNode == NULL) {
       printf("Could not find command for SC[%ld] at time %lf. "
@@ -1971,7 +1944,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
       exit(EXIT_FAILURE);
    }
 
-   iterNode = NULL;
+   struct fy_node *iterNode = NULL;
    WHILE_FY_ITER(cmdsNode, iterNode)
    {
       char typeToken[FIELDWIDTH + 1] = {}, subType[FIELDWIDTH + 1] = {};
@@ -3298,10 +3271,11 @@ void DsmFSW(struct SCType *S)
    }
 
    if (DSM->CmdNum < DSM->CmdCnt && SimTime >= DSM->CmdNextTime) {
-      DsmCmdInterpreterMrk2(AC, DSM, dsmRoot, dsmCmds);
+      DsmCmdInterpreterMrk2(AC, DSM, dsmRoot);
       DSM->CmdNum++;
       if (DSM->CmdNum < DSM->CmdCnt)
-         DSM->CmdNextTime = DSM->CmdTime_f[DSM->CmdNum];
+         fy_node_scanf(DSM->CmdArray[DSM->CmdNum], "/Time %lf",
+                       &DSM->CmdNextTime);
    }
 
    // Generate Data From Sensors

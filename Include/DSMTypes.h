@@ -425,7 +425,7 @@ struct DSMType {
    double qbn[4];      // Quarternion from N to B
    double CBN[3][3];   // Rotation Matrix from N to B
 
-   double *CmdTime_f;
+   struct fy_node **CmdArray;
    long CmdNum;
    long CmdInit;
    long CmdCnt;

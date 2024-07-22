@@ -1694,8 +1694,8 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++) {
-                              dAeroFrcdVRel[i][j] /= DSM->mass;
-                              tmpAssign[i][j]      = dAeroFrcdVRel[i][j];
+                              // dAeroFrcdVRel[i][j] /= DSM->mass;
+                              tmpAssign[i][j] = dAeroFrcdVRel[i][j];
                            }
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
                                   3);
@@ -2093,9 +2093,9 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      subMatAdd(Nav->jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      if (AeroActive) {
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              dAeroFrcdVRel[i][j] /= DSM->mass;
+                        // for (i = 0; i < 3; i++)
+                        //    for (j = 0; j < 3; j++)
+                        //       dAeroFrcdVRel[i][j] /= DSM->mass;
                         AdjointT(CRB, dAeroFrcdVRel, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
@@ -2400,8 +2400,8 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++) {
-                              dAeroFrcdVRel[i][j] /= DSM->mass;
-                              tmpAssign[i][j]      = dAeroFrcdVRel[i][j];
+                              // dAeroFrcdVRel[i][j] /= DSM->mass;
+                              tmpAssign[i][j] = dAeroFrcdVRel[i][j];
                            }
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
                                   3);
@@ -2907,13 +2907,12 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
 
                      if (AeroActive)
                         for (i = 0; i < 3; i++)
-                           VelRdot[i] += aeroFrc[i] / DSM->mass;
+                           VelRdot[i] += aeroFrc[i]; /// DSM->mass;
                      break;
                   }
                   default:
                      printf("Orbit types other than CENTRAL are still in "
-                            "development for "
-                            "filtering. Exiting...\n");
+                            "development for filtering. Exiting...\n");
                      exit(EXIT_FAILURE);
                      break;
                }
