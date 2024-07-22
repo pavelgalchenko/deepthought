@@ -27,6 +27,7 @@
 #include "42types.h"
 #include "dcmkit.h"
 #include "docoptkit.h"
+#include "dsmkit.h"
 #include "envkit.h"
 #include "fswkit.h"
 #include "geomkit.h"

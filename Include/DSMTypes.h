@@ -15,7 +15,7 @@
 #define __DSMTYPES_H__
 
 // Controller Type Definitions
-enum ctrlType {
+enum CtrlType {
    PID_CNTRL = 0,   // Translational and Rotational
    LYA_ATT_CNTRL,   // Attitude
    LYA_2BODY_CNTRL, // 2 Body Relative Orbit Control
@@ -23,7 +23,7 @@ enum ctrlType {
 };
 
 // Controller State Definitions
-enum ctrlState {
+enum CtrlState {
    TRN_STATE = 0, // Translational
    ATT_STATE,     // Attitude
    FULL_STATE,    // 6DOF controller, currently unused
@@ -31,18 +31,39 @@ enum ctrlState {
 };
 
 // Manuever Type Definitions
-enum maneuverType {
+enum ManeuverType {
    INACTIVE = -1,
    CONSTANT,
    SMOOTHED,
 };
 
 // Actuator Type Definitions
-enum actuatorType {
+enum ActuatorType {
    WHL_TYPE = 0,
    THR_TYPE,
    MTB_TYPE,
 };
+
+// TODO: see about merging ROTMAT_STATE and QUAT_STATE
+//  states to filter
+enum States {
+   NULL_STATE = -2,
+   ATTITUDE_STATE,
+   TIME_STATE,
+   CBN_STATE,
+   QBN_STATE,
+   WBN_STATE,
+   POSN_STATE,
+   POSR_STATE,
+   VELN_STATE,
+   VELR_STATE,
+   // bias filtering???
+   // MOI filtering???
+   // actuation filtering???
+};
+// Update these to be the zeroth and last items in navState
+#define INIT_STATE TIME_STATE
+#define FIN_STATE  VELR_STATE
 
 /*
 ** #ifdef __cplusplus
@@ -124,10 +145,10 @@ struct DSMCmdType {
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
-   enum ctrlType trn_controller;
-   enum ctrlType att_controller;
-   enum ctrlType dmp_controller;
-   enum maneuverType ManeuverMode;
+   enum CtrlType trn_controller;
+   enum CtrlType att_controller;
+   enum CtrlType dmp_controller;
+   enum ManeuverType ManeuverMode;
    char AttRefScID[6];
    char H_DumpGain[20];
    char H_DumpMode[20];
@@ -136,7 +157,7 @@ struct DSMCmdType {
    double BurnTime;
    double TrgVelR[3];
    double BurnStopTime;
-   enum actuatorType ActTypes[100];
+   enum ActuatorType ActTypes[100];
    int ActInds[100];
    int ActNumCmds;
    double ActDuties[100];
@@ -187,29 +208,43 @@ struct DSMCtrlType {
    double CmdVelR[3]; // Commanded Velocity in the Inertial frame (R)
 };
 
-struct DSMType {
+struct DSMStateType {
    /*~ Parameters ~*/
    long ID; /* Spacecraft ID */
-   long Nb;
-   long DsmTag; // Tag to designate DSM fsw modes
 
    /*~ Inputs ~*/
    double Time; /* Time since J2000 [[sec]] */
+
+   /*~ Outputs ~*/
+   double VelR[3];   // Velocity in R Frame
+   double PosR[3];   // Position in R Frame
+   double VelN[3];   // Velocity in N Frame
+   double PosN[3];   // Position in N Frame
+   double wbn[3];    // Angular Velocity in the SC Body Frame
+   double qbn[4];    // Quarternion from N to B
+   double CBN[3][3]; // Rotation Matrix from N to B
+};
+
+struct DSMType {
+   /*~ Parameters ~*/
+   long ID; /* Spacecraft ID */
+
+   /*~ Inputs ~*/
    double DT;
    double mass;
    double MOI[3][3];
    long Mode;
 
    /*~ Outputs ~*/
+   struct DSMStateType state;
+   struct DSMStateType commState;
+   // assign a function pointer to allow for this to be more general later
+   void (*CommStateProcessing)(struct DSMStateType *, struct DSMStateType *);
    double Tcmd[3];  // Torque Command
    double Mcmd[3];  // Magnetorquer Command
    double dTcmd[3]; // Dump Torque Command
    double FcmdN[3]; // Force Command in N frame
    double FcmdB[3]; // Force Command in SC B Frame
-   double VelR[3];  // Velocity in R Frame
-   double PosR[3];  // Position in R Frame
-   double VelN[3];  // Velocity in N Frame
-   double PosN[3];  // Position in N Frame
 
    double therr[3]; // Angular Position Error
    double werr[3];  // Angular Velocity Error
@@ -226,9 +261,6 @@ struct DSMType {
 
    double IdealTrq[3]; // Ideal Torque
    double IdealFrc[3]; // Ideal Force
-   double wbn[3];      // Angular Velocity in the SC Body Frame
-   double qbn[4];      // Quarternion from N to B
-   double CBN[3][3];   // Rotation Matrix from N to B
 
    struct fy_node **CmdArray;
    long CmdNum;

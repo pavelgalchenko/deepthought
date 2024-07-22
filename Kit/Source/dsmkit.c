@@ -318,6 +318,28 @@ void DSM_MtbProcessing(struct AcType *AC)
       M->Mcmd = Limit(VoV(AC->Mcmd, M->DistVec), -M->Mmax, M->Mmax);
    }
 }
+/**********************************************************************/
+/*  End Actuator Processing Functions                                   */
+/**********************************************************************/
+/*  Some "Comm" Processing Functions                                */
+/**********************************************************************/
+void DSM_CommStateProcessing(struct DSMStateType *state,
+                             struct DSMStateType *commState)
+{
+   commState->Time = state->Time;
+   commState->ID   = state->ID;
+   for (int i = 0; i < 3; i++) {
+      commState->VelR[i] = state->VelR[i];
+      commState->PosR[i] = state->PosR[i];
+      commState->VelN[i] = state->VelN[i];
+      commState->PosN[i] = state->PosN[i];
+      commState->wbn[i]  = state->wbn[i];
+      commState->qbn[i]  = state->qbn[i];
+      for (int j = 0; j < 3; j++)
+         commState->CBN[i][j] = state->CBN[i][j];
+   }
+   commState->qbn[3] = state->qbn[3];
+}
 
 /* #ifdef __cplusplus
 ** }
