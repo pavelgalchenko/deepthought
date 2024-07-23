@@ -1513,90 +1513,109 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
 
    if (Cmd->TranslationCtrlActive == TRUE && Cmd->ManeuverMode == INACTIVE) {
       // Convert Disp vec into N/R coords.
-      if (!strcmp(Cmd->RefFrame, "F")) {
-         MTxV(F->CN, Cmd->Pos, CTRL->CmdPosR); // Convert F to R Inertial
-         if (F->FixedInFrame == 'L') {
+      switch (Cmd->RefFrame[0]) {
+         case 'F': {
+            MTxV(F->CN, Cmd->Pos, CTRL->CmdPosR); // Convert F to R Inertial
+            switch (F->FixedInFrame) {
+               case 'L': {
+                  // L rotates wrt R
+                  for (i = 0; i < 3; i++)
+                     wcn[i] = DSM->refOrb->wln[i];
+                  goodOriginFrame = TRUE;
+               } break;
+               case 'N': {
+                  // R does not rotate wrt R Inertial
+                  for (i = 0; i < 3; i++)
+                     wcn[i] = 0.0;
+                  goodOriginFrame = TRUE;
+               } break;
+               default: {
+                  printf("Invalid Formation fixed frame. How did this happen? "
+                         "Exiting...\n");
+                  exit(EXIT_FAILURE);
+               } break;
+            }
+         } break;
+         case 'N': {
             for (i = 0; i < 3; i++)
-               wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
-            goodOriginFrame = TRUE;
-         }
-         else if (F->FixedInFrame == 'N') {
+               CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
             for (i = 0; i < 3; i++)
                wcn[i] = 0.0; // R does not rotate wrt R Inertial
             goodOriginFrame = TRUE;
-         }
-      }
-      else if (!strcmp(Cmd->RefFrame, "N")) {
-         for (i = 0; i < 3; i++)
-            CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
-         for (i = 0; i < 3; i++)
-            wcn[i] = 0.0; // R does not rotate wrt R Inertial
-         goodOriginFrame = TRUE;
-      }
-      else if (!strcmp(Cmd->RefFrame, "L")) {
-         double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
-         FindCLN(state->PosN, state->VelN, CLN, wln);
-         MTxV(CLN, Cmd->Pos, CTRL->CmdPosR); // Convert LVLH to R Inertial
-         for (i = 0; i < 3; i++)
-            wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
-         goodOriginFrame = TRUE;
-      }
-      else if (!strncmp(Cmd->RefFrame, "SC",
-                        2)) { // Specify disp from OP, in SC B frame directions,
-                              // control to OP
-         sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
-                &frame_body); // Decode ref SC ID Number
-         if (Isc_Ref >= Nsc) {
-            printf(
-                "This mission only has %ld spacecraft, but spacecraft %ld was "
-                "attempted to be set as the reference frame. Exiting...\n",
-                Nsc, Isc_Ref);
-            exit(EXIT_FAILURE);
-         }
-         if (frame_body >= SC[Isc_Ref].Nb) {
-            printf("Spacecraft %ld only has %ld bodies, but the reference "
-                   "frame was attempted to be set as body %ld. Exiting...\n",
-                   Isc_Ref, SC[Isc_Ref].Nb, frame_body);
-            exit(EXIT_FAILURE);
-         }
-         // TODO: don't use other sc truth
-         double qbn[4] = {0.0}, wbn[3] = {0.0};
-         struct BodyType *TrgSB        = NULL;
-         struct DSMType *TrgDSM        = NULL;
-         struct DSMStateType *TrgState = NULL;
-         {
-            // Limit scope where we need SCType
-            struct SCType *TrgS = &SC[Isc_Ref];
-            TrgSB               = TrgS->B;
-            TrgDSM              = &TrgS->DSM;
-            TrgState            = &TrgDSM->state;
-         }
-         if (frame_body != 0) {
-            // get relative orientation of body to B[0] then apply this to
-            // AC.qbn
-            double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
-            QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
-            QxQ(qbB, TrgState->qbn, qbn);
+         } break;
+         case 'L': {
+            double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
+            FindCLN(state->PosN, state->VelN, CLN, wln);
+            MTxV(CLN, Cmd->Pos, CTRL->CmdPosR); // Convert LVLH to R Inertial
+            for (i = 0; i < 3; i++)
+               wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
+            goodOriginFrame = TRUE;
+         } break;
+         default: {
+            // Decode ref SC ID Number
+            if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
+                       &frame_body) == 2) {
+               // Specify disp from OP, in SC B frame directions, control to OP
+               if (Isc_Ref >= Nsc) {
+                  printf("This mission only has %ld spacecraft, but spacecraft "
+                         "%ld was attempted to be set as the reference frame. "
+                         "Exiting...\n",
+                         Nsc, Isc_Ref);
+                  exit(EXIT_FAILURE);
+               }
+               if (frame_body >= SC[Isc_Ref].Nb) {
+                  printf(
+                      "Spacecraft %ld only has %ld bodies, but the reference "
+                      "frame was attempted to be set as body %ld. Exiting...\n",
+                      Isc_Ref, SC[Isc_Ref].Nb, frame_body);
+                  exit(EXIT_FAILURE);
+               }
+               // TODO: don't use other sc truth
+               double qbn[4] = {0.0}, wbn[3] = {0.0};
+               struct BodyType *TrgSB        = NULL;
+               struct DSMType *TrgDSM        = NULL;
+               struct DSMStateType *TrgState = NULL;
+               {
+                  // Limit scope where we need SCType
+                  struct SCType *TrgS = &SC[Isc_Ref];
+                  TrgSB               = TrgS->B;
+                  TrgDSM              = &TrgS->DSM;
+                  TrgState            = &TrgDSM->state;
+               }
+               if (frame_body != 0) {
+                  // get relative orientation of body to B[0] then apply this to
+                  // AC.qbn
+                  double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
+                  QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
+                  QxQ(qbB, TrgState->qbn, qbn);
 
-            // get angular velocity of body relative to B[0], then apply this to
-            // AC.wbn; all in B[frame_body] frame
-            QxV(qbB, TrgSB[0].wn, wBnb);
-            QxV(qbB, TrgState->wbn, wBnbAC);
-            for (i = 0; i < 3; i++) {
-               // TODO: double check what BodyType::wn actually is
-               wbn[i] = wBnbAC[i] + (TrgSB[frame_body].wn[i] - wBnb[i]);
+                  // get angular velocity of body relative to B[0], then apply
+                  // this to AC.wbn; all in B[frame_body] frame
+                  QxV(qbB, TrgSB[0].wn, wBnb);
+                  QxV(qbB, TrgState->wbn, wBnbAC);
+                  for (i = 0; i < 3; i++) {
+                     // TODO: double check what BodyType::wn actually is
+                     wbn[i] = wBnbAC[i] + (TrgSB[frame_body].wn[i] - wBnb[i]);
+                  }
+               }
+               else {
+                  for (i = 0; i < 3; i++) {
+                     qbn[i] = TrgState->qbn[i];
+                     wbn[i] = TrgState->wbn[i];
+                  }
+                  qbn[3] = TrgState->qbn[3];
+               }
+               QTxV(qbn, Cmd->Pos,
+                    CTRL->CmdPosR); // Convert SC# B to R Inertial
+               QTxV(qbn, wbn, wcn); // SC rotates wrt R
+               goodOriginFrame = TRUE;
             }
-         }
-         else {
-            for (i = 0; i < 3; i++) {
-               qbn[i] = TrgState->qbn[i];
-               wbn[i] = TrgState->wbn[i];
+            else {
+               printf("Invalid Translational Control Reference Frame. "
+                      "Exiting...\n");
+               exit(EXIT_FAILURE);
             }
-            qbn[3] = TrgState->qbn[3];
-         }
-         QTxV(qbn, Cmd->Pos, CTRL->CmdPosR); // Convert SC# B to R Inertial
-         QTxV(qbn, wbn, wcn);                // SC rotates wrt R
-         goodOriginFrame = TRUE;
+         } break;
       }
       if (!strcmp(Cmd->RefOrigin, "OP")) {
          // Specify disp from OP, in X frame directions, control to OP
@@ -1680,41 +1699,54 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             double cmdVecB[2][3]          = {{0.0}};
             double cmdVecN[2][3]          = {{0.0}};
             struct DSMCmdVecType *vecs[2] = {&Cmd->PriVec, &Cmd->SecVec};
+            char *attRefFrame[2] = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
             double C_tb[3][3], C_tn[3][3], dC[3][3];
             double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
             double tmag;
             for (int k = 0; k < 2; k++) {
-               if (vecs[k]->TrgType == TARGET_SC ||
-                   vecs[k]->TrgType == TARGET_WORLD) {
-                  // to get PV->wn, PV->N (in F Frame)
-                  FindDsmCmdVecN(DSM, vecs[k]);
-                  // (Converting Cmd vec to body frame)
-                  QxV(state->qbn, vecs[k]->N, cmdVecB[k]);
-               }
-               else if (vecs[k]->TrgType == TARGET_VEC) {
-                  if (!strcmp(Cmd->PriAttRefFrame, "N")) {
+               switch (vecs[k]->TrgType) {
+                  case TARGET_SC:
+                  case TARGET_WORLD: {
+                     // to get PV->wn, PV->N (in F Frame)
+                     FindDsmCmdVecN(DSM, vecs[k]);
                      // (Converting Cmd vec to body frame)
-                     QxV(state->qbn, vecs[k]->cmd_vec, cmdVecB[k]);
-                  }
-                  else if (!strcmp(Cmd->PriAttRefFrame, "F")) {
-                     // (Converting to Inertial frame)
-                     MTxV(F->CN, vecs[k]->cmd_vec, cmdVecN[k]);
-                     // (Converting to body frame)
-                     QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
-                  }
-                  else if (!strcmp(Cmd->PriAttRefFrame, "L")) {
-                     double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
-                     FindCLN(state->PosN, state->VelN, CLN, wln);
-                     // (Converting to LVLH to Inertial frame)
-                     MTxV(CLN, vecs[k]->cmd_vec, cmdVecN[k]);
-                     UNITV(cmdVecN[k]);
-                     // (Converting to body frame)
-                     QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
-                  }
-                  else if (!strcmp(Cmd->PriAttRefFrame, "B")) {
-                     for (i = 0; i < 3; i++)
-                        cmdVecB[k][i] = vecs[k]->cmd_vec[i];
-                  }
+                     QxV(state->qbn, vecs[k]->N, cmdVecB[k]);
+                  } break;
+                  case TARGET_VEC: {
+                     switch (attRefFrame[k][0]) {
+                        case 'N': {
+                           // (Converting Cmd vec to body frame)
+                           QxV(state->qbn, vecs[k]->cmd_vec, cmdVecB[k]);
+                        } break;
+                        case 'F': {
+                           // (Converting to Inertial frame)
+                           MTxV(F->CN, vecs[k]->cmd_vec, cmdVecN[k]);
+                           // (Converting to body frame)
+                           QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
+                        } break;
+                        case 'L': {
+                           double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
+                           FindCLN(state->PosN, state->VelN, CLN, wln);
+                           // (Converting to LVLH to Inertial frame)
+                           MTxV(CLN, vecs[k]->cmd_vec, cmdVecN[k]);
+                           UNITV(cmdVecN[k]);
+                           // (Converting to body frame)
+                           QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
+                        } break;
+                        default: {
+                           // TODO: Add ability to use different spacecraft's
+                           // frame for pointing frame
+                           printf("Invlaid attitude reference frame for "
+                                  "pointing vector. Exiting...\n");
+                           exit(EXIT_FAILURE);
+                        } break;
+                     }
+                  } break;
+                  default:
+                     printf("Invalid Target type for %s vector. Exiting...\n",
+                            k == 0 ? "Primary" : "Secondary");
+                     exit(EXIT_FAILURE);
+                     break;
                }
                UNITV(cmdVecB[k]);
                QTxV(state->qbn, cmdVecB[k], cmdVecN[k]);
@@ -1780,40 +1812,56 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             exit(EXIT_FAILURE);
          } break;
          case (PARM_QUATERNION): {
-            if (!strcmp(Cmd->AttRefFrame, "N")) {
-               for (i = 0; i < 4; i++)
-                  Cmd->qrn[i] = Cmd->q[i];
-               QxQT(state->qbn, Cmd->qrn, Cmd->qbr);
-               for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] = 0.0;
-            }
-            else if (!strcmp(Cmd->AttRefFrame, "F")) {
-               for (i = 0; i < 4; i++)
-                  Cmd->qrf[i] = Cmd->q[i];
-               C2Q(F->CN, qfn);
-               QxQ(Cmd->qrf, qfn, qrn);
-               QxQT(state->qbn, qrn, Cmd->qbr);
-               if (F->FixedInFrame == 'L') {
-                  // F rotates wrt N
-                  for (i = 0; i < 3; i++)
-                     Cmd->wrn[i] = DSM->refOrb->wln[i];
-               }
-               else if (F->FixedInFrame == 'N') {
-                  // N does not rotate wrt N Inertial
+            switch (Cmd->AttRefFrame[0]) {
+               case 'N': {
+                  for (i = 0; i < 4; i++)
+                     Cmd->qrn[i] = Cmd->q[i];
+                  QxQT(state->qbn, Cmd->qrn, Cmd->qbr);
                   for (i = 0; i < 3; i++)
                      Cmd->wrn[i] = 0.0;
-               }
-            }
-            else if (!strcmp(Cmd->AttRefFrame, "L")) {
-               for (i = 0; i < 4; i++)
-                  Cmd->qrl[i] = Cmd->q[i];
-               C2Q(F->CL, qfl);
-               QxQT(Cmd->qrl, qfl, qrf);
-               C2Q(F->CN, qfn);
-               QxQ(qrf, qfn, qrn);
-               QxQT(state->qbn, qrn, Cmd->qbr);
-               for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] = DSM->refOrb->wln[i];
+               } break;
+               case 'F': {
+                  for (i = 0; i < 4; i++)
+                     Cmd->qrf[i] = Cmd->q[i];
+                  C2Q(F->CN, qfn);
+                  QxQ(Cmd->qrf, qfn, qrn);
+                  QxQT(state->qbn, qrn, Cmd->qbr);
+                  switch (F->FixedInFrame) {
+                     case 'L': {
+                        // F rotates wrt N
+                        for (i = 0; i < 3; i++)
+                           Cmd->wrn[i] = DSM->refOrb->wln[i];
+                     } break;
+                     case 'N': {
+                        // N does not rotate wrt N Inertial
+                        for (i = 0; i < 3; i++)
+                           Cmd->wrn[i] = 0.0;
+                     } break;
+                     default: {
+                        printf("Invalid Formation fixed frame. How did this "
+                               "happen? Exiting...\n");
+                        exit(EXIT_FAILURE);
+                     } break;
+                  }
+               } break;
+               case 'L': {
+                  for (i = 0; i < 4; i++)
+                     Cmd->qrl[i] = Cmd->q[i];
+                  C2Q(F->CL, qfl);
+                  QxQT(Cmd->qrl, qfl, qrf);
+                  C2Q(F->CN, qfn);
+                  QxQ(qrf, qfn, qrn);
+                  QxQT(state->qbn, qrn, Cmd->qbr);
+                  for (i = 0; i < 3; i++)
+                     Cmd->wrn[i] = DSM->refOrb->wln[i];
+               } break;
+               default: {
+                  // TODO: Add ability to use different spacecraft's frame for
+                  // quaternion frame
+                  printf("Invlaid attitude reference frame for quaternion. "
+                         "Exiting...\n");
+                  exit(EXIT_FAILURE);
+               } break;
             }
          } break;
          case (PARM_MIRROR): {
@@ -1956,78 +2004,90 @@ void TranslationCtrl(struct DSMType *DSM)
    if (Cmd->TranslationCtrlActive == TRUE && Cmd->ManeuverMode == INACTIVE) {
       // TODO: do we want S->PosR to be AC->PosR? and DSM->FcmdB to be
       // CTRL->FcmdB??
-      if (Cmd->trn_controller == PID_CNTRL) { // PID Controller
-         if (Cmd->NewTrnGainsProcessed == TRUE) {
-            for (i = 0; i < 3; i++)
-               DSM->trn_ei[i] = 0.0;
-            Cmd->NewTrnGainsProcessed = FALSE;
-         }
-
-         for (i = 0; i < 3; i++) {
-            DSM->perr[i] = state->PosR[i] - CTRL->CmdPosR[i]; // Position Error
-            DSM->verr[i] = state->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
-            DSM->trn_ei[i] += (DSM->Oldperr[i] + DSM->perr[i]) / 2.0 *
-                              DSM->DT; // Integrated Error
-
-            if (fabs(Cmd->trn_kilimit[i]) > EPS_DSM &&
-                fabs(CTRL->trn_ki[i]) > EPS_DSM)
-               DSM->trn_ei[i] =
-                   Limit(DSM->trn_ei[i], -Cmd->trn_kilimit[i] / CTRL->trn_ki[i],
-                         Cmd->trn_kilimit[i] /
-                             CTRL->trn_ki[i]); // limits integrated error to
-                                               // limit/ki, since limit is given
-                                               // in terms of force
-
-            CTRL->u1[i] = CTRL->trn_kp[i] / CTRL->trn_kr[i] * DSM->perr[i];
-            if (CTRL->vel_max[i] > 0) {
-               CTRL->u1[i] =
-                   Limit(CTRL->u1[i], -CTRL->vel_max[i], CTRL->vel_max[i]);
+      switch (Cmd->trn_controller) {
+         case PID_CNTRL: {
+            // PID Controller
+            if (Cmd->NewTrnGainsProcessed == TRUE) {
+               for (i = 0; i < 3; i++)
+                  DSM->trn_ei[i] = 0.0;
+               Cmd->NewTrnGainsProcessed = FALSE;
             }
-            CTRL->FcmdN[i] = -CTRL->trn_kr[i] * (CTRL->u1[i] + DSM->verr[i]) -
-                             CTRL->trn_ki[i] * DSM->trn_ei[i];
-         }
-         QxV(state->qbn, CTRL->FcmdN,
-             CTRL->FcmdB); // Converting from Inertial to body frame for
-                           // Report
-         for (i = 0; i < 3; i++) {
-            if (CTRL->FrcB_max[i] > 0)
-               CTRL->FcmdB[i] =
-                   Limit(CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                         CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-         }
-         QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
-      }
-      else if (Cmd->trn_controller == LYA_2BODY_CNTRL) {
-         // Calculate relative radius, velocity
-         for (i = 0; i < 3; i++) {
-            DSM->perr[i] =
-                state->PosR[i] - CTRL->CmdPosR[i]; // Position Error, Relative
-            DSM->verr[i] = state->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
-         }
 
-         double r_norm  = MAGV(state->PosN);
-         double r_cntrl = MAGV(CTRL->CmdPosN);
-         double mu      = DSM->refOrb->mu;
+            for (i = 0; i < 3; i++) {
+               DSM->perr[i] =
+                   state->PosR[i] - CTRL->CmdPosR[i]; // Position Error
+               DSM->verr[i] =
+                   state->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
+               DSM->trn_ei[i] += (DSM->Oldperr[i] + DSM->perr[i]) / 2.0 *
+                                 DSM->DT; // Integrated Error
 
-         double dg[3];
-         for (i = 0; i < 3; i++)
-            dg[i] = -mu / pow(r_norm, 3) * state->PosN[i] +
-                    mu / pow(r_cntrl, 3) * CTRL->CmdPosN[i];
+               if (fabs(Cmd->trn_kilimit[i]) > EPS_DSM &&
+                   fabs(CTRL->trn_ki[i]) > EPS_DSM)
+                  DSM->trn_ei[i] = Limit(
+                      DSM->trn_ei[i], -Cmd->trn_kilimit[i] / CTRL->trn_ki[i],
+                      Cmd->trn_kilimit[i] /
+                          CTRL->trn_ki[i]); // limits integrated error to
+                                            // limit/ki, since limit is given
+                                            // in terms of force
 
-         for (i = 0; i < 3; i++) {
-            CTRL->FcmdN[i] = -CTRL->trn_kp[i] * DSM->perr[i] -
-                             CTRL->trn_kr[i] * DSM->verr[i] - dg[i] * DSM->mass;
-         }
-         QxV(state->qbn, CTRL->FcmdN,
-             CTRL->FcmdB); // Converting from Inertial to body frame for
-                           // Report
-         for (i = 0; i < 3; i++) {
-            if (CTRL->FrcB_max[i] > 0)
-               CTRL->FcmdB[i] =
-                   Limit(CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                         CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-         }
-         QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
+               CTRL->u1[i] = CTRL->trn_kp[i] / CTRL->trn_kr[i] * DSM->perr[i];
+               if (CTRL->vel_max[i] > 0) {
+                  CTRL->u1[i] =
+                      Limit(CTRL->u1[i], -CTRL->vel_max[i], CTRL->vel_max[i]);
+               }
+               CTRL->FcmdN[i] =
+                   -CTRL->trn_kr[i] * (CTRL->u1[i] + DSM->verr[i]) -
+                   CTRL->trn_ki[i] * DSM->trn_ei[i];
+            }
+            QxV(state->qbn, CTRL->FcmdN,
+                CTRL->FcmdB); // Converting from Inertial to body frame for
+                              // Report
+            for (i = 0; i < 3; i++) {
+               if (CTRL->FrcB_max[i] > 0)
+                  CTRL->FcmdB[i] = Limit(
+                      CTRL->FcmdB[i], -CTRL->FrcB_max[i],
+                      CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
+            }
+            QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
+         } break;
+         case LYA_2BODY_CNTRL: {
+            // Calculate relative radius, velocity
+            for (i = 0; i < 3; i++) {
+               DSM->perr[i] = state->PosR[i] -
+                              CTRL->CmdPosR[i]; // Position Error, Relative
+               DSM->verr[i] =
+                   state->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
+            }
+
+            double r_norm  = MAGV(state->PosN);
+            double r_cntrl = MAGV(CTRL->CmdPosN);
+            double mu      = DSM->refOrb->mu;
+
+            double dg[3];
+            for (i = 0; i < 3; i++)
+               dg[i] = -mu / pow(r_norm, 3) * state->PosN[i] +
+                       mu / pow(r_cntrl, 3) * CTRL->CmdPosN[i];
+
+            for (i = 0; i < 3; i++) {
+               CTRL->FcmdN[i] = -CTRL->trn_kp[i] * DSM->perr[i] -
+                                CTRL->trn_kr[i] * DSM->verr[i] -
+                                dg[i] * DSM->mass;
+            }
+            QxV(state->qbn, CTRL->FcmdN,
+                CTRL->FcmdB); // Converting from Inertial to body frame for
+                              // Report
+            for (i = 0; i < 3; i++) {
+               if (CTRL->FrcB_max[i] > 0)
+                  CTRL->FcmdB[i] = Limit(
+                      CTRL->FcmdB[i], -CTRL->FrcB_max[i],
+                      CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
+            }
+            QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
+         } break;
+         default:
+            printf("Invalid Translational Controller type. Exiting...\n");
+            exit(EXIT_FAILURE);
+            break;
       }
       for (i = 0; i < 3; i++)
          DSM->Oldperr[i] = DSM->perr[i];
@@ -2035,67 +2095,79 @@ void TranslationCtrl(struct DSMType *DSM)
    else if (Cmd->TranslationCtrlActive == TRUE &&
             Cmd->ManeuverMode != INACTIVE) {
       if (SimTime < Cmd->BurnStopTime) {
-         if (Cmd->ManeuverMode == CONSTANT) {
-            if (!strcmp(Cmd->RefFrame, "N")) {
+         switch (Cmd->ManeuverMode) {
+            case CONSTANT: {
+               if (!strcmp(Cmd->RefFrame, "N")) {
+                  for (i = 0; i < 3; i++) {
+                     CTRL->FcmdN[i] =
+                         DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
+                  }
+                  QxV(state->qbn, CTRL->FcmdN,
+                      CTRL->FcmdB); // Converting from Inertial to body frame
+                                    // for Report
+               }
+               else if (!strcmp(Cmd->RefFrame, "B")) {
+                  for (i = 0; i < 3; i++) {
+                     CTRL->FcmdB[i] =
+                         DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
+                  }
+               }
                for (i = 0; i < 3; i++) {
-                  CTRL->FcmdN[i] = DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
+                  if (CTRL->FrcB_max[i] > 0) {
+                     CTRL->FcmdB[i] = Limit(
+                         CTRL->FcmdB[i], -CTRL->FrcB_max[i],
+                         CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
+                  }
                }
-               QxV(state->qbn, CTRL->FcmdN,
-                   CTRL->FcmdB); // Converting from Inertial to body frame
-                                 // for Report
-            }
-            else if (!strcmp(Cmd->RefFrame, "B")) {
-               for (i = 0; i < 3; i++) {
-                  CTRL->FcmdB[i] = DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
-               }
-            }
-            for (i = 0; i < 3; i++) {
-               if (CTRL->FrcB_max[i] > 0) {
-                  CTRL->FcmdB[i] = Limit(
-                      CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                      CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-               }
-            }
-            QTxV(state->qbn, CTRL->FcmdB,
-                 CTRL->FcmdN); // Converting back to Inertial from body frame
-         }
-         else if (Cmd->ManeuverMode == SMOOTHED) {
-            const double coef =
-                -2 * atanh(-0.99998); // .99998 corresponds to capturing 99.999%
-                                      // of the burn since tanh has an asymptote
-            double sharp = coef / Cmd->BurnTime;
-            double t_mid = Cmd->BurnStopTime - Cmd->BurnTime / 2.0;
-            double t_since_mid =
-                SimTime - t_mid; // Time elapsed since middle of burn
-            double coshSharp  = cosh(sharp * t_since_mid);
-            double coshSharp2 = coshSharp * coshSharp;
+               QTxV(state->qbn, CTRL->FcmdB,
+                    CTRL->FcmdN); // Converting back to Inertial from body frame
+            } break;
+            case SMOOTHED: {
+               const double coef =
+                   -2 *
+                   atanh(-0.99998); // .99998 corresponds to capturing 99.999%
+                                    // of the burn since tanh has an asymptote
+               double sharp = coef / Cmd->BurnTime;
+               double t_mid = Cmd->BurnStopTime - Cmd->BurnTime / 2.0;
+               double t_since_mid =
+                   SimTime - t_mid; // Time elapsed since middle of burn
+               double coshSharp  = cosh(sharp * t_since_mid);
+               double coshSharp2 = coshSharp * coshSharp;
 
-            if (!strcmp(Cmd->RefFrame, "N")) {
+               if (!strcmp(Cmd->RefFrame, "N")) {
+                  for (i = 0; i < 3; i++) {
+                     CTRL->FcmdN[i] = DSM->mass *
+                                      (Cmd->DeltaV[i] * sharp / 2.0) /
+                                      coshSharp2;
+                     CTRL->FcmdN[i] = DSM->mass *
+                                      (Cmd->DeltaV[i] * sharp / 2.0) /
+                                      coshSharp2;
+                  }
+                  QxV(state->qbn, CTRL->FcmdN,
+                      CTRL->FcmdB); // Converting from Inertial to body frame
+                                    // for Report
+               }
+               else if (!strcmp(Cmd->RefFrame, "B")) {
+                  for (i = 0; i < 3; i++) {
+                     CTRL->FcmdB[i] = DSM->mass *
+                                      (Cmd->DeltaV[i] * sharp / 2.0) /
+                                      coshSharp2;
+                  }
+               }
                for (i = 0; i < 3; i++) {
-                  CTRL->FcmdN[i] =
-                      DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) / coshSharp2;
-                  CTRL->FcmdN[i] =
-                      DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) / coshSharp2;
+                  if (CTRL->FrcB_max[i] > 0) {
+                     CTRL->FcmdB[i] = Limit(
+                         CTRL->FcmdB[i], -CTRL->FrcB_max[i],
+                         CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
+                  }
                }
-               QxV(state->qbn, CTRL->FcmdN,
-                   CTRL->FcmdB); // Converting from Inertial to body frame
-                                 // for Report
-            }
-            else if (!strcmp(Cmd->RefFrame, "B")) {
-               for (i = 0; i < 3; i++) {
-                  CTRL->FcmdB[i] =
-                      DSM->mass * (Cmd->DeltaV[i] * sharp / 2.0) / coshSharp2;
-               }
-            }
-            for (i = 0; i < 3; i++) {
-               if (CTRL->FrcB_max[i] > 0) {
-                  CTRL->FcmdB[i] = Limit(
-                      CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                      CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-               }
-            }
-            QTxV(state->qbn, CTRL->FcmdB,
-                 CTRL->FcmdN); // Converting back to Inertial from body frame
+               QTxV(state->qbn, CTRL->FcmdB,
+                    CTRL->FcmdN); // Converting back to Inertial from body frame
+            } break;
+            default:
+               printf("Invalid maneuver mode. Exiting...\n");
+               exit(EXIT_FAILURE);
+               break;
          }
       }
       else {
@@ -2130,57 +2202,63 @@ void AttitudeCtrl(struct DSMType *DSM)
    struct DSMStateType *state = &DSM->state;
 
    if (Cmd->AttitudeCtrlActive == TRUE) {
-      if (Cmd->att_controller == PID_CNTRL) // PID Controller
-      {
-         if (Cmd->NewAttGainsProcessed == TRUE) {
+      switch (Cmd->att_controller) {
+         case PID_CNTRL: {
+            // PID Controller
+            if (Cmd->NewAttGainsProcessed == TRUE) {
+               for (i = 0; i < 3; i++) {
+                  DSM->att_ei[i] = 0.0;
+               }
+               Cmd->NewAttGainsProcessed = FALSE;
+            }
+
+            Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
+            QxV(state->qbn, Cmd->wrn,
+                wrb); // Rotate angular velocity into Body frame
             for (i = 0; i < 3; i++) {
-               DSM->att_ei[i] = 0.0;
+               DSM->werr[i] = state->wbn[i] -
+                              wrb[i]; // Angular Velocity Error (in body frame)
+               DSM->att_ei[i] += (DSM->Oldtherr[i] + DSM->therr[i]) / 2.0 *
+                                 DSM->DT; // Integrated angle error
+
+               if (fabs(Cmd->att_kilimit[i]) > EPS_DSM &&
+                   CTRL->att_ki[i] > EPS_DSM)
+                  DSM->att_ei[i] = Limit(DSM->att_ei[i],
+                                         -Cmd->att_kilimit[i] / CTRL->att_ki[i],
+                                         Cmd->att_kilimit[i] / CTRL->att_ki[i]);
+
+               CTRL->u2[i] = CTRL->att_kp[i] / CTRL->att_kr[i] * DSM->therr[i];
+               if (CTRL->w_max[i] > 0) {
+                  CTRL->u2[i] =
+                      Limit(CTRL->u2[i], -CTRL->w_max[i], CTRL->w_max[i]);
+               }
+               CTRL->Tcmd[i] = -CTRL->att_kr[i] * (CTRL->u2[i] + DSM->werr[i]) -
+                               CTRL->att_ki[i] * DSM->att_ei[i];
             }
-            Cmd->NewAttGainsProcessed = FALSE;
-         }
+            for (i = 0; i < 3; i++)
+               DSM->Oldtherr[i] = DSM->therr[i];
+         } break;
+         case LYA_ATT_CNTRL: {
+            double om_x_I_om[3];
 
-         Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
-         QxV(state->qbn, Cmd->wrn,
-             wrb); // Rotate angular velocity into Body frame
-         for (i = 0; i < 3; i++) {
-            DSM->werr[i] = state->wbn[i] -
-                           wrb[i]; // Angular Velocity Error (in body frame)
-            DSM->att_ei[i] += (DSM->Oldtherr[i] + DSM->therr[i]) / 2.0 *
-                              DSM->DT; // Integrated angle error
+            Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
+            QxV(state->qbn, Cmd->wrn,
+                wrb); // Rotate angular velocity into Body frame
+            for (i = 0; i < 3; i++)
+               DSM->werr[i] = state->wbn[i] -
+                              wrb[i]; // Angular Velocity Error (in body frame)
+            // calculate nonlinear term in Quaternion Lyapunov stability
+            vxMov(DSM->werr, DSM->MOI, om_x_I_om);
 
-            if (fabs(Cmd->att_kilimit[i]) > EPS_DSM &&
-                CTRL->att_ki[i] > EPS_DSM)
-               DSM->att_ei[i] =
-                   Limit(DSM->att_ei[i], -Cmd->att_kilimit[i] / CTRL->att_ki[i],
-                         Cmd->att_kilimit[i] / CTRL->att_ki[i]);
-
-            CTRL->u2[i] = CTRL->att_kp[i] / CTRL->att_kr[i] * DSM->therr[i];
-            if (CTRL->w_max[i] > 0) {
-               CTRL->u2[i] =
-                   Limit(CTRL->u2[i], -CTRL->w_max[i], CTRL->w_max[i]);
+            for (i = 0; i < 3; i++) {
+               CTRL->Tcmd[i] = -Cmd->att_kp[i] * CTRL->qbr[i] -
+                               Cmd->att_kr[i] * DSM->werr[i] + om_x_I_om[i];
             }
-            CTRL->Tcmd[i] = -CTRL->att_kr[i] * (CTRL->u2[i] + DSM->werr[i]) -
-                            CTRL->att_ki[i] * DSM->att_ei[i];
-         }
-         for (i = 0; i < 3; i++)
-            DSM->Oldtherr[i] = DSM->therr[i];
-      }
-      else if (Cmd->att_controller == LYA_ATT_CNTRL) {
-         double om_x_I_om[3];
-
-         Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
-         QxV(state->qbn, Cmd->wrn,
-             wrb); // Rotate angular velocity into Body frame
-         for (i = 0; i < 3; i++)
-            DSM->werr[i] = state->wbn[i] -
-                           wrb[i]; // Angular Velocity Error (in body frame)
-         // calculate nonlinear term in Quaternion Lyapunov stability
-         vxMov(DSM->werr, DSM->MOI, om_x_I_om);
-
-         for (i = 0; i < 3; i++) {
-            CTRL->Tcmd[i] = -Cmd->att_kp[i] * CTRL->qbr[i] -
-                            Cmd->att_kr[i] * DSM->werr[i] + om_x_I_om[i];
-         }
+         } break;
+         default:
+            printf("Invalid Attitude controller type. Exiting...\n");
+            exit(EXIT_FAILURE);
+            break;
       }
       for (i = 0; i < 3; i++) {
          if (CTRL->Trq_max[i] > 0)
