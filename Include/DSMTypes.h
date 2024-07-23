@@ -57,13 +57,17 @@ enum States {
    POSR_STATE,
    VELN_STATE,
    VELR_STATE,
+   SVN_STATE,
+   SVB_STATE,
+   BVB_STATE,
+   BVN_STATE,
    // bias filtering???
    // MOI filtering???
    // actuation filtering???
 };
 // Update these to be the zeroth and last items in navState
 #define INIT_STATE TIME_STATE
-#define FIN_STATE  VELR_STATE
+#define FIN_STATE  BVN_STATE
 
 /*
 ** #ifdef __cplusplus
@@ -209,6 +213,12 @@ struct DSMCtrlType {
 };
 
 struct DSMStateType {
+   // TODO: make commState a different structure that is user configurable
+   // I would have already done this, but CBN complicates the issue
+   // (double ** != double [][])
+   // Figuring out how DSM guidance works with data not in commState would also
+   // be interesting
+
    /*~ Parameters ~*/
    long ID; /* Spacecraft ID */
 
@@ -223,6 +233,11 @@ struct DSMStateType {
    double wbn[3];    // Angular Velocity in the SC Body Frame
    double qbn[4];    // Quarternion from N to B
    double CBN[3][3]; // Rotation Matrix from N to B
+
+   double svn[3]; // Sun vector in N frame
+   double svb[3]; // Sun vector in B frame
+   double bvn[3]; // Magnetic field vector in N frame
+   double bvb[3]; // Magnetic field vector in B frame
 };
 
 struct DSMType {
@@ -267,11 +282,6 @@ struct DSMType {
    long CmdInit;
    long CmdCnt;
    double CmdNextTime;
-
-   double svn[3];
-   double svb[3];
-   double bvn[3];
-   double bvb[3];
 
    /*~ Internal Variables ~*/
    struct OrbitType *refOrb; // spacecraft's reference orbit

@@ -319,9 +319,9 @@ void DSM_MtbProcessing(struct AcType *AC)
    }
 }
 /**********************************************************************/
-/*  End Actuator Processing Functions                                   */
+/*  End Actuator Processing Functions                                 */
 /**********************************************************************/
-/*  Some "Comm" Processing Functions                                */
+/*  Some "Comm" Processing Functions                                  */
 /**********************************************************************/
 void DSM_CommStateProcessing(struct DSMStateType *state,
                              struct DSMStateType *commState)
@@ -337,9 +337,17 @@ void DSM_CommStateProcessing(struct DSMStateType *state,
       commState->qbn[i]  = state->qbn[i];
       for (int j = 0; j < 3; j++)
          commState->CBN[i][j] = state->CBN[i][j];
+
+      commState->svn[i] = state->svn[i];
+      commState->svb[i] = state->svb[i];
+      commState->bvn[i] = state->bvn[i];
+      commState->bvb[i] = state->bvb[i];
    }
    commState->qbn[3] = state->qbn[3];
 }
+/**********************************************************************/
+/*  End "Comm" Processing Functions                                   */
+/**********************************************************************/
 
 /* #ifdef __cplusplus
 ** }

@@ -1470,7 +1470,7 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          break;
       case TARGET_MAGFIELD:
          for (i = 0; i < 3; i++)
-            CV->N[i] = DSM->bvn[i];
+            CV->N[i] = state->bvn[i];
          UNITV(CV->N);
          break;
       case TARGET_TDRS:
@@ -1668,13 +1668,6 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
 {
    long i, Isc_Ref, target_num;
    double qfn[4], qrn[4], qfl[4], qrf[4];
-   double PriCmdVecB[3], PriCmdVecN[3];
-   double SecCmdVecB[3], SecCmdVecN[3];
-   double tgtX_b[3], tgtY_b[3], tgtZ_b[3];
-   double tgtX_n[3], tgtY_n[3], tgtZ_n[3];
-   double C_tb[3][3], C_tn[3][3], dC[3][3];
-   double tmag;
-   double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
    double vec_cmp[3];
 
    struct DSMCmdType *Cmd     = &DSM->Cmd;
@@ -1683,128 +1676,93 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
 
    if (Cmd->AttitudeCtrlActive == TRUE) {
       if (Cmd->Method == PARM_VECTORS) {
-         struct DSMCmdVecType *PV = &Cmd->PriVec, *SV = &Cmd->SecVec;
-         if (PV->TrgType == TARGET_SC || PV->TrgType == TARGET_WORLD) {
-            FindDsmCmdVecN(DSM,
-                           PV); // to get PV->wn, PV->N (in F Frame)
-            QxV(state->qbn, PV->N,
-                PriCmdVecB); // (Converting Cmd vec to body frame)
-         }
-         else if (PV->TrgType == TARGET_VEC) {
-            if (!strcmp(Cmd->PriAttRefFrame, "N")) {
-               QxV(state->qbn, PV->cmd_vec,
-                   PriCmdVecB); // (Converting Cmd vec to body frame)
+         double cmdVecB[2][3]          = {{0.0}};
+         double cmdVecN[2][3]          = {{0.0}};
+         struct DSMCmdVecType *vecs[2] = {&Cmd->PriVec, &Cmd->SecVec};
+         double C_tb[3][3], C_tn[3][3], dC[3][3];
+         double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
+         double tmag;
+         for (int k = 0; k < 2; k++) {
+            if (vecs[k]->TrgType == TARGET_SC ||
+                vecs[k]->TrgType == TARGET_WORLD) {
+               // to get PV->wn, PV->N (in F Frame)
+               FindDsmCmdVecN(DSM, vecs[k]);
+               // (Converting Cmd vec to body frame)
+               QxV(state->qbn, vecs[k]->N, cmdVecB[k]);
             }
-            else if (!strcmp(Cmd->PriAttRefFrame, "F")) {
-               MTxV(F->CN, PV->cmd_vec,
-                    PriCmdVecN); // (Converting to Inertial frame)
-               QxV(state->qbn, PriCmdVecN,
-                   PriCmdVecB); // (Converting to body frame) CHECK THIS
+            else if (vecs[k]->TrgType == TARGET_VEC) {
+               if (!strcmp(Cmd->PriAttRefFrame, "N")) {
+                  // (Converting Cmd vec to body frame)
+                  QxV(state->qbn, vecs[k]->cmd_vec, cmdVecB[k]);
+               }
+               else if (!strcmp(Cmd->PriAttRefFrame, "F")) {
+                  // (Converting to Inertial frame)
+                  MTxV(F->CN, vecs[k]->cmd_vec, cmdVecN[k]);
+                  // (Converting to body frame)
+                  QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
+               }
+               else if (!strcmp(Cmd->PriAttRefFrame, "L")) {
+                  double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
+                  FindCLN(state->PosN, state->VelN, CLN, wln);
+                  // (Converting to LVLH to Inertial frame)
+                  MTxV(CLN, vecs[k]->cmd_vec, cmdVecN[k]);
+                  UNITV(cmdVecN[k]);
+                  // (Converting to body frame)
+                  MxV(state->CBN, cmdVecN[k], cmdVecB[k]);
+               }
+               else if (!strcmp(Cmd->PriAttRefFrame, "B")) {
+                  for (i = 0; i < 3; i++)
+                     cmdVecB[k][i] = vecs[k]->cmd_vec[i];
+               }
             }
-            else if (!strcmp(Cmd->PriAttRefFrame, "L")) {
-               double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
-               FindCLN(state->PosN, state->VelN, CLN, wln);
-               MTxV(CLN, PV->cmd_vec,
-                    PriCmdVecN); // (Converting to LVLH to Inertial frame)
-               UNITV(PriCmdVecN);
-               QxV(state->qbn, PriCmdVecN,
-                   PriCmdVecB); // (Converting to body frame)
-            }
-            else if (!strcmp(Cmd->PriAttRefFrame, "B")) {
-               for (i = 0; i < 3; i++)
-                  PriCmdVecB[i] = PV->cmd_vec[i];
-            }
-         }
-         UNITV(PriCmdVecB);
-
-         if (SV->TrgType == TARGET_SC || SV->TrgType == TARGET_WORLD) {
-            FindDsmCmdVecN(DSM, SV); // to get SV->wn, SV->N
-            QxV(state->qbn, SV->N, SecCmdVecB);
-         }
-         else if (SV->TrgType == TARGET_VEC) {
-            if (!strcmp(Cmd->SecAttRefFrame, "N")) {
-               QxV(state->qbn, SV->cmd_vec,
-                   SecCmdVecB); // (Converting Cmd vec to body frame)
-            }
-            else if (!strcmp(Cmd->SecAttRefFrame, "F")) {
-               MTxV(F->CN, SV->cmd_vec,
-                    SecCmdVecN); // (Converting to Inertial frame)
-               QxV(state->qbn, SecCmdVecN,
-                   SecCmdVecB); // (Converting to body frame)
-            }
-            else if (!strcmp(Cmd->SecAttRefFrame, "L")) {
-               double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
-               FindCLN(state->PosN, state->VelN, CLN, wln);
-               MTxV(CLN, SV->cmd_vec,
-                    SecCmdVecN); // (Converting from LVLH to Inertial frame)
-               UNITV(SecCmdVecN);
-               QxV(state->qbn, SecCmdVecN,
-                   SecCmdVecB); // (Converting to body frame)
-            }
-            else if (!strcmp(Cmd->SecAttRefFrame, "B")) {
-               for (i = 0; i < 3; i++)
-                  SecCmdVecB[i] = SV->cmd_vec[i];
-            }
-            UNITV(SecCmdVecB);
+            UNITV(cmdVecB[k]);
+            QTxV(state->qbn, cmdVecB[k], cmdVecN[k]);
+            UNITV(cmdVecN[k]);
          }
 
-         QTxV(state->qbn, PriCmdVecB, PriCmdVecN);
-         QTxV(state->qbn, SecCmdVecB, SecCmdVecN);
-         UNITV(PriCmdVecN);
-         UNITV(SecCmdVecN);
-
+         /*construct body to target DCM and Inertial to Target DCMS*/
          for (i = 0; i < 3; i++) {
-            tgtX_b[i] = PV->cmd_axis[i]; // = PV->cmd_axis
-            tgtX_n[i] = PriCmdVecN[i];   // = PriCmdVec
+            C_tb[0][i] = vecs[0]->cmd_axis[i]; // = PV->cmd_axis
+            C_tn[0][i] = cmdVecN[0][i];        // = PriCmdVec
          }
 
-         VxV(PV->cmd_axis, SV->cmd_axis, tgtZ_b);
-         VxV(PriCmdVecN, SecCmdVecN, tgtZ_n);
-         VxV(tgtZ_b, tgtX_b, tgtY_b);
-         VxV(tgtZ_n, tgtX_n, tgtY_n);
+         VxV(vecs[0]->cmd_axis, vecs[1]->cmd_axis, C_tb[2]);
+         VxV(cmdVecN[0], cmdVecN[1], C_tn[2]);
+         VxV(C_tb[2], C_tb[0], C_tb[1]);
+         VxV(C_tn[2], C_tn[0], C_tn[1]);
 
          for (i = 0; i < 3; i++)
-            vec_cmp[i] = PV->cmd_axis[i] - SV->cmd_axis[i];
+            vec_cmp[i] = vecs[0]->cmd_axis[i] - vecs[1]->cmd_axis[i];
          if (fabs(MAGV(vec_cmp)) < EPS_DSM) {
             printf("PV [%lf  %lf  %lf] in %s and SV [%lf  %lf  %lf] in %s are "
                    "identical, resulting in a infeasible attitude command. "
                    "Exiting...\n",
-                   PV->cmd_vec[0], PV->cmd_vec[1], PV->cmd_vec[2],
-                   Cmd->PriAttRefFrame, SV->cmd_vec[0], SV->cmd_vec[1],
-                   SV->cmd_vec[2], Cmd->SecAttRefFrame);
+                   vecs[0]->cmd_vec[0], vecs[0]->cmd_vec[1],
+                   vecs[0]->cmd_vec[2], Cmd->PriAttRefFrame,
+                   vecs[1]->cmd_vec[0], vecs[1]->cmd_vec[1],
+                   vecs[1]->cmd_vec[2], Cmd->SecAttRefFrame);
             exit(EXIT_FAILURE);
          }
 
-         UNITV(tgtX_b);
-         UNITV(tgtY_b);
-         UNITV(tgtZ_b);
-         UNITV(tgtX_n);
-         UNITV(tgtY_n);
-         UNITV(tgtZ_n);
-
-         /*construct body to target DCM and Inertial to Target DCMS*/
          for (i = 0; i < 3; i++) {
-            C_tb[0][i] = tgtX_b[i];
-            C_tb[1][i] = tgtY_b[i];
-            C_tb[2][i] = tgtZ_b[i];
-            C_tn[0][i] = tgtX_n[i];
-            C_tn[1][i] = tgtY_n[i];
-            C_tn[2][i] = tgtZ_n[i];
+            UNITV(C_tb[i]);
+            UNITV(C_tn[i]);
          }
 
          C2Q(C_tb, q_tb);
          C2Q(C_tn, q_tn);
 
-         /* Approximation of log map from SO3 to so3 to calculate Cmd->wrn */
+         /* Approximation of log map from SO(3) to so(3) to calculate Cmd->wrn
+          */
          MTxM(C_tn, Cmd->OldCRN, dC);
          tmag        = acos((dC[0][0] + dC[1][1] + dC[2][2] - 1) / 2.0);
          Cmd->wrn[0] = (dC[2][1] - dC[1][2]) / 2.0 / DSM->DT;
          Cmd->wrn[1] = (dC[0][2] - dC[2][0]) / 2.0 / DSM->DT;
          Cmd->wrn[2] = (dC[1][0] - dC[0][1]) / 2.0 / DSM->DT;
-         if (tmag >
-             EPS_DSM) { // check if wmag large enough to avoid singularity
+         // check if wmag large enough to avoid singularity
+         if (tmag > EPS_DSM) {
             for (i = 0; i < 3; i++)
-               Cmd->wrn[i] *= tmag / sin(tmag);
+               Cmd->wrn[i] /= sinc(tmag);
          }
          memcpy(Cmd->OldCRN, C_tn, sizeof(Cmd->OldCRN));
 
@@ -1833,12 +1791,14 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             QxQ(Cmd->qrf, qfn, qrn);
             QxQT(state->qbn, qrn, Cmd->qbr);
             if (F->FixedInFrame == 'L') {
+               // F rotates wrt N
                for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] = DSM->refOrb->wln[i]; // F rotates wrt N
+                  Cmd->wrn[i] = DSM->refOrb->wln[i];
             }
             else if (F->FixedInFrame == 'N') {
+               // N does not rotate wrt N Inertial
                for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] = 0.0; // N does not rotate wrt N Inertial
+                  Cmd->wrn[i] = 0.0;
             }
          }
          else if (!strcmp(Cmd->AttRefFrame, "L")) {
@@ -1854,9 +1814,8 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          }
       }
       else if (Cmd->Method == PARM_MIRROR) {
-         sscanf(Cmd->AttRefScID, "SC[%ld].B[%ld]", &Isc_Ref,
-                &target_num); // Decode ref SC ID Number - does this need to be
-                              // SC[%ld].B[%ld]?
+         // Decode ref SC ID Number
+         sscanf(Cmd->AttRefScID, "SC[%ld].B[%ld]", &Isc_Ref, &target_num);
          if (Isc_Ref >= Nsc) {
             printf(
                 "This mission only has %ld spacecraft, but spacecraft %ld was "
@@ -1946,10 +1905,10 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
       state->qbn[i] = AC->qbn[i];
       state->wbn[i] = AC->wbn[i];
 
-      DSM->svb[i] = AC->svb[i];
-      DSM->svn[i] = AC->svn[i];
-      DSM->bvb[i] = AC->bvb[i];
-      DSM->bvn[i] = AC->bvn[i];
+      state->svb[i] = AC->svb[i];
+      state->svn[i] = AC->svn[i];
+      state->bvb[i] = AC->bvb[i];
+      state->bvn[i] = AC->bvn[i];
    }
    state->qbn[3] = AC->qbn[3];
    return;
@@ -2320,13 +2279,6 @@ void DsmFSW(struct SCType *S)
    SensorModule(S);
 
    // Navigation Modules
-   {
-      // TODO: this
-      for (int i = 0; i < 3; i++) {
-         DSM->bvn[i] = AC->bvn[i];
-         DSM->svn[i] = AC->svn[i];
-      }
-   }
    NavigationModule(AC, DSM);
    TranslationalNavigation(AC, &DSM->state);
    AttitudeNavigation(AC, &DSM->state);
