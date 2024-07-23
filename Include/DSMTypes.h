@@ -50,24 +50,18 @@ enum States {
    NULL_STATE = -2,
    ATTITUDE_STATE,
    TIME_STATE,
-   CBN_STATE,
-   QBN_STATE,
-   WBN_STATE,
-   POSN_STATE,
-   POSR_STATE,
-   VELN_STATE,
-   VELR_STATE,
-   SVN_STATE,
-   SVB_STATE,
-   BVB_STATE,
-   BVN_STATE,
+   ROTMAT_STATE,
+   QUAT_STATE,
+   OMEGA_STATE,
+   POS_STATE,
+   VEL_STATE,
    // bias filtering???
    // MOI filtering???
    // actuation filtering???
 };
 // Update these to be the zeroth and last items in navState
 #define INIT_STATE TIME_STATE
-#define FIN_STATE  BVN_STATE
+#define FIN_STATE  VEL_STATE
 
 /*
 ** #ifdef __cplusplus
