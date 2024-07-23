@@ -5651,6 +5651,18 @@ void InitSim(int argc, char **argv)
          InitSpacecraft(&SC[Isc]);
       }
    }
+   long nonDSMFSW = FALSE, DSMFSW = FALSE;
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         DSMFSW    |= SC[Isc].FswTag == DSM_FSW;
+         nonDSMFSW |= SC[Isc].FswTag != DSM_FSW;
+         if (nonDSMFSW && DSMFSW) {
+            printf("Mixing DSM_FSW and non DSM_FSW flightsoftware tags is not "
+                   "supported. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
+      }
+   }
 
    LoadTdrs();
 
