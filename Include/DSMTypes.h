@@ -153,7 +153,7 @@ struct DSMCmdType {
    enum CtrlType att_controller;
    enum CtrlType dmp_controller;
    enum ManeuverType ManeuverMode;
-   char AttRefScID[6];
+   char AttRefScID[20];
    char H_DumpGain[20];
    char H_DumpMode[20];
    double H_DumpLims[2];

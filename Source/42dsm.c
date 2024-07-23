@@ -835,7 +835,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       AttitudeCmdProcessed =
-          fy_node_scanf(iterNode, "/Target %5s", Cmd->AttRefScID) == 1;
+          fy_node_scanf(iterNode, "/Target %19s", Cmd->AttRefScID) == 1;
       ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
       actNode               = fy_node_by_path_def(iterNode, "/Actuator");
       AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
