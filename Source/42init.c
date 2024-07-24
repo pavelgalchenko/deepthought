@@ -3905,7 +3905,7 @@ void LoadMoonsOfMars(void)
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
+         C2Q(World[Im].CNH, World[Im].qnh);
       }
 
       C2Q(M->CNH, M->qnh);
@@ -4067,7 +4067,7 @@ void LoadMoonsOfJupiter(void)
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
+         C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4226,7 +4226,7 @@ void LoadMoonsOfSaturn(void)
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
+         C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4356,7 +4356,7 @@ void LoadMoonsOfUranus(void)
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
+         C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4485,7 +4485,7 @@ void LoadMoonsOfNeptune(void)
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
+         C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4616,7 +4616,7 @@ void LoadMoonsOfPluto(void)
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
+         C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -5239,6 +5239,7 @@ long LoadSpiceEphems(double JS)
 
    long Iw, Ip, Im;
    int i;
+   double CNJ[3][3];
 
    char MajorBodiesNamesState[55][15] = {
        "SUN",        "MERCURY",  "VENUS",     "EARTH",
@@ -5283,7 +5284,7 @@ long LoadSpiceEphems(double JS)
    double light_time;
    double ang[3];
 
-   double CRJ[3][3];
+   double CWJ[3][3];
 
    // Read all planets
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
@@ -5309,12 +5310,15 @@ long LoadSpiceEphems(double JS)
       char frame_name[25] = "IAU_";
       strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
-      pxform_c("J2000", frame_name, JS,
-                  CRJ); // matrix from J2000 (ICRF) -> body fixed
+      // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
+      MxT(World[Iw].CNH, World[EARTH].CNH, CNJ);
 
-      m2eul_c(CRJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
-      
-      SimpRot(ZAxis, ang[2], World[Iw].CWN);
+      pxform_c("J2000", frame_name, JS,
+                  CWJ); // matrix from J2000 (ICRF) -> body fixed
+
+      // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
+
+      MxMT(CWJ, CNJ, World[Iw].CWN) ;
       C2Q(World[Iw].CWN, World[Iw].qwn);
       World[Iw].PriMerAng = ang[2];
    }
@@ -5351,11 +5355,17 @@ long LoadSpiceEphems(double JS)
             strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
             pxform_c("J2000", frame_name, JS,
-                     CRJ); // matrix from J2000 (ICRF) -> body fixed
+                     CWJ); // matrix from J2000 (ICRF) -> body fixed
 
-            m2eul_c(CRJ, 3, 1, 3, &ang[2], &ang[1], &ang[0]);
+            // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
+            MxT(World[Iw].CNH, World[EARTH].CNH, CNJ);
 
-            SimpRot(ZAxis, ang[2], World[Iw].CWN);
+            pxform_c("J2000", frame_name, JS,
+                        CWJ); // matrix from J2000 (ICRF) -> body fixed
+
+            // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
+
+            MxMT(CWJ, CNJ, World[Iw].CWN) ;
             C2Q(World[Iw].CWN, World[Iw].qwn);
             World[Iw].PriMerAng = ang[2];
          }
