@@ -191,9 +191,9 @@
 #define ORBDOF_ENCKE      2
 #define ORBDOF_COWELL     3
 
-#define EPH_MEAN      0
-#define EPH_DE430     1
-#define EPH_DE440     2
+#define EPH_MEAN  0
+#define EPH_DE430 1
+#define EPH_DE440 2
 #define EPH_SPICE 3 // Recommended Spice Kernels
 
 #define REFPT_CM    0
@@ -300,6 +300,5 @@
 /* Thruster Command Modes */
 #define THR_PULSED       0
 #define THR_PROPORTIONAL 1
-
 
 #endif /* __42DEFINES_H__ */

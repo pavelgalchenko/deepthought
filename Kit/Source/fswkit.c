@@ -403,9 +403,9 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
    qmr[2] = X[2] / mag;
    qmr[3] = gamma / mag;
 
-      free(a);
-      DestroyMatrix(W);
-      DestroyMatrix(V);
+   free(a);
+   DestroyMatrix(W);
+   DestroyMatrix(V);
 }
 /**********************************************************************/
 /* Find the Euler Angles to point a given boresight vector fixed in   */
@@ -414,13 +414,13 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
 void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
                          double tvi[3], double bvo[3], double GimAngCmd[3])
 {
-      double *a1,*a2;
-      double a3[3];
-      double Axis[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};
-      double TargVec[3],BoreVec[3];
-      double TargAng1,BoreAng1,TargAng2,BoreAng2;
-      double t1,t2,t3,b1,b2,b3;
-      double Cycle;
+   double *a1, *a2;
+   double a3[3];
+   double Axis[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double TargVec[3], BoreVec[3];
+   double TargAng1, BoreAng1, TargAng2, BoreAng2;
+   double t1, t2, t3, b1, b2, b3;
+   double Cycle;
 
    /* Form perpendicular basis for unrotated gimbal */
    /* Call it the A frame */
@@ -511,8 +511,8 @@ void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
    if (GimAngCmd[1] > PI)
       GimAngCmd[1] -= TWOPI;
 
-      /* Always */
-      GimAngCmd[2] = 0.0;
+   /* Always */
+   GimAngCmd[2] = 0.0;
 #undef PI
 #undef TWOPI
 }
@@ -897,22 +897,24 @@ double ThrusterSelection(double **A, double *f, double *t, double tmax, long m,
    MakeTableau(A, f, tmax, m, n, OffPulse, T);
    TableauGaussElim(T, m, n);
 
+   Done = 1;
+   for (i = 1; i <= m; i++) {
+      if (T[i][n] < 0.0)
+         Done = 0;
+   }
+   while (!Done) {
+      FindSwap(T, &incoming, &outgoing, m, n);
+      SwapCol(T, incoming, outgoing, m);
+      TableauGaussElim(T, m, n);
       Done = 1;
-      for(i=1;i<=m;i++) {
-         if (T[i][n] < 0.0) Done = 0;
+      for (i = 1; i <= m; i++) {
+         if (T[i][n] < 0.0)
+            Done = 0;
       }
-      while(!Done) {
-         FindSwap(T,&incoming,&outgoing,m,n);
-         SwapCol(T,incoming,outgoing,m);
-         TableauGaussElim(T,m,n);
-         Done = 1;
-         for(i=1;i<=m;i++) {
-            if (T[i][n] < 0.0) Done = 0;
-         }
-      }
-      Cost = InterpretTableau(T,tmax,t,m,n,OffPulse);
-      DestroyMatrix(T);
-      return(Cost);
+   }
+   Cost = InterpretTableau(T, tmax, t, m, n, OffPulse);
+   DestroyMatrix(T);
+   return (Cost);
 }
 
 /**********************************************************************/
@@ -1142,11 +1144,11 @@ void UDTimeUpdate(double *x, double **U, double **phi, double **gam, double *y,
       }
    }
 
-      DestroyMatrix(Uaug);
-      free(D);
-      free(v);
-      free(a);
-      free(Gy);
+   DestroyMatrix(Uaug);
+   free(D);
+   free(v);
+   free(a);
+   free(Gy);
 }
 /******************************************************************************/
 /*  The following functions implement a "sequential" Kalman Filter, with      */
@@ -1443,16 +1445,16 @@ void KalmanFilterTimeUpdate(struct KalmanFilterType *KF)
 double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
                     double h[4], double AngRateCmd[4])
 {
-      double eps0 = 0.1;
-      double lam0 = 0.01;
-      double mu = 10.0;
-      double w = 1.0;
-      double dt = 0.1;
-      double TwoPi = 6.2831853072;
-      double A[3][4],AAt[3][3],Asharp[4][3],Gain;
-      static double wt = 0.0;
-      double lam,eps;
-      double V[3][3],W[4][4],AW[3][4],Den[3][3],InvDen[3][3];
+   double eps0  = 0.1;
+   double lam0  = 0.01;
+   double mu    = 10.0;
+   double w     = 1.0;
+   double dt    = 0.1;
+   double TwoPi = 6.2831853072;
+   double A[3][4], AAt[3][3], Asharp[4][3], Gain;
+   static double wt = 0.0;
+   double lam, eps;
+   double V[3][3], W[4][4], AW[3][4], Den[3][3], InvDen[3][3];
 
    long i, j;
 
@@ -1475,11 +1477,11 @@ double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
        AAt[0][2] * AAt[1][0] * AAt[2][1] - AAt[0][2] * AAt[1][1] * AAt[2][0] -
        AAt[0][1] * AAt[1][0] * AAt[2][2] - AAt[0][0] * AAt[1][2] * AAt[2][1];
 
-      /* Singularity Avoidance */
-      lam = lam0*exp(-mu*Gain);
-      eps = eps0*sin(wt);
-      wt += w*dt;
-      wt = fmod(wt,TwoPi);
+   /* Singularity Avoidance */
+   lam  = lam0 * exp(-mu * Gain);
+   eps  = eps0 * sin(wt);
+   wt  += w * dt;
+   wt   = fmod(wt, TwoPi);
 
    /* V */
    for (i = 0; i < 3; i++) {

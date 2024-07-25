@@ -696,19 +696,19 @@ void Ephemerides(void)
       exit(1);
    }
 
-/* .. Locate Asteroids and Comets */
-   for(Imb=0;Imb<Nmb;Imb++) {
-      if(World[55+Imb].Exists){
-         W = &World[55+Imb];
+   /* .. Locate Asteroids and Comets */
+   for (Imb = 0; Imb < Nmb; Imb++) {
+      if (World[55 + Imb].Exists) {
+         W   = &World[55 + Imb];
          Eph = &W->eph;
-         Eph2RV(Eph->mu,Eph->SLR,Eph->ecc,Eph->inc,Eph->RAAN,Eph->ArgP,
-                  DynTime-Eph->tp,Eph->PosN,Eph->VelN,&Eph->anom);
-         for(j=0;j<3;j++) {
+         Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
+                DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+         for (j = 0; j < 3; j++) {
             W->PosH[j] = Eph->PosN[j];
             W->VelH[j] = Eph->VelN[j];
          }
-         W->PriMerAng = fmod(W->w*DynTime,TwoPi);
-         SimpRot(ZAxis,W->PriMerAng,W->CWN);
+         W->PriMerAng = fmod(W->w * DynTime, TwoPi);
+         SimpRot(ZAxis, W->PriMerAng, W->CWN);
       }
    }
 

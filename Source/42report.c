@@ -14,6 +14,9 @@
 #include "42.h"
 #include "SpiceUsr.h"
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
 /* #ifdef __cplusplus
 ** namespace _42 {
 ** using namespace Kit;
@@ -190,10 +193,10 @@ void DSM_PlanEphemReport(void)
    long Iw;
    char s[40];
    double svh[3], svw[3], CWH[3][3];
-   double junk, Lat, Lng;
+   double Lat, Lng;
 
    if (First) {
-      ephemfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
+      ephemfile    = (FILE **)calloc(NWORLD, sizeof(FILE *));
       suntrackfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
       for (Iw = 0; Iw < NWORLD; Iw++) {
          if (World[Iw].Exists) {
@@ -220,7 +223,8 @@ void DSM_PlanEphemReport(void)
                  World[Iw].VelH[0], World[Iw].VelH[1], World[Iw].VelH[2]);
          fprintf(ephemfile[Iw], "\n");
 
-         for (int i = 0; i < 3; i++) svh[i] = -World[Iw].PosH[i];
+         for (int i = 0; i < 3; i++)
+            svh[i] = -World[Iw].PosH[i];
          UNITV(svh);
          MxM(World[Iw].CWN, World[Iw].CNH, CWH);
          MxV(CWH, svh, svw);
@@ -228,8 +232,7 @@ void DSM_PlanEphemReport(void)
          Lng = atan2(svw[1], svw[0]) * R2D;
          Lat = asin(svw[2]) * R2D;
 
-         fprintf(suntrackfile[Iw], "%18.12le %18.12le ",
-                 Lat, Lng);
+         fprintf(suntrackfile[Iw], "%18.12le %18.12le ", Lat, Lng);
          fprintf(suntrackfile[Iw], "\n");
       }
       fflush(ephemfile[Iw]);
@@ -477,7 +480,7 @@ void DSM_GroundTrackReport(void)
          MxV(W->CWN, SC[Isc].PosN, p);
          reclat_c(p, &junk, &Lng, &Lat);
 
-         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat*R2D, Lng*R2D);
+         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat * R2D, Lng * R2D);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);
@@ -755,15 +758,16 @@ void Report(void)
          // GmatReport();
 
          if (SC[0].DSM.Init == 1) {
+
             DSM_AttitudeReport();
             DSM_InertialReport();
-            DSM_PlanEphemReport();
+            // DSM_PlanEphemReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();
             DSM_WHLReport();
             DSM_THRReport();
-            DSM_GroundTrackReport();
+            // DSM_GroundTrackReport();
          }
       }
    }
