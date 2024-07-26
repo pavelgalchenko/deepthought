@@ -3470,18 +3470,16 @@ void LoadPlanets(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (int i = 0; i < 10; i++) {
-         dim = 1;
          bodvrd_c(PlanetName[i], "GM", 1, &dim, &tmp_holder);
          Mu[i] = tmp_holder * 1E9;
 
-         dim = 3;
          if ((!strcmp(PlanetName[i], "Pluto")) ||
              (!strcmp(PlanetName[i], "Sun"))) { // Pluto/Sun J2 is not defined
             J2[i] = 0.0;
          }
          else {
-            bodvrd_c(PlanetName[i], "J2", 1, &dim, tmp_holder3);
-            J2[i] = tmp_holder3[0];
+            bodvrd_c(PlanetName[i], "J2", 1, &dim, &tmp_holder);
+            J2[i] = tmp_holder;
          }
 
          bodvrd_c(PlanetName[i], "RADII", 3, &dim, tmp_holder3);
@@ -3709,11 +3707,10 @@ void LoadMoonOfEarth(void)
 
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
-      dim = 1;
       bodvrd_c("Moon", "GM", 1, &dim, &tmp_holder);
       mu[0] = tmp_holder * 1E9;
 
-      bodvrd_c("Moon", "J2", 3, &dim, tmp_holder3);
+      bodvrd_c("Moon", "J2", 1, &dim, &tmp_holder);
       J2[0] = tmp_holder;
 
       bodvrd_c("Moon", "RADII", 3, &dim, tmp_holder3);
@@ -3722,7 +3719,6 @@ void LoadMoonOfEarth(void)
       bodvrd_c("Moon", "PM", 3, &dim, tmp_holder3);
       w[0] = tmp_holder3[1] * D2R /
              spd_c(); // converts the prime meridian rate in deg/day to rad/s
-      
    }
 
    P       = &World[Ip];
@@ -3829,7 +3825,6 @@ void LoadMoonsOfMars(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (i = 0; i < Nm; i++) {
-         dim = 1;
          bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
          mu[i] = tmp_holder * 1E9;
 
@@ -3991,7 +3986,6 @@ void LoadMoonsOfJupiter(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (i = 0; i < Nm; i++) {
-         dim = 1;
          bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
          mu[i] = tmp_holder * 1E9;
 
@@ -4149,7 +4143,6 @@ void LoadMoonsOfSaturn(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (i = 0; i < Nm; i++) {
-         dim = 1;
          bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
          mu[i] = tmp_holder * 1E9;
 
@@ -4279,7 +4272,6 @@ void LoadMoonsOfUranus(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (i = 0; i < Nm; i++) {
-         dim = 1;
          bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
          mu[i] = tmp_holder * 1E9;
 
@@ -4408,7 +4400,6 @@ void LoadMoonsOfNeptune(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (i = 0; i < Nm; i++) {
-         dim = 1;
          bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
          mu[i] = tmp_holder * 1E9;
 
@@ -4538,7 +4529,6 @@ void LoadMoonsOfPluto(void)
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
       for (i = 0; i < Nm; i++) {
-         dim = 1;
          bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
          mu[i] = tmp_holder * 1E9;
 
@@ -5297,14 +5287,12 @@ long LoadSpiceEphems(double JS)
                &light_time); // State of major bodies in J2000 wrt Sun center
 
       for (i = 0; i < 3; i++) {
-         Eph->PosN[i] =
-             Nstate[i] * 1e3; // Assign inertial positions (m)
+         Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
          W->PosH[i] =
              Nstate[i] *
              1e3; // Assign suncentric positions = inertial position (m)
 
-         Eph->VelN[i] =
-             Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+         Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
          W->VelH[i] =
              Nstate[i + 3] *
              1e3; // Assign suncentric velocity = inertial velocity (m/s)
@@ -5344,13 +5332,11 @@ long LoadSpiceEphems(double JS)
                                    // center
 
             for (i = 0; i < 3; i++) {
-               Eph->PosN[i] =
-                   Nstate[i] * 1e3; // Assign inertial positions (m)
-               W->PosH[i] = Hstate[i] * 1e3;
+               Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
+               W->PosH[i]   = Hstate[i] * 1e3;
 
-               Eph->VelN[i] =
-                   Nstate[i + 3]; // Assign inertial velocity (m/s)
-               W->VelH[i] = Hstate[i + 3] * 1e3;
+               Eph->VelN[i] = Nstate[i + 3]; // Assign inertial velocity (m/s)
+               W->VelH[i]   = Hstate[i + 3] * 1e3;
             }
 
             char frame_name[25] = "IAU_";
