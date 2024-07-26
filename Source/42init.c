@@ -3713,12 +3713,16 @@ void LoadMoonOfEarth(void)
       bodvrd_c("Moon", "GM", 1, &dim, &tmp_holder);
       mu[0] = tmp_holder * 1E9;
 
+      bodvrd_c("Moon", "J2", 3, &dim, tmp_holder3);
+      J2[0] = tmp_holder;
+
       bodvrd_c("Moon", "RADII", 3, &dim, tmp_holder3);
       rad[0] = tmp_holder3[0] * 1e3;
 
       bodvrd_c("Moon", "PM", 3, &dim, tmp_holder3);
       w[0] = tmp_holder3[1] * D2R /
              spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      
    }
 
    P       = &World[Ip];
