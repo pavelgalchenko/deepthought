@@ -1544,9 +1544,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             goodOriginFrame = TRUE;
          } break;
          case 'L': {
-            double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
-            FindCLN(state->PosN, state->VelN, CLN, wln);
-            MTxV(CLN, Cmd->Pos, CTRL->CmdPosR); // Convert LVLH to R Inertial
+            // Convert LVLH to R Inertial
+            MTxV(DSM->refOrb->CLN, Cmd->Pos, CTRL->CmdPosR);
             for (i = 0; i < 3; i++)
                wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
             goodOriginFrame = TRUE;
@@ -1725,10 +1724,8 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                            QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
                         } break;
                         case 'L': {
-                           double CLN[3][3] = {{0.0}}, wln[3] = {0.0};
-                           FindCLN(state->PosN, state->VelN, CLN, wln);
                            // (Converting to LVLH to Inertial frame)
-                           MTxV(CLN, vecs[k]->cmd_vec, cmdVecN[k]);
+                           MTxV(DSM->refOrb->CLN, vecs[k]->cmd_vec, cmdVecN[k]);
                            UNITV(cmdVecN[k]);
                            // (Converting to body frame)
                            QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
