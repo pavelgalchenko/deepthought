@@ -5229,7 +5229,7 @@ long LoadSpiceKernels(char SpicePath[80])
 
 long LoadSpiceEphems(double JS)
 {
-   long Iw, Ip, Im;
+   long Iw, Iwm, Ip, Im;
    int i;
    double CNJ[3][3];
 
@@ -5317,16 +5317,16 @@ long LoadSpiceEphems(double JS)
    for (Ip = EARTH; Ip <= PLUTO; Ip++) {
       if (World[Ip].Exists) {
          for (Im = 0; Im < World[Ip].Nsat; Im++) {
-            Iw  = World[Ip].Sat[Im];
-            W   = &World[Iw];
+            Iwm  = World[Ip].Sat[Im];
+            W   = &World[Iwm];
             Eph = &W->eph;
 
             spkezr_c(
-                MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+                MajorBodiesNamesState[Iwm], JS, "ECLIPJ2000", "NONE", "SUN",
                 Hstate,
                 &light_time); // State of major bodies in J2000 wrt Sun center
 
-            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE",
+            spkezr_c(MajorBodiesNamesState[Iwm], JS, "ECLIPJ2000", "NONE",
                      MajorBodiesNamesState[Ip], Nstate,
                      &light_time); // State of major bodies in J2000 wrt Planet
                                    // center
@@ -5340,22 +5340,22 @@ long LoadSpiceEphems(double JS)
             }
 
             char frame_name[25] = "IAU_";
-            strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+            strcat(frame_name, MajorBodiesNamesOrientation[Iwm]);
 
             pxform_c("J2000", frame_name, JS,
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-            MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
+            MxMT(World[Iwm].CNH, World[EARTH].CNH, CNJ);
 
             pxform_c("J2000", frame_name, JS,
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
 
-            MxMT(CWJ, CNJ, World[Iw].CWN);
-            C2Q(World[Iw].CWN, World[Iw].qwn);
-            World[Iw].PriMerAng = ang[2];
+            MxMT(CWJ, CNJ, World[Iwm].CWN);
+            C2Q(World[Iwm].CWN, World[Iwm].qwn);
+            World[Iwm].PriMerAng = ang[2];
          }
       }
    }
