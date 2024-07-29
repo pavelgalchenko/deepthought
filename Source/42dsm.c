@@ -507,17 +507,17 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
       TranslationCmdProcessed    = TRUE;
       return (TranslationCmdProcessed);
    }
-   else if (!strcmp(subType, "Translation")) {
+   else if (!strcmp(subType, "Position")) {
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
-          fy_node_by_path_def(dsmRoot, "/Translation Configurations");
+          fy_node_by_path_def(dsmRoot, "/Position Configurations");
 
       WHILE_FY_ITER(cmdNode, iterNode)
       {
          long ind = 0;
-         fy_node_scanf(iterNode, "/Translation/Index %ld", &ind);
+         fy_node_scanf(iterNode, "/Position/Index %ld", &ind);
          if (ind == cmdInd) {
-            iterNode     = fy_node_by_path_def(iterNode, "/Translation");
+            iterNode     = fy_node_by_path_def(iterNode, "/Position");
             long isGood  = fy_node_scanf(iterNode,
                                          "/Origin %19s "
                                           "/Frame %19s",
@@ -1364,7 +1364,6 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          }
          if (TrgDSM->refOrb == RefOrb) {
             for (i = 0; i < 3; i++) {
-               // TODO
                RelPosN[i] = TrgState->PosR[i] - state->PosR[i];
                RelVelN[i] = TrgState->VelR[i] - state->VelR[i];
             }
@@ -1904,11 +1903,65 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                   Cmd->wrn[i] = DSM->refOrb->wln[i];
             } break;
             default: {
-               // TODO: Add ability to use different spacecraft's frame for
-               // quaternion frame
-               printf("Invlaid attitude reference frame for quaternion. "
-                      "Exiting...\n");
-               exit(EXIT_FAILURE);
+               long frame_body = 0;
+               // Decode ref SC ID Number
+               if (sscanf(Cmd->AttRefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
+                          &frame_body) == 2) {
+                  if (Isc_Ref == DSM->ID) {
+                     printf("SC[%ld] is attempting to point relative to its "
+                            "own body frame. Exiting...\n",
+                            DSM->ID);
+                     exit(EXIT_FAILURE);
+                  }
+                  if (Isc_Ref >= Nsc) {
+                     printf("This mission only has %ld spacecraft, but "
+                            "spacecraft %ld was attempted to be set as the "
+                            "reference frame. Exiting...\n",
+                            Nsc, Isc_Ref);
+                     exit(EXIT_FAILURE);
+                  }
+                  if (frame_body >= SC[Isc_Ref].Nb) {
+                     printf("Spacecraft %ld only has %ld bodies, but the "
+                            "reference frame was attempted to be set as body "
+                            "%ld. Exiting...\n",
+                            Isc_Ref, SC[Isc_Ref].Nb, frame_body);
+                     exit(EXIT_FAILURE);
+                  }
+                  // TODO: don't use other sc truth
+                  double qbn[4]                 = {0.0};
+                  struct BodyType *TrgSB        = NULL;
+                  struct DSMType *TrgDSM        = NULL;
+                  struct DSMStateType *TrgState = NULL;
+                  {
+                     // Limit scope where we need SCType
+                     struct SCType *TrgS = &SC[Isc_Ref];
+                     TrgSB               = TrgS->B;
+                     TrgDSM              = &TrgS->DSM;
+                     TrgState            = &TrgDSM->state;
+                  }
+                  if (frame_body != 0) {
+                     // get relative orientation of body to B[0]
+                     // then apply this to AC.qbn
+                     double qbB[4] = {0.0};
+                     QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
+                     QxQ(qbB, TrgState->qbn, qbn);
+                  }
+                  else {
+                     for (i = 0; i < 3; i++) {
+                        qbn[i] = TrgState->qbn[i];
+                     }
+                     qbn[3] = TrgState->qbn[3];
+                  }
+                  // rotation from trg Body to DSM body frame
+                  double qbbs[4] = {0.0};
+                  QxQT(state->qbn, qbn, qbbs);
+                  QxQT(qbbs, Cmd->q, Cmd->qbr);
+               }
+               else {
+                  printf("Invlaid attitude reference frame for quaternion. "
+                         "Exiting...\n");
+                  exit(EXIT_FAILURE);
+               }
             } break;
          }
       } break;

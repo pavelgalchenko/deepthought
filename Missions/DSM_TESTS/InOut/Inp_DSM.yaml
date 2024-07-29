@@ -175,10 +175,10 @@ Controller Configurations:
       Type: H_DUMP_CNTRL
       Gains: *Gains_8
       Limits: *Limits_3
-Translation Configurations:
-  # ------------------------------Translation Command------------------------------
-  # ((Sequence; one element for unique Translation Command))
-  #   - Translation:
+Position Configurations:
+  # --------------------------------Position Command-------------------------------
+  # ((Sequence; one element for unique Position Command))
+  #   - Position:
   #       Index:          [[Index]]
   #       Description:    {Optional}
   #       Position:       [[X, Y, Z]] [[meters]]
@@ -186,7 +186,7 @@ Translation Configurations:
   #       Frame:          [[N/F/L/SC[#].B[#]]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-  - Translation:
+  - Position:
       Index: 0
       Description: TranslationCmd_[0]
       Position: [2.0, 0.0, 0.0]
@@ -194,7 +194,7 @@ Translation Configurations:
       Frame: N
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 1
       Description: TranslationCmd_[1]
       Position: [2.0, 0.0, 0.0]
@@ -202,7 +202,7 @@ Translation Configurations:
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 2
       Description: TranslationCmd_[2]
       Position: [0.0, 2.0, 0.0]
@@ -210,7 +210,7 @@ Translation Configurations:
       Frame: L
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 3
       Description: TranslationCmd_[3]
       Position: [-2.0, 0.0, 0.0]
@@ -218,7 +218,7 @@ Translation Configurations:
       Frame: SC[4].B[0]
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 4
       Description: TranslationCmd_[4]
       Position: [1.0, 0.0, 0.0]
@@ -238,7 +238,7 @@ Primary Vector Configurations:
   #       Target: ((Describes pointing target))
   #         Type:   [[VEC/BODY/SC]]
   #         ((Frame and Axis are only if Type is VEC))
-  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
   #        Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
@@ -319,7 +319,7 @@ Secondary Vector Configurations:
   #       Target: ((Describes pointing target))
   #         Type:   [[VEC, BODY, SC]]
   #         ((Frame and Axis are only if Type is VEC))
-  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
   #         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/GroundStation_[#])]]
@@ -597,7 +597,7 @@ DSM Commands:
       - Time: 600.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 3
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -631,7 +631,7 @@ DSM Commands:
       - Time: 600.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 4
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -696,15 +696,15 @@ DSM Commands:
       - Time: 80.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 0
       - Time: 500.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 1
       - Time: 800.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 2

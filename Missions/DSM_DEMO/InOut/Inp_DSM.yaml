@@ -175,10 +175,10 @@ Controller Configurations:
       Type: H_DUMP_CNTRL
       Gains: *Gains_8
       Limits: *Limits_3
-Translation Configurations:
-  # ------------------------------Translation Command------------------------------
-  # ((Sequence; one element for unique Translation Command))
-  #   - Translation:
+Position Configurations:
+  # --------------------------------Position Command-------------------------------
+  # ((Sequence; one element for unique Position Command))
+  #   - Position:
   #       Index:          [[Index]]
   #       Description:    {Optional}
   #       Position:       [[X, Y, Z]] [[meters]]
@@ -186,7 +186,7 @@ Translation Configurations:
   #       Frame:          [[N/F/L/SC[#].B[#]]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-  - Translation:
+  - Position:
       Index: 0
       Description: TranslationCmd_[0]
       Position: [2.0, 0.0, 0.0]
@@ -194,7 +194,7 @@ Translation Configurations:
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 1
       Description: TranslationCmd_[1]
       Position: [2.0, 0.0, 0.0]
@@ -202,7 +202,7 @@ Translation Configurations:
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_5
-  - Translation:
+  - Position:
       Index: 2
       Description: TranslationCmd_[2]
       Position: [0.0, 2.0, 0.0]
@@ -210,7 +210,7 @@ Translation Configurations:
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 3
       Description: TranslationCmd_[3]
       Position: [-2.0, 0.0, 0.0]
@@ -218,7 +218,7 @@ Translation Configurations:
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_5
-  - Translation:
+  - Position:
       Index: 4
       Description: TranslationCmd_[4]
       Position: [0.0, 0.0, -2.0]
@@ -226,7 +226,7 @@ Translation Configurations:
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
-  - Translation:
+  - Position:
       Index: 5
       Description: TranslationCmd_[5]
       Position: [1.0, 0.0, 0.0]
@@ -246,7 +246,7 @@ Primary Vector Configurations:
   #       Target: ((Describes pointing target))
   #         Type:   [[VEC/BODY/SC]]
   #         ((Frame and Axis are only if Type is VEC))
-  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
   #        Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
@@ -339,7 +339,7 @@ Secondary Vector Configurations:
   #       Target: ((Describes pointing target))
   #         Type:   [[VEC, BODY, SC]]
   #         ((Frame and Axis are only if Type is VEC))
-  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
   #         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
@@ -567,7 +567,7 @@ DSM Commands:
   #         Commands: ((Sequence; describes all commands at a particular time))
   #           - Type:       [[Attitude/Translation/Actuator]]
   #             ((Both Attitude & Translation can be Passive or NO_CHANGE Subtype))
-  #             ((IF Translation: Translation, Maneuver))
+  #             ((IF Position: Translation, Maneuver))
   #             ((IF Attitude:    One Vector Pointing, Two Vector Pointing, Quaternion, Mirror, Detumble, Whl H Manage))
   #             Index:      [[Index, {SV Index for Two Vector}]] ((needed if not Passive or NO_CHANGE))
   #             Subtype:    [[Subtype]] ((Needed if not Actuator))
@@ -600,7 +600,7 @@ DSM Commands:
       - Time: 180.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 0
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -608,7 +608,7 @@ DSM Commands:
       - Time: 550.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 1
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -644,7 +644,7 @@ DSM Commands:
       - Time: 420.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 2
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -657,7 +657,7 @@ DSM Commands:
       - Time: 840.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 5
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -683,7 +683,7 @@ DSM Commands:
       - Time: 420.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 3
           - Type: Attitude
             Subtype: Two Vector Pointing
@@ -742,7 +742,7 @@ DSM Commands:
       - Time: 640.0
         Commands:
           - Type: Translation
-            Subtype: Translation
+            Subtype: Position
             Index: 4
           - Type: Attitude
             Subtype: Quaternion
