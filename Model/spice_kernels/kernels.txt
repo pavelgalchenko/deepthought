@@ -1,0 +1,26 @@
+KPL/MK
+\begindata
+
+PATH_VALUES = ( './Model/spice_kernels/lsk',
+				'./Model/spice_kernels/spk/planets',
+				'./Model/spice_kernels/spk/satellites',
+				'./Model/spice_kernels/pck' )
+
+PATH_SYMBOLS = ( 'LSK', 'SPK_PLANETS', 'SPK_SATS', 'PCK' )
+
+KERNELS_TO_LOAD = ( '$LSK/naif0012.tls'
+					'$SPK_PLANETS/de440.bsp',
+                    '$SPK_PLANETS/de430.bsp',
+					'$SPK_SATS/mar097.bsp',
+					'$SPK_SATS/jup344.bsp',
+					'$SPK_SATS/jup365.bsp',
+					'$SPK_SATS/sat415.bsp',
+					'$SPK_SATS/sat441.bsp',
+					'$SPK_SATS/ura111l.bsp',
+					'$SPK_SATS/nep097.bsp',
+					'$SPK_SATS/a_old_versions/nep101.bsp',
+					'$SPK_SATS/plu060.bsp',
+					'$PCK/pck00010.tpc',
+					'$PCK/Gravity.tpc')
+
+\begintext

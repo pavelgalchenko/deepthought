@@ -1,0 +1,32 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<<<  Body Node Inputs for 42  >>>>>>>>>>>>>>>>>>>>>
+Configuration:
+  # ---------------------------------Configuration---------------------------------
+  #   Name:
+  #   Description:
+  Name: Nodes_Simple.txt
+  Description: Simple Nodes
+Nodes:
+  # -------------------------------Node Configuration------------------------------
+  # ((Sequence; one element for unique Atmospere Model Definition))
+  #   - Node:
+  #       Index:
+  #       Location: [[x, y, z]] [[m]]
+  #       Comment:
+  - Node:
+      Index: 0
+      Location: [-1.0, 0.0, 2.5]
+      Comment: Wheels
+  - Node:
+      Index: 1
+      Location: [1.0, -1.0, 1.5]
+      Comment: Gyro
+  - Node:
+      Index: 2
+      Location: [0.0, 0.0, 1.0]
+      Comment: Fwd Thrusters
+  - Node:
+      Index: 3
+      Location: [0.0, 0.0, -1.0]
+      Comment: Aft Thrusters

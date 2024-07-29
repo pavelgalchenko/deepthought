@@ -68,7 +68,7 @@ void InitInterProcessComm(void)
          exit(EXIT_FAILURE);
       }
       I->Mode = DecodeString(response);
-      if(!fy_node_scanf(seqNode, "/Socket/Role %119s", response)){
+      if (!fy_node_scanf(seqNode, "/Socket/Role %119s", response)) {
          printf("Could not find Socket Role for IPC. Exiting...\n");
          exit(EXIT_FAILURE);
       }

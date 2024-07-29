@@ -12,6 +12,10 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "42.h"
+#include "SpiceUsr.h"
+
+#include <sys/stat.h>
+#include <sys/types.h>
 
 /* #ifdef __cplusplus
 ** namespace _42 {
@@ -178,6 +182,61 @@ void DSM_InertialReport(void)
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
+   }
+}
+/*********************************************************************/
+void DSM_PlanetEphemReport(void)
+{
+   static FILE **ephemfile;
+   static FILE **suntrackfile;
+   static long First = 1;
+   long Iw;
+   char s[40];
+   double svh[3], svw[3], CWH[3][3];
+   double Lat, Lng;
+
+   if (First) {
+      ephemfile    = (FILE **)calloc(NWORLD, sizeof(FILE *));
+      suntrackfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
+      for (Iw = 0; Iw < NWORLD; Iw++) {
+         if (World[Iw].Exists) {
+            sprintf(s, "ephem/DSM_ephem_%s.42", World[Iw].Name);
+            ephemfile[Iw] = FileOpen(OutPath, s, "wt");
+            fprintf(ephemfile[Iw], "PosH_X PosH_Y PosH_Z ");
+            fprintf(ephemfile[Iw], "VelH_X VelH_Y VelH_Z ");
+            fprintf(ephemfile[Iw], "\n");
+
+            sprintf(s, "ephem/DSM_suntrack_%s.42", World[Iw].Name);
+            suntrackfile[Iw] = FileOpen(OutPath, s, "wt");
+            fprintf(suntrackfile[Iw], "Lat Lon ");
+            fprintf(suntrackfile[Iw], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Iw = 1; Iw < NWORLD; Iw++) { // Skip Sun
+      if (World[Iw].Exists) {
+         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
+                 World[Iw].PosH[0], World[Iw].PosH[1], World[Iw].PosH[2]);
+         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
+                 World[Iw].VelH[0], World[Iw].VelH[1], World[Iw].VelH[2]);
+         fprintf(ephemfile[Iw], "\n");
+
+         for (int i = 0; i < 3; i++)
+            svh[i] = -World[Iw].PosH[i];
+         UNITV(svh);
+         MxM(World[Iw].CWN, World[Iw].CNH, CWH);
+         MxV(CWH, svh, svw);
+
+         Lng = atan2(svw[1], svw[0]) * R2D;
+         Lat = asin(svw[2]) * R2D;
+
+         fprintf(suntrackfile[Iw], "%18.12le %18.12le ", Lat, Lng);
+         fprintf(suntrackfile[Iw], "\n");
+      }
+      fflush(ephemfile[Iw]);
+      fflush(suntrackfile[Iw]);
    }
 }
 /*********************************************************************/
@@ -387,6 +446,44 @@ void DSM_THRReport(void)
          }
       }
       fflush(THRFile[Isc]);
+   }
+}
+/*********************************************************************/
+void DSM_GroundTrackReport(void)
+{
+   static FILE **gtrackfile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+   struct WorldType *W;
+   struct SCType *S;
+   double p[3], Lat, Lng, junk;
+
+   if (First) {
+      gtrackfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_groundtrack_%02li.42", Isc);
+            gtrackfile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(gtrackfile[Isc], "Lat Lon ");
+            fprintf(gtrackfile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (SC[Isc].Exists) {
+         W = &World[Orb[S->RefOrb].World];
+
+         MxV(W->CWN, SC[Isc].PosN, p);
+         reclat_c(p, &junk, &Lng, &Lat);
+
+         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat * R2D, Lng * R2D);
+         fprintf(gtrackfile[Isc], "\n");
+      }
+      fflush(gtrackfile[Isc]);
    }
 }
 /*********************************************************************/
@@ -661,13 +758,16 @@ void Report(void)
          // GmatReport();
 
          if (SC[0].DSM.Init == 1) {
+
             DSM_AttitudeReport();
             DSM_InertialReport();
+            // DSM_PlanetEphemReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();
             DSM_WHLReport();
             DSM_THRReport();
+            // DSM_GroundTrackReport();
          }
       }
    }
