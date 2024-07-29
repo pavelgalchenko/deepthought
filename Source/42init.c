@@ -3904,7 +3904,7 @@ void LoadMoonsOfMars(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
          C2Q(World[Im].CNH, World[Im].qnh);
       }
 
@@ -4065,7 +4065,7 @@ void LoadMoonsOfJupiter(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
          C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
@@ -4222,7 +4222,7 @@ void LoadMoonsOfSaturn(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
          C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
@@ -4351,7 +4351,7 @@ void LoadMoonsOfUranus(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
          C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
@@ -4479,7 +4479,7 @@ void LoadMoonsOfNeptune(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
          C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
@@ -4609,7 +4609,7 @@ void LoadMoonsOfPluto(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
          C2Q(World[Im].CNH, World[Im].qnh);
       }
       C2Q(M->CNH, M->qnh);
