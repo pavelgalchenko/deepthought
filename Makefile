@@ -260,10 +260,11 @@ $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
 #ANSIFLAGS = -Wstrict-prototypes -pedantic -ansi -Werror
 ANSIFLAGS =
 
-CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) -I $(CSPICEDIR) -I $(CSPICEINC) -I $(CSPICESRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG)
+CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG)
 
 CFLAGS+= `pkg-config --cflags libfyaml`
 LFLAGS+= `pkg-config --libs libfyaml`
+SPICEFLAGS =  -I $(CSPICEDIR) -I $(CSPICEINC) -I $(CSPICESRC)
 
 ##########################  Rules to link 42  #############################
 
@@ -298,7 +299,7 @@ $(OBJ)42environs.o  : $(SRC)42environs.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42environs.c -o $(OBJ)42environs.o
 
 $(OBJ)42ephem.o     : $(SRC)42ephem.c $(INC)42.h
-	$(CC) $(CFLAGS) -c $(SRC)42ephem.c -o $(OBJ)42ephem.o
+	$(CC) $(CFLAGS) $(SPICEFLAGS) -c $(SRC)42ephem.c -o $(OBJ)42ephem.o
 
 $(OBJ)42fsw.o       : $(SRC)42fsw.c $(INC)Ac.h $(INC)AcTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42fsw.c -o $(OBJ)42fsw.o
@@ -316,7 +317,7 @@ $(OBJ)42gpgpu.o      : $(SRC)42gpgpu.c $(INC)42.h $(INC)42gl.h $(INC)42glut.h
 	$(CC) $(CFLAGS) -c $(SRC)42gpgpu.c -o $(OBJ)42gpgpu.o
 
 $(OBJ)42init.o      : $(SRC)42init.c $(INC)42.h
-	$(CC) $(CFLAGS) -c $(SRC)42init.c -o $(OBJ)42init.o
+	$(CC) $(CFLAGS) $(SPICEFLAGS) -c $(SRC)42init.c -o $(OBJ)42init.o
 
 $(OBJ)42ipc.o       : $(SRC)42ipc.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42ipc.c -o $(OBJ)42ipc.o
@@ -331,7 +332,7 @@ $(OBJ)42perturb.o   : $(SRC)42perturb.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42perturb.c -o $(OBJ)42perturb.o
 
 $(OBJ)42report.o    : $(SRC)42report.c $(INC)42.h
-	$(CC) $(CFLAGS) -c $(SRC)42report.c -o $(OBJ)42report.o
+	$(CC) $(CFLAGS) $(SPICEFLAGS) -c $(SRC)42report.c -o $(OBJ)42report.o
 
 $(OBJ)42sensors.o   : $(SRC)42sensors.c $(INC)42.h $(INC)Ac.h $(INC)AcTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42sensors.c -o $(OBJ)42sensors.o
