@@ -3904,8 +3904,8 @@ void LoadMoonsOfMars(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
-         C2Q(World[Im].CNH, World[Im].qnh);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
 
       C2Q(M->CNH, M->qnh);
@@ -4065,8 +4065,8 @@ void LoadMoonsOfJupiter(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
-         C2Q(World[Im].CNH, World[Im].qnh);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4222,8 +4222,8 @@ void LoadMoonsOfSaturn(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
-         C2Q(World[Im].CNH, World[Im].qnh);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4351,8 +4351,8 @@ void LoadMoonsOfUranus(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
-         C2Q(World[Im].CNH, World[Im].qnh);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4479,8 +4479,8 @@ void LoadMoonsOfNeptune(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
-         C2Q(World[Im].CNH, World[Im].qnh);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4609,8 +4609,8 @@ void LoadMoonsOfPluto(void)
       else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Im].CNH);
-         C2Q(World[Im].CNH, World[Im].qnh);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -5229,7 +5229,7 @@ long LoadSpiceKernels(char SpicePath[80])
 
 long LoadSpiceEphems(double JS)
 {
-   long Iw, Iwm, Ip, Im;
+   long Iw, Ip, Im;
    int i;
    double CNJ[3][3];
 
@@ -5317,16 +5317,16 @@ long LoadSpiceEphems(double JS)
    for (Ip = EARTH; Ip <= PLUTO; Ip++) {
       if (World[Ip].Exists) {
          for (Im = 0; Im < World[Ip].Nsat; Im++) {
-            Iwm  = World[Ip].Sat[Im];
-            W   = &World[Iwm];
+            Iw  = World[Ip].Sat[Im];
+            W   = &World[Iw];
             Eph = &W->eph;
 
             spkezr_c(
-                MajorBodiesNamesState[Iwm], JS, "ECLIPJ2000", "NONE", "SUN",
+                MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
                 Hstate,
                 &light_time); // State of major bodies in J2000 wrt Sun center
 
-            spkezr_c(MajorBodiesNamesState[Iwm], JS, "ECLIPJ2000", "NONE",
+            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE",
                      MajorBodiesNamesState[Ip], Nstate,
                      &light_time); // State of major bodies in J2000 wrt Planet
                                    // center
@@ -5340,22 +5340,22 @@ long LoadSpiceEphems(double JS)
             }
 
             char frame_name[25] = "IAU_";
-            strcat(frame_name, MajorBodiesNamesOrientation[Iwm]);
+            strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
             pxform_c("J2000", frame_name, JS,
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-            MxMT(World[Iwm].CNH, World[EARTH].CNH, CNJ);
+            MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
 
             pxform_c("J2000", frame_name, JS,
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
 
-            MxMT(CWJ, CNJ, World[Iwm].CWN);
-            C2Q(World[Iwm].CWN, World[Iwm].qwn);
-            World[Iwm].PriMerAng = ang[2];
+            MxMT(CWJ, CNJ, World[Iw].CWN);
+            C2Q(World[Iw].CWN, World[Iw].qwn);
+            World[Iw].PriMerAng = ang[2];
          }
       }
    }

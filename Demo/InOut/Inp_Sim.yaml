@@ -47,7 +47,7 @@ Orbits:
     Enabled: true
   - Name: Orb_ISS
     Enabled: true
-  - Name: Orb_67P
+  - Name: Orb_L2Halo
     Enabled: true
   - Name: Orb_Saturn
     Enabled: true
@@ -83,7 +83,7 @@ SCs:
     Orbit: Orb_ISS
     Enabled: true
   - Name: SC_IonCruiser
-    Orbit: Orb_67P
+    Orbit: Orb_L2Halo
     Enabled: true
   - Name: SC_Cubesat1U
     Orbit: Orb_Cube

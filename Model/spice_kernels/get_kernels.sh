@@ -27,8 +27,8 @@ for i in $satellite_kernels; do
     wget_kernels spk/satellites $i
 done
 
-mkdir ../lsk
-cd ../lsk
+mkdir ../../lsk
+cd ../../lsk
 for i in $leapsecond_kernels; do
     wget_kernels lsk $i
 done
