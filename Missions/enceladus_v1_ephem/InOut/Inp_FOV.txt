@@ -1,0 +1,90 @@
+**************************** Fields of View ****************************
+8                              !  Number of FOVs
+------------------------------------------------------------------------
+"SC1 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE   TRUE                    !  Draw Near Field, Draw Far Field
+1  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC2 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+2  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC3 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+3  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC4 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+4  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC5 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+5  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC6 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+6  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC7 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+7  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS
+------------------------------------------------------------------------
+"SC8 Cam"                      !  Label
+4  4.0                         !  Number of Sides, Length [m]
+8.0  4.0                       !  H Width, V Height [deg]
+0  1  0  0.498                 !  Color RGB+Alpha
+SOLID                          !  WIREFRAME, SOLID, VECTOR, or PLANE
+TRUE  TRUE                     !  Draw Near Field, Draw Far Field
+8  0                           !  SC, Body
+0.0  0.0  1.0                  !  Position in Body [m]
+0.0  0.0  0.0  321             !  Euler Angles [deg], Sequence
+Z_AXIS                         !  Boresight Axis X_AXIS, Y_AXIS, or Z_AXIS

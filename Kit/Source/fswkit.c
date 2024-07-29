@@ -414,7 +414,6 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
 void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
                          double tvi[3], double bvo[3], double GimAngCmd[3])
 {
-
    double *a1, *a2;
    double a3[3];
    double Axis[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
@@ -514,6 +513,8 @@ void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
 
    /* Always */
    GimAngCmd[2] = 0.0;
+#undef PI
+#undef TWOPI
 }
 /**********************************************************************/
 /*   Find control acceleration to seek goal at xg while staying at    */
@@ -1444,11 +1445,12 @@ void KalmanFilterTimeUpdate(struct KalmanFilterType *KF)
 double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
                     double h[4], double AngRateCmd[4])
 {
-   double eps0 = 0.1;
-   double lam0 = 0.01;
-   double mu   = 10.0;
-   double w    = 1.0;
-   double dt   = 0.1;
+   double eps0  = 0.1;
+   double lam0  = 0.01;
+   double mu    = 10.0;
+   double w     = 1.0;
+   double dt    = 0.1;
+   double TwoPi = 6.2831853072;
    double A[3][4], AAt[3][3], Asharp[4][3], Gain;
    static double wt = 0.0;
    double lam, eps;
@@ -1479,7 +1481,7 @@ double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
    lam  = lam0 * exp(-mu * Gain);
    eps  = eps0 * sin(wt);
    wt  += w * dt;
-   wt   = fmod(wt, TWOPI);
+   wt   = fmod(wt, TwoPi);
 
    /* V */
    for (i = 0; i < 3; i++) {

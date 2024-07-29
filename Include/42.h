@@ -227,6 +227,8 @@ void InitOrbits(void);
 void InitSpacecraft(struct SCType *S);
 void LoadPlanets(void);
 long LoadJplEphems(char EphemPath[80], double JD);
+long LoadSpiceKernels(char SpicePath[80]);
+long LoadSpiceEphems(double JS);
 long DecodeString(char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);

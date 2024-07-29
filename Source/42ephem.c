@@ -688,6 +688,9 @@ void Ephemerides(void)
       World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
    }
+   else if (EphemOption == EPH_SPICE) {
+      LoadSpiceEphems(DynTime);
+   }
    else {
       printf("Bogus Ephem Option in Ephemerides.  Bailing out.\n");
       exit(1);
@@ -709,28 +712,32 @@ void Ephemerides(void)
       }
    }
 
-   /* .. Earth rotation is a special case */
-   GMST                   = JD2GMST(UTC.JulDay);
-   World[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
+   if (EphemOption !=
+       EPH_SPICE) { // If we use SPICE, all rotations are handled via SPICE
+      /* .. Earth rotation is a special case */
+      GMST                   = JD2GMST(UTC.JulDay);
+      World[EARTH].PriMerAng = TwoPi * GMST;
+      HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
+      SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
+      MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
 
-   /* .. Other planets' moons */
-   for (Ip = MARS; Ip <= PLUTO; Ip++) {
-      if (World[Ip].Exists) {
-         for (Im = 0; Im < World[Ip].Nsat; Im++) {
-            Iw  = World[Ip].Sat[Im];
-            Eph = &World[Iw].eph;
-            Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                   DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-            World[Iw].PriMerAng = fmod(World[Iw].w * DynTime, TwoPi);
-            SimpRot(ZAxis, World[Iw].PriMerAng, World[Iw].CWN);
-            MTxV(World[Ip].CNH, Eph->PosN, rh);
-            MTxV(World[Ip].CNH, Eph->VelN, vh);
-            for (i = 0; i < 3; i++) {
-               World[Iw].PosH[i] = rh[i] + World[Ip].PosH[i];
-               World[Iw].VelH[i] = vh[i] + World[Ip].VelH[i];
+      /* .. Other planets' moons */
+      for (Ip = MARS; Ip <= PLUTO; Ip++) {
+         if (World[Ip].Exists) {
+            for (Im = 0; Im < World[Ip].Nsat; Im++) {
+               Iw  = World[Ip].Sat[Im];
+               Eph = &World[Iw].eph;
+               Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN,
+                      Eph->ArgP, DynTime - Eph->tp, Eph->PosN, Eph->VelN,
+                      &Eph->anom);
+               World[Iw].PriMerAng = fmod(World[Iw].w * DynTime, TwoPi);
+               SimpRot(ZAxis, World[Iw].PriMerAng, World[Iw].CWN);
+               MTxV(World[Ip].CNH, Eph->PosN, rh);
+               MTxV(World[Ip].CNH, Eph->VelN, vh);
+               for (i = 0; i < 3; i++) {
+                  World[Iw].PosH[i] = rh[i] + World[Ip].PosH[i];
+                  World[Iw].VelH[i] = vh[i] + World[Ip].VelH[i];
+               }
             }
          }
       }

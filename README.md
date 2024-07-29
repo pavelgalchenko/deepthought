@@ -90,3 +90,10 @@ throw things out of synch. Again, the most common symptom is the "Bogus input in
 DecodeString" error. Use your debugger to trace back where the error was
 generated. (The actual mistake may be at that line, or may be somewhere
 upstream.)
+
+## Planetary Ephemeris Settings (SPICE)
+Deepthought is now packaged with [SPICE](https://naif.jpl.nasa.gov/naif/), a toolkit 
+used to read and process planetary ephemeris. We recommend a specific set of SPICE 
+kernels to take advantage of all of 42's capabilities; ```Model/spice_kernels/kernels.txt``` is 42's SPICE metakernel which lists all of the kernels you need for 42's basic functionality. We have provided a shell script (```Model/spice_kernels/get_kernels.sh```) that automates the download process. 
+
+There are some use cases in which you need specialized or specific kernels that replace or add to the default SPICE kernels. In this case, you may replace or add the relevant line in the metakernel that points to the desired SPICE kernel. For more information on how metakernels are formatted and read, please see the [corresponding documentation](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/kernel.html#Text%20Kernel%20Specifications) through JPL NAIF.
