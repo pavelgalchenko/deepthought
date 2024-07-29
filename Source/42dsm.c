@@ -759,7 +759,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                vecs[k]->CmdMode = CMD_DIRECTION;
                vecs[k]->TrgType = TARGET_VEC;
                *attcmdProc[k] =
-                   fy_node_scanf(tgtNode, "/Frame %c", cmdRefFrm[k]);
+                   fy_node_scanf(tgtNode, "/Frame %19s", cmdRefFrm[k]);
                *attcmdProc[k] &= assignYAMLToDoubleArray(
                                      3, fy_node_by_path_def(tgtNode, "/Axis"),
                                      vecs[k]->cmd_vec) == 3;
@@ -1047,7 +1047,6 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
             {
                DSM->CmdArray[i++] = cmdIterNode;
             }
-            fy_node_scanf(DSM->CmdArray[0], "/Time %lf", &DSM->CmdNextTime);
             qsort(DSM->CmdArray, DSM->CmdCnt, sizeof(struct fy_node *),
                   &compareCmdNodes);
             fy_node_scanf(DSM->CmdArray[0], "/Time %lf", &DSM->CmdNextTime);
@@ -1150,13 +1149,8 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
 //------------------------------------------------------------------------------
 //                                SENSORS
 //------------------------------------------------------------------------------
-void SensorModule(struct SCType *S)
+void SensorModule(struct AcType *const AC)
 {
-
-   struct AcType *AC;
-
-   AC = &S->AC;
-
    if (AC->Ngyro > 0)
       DSM_GyroProcessing(AC);
    if (AC->Nmag > 0)
@@ -1503,383 +1497,79 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
 //------------------------------------------------------------------------------
 void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
 {
+   struct DSMCmdType *Cmd = &DSM->Cmd;
+   if (Cmd->TranslationCtrlActive == FALSE || Cmd->ManeuverMode != INACTIVE)
+      return;
+
    double wcn[3];
    long i, Isc_Ref, goodOriginFrame = FALSE;
    long frame_body, origin_body;
-
-   struct DSMCmdType *Cmd     = &DSM->Cmd;
    struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
    struct DSMStateType *state = &DSM->state;
 
-   if (Cmd->TranslationCtrlActive == TRUE && Cmd->ManeuverMode == INACTIVE) {
-      // Convert Disp vec into N/R coords.
-      switch (Cmd->RefFrame[0]) {
-         case 'F': {
-            MTxV(F->CN, Cmd->Pos, CTRL->CmdPosR); // Convert F to R Inertial
-            switch (F->FixedInFrame) {
-               case 'L': {
-                  // L rotates wrt R
-                  for (i = 0; i < 3; i++)
-                     wcn[i] = DSM->refOrb->wln[i];
-                  goodOriginFrame = TRUE;
-               } break;
-               case 'N': {
-                  // R does not rotate wrt R Inertial
-                  for (i = 0; i < 3; i++)
-                     wcn[i] = 0.0;
-                  goodOriginFrame = TRUE;
-               } break;
-               default: {
-                  printf("Invalid Formation fixed frame. How did this happen? "
-                         "Exiting...\n");
-                  exit(EXIT_FAILURE);
-               } break;
-            }
-         } break;
-         case 'N': {
-            for (i = 0; i < 3; i++)
-               CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
-            for (i = 0; i < 3; i++)
-               wcn[i] = 0.0; // R does not rotate wrt R Inertial
-            goodOriginFrame = TRUE;
-         } break;
-         case 'L': {
-            // Convert LVLH to R Inertial
-            MTxV(DSM->refOrb->CLN, Cmd->Pos, CTRL->CmdPosR);
-            for (i = 0; i < 3; i++)
-               wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
-            goodOriginFrame = TRUE;
-         } break;
-         default: {
-            // Decode ref SC ID Number
-            if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
-                       &frame_body) == 2) {
-               // Specify disp from OP, in SC B frame directions, control to OP
-               if (Isc_Ref >= Nsc) {
-                  printf("This mission only has %ld spacecraft, but spacecraft "
-                         "%ld was attempted to be set as the reference frame. "
-                         "Exiting...\n",
-                         Nsc, Isc_Ref);
-                  exit(EXIT_FAILURE);
-               }
-               if (frame_body >= SC[Isc_Ref].Nb) {
-                  printf(
-                      "Spacecraft %ld only has %ld bodies, but the reference "
-                      "frame was attempted to be set as body %ld. Exiting...\n",
-                      Isc_Ref, SC[Isc_Ref].Nb, frame_body);
-                  exit(EXIT_FAILURE);
-               }
-               // TODO: don't use other sc truth
-               double qbn[4] = {0.0}, wbn[3] = {0.0};
-               struct BodyType *TrgSB        = NULL;
-               struct DSMType *TrgDSM        = NULL;
-               struct DSMStateType *TrgState = NULL;
-               {
-                  // Limit scope where we need SCType
-                  struct SCType *TrgS = &SC[Isc_Ref];
-                  TrgSB               = TrgS->B;
-                  TrgDSM              = &TrgS->DSM;
-                  TrgState            = &TrgDSM->state;
-               }
-               if (frame_body != 0) {
-                  // get relative orientation of body to B[0] then apply this to
-                  // AC.qbn
-                  double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
-                  QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
-                  QxQ(qbB, TrgState->qbn, qbn);
-
-                  // get angular velocity of body relative to B[0], then apply
-                  // this to AC.wbn; all in B[frame_body] frame
-                  QxV(qbB, TrgSB[0].wn, wBnb);
-                  QxV(qbB, TrgState->wbn, wBnbAC);
-                  for (i = 0; i < 3; i++) {
-                     // TODO: double check what BodyType::wn actually is
-                     wbn[i] = wBnbAC[i] + (TrgSB[frame_body].wn[i] - wBnb[i]);
-                  }
-               }
-               else {
-                  for (i = 0; i < 3; i++) {
-                     qbn[i] = TrgState->qbn[i];
-                     wbn[i] = TrgState->wbn[i];
-                  }
-                  qbn[3] = TrgState->qbn[3];
-               }
-               QTxV(qbn, Cmd->Pos,
-                    CTRL->CmdPosR); // Convert SC# B to R Inertial
-               QTxV(qbn, wbn, wcn); // SC rotates wrt R
+   // Convert Disp vec into N/R coords.
+   switch (Cmd->RefFrame[0]) {
+      case 'F': {
+         MTxV(F->CN, Cmd->Pos, CTRL->CmdPosR); // Convert F to R Inertial
+         switch (F->FixedInFrame) {
+            case 'L': {
+               // L rotates wrt R
+               for (i = 0; i < 3; i++)
+                  wcn[i] = DSM->refOrb->wln[i];
                goodOriginFrame = TRUE;
-            }
-            else {
-               printf("Invalid Translational Control Reference Frame. "
+            } break;
+            case 'N': {
+               // R does not rotate wrt R Inertial
+               for (i = 0; i < 3; i++)
+                  wcn[i] = 0.0;
+               goodOriginFrame = TRUE;
+            } break;
+            default: {
+               printf("Invalid Formation fixed frame. How did this happen? "
                       "Exiting...\n");
                exit(EXIT_FAILURE);
-            }
-         } break;
-      }
-      if (!strcmp(Cmd->RefOrigin, "OP")) {
-         // Specify disp from OP, in X frame directions, control to OP
-         // Add pos of F frame origin in R frame
-         VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
+            } break;
+         }
+      } break;
+      case 'N': {
          for (i = 0; i < 3; i++)
-            CTRL->CmdPosR[i] += F->PosR[i];
+            CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
+         for (i = 0; i < 3; i++)
+            wcn[i] = 0.0; // R does not rotate wrt R Inertial
          goodOriginFrame = TRUE;
-      }
-      else if (!strncmp(Cmd->RefOrigin, "SC", 2)) {
-         // Specify disp from SC, in X frame directions, control to SC
-         // Add pos of SC in R frame
-         sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
-                &origin_body); // Decode ref SC ID Number
-         if (Isc_Ref >= Nsc) {
-            printf(
-                "This mission only has %ld spacecraft, but spacecraft %ld was "
-                "attempted to be set as the reference origin. Exiting...\n",
-                Nsc, Isc_Ref);
-            exit(EXIT_FAILURE);
-         }
-         if (origin_body >= SC[Isc_Ref].Nb) {
-            printf("Spacecraft %ld only has %ld bodies, but the reference "
-                   "origin was attempted to be set as body %ld. Exiting...\n",
-                   Isc_Ref, SC[Isc_Ref].Nb, origin_body);
-            exit(EXIT_FAILURE);
-         }
-         VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
-         struct BodyType *TrgSB        = NULL;
-         struct DSMType *TrgDSM        = NULL;
-         struct DSMStateType *TrgState = NULL;
-         {
-            // Limit scope where we need SCType
-            struct SCType *TrgS = &SC[Isc_Ref];
-            TrgSB               = TrgS->B;
-            TrgDSM              = &TrgS->DSM;
-            TrgState            = &TrgDSM->state;
-         }
-         for (i = 0; i < 3; i++) {
-            CTRL->CmdPosR[i] += TrgState->PosR[i] + TrgSB[origin_body].pn[i];
-            CTRL->CmdVelR[i] += TrgState->VelR[i] + TrgSB[origin_body].vn[i];
-         }
+      } break;
+      case 'L': {
+         // Convert LVLH to R Inertial
+         MTxV(DSM->refOrb->CLN, Cmd->Pos, CTRL->CmdPosR);
+         for (i = 0; i < 3; i++)
+            wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
          goodOriginFrame = TRUE;
-      }
-      else {
-         goodOriginFrame = FALSE;
-      }
-      if (goodOriginFrame == FALSE) {
-         printf("Invalid Ref origin/frame combo %s/%s in Translation Command "
-                "at %lf. Exiting...\n",
-                Cmd->RefOrigin, Cmd->RefFrame, SimTime);
-         exit(EXIT_FAILURE);
-      }
-      for (i = 0; i < 3; i++) {
-         CTRL->CmdPosN[i] = CTRL->CmdPosR[i] + state->PosN[i];
-         CTRL->CmdVelN[i] = CTRL->CmdVelR[i] + state->VelN[i];
-      }
-      for (i = 0; i < 3; i++) {
-         CTRL->trn_kp[i]   = Cmd->trn_kp[i];
-         CTRL->trn_kr[i]   = Cmd->trn_kr[i];
-         CTRL->trn_ki[i]   = Cmd->trn_ki[i];
-         CTRL->FrcB_max[i] = Cmd->FrcB_max[i];
-         CTRL->vel_max[i]  = Cmd->vel_max[i];
-      }
-   }
-}
-//------------------------------------------------------------------------------
-void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
-{
-   long i, Isc_Ref, target_num;
-   double qfn[4], qrn[4], qfl[4], qrf[4];
-   double vec_cmp[3];
-
-   struct DSMCmdType *Cmd     = &DSM->Cmd;
-   struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
-   struct DSMStateType *state = &DSM->state;
-
-   if (Cmd->AttitudeCtrlActive == TRUE) {
-      switch (Cmd->Method) {
-         case (PARM_VECTORS): {
-            double cmdVecB[2][3]          = {{0.0}};
-            double cmdVecN[2][3]          = {{0.0}};
-            struct DSMCmdVecType *vecs[2] = {&Cmd->PriVec, &Cmd->SecVec};
-            char *attRefFrame[2] = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
-            double C_tb[3][3], C_tn[3][3], dC[3][3];
-            double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
-            double tmag;
-            for (int k = 0; k < 2; k++) {
-               switch (vecs[k]->TrgType) {
-                  case TARGET_SC:
-                  case TARGET_WORLD: {
-                     // to get PV->wn, PV->N (in F Frame)
-                     FindDsmCmdVecN(DSM, vecs[k]);
-                     // (Converting Cmd vec to body frame)
-                     QxV(state->qbn, vecs[k]->N, cmdVecB[k]);
-                  } break;
-                  case TARGET_VEC: {
-                     switch (attRefFrame[k][0]) {
-                        case 'N': {
-                           // (Converting Cmd vec to body frame)
-                           QxV(state->qbn, vecs[k]->cmd_vec, cmdVecB[k]);
-                        } break;
-                        case 'F': {
-                           // (Converting to Inertial frame)
-                           MTxV(F->CN, vecs[k]->cmd_vec, cmdVecN[k]);
-                           // (Converting to body frame)
-                           QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
-                        } break;
-                        case 'L': {
-                           // (Converting to LVLH to Inertial frame)
-                           MTxV(DSM->refOrb->CLN, vecs[k]->cmd_vec, cmdVecN[k]);
-                           UNITV(cmdVecN[k]);
-                           // (Converting to body frame)
-                           QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
-                        } break;
-                        default: {
-                           // TODO: Add ability to use different spacecraft's
-                           // frame for pointing frame
-                           printf("Invlaid attitude reference frame for "
-                                  "pointing vector. Exiting...\n");
-                           exit(EXIT_FAILURE);
-                        } break;
-                     }
-                  } break;
-                  default:
-                     printf("Invalid Target type for %s vector. Exiting...\n",
-                            k == 0 ? "Primary" : "Secondary");
-                     exit(EXIT_FAILURE);
-                     break;
-               }
-               UNITV(cmdVecB[k]);
-               QTxV(state->qbn, cmdVecB[k], cmdVecN[k]);
-               UNITV(cmdVecN[k]);
-            }
-
-            /*construct body to target DCM and Inertial to Target DCMS*/
-            for (i = 0; i < 3; i++) {
-               C_tb[0][i] = vecs[0]->cmd_axis[i]; // = PV->cmd_axis
-               C_tn[0][i] = cmdVecN[0][i];        // = PriCmdVec
-            }
-
-            VxV(vecs[0]->cmd_axis, vecs[1]->cmd_axis, C_tb[2]);
-            VxV(cmdVecN[0], cmdVecN[1], C_tn[2]);
-            VxV(C_tb[2], C_tb[0], C_tb[1]);
-            VxV(C_tn[2], C_tn[0], C_tn[1]);
-
-            for (i = 0; i < 3; i++)
-               vec_cmp[i] = vecs[0]->cmd_axis[i] - vecs[1]->cmd_axis[i];
-            if (fabs(MAGV(vec_cmp)) < EPS_DSM) {
-               printf(
-                   "PV [%lf  %lf  %lf] in %s and SV [%lf  %lf  %lf] in %s are "
-                   "identical, resulting in a infeasible attitude command. "
-                   "Exiting...\n",
-                   vecs[0]->cmd_vec[0], vecs[0]->cmd_vec[1],
-                   vecs[0]->cmd_vec[2], Cmd->PriAttRefFrame,
-                   vecs[1]->cmd_vec[0], vecs[1]->cmd_vec[1],
-                   vecs[1]->cmd_vec[2], Cmd->SecAttRefFrame);
+      } break;
+      default: {
+         // Decode ref SC ID Number
+         if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body) ==
+             2) {
+            if (Isc_Ref == DSM->ID) {
+               printf("SC[%ld] is attempting to translate relative to its "
+                      "own body frame. Exiting...\n",
+                      DSM->ID);
                exit(EXIT_FAILURE);
             }
-
-            for (i = 0; i < 3; i++) {
-               UNITV(C_tb[i]);
-               UNITV(C_tn[i]);
-            }
-
-            C2Q(C_tb, q_tb);
-            C2Q(C_tn, q_tn);
-
-            /* Approximation of log map from SO(3) to so(3) to calculate
-             * Cmd->wrn
-             */
-            MTxM(C_tn, Cmd->OldCRN, dC);
-            tmag        = acos((dC[0][0] + dC[1][1] + dC[2][2] - 1) / 2.0);
-            Cmd->wrn[0] = (dC[2][1] - dC[1][2]) / 2.0 / DSM->DT;
-            Cmd->wrn[1] = (dC[0][2] - dC[2][0]) / 2.0 / DSM->DT;
-            Cmd->wrn[2] = (dC[1][0] - dC[0][1]) / 2.0 / DSM->DT;
-            // check if wmag large enough to avoid singularity
-            if (tmag > EPS_DSM) {
-               for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] *= tmag / sin(tmag);
-            }
-            memcpy(Cmd->OldCRN, C_tn, sizeof(Cmd->OldCRN));
-
-            /* Calculate Inertial to Body Quaternion */
-            QTxQ(q_tb, q_tn, qbn_cmd);
-            UNITQ(qbn_cmd);
-            QxQT(state->qbn, qbn_cmd, Cmd->qbr);
-         } break;
-         case (PARM_UNITVECTOR): {
-            printf("Feature for Singular Primary Unit Vector Pointing not "
-                   "currently fully implemented. Exiting...\n");
-            exit(EXIT_FAILURE);
-         } break;
-         case (PARM_QUATERNION): {
-            switch (Cmd->AttRefFrame[0]) {
-               case 'N': {
-                  for (i = 0; i < 4; i++)
-                     Cmd->qrn[i] = Cmd->q[i];
-                  QxQT(state->qbn, Cmd->qrn, Cmd->qbr);
-                  for (i = 0; i < 3; i++)
-                     Cmd->wrn[i] = 0.0;
-               } break;
-               case 'F': {
-                  for (i = 0; i < 4; i++)
-                     Cmd->qrf[i] = Cmd->q[i];
-                  C2Q(F->CN, qfn);
-                  QxQ(Cmd->qrf, qfn, qrn);
-                  QxQT(state->qbn, qrn, Cmd->qbr);
-                  switch (F->FixedInFrame) {
-                     case 'L': {
-                        // F rotates wrt N
-                        for (i = 0; i < 3; i++)
-                           Cmd->wrn[i] = DSM->refOrb->wln[i];
-                     } break;
-                     case 'N': {
-                        // N does not rotate wrt N Inertial
-                        for (i = 0; i < 3; i++)
-                           Cmd->wrn[i] = 0.0;
-                     } break;
-                     default: {
-                        printf("Invalid Formation fixed frame. How did this "
-                               "happen? Exiting...\n");
-                        exit(EXIT_FAILURE);
-                     } break;
-                  }
-               } break;
-               case 'L': {
-                  for (i = 0; i < 4; i++)
-                     Cmd->qrl[i] = Cmd->q[i];
-                  C2Q(F->CL, qfl);
-                  QxQT(Cmd->qrl, qfl, qrf);
-                  C2Q(F->CN, qfn);
-                  QxQ(qrf, qfn, qrn);
-                  QxQT(state->qbn, qrn, Cmd->qbr);
-                  for (i = 0; i < 3; i++)
-                     Cmd->wrn[i] = DSM->refOrb->wln[i];
-               } break;
-               default: {
-                  // TODO: Add ability to use different spacecraft's frame for
-                  // quaternion frame
-                  printf("Invlaid attitude reference frame for quaternion. "
-                         "Exiting...\n");
-                  exit(EXIT_FAILURE);
-               } break;
-            }
-         } break;
-         case (PARM_MIRROR): {
-            // Decode ref SC ID Number
-            sscanf(Cmd->AttRefScID, "SC[%ld].B[%ld]", &Isc_Ref, &target_num);
+            // Specify disp from OP, in SC B frame directions, control to OP
             if (Isc_Ref >= Nsc) {
                printf("This mission only has %ld spacecraft, but spacecraft "
-                      "%ld was "
-                      "attempted to be set as the spacecraft to mirror. "
+                      "%ld was attempted to be set as the reference frame. "
                       "Exiting...\n",
                       Nsc, Isc_Ref);
                exit(EXIT_FAILURE);
             }
-            if (target_num >= SC[Isc_Ref].Nb) {
-               printf(
-                   "Spacecraft %ld only has %ld bodies, but the mirror target "
-                   "was attempted to be set as body %ld. Exiting...\n",
-                   Isc_Ref, SC[Isc_Ref].Nb, target_num);
+            if (frame_body >= SC[Isc_Ref].Nb) {
+               printf("Spacecraft %ld only has %ld bodies, but the reference "
+                      "frame was attempted to be set as body %ld. Exiting...\n",
+                      Isc_Ref, SC[Isc_Ref].Nb, frame_body);
                exit(EXIT_FAILURE);
             }
-            // TODO: not truth of other body
+            // TODO: don't use other sc truth
             double qbn[4] = {0.0}, wbn[3] = {0.0};
             struct BodyType *TrgSB        = NULL;
             struct DSMType *TrgDSM        = NULL;
@@ -1891,19 +1581,21 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                TrgDSM              = &TrgS->DSM;
                TrgState            = &TrgDSM->state;
             }
-            if (target_num != 0) {
+            if (frame_body != 0) {
                // get relative orientation of body to B[0] then apply this to
                // AC.qbn
-               double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbDSM[3] = {0.0};
-               QxQT(TrgSB[target_num].qn, TrgSB[0].qn, qbB);
+               double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
+               QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
                QxQ(qbB, TrgState->qbn, qbn);
 
-               // get relative angular velocity of body to B[0], then apply this
-               // to AC.wbn; all in B[frame_body] frame
+               // get angular velocity of body relative to B[0], then apply
+               // this to AC.wbn; all in B[frame_body] frame
                QxV(qbB, TrgSB[0].wn, wBnb);
-               QxV(qbB, TrgState->wbn, wBnbDSM);
-               for (i = 0; i < 3; i++)
-                  wbn[i] = wBnbDSM[i] + (TrgSB[target_num].wn[i] - wBnb[i]);
+               QxV(qbB, TrgState->wbn, wBnbAC);
+               for (i = 0; i < 3; i++) {
+                  // TODO: double check what BodyType::wn actually is
+                  wbn[i] = wBnbAC[i] + (TrgSB[frame_body].wn[i] - wBnb[i]);
+               }
             }
             else {
                for (i = 0; i < 3; i++) {
@@ -1912,34 +1604,389 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                }
                qbn[3] = TrgState->qbn[3];
             }
-            QxQT(state->qbn, qbn, Cmd->qbr);
-            QTxV(TrgState->qbn, wbn, Cmd->wrn);
-         } break;
-         case (PARM_DETUMBLE): {
-            for (i = 0; i < 3; i++)
-               Cmd->qbr[i] = 0;
-            Cmd->qbr[3] = 1;
-            for (i = 0; i < 3; i++)
-               Cmd->wrn[i] = 0.0;
-         } break;
-         default:
-            printf(
-                "Invalid Command Method for Attitude Guidance. Exiting...\n");
+            QTxV(qbn, Cmd->Pos,
+                 CTRL->CmdPosR); // Convert SC# B to R Inertial
+            QTxV(qbn, wbn, wcn); // SC rotates wrt R
+            goodOriginFrame = TRUE;
+         }
+         else {
+            printf("Invalid Translational Control Reference Frame. "
+                   "Exiting...\n");
             exit(EXIT_FAILURE);
-            break;
+         }
+      } break;
+   }
+   if (!strcmp(Cmd->RefOrigin, "OP")) {
+      // Specify disp from OP, in X frame directions, control to OP
+      // Add pos of F frame origin in R frame
+      VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
+      for (i = 0; i < 3; i++)
+         CTRL->CmdPosR[i] += F->PosR[i];
+      goodOriginFrame = TRUE;
+   }
+   else if (!strncmp(Cmd->RefOrigin, "SC", 2)) {
+      // Specify disp from SC, in X frame directions, control to SC
+      // Add pos of SC in R frame
+      sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
+             &origin_body); // Decode ref SC ID Number
+      if (Isc_Ref >= Nsc) {
+         printf("This mission only has %ld spacecraft, but spacecraft %ld was "
+                "attempted to be set as the reference origin. Exiting...\n",
+                Nsc, Isc_Ref);
+         exit(EXIT_FAILURE);
       }
-
-      for (i = 0; i < 4; i++)
-         CTRL->qbr[i] = Cmd->qbr[i];
+      if (origin_body >= SC[Isc_Ref].Nb) {
+         printf("Spacecraft %ld only has %ld bodies, but the reference "
+                "origin was attempted to be set as body %ld. Exiting...\n",
+                Isc_Ref, SC[Isc_Ref].Nb, origin_body);
+         exit(EXIT_FAILURE);
+      }
+      VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
+      struct BodyType *TrgSB        = NULL;
+      struct DSMType *TrgDSM        = NULL;
+      struct DSMStateType *TrgState = NULL;
+      {
+         // Limit scope where we need SCType
+         struct SCType *TrgS = &SC[Isc_Ref];
+         TrgSB               = TrgS->B;
+         TrgDSM              = &TrgS->DSM;
+         TrgState            = &TrgDSM->state;
+      }
       for (i = 0; i < 3; i++) {
-         CTRL->dmp_kp[i]   = Cmd->dmp_kp[i];
-         CTRL->att_kp[i]   = Cmd->att_kp[i];
-         CTRL->att_kr[i]   = Cmd->att_kr[i];
-         CTRL->att_ki[i]   = Cmd->att_ki[i];
-         CTRL->Trq_max[i]  = Cmd->Trq_max[i];
-         CTRL->dTrq_max[i] = Cmd->dTrq_max[i];
-         CTRL->w_max[i]    = Cmd->w_max[i];
+         CTRL->CmdPosR[i] += TrgState->PosR[i] + TrgSB[origin_body].pn[i];
+         CTRL->CmdVelR[i] += TrgState->VelR[i] + TrgSB[origin_body].vn[i];
       }
+      goodOriginFrame = TRUE;
+   }
+   else {
+      goodOriginFrame = FALSE;
+   }
+   if (goodOriginFrame == FALSE) {
+      printf("Invalid Ref origin/frame combo %s/%s in Translation Command "
+             "at %lf. Exiting...\n",
+             Cmd->RefOrigin, Cmd->RefFrame, SimTime);
+      exit(EXIT_FAILURE);
+   }
+   for (i = 0; i < 3; i++) {
+      CTRL->CmdPosN[i] = CTRL->CmdPosR[i] + state->PosN[i];
+      CTRL->CmdVelN[i] = CTRL->CmdVelR[i] + state->VelN[i];
+   }
+   for (i = 0; i < 3; i++) {
+      CTRL->trn_kp[i]   = Cmd->trn_kp[i];
+      CTRL->trn_kr[i]   = Cmd->trn_kr[i];
+      CTRL->trn_ki[i]   = Cmd->trn_ki[i];
+      CTRL->FrcB_max[i] = Cmd->FrcB_max[i];
+      CTRL->vel_max[i]  = Cmd->vel_max[i];
+   }
+}
+//------------------------------------------------------------------------------
+void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
+{
+   struct DSMCmdType *Cmd = &DSM->Cmd;
+   if (Cmd->AttitudeCtrlActive == FALSE)
+      return;
+
+   long i, Isc_Ref, target_num;
+   double qfn[4], qrn[4], qfl[4], qrf[4];
+   double vec_cmp[3];
+   struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
+   struct DSMStateType *state = &DSM->state;
+
+   switch (Cmd->Method) {
+      case (PARM_VECTORS): {
+         double cmdVecB[2][3]          = {{0.0}};
+         double cmdVecN[2][3]          = {{0.0}};
+         struct DSMCmdVecType *vecs[2] = {&Cmd->PriVec, &Cmd->SecVec};
+         char *attRefFrame[2] = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
+         double C_tb[3][3], C_tn[3][3], dC[3][3];
+         double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
+         double tmag;
+         for (int k = 0; k < 2; k++) {
+            switch (vecs[k]->TrgType) {
+               case TARGET_SC:
+               case TARGET_WORLD: {
+                  // to get PV->wn, PV->N (in F Frame)
+                  FindDsmCmdVecN(DSM, vecs[k]);
+                  // (Converting Cmd vec to body frame)
+                  QxV(state->qbn, vecs[k]->N, cmdVecB[k]);
+               } break;
+               case TARGET_VEC: {
+                  switch (attRefFrame[k][0]) {
+                     case 'N': {
+                        // (Converting Cmd vec to body frame)
+                        QxV(state->qbn, vecs[k]->cmd_vec, cmdVecB[k]);
+                     } break;
+                     case 'F': {
+                        // (Converting to Inertial frame)
+                        MTxV(F->CN, vecs[k]->cmd_vec, cmdVecN[k]);
+                        // (Converting to body frame)
+                        QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
+                     } break;
+                     case 'L': {
+                        // (Converting to LVLH to Inertial frame)
+                        MTxV(DSM->refOrb->CLN, vecs[k]->cmd_vec, cmdVecN[k]);
+                        // (Converting to body frame)
+                        QxV(state->qbn, cmdVecN[k], cmdVecB[k]);
+                     } break;
+                     default: {
+                        long frame_body = 0;
+                        // Decode ref SC ID Number
+                        if (sscanf(attRefFrame[k], "SC[%ld].B[%ld]", &Isc_Ref,
+                                   &frame_body) == 2) {
+                           if (Isc_Ref == DSM->ID) {
+                              printf("SC[%ld] is attempting to point relative "
+                                     "to its own body frame. Exiting...\n",
+                                     DSM->ID);
+                              exit(EXIT_FAILURE);
+                           }
+                           if (Isc_Ref >= Nsc) {
+                              printf("This mission only has %ld spacecraft, "
+                                     "but spacecraft %ld was attempted to be "
+                                     "set as the reference frame. Exiting...\n",
+                                     Nsc, Isc_Ref);
+                              exit(EXIT_FAILURE);
+                           }
+                           if (frame_body >= SC[Isc_Ref].Nb) {
+                              printf("Spacecraft %ld only has %ld bodies, but "
+                                     "the reference frame was attempted to be "
+                                     "set as body %ld. Exiting...\n",
+                                     Isc_Ref, SC[Isc_Ref].Nb, frame_body);
+                              exit(EXIT_FAILURE);
+                           }
+                           // TODO: don't use other sc truth
+                           double qbn[4]                 = {0.0};
+                           struct BodyType *TrgSB        = NULL;
+                           struct DSMType *TrgDSM        = NULL;
+                           struct DSMStateType *TrgState = NULL;
+                           {
+                              // Limit scope where we need SCType
+                              struct SCType *TrgS = &SC[Isc_Ref];
+                              TrgSB               = TrgS->B;
+                              TrgDSM              = &TrgS->DSM;
+                              TrgState            = &TrgDSM->state;
+                           }
+                           if (frame_body != 0) {
+                              // get relative orientation of body to B[0]
+                              // then apply this to AC.qbn
+                              double qbB[4] = {0.0};
+                              QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
+                              QxQ(qbB, TrgState->qbn, qbn);
+                           }
+                           else {
+                              for (i = 0; i < 3; i++) {
+                                 qbn[i] = TrgState->qbn[i];
+                              }
+                              qbn[3] = TrgState->qbn[3];
+                           }
+                           // rotation from trg Body to DSM body frame
+                           double qbbs[4] = {0.0};
+                           QxQT(state->qbn, qbn, qbbs);
+                           QxV(qbbs, vecs[k]->cmd_vec, cmdVecB[k]);
+                        }
+                        else {
+                           printf("Invalid attitude reference frame for "
+                                  "pointing vector. Exiting...\n");
+                           exit(EXIT_FAILURE);
+                        }
+                     } break;
+                  }
+               } break;
+               default:
+                  printf("Invalid Target type for %s vector. Exiting...\n",
+                         k == 0 ? "Primary" : "Secondary");
+                  exit(EXIT_FAILURE);
+                  break;
+            }
+            UNITV(cmdVecB[k]);
+            QTxV(state->qbn, cmdVecB[k], cmdVecN[k]);
+            UNITV(cmdVecN[k]);
+         }
+
+         /*construct body to target DCM and Inertial to Target DCMS*/
+         for (i = 0; i < 3; i++) {
+            C_tb[0][i] = vecs[0]->cmd_axis[i]; // = PV->cmd_axis
+            C_tn[0][i] = cmdVecN[0][i];        // = PriCmdVec
+         }
+
+         VxV(vecs[0]->cmd_axis, vecs[1]->cmd_axis, C_tb[2]);
+         VxV(cmdVecN[0], cmdVecN[1], C_tn[2]);
+         VxV(C_tb[2], C_tb[0], C_tb[1]);
+         VxV(C_tn[2], C_tn[0], C_tn[1]);
+
+         for (i = 0; i < 3; i++)
+            vec_cmp[i] = vecs[0]->cmd_axis[i] - vecs[1]->cmd_axis[i];
+         if (fabs(MAGV(vec_cmp)) < EPS_DSM) {
+            printf("PV [%lf  %lf  %lf] in %s and SV [%lf  %lf  %lf] in %s are "
+                   "identical, resulting in a infeasible attitude command. "
+                   "Exiting...\n",
+                   vecs[0]->cmd_vec[0], vecs[0]->cmd_vec[1],
+                   vecs[0]->cmd_vec[2], Cmd->PriAttRefFrame,
+                   vecs[1]->cmd_vec[0], vecs[1]->cmd_vec[1],
+                   vecs[1]->cmd_vec[2], Cmd->SecAttRefFrame);
+            exit(EXIT_FAILURE);
+         }
+
+         for (i = 0; i < 3; i++) {
+            UNITV(C_tb[i]);
+            UNITV(C_tn[i]);
+         }
+
+         C2Q(C_tb, q_tb);
+         C2Q(C_tn, q_tn);
+
+         /* Approximation of log map from SO(3) to so(3) to calculate
+          * Cmd->wrn
+          */
+         MTxM(C_tn, Cmd->OldCRN, dC);
+         tmag        = acos((dC[0][0] + dC[1][1] + dC[2][2] - 1) / 2.0);
+         Cmd->wrn[0] = (dC[2][1] - dC[1][2]) / 2.0 / DSM->DT;
+         Cmd->wrn[1] = (dC[0][2] - dC[2][0]) / 2.0 / DSM->DT;
+         Cmd->wrn[2] = (dC[1][0] - dC[0][1]) / 2.0 / DSM->DT;
+         // check if wmag large enough to avoid singularity
+         if (tmag > EPS_DSM) {
+            for (i = 0; i < 3; i++)
+               Cmd->wrn[i] *= tmag / sin(tmag);
+         }
+         memcpy(Cmd->OldCRN, C_tn, sizeof(Cmd->OldCRN));
+
+         /* Calculate Inertial to Body Quaternion */
+         QTxQ(q_tb, q_tn, qbn_cmd);
+         UNITQ(qbn_cmd);
+         QxQT(state->qbn, qbn_cmd, Cmd->qbr);
+      } break;
+      case (PARM_UNITVECTOR): {
+         printf("Feature for Singular Primary Unit Vector Pointing not "
+                "currently fully implemented. Exiting...\n");
+         exit(EXIT_FAILURE);
+      } break;
+      case (PARM_QUATERNION): {
+         switch (Cmd->AttRefFrame[0]) {
+            case 'N': {
+               for (i = 0; i < 4; i++)
+                  Cmd->qrn[i] = Cmd->q[i];
+               QxQT(state->qbn, Cmd->qrn, Cmd->qbr);
+               for (i = 0; i < 3; i++)
+                  Cmd->wrn[i] = 0.0;
+            } break;
+            case 'F': {
+               for (i = 0; i < 4; i++)
+                  Cmd->qrf[i] = Cmd->q[i];
+               C2Q(F->CN, qfn);
+               QxQ(Cmd->qrf, qfn, qrn);
+               QxQT(state->qbn, qrn, Cmd->qbr);
+               switch (F->FixedInFrame) {
+                  case 'L': {
+                     // F rotates wrt N
+                     for (i = 0; i < 3; i++)
+                        Cmd->wrn[i] = DSM->refOrb->wln[i];
+                  } break;
+                  case 'N': {
+                     // N does not rotate wrt N Inertial
+                     for (i = 0; i < 3; i++)
+                        Cmd->wrn[i] = 0.0;
+                  } break;
+                  default: {
+                     printf("Invalid Formation fixed frame. How did this "
+                            "happen? Exiting...\n");
+                     exit(EXIT_FAILURE);
+                  } break;
+               }
+            } break;
+            case 'L': {
+               for (i = 0; i < 4; i++)
+                  Cmd->qrl[i] = Cmd->q[i];
+               C2Q(F->CL, qfl);
+               QxQT(Cmd->qrl, qfl, qrf);
+               C2Q(F->CN, qfn);
+               QxQ(qrf, qfn, qrn);
+               QxQT(state->qbn, qrn, Cmd->qbr);
+               for (i = 0; i < 3; i++)
+                  Cmd->wrn[i] = DSM->refOrb->wln[i];
+            } break;
+            default: {
+               // TODO: Add ability to use different spacecraft's frame for
+               // quaternion frame
+               printf("Invlaid attitude reference frame for quaternion. "
+                      "Exiting...\n");
+               exit(EXIT_FAILURE);
+            } break;
+         }
+      } break;
+      case (PARM_MIRROR): {
+         // Decode ref SC ID Number
+         sscanf(Cmd->AttRefScID, "SC[%ld].B[%ld]", &Isc_Ref, &target_num);
+         if (Isc_Ref >= Nsc) {
+            printf(
+                "This mission only has %ld spacecraft, but spacecraft %ld was "
+                "attempted to be set as the spacecraft to mirror. Exiting...\n",
+                Nsc, Isc_Ref);
+            exit(EXIT_FAILURE);
+         }
+         if (target_num >= SC[Isc_Ref].Nb) {
+            printf("Spacecraft %ld only has %ld bodies, but the mirror target "
+                   "was attempted to be set as body %ld. Exiting...\n",
+                   Isc_Ref, SC[Isc_Ref].Nb, target_num);
+            exit(EXIT_FAILURE);
+         }
+         // TODO: not truth of other body
+         double qbn[4] = {0.0}, wbn[3] = {0.0};
+         struct BodyType *TrgSB        = NULL;
+         struct DSMType *TrgDSM        = NULL;
+         struct DSMStateType *TrgState = NULL;
+         {
+            // Limit scope where we need SCType
+            struct SCType *TrgS = &SC[Isc_Ref];
+            TrgSB               = TrgS->B;
+            TrgDSM              = &TrgS->DSM;
+            TrgState            = &TrgDSM->state;
+         }
+         if (target_num != 0) {
+            // get relative orientation of body to B[0] then apply this to
+            // AC.qbn
+            double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbDSM[3] = {0.0};
+            QxQT(TrgSB[target_num].qn, TrgSB[0].qn, qbB);
+            QxQ(qbB, TrgState->qbn, qbn);
+
+            // get relative angular velocity of body to B[0], then apply this
+            // to AC.wbn; all in B[frame_body] frame
+            QxV(qbB, TrgSB[0].wn, wBnb);
+            QxV(qbB, TrgState->wbn, wBnbDSM);
+            for (i = 0; i < 3; i++)
+               wbn[i] = wBnbDSM[i] + (TrgSB[target_num].wn[i] - wBnb[i]);
+         }
+         else {
+            for (i = 0; i < 3; i++) {
+               qbn[i] = TrgState->qbn[i];
+               wbn[i] = TrgState->wbn[i];
+            }
+            qbn[3] = TrgState->qbn[3];
+         }
+         QxQT(state->qbn, qbn, Cmd->qbr);
+         QTxV(TrgState->qbn, wbn, Cmd->wrn);
+      } break;
+      case (PARM_DETUMBLE): {
+         for (i = 0; i < 3; i++)
+            Cmd->qbr[i] = 0;
+         Cmd->qbr[3] = 1;
+         for (i = 0; i < 3; i++)
+            Cmd->wrn[i] = 0.0;
+      } break;
+      default:
+         printf("Invalid Command Method for Attitude Guidance. Exiting...\n");
+         exit(EXIT_FAILURE);
+         break;
+   }
+
+   for (i = 0; i < 4; i++)
+      CTRL->qbr[i] = Cmd->qbr[i];
+   for (i = 0; i < 3; i++) {
+      CTRL->dmp_kp[i]   = Cmd->dmp_kp[i];
+      CTRL->att_kp[i]   = Cmd->att_kp[i];
+      CTRL->att_kr[i]   = Cmd->att_kr[i];
+      CTRL->att_ki[i]   = Cmd->att_ki[i];
+      CTRL->Trq_max[i]  = Cmd->Trq_max[i];
+      CTRL->dTrq_max[i] = Cmd->dTrq_max[i];
+      CTRL->w_max[i]    = Cmd->w_max[i];
    }
 }
 //------------------------------------------------------------------------------
@@ -2364,7 +2411,7 @@ void DsmFSW(struct SCType *S)
    }
 
    // Generate Data From Sensors
-   SensorModule(S);
+   SensorModule(AC);
 
    // Navigation Modules
    NavigationModule(AC, DSM);

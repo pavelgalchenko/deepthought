@@ -299,6 +299,16 @@ Primary Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
+  - Primary Vector:
+      Index: 6
+      Description: AttitudeCmd_PV[3]
+      Target:
+        Type: VEC
+        Frame: SC[4].B[0]
+        Axis: [0.0, 0.0, 1.0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
 Secondary Vector Configurations:
   # ------------------------------Secondary Axis Cmd-------------------------------
   # ((Sequence; one element for unique Secondary Axis Command))
@@ -357,6 +367,14 @@ Secondary Vector Configurations:
         Type: VEC
         Frame: L
         Axis: [-1.0, 0.0, 0.0]
+      Axis: [-1.0, 0.0, 0.0]
+  - Secondary Vector:
+      Index: 6
+      Description: AttitudeCmd_PV[3]
+      Target:
+        Type: VEC
+        Frame: SC[4].B[0]
+        Axis: [0.0, 0.0, 1.0]
       Axis: [-1.0, 0.0, 0.0]
 Quaternion Configurations:
   # ------------------------Quaternion Attitude Cmd--------------------------------
@@ -573,9 +591,6 @@ DSM Commands:
             Index: 0
       - Time: 300.0
         Commands:
-          - Type: Attitude
-            Subtype: Mirror
-            Index: 0
           - Type: Translation
             Subtype: Maneuver
             Index: 2
@@ -586,7 +601,12 @@ DSM Commands:
             Index: 3
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [3, 3]
+            Index: [6, 3]
+      - Time: 800.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [3, 6]
   - SC: 2
     Command Sequence:
       - Time: 0.0
@@ -605,9 +625,6 @@ DSM Commands:
             Index: 1
       - Time: 300.0
         Commands:
-          - Type: Attitude
-            Subtype: Mirror
-            Index: 0
           - Type: Translation
             Subtype: Maneuver
             Index: 3
@@ -618,7 +635,12 @@ DSM Commands:
             Index: 4
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [2, 2]
+            Index: [2, 6]
+      - Time: 800.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [6, 2]
   - SC: 3
     Command Sequence:
       - Time: 0.0
@@ -673,9 +695,6 @@ DSM Commands:
             Subtype: Passive
       - Time: 80.0
         Commands:
-          - Type: Attitude
-            Subtype: Quaternion
-            Index: 0
           - Type: Translation
             Subtype: Translation
             Index: 0
