@@ -185,7 +185,7 @@ void DSM_InertialReport(void)
    }
 }
 /*********************************************************************/
-void DSM_PlanEphemReport(void)
+void DSM_PlanetEphemReport(void)
 {
    static FILE **ephemfile;
    static FILE **suntrackfile;
@@ -761,7 +761,7 @@ void Report(void)
 
             DSM_AttitudeReport();
             DSM_InertialReport();
-            // DSM_PlanEphemReport();
+            // DSM_PlanetEphemReport();
             DSM_ATT_ControlReport();
             DSM_POS_ControlReport();
             DSM_EphemReport();
