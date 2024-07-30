@@ -1500,7 +1500,6 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    if (Cmd->TranslationCtrlActive == FALSE || Cmd->ManeuverMode != INACTIVE)
       return;
 
-   double wcn[3];
    long i, Isc_Ref, goodOriginFrame = FALSE;
    long frame_body, origin_body;
    struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
@@ -1509,18 +1508,19 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    // Convert Disp vec into N/R coords.
    switch (Cmd->RefFrame[0]) {
       case 'F': {
+         double wfn[3] = {0.0};
          MTxV(F->CN, Cmd->Pos, CTRL->CmdPosR); // Convert F to R Inertial
          switch (F->FixedInFrame) {
             case 'L': {
                // L rotates wrt R
                for (i = 0; i < 3; i++)
-                  wcn[i] = DSM->refOrb->wln[i];
+                  wfn[i] = DSM->refOrb->wln[i];
                goodOriginFrame = TRUE;
             } break;
             case 'N': {
                // R does not rotate wrt R Inertial
                for (i = 0; i < 3; i++)
-                  wcn[i] = 0.0;
+                  wfn[i] = 0.0;
                goodOriginFrame = TRUE;
             } break;
             default: {
@@ -1528,20 +1528,20 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                       "Exiting...\n");
                exit(EXIT_FAILURE);
             } break;
+               VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
          }
       } break;
       case 'N': {
          for (i = 0; i < 3; i++)
             CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
          for (i = 0; i < 3; i++)
-            wcn[i] = 0.0; // R does not rotate wrt R Inertial
+            CTRL->CmdVelR[i] = 0.0; // R does not rotate wrt R Inertial
          goodOriginFrame = TRUE;
       } break;
       case 'L': {
          // Convert LVLH to R Inertial
          MTxV(DSM->refOrb->CLN, Cmd->Pos, CTRL->CmdPosR);
-         for (i = 0; i < 3; i++)
-            wcn[i] = DSM->refOrb->wln[i]; // L rotates wrt R
+         VxV(DSM->refOrb->wln, CTRL->CmdPosR, CTRL->CmdVelR);
          goodOriginFrame = TRUE;
       } break;
       default: {
@@ -1603,9 +1603,12 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                }
                qbn[3] = TrgState->qbn[3];
             }
-            QTxV(qbn, Cmd->Pos,
-                 CTRL->CmdPosR); // Convert SC# B to R Inertial
-            QTxV(qbn, wbn, wcn); // SC rotates wrt R
+            // angular velocity of trgDSM wrt N expressed in N
+            double wbnn[3] = {0.0};
+            // Convert SC# B to R Inertial
+            QTxV(qbn, Cmd->Pos, CTRL->CmdPosR);
+            QTxV(qbn, wbn, wbnn); // SC rotates wrt R
+            VxV(wbnn, CTRL->CmdPosR, CTRL->CmdVelR);
             goodOriginFrame = TRUE;
          }
          else {
@@ -1615,10 +1618,10 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          }
       } break;
    }
+
    if (!strcmp(Cmd->RefOrigin, "OP")) {
       // Specify disp from OP, in X frame directions, control to OP
       // Add pos of F frame origin in R frame
-      VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
       for (i = 0; i < 3; i++)
          CTRL->CmdPosR[i] += F->PosR[i];
       goodOriginFrame = TRUE;
@@ -1635,12 +1638,11 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          exit(EXIT_FAILURE);
       }
       if (origin_body >= SC[Isc_Ref].Nb) {
-         printf("Spacecraft %ld only has %ld bodies, but the reference "
-                "origin was attempted to be set as body %ld. Exiting...\n",
+         printf("Spacecraft %ld only has %ld bodies, but the reference origin "
+                "was attempted to be set as body %ld. Exiting...\n",
                 Isc_Ref, SC[Isc_Ref].Nb, origin_body);
          exit(EXIT_FAILURE);
       }
-      VxV(wcn, CTRL->CmdPosR, CTRL->CmdVelR);
       struct BodyType *TrgSB        = NULL;
       struct DSMType *TrgDSM        = NULL;
       struct DSMStateType *TrgState = NULL;
@@ -1660,6 +1662,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    else {
       goodOriginFrame = FALSE;
    }
+
    if (goodOriginFrame == FALSE) {
       printf("Invalid Ref origin/frame combo %s/%s in Translation Command "
              "at %lf. Exiting...\n",
