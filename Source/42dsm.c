@@ -670,7 +670,9 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
          Cmd->Method = PARM_UNITVECTOR;
          cmdModes[0] = &AttCmdMode;
          fy_node_scanf(indNode, "/ %ld", cmdModes[0]);
+         AttSecCmdProcessed = TRUE;
       }
+
       for (int k = 0; k < kMax; k++) {
          struct fy_node *searchNode = fy_node_by_path_def(
              dsmRoot, (k == 0) ? ("/Primary Vector Configurations")
@@ -724,8 +726,8 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                else if (!strcmp(tgtType, "SC")) {
                   vecs[k]->TrgType = TARGET_SC;
                   if (sscanf(target, "SC[%ld].B[%ld]", &vecs[k]->TrgSC,
-                             &vecs[k]->TrgBody) ==
-                      2) { // Decode Current SC ID Number
+                             &vecs[k]->TrgBody) == 2) {
+                     // Decode Current SC ID Number
                      if (vecs[k]->TrgSC >= Nsc) {
                         printf("This mission only has %ld spacecraft, but "
                                "spacecraft %ld was attempted to be set as the "
@@ -733,6 +735,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                                Nsc, vecs[k]->TrgSC);
                         exit(EXIT_FAILURE);
                      }
+
                      if (vecs[k]->TrgBody >= SC[vecs[k]->TrgSC].Nb) {
                         printf("Spacecraft %ld only has %ld bodies, but the "
                                "primary target was attempted to be set as body "
@@ -786,6 +789,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                 *cmdModes[0], *cmdModes[1]);
          exit(EXIT_FAILURE);
       }
+
       if (AttPriCmdProcessed == TRUE && AttSecCmdProcessed == TRUE)
          AttitudeCmdProcessed = TRUE;
 
@@ -806,6 +810,12 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
             iterNode = fy_node_by_path_def(iterNode, "/Quaternion");
             break;
          }
+      }
+      if (iterNode == NULL) {
+         printf("Could not find Quaternion Configuration with index %ld. "
+                "Exiting...\n",
+                cmdInd);
+         exit(EXIT_FAILURE);
       }
       searchNode = fy_node_by_path_def(iterNode, "/Quaternion");
       AttitudeCmdProcessed =
@@ -834,6 +844,12 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
             break;
          }
       }
+      if (iterNode == NULL) {
+         printf(
+             "Could not find Mirror Configuration with index %ld. Exiting...\n",
+             cmdInd);
+         exit(EXIT_FAILURE);
+      }
       AttitudeCmdProcessed =
           fy_node_scanf(iterNode, "/Target %19s", Cmd->AttRefScID) == 1;
       ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
@@ -858,6 +874,12 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
             break;
          }
       }
+      if (iterNode == NULL) {
+         printf("Could not find Detumble Configuration with index %ld. "
+                "Exiting...\n",
+                cmdInd);
+         exit(EXIT_FAILURE);
+      }
       ctrlNode             = fy_node_by_path_def(iterNode, "/Controller");
       actNode              = fy_node_by_path_def(iterNode, "/Actuator");
       AttitudeCmdProcessed = ctrlNode != NULL && actNode != NULL;
@@ -878,6 +900,12 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
             iterNode = fy_node_by_path_def(iterNode, "/Whl H Manage");
             break;
          }
+      }
+      if (iterNode == NULL) {
+         printf("Could not find Whl H Manage Configuration with index %ld. "
+                "Exiting...\n",
+                cmdInd);
+         exit(EXIT_FAILURE);
       }
       AttitudeCmdProcessed =
           fy_node_scanf(iterNode,
@@ -1249,11 +1277,14 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
         // Error????
    }
 
+   // TODO: move momentum dumping to its own type
    // Momentum Dumping
    if (Cmd->H_DumpActive == TRUE) {
-      if (Cmd->AttitudeCtrlActive == TRUE && strcmp(Cmd->att_actuator, "WHL")) {
-         printf("You many only enable momentum dumping in a PASSIVE attitude "
-                "state or the attitude is controlled with WHLs. Exiting...\n");
+      if ((Cmd->AttitudeCtrlActive == TRUE &&
+           strcmp(Cmd->att_actuator, "WHL")) ||
+          Cmd->AttitudeCtrlActive == FALSE) {
+         printf("You many only enable momentum dumping when the attitude is "
+                "actively controlled with WHLs. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (DSM->DsmCtrl.H_DumpActive == TRUE &&
@@ -1354,28 +1385,29 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          DSM_RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
       } break;
       case TARGET_SC: {
-         struct DSMType *TrgDSM        = NULL;
          struct DSMStateType *TrgState = NULL;
+         struct OrbitType *TrgOrb      = NULL;
          {
             // Limit the scope where SC is accessed
-            struct SCType *TrgS = &SC[CV->TrgSC];
-            TrgDSM              = &TrgS->DSM;
-            TrgState            = &TrgDSM->commState;
+            struct SCType *TrgS    = &SC[CV->TrgSC];
+            struct DSMType *TrgDSM = &TrgS->DSM;
+            TrgOrb                 = TrgDSM->refOrb;
+            TrgState               = &TrgDSM->commState;
          }
-         if (TrgDSM->refOrb == RefOrb) {
+         if (TrgOrb == RefOrb) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = TrgState->PosR[i] - state->PosR[i];
                RelVelN[i] = TrgState->VelR[i] - state->VelR[i];
             }
          }
-         else if (TrgDSM->refOrb->World == RefOrb->World) {
+         else if (TrgOrb->World == RefOrb->World) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = TrgState->PosN[i] - state->PosN[i];
                RelVelN[i] = TrgState->VelN[i] - state->VelN[i];
             }
          }
          else {
-            struct WorldType *TrgW = &World[TrgDSM->refOrb->World];
+            struct WorldType *TrgW = &World[TrgOrb->World];
             struct WorldType *W    = &World[RefOrb->World];
             MTxV(TrgW->CNH, TrgState->PosN, RelPosH);
             MTxV(TrgW->CNH, TrgState->VelN, RelVelH);
@@ -1394,16 +1426,17 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          DSM_RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
       } break;
       case TARGET_BODY: {
-         struct DSMType *TrgDSM        = NULL;
+         struct OrbitType *TrgOrb      = NULL;
          struct DSMStateType *TrgState = NULL;
          struct BodyType *TrgSB        = NULL;
          double pcmn[3]                = {0.0};
          {
             // Limit the scope where SC is accessed
-            struct SCType *TrgS = &SC[CV->TrgSC];
-            TrgSB               = TrgS->B;
-            TrgDSM              = &TrgS->DSM;
-            TrgState            = &TrgDSM->state;
+            struct SCType *TrgS    = &SC[CV->TrgSC];
+            TrgSB                  = TrgS->B;
+            struct DSMType *TrgDSM = &TrgS->DSM;
+            TrgOrb                 = TrgDSM->refOrb;
+            TrgState               = &TrgDSM->commState;
             // TODO: don't like accessing SCType::cm
             QTxV(TrgState->qbn, TrgS->cm, pcmn);
          }
@@ -1421,13 +1454,13 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
             vn[i] += TrgSB[CV->TrgBody].vn[i];
          }
 
-         if (TrgDSM->refOrb == RefOrb) {
+         if (TrgOrb == RefOrb) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = TrgState->PosR[i] + pn[i] - state->PosR[i];
                RelVelN[i] = TrgState->VelR[i] + vn[i] - state->VelR[i];
             }
          }
-         else if (TrgDSM->refOrb->World == RefOrb->World) {
+         else if (TrgOrb->World == RefOrb->World) {
             for (i = 0; i < 3; i++) {
                RelPosN[i] = TrgState->PosN[i] + pn[i] - state->PosN[i];
                RelVelN[i] = TrgState->VelN[i] + vn[i] - state->VelN[i];
@@ -1438,7 +1471,7 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
                pn[i] += TrgState->PosN[i];
                vn[i] += TrgState->VelN[i];
             }
-            struct WorldType *TrgW = &World[TrgDSM->refOrb->World];
+            struct WorldType *TrgW = &World[TrgOrb->World];
             MTxV(TrgW->CNH, pn, RelPosH);
             MTxV(TrgW->CNH, vn, RelVelH);
             struct WorldType *W = &World[RefOrb->World];
@@ -1571,14 +1604,13 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             // TODO: don't use other sc truth
             double qbn[4] = {0.0}, wbn[3] = {0.0};
             struct BodyType *TrgSB        = NULL;
-            struct DSMType *TrgDSM        = NULL;
             struct DSMStateType *TrgState = NULL;
             {
                // Limit scope where we need SCType
-               struct SCType *TrgS = &SC[Isc_Ref];
-               TrgSB               = TrgS->B;
-               TrgDSM              = &TrgS->DSM;
-               TrgState            = &TrgDSM->state;
+               struct SCType *TrgS    = &SC[Isc_Ref];
+               TrgSB                  = TrgS->B;
+               struct DSMType *TrgDSM = &TrgS->DSM;
+               TrgState               = &TrgDSM->commState;
             }
             if (frame_body != 0) {
                // get relative orientation of body to B[0] then apply this to
@@ -1644,14 +1676,13 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          exit(EXIT_FAILURE);
       }
       struct BodyType *TrgSB        = NULL;
-      struct DSMType *TrgDSM        = NULL;
       struct DSMStateType *TrgState = NULL;
       {
          // Limit scope where we need SCType
-         struct SCType *TrgS = &SC[Isc_Ref];
-         TrgSB               = TrgS->B;
-         TrgDSM              = &TrgS->DSM;
-         TrgState            = &TrgDSM->state;
+         struct SCType *TrgS    = &SC[Isc_Ref];
+         TrgSB                  = TrgS->B;
+         struct DSMType *TrgDSM = &TrgS->DSM;
+         TrgState               = &TrgDSM->commState;
       }
       for (i = 0; i < 3; i++) {
          CTRL->CmdPosR[i] += TrgState->PosR[i] + TrgSB[origin_body].pn[i];
@@ -1758,14 +1789,13 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                            // TODO: don't use other sc truth
                            double qbn[4]                 = {0.0};
                            struct BodyType *TrgSB        = NULL;
-                           struct DSMType *TrgDSM        = NULL;
                            struct DSMStateType *TrgState = NULL;
                            {
                               // Limit scope where we need SCType
-                              struct SCType *TrgS = &SC[Isc_Ref];
-                              TrgSB               = TrgS->B;
-                              TrgDSM              = &TrgS->DSM;
-                              TrgState            = &TrgDSM->state;
+                              struct SCType *TrgS    = &SC[Isc_Ref];
+                              TrgSB                  = TrgS->B;
+                              struct DSMType *TrgDSM = &TrgS->DSM;
+                              TrgState               = &TrgDSM->commState;
                            }
                            if (frame_body != 0) {
                               // get relative orientation of body to B[0]
@@ -1933,14 +1963,13 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                   // TODO: don't use other sc truth
                   double qbn[4]                 = {0.0};
                   struct BodyType *TrgSB        = NULL;
-                  struct DSMType *TrgDSM        = NULL;
                   struct DSMStateType *TrgState = NULL;
                   {
                      // Limit scope where we need SCType
-                     struct SCType *TrgS = &SC[Isc_Ref];
-                     TrgSB               = TrgS->B;
-                     TrgDSM              = &TrgS->DSM;
-                     TrgState            = &TrgDSM->state;
+                     struct SCType *TrgS    = &SC[Isc_Ref];
+                     TrgSB                  = TrgS->B;
+                     struct DSMType *TrgDSM = &TrgS->DSM;
+                     TrgState               = &TrgDSM->commState;
                   }
                   if (frame_body != 0) {
                      // get relative orientation of body to B[0]
@@ -1987,14 +2016,13 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          // TODO: not truth of other body
          double qbn[4] = {0.0}, wbn[3] = {0.0};
          struct BodyType *TrgSB        = NULL;
-         struct DSMType *TrgDSM        = NULL;
          struct DSMStateType *TrgState = NULL;
          {
             // Limit scope where we need SCType
-            struct SCType *TrgS = &SC[Isc_Ref];
-            TrgSB               = TrgS->B;
-            TrgDSM              = &TrgS->DSM;
-            TrgState            = &TrgDSM->state;
+            struct SCType *TrgS    = &SC[Isc_Ref];
+            TrgSB                  = TrgS->B;
+            struct DSMType *TrgDSM = &TrgS->DSM;
+            TrgState               = &TrgDSM->commState;
          }
          if (target_num != 0) {
             // get relative orientation of body to B[0] then apply this to
@@ -2102,8 +2130,6 @@ void TranslationCtrl(struct DSMType *DSM)
    struct DSMStateType *state = &DSM->state;
 
    if (Cmd->TranslationCtrlActive == TRUE && Cmd->ManeuverMode == INACTIVE) {
-      // TODO: do we want S->PosR to be AC->PosR? and DSM->FcmdB to be
-      // CTRL->FcmdB??
       switch (Cmd->trn_controller) {
          case PID_CNTRL: {
             // PID Controller
