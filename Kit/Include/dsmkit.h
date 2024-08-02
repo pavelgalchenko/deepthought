@@ -13,6 +13,7 @@
 
 #include "42defines.h"
 #include "AcTypes.h"
+#include "DSMTypes.h"
 #include "dcmkit.h"
 #include "fswkit.h"
 #include "mathkit.h"
@@ -39,6 +40,8 @@ void DSM_FssProcessing(struct AcType *AC);
 void DSM_StarTrackerProcessing(struct AcType *AC);
 void DSM_GpsProcessing(struct AcType *AC);
 void DSM_AccelProcessing(struct AcType *AC);
+void DSM_CommStateProcessing(struct DSMStateType *state,
+                             struct DSMStateType *commState);
 
 /*
 ** #ifdef __cplusplus

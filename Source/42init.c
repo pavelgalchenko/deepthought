@@ -987,6 +987,7 @@ void InitOrbit(struct OrbitType *O)
          }
          O->LagDOF = DecodeString(response);
 
+         node = fy_node_by_path_def(node, "/Init");
          if (!fy_node_scanf(node, "/Method %49s", response)) {
             printf("Could not find Three Body orbit Initialization Method. "
                    "Exiting...\n");
@@ -6105,6 +6106,18 @@ void InitSim(int argc, char **argv)
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          InitSpacecraft(&SC[Isc]);
+      }
+   }
+   long nonDSMFSW = FALSE, DSMFSW = FALSE;
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         DSMFSW    |= SC[Isc].FswTag == DSM_FSW;
+         nonDSMFSW |= SC[Isc].FswTag != DSM_FSW;
+         if (nonDSMFSW && DSMFSW) {
+            printf("Mixing DSM_FSW and non DSM_FSW flightsoftware tags is not "
+                   "supported. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
       }
    }
 

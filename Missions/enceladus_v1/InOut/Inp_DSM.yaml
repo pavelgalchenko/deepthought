@@ -65,10 +65,10 @@ Controller Configurations:
       Type: PID_CNTRL
       Gains: *Gains_0
       Limits: *Limits_1
-Translation Configurations:
-  # ------------------------------Translation Command------------------------------
-  # ((Sequence; one element for unique Translation Command))
-  #   - Translation:
+Position Configurations:
+  # --------------------------------Position Command-------------------------------
+  # ((Sequence; one element for unique Position Command))
+  #   - Position:
   #       Index:          [[Index]]
   #       Description:    {Optional}
   #       Position:       [[X, Y, Z]] [[meters]]
@@ -76,7 +76,7 @@ Translation Configurations:
   #       Frame:          [[N/F/L/SC[#].B[#]]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-    []
+  []
 Primary Vector Configurations:
   # -------------------------------Primary Axis Cmd--------------------------------
   # ((Sequence; one element for unique Primary Axis Command))
@@ -89,7 +89,7 @@ Primary Vector Configurations:
   #       Target: ((Describes pointing target))
   #         Type:   [[VEC/BODY/SC]]
   #         ((Frame and Axis are only if Type is VEC))
-  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
   #        Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
@@ -113,7 +113,7 @@ Secondary Vector Configurations:
   #       Target: ((Describes pointing target))
   #         Type:   [[VEC, BODY, SC]]
   #         ((Frame and Axis are only if Type is VEC))
-  #         Frame:  [[N/F/L]] ((Pointing Vector Frame))
+  #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
   #         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
@@ -134,7 +134,7 @@ Quaternion Configurations:
   #       Frame:          [[(N, F, L)]] ((Quaternion Reference Frame))
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-    []
+  []
 Mirror Configurations:
   # ----------------------------Mirror Attitude Cmd--------------------------------
   # ((Sequence; one element for unique Mirror Command))
@@ -144,7 +144,7 @@ Mirror Configurations:
   #       Target:         [[SC[#]]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-    []
+  []
 Detumble Configurations:
   # ---------------------------Detumble Attitude Cmd-------------------------------
   # ((Sequence; one element for unique Detumble Command))
@@ -152,7 +152,7 @@ Detumble Configurations:
   #       Index:          [[Index]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-    []
+  []
 Whl H Manage Configurations:
   # ---------------------------Wheel Momentum Management Cmd-------------------------------
   # ((Sequence; one element for unique Whl H Manage Command))
@@ -164,7 +164,7 @@ Whl H Manage Configurations:
   #       Maximum H_norm: [[Maximum Angular Momentum]] [[Nms]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-    []
+  []
 Actuator Cmd Configurations:
   # --------------------------------Actuator Command-------------------------------
   # ((Sequence; one element for unique Actuator Command))
@@ -174,7 +174,7 @@ Actuator Cmd Configurations:
   #       - Type:       [[THR/WHL/MTB]]
   #         Index:      [[Index]]
   #         Duty Cycle: [[Duty Cycle]]
-    []
+  []
 Maneuver Configurations:
   # --------------------------------Maneuver Command-------------------------------
   # ((Sequence; one element for unique Actuator Definition))
@@ -188,7 +188,7 @@ Maneuver Configurations:
   #       Duration:       [[Duration]] [[s]]
   #       Limits:         [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
-    []
+  []
 DSM Commands:
   # ------------------------------Spacecraft Commands------------------------------
   # ((Sequence; one element for each spacecraft))

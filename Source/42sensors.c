@@ -497,6 +497,7 @@ void Sensors(struct SCType *S)
    if (S->Nst == 0) {
       for (i = 0; i < 4; i++)
          AC->qbn[i] = S->B[0].qn[i];
+      Q2C(AC->qbn, AC->CBN);
    }
    else {
       StarTrackerModel(S);

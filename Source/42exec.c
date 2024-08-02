@@ -336,6 +336,13 @@ long SimStep(void)
             PartitionForces(S); /* Orbit-affecting and "internal" */
          }
       }
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists && S->FswTag == DSM_FSW) {
+            struct DSMType *DSM = &S->DSM;
+            DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+         }
+      }
       Report(); /* File Output */
    }
 
@@ -368,6 +375,13 @@ long SimStep(void)
          FlightSoftWare(S);
          Actuators(S);
          PartitionForces(S); /* Orbit-affecting and "internal" */
+      }
+   }
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists && S->FswTag == DSM_FSW) {
+         struct DSMType *DSM = &S->DSM;
+         DSM->CommStateProcessing(&DSM->state, &DSM->commState);
       }
    }
    Report(); /* File Output */

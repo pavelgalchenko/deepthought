@@ -191,7 +191,7 @@ Position Configurations:
       Description: TranslationCmd_[0]
       Position: [2.0, 0.0, 0.0]
       Origin: OP
-      Frame: F
+      Frame: N
       Controller: *Controller_0
       Actuator: *Actuator_3
   - Position:
@@ -201,13 +201,13 @@ Position Configurations:
       Origin: OP
       Frame: F
       Controller: *Controller_0
-      Actuator: *Actuator_5
+      Actuator: *Actuator_3
   - Position:
       Index: 2
       Description: TranslationCmd_[2]
       Position: [0.0, 2.0, 0.0]
       Origin: OP
-      Frame: F
+      Frame: L
       Controller: *Controller_0
       Actuator: *Actuator_3
   - Position:
@@ -215,20 +215,12 @@ Position Configurations:
       Description: TranslationCmd_[3]
       Position: [-2.0, 0.0, 0.0]
       Origin: OP
-      Frame: F
-      Controller: *Controller_0
-      Actuator: *Actuator_5
-  - Position:
-      Index: 4
-      Description: TranslationCmd_[4]
-      Position: [0.0, 0.0, -2.0]
-      Origin: OP
-      Frame: F
+      Frame: SC[4].B[0]
       Controller: *Controller_0
       Actuator: *Actuator_3
   - Position:
-      Index: 5
-      Description: TranslationCmd_[5]
+      Index: 4
+      Description: TranslationCmd_[4]
       Position: [1.0, 0.0, 0.0]
       Origin: SC[4].B[0]
       Frame: SC[4].B[0]
@@ -255,7 +247,7 @@ Primary Vector Configurations:
       Description: AttitudeCmd_PV[0]
       Target:
         Type: VEC
-        Frame: L
+        Frame: N
         Axis: [1.0, 0.0, 0.0]
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
@@ -265,8 +257,8 @@ Primary Vector Configurations:
       Description: AttitudeCmd_PV[1]
       Target:
         Type: VEC
-        Frame: L
-        Axis: [0.0, -1.0, 0.0]
+        Frame: F
+        Axis: [1.0, 0.0, 0.0]
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
@@ -276,7 +268,7 @@ Primary Vector Configurations:
       Target:
         Type: VEC
         Frame: L
-        Axis: [-1.0, 0.0, 0.0]
+        Axis: [1.0, 0.0, 0.0]
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
@@ -284,9 +276,8 @@ Primary Vector Configurations:
       Index: 3
       Description: AttitudeCmd_PV[3]
       Target:
-        Type: VEC
-        Frame: L
-        Axis: [0.0, 1.0, 0.0]
+        Type: SC
+        Target: SC[4].B[0]
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
@@ -294,8 +285,8 @@ Primary Vector Configurations:
       Index: 4
       Description: AttitudeCmd_PV[4]
       Target:
-        Type: SC
-        Target: SC[4].B[0]
+        Type: BODY
+        Target: SUN
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
@@ -303,31 +294,20 @@ Primary Vector Configurations:
       Index: 5
       Description: AttitudeCmd_PV[5]
       Target:
-        Type: VEC
-        Frame: N
-        Axis: [0.0, 0.0, -1.0]
-      Axis: [1.0, 0.0, 0.0]
+        Type: BODY
+        Target: GroundStation_[0]
+      Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Primary Vector:
       Index: 6
-      Description: AttitudeCmd_PV[6]
+      Description: AttitudeCmd_PV[3]
       Target:
         Type: VEC
-        Frame: N
-        Axis: [-1.0, 0.0, 0.0]
-      Axis: [1.0, 0.0, 0.0]
-      Controller: *Controller_2
-      Actuator: *Actuator_2
-  - Primary Vector:
-      Index: 7
-      Description: AttitudeCmd_PV[7]
-      Target:
-        Type: VEC
-        Frame: N
-        Axis: [0.0, -1.0, 0.0]
-      Axis: [1.0, 0.0, 0.0]
-      Controller: *Controller_2
+        Frame: SC[4].B[0]
+        Axis: [0.0, 0.0, 1.0]
+      Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
       Actuator: *Actuator_2
 Secondary Vector Configurations:
   # ------------------------------Secondary Axis Cmd-------------------------------
@@ -342,7 +322,7 @@ Secondary Vector Configurations:
   #         Frame:  [[N/F/L/SC[#].B[#]]] ((Pointing Vector Frame))
   #         Axis:   [[X, Y, Z]] ((Pointing Vector Axis))
   #         ((Target is used if BODY or SC))
-  #         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/Groundstation_[#])]]
+  #         Target: [[(IF SC: SC[#].B[#]), (IF BODY: WORLD/GroundStation_[#])]]
   - Secondary Vector:
       Index: 0
       Description: AttitudeCmd_SV[0]
@@ -355,45 +335,47 @@ Secondary Vector Configurations:
       Description: AttitudeCmd_SV[1]
       Target:
         Type: BODY
-        Target: EARTH
+        Target: GroundStation_[0]
       Axis: [-1.0, 0.0, 0.0]
   - Secondary Vector:
       Index: 2
       Description: AttitudeCmd_SV[2]
       Target:
-        Type: BODY
-        Target: EARTH
+        Type: SC
+        Target: SC[4].B[0]
       Axis: [-1.0, 0.0, 0.0]
   - Secondary Vector:
       Index: 3
       Description: AttitudeCmd_SV[3]
       Target:
-        Type: BODY
-        Target: EARTH
+        Type: VEC
+        Frame: N
+        Axis: [-1.0, 0.0, 0.0]
       Axis: [-1.0, 0.0, 0.0]
   - Secondary Vector:
       Index: 4
       Description: AttitudeCmd_SV[4]
       Target:
-        Type: BODY
-        Target: SUN
-      Axis: [1.0, 0.0, 0.0]
+        Type: VEC
+        Frame: F
+        Axis: [-1.0, 0.0, 0.0]
+      Axis: [-1.0, 0.0, 0.0]
   - Secondary Vector:
       Index: 5
       Description: AttitudeCmd_SV[5]
       Target:
         Type: VEC
-        Frame: N
-        Axis: [0.0, 1.0, 0.0]
-      Axis: [0.0, 0.0, 1.0]
+        Frame: L
+        Axis: [-1.0, 0.0, 0.0]
+      Axis: [-1.0, 0.0, 0.0]
   - Secondary Vector:
       Index: 6
-      Description: AttitudeCmd_SV[6]
+      Description: AttitudeCmd_PV[3]
       Target:
         Type: VEC
-        Frame: N
+        Frame: SC[4].B[0]
         Axis: [0.0, 0.0, 1.0]
-      Axis: [0.0, 1.0, 0.0]
+      Axis: [-1.0, 0.0, 0.0]
 Quaternion Configurations:
   # ------------------------Quaternion Attitude Cmd--------------------------------
   # ((Sequence; one element for unique Quaternion Command))
@@ -408,24 +390,38 @@ Quaternion Configurations:
       Index: 0
       Description: QuaternionCmd_[0]
       Quaternion: [0.0, 0.0, 0.0, 1.0]
+      Frame: N
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Quaternion:
+      Index: 1
+      Description: QuaternionCmd_[1]
+      Quaternion: [0.0, 0.0, 0.0, 1.0]
+      Frame: F
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Quaternion:
+      Index: 2
+      Description: QuaternionCmd_[2]
+      Quaternion: [0.0, 0.0, 0.0, 1.0]
       Frame: L
-      Controller: *Controller_6
-      Actuator: *Actuator_0
+      Controller: *Controller_1
+      Actuator: *Actuator_2
 Mirror Configurations:
   # ----------------------------Mirror Attitude Cmd--------------------------------
   # ((Sequence; one element for unique Mirror Command))
   #   - Mirror:
   #       Index:          [[Index]]
   #       Description:    {Optional}
-  #       Target:         [[SC[#]]]
+  #       Target:         [[SC[#].B[#]]]
   #       Controller:     [[Configuration or *{Alias}]]
   #       Actuator:       [[Configuration or *{Alias}]]
   - Mirror:
       Index: 0
       Description: MirrorCmd_[0]
-      Target: SC[0]
-      Controller: *Controller_6
-      Actuator: *Actuator_0
+      Target: SC[0].B[0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
 Detumble Configurations:
   # ---------------------------Detumble Attitude Cmd-------------------------------
   # ((Sequence; one element for unique Detumble Command))
@@ -462,30 +458,6 @@ Whl H Manage Configurations:
       Maximum H_norm: 0.005
       Controller: *Controller_7
       Actuator: *Actuator_4
-  - Whl H Manage:
-      Index: 1
-      Description: WhlHManageCmd_[1]
-      Dumping: true
-      Minimum H_norm: 0.002
-      Maximum H_norm: 0.005
-      Controller: *Controller_8
-      Actuator: *Actuator_5
-  - Whl H Manage:
-      Index: 2
-      Description: WhlHManageCmd_[2]
-      Dumping: false
-      Minimum H_norm: 0.002
-      Maximum H_norm: 0.005
-      Controller: *Controller_7
-      Actuator: *Actuator_4
-  - Whl H Manage:
-      Index: 3
-      Description: WhlHManageCmd_[3]
-      Dumping: false
-      Minimum H_norm: 0.002
-      Maximum H_norm: 0.005
-      Controller: *Controller_8
-      Actuator: *Actuator_5
 Actuator Cmd Configurations:
   # --------------------------------Actuator Command-------------------------------
   # ((Sequence; one element for unique Actuator Command))
@@ -495,20 +467,7 @@ Actuator Cmd Configurations:
   #       - Type:       [[THR/WHL/MTB]]
   #         Index:      [[Index]]
   #         Duty Cycle: [[Duty Cycle]]
-  - Actuator Cmd:
-      Index: 0
-      Description: ActuatorCmd_[0]
-      Actuators:
-        - Type: THR
-          Index: 13
-          Duty Cycle: 100.0
-        - Type: THR
-          Index: 16
-          Duty Cycle: 100.0
-  - Actuator Cmd:
-      Index: 1
-      Description: ActuatorCmd_[1]
-      Actuators: []
+  []
 Maneuver Configurations:
   # --------------------------------Maneuver Command-------------------------------
   # ((Sequence; one element for unique Actuator Definition))
@@ -525,7 +484,7 @@ Maneuver Configurations:
   - Maneuver:
       Index: 0
       Description: ManeuverCmd_[0]
-      Delta V: [0.0, 0.0, 0.1]
+      Delta V: [0.0, 0.0, 0.05]
       Frame: B
       Type: CONSTANT
       Duration: 30.0
@@ -534,28 +493,28 @@ Maneuver Configurations:
   - Maneuver:
       Index: 1
       Description: ManeuverCmd_[1]
-      Delta V: [0.0, 0.0, 0.1]
-      Frame: B
+      Delta V: [0.0, 0.0, 0.05]
+      Frame: N
       Type: CONSTANT
-      Duration: 15.0
+      Duration: 30.0
       Limits: *Limits_0
       Actuator: *Actuator_3
   - Maneuver:
       Index: 2
       Description: ManeuverCmd_[2]
-      Delta V: [0.0, 0.0, 0.1]
+      Delta V: [0.0, 0.0, -0.05]
       Frame: B
-      Type: CONSTANT
-      Duration: 15.0
+      Type: SMOOTHED
+      Duration: 30.0
       Limits: *Limits_0
       Actuator: *Actuator_3
   - Maneuver:
       Index: 3
       Description: ManeuverCmd_[3]
-      Delta V: [0.0, 0.0, -0.2]
-      Frame: B
-      Type: CONSTANT
-      Duration: 90.0
+      Delta V: [0.0, 0.0, -0.05]
+      Frame: N
+      Type: SMOOTHED
+      Duration: 30.0
       Limits: *Limits_0
       Actuator: *Actuator_3
 DSM Commands:
@@ -567,7 +526,7 @@ DSM Commands:
   #         Commands: ((Sequence; describes all commands at a particular time))
   #           - Type:       [[Attitude/Translation/Actuator]]
   #             ((Both Attitude & Translation can be Passive or NO_CHANGE Subtype))
-  #             ((IF Position: Translation, Maneuver))
+  #             ((IF Translation: Translation, Maneuver))
   #             ((IF Attitude:    One Vector Pointing, Two Vector Pointing, Quaternion, Mirror, Detumble, Whl H Manage))
   #             Index:      [[Index, {SV Index for Two Vector}]] ((needed if not Passive or NO_CHANGE))
   #             Subtype:    [[Subtype]] ((Needed if not Actuator))
@@ -584,45 +543,36 @@ DSM Commands:
           - Type: Attitude
             Subtype: Detumble
             Index: 0
-      - Time: 60.0
+      - Time: 80.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
             Index: [0, 0]
       - Time: 120.0
         Commands:
-          - Type: Translation
-            Subtype: Maneuver
-            Index: 0
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [0, 0]
-      - Time: 180.0
+            Index: [1, 1]
+      - Time: 300.0
         Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 0
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [0, 0]
-      - Time: 550.0
+            Index: [2, 1]
+      - Time: 500.0
         Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 1
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [4, 4]
-      - Time: 600.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 0
+            Index: [2, 3]
       - Time: 700.0
         Commands:
           - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 2
+            Subtype: Two Vector Pointing
+            Index: [4, 4]
+      - Time: 900.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [5, 5]
   - SC: 1
     Command Sequence:
       - Time: 0.0
@@ -631,37 +581,32 @@ DSM Commands:
             Subtype: Passive
           - Type: Translation
             Subtype: Passive
-      - Time: 30.0
+      - Time: 100.0
         Commands:
           - Type: Attitude
-            Subtype: Detumble
+            Subtype: Mirror
             Index: 0
-      - Time: 60.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [1, 1]
-      - Time: 420.0
+          - Type: Translation
+            Subtype: Maneuver
+            Index: 0
+      - Time: 300.0
         Commands:
           - Type: Translation
-            Subtype: Position
+            Subtype: Maneuver
             Index: 2
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [1, 1]
-      - Time: 550.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [4, 4]
-      - Time: 840.0
+      - Time: 600.0
         Commands:
           - Type: Translation
             Subtype: Position
-            Index: 5
+            Index: 3
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [4, 4]
+            Index: [6, 3]
+      - Time: 800.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [3, 6]
   - SC: 2
     Command Sequence:
       - Time: 0.0
@@ -670,39 +615,32 @@ DSM Commands:
             Subtype: Passive
           - Type: Translation
             Subtype: Passive
-      - Time: 30.0
+      - Time: 100.0
         Commands:
           - Type: Attitude
-            Subtype: Detumble
+            Subtype: Mirror
             Index: 0
-      - Time: 60.0
+          - Type: Translation
+            Subtype: Maneuver
+            Index: 1
+      - Time: 300.0
         Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [2, 2]
-      - Time: 420.0
+          - Type: Translation
+            Subtype: Maneuver
+            Index: 3
+      - Time: 600.0
         Commands:
           - Type: Translation
             Subtype: Position
-            Index: 3
+            Index: 4
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [2, 2]
-      - Time: 550.0
+            Index: [2, 6]
+      - Time: 800.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [4, 4]
-      - Time: 600.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 1
-      - Time: 700.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 3
+            Index: [6, 2]
   - SC: 3
     Command Sequence:
       - Time: 0.0
@@ -716,22 +654,36 @@ DSM Commands:
           - Type: Attitude
             Subtype: Detumble
             Index: 0
-      - Time: 60.0
+      - Time: 80.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [3, 3]
-      - Time: 320.0
+            Index: [5, 5]
+      - Time: 120.0
         Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
-            Index: [3, 3]
-          - Type: Actuator
-            Index: 0
-      - Time: 400.0
+            Index: [4, 4]
+      - Time: 300.0
         Commands:
-          - Type: Actuator
-            Index: 1
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [4, 3]
+      - Time: 500.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [2, 3]
+      - Time: 700.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [1, 1]
+      - Time: 900.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector Pointing
+            Index: [0, 0]
   - SC: 4
     Command Sequence:
       - Time: 0.0
@@ -739,26 +691,20 @@ DSM Commands:
           - Type: Attitude
             Subtype: Quaternion
             Index: 0
-      - Time: 640.0
+          - Type: Translation
+            Subtype: Passive
+      - Time: 80.0
         Commands:
           - Type: Translation
             Subtype: Position
-            Index: 4
-          - Type: Attitude
-            Subtype: Quaternion
             Index: 0
-      - Time: 720.0
+      - Time: 500.0
         Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [5, 5]
-      - Time: 1000.0
+          - Type: Translation
+            Subtype: Position
+            Index: 1
+      - Time: 800.0
         Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [6, 5]
-      - Time: 1800.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [7, 6]
+          - Type: Translation
+            Subtype: Position
+            Index: 2
