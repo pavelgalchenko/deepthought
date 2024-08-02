@@ -1561,8 +1561,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                       "Exiting...\n");
                exit(EXIT_FAILURE);
             } break;
-               VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
          }
+         VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
       } break;
       case 'N': {
          for (i = 0; i < 3; i++)
