@@ -814,7 +814,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       if (iterNode == NULL) {
          printf("Could not find Quaternion Configuration with index %ld. "
                 "Exiting...\n",
-                cmdInd);
+                *cmdInd);
          exit(EXIT_FAILURE);
       }
       searchNode = fy_node_by_path_def(iterNode, "/Quaternion");
@@ -847,7 +847,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       if (iterNode == NULL) {
          printf(
              "Could not find Mirror Configuration with index %ld. Exiting...\n",
-             cmdInd);
+             *cmdInd);
          exit(EXIT_FAILURE);
       }
       AttitudeCmdProcessed =
@@ -877,7 +877,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       if (iterNode == NULL) {
          printf("Could not find Detumble Configuration with index %ld. "
                 "Exiting...\n",
-                cmdInd);
+                *cmdInd);
          exit(EXIT_FAILURE);
       }
       ctrlNode             = fy_node_by_path_def(iterNode, "/Controller");
@@ -904,7 +904,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       if (iterNode == NULL) {
          printf("Could not find Whl H Manage Configuration with index %ld. "
                 "Exiting...\n",
-                cmdInd);
+                *cmdInd);
          exit(EXIT_FAILURE);
       }
       AttitudeCmdProcessed =
