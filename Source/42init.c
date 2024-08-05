@@ -1938,6 +1938,7 @@ void InitFlexModes(struct SCType *S)
 /**********************************************************************/
 void InitNodes(struct BodyType *B)
 {
+   // TODO: put node sequence in relevant spacecraft file
    if (strcmp(B->NodeFileName, "NONE")) {
       char fileName[40] = {0};
       strcpy(fileName, B->NodeFileName);
