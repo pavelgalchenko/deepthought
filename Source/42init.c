@@ -132,6 +132,8 @@ long DecodeString(char *s)
       return INP_MODES;
    else if (!strcmp(s, "XYZ"))
       return INP_XYZ;
+   else if (!strcmp(s, "XYZ_ROT"))
+      return INP_XYZ_ROT;
    else if (!strcmp(s, "SPLINE"))
       return INP_SPLINE;
    else if (!strcmp(s, "L1"))
@@ -1053,6 +1055,20 @@ void InitOrbit(struct OrbitType *O)
                XYZ2LagModes(0.0, &LagSys[O->Sys], O);
                LagModes2RV(DynTime, &LagSys[O->Sys], O, O->PosN, O->VelN);
             } break;
+            case INP_XYZ_ROT: {
+               double vec3_p[3] = {0.0};
+               double vec3_v[3] = {0.0};
+
+               struct LagrangeSystemType *LS;
+               LS = &LagSys[O->Sys];
+
+               assignYAMLToDoubleArray(
+                   3, fy_node_by_path_def(node, "/Position"), vec3_p);
+               assignYAMLToDoubleArray(
+                   3, fy_node_by_path_def(node, "/Velocity"), vec3_v);
+                  
+               StateRnd2StateN(LS, World[LS->Body2].eph.PosN, World[LS->Body2].eph.VelN, vec3_p, vec3_v, O->PosN, O->VelN);
+            } break;
             case INP_FILE: {
                char elementFileName[50] = {0}, elementLabel[50] = {0};
                if (fy_node_scanf(node,
@@ -1134,7 +1150,7 @@ void InitOrbit(struct OrbitType *O)
          FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
          O->MeanMotion = LagSys[O->Sys].MeanRate;
          O->Period     = TwoPi / O->MeanMotion;
-      }
+      } break;
       default:
          printf("Bogus Orbit Regime in file %s\n", O->FileName);
          exit(EXIT_FAILURE);
@@ -4797,10 +4813,14 @@ void InitLagrangePoints(void)
 
    LagSys[EARTHMOON].Body1  = EARTH;
    LagSys[EARTHMOON].Body2  = LUNA;
+   LagSys[EARTHMOON].LU  = 385692500.0;
    LagSys[SUNEARTH].Body1   = SOL;
    LagSys[SUNEARTH].Body2   = EARTH;
+   LagSys[SUNEARTH].LU  = 149597927000.0;
    LagSys[SUNJUPITER].Body1 = SOL;
    LagSys[SUNJUPITER].Body2 = JUPITER;
+   LagSys[SUNJUPITER].LU  = 778547200000.0 ;
+
 
    for (i = 0; i < 3; i++) {
       LS = &LagSys[i];
@@ -4826,6 +4846,9 @@ void InitLagrangePoints(void)
          LS->tp       = W2->eph.tp;
          LS->MeanRate = sqrt(LS->mu1 / LS->SMA) / LS->SMA;
          LS->Period   = TwoPi / LS->MeanRate;
+
+         LS->TU = sqrt(pow(LS->LU, 3)/ (LS->mu1 + LS->mu2));
+         LS->VU = LS->LU/LS->TU;
 
          FindLagPtParms(LS);
          for (j = 0; j < 5; j++) {
