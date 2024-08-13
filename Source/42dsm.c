@@ -583,8 +583,9 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
                Cmd->Phase *= M_PI / 180;
             }
             else if (!strcmp(Cmd->TranslationType, "Docking")) {
-               isGood &= fy_node_scanf(iterNode, "/Time to Dock %lf ",
-                                       &Cmd->TimeDock) == 1;
+               isGood          &= fy_node_scanf(iterNode, "/Time to Dock %lf ",
+                                                &Cmd->TimeDock) == 1;
+               Cmd->ResetTimer  = 1;
             }
             ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
             actNode   = fy_node_by_path_def(iterNode, "/Actuator");
@@ -1645,17 +1646,9 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          double cmd_vel_EH[3] = {0.0};
          double wln[3]        = {0.0};
 
-         double n       = sqrt(DSM->refOrb->mu / pow(DSM->refOrb->SMA, 3));
-         double time_EH = 0;
-         static double TimeStart;
-         if (time_EH == 0)
-            TimeStart = state->Time;
+         double n = sqrt(DSM->refOrb->mu / pow(DSM->refOrb->SMA, 3));
 
-         if (sscanf(Cmd->TranslationType, "Position") == 1) {
-            time_EH = state->Time - TimeStart;
-
-            printf("Cmd->Phase: %lf \n", Cmd->Phase);
-
+         if (!strcmp(Cmd->TranslationType, "Position")) {
             cmd_pos_EH[0] = -Cmd->Distance * cos(Cmd->Phase) / 2;
             cmd_pos_EH[1] = Cmd->Distance * sin(Cmd->Phase);
             cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(Cmd->Phase) / 2;
@@ -1664,8 +1657,12 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             cmd_vel_EH[1] = Cmd->Distance * n * cos(Cmd->Phase);
             cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(Cmd->Phase) / 2;
          }
-         else if (sscanf(Cmd->TranslationType, "Circumnavigation") == 1) {
-            time_EH = state->Time - TimeStart;
+         else if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
+            if (Cmd->ResetTimer == 1) {
+               Cmd->InitTime   = state->Time;
+               Cmd->ResetTimer = 0;
+            }
+            Cmd->CurrentTimer = state->Time - Cmd->InitTime;
             sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body);
             if (Isc_Ref == DSM->ID) {
                printf("Spacecraft %ld called Euler Hill guidance law on itself."
@@ -1674,7 +1671,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                exit(EXIT_FAILURE);
             }
             /* Calculate coefficients */
-            double tau_k = n * time_EH + Cmd->Phase;
+            double tau_k = n * Cmd->CurrentTimer + Cmd->Phase;
             for (i = 0; i < 3; i++)
                wln[i] = DSM->refOrb->wln[i];
 
@@ -1687,79 +1684,96 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             cmd_vel_EH[1] = Cmd->Distance * n * cos(tau_k);
             cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
          }
-         else if (sscanf(Cmd->TranslationType, "Docking") == 1) {
-            sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body);
-            if (Isc_Ref == DSM->ID) {
-               printf("Spacecraft %ld called Euler Hill guidance law on "
-                      "itself. "
-                      "Exiting...\n",
-                      Isc_Ref);
-               exit(EXIT_FAILURE);
-            }
-            if (time_EH == 0) {
-               TimeStart = state->Time;
-               for (i = 0; i < 3; i++) // this breaks when computed outside if
-                  wln[i] = DSM->refOrb->wln[i];
-               /* R Interial -> LVLH */
-               MxV(SC[Isc_Ref].CLN, state->PosR, Cmd->Pos);
-               //  y0' = (6x0(wt - sin(wt)) - y0)wsin(wt) - 2wx0(4 - 3cos(wt))(1
-               //  - cos(wt))) / ((4sin(wt) - 3wt)sin(wt) + 4(1 - cos(wt))^2)
-               //  x0' = -(wx0(4 - 3cos(wt)) + 2(1 - cos(wt))y0') / (sin(wt))
-               //  z0' = -z0wcos(wt)
-               Cmd->PosRate[1] =
-                   ((6 * Cmd->Pos[0] *
-                         (n * Cmd->TimeDock - sin(n * Cmd->TimeDock)) -
-                     Cmd->Pos[1]) *
-                        n * sin(n * Cmd->TimeDock) -
-                    2 * n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
-                        (1 - cos(n * Cmd->TimeDock))) /
-                   ((4 * sin(n * Cmd->TimeDock) - 3 * n * Cmd->TimeDock) *
-                        sin(n * Cmd->TimeDock) +
-                    4 * pow(1 - cos(n * Cmd->TimeDock), 2));
-               Cmd->PosRate[0] =
-                   -(n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
-                     2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate[1]) /
-                   sin(n * Cmd->TimeDock);
-               Cmd->PosRate[2] = -Cmd->Pos[2] * n / tan(n * Cmd->TimeDock);
-            }
-
-            time_EH = state->Time - TimeStart;
-            if (time_EH <= Cmd->TimeDock) {
-               // x(t) = (x0'/w)sin(wt) - (3x0 + 2y0'/w)cos(wt) + (4x0 +
-               // 2y0'/w) y(t) = (6x0 + 4y0'/w)sin(wt) + (2x0'/w)cos(wt) -
-               // (6wx0+3y0')t
-               // + (y0 - 2x0'/w)
-               // z(t) = z0cos(wt) + (z0'/w)sin(wt)
-               cmd_pos_EH[0] = (Cmd->PosRate[0] / n) * sin(n * time_EH) -
-                               (3 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n) *
-                                   cos(n * time_EH) +
-                               4 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n;
-               cmd_pos_EH[1] =
-                   (6 * Cmd->Pos[0] + 4 * Cmd->PosRate[1] / n) *
-                       sin(n * time_EH) +
-                   (2 * Cmd->PosRate[0] / n) * cos(n * time_EH) -
-                   (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]) * time_EH +
-                   Cmd->Pos[1] - 2 * Cmd->PosRate[0] / n;
-               cmd_pos_EH[2] = Cmd->Pos[2] * cos(n * time_EH) +
-                               (Cmd->PosRate[2] / n) * sin(n * time_EH);
-               // x'(t) = x0'cos(wt) + (3wx0 + 2y0')sin(wt)
-               // y'(t) = (6wx0 + 4y0')cos(wt) - (2x0')sin(wt) - (6wx0 +
-               // 3y0') z'(t) = -(z0w)sin(wt) + z0'cos(wt)
-               cmd_vel_EH[0] = Cmd->PosRate[0] * cos(n * time_EH) +
-                               (3 * n * Cmd->Pos[0] + 2 * Cmd->PosRate[1]) *
-                                   sin(n * time_EH);
-               cmd_vel_EH[1] = (6 * n * Cmd->Pos[0] + 4 * Cmd->PosRate[1]) *
-                                   cos(n * time_EH) -
-                               (2 * Cmd->PosRate[0]) * sin(n * time_EH) -
-                               (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]);
-               cmd_vel_EH[2] = (-Cmd->Pos[2] * n) * sin(n * time_EH) +
-                               Cmd->PosRate[2] * cos(n * time_EH);
-            }
-            else { // arrived at docking location
-               for (i = 0; i < 3; i++) {
-                  cmd_pos_EH[i] = 0;
-                  cmd_vel_EH[i] = 0;
+         else if (!strcmp(Cmd->TranslationType, "Docking")) {
+            if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
+                       &frame_body) == 2) {
+               if (Isc_Ref == DSM->ID) {
+                  printf("Spacecraft %ld called Euler Hill guidance law on "
+                         "itself. "
+                         "Exiting...\n",
+                         Isc_Ref);
+                  exit(EXIT_FAILURE);
                }
+               if (Cmd->ResetTimer == 1) {
+                  Cmd->InitTime   = state->Time;
+                  Cmd->ResetTimer = 0;
+
+                  for (i = 0; i < 3;
+                       i++) // this breaks when computed outside if
+                     wln[i] = DSM->refOrb->wln[i];
+                  /* R Interial -> LVLH */
+                  MxV(SC[Isc_Ref].CLN, state->PosR, Cmd->Pos);
+                  //  y0' = (6x0(wt - sin(wt)) - y0)wsin(wt) - 2wx0(4 -
+                  //  3cos(wt))(1 - cos(wt))) / ((4sin(wt) - 3wt)sin(wt) + 4(1 -
+                  //  cos(wt))^2)
+                  // x0' = -(wx0(4 - 3cos(wt)) + 2(1 - cos(wt))y0') / (sin(wt))
+                  // z0' = -z0wcos(wt)
+                  Cmd->PosRate[1] =
+                      ((6 * Cmd->Pos[0] *
+                            (n * Cmd->TimeDock - sin(n * Cmd->TimeDock)) -
+                        Cmd->Pos[1]) *
+                           n * sin(n * Cmd->TimeDock) -
+                       2 * n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
+                           (1 - cos(n * Cmd->TimeDock))) /
+                      ((4 * sin(n * Cmd->TimeDock) - 3 * n * Cmd->TimeDock) *
+                           sin(n * Cmd->TimeDock) +
+                       4 * pow(1 - cos(n * Cmd->TimeDock), 2));
+                  Cmd->PosRate[0] =
+                      -(n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
+                        2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate[1]) /
+                      sin(n * Cmd->TimeDock);
+                  Cmd->PosRate[2] = -Cmd->Pos[2] * n / tan(n * Cmd->TimeDock);
+               }
+
+               Cmd->CurrentTimer = state->Time - Cmd->InitTime;
+               if (Cmd->CurrentTimer <= Cmd->TimeDock) {
+                  // x(t) = (x0'/w)sin(wt) - (3x0 + 2y0'/w)cos(wt) + (4x0 +
+                  // 2y0'/w)
+                  // y(t) = (6x0 + 4y0'/w)sin(wt) + (2x0'/w)cos(wt) -
+                  // (6wx0+3y0')t + (y0 - 2x0'/w)
+                  // z(t) = z0cos(wt) + (z0'/w)sin(wt)
+                  cmd_pos_EH[0] =
+                      (Cmd->PosRate[0] / n) * sin(n * Cmd->CurrentTimer) -
+                      (3 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n) *
+                          cos(n * Cmd->CurrentTimer) +
+                      4 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n;
+                  cmd_pos_EH[1] =
+                      (6 * Cmd->Pos[0] + 4 * Cmd->PosRate[1] / n) *
+                          sin(n * Cmd->CurrentTimer) +
+                      (2 * Cmd->PosRate[0] / n) * cos(n * Cmd->CurrentTimer) -
+                      (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]) *
+                          Cmd->CurrentTimer +
+                      Cmd->Pos[1] - 2 * Cmd->PosRate[0] / n;
+                  cmd_pos_EH[2] =
+                      Cmd->Pos[2] * cos(n * Cmd->CurrentTimer) +
+                      (Cmd->PosRate[2] / n) * sin(n * Cmd->CurrentTimer);
+                  // x'(t) = x0'cos(wt) + (3wx0 + 2y0')sin(wt)
+                  // y'(t) = (6wx0 + 4y0')cos(wt) - (2x0')sin(wt) - (6wx0 +
+                  // 3y0')
+                  // z'(t) = -(z0w)sin(wt) + z0'cos(wt)
+                  cmd_vel_EH[0] = Cmd->PosRate[0] * cos(n * Cmd->CurrentTimer) +
+                                  (3 * n * Cmd->Pos[0] + 2 * Cmd->PosRate[1]) *
+                                      sin(n * Cmd->CurrentTimer);
+                  cmd_vel_EH[1] =
+                      (6 * n * Cmd->Pos[0] + 4 * Cmd->PosRate[1]) *
+                          cos(n * Cmd->CurrentTimer) -
+                      (2 * Cmd->PosRate[0]) * sin(n * Cmd->CurrentTimer) -
+                      (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]);
+                  cmd_vel_EH[2] =
+                      (-Cmd->Pos[2] * n) * sin(n * Cmd->CurrentTimer) +
+                      Cmd->PosRate[2] * cos(n * Cmd->CurrentTimer);
+               }
+               else { // arrived at docking location
+                  for (i = 0; i < 3; i++) {
+                     cmd_pos_EH[i] = 0;
+                     cmd_vel_EH[i] = 0;
+                  }
+               }
+            }
+            else {
+               printf("Invalid Translational Control Reference Frame. "
+                      "Exiting...\n");
+               exit(EXIT_FAILURE);
             }
          }
          /* LVLH -> R Inertial */
