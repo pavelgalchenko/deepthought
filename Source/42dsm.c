@@ -523,21 +523,24 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
                                         "/Frame %19s",
                                         Cmd->RefOrigin, Cmd->RefFrame) == 2;
             // Hailey's EH Code Begin ************************************
-            if (Cmd->RefOrigin == "EH") {
-               isGood &= fy_node_scanf(iterNode,
-                                       "/Distance %ld "
-                                       "/Phase %ld",
-                                       Cmd->Distance, Cmd->Phase) == 2;
-               strcpy(Cmd->TransType, "Position");
+            if (!strcmp(Cmd->RefFrame, "E")) {
+               isGood     &= fy_node_scanf(iterNode,
+                                           "/Distance %lf "
+                                               "/Phase %lf",
+                                           &Cmd->Distance, &Cmd->Phase) == 2;
+               Cmd->Phase *= M_PI / 180;
+               strcpy(Cmd->TranslationType, "Position");
+            }
+            else {
+               isGood &= assignYAMLToDoubleArray(
+                             3, fy_node_by_path_def(iterNode, "/Position"),
+                             Cmd->Pos) == 3;
             }
             // Hailey's EH Code End **************************************
             ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
             actNode   = fy_node_by_path_def(iterNode, "/Actuator");
             isGood   &= ctrlNode != NULL && actNode != NULL;
 
-            isGood &= assignYAMLToDoubleArray(
-                          3, fy_node_by_path_def(iterNode, "/Position"),
-                          Cmd->Pos) == 3;
             if (isGood) {
                TranslationCmdProcessed = TRUE;
                Cmd->ManeuverMode       = INACTIVE;
@@ -562,26 +565,26 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
       WHILE_FY_ITER(cmdNode, iterNode)
       {
          long ind = 0;
-         // char TransType[FIELDWIDTH + 1] = {}; // move this into Cmd
          fy_node_scanf(iterNode, "/Translation/Index %ld", &ind);
          if (ind == cmdInd) {
             iterNode = fy_node_by_path_def(iterNode, "/Translation");
             // Cmd->TranslationCmdType == "Translation";
             long isGood  = fy_node_scanf(iterNode,
                                          "/Origin %19s "
-                                          "/Frame %19s",
+                                          "/Frame %19s ",
                                          Cmd->RefOrigin, Cmd->RefFrame) == 2;
-            isGood      &= fy_node_scanf(iterNode, "/TransType %19s ",
-                                         Cmd->TransType) == 1;
-            if (Cmd->TransType == 'Circumnavigation') {
-               isGood &= fy_node_scanf(iterNode,
-                                       "/Distance %ld "
-                                       "/Phase %ld",
-                                       Cmd->Distance, Cmd->Phase) == 2;
+            isGood      &= fy_node_scanf(iterNode, "/Translation Type %19s ",
+                                         Cmd->TranslationType) == 1;
+            if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
+               isGood     &= fy_node_scanf(iterNode,
+                                           "/Distance %lf "
+                                               "/Phase %lf ",
+                                           &Cmd->Distance, &Cmd->Phase) == 2;
+               Cmd->Phase *= M_PI / 180;
             }
-            else if (Cmd->TransType == 'Docking') {
-               isGood &= fy_node_scanf(iterNode, "/Time to Dock %ld ",
-                                       Cmd->TimeDock) == 1;
+            else if (!strcmp(Cmd->TranslationType, "Docking")) {
+               isGood &= fy_node_scanf(iterNode, "/Time to Dock %lf ",
+                                       &Cmd->TimeDock) == 1;
             }
             ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
             actNode   = fy_node_by_path_def(iterNode, "/Actuator");
@@ -1638,27 +1641,33 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
       } break;
       case 'E': {
          // Hailey's EH Code Begin ****************************************
-         double cmd_pos_EH[3];
-         double cmd_vel_EH[3];
-         double wfn[3] = {0.0};
-         // double r_sep  = sqrt(pow(Cmd->Pos[0], 2) + pow(Cmd->Pos[1], 2) +
-         //                      pow(Cmd->Pos[2], 2));
-         double n = sqrt(World->mu * pow(10, 14) / pow(Cmd->Distance, 3));
-         static double time_EH = 0;
+         double cmd_pos_EH[3] = {0.0};
+         double cmd_vel_EH[3] = {0.0};
+         double wln[3]        = {0.0};
+
+         double n       = sqrt(DSM->refOrb->mu / pow(DSM->refOrb->SMA, 3));
+         double time_EH = 0;
          static double TimeStart;
          if (time_EH == 0)
             TimeStart = state->Time;
 
-         if (sscanf(Cmd->TransType, "Position") == 1) {
-            time_EH = state->Time - TimeStart; // correct reference?
-            // Cmd->Pos
+         if (sscanf(Cmd->TranslationType, "Position") == 1) {
+            time_EH = state->Time - TimeStart;
 
-            VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
+            printf("Cmd->Phase: %lf \n", Cmd->Phase);
+
+            cmd_pos_EH[0] = -Cmd->Distance * cos(Cmd->Phase) / 2;
+            cmd_pos_EH[1] = Cmd->Distance * sin(Cmd->Phase);
+            cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(Cmd->Phase) / 2;
+
+            cmd_vel_EH[0] = Cmd->Distance * n * sin(Cmd->Phase) / 2;
+            cmd_vel_EH[1] = Cmd->Distance * n * cos(Cmd->Phase);
+            cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(Cmd->Phase) / 2;
          }
-         else if (sscanf(Cmd->TransType, "Circumnavigation") == 1) {
-            time_EH = state->Time - TimeStart; // correct reference?
+         else if (sscanf(Cmd->TranslationType, "Circumnavigation") == 1) {
+            time_EH = state->Time - TimeStart;
             sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body);
-            if (1 == 0) {
+            if (Isc_Ref == DSM->ID) {
                printf("Spacecraft %ld called Euler Hill guidance law on itself."
                       "Exiting...\n",
                       Isc_Ref);
@@ -1667,7 +1676,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             /* Calculate coefficients */
             double tau_k = n * time_EH + Cmd->Phase;
             for (i = 0; i < 3; i++)
-               wfn[i] = Orb[SC[Isc_Ref].RefOrb].wln[i];
+               wln[i] = DSM->refOrb->wln[i];
 
             /* CW equations (note: vel. is incorrect in paper) */
             cmd_pos_EH[0] = -Cmd->Distance * cos(tau_k) / 2;
@@ -1677,18 +1686,10 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             cmd_vel_EH[0] = Cmd->Distance * n * sin(tau_k) / 2;
             cmd_vel_EH[1] = Cmd->Distance * n * cos(tau_k);
             cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
-
-            /* LVLH -> R Inertial */
-            MTxV(SC[Isc_Ref].CLN, cmd_pos_EH, CTRL->CmdPosR);
-            VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
-            double temp[3];
-            MTxV(SC[Isc_Ref].CLN, cmd_vel_EH, temp);
-            for (i = 0; i < 3; i++)
-               CTRL->CmdVelR[i] += temp[i];
          }
-         else if (sscanf(Cmd->TransType, "Docking") == 1) {
+         else if (sscanf(Cmd->TranslationType, "Docking") == 1) {
             sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body);
-            if (1 == 0) {
+            if (Isc_Ref == DSM->ID) {
                printf("Spacecraft %ld called Euler Hill guidance law on "
                       "itself. "
                       "Exiting...\n",
@@ -1698,32 +1699,31 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             if (time_EH == 0) {
                TimeStart = state->Time;
                for (i = 0; i < 3; i++) // this breaks when computed outside if
-                  wfn[i] = Orb[SC[Isc_Ref].RefOrb].wln[i];
+                  wln[i] = DSM->refOrb->wln[i];
                /* R Interial -> LVLH */
-               double temp[3];
-               MxV(SC[Isc_Ref].CLN, CTRL->CmdPosR, temp);
+               MxV(SC[Isc_Ref].CLN, state->PosR, Cmd->Pos);
                //  y0' = (6x0(wt - sin(wt)) - y0)wsin(wt) - 2wx0(4 - 3cos(wt))(1
                //  - cos(wt))) / ((4sin(wt) - 3wt)sin(wt) + 4(1 - cos(wt))^2)
                //  x0' = -(wx0(4 - 3cos(wt)) + 2(1 - cos(wt))y0') / (sin(wt))
                //  z0' = -z0wcos(wt)
                Cmd->PosRate[1] =
-                   ((6 * temp[0] *
+                   ((6 * Cmd->Pos[0] *
                          (n * Cmd->TimeDock - sin(n * Cmd->TimeDock)) -
-                     temp[1]) *
+                     Cmd->Pos[1]) *
                         n * sin(n * Cmd->TimeDock) -
-                    2 * n * temp[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
+                    2 * n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
                         (1 - cos(n * Cmd->TimeDock))) /
                    ((4 * sin(n * Cmd->TimeDock) - 3 * n * Cmd->TimeDock) *
                         sin(n * Cmd->TimeDock) +
                     4 * pow(1 - cos(n * Cmd->TimeDock), 2));
                Cmd->PosRate[0] =
-                   -(n * temp[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
+                   -(n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
                      2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate[1]) /
                    sin(n * Cmd->TimeDock);
-               Cmd->PosRate[2] = -temp[2] * n / tan(n * Cmd->TimeDock);
+               Cmd->PosRate[2] = -Cmd->Pos[2] * n / tan(n * Cmd->TimeDock);
             }
 
-            time_EH = state->Time - TimeStart; // correct reference?
+            time_EH = state->Time - TimeStart;
             if (time_EH <= Cmd->TimeDock) {
                // x(t) = (x0'/w)sin(wt) - (3x0 + 2y0'/w)cos(wt) + (4x0 +
                // 2y0'/w) y(t) = (6x0 + 4y0'/w)sin(wt) + (2x0'/w)cos(wt) -
@@ -1761,14 +1761,14 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                   cmd_vel_EH[i] = 0;
                }
             }
-            /* LVLH -> R Inertial */
-            MTxV(SC[Isc_Ref].CLN, cmd_pos_EH, CTRL->CmdPosR);
-            VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
-            double temp[3];
-            MTxV(SC[Isc_Ref].CLN, cmd_vel_EH, temp);
-            for (i = 0; i < 3; i++)
-               CTRL->CmdVelR[i] += temp[i];
          }
+         /* LVLH -> R Inertial */
+         MTxV(DSM->refOrb->CLN, cmd_pos_EH, CTRL->CmdPosR);
+         VxV(wln, CTRL->CmdPosR, CTRL->CmdVelR);
+         double temp[3];
+         MTxV(DSM->refOrb->CLN, cmd_vel_EH, temp);
+         for (i = 0; i < 3; i++)
+            CTRL->CmdVelR[i] += temp[i];
          // Hailey's EH Code End ******************************************
       } break;
       default: {

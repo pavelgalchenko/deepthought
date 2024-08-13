@@ -58,7 +58,7 @@ SCs:
     Enabled: true
   - Name: SC_SWARM_3U_2
     Orbit: Orb_SWARM
-    Enabled: true
+    Enabled: false
   - Name: SC_SWARM_3U_3
     Orbit: Orb_SWARM
     Enabled: true
