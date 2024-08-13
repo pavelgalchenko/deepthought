@@ -517,14 +517,23 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          long ind = 0;
          fy_node_scanf(iterNode, "/Position/Index %ld", &ind);
          if (ind == cmdInd) {
-            iterNode     = fy_node_by_path_def(iterNode, "/Position");
-            long isGood  = fy_node_scanf(iterNode,
-                                         "/Origin %19s "
-                                          "/Frame %19s",
-                                         Cmd->RefOrigin, Cmd->RefFrame) == 2;
-            ctrlNode     = fy_node_by_path_def(iterNode, "/Controller");
-            actNode      = fy_node_by_path_def(iterNode, "/Actuator");
-            isGood      &= ctrlNode != NULL && actNode != NULL;
+            iterNode    = fy_node_by_path_def(iterNode, "/Position");
+            long isGood = fy_node_scanf(iterNode,
+                                        "/Origin %19s "
+                                        "/Frame %19s",
+                                        Cmd->RefOrigin, Cmd->RefFrame) == 2;
+            // Hailey's EH Code Begin ************************************
+            if (Cmd->RefOrigin == "EH") {
+               isGood &= fy_node_scanf(iterNode,
+                                       "/Distance %ld "
+                                       "/Phase %ld",
+                                       Cmd->Distance, Cmd->Phase) == 2;
+               strcpy(Cmd->TransType, "Position");
+            }
+            // Hailey's EH Code End **************************************
+            ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
+            actNode   = fy_node_by_path_def(iterNode, "/Actuator");
+            isGood   &= ctrlNode != NULL && actNode != NULL;
 
             isGood &= assignYAMLToDoubleArray(
                           3, fy_node_by_path_def(iterNode, "/Position"),
@@ -544,6 +553,56 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          exit(EXIT_FAILURE);
       }
    }
+   // Hailey's EH Code Begin ********************************************
+   else if (!strcmp(subType, "Translation")) {
+      Cmd->TranslationCtrlActive = TRUE;
+      struct fy_node *cmdNode =
+          fy_node_by_path_def(dsmRoot, "/Translation Configurations");
+
+      WHILE_FY_ITER(cmdNode, iterNode)
+      {
+         long ind = 0;
+         // char TransType[FIELDWIDTH + 1] = {}; // move this into Cmd
+         fy_node_scanf(iterNode, "/Translation/Index %ld", &ind);
+         if (ind == cmdInd) {
+            iterNode = fy_node_by_path_def(iterNode, "/Translation");
+            // Cmd->TranslationCmdType == "Translation";
+            long isGood  = fy_node_scanf(iterNode,
+                                         "/Origin %19s "
+                                          "/Frame %19s",
+                                         Cmd->RefOrigin, Cmd->RefFrame) == 2;
+            isGood      &= fy_node_scanf(iterNode, "/TransType %19s ",
+                                         Cmd->TransType) == 1;
+            if (Cmd->TransType == 'Circumnavigation') {
+               isGood &= fy_node_scanf(iterNode,
+                                       "/Distance %ld "
+                                       "/Phase %ld",
+                                       Cmd->Distance, Cmd->Phase) == 2;
+            }
+            else if (Cmd->TransType == 'Docking') {
+               isGood &= fy_node_scanf(iterNode, "/Time to Dock %ld ",
+                                       Cmd->TimeDock) == 1;
+            }
+            ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
+            actNode   = fy_node_by_path_def(iterNode, "/Actuator");
+            isGood   &= ctrlNode != NULL && actNode != NULL;
+
+            if (isGood) {
+               TranslationCmdProcessed = TRUE;
+               Cmd->ManeuverMode       = INACTIVE;
+            }
+            break;
+         }
+      }
+      if (TranslationCmdProcessed == FALSE) {
+         printf(
+             "Could not find Translation Command index %ld or invalid format. "
+             "Exiting...\n",
+             cmdInd);
+         exit(EXIT_FAILURE);
+      }
+   }
+   // Hailey's EH Code End **********************************************
    else if (!strcmp(subType, "Maneuver")) {
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
@@ -1577,6 +1636,141 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          VxV(DSM->refOrb->wln, CTRL->CmdPosR, CTRL->CmdVelR);
          goodOriginFrame = TRUE;
       } break;
+      case 'E': {
+         // Hailey's EH Code Begin ****************************************
+         double cmd_pos_EH[3];
+         double cmd_vel_EH[3];
+         double wfn[3] = {0.0};
+         // double r_sep  = sqrt(pow(Cmd->Pos[0], 2) + pow(Cmd->Pos[1], 2) +
+         //                      pow(Cmd->Pos[2], 2));
+         double n = sqrt(World->mu * pow(10, 14) / pow(Cmd->Distance, 3));
+         static double time_EH = 0;
+         static double TimeStart;
+         if (time_EH == 0)
+            TimeStart = state->Time;
+
+         if (sscanf(Cmd->TransType, "Position") == 1) {
+            time_EH = state->Time - TimeStart; // correct reference?
+            // Cmd->Pos
+
+            VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
+         }
+         else if (sscanf(Cmd->TransType, "Circumnavigation") == 1) {
+            time_EH = state->Time - TimeStart; // correct reference?
+            sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body);
+            if (1 == 0) {
+               printf("Spacecraft %ld called Euler Hill guidance law on itself."
+                      "Exiting...\n",
+                      Isc_Ref);
+               exit(EXIT_FAILURE);
+            }
+            /* Calculate coefficients */
+            double tau_k = n * time_EH + Cmd->Phase;
+            for (i = 0; i < 3; i++)
+               wfn[i] = Orb[SC[Isc_Ref].RefOrb].wln[i];
+
+            /* CW equations (note: vel. is incorrect in paper) */
+            cmd_pos_EH[0] = -Cmd->Distance * cos(tau_k) / 2;
+            cmd_pos_EH[1] = Cmd->Distance * sin(tau_k);
+            cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(tau_k) / 2;
+
+            cmd_vel_EH[0] = Cmd->Distance * n * sin(tau_k) / 2;
+            cmd_vel_EH[1] = Cmd->Distance * n * cos(tau_k);
+            cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
+
+            /* LVLH -> R Inertial */
+            MTxV(SC[Isc_Ref].CLN, cmd_pos_EH, CTRL->CmdPosR);
+            VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
+            double temp[3];
+            MTxV(SC[Isc_Ref].CLN, cmd_vel_EH, temp);
+            for (i = 0; i < 3; i++)
+               CTRL->CmdVelR[i] += temp[i];
+         }
+         else if (sscanf(Cmd->TransType, "Docking") == 1) {
+            sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body);
+            if (1 == 0) {
+               printf("Spacecraft %ld called Euler Hill guidance law on "
+                      "itself. "
+                      "Exiting...\n",
+                      Isc_Ref);
+               exit(EXIT_FAILURE);
+            }
+            if (time_EH == 0) {
+               TimeStart = state->Time;
+               for (i = 0; i < 3; i++) // this breaks when computed outside if
+                  wfn[i] = Orb[SC[Isc_Ref].RefOrb].wln[i];
+               /* R Interial -> LVLH */
+               double temp[3];
+               MxV(SC[Isc_Ref].CLN, CTRL->CmdPosR, temp);
+               //  y0' = (6x0(wt - sin(wt)) - y0)wsin(wt) - 2wx0(4 - 3cos(wt))(1
+               //  - cos(wt))) / ((4sin(wt) - 3wt)sin(wt) + 4(1 - cos(wt))^2)
+               //  x0' = -(wx0(4 - 3cos(wt)) + 2(1 - cos(wt))y0') / (sin(wt))
+               //  z0' = -z0wcos(wt)
+               Cmd->PosRate[1] =
+                   ((6 * temp[0] *
+                         (n * Cmd->TimeDock - sin(n * Cmd->TimeDock)) -
+                     temp[1]) *
+                        n * sin(n * Cmd->TimeDock) -
+                    2 * n * temp[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
+                        (1 - cos(n * Cmd->TimeDock))) /
+                   ((4 * sin(n * Cmd->TimeDock) - 3 * n * Cmd->TimeDock) *
+                        sin(n * Cmd->TimeDock) +
+                    4 * pow(1 - cos(n * Cmd->TimeDock), 2));
+               Cmd->PosRate[0] =
+                   -(n * temp[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
+                     2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate[1]) /
+                   sin(n * Cmd->TimeDock);
+               Cmd->PosRate[2] = -temp[2] * n / tan(n * Cmd->TimeDock);
+            }
+
+            time_EH = state->Time - TimeStart; // correct reference?
+            if (time_EH <= Cmd->TimeDock) {
+               // x(t) = (x0'/w)sin(wt) - (3x0 + 2y0'/w)cos(wt) + (4x0 +
+               // 2y0'/w) y(t) = (6x0 + 4y0'/w)sin(wt) + (2x0'/w)cos(wt) -
+               // (6wx0+3y0')t
+               // + (y0 - 2x0'/w)
+               // z(t) = z0cos(wt) + (z0'/w)sin(wt)
+               cmd_pos_EH[0] = (Cmd->PosRate[0] / n) * sin(n * time_EH) -
+                               (3 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n) *
+                                   cos(n * time_EH) +
+                               4 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n;
+               cmd_pos_EH[1] =
+                   (6 * Cmd->Pos[0] + 4 * Cmd->PosRate[1] / n) *
+                       sin(n * time_EH) +
+                   (2 * Cmd->PosRate[0] / n) * cos(n * time_EH) -
+                   (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]) * time_EH +
+                   Cmd->Pos[1] - 2 * Cmd->PosRate[0] / n;
+               cmd_pos_EH[2] = Cmd->Pos[2] * cos(n * time_EH) +
+                               (Cmd->PosRate[2] / n) * sin(n * time_EH);
+               // x'(t) = x0'cos(wt) + (3wx0 + 2y0')sin(wt)
+               // y'(t) = (6wx0 + 4y0')cos(wt) - (2x0')sin(wt) - (6wx0 +
+               // 3y0') z'(t) = -(z0w)sin(wt) + z0'cos(wt)
+               cmd_vel_EH[0] = Cmd->PosRate[0] * cos(n * time_EH) +
+                               (3 * n * Cmd->Pos[0] + 2 * Cmd->PosRate[1]) *
+                                   sin(n * time_EH);
+               cmd_vel_EH[1] = (6 * n * Cmd->Pos[0] + 4 * Cmd->PosRate[1]) *
+                                   cos(n * time_EH) -
+                               (2 * Cmd->PosRate[0]) * sin(n * time_EH) -
+                               (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]);
+               cmd_vel_EH[2] = (-Cmd->Pos[2] * n) * sin(n * time_EH) +
+                               Cmd->PosRate[2] * cos(n * time_EH);
+            }
+            else { // arrived at docking location
+               for (i = 0; i < 3; i++) {
+                  cmd_pos_EH[i] = 0;
+                  cmd_vel_EH[i] = 0;
+               }
+            }
+            /* LVLH -> R Inertial */
+            MTxV(SC[Isc_Ref].CLN, cmd_pos_EH, CTRL->CmdPosR);
+            VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
+            double temp[3];
+            MTxV(SC[Isc_Ref].CLN, cmd_vel_EH, temp);
+            for (i = 0; i < 3; i++)
+               CTRL->CmdVelR[i] += temp[i];
+         }
+         // Hailey's EH Code End ******************************************
+      } break;
       default: {
          // Decode ref SC ID Number
          if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body) ==
@@ -2237,6 +2431,9 @@ void TranslationCtrl(struct DSMType *DSM)
                      CTRL->FcmdB[i] =
                          DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
                   }
+               }
+               else if (!strcmp(Cmd->RefFrame, "EH")) {
+                  // Hailey's code here
                }
                for (i = 0; i < 3; i++) {
                   if (CTRL->FrcB_max[i] > 0) {
