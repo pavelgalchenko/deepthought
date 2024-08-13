@@ -143,6 +143,9 @@ struct DSMCmdType {
    double Distance;          // target distance for EH maneuver
    double Phase;             // target degree for EH maneuver
    double TimeDock;          // target time period for EH docking
+   long ResetTimer;          // resets EH timer
+   double InitTime;          // start of EH guidance law execution
+   double CurrentTimer;      // time after EH start
    char TranslationType[20]; // Docking or Circumnavigation or Position
    char trn_actuator[20];
    char att_actuator[20];

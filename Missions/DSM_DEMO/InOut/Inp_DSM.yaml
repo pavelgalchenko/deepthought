@@ -237,8 +237,8 @@ Position Configurations:
   - Position:
       Index: 6
       Description: TranslationCmd_[6]
-      Distance: 2
-      Phase: 270
+      Distance: 3
+      Phase: 90
       Origin: SC[4].B[0]
       Frame: E
       Controller: *Controller_0
@@ -248,8 +248,8 @@ Translation Configurations:
       Index: 0
       Description: TranslationCmd_[7]
       Translation Type: Circumnavigation
-      Distance: 2
-      Phase: 270
+      Distance: 3
+      Phase: 90
       Origin: SC[4].B[0]
       Frame: E
       Controller: *Controller_0
@@ -623,7 +623,7 @@ DSM Commands:
           - Type: Translation
             Subtype: Position
             Index: 6
-      - Time: 240.0
+      - Time: 120.0
         Commands:
           - Type: Translation
             Subtype: Translation
