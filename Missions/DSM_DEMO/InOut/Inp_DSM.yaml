@@ -255,7 +255,7 @@ Translation Configurations:
       Controller: *Controller_0
       Actuator: *Actuator_3
   - Translation:
-      Index: 0
+      Index: 1
       Description: TranslationCmd_[8]
       Translation Type: Docking
       Time to Dock: 400
@@ -600,7 +600,7 @@ DSM Commands:
   #             ((IF Attitude:    One Vector Pointing, Two Vector Pointing, Quaternion, Mirror, Detumble, Whl H Manage))
   #             Index:      [[Index, {SV Index for Two Vector}]] ((needed if not Passive or NO_CHANGE))
   #             Subtype:    [[Subtype]] ((Needed if not Actuator))
-  - SC: 0
+  - SC: 0 # EH deputy
     Command Sequence:
       - Time: 0.0
         Commands:
@@ -621,37 +621,13 @@ DSM Commands:
       - Time: 120.0
         Commands:
           - Type: Translation
-            Subtype: Maneuver
-            Index: 0
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [0, 0]
-      - Time: 180.0
+            Subtype: Position
+            Index: 6
+      - Time: 240.0
         Commands:
           - Type: Translation
-            Subtype: Position
+            Subtype: Translation
             Index: 0
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [0, 0]
-      - Time: 550.0
-        Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 1
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [4, 4]
-      - Time: 600.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 0
-      - Time: 700.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 2
   - SC: 1
     Command Sequence:
       - Time: 0.0
@@ -670,27 +646,6 @@ DSM Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
             Index: [1, 1]
-      - Time: 420.0
-        Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 2
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [1, 1]
-      - Time: 550.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [4, 4]
-      - Time: 840.0
-        Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 5
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [4, 4]
   - SC: 2
     Command Sequence:
       - Time: 0.0
@@ -709,29 +664,6 @@ DSM Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
             Index: [2, 2]
-      - Time: 420.0
-        Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 3
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [2, 2]
-      - Time: 550.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [4, 4]
-      - Time: 600.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 1
-      - Time: 700.0
-        Commands:
-          - Type: Attitude
-            Subtype: Whl H Manage
-            Index: 3
   - SC: 3
     Command Sequence:
       - Time: 0.0
@@ -750,44 +682,10 @@ DSM Commands:
           - Type: Attitude
             Subtype: Two Vector Pointing
             Index: [3, 3]
-      - Time: 320.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [3, 3]
-          - Type: Actuator
-            Index: 0
-      - Time: 400.0
-        Commands:
-          - Type: Actuator
-            Index: 1
-  - SC: 4
+  - SC: 4 # EH chief
     Command Sequence:
       - Time: 0.0
         Commands:
           - Type: Attitude
             Subtype: Quaternion
             Index: 0
-      - Time: 640.0
-        Commands:
-          - Type: Translation
-            Subtype: Position
-            Index: 4
-          - Type: Attitude
-            Subtype: Quaternion
-            Index: 0
-      - Time: 720.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [5, 5]
-      - Time: 1000.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [6, 5]
-      - Time: 1800.0
-        Commands:
-          - Type: Attitude
-            Subtype: Two Vector Pointing
-            Index: [7, 6]
