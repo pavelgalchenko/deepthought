@@ -140,6 +140,10 @@ struct DSMCmdType {
    double PosN[3];        // Position Vector of wrt Inertial frame N
    double PosR[3];        // Position Vector of wrt Inertial frame R
    double q[4];           // Quaternion wrt any frame
+   double Distance;       // target distance for EH maneuver
+   double Phase;          // target degree for EH maneuver
+   double TimeDock;       // target time period for EH docking
+   char TransType[20];    // Docking or Circumnavigation
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
