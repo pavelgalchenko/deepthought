@@ -524,7 +524,6 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
                                         "/Origin %19s "
                                         "/Frame %19s",
                                         Cmd->RefOrigin, Cmd->RefFrame) == 2;
-            // Hailey's EH Code Begin ************************************
             if (!strcmp(Cmd->RefFrame, "E")) {
                isGood     &= fy_node_scanf(iterNode,
                                            "/Distance %lf "
@@ -538,7 +537,6 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
                              3, fy_node_by_path_def(iterNode, "/Position"),
                              Cmd->Pos) == 3;
             }
-            // Hailey's EH Code End **************************************
             ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
             actNode   = fy_node_by_path_def(iterNode, "/Actuator");
             isGood   &= ctrlNode != NULL && actNode != NULL;
@@ -558,7 +556,6 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          exit(EXIT_FAILURE);
       }
    }
-   // Hailey's EH Code Begin ********************************************
    else if (!strcmp(subType, "Translation")) {
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
@@ -609,7 +606,6 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          exit(EXIT_FAILURE);
       }
    }
-   // Hailey's EH Code End **********************************************
    else if (!strcmp(subType, "Maneuver")) {
       Cmd->TranslationCtrlActive = TRUE;
       struct fy_node *cmdNode =
@@ -2468,9 +2464,6 @@ void TranslationCtrl(struct DSMType *DSM)
                      CTRL->FcmdB[i] =
                          DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
                   }
-               }
-               else if (!strcmp(Cmd->RefFrame, "EH")) {
-                  // Hailey's code here
                }
                for (i = 0; i < 3; i++) {
                   if (CTRL->FrcB_max[i] > 0) {
