@@ -623,7 +623,7 @@ DSM Commands:
           - Type: Translation
             Subtype: Position
             Index: 6
-      - Time: 120.0
+      - Time: 240.0
         Commands:
           - Type: Translation
             Subtype: Translation
