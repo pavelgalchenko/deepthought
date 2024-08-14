@@ -11,7 +11,7 @@ Configuration:
   #   Unit Sphere Exists: [[true/false]]
   #   Pause on Startup: [[true/false]]
   Name: Inp_Graphics.txt
-  Output Interval: 0.1
+  Output Interval: 1.0
   Star Catalog File: Skymap09.txt
   Map Exists: true
   Orrery Exists: true

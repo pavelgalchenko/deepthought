@@ -234,6 +234,35 @@ Position Configurations:
       Frame: SC[4].B[0]
       Controller: *Controller_0
       Actuator: *Actuator_3
+  - Position:
+      Index: 6
+      Description: TranslationCmd_[6]
+      Distance: 3
+      Phase: 0
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+Translation Configurations:
+  - Translation:
+      Index: 0
+      Description: TranslationCmd_[7]
+      Translation Type: Circumnavigation
+      Distance: 3
+      Phase: 0
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Translation:
+      Index: 1
+      Description: TranslationCmd_[8]
+      Translation Type: Docking
+      Time to Dock: 800
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
 Primary Vector Configurations:
   # -------------------------------Primary Axis Cmd--------------------------------
   # ((Sequence; one element for unique Primary Axis Command))
@@ -703,6 +732,16 @@ DSM Commands:
           - Type: Attitude
             Subtype: Whl H Manage
             Index: 3
+      - Time: 900.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Index: 6
+      - Time: 1000.0
+        Commands:
+          - Type: Translation
+            Subtype: Translation
+            Index: 0
   - SC: 3
     Command Sequence:
       - Time: 0.0
