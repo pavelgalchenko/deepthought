@@ -30,6 +30,7 @@ import re
 import ruamel.yaml
 from ruamel.yaml import YAML
 from parse import parse
+import copy
 import ruamel.yaml.comments
 
 
@@ -1109,6 +1110,19 @@ def convertNOS3(missionDir, yaml, nos3FileName="Inp_NOS3.txt", commentDict=None)
 
 
 # %%
+def nukeIndex(dsmMap):
+    if isinstance(dsmMap, ruamel.yaml.comments.CommentedMap):
+        if "Index" in dsmMap:
+            del dsmMap["Index"]
+            return
+        else:
+            for key in dsmMap.keys():
+                nukeIndex(dsmMap[key])
+    elif isinstance(dsmMap, ruamel.yaml.comments.CommentedSeq):
+        for item in dsmMap:
+            nukeIndex(item)
+
+
 def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
     dsm = ruamel.yaml.comments.CommentedMap()
     dsmTypes = [
@@ -1116,8 +1130,8 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
         "Limits",
         "Actuator",
         "Controller",
-        "Translation",
-        "Primary Vector",
+        "Position",
+        "One Vector",
         "Secondary Vector",
         "Quaternion",
         "Mirror",
@@ -1132,6 +1146,7 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
         if not typeName.startswith("DSM Commands"):
             dsm[typeName + " Configurations"] = list()
         else:
+            dsm["Two Vector Configurations"] = list()
             dsm[typeName] = list()
 
     with open(missionDir + "/InOut/" + dsmFileName, "r") as f:
@@ -1165,16 +1180,16 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
                         index = int(search.group())
                     if command.startswith("TranslationCmd_"):
                         cmdDict["Type"] = "Translation"
-                        cmdDict["Subtype"] = "Translation"
+                        cmdDict["Subtype"] = "Position"
                         cmdDict["Index"] = index
                     elif command.startswith("AttitudeCmd_PV"):
                         cmdDict["Type"] = "Attitude"
                         if "_SV" in command:
                             indicies = re.findall(r"\d+", command)
-                            cmdDict["Subtype"] = "Two Vector Pointing"
+                            cmdDict["Subtype"] = "Two Vector"
                             cmdDict["Index"] = [int(ind) for ind in indicies]
                         else:
-                            cmdDict["Subtype"] = "One Vector Pointing"
+                            cmdDict["Subtype"] = "One Vector"
                             cmdDict["Index"] = index
                     elif command.startswith("QuaternionCmd_"):
                         cmdDict["Type"] = "Attitude"
@@ -1217,9 +1232,9 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
                 or bool(re.match("eof", line, re.I))
             ):
                 if line.startswith("TranslationCmd_"):
-                    typeName = "Translation"
+                    typeName = "Position"
                 elif line.startswith("AttitudeCmd_PV"):
-                    typeName = "Primary Vector"
+                    typeName = "One Vector"
                 elif line.startswith("AttitudeCmd_SV"):
                     typeName = "Secondary Vector"
                 elif line.startswith("QuaternionCmd_"):
@@ -1257,9 +1272,10 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
                     newDict["Controller"] = int(re.search(r"\d+", strData[6]).group())
                     newDict["Actuator"] = int(re.search(r"\d+", strData[7]).group())
                 elif line.startswith("AttitudeCmd_PV"):
-                    tgtDict = newDict["Target"] = dict()
+                    pvDict = newDict["Primary Vector"] = dict()
+                    tgtDict = pvDict["Target"] = dict()
                     tgtDict["Type"] = strData[1]
-                    newDict["Axis"] = [float(string) for string in strData[2:5]]
+                    pvDict["Axis"] = [float(string) for string in strData[2:5]]
                     if tgtDict["Type"].lower() == "vec":
                         tgtDict["Frame"] = strData[5]
                         tgtDict["Axis"] = [float(string) for string in strData[6:9]]
@@ -1380,62 +1396,103 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
                 dsm[typeName + " Configurations"].append(newItem)
 
     dsm = convertToYamlAndComment(dsm, commentDict)
+    for scDict in dsm["DSM Commands"]:
+        for cmdTime in scDict["Command Sequence"]:
+            for cmd in cmdTime["Commands"]:
+                if cmd["Type"] == "Actuator":
+                    subType = "Actuator Cmd"
+                else:
+                    subType = cmd["Subtype"]
+                if "Two Vector" in subType:
+                    inds = cmd["Index"]
+                    haveDict = False
+                    for config in dsm["Two Vector Configurations"]:
+                        twoVec = config["Two Vector"]
+                        if twoVec["Index"] == inds:
+                            haveDict = True
+                            cmd["Command Data"] = config["Two Vector"]
+                            break
+                    if not haveDict:
+                        headDict = ruamel.yaml.comments.CommentedMap()
+                        headDict["Two Vector"] = twoVecCmd = (
+                            ruamel.yaml.comments.CommentedMap()
+                        )
+                        twoVecCmd["Description"] = (
+                            f"Two Vector Command {inds[0]}-{inds[1]}"
+                        )
+                        twoVecCmd["Index"] = inds
+                        twoVecCmd["Primary Vector"] = pv = (
+                            ruamel.yaml.comments.CommentedMap()
+                        )
+                        twoVecCmd["Secondary Vector"] = sv = (
+                            ruamel.yaml.comments.CommentedMap()
+                        )
+                        for item in dsm["One Vector Configurations"]:
+                            pvConf = item["One Vector"]
+                            if pvConf["Index"] == inds[0]:
+                                pv["Target"] = copy.deepcopy(
+                                    pvConf["Primary Vector"]["Target"]
+                                )
+                                pv["Axis"] = copy.deepcopy(
+                                    pvConf["Primary Vector"]["Axis"]
+                                )
+                                twoVecCmd["Controller"] = pvConf["Controller"]
+                                twoVecCmd["Actuator"] = pvConf["Actuator"]
+                                break
+                        for item in dsm["Secondary Vector Configurations"]:
+                            svConf = item["Secondary Vector"]
+                            if svConf["Index"] == inds[1]:
+                                sv["Target"] = copy.deepcopy(svConf["Target"])
+                                sv["Axis"] = copy.deepcopy(svConf["Axis"])
+                                break
+                        dsm["Two Vector Configurations"].append(headDict)
+                        cmd["Command Data"] = twoVecCmd
+
+                elif "passive" not in subType.lower():
+                    ind = cmd["Index"]
+                    for seqItem in dsm[subType + " Configurations"]:
+                        config = seqItem[subType]
+                        if config["Index"] == ind:
+                            cmd["Command Data"] = config
+                            break
+
+    del dsm["Secondary Vector Configurations"]
+
     for key in dsm.keys():
         if not key == "DSM Commands":
-            # for sc in dsm[key]:
-            #     for cmd in sc["Command Sequence"]:
-            # else:
+            for i, thing in enumerate(dsm[key]):
+                thingName = list(thing.keys())[0]
+                thing[thingName].yaml_set_anchor(thingName.replace(" ", "-") + f"_{i}")
+                thing[thingName].anchor.always_dump = True
+
+    for key in dsm.keys():
+        if not key == "DSM Commands":
             for cmd in dsm[key]:
-                cmdData = cmd[list(cmd.keys())[0]]
+                thingName = list(cmd.keys())[0]
+                cmdData = cmd[thingName]
                 for cmdKey in cmdData.keys():
                     if cmdKey == "Controller" and key != "Controller Configurations":
                         test = cmdData[cmdKey]
-                        for ctrl in dsm["Controller Configurations"]:
-                            ctrl["Controller"].yaml_set_anchor(
-                                "Controller_%0d" % ctrl["Controller"]["Index"]
-                            )
-                            ctrl["Controller"].anchor.always_dump = True
+                        for i, ctrl in enumerate(dsm["Controller Configurations"]):
                             if ctrl["Controller"]["Index"] == test:
                                 cmdData[cmdKey] = ctrl["Controller"]
                     elif cmdKey == "Actuator":
                         test = cmdData[cmdKey]
-                        for act in dsm["Actuator Configurations"]:
-                            act["Actuator"].yaml_set_anchor(
-                                "Actuator_%0d" % act["Actuator"]["Index"]
-                            )
-                            act["Actuator"].anchor.always_dump = True
+                        for i, act in enumerate(dsm["Actuator Configurations"]):
                             if act["Actuator"]["Index"] == test:
                                 cmdData[cmdKey] = act["Actuator"]
                     elif cmdKey == "Gains":
                         test = cmdData[cmdKey]
-                        for gain in dsm["Gains Configurations"]:
-                            gain["Gains"].yaml_set_anchor(
-                                "Gains_%0d" % gain["Gains"]["Index"]
-                            )
-                            gain["Gains"].anchor.always_dump = True
+                        for i, gain in enumerate(dsm["Gains Configurations"]):
                             if gain["Gains"]["Index"] == test:
                                 cmdData[cmdKey] = gain["Gains"]
                     elif cmdKey == "Limits":
                         test = cmdData[cmdKey]
-                        for lim in dsm["Limits Configurations"]:
-                            lim["Limits"].yaml_set_anchor(
-                                "Limits_%0d" % lim["Limits"]["Index"]
-                            )
-                            lim["Limits"].anchor.always_dump = True
+                        for i, lim in enumerate(dsm["Limits Configurations"]):
                             if lim["Limits"]["Index"] == test:
                                 cmdData[cmdKey] = lim["Limits"]
 
-    for ctrl in dsm["Controller Configurations"]:
-        del ctrl["Controller"]["Index"]
-
-    for act in dsm["Actuator Configurations"]:
-        del act["Actuator"]["Index"]
-
-    for gain in dsm["Gains Configurations"]:
-        del gain["Gains"]["Index"]
-
-    for lim in dsm["Limits Configurations"]:
-        del lim["Limits"]["Index"]
+    nukeIndex(dsm)
 
     return dsm
 
@@ -1745,6 +1802,7 @@ startswith_type = {
 if __name__ == "__main__":
     yaml_file = sys.argv[1]
     missionDir = sys.argv[2]
+    doComment = sys.argv[3] == "True"
 
     comment_dir = "yaml/yamlComments/"
     yaml = YAML()
@@ -1767,7 +1825,7 @@ if __name__ == "__main__":
             for f_type in f_type_list:
                 if f_type in startswith_type and name.startswith(f_type):
                     comment_file_name = comment_file_dict[f_type]
-                    if comment_file_name is not None:
+                    if doComment and comment_file_name is not None:
                         with open(comment_dir + comment_file_name) as comm_file:
                             yaml_comments = yaml.load(comm_file)
                     else:
@@ -1777,7 +1835,7 @@ if __name__ == "__main__":
                     )
                 elif f_type == name:
                     comment_file_name = comment_file_dict[f_type]
-                    if comment_file_name is not None:
+                    if doComment and comment_file_name is not None:
                         with open(comment_dir + comment_file_name) as comm_file:
                             yaml_comments = yaml.load(comm_file)
                     else:

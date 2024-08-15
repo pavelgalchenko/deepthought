@@ -1,21 +1,6 @@
 %YAML 1.2
 ---
-# ***************************  Regions for 42  ***************************
 Regions:
-  # ------------------------------Region Configuration-----------------------------
-  # ((Sequence; one element for unique Region Definition))
-  #   - Region:
-  #       Exists: [[true/false]]
-  #       Name: [[]]
-  #       World: [[]]
-  #       Location:
-  #         Type: [[POSW/LLA]]
-  #         Position: [[x, y, z](POSW)/[Lat, Long, Alt](LLA)]  [[m, m, m](POSW)/[deg, deg, m](LLA)]
-  #       Coefficients:
-  #         Elasticity: [[]]
-  #         Damping: [[]]
-  #         Friction: [[]]
-  #       Geometry File Name: [[]]
   - Region:
       Exists: true
       Name: LZ
