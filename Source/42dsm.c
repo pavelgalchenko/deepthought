@@ -4,10 +4,12 @@
 /*    created by Eric Stoneking of NASA Goddard Space Flight Center   */
 
 /*    Contributors [aka cool froods]:                                 */
-/*    - Daniel Newberry - NASA WFF Intern, Summer 2023                */
+/*    - Daniel Newberry - NASA WFF Intern, Summer 2023 & 2024         */
 /*      drnmvd@mst.edu                                                */
-/*    - Jerry Varghese - NASA WFF Intern, Summer 2023                 */
+/*    - Jerry Varghese - NASA WFF Intern, Summer 2023 & 2024          */
 /*      varghes5@purdue.edu                                           */
+/*    - Hailey Warner  - NASA WFF Intern, Summer 2024                 */
+/*      hlwarner@stanford.edu                                         */
 /*    - Matthew Zaffram - NASA WFF Intern, Summer 2022 & 2021         */
 /*      mzaffram@gmail.com                                            */
 /*    - Rod Regado - NASA WFF Intern, Summer 2022                     */
@@ -518,17 +520,28 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
        fy_node_get_scalar0(fy_node_by_path_def(cmdNode, "/Description"));
 
    if (!strcmp(subType, "Position")) {
-      long isGood  = fy_node_scanf(cmdNode,
-                                   "/Origin %19s "
-                                    "/Frame %19s",
-                                   Cmd->RefOrigin, Cmd->RefFrame) == 2;
-      ctrlNode     = fy_node_by_path_def(cmdNode, "/Controller");
-      actNode      = fy_node_by_path_def(cmdNode, "/Actuator");
-      isGood      &= ctrlNode != NULL && actNode != NULL;
+      long isGood = fy_node_scanf(cmdNode,
+                                  "/Origin %19s "
+                                  "/Frame %19s ",
+                                  Cmd->RefOrigin, Cmd->RefFrame) == 2;
+      if (!strcmp(Cmd->RefFrame, "E")) {
+         isGood &= fy_node_scanf(cmdNode,
+                                 "/Distance %lf "
+                                 "/Phase %lf",
+                                 &Cmd->Distance, &Cmd->Phase) == 2;
 
-      isGood &=
-          assignYAMLToDoubleArray(3, fy_node_by_path_def(cmdNode, "/Position"),
-                                  Cmd->Pos) == 3;
+         Cmd->Phase *= PI / 180;
+         strcpy(Cmd->TranslationType, "Position");
+      }
+      else {
+         isGood &=
+             assignYAMLToDoubleArray(
+                 3, fy_node_by_path_def(cmdNode, "/Position"), Cmd->Pos) == 3;
+      }
+      ctrlNode  = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode   = fy_node_by_path_def(cmdNode, "/Actuator");
+      isGood   &= ctrlNode != NULL && actNode != NULL;
+
       if (isGood) {
          TranslationCmdProcessed = TRUE;
          Cmd->ManeuverMode       = INACTIVE;
@@ -538,6 +551,38 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          printf("Position Command %s has invalid format. Exiting...\n",
                 cmdName);
          exit(EXIT_FAILURE);
+      }
+   }
+   else if (!strcmp(subType, "Translation")) {
+      Cmd->TranslationCtrlActive = TRUE;
+
+      long isGood  = fy_node_scanf(cmdNode,
+                                   "/Origin %19s "
+                                    "/Frame %19s",
+                                   Cmd->RefOrigin, Cmd->RefFrame) == 2;
+      isGood      &= fy_node_scanf(cmdNode, "/Translation Type %19s ",
+                                   Cmd->TranslationType) == 1;
+      if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
+         isGood &= fy_node_scanf(cmdNode,
+                                 "/Distance %lf "
+                                 "/Phase %lf ",
+                                 &Cmd->Distance, &Cmd->Phase) == 2;
+
+         Cmd->Phase      *= PI / 180;
+         Cmd->ResetTimer  = 1;
+      }
+      else if (!strcmp(Cmd->TranslationType, "Docking")) {
+         isGood &=
+             fy_node_scanf(cmdNode, "/Time to Dock %lf ", &Cmd->TimeDock) == 1;
+         Cmd->ResetTimer = 1;
+      }
+      ctrlNode  = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode   = fy_node_by_path_def(cmdNode, "/Actuator");
+      isGood   &= ctrlNode != NULL && actNode != NULL;
+
+      if (isGood) {
+         TranslationCmdProcessed = TRUE;
+         Cmd->ManeuverMode       = INACTIVE;
       }
    }
    else if (!strcmp(subType, "Maneuver")) {
@@ -1475,6 +1520,149 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          VxV(DSM->refOrb->wln, CTRL->CmdPosR, CTRL->CmdVelR);
          goodOriginFrame = TRUE;
       } break;
+      case 'E': {
+         // Hailey's EH Code Begin ****************************************
+         double cmd_pos_EH[3] = {0.0};
+         double cmd_vel_EH[3] = {0.0};
+         double wln[3]        = {0.0};
+
+         double n = sqrt(DSM->refOrb->mu / pow(DSM->refOrb->SMA, 3));
+
+         if (!strcmp(Cmd->TranslationType, "Position")) {
+            cmd_pos_EH[0] = -Cmd->Distance * cos(Cmd->Phase) / 2;
+            cmd_pos_EH[1] = Cmd->Distance * sin(Cmd->Phase);
+            cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(Cmd->Phase) / 2;
+
+            cmd_vel_EH[0] = Cmd->Distance * n * sin(Cmd->Phase) / 2;
+            cmd_vel_EH[1] = Cmd->Distance * n * cos(Cmd->Phase);
+            cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(Cmd->Phase) / 2;
+         }
+         else if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
+            /* "Development and Flight of a Stereoscopic Imager for Use in
+             * Spacecraft Close Proximity Operations," Darling et. al. p. 497 */
+            if (Cmd->ResetTimer == 1) {
+               Cmd->InitTime   = state->Time;
+               Cmd->ResetTimer = 0;
+            }
+            Cmd->CurrentTimer = state->Time - Cmd->InitTime;
+            if (sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
+                       &frame_body) == 2) {
+               if (Isc_Ref == DSM->ID) {
+                  printf(
+                      "Spacecraft %ld called Euler Hill guidance law on itself."
+                      "Exiting...\n",
+                      Isc_Ref);
+                  exit(EXIT_FAILURE);
+               }
+               /* Calculate coefficients */
+               double tau_k = n * Cmd->CurrentTimer + Cmd->Phase;
+               for (i = 0; i < 3; i++)
+                  wln[i] = DSM->refOrb->wln[i];
+
+               /* CW equations (note: vel. is incorrect in paper) */
+               cmd_pos_EH[0] = -Cmd->Distance * cos(tau_k) / 2;
+               cmd_pos_EH[1] = Cmd->Distance * sin(tau_k);
+               cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(tau_k) / 2;
+
+               cmd_vel_EH[0] = Cmd->Distance * n * sin(tau_k) / 2;
+               cmd_vel_EH[1] = Cmd->Distance * n * cos(tau_k);
+               cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
+            }
+            else {
+               printf("Invalid Translational Control Reference Frame. "
+                      "Exiting...\n");
+               exit(EXIT_FAILURE);
+            }
+         }
+         else if (!strcmp(Cmd->TranslationType, "Docking")) {
+            /* "Fundamentals of Astrodynamics and Applications", Vallado p. 397,
+             * 410 */
+            if (sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
+                       &frame_body) == 2) {
+               if (Isc_Ref == DSM->ID) {
+                  printf("Spacecraft %ld called Euler Hill guidance law on "
+                         "itself. "
+                         "Exiting...\n",
+                         Isc_Ref);
+                  exit(EXIT_FAILURE);
+               }
+
+               if (Cmd->ResetTimer == 1) {
+                  Cmd->InitTime   = state->Time;
+                  Cmd->ResetTimer = 0;
+                  /* R Interial -> LVLH */
+                  MxV(SC[Isc_Ref].CLN, state->PosR, Cmd->Pos);
+
+                  Cmd->PosRate[1] =
+                      ((6 * Cmd->Pos[0] *
+                            (n * Cmd->TimeDock - sin(n * Cmd->TimeDock)) -
+                        Cmd->Pos[1]) *
+                           n * sin(n * Cmd->TimeDock) -
+                       2 * n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
+                           (1 - cos(n * Cmd->TimeDock))) /
+                      ((4 * sin(n * Cmd->TimeDock) - 3 * n * Cmd->TimeDock) *
+                           sin(n * Cmd->TimeDock) +
+                       4 * pow(1 - cos(n * Cmd->TimeDock), 2));
+                  Cmd->PosRate[0] =
+                      -(n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
+                        2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate[1]) /
+                      sin(n * Cmd->TimeDock);
+                  Cmd->PosRate[2] = -Cmd->Pos[2] * n / tan(n * Cmd->TimeDock);
+               }
+               for (i = 0; i < 3; i++)
+                  wln[i] = DSM->refOrb->wln[i];
+               Cmd->CurrentTimer = state->Time - Cmd->InitTime;
+               if (Cmd->CurrentTimer <= Cmd->TimeDock) {
+                  /* Update Position */
+                  cmd_pos_EH[0] =
+                      (Cmd->PosRate[0] / n) * sin(n * Cmd->CurrentTimer) -
+                      (3 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n) *
+                          cos(n * Cmd->CurrentTimer) +
+                      4 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n;
+                  cmd_pos_EH[1] =
+                      (6 * Cmd->Pos[0] + 4 * Cmd->PosRate[1] / n) *
+                          sin(n * Cmd->CurrentTimer) +
+                      (2 * Cmd->PosRate[0] / n) * cos(n * Cmd->CurrentTimer) -
+                      (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]) *
+                          Cmd->CurrentTimer +
+                      Cmd->Pos[1] - 2 * Cmd->PosRate[0] / n;
+                  cmd_pos_EH[2] =
+                      Cmd->Pos[2] * cos(n * Cmd->CurrentTimer) +
+                      (Cmd->PosRate[2] / n) * sin(n * Cmd->CurrentTimer);
+                  /* Update Velocity */
+                  cmd_vel_EH[0] = Cmd->PosRate[0] * cos(n * Cmd->CurrentTimer) +
+                                  (3 * n * Cmd->Pos[0] + 2 * Cmd->PosRate[1]) *
+                                      sin(n * Cmd->CurrentTimer);
+                  cmd_vel_EH[1] =
+                      (6 * n * Cmd->Pos[0] + 4 * Cmd->PosRate[1]) *
+                          cos(n * Cmd->CurrentTimer) -
+                      (2 * Cmd->PosRate[0]) * sin(n * Cmd->CurrentTimer) -
+                      (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]);
+                  cmd_vel_EH[2] =
+                      (-Cmd->Pos[2] * n) * sin(n * Cmd->CurrentTimer) +
+                      Cmd->PosRate[2] * cos(n * Cmd->CurrentTimer);
+               }
+               else { // arrived at docking location
+                  for (i = 0; i < 3; i++) {
+                     cmd_pos_EH[i] = 0;
+                     cmd_vel_EH[i] = 0;
+                  }
+               }
+            }
+            else {
+               printf("Invalid Translational Control Reference Frame. "
+                      "Exiting...\n");
+               exit(EXIT_FAILURE);
+            }
+         }
+         /* LVLH -> R Inertial */
+         MTxV(DSM->refOrb->CLN, cmd_pos_EH, CTRL->CmdPosR);
+         VxV(wln, CTRL->CmdPosR, CTRL->CmdVelR);
+         double temp[3];
+         MTxV(DSM->refOrb->CLN, cmd_vel_EH, temp);
+         for (i = 0; i < 3; i++)
+            CTRL->CmdVelR[i] += temp[i];
+      } break;
       default: {
          // Decode ref SC ID Number
          if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body) ==
@@ -2015,6 +2203,28 @@ void AttitudeNavigation(struct AcType *AC, struct DSMStateType *state)
       AC->wbn[i] = state->wbn[i];
    }
    AC->qbn[3] = state->qbn[3];
+}
+//------------------------------------------------------------------------------
+void MurAKF(struct AcType *AC, struct DSMStateType *state)
+{
+   /* Propagate quaternion, bias, and error covariance */
+   // (Hasnaa uses mag, ST, and FSS data)
+   // long N = AC->Nmag + AC->Nst + AC->Nfss; // # observations?
+
+   /* Compute attitude matrix A(qk^-) */
+
+   /* Initialize error state vector */
+   // double delta_xk_minus[3] = {0.0};
+
+   // for (int i = 1; i < N; i++) {
+   /* Sensitivity matrix */
+
+   /* Compute Kalman gain */
+
+   /* Update covariance, residual, and state */
+   //}
+
+   /* Reset */
 }
 //------------------------------------------------------------------------------
 //                                 CONTROL

@@ -239,6 +239,50 @@ void DSM_PlanetEphemReport(void)
       fflush(suntrackfile[Iw]);
    }
 }
+void DSM_StateRot3BodyReport(void){
+   static FILE **staterotfile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+   double full_N_state[6], posRot[3], velRot[3];
+   struct LagrangeSystemType *LS;
+
+   if (First) {
+      staterotfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            LS = &LagSys[Orb[SC[Isc].RefOrb].Sys];
+            if (LS->Exists){
+               sprintf(s, "DSM_StateRot3Body_%02li.42", Isc);
+               staterotfile[Isc] = FileOpen(OutPath, s, "wt");
+               fprintf(staterotfile[Isc], "PosR_X PosR_Y PosR_Z ");
+               fprintf(staterotfile[Isc], "VelR_X VelR_Y VelR_Z ");
+               fprintf(staterotfile[Isc], "\n");
+            }
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         LS = &LagSys[Orb[SC[Isc].RefOrb].Sys];
+         if (LS->Exists){
+            for (int i = 0; i<3; i++) full_N_state[i] = SC[Isc].PosN[i];
+            for (int i = 0; i<3; i++) full_N_state[i+3] = SC[Isc].VelN[i];
+
+            StateN2StateRnd(LS, World[LS->Body2].eph.PosN, World[LS->Body2].eph.VelN, SC[Isc].PosN, SC[Isc].VelN, posRot, velRot);
+
+            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ",
+                  posRot[0], posRot[1], posRot[2]);
+            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ",
+                  velRot[0], velRot[1], velRot[2]);
+            fprintf(staterotfile[Isc], "\n");
+         }
+      }
+      fflush(staterotfile[Isc]);
+   }
+}
 /*********************************************************************/
 void DSM_ATT_ControlReport(void)
 {
@@ -768,6 +812,8 @@ void Report(void)
             DSM_WHLReport();
             DSM_THRReport();
             // DSM_GroundTrackReport();
+
+            DSM_StateRot3BodyReport();
          }
       }
    }

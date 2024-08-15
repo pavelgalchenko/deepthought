@@ -120,26 +120,33 @@ struct DSMCmdType {
    double Hvr[3];
    double Hvn[3];
    double OldCRN[3][3];
-   double k_nute[3];      // Nutation Gain
-   double k_prec[3];      // Precession Gain
-   double trn_kp[3];      // Proportional Gain
-   double trn_ki[3];      // Intergral Gain
-   double trn_kr[3];      // Rate / Derivitive Gain
-   double trn_kilimit[3]; // Integral Limit
-   double dmp_kp[3];      // Dumping Proportional Gain
-   double att_kp[3];      // Attitude Proportional Gain
-   double att_ki[3];      // Attitude Intergral Gain
-   double att_kr[3];      // Attitude Rate / Derivitive Gain
-   double att_kilimit[3]; // Attitude Integral Limit
-   double FrcB_max[3];    // Force limit in SC body frame
-   double vel_max[3];     // Velocity limit in SC body frame
-   double Trq_max[3];     // Torque limit in SC body frame
-   double dTrq_max[3];    // Detumble torque limit in SC body frame
-   double w_max[3];       // Angular velocity limit in SC body frame
-   double Pos[3];         // Position Vector of wrt any frame
-   double PosN[3];        // Position Vector of wrt Inertial frame N
-   double PosR[3];        // Position Vector of wrt Inertial frame R
-   double q[4];           // Quaternion wrt any frame
+   double k_nute[3];         // Nutation Gain
+   double k_prec[3];         // Precession Gain
+   double trn_kp[3];         // Proportional Gain
+   double trn_ki[3];         // Intergral Gain
+   double trn_kr[3];         // Rate / Derivitive Gain
+   double trn_kilimit[3];    // Integral Limit
+   double dmp_kp[3];         // Dumping Proportional Gain
+   double att_kp[3];         // Attitude Proportional Gain
+   double att_ki[3];         // Attitude Intergral Gain
+   double att_kr[3];         // Attitude Rate / Derivitive Gain
+   double att_kilimit[3];    // Attitude Integral Limit
+   double FrcB_max[3];       // Force limit in SC body frame
+   double vel_max[3];        // Velocity limit in SC body frame
+   double Trq_max[3];        // Torque limit in SC body frame
+   double dTrq_max[3];       // Detumble torque limit in SC body frame
+   double w_max[3];          // Angular velocity limit in SC body frame
+   double Pos[3];            // Position Vector of wrt any frame
+   double PosN[3];           // Position Vector of wrt Inertial frame N
+   double PosR[3];           // Position Vector of wrt Inertial frame R
+   double q[4];              // Quaternion wrt any frame
+   double Distance;          // target distance for EH maneuver
+   double Phase;             // target degree for EH maneuver
+   double TimeDock;          // target time period for EH docking
+   long ResetTimer;          // resets EH timer
+   double InitTime;          // start of EH guidance law execution
+   double CurrentTimer;      // time after EH start
+   char TranslationType[20]; // Docking or Circumnavigation or Position
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
