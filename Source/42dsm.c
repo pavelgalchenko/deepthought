@@ -520,10 +520,11 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
        fy_node_get_scalar0(fy_node_by_path_def(cmdNode, "/Description"));
 
    if (!strcmp(subType, "Position")) {
-      long isGood = fy_node_scanf(cmdNode,
-                                  "/Origin %19s "
-                                  "/Frame %19s ",
-                                  Cmd->RefOrigin, Cmd->RefFrame) == 2;
+      Cmd->TranslationCtrlActive = TRUE;
+      long isGood                = fy_node_scanf(cmdNode,
+                                                 "/Origin %19s "
+                                                                "/Frame %19s",
+                                                 Cmd->RefOrigin, Cmd->RefFrame) == 2;
       if (!strcmp(Cmd->RefFrame, "E")) {
          isGood &= fy_node_scanf(cmdNode,
                                  "/Distance %lf "
