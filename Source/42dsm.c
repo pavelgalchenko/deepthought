@@ -487,8 +487,7 @@ long GetActuators(struct AcType *const AC, struct DSMType *const DSM,
 }
 //------------------------- TRANSLATIONAL CMD ----------------------------------
 long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
-                       struct fy_node *trnCmdNode, const double DsmCmdTime,
-                       struct fy_node *dsmRoot)
+                       struct fy_node *trnCmdNode, const double DsmCmdTime)
 {
    struct fy_node *ctrlNode = NULL, *actNode = NULL, *limNode = NULL;
    long TranslationCmdProcessed = FALSE;
@@ -654,7 +653,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
 }
 //-----------------------ATTITUDE CMD ---------------------------------------
 long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
-                    struct fy_node *attCmdNode, struct fy_node *dsmRoot)
+                    struct fy_node *attCmdNode)
 {
    struct fy_node *ctrlNode = NULL, *actNode = NULL;
    long AttitudeCmdProcessed = FALSE, AttPriCmdProcessed = FALSE,
@@ -916,7 +915,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
 }
 //-------------------------------- ACTUATOR CMD --------------------------------
 long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
-                    struct fy_node *actCmdNode, struct fy_node *dsmRoot)
+                    struct fy_node *actCmdNode)
 {
    struct fy_node *iterNode = NULL, *actSeqNode = NULL;
    long ActuatorCmdProcessed = FALSE;
@@ -1068,8 +1067,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
       const char *searchSubtypeStr = "/Subtype %" STR(FIELDWIDTH) "[^\n]";
       fy_node_scanf(iterNode, searchTypeStr, typeToken);
       if (!strcmp(typeToken, "Translation")) {
-         if (GetTranslationCmd(AC, DSM, iterNode, DSM->CmdNextTime, dsmRoot) ==
-             FALSE) {
+         if (GetTranslationCmd(AC, DSM, iterNode, DSM->CmdNextTime) == FALSE) {
             fy_node_scanf(iterNode, searchSubtypeStr, subType);
             printf("Translation command of subtype %s cannot be found in "
                    "Inp_DSM.yaml. Exiting...\n",
@@ -1078,7 +1076,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else if (!strcmp(typeToken, "Attitude")) {
-         if (GetAttitudeCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
+         if (GetAttitudeCmd(AC, DSM, iterNode) == FALSE) {
             fy_node_scanf(iterNode, searchSubtypeStr, subType);
             printf("Actuator command of subtype %s cannot be found in "
                    "Inp_DSM.yaml. Exiting...\n",
@@ -1087,7 +1085,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else if (!strcmp(typeToken, "Actuator")) {
-         if (GetActuatorCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
+         if (GetActuatorCmd(AC, DSM, iterNode) == FALSE) {
             printf("Actuator command cannot be found in Inp_DSM.yaml. "
                    "Exiting...\n");
             exit(EXIT_FAILURE);

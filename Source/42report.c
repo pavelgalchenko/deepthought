@@ -141,10 +141,10 @@ void DSM_AttitudeReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le %18.12le ",
+         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le %18.36le ",
                  SC[Isc].B[0].qn[0], SC[Isc].B[0].qn[1], SC[Isc].B[0].qn[2],
                  SC[Isc].B[0].qn[3]);
-         fprintf(attitudefile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].B[0].wn[0], SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
          fprintf(attitudefile[Isc], "\n");
       }
@@ -175,9 +175,9 @@ void DSM_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
-         fprintf(inertialfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
          fprintf(inertialfile[Isc], "\n");
       }
