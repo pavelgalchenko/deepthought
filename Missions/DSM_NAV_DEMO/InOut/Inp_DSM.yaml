@@ -186,6 +186,14 @@ Position Configurations:
       Frame: SC[4].B[0]
       Controller: *Controller_0
       Actuator: *Actuator_3
+  - Position: &Position_6
+      Description: TranslationCmd_[6]
+      Distance: 3
+      Phase: 0
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
 Translation Configurations:
   - Translation: &Translation_0
       Description: TranslationCmd_[0]
@@ -285,58 +293,50 @@ One Vector Configurations:
       Controller: *Controller_2
       Actuator: *Actuator_2
 Quaternion Configurations:
-  - Quaternion:
-      Index: 0
+  - Quaternion: &Quaternion_0
       Description: QuaternionCmd_[0]
       Quaternion: [0.0, 0.0, 0.0, 1.0]
       Frame: L
       Controller: *Controller_6
       Actuator: *Actuator_0
 Mirror Configurations:
-  - Mirror:
-      Index: 0
+  - Mirror: &Mirror_0
       Description: MirrorCmd_[0]
       Target: SC[0]
       Controller: *Controller_6
       Actuator: *Actuator_0
 Detumble Configurations:
-  - Detumble:
-      Index: 0
+  - Detumble: &Detumble_0
       Description: DetumbleCmd_[0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - Detumble:
-      Index: 1
+  - Detumble: &Detumble_1
       Description: DetumbleCmd_[1]
       Controller: *Controller_3
       Actuator: *Actuator_4
 Whl H Manage Configurations:
-  - Whl H Manage:
-      Index: 0
+  - Whl H Manage: &Whl-H-Manage_0
       Description: WhlHManageCmd_[0]
       Dumping: true
       Minimum H_norm: 0.002
       Maximum H_norm: 0.005
       Controller: *Controller_7
       Actuator: *Actuator_4
-  - Whl H Manage:
-      Index: 1
+  - Whl H Manage: &Whl-H-Manage_1
       Description: WhlHManageCmd_[1]
       Dumping: true
       Minimum H_norm: 0.002
       Maximum H_norm: 0.005
       Controller: *Controller_8
       Actuator: *Actuator_5
-  - Whl H Manage:
-      Index: 2
+  - Whl H Manage: &Whl-H-Manage_2
       Description: WhlHManageCmd_[2]
       Dumping: false
       Minimum H_norm: 0.002
       Maximum H_norm: 0.005
       Controller: *Controller_7
       Actuator: *Actuator_4
-  - Whl H Manage:
-      Index: 3
+  - Whl H Manage: &Whl-H-Manage_3
       Description: WhlHManageCmd_[3]
       Dumping: false
       Minimum H_norm: 0.002
@@ -344,8 +344,7 @@ Whl H Manage Configurations:
       Controller: *Controller_8
       Actuator: *Actuator_5
 Actuator Cmd Configurations:
-  - Actuator Cmd:
-      Index: 0
+  - Actuator Cmd: &Actuator-Cmd_0
       Description: ActuatorCmd_[0]
       Actuators:
         - Type: THR
@@ -354,13 +353,11 @@ Actuator Cmd Configurations:
         - Type: THR
           Index: 16
           Duty Cycle: 100.0
-  - Actuator Cmd:
-      Index: 1
+  - Actuator Cmd: &Actuator-Cmd_1
       Description: ActuatorCmd_[1]
       Actuators: []
 Maneuver Configurations:
-  - Maneuver:
-      Index: 0
+  - Maneuver: &Maneuver_0
       Description: ManeuverCmd_[0]
       Delta V: [0.0, 0.0, 0.1]
       Frame: B
@@ -368,8 +365,7 @@ Maneuver Configurations:
       Duration: 30.0
       Limits: *Limits_0
       Actuator: *Actuator_3
-  - Maneuver:
-      Index: 1
+  - Maneuver: &Maneuver_1
       Description: ManeuverCmd_[1]
       Delta V: [0.0, 0.0, 0.1]
       Frame: B
@@ -377,8 +373,7 @@ Maneuver Configurations:
       Duration: 15.0
       Limits: *Limits_0
       Actuator: *Actuator_3
-  - Maneuver:
-      Index: 2
+  - Maneuver: &Maneuver_2
       Description: ManeuverCmd_[2]
       Delta V: [0.0, 0.0, 0.1]
       Frame: B
@@ -386,8 +381,7 @@ Maneuver Configurations:
       Duration: 15.0
       Limits: *Limits_0
       Actuator: *Actuator_3
-  - Maneuver:
-      Index: 3
+  - Maneuver: &Maneuver_3
       Description: ManeuverCmd_[3]
       Delta V: [0.0, 0.0, -0.2]
       Frame: B
