@@ -14,8 +14,8 @@
 #define PI             M_PI
 #define TWOPI          (2.0 * PI)
 #define HALFPI         M_PI_2
-#define D2R            (0.017453292519943295769)
-#define R2D            (57.295779513082320877)
+#define D2R            ((PI) / (180.0))
+#define R2D            ((180.0) / (PI))
 #define SQRTTWO        M_SQRT2
 #define SQRTHALF       M_SQRT1_2
 #define GOLDENRATIO    (1.6180339887498948482)

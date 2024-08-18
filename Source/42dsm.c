@@ -531,7 +531,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
                                  "/Phase %lf",
                                  &Cmd->Distance, &Cmd->Phase) == 2;
 
-         Cmd->Phase *= PI / 180;
+         Cmd->Phase *= D2R;
          strcpy(Cmd->TranslationType, "Position");
       }
       else {
@@ -569,7 +569,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
                                  "/Phase %lf ",
                                  &Cmd->Distance, &Cmd->Phase) == 2;
 
-         Cmd->Phase      *= PI / 180;
+         Cmd->Phase      *= D2R;
          Cmd->ResetTimer  = 1;
       }
       else if (!strcmp(Cmd->TranslationType, "Docking")) {
