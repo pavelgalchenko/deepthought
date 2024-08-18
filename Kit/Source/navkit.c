@@ -161,7 +161,7 @@ void bubbleSort(struct DSMMeasListType *list)
 }
 
 struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
-                               enum sensorType const type, long const sensorNum)
+                               enum SensorType const type, long const sensorNum)
 {
    struct DSMMeasType *meas, *sourceMeas = &Nav->measTypes[type][sensorNum];
    meas                  = malloc(sizeof *meas);
@@ -1447,7 +1447,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double wrnd[3]            = {0.0};
    struct DSMNavType *Nav;
    long i, j, rowInd;
-   enum navState state;
+   enum States state;
 
    Nav = &DSM->DsmNav;
 
@@ -1860,7 +1860,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double wrnd[3]            = {0.0};
    struct DSMNavType *Nav;
    long i, j, rowInd;
-   enum navState state;
+   enum States state;
 
    Nav = &DSM->DsmNav;
 
@@ -2238,7 +2238,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double wrnd[3]            = {0.0};
    struct DSMNavType *Nav;
    long i, j, rowInd;
-   enum navState state;
+   enum States state;
 
    Nav = &DSM->DsmNav;
 
@@ -2614,12 +2614,13 @@ void configureRefFrame(struct DSMNavType *const Nav,
       default: {
          // make sure if you do sc relative nav, you initialize that sc's nav
          // before you start this sc's
-         struct DSMType *TrgDSM = Nav->refOriPtr;
-         struct BodyType *TrgSB = Nav->refBodyPtr;
+         struct DSMType *TrgDSM        = Nav->refOriPtr;
+         struct DSMStateType *TrgState = &TrgDSM->commState;
+         struct BodyType *TrgSB        = Nav->refBodyPtr;
          for (i = 0; i < 3; i++) {
             // TODO: pn is position of body origin relative to sc origin or cm??
-            targetPosN[i] = TrgDSM->PosN[i] + TrgSB[Nav->refOriBody].pn[i];
-            targetVelN[i] = TrgDSM->VelN[i] + TrgSB[Nav->refOriBody].vn[i];
+            targetPosN[i] = TrgState->PosN[i] + TrgSB[Nav->refOriBody].pn[i];
+            targetVelN[i] = TrgState->VelN[i] + TrgSB[Nav->refOriBody].vn[i];
          }
       } break;
    }
@@ -2975,7 +2976,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    double lerpAlphaState, AtmoDensity = 0.0;
 
    long i, j, k;
-   enum navState Istate;
+   enum States Istate;
 
    struct DSMNavType *Nav = &DSM->DsmNav;
    lerpAlphaState         = Nav->refLerpAlpha;
@@ -3256,7 +3257,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
    else {
       while (measList->head != NULL) {
          long measDim              = 0;
-         enum sensorType senseType = measList->head->type;
+         enum SensorType senseType = measList->head->type;
          long measStep             = measList->head->step;
          long measSubStep          = measList->head->subStep;
 
@@ -3303,7 +3304,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
             Nav->step    = measStep;
             Nav->subStep = measSubStep;
 #if REPORT_RESIDUALS == TRUE
-            for (enum sensorType sensor = INIT_SENSOR; sensor < FIN_SENSOR;
+            for (enum SensorType sensor = INIT_SENSOR; sensor < FIN_SENSOR;
                  sensor++) {
                if (Nav->sensorActive[sensor] == TRUE) {
                   for (i = 0; i < Nav->nSensor[sensor]; i++) {

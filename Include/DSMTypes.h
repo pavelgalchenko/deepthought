@@ -50,7 +50,7 @@ enum ActuatorType {
 
 // Sensor Type Definitions
 // need to arrange this in order of filtering preference
-enum sensorType {
+enum SensorType {
    NULL_SENSOR = -1,
    GPS_SENSOR,
    STARTRACK_SENSOR,
@@ -60,12 +60,12 @@ enum sensorType {
    MAG_SENSOR,
    ACCEL_SENSOR,
 };
-// Update these to be the zeroth and last items in sensorType
+// Update these to be the zeroth and last items in SensorType
 #define INIT_SENSOR GPS_SENSOR
 #define FIN_SENSOR  ACCEL_SENSOR
 
 // Nav Filter Type Definitions
-enum navType {
+enum NavType {
    IDEAL_NAV = 0, // get data direct from AC
    MEKF_NAV, // TODO: maybe make it EKF and have it go MEKF if Quaternion is
              // defined to be filtered??
@@ -75,7 +75,7 @@ enum navType {
 
 // TODO: see about merging ROTMAT_STATE and QUAT_STATE
 // Nav states to filter
-enum navState {
+enum States {
    NULL_STATE = -2,
    ATTITUDE_STATE, // allows for nav dat to be either rotmat or quaternion data
    TIME_STATE,
@@ -88,7 +88,7 @@ enum navState {
    // MOI filtering???
    // actuation filtering???
 };
-// Update these to be the zeroth and last items in navState
+// Update these to be the zeroth and last items in States
 #define INIT_STATE TIME_STATE
 #define FIN_STATE  VEL_STATE
 
@@ -268,7 +268,7 @@ struct DSMMeasType {
    double *(*measFun)(struct AcType *const, struct DSMType *const, const long);
    double **(*measJacobianFun)(struct AcType *const, struct DSMType *const,
                                const long);
-   enum sensorType type;
+   enum SensorType type;
    int dim;
    int errDim;
    double *R;  // diagonal elements of measurement noise covariance
@@ -320,7 +320,7 @@ struct DSMNavType {
    /*~ Parameters ~*/
    long NavigationActive;
 
-   enum navType type;
+   enum NavType type;
    enum batchType batching;
 
    // These need to be figured out still
@@ -404,14 +404,14 @@ struct DSMNavType {
    // Use final element of relevant enums+1 to ensure these arrays are just as
    // big as needed
    struct DSMMeasType
-       *measTypes[FIN_SENSOR + 1];   // index corresponding to enum sensorType
+       *measTypes[FIN_SENSOR + 1];   // index corresponding to enum SensorType
                                      // holds default sensor data
    int sensorActive[FIN_SENSOR + 1]; // TRUE/FALSE; index corresponding to enum
-                                     // sensorType indicates sensor is used
+                                     // SensorType indicates sensor is used
    int nSensor[FIN_SENSOR +
                1]; // each index incates the number of the corresponding sensor
    int stateActive[FIN_STATE + 1]; // TRUE/FALSE; index corresponding to enum
-                                   // navState indicates state is filtered
+                                   // States indicates state is filtered
 
    double **residuals[FIN_SENSOR + 1];
    long reportConfigured;

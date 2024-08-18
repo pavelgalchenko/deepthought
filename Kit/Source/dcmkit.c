@@ -24,7 +24,7 @@
 /**********************************************************************/
 /*    Convert direction cosine matrix to quaternion.  Bulletproof.    */
 
-void C2Q(double C[3][3], double Q[4])
+void C2Q(const double C[3][3], double Q[4])
 {
    double K1, K2, K3, K4, K;
 
@@ -69,7 +69,7 @@ void C2Q(double C[3][3], double Q[4])
 /**********************************************************************/
 /*  Convert quaternion to direction cosine matrix                     */
 
-void Q2C(double Q[4], double C[3][3])
+void Q2C(const double Q[4], double C[3][3])
 {
    double TwoQ00, TwoQ11, TwoQ22;
    double TwoQ01, TwoQ02, TwoQ03;

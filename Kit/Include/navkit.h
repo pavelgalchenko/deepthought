@@ -42,7 +42,7 @@ struct DSMMeasType *swap_DSMMeas(struct DSMMeasType *ptr1,
                                  struct DSMMeasType *ptr2);
 void bubbleSort(struct DSMMeasListType *list);
 struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
-                               enum sensorType const type,
+                               enum SensorType const type,
                                long const sensorNum);
 int comparator_DSMMeas(const void *v1, const void *v2);
 

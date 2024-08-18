@@ -35,7 +35,7 @@
 // Assigns the Jacobian and update functions as needed. Also initializes the
 // the default measurement data
 void AssignNavFunctions(struct DSMNavType *const Nav,
-                        const enum navType navType)
+                        const enum NavType navType)
 {
    switch (navType) {
       case RIEKF_NAV:
@@ -156,17 +156,10 @@ void InitThrDistVecs(struct AcType *AC, int DOF, enum CtrlState controllerState)
 void InitDSM(struct SCType *S)
 {
    struct DSMType *DSM            = &S->DSM;
+   struct DSMNavType *Nav         = &DSM->DsmNav;
    struct DSMCmdType *Cmd         = &DSM->Cmd;
    struct DSMStateType *state     = &DSM->state;
    struct DSMStateType *commState = &DSM->commState;
-
-   struct DSMType *DSM;
-   struct DSMCmdType *Cmd;
-   struct DSMNavType *Nav;
-
-   DSM = &S->DSM;
-   Cmd = &DSM->Cmd;
-   Nav = &DSM->DsmNav;
 
    S->InitDSM               = 0;
    DSM->Init                = 1;
@@ -228,9 +221,9 @@ void InitDSM(struct SCType *S)
    Nav->Date0.Second = 0;
    Nav->Date         = Nav->Date0;
 
-   for (enum navState i = INIT_STATE; i <= FIN_STATE; i++)
+   for (enum States i = INIT_STATE; i <= FIN_STATE; i++)
       Nav->stateActive[i] = FALSE;
-   for (enum sensorType i = INIT_SENSOR; i <= FIN_SENSOR; i++) {
+   for (enum SensorType i = INIT_SENSOR; i <= FIN_SENSOR; i++) {
       Nav->sensorActive[i] = FALSE;
       Nav->measTypes[i]    = NULL;
       Nav->residuals[i]    = NULL;
@@ -613,7 +606,6 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
    }
 
    struct fy_node *cmdNode = fy_node_by_path_def(trnCmdNode, "/Command Data");
-
    if (cmdNode == NULL) {
       printf("Could not find Command Data for Translation command of subtype "
              "%s. Exiting...\n",
@@ -1092,7 +1084,7 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
    return (ActuatorCmdProcessed);
 }
 //--------------------------------- STATE NAMES --------------------------------
-enum navState GetStateValue(const char *string)
+enum States GetStateValue(const char *string)
 {
    if (!strcmp(string, "Attitude"))
       return ATTITUDE_STATE;
@@ -1113,7 +1105,7 @@ enum navState GetStateValue(const char *string)
 }
 
 //-------------------------------- SENSOR NAMES --------------------------------
-enum sensorType GetSensorValue(const char *string)
+enum SensorType GetSensorValue(const char *string)
 {
    if (!strcmp(string, "STARTRACK"))
       return STARTRACK_SENSOR;
@@ -1134,7 +1126,7 @@ enum sensorType GetSensorValue(const char *string)
 }
 
 //------------------------------- NAVIGATION DATA ------------------------------
-void ConfigureMeas(struct DSMMeasType *meas, enum sensorType sensor)
+void ConfigureMeas(struct DSMMeasType *meas, enum SensorType sensor)
 {
    switch (sensor) {
       case GPS_SENSOR:
@@ -1197,7 +1189,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
    struct fy_node *iterNode = NULL;
    long DataProcessed = FALSE, numSensors[FIN_SENSOR + 1] = {0};
    long i, j;
-   enum sensorType sensor;
+   enum SensorType sensor;
 
    for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
       long nSensor;
@@ -1376,7 +1368,7 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                        enum matType type)
 {
    long DataProcessed = FALSE, (*inds)[] = NULL, (*sizes)[] = NULL;
-   enum navState state;
+   enum States state;
    double *dataDest;
    long dataDim = 0;
    long i, maxI, startInd;
@@ -1514,11 +1506,9 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
 {
    char navType[FIELDWIDTH + 1] = {}, batchingType[FIELDWIDTH + 1] = {},
                              refOri[FIELDWIDTH + 1] = {}, refFrame = 0;
-   struct fy_node *iterNode    = NULL;
    long NavigationCmdProcessed = FALSE;
-   enum navState state;
+   enum States state;
    long i, j;
-   long cmdInd;
    struct fy_node *qNode = NULL, *pNode = NULL, *x0Node = NULL,
                   *senSetNode = NULL, *statesNode = NULL;
 
@@ -1535,40 +1525,37 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
       return (NavigationCmdProcessed);
    }
-   else {
-      Nav->NavigationActive = TRUE;
-      struct fy_node *cmdNode =
-          fy_node_by_path_def(dsmRoot, "/Navigation Configurations");
-      fy_node_scanf(navCmdNode, "/Index %ld", &cmdInd);
-      WHILE_FY_ITER(cmdNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Navigation/Index %ld", &ind);
-         if (ind == cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Navigation");
-            NavigationCmdProcessed =
-                fy_node_scanf(
-                    iterNode,
-                    "/Type %" STR(
-                        FIELDWIDTH) "s "
-                                    "/Batching %" STR(
-                                        FIELDWIDTH) "s "
-                                                    "/Frame %c "
-                                                    "/Reference Origin %" STR(
-                                                        FIELDWIDTH) "s",
-                    navType, batchingType, &refFrame, refOri) == 4;
-            qNode      = fy_node_by_path_def(iterNode, "/Data/Q");
-            pNode      = fy_node_by_path_def(iterNode, "/Data/P");
-            x0Node     = fy_node_by_path_def(iterNode, "/Data/x0");
-            senSetNode = fy_node_by_path_def(iterNode, "/Sensor Set");
-            statesNode = fy_node_by_path_def(iterNode, "/States");
-            NavigationCmdProcessed &= qNode != NULL && pNode != NULL &&
-                                      x0Node != NULL && senSetNode != NULL &&
-                                      statesNode != NULL;
-            break;
-         }
-      }
+
+   struct fy_node *cmdNode = fy_node_by_path_def(navCmdNode, "/Command Data");
+   if (cmdNode == NULL) {
+      printf("Could not find Command Data for Translation command of subtype "
+             "%s. Exiting...\n",
+             subType);
+      exit(EXIT_FAILURE);
    }
+   const char *cmdName =
+       fy_node_get_scalar0(fy_node_by_path_def(cmdNode, "/Description"));
+
+   Nav->NavigationActive = TRUE;
+
+   NavigationCmdProcessed =
+       fy_node_scanf(
+           cmdNode,
+           "/Type %" STR(FIELDWIDTH) "s "
+                                     "/Batching %" STR(
+                                         FIELDWIDTH) "s "
+                                                     "/Frame %c "
+                                                     "/Reference Origin %" STR(
+                                                         FIELDWIDTH) "s",
+           navType, batchingType, &refFrame, refOri) == 4;
+
+   qNode                   = fy_node_by_path_def(cmdNode, "/Data/Q");
+   pNode                   = fy_node_by_path_def(cmdNode, "/Data/P");
+   x0Node                  = fy_node_by_path_def(cmdNode, "/Data/x0");
+   senSetNode              = fy_node_by_path_def(cmdNode, "/Sensor Set");
+   statesNode              = fy_node_by_path_def(cmdNode, "/States");
+   NavigationCmdProcessed &= qNode != NULL && pNode != NULL && x0Node != NULL &&
+                             senSetNode != NULL && statesNode != NULL;
 
    if (NavigationCmdProcessed == TRUE) {
       // TODO: not the biggest fan of DTSIM being here, but I'm coming around
@@ -1618,9 +1605,9 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          Nav->type = MEKF_NAV;
       }
       else {
-         printf(
-             "%s is an invalid filter type for filter index %ld. Exiting...\n",
-             navType, cmdInd);
+         printf("%s is an invalid filter type for Navigation Command %s. "
+                "Exiting...\n",
+                navType, cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -1634,9 +1621,9 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          Nav->batching = TIME_BATCH;
       }
       else {
-         printf("%s is an invalid batching type for filter index %ld. "
+         printf("%s is an invalid batching type for Navigation Command %s. "
                 "Exiting...\n",
-                batchingType, cmdInd);
+                batchingType, cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -1648,9 +1635,9 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          //    Nav->refFrame = FRAME_B;
       }
       else {
-         printf("Frame %c is an invalid navigation reference frame for filter "
-                "index %ld. Exiting...\n",
-                refFrame, cmdInd);
+         printf("Frame %c is an invalid navigation reference frame for "
+                "Navigation Command %s. Exiting...\n",
+                refFrame, cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -1695,7 +1682,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       for (i = INIT_STATE; i <= FIN_STATE; i++)
          Nav->stateActive[i] = FALSE;
 
-      iterNode = NULL;
+      struct fy_node *iterNode = NULL;
       WHILE_FY_ITER(statesNode, iterNode)
       {
          char p[FIELDWIDTH + 1] = {0};
@@ -1703,9 +1690,9 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          state = GetStateValue(p);
          if (state == -1 || (state == ROTMAT_STATE && Nav->type == MEKF_NAV) ||
              (state == QUAT_STATE && Nav->type != MEKF_NAV)) {
-            printf("%s is an invalid state to estimate for navigation filter "
-                   "index %ld of type %s. Exiting...\n",
-                   p, cmdInd, navType);
+            printf("%s is an invalid state to estimate for Navigation Command "
+                   "%s of type %s. Exiting...\n",
+                   p, cmdName, navType);
             exit(EXIT_FAILURE);
          }
          else {
@@ -1804,8 +1791,8 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       if (GetNavigationData(Nav, x0Node, IC_DAT) == FALSE) {
          printf("Navigation data is an invalid data set for the initial "
-                "estimation states for Navigation index %ld. Exiting...\n",
-                cmdInd);
+                "estimation states for Navigation Command %s. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -1829,25 +1816,25 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
                test += fabs(testM[i][j]); // 1-norm of vec(testM)
          if (test >= EPS_DSM) {
             printf("The supplied initial rotation matrix for Navigation "
-                   "Command index %ld is not a valid Rotation Matrix. "
+                   "Command %s is not a valid Rotation Matrix. "
                    "Exiting...\n",
-                   cmdInd);
+                   cmdName);
             exit(EXIT_FAILURE);
          }
       }
 
       if (GetNavigationData(Nav, qNode, Q_DAT) == FALSE) {
          printf("Navigation data is an invalid data set for the process noise "
-                "covariance matrix for Navigation command %ld. Exiting...\n",
-                cmdInd);
+                "covariance matrix for Navigation command %s. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
       if (GetNavigationData(Nav, pNode, P0_DAT) == FALSE) {
          printf(
              "Navigation data is an invalid data set for the inital estimation "
-             "error covariance matrix for Navigation command index %ld. "
+             "error covariance matrix for Navigation command index %s. "
              "Exiting...",
-             cmdInd);
+             cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -1978,11 +1965,8 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
       }
       else if (!strcmp(typeToken, "Navigation")) {
          if (GetNavigationCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
-            long index;
-            fy_node_scanf(iterNode, "/Index %ld", &index);
-            printf("Navigation command of index %ld cannot be found in "
-                   "Inp_DSM.yaml. Exiting...\n",
-                   index);
+            printf("Navigation command cannot be found in Inp_DSM.yaml. "
+                   "Exiting...\n");
             exit(EXIT_FAILURE);
          }
       }
@@ -2022,7 +2006,7 @@ void DsmSensorModule(struct AcType *const AC, struct DSMType *const DSM)
 
    InitMeasList(&measList);
 
-   for (enum sensorType sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
+   for (enum SensorType sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
       struct DSMMeasListType *newMeasList = NULL;
       switch (sensor) {
          case GYRO_SENSOR:
@@ -2750,7 +2734,6 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          char *attRefFrame[2] = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
          double C_tb[3][3], C_tn[3][3], dC[3][3];
          double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
-         double tmag;
          for (int k = 0; k < 2; k++) {
             switch (vecs[k]->TrgType) {
                case TARGET_SC:
@@ -3115,11 +3098,11 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    KalmanFilt(AC, DSM);
-   struct DateType *navDate = &Nav->Date;
+  const struct DateType *navDate = &Nav->Date;
    DSMState->Time = DateToTime(navDate->Year, navDate->Month, navDate->Day,
                                navDate->Hour, navDate->Minute, navDate->Second);
    // Overwrite data in AC structure with filtered data
-   for (enum navState state = INIT_STATE; state <= FIN_STATE; state++) {
+   for (enum States state = INIT_STATE; state <= FIN_STATE; state++) {
       if (Nav->stateActive[state] == TRUE) {
          // TODO: what to do for states that are not active in Nav?
          double tmp3Vec[3] = {0.0}, tmpQ[4] = {0.0};

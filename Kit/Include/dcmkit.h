@@ -20,8 +20,8 @@
 ** #endif
 */
 
-void C2Q(double C[3][3], double Q[4]);
-void Q2C(double Q[4], double C[3][3]);
+void C2Q(const double C[3][3], double Q[4]);
+void Q2C(const double Q[4], double C[3][3]);
 void A2C(long SEQ, double TH1, double TH2, double TH3, double C[3][3]);
 void C2A(long SEQ, double C[3][3], double *TH1, double *TH2, double *TH3);
 void SimpRot(const double AXIS[3], const double THETA, double C[3][3]);

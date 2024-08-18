@@ -14,11 +14,11 @@
 #include "navkit_tests.h"
 
 struct DSMMeasType *DSMMeasType_New(long step, long subStep, long sensorNum,
-                                    enum sensorType sensor,
+                                    enum SensorType sensor,
                                     double underWeighting, double probGate,
                                     struct DSMMeasType *nextMeas)
 {
-   void ConfigureMeas(struct DSMMeasType * meas, enum sensorType sensor);
+   void ConfigureMeas(struct DSMMeasType * meas, enum SensorType sensor);
    struct DSMMeasType *newMeas = malloc(sizeof(struct DSMMeasType));
 
    ConfigureMeas(newMeas, sensor);
@@ -51,7 +51,7 @@ long RunNavKit_Tests()
 long DSMMeasType_Tests()
 {
    long successful = TRUE;
-   enum sensorType GetSensorValue(char *string);
+   enum SensorType GetSensorValue(char *string);
 
    // TODO: move some of this stuff to a dsmkit_tests
    ASSERT(GetSensorValue("GPS"), GPS_SENSOR);
