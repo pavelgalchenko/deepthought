@@ -1,0 +1,136 @@
+%YAML 1.2
+---
+Simulation Control:
+  Mode: FAST
+  Duration: 77760.0
+  Step Size: 1.0
+  File Interval: 60.0
+  RNG Seed: 0
+  Enable Graphics: true
+  Command File: Inp_Cmd.txt
+Time:
+  Date:
+    Month: 1
+    Day: 1
+    Year: 2028
+  Time:
+    Hour: 3
+    Minute: 0
+    Second: 0
+    Millisecond: 0
+  Leap Seconds: 37.0
+Orbits:
+  - Name: Orb_000
+    Enabled: true
+  - Name: Orb_001
+    Enabled: true
+  - Name: Orb_002
+    Enabled: true
+  - Name: Orb_003
+    Enabled: true
+  - Name: Orb_004
+    Enabled: true
+  - Name: Orb_005
+    Enabled: true
+  - Name: Orb_006
+    Enabled: true
+  - Name: Orb_007
+    Enabled: true
+  - Name: Orb_008
+    Enabled: true
+SCs:
+  - Name: SC_000
+    Orbit: Orb_000
+    Enabled: true
+  - Name: SC_001
+    Orbit: Orb_001
+    Enabled: true
+  - Name: SC_002
+    Orbit: Orb_002
+    Enabled: true
+  - Name: SC_003
+    Orbit: Orb_003
+    Enabled: true
+  - Name: SC_004
+    Orbit: Orb_004
+    Enabled: true
+  - Name: SC_005
+    Orbit: Orb_005
+    Enabled: true
+  - Name: SC_006
+    Orbit: Orb_006
+    Enabled: true
+  - Name: SC_007
+    Orbit: Orb_007
+    Enabled: true
+  - Name: SC_008
+    Orbit: Orb_008
+    Enabled: true
+Perturbation Models:
+  Atmosphere:
+    Enabled: false
+    Shadows: false
+    Models:
+      - World: EARTH
+        Method: USER
+        F10.7: 230.0
+        Ap: 100.0
+  Magnetic:
+    Residual Mag Moment: false
+    Models:
+      - World: EARTH
+        Method: NONE
+        Degree: 8
+        Order: 8
+  Gravitation:
+    Enabled: false
+    Gravity Gradient: false
+    Models:
+      - World: EARTH
+        Degree: 8
+        Order: 8
+      - World: MARS
+        Degree: 2
+        Order: 0
+      - World: LUNA
+        Degree: 2
+        Order: 0
+  SRP:
+    Enabled: false
+    Shadows: false
+  Thruster Plume: false
+  Contact: false
+  CFD Slosh: false
+  Albedo on CSS: false
+  Output Env Torques to File: false
+Ephem Type: SPICE
+Celestial Bodies:
+  Mercury: false
+  Venus: false
+  Earth and Luna: false
+  Mars and its moons: false
+  Jupiter and its moons: false
+  Saturn and its moons: true
+  Uranus and its moons: false
+  Neptune and its moons: false
+  Pluto and its moons: false
+  Asteroids and Comets: false
+Lagrange Systems:
+  Earth-Moon: false
+  Sun-Earth: false
+  Sun-Jupiter: false
+Ground Stations:
+  - Ground Station:
+      Index: 0
+      Enabled: true
+      World: ENCELADUS
+      Longitude: 50.0
+      Latitude: -53.0
+      Label: Baghdad Geyser
+  - Ground Station:
+      Index: 1
+      Enabled: true
+      World: ENCELADUS
+      Longitude: 330.0
+      Latitude: -87.0
+      Label: South Geyser

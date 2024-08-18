@@ -33,6 +33,8 @@
 #include <errno.h>
 #include <strings.h>
 
+#include "SpiceUsr.h"
+
 /* #ifdef __cplusplus
 ** namespace _42 {
 ** using namespace Kit;
@@ -130,6 +132,8 @@ long DecodeString(char *s)
       return INP_MODES;
    else if (!strcmp(s, "XYZ"))
       return INP_XYZ;
+   else if (!strcmp(s, "XYZ_ROT"))
+      return INP_XYZ_ROT;
    else if (!strcmp(s, "SPLINE"))
       return INP_SPLINE;
    else if (!strcmp(s, "L1"))
@@ -412,6 +416,8 @@ long DecodeString(char *s)
       return EPH_DE430;
    else if (!strcmp(s, "DE440"))
       return EPH_DE440;
+   else if (!strcmp(s, "SPICE"))
+      return EPH_SPICE;
 
    else if (!strcmp(s, "MAJOR"))
       return MAJOR_CONSTELL;
@@ -983,6 +989,7 @@ void InitOrbit(struct OrbitType *O)
          }
          O->LagDOF = DecodeString(response);
 
+         node = fy_node_by_path_def(node, "/Init");
          if (!fy_node_scanf(node, "/Method %49s", response)) {
             printf("Could not find Three Body orbit Initialization Method. "
                    "Exiting...\n");
@@ -1047,6 +1054,20 @@ void InitOrbit(struct OrbitType *O)
                O->zdot = vec3[2];
                XYZ2LagModes(0.0, &LagSys[O->Sys], O);
                LagModes2RV(DynTime, &LagSys[O->Sys], O, O->PosN, O->VelN);
+            } break;
+            case INP_XYZ_ROT: {
+               double vec3_p[3] = {0.0};
+               double vec3_v[3] = {0.0};
+
+               struct LagrangeSystemType *LS;
+               LS = &LagSys[O->Sys];
+
+               assignYAMLToDoubleArray(
+                   3, fy_node_by_path_def(node, "/Position"), vec3_p);
+               assignYAMLToDoubleArray(
+                   3, fy_node_by_path_def(node, "/Velocity"), vec3_v);
+                  
+               StateRnd2StateN(LS, World[LS->Body2].eph.PosN, World[LS->Body2].eph.VelN, vec3_p, vec3_v, O->PosN, O->VelN);
             } break;
             case INP_FILE: {
                char elementFileName[50] = {0}, elementLabel[50] = {0};
@@ -1129,7 +1150,7 @@ void InitOrbit(struct OrbitType *O)
          FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
          O->MeanMotion = LagSys[O->Sys].MeanRate;
          O->Period     = TwoPi / O->MeanMotion;
-      }
+      } break;
       default:
          printf("Bogus Orbit Regime in file %s\n", O->FileName);
          exit(EXIT_FAILURE);
@@ -1933,6 +1954,7 @@ void InitFlexModes(struct SCType *S)
 /**********************************************************************/
 void InitNodes(struct BodyType *B)
 {
+   // TODO: put node sequence in relevant spacecraft file
    if (strcmp(B->NodeFileName, "NONE")) {
       char fileName[40] = {0};
       strcpy(fileName, B->NodeFileName);
@@ -3434,10 +3456,13 @@ void LoadPlanets(void)
    double GMST;
    double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
 
-   char PlanetName[10][20]  = {"Sun",     "Mercury", "Venus",  "Earth",
-                               "Mars",    "Jupiter", "Saturn", "Uranus",
-                               "Neptune", "Pluto"};
-   char MapFileName[10][20] = {
+   char PlanetName[10][20]      = {"Sun",     "Mercury", "Venus",  "Earth",
+                                   "Mars",    "Jupiter", "Saturn", "Uranus",
+                                   "Neptune", "Pluto"};
+   char OrientationName[10][20] = {"SUN",     "MERCURY", "VENUS",  "EARTH",
+                                   "MARS",    "JUPITER", "SATURN", "URANUS",
+                                   "NEPTUNE", "PLUTO"};
+   char MapFileName[10][20]     = {
        "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
    double Mu[10]  = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
@@ -3449,13 +3474,49 @@ void LoadPlanets(void)
    double W[10]   = {2.69E-6,   1.23E-6,   2.94E-7,  7.292115E-5, 7.0882E-5,
                      1.7659E-4, 1.6728E-4, 1.631E-4, 1.105E-4,    0.0};
 
-   double PoleRA[10]  = {0.0,     281.008, 272.758, 0.0,     317.683,
-                         268.057, 40.587,  257.313, 299.333, 133.046};
-   double PoleDec[10] = {90.0,   61.45,  67.16,   0.0,   52.8865,
-                         64.496, 83.537, -15.175, 42.95, -6.145};
-   double CNJ[3][3];
+   double PoleRA[10]         = {0.0,     281.008, 272.758, 0.0,     317.683,
+                                268.057, 40.587,  257.313, 299.333, 133.046};
+   double PoleDec[10]        = {90.0,   61.45,  67.16,   0.0,   52.8865,
+                                64.496, 83.537, -15.175, 42.95, -6.145};
    double PriMerAngJ2000[10] = {0.0,    329.71, 160.26, 190.16, 176.868,
                                 284.95, 38.90,  203.81, 253.18, 236.77};
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (int i = 0; i < 10; i++) {
+         bodvrd_c(PlanetName[i], "GM", 1, &dim, &tmp_holder);
+         Mu[i] = tmp_holder * 1E9;
+
+         if ((!strcmp(PlanetName[i], "Pluto")) ||
+             (!strcmp(PlanetName[i], "Sun"))) { // Pluto/Sun J2 is not defined
+            J2[i] = 0.0;
+         }
+         else {
+            bodvrd_c(PlanetName[i], "J2", 1, &dim, &tmp_holder);
+            J2[i] = tmp_holder;
+         }
+
+         bodvrd_c(PlanetName[i], "RADII", 3, &dim, tmp_holder3);
+         Rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         W[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
+
+   double CNJ[3][3];
    /* Magnetic Field Dipole Strength, Wb-m */
    double DipoleMoment[10] = {0.0, 0.0, 0.0, 7.943E15, 0.0,
                               0.0, 0.0, 0.0, 0.0,      0.0};
@@ -3658,6 +3719,26 @@ void LoadMoonOfEarth(void)
    struct OrbitType *E;
    double CNJ[3][3];
 
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      bodvrd_c("Moon", "GM", 1, &dim, &tmp_holder);
+      mu[0] = tmp_holder * 1E9;
+
+      bodvrd_c("Moon", "J2", 1, &dim, &tmp_holder);
+      J2[0] = tmp_holder;
+
+      bodvrd_c("Moon", "RADII", 3, &dim, tmp_holder3);
+      rad[0] = tmp_holder3[0] * 1e3;
+
+      bodvrd_c("Moon", "PM", 3, &dim, tmp_holder3);
+      w[0] = tmp_holder3[1] * D2R /
+             spd_c(); // converts the prime meridian rate in deg/day to rad/s
+   }
+
    P       = &World[Ip];
    P->Nsat = 1;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
@@ -3728,20 +3809,25 @@ void LoadMoonsOfMars(void)
 {
 #define Nm 2
 
-   char Name[Nm][40]        = {"Phobos", "Deimos"};
-   char MapFileName[Nm][40] = {"Rockball", "Rockball"};
-   double mu[Nm]            = {7.158E5, 9.8E4};
-   double rad[Nm]           = {11.1E3, 6.2E3};
-   double w[Nm]             = {0.0, 0.0};
-   double SMA[Nm]           = {9380.0E3, 23460.0E3};
-   double ecc[Nm]           = {0.0151, 0.0002};
-   double inc[Nm]           = {1.075, 1.793};
-   double RAAN[Nm]          = {164.931, 339.600};
-   double omg[Nm]           = {150.247, 290.496};
-   long EpochYear[Nm]       = {1950, 1950};
-   long EpochMon[Nm]        = {1, 1};
-   long EpochDay[Nm]        = {1, 1};
-   double MeanAnom[Nm]      = {92.474, 296.230};
+   char Name[Nm][40]            = {"Phobos", "Deimos"};
+   char OrientationName[Nm][40] = {"PHOBOS", "DEIMOS"};
+   char MapFileName[Nm][40]     = {"Rockball", "Rockball"};
+   double mu[Nm]                = {7.158E5, 9.8E4};
+   double rad[Nm]               = {11.1E3, 6.2E3};
+   double w[Nm]                 = {0.0, 0.0};
+   double PriMerAngJ2000[Nm];
+   double PoleRA[Nm];
+   double PoleDec[Nm];
+   double CNJ[3][3];
+   double SMA[Nm]      = {9380.0E3, 23460.0E3};
+   double ecc[Nm]      = {0.0151, 0.0002};
+   double inc[Nm]      = {1.075, 1.793};
+   double RAAN[Nm]     = {164.931, 339.600};
+   double omg[Nm]      = {150.247, 290.496};
+   long EpochYear[Nm]  = {1950, 1950};
+   long EpochMon[Nm]   = {1, 1};
+   long EpochDay[Nm]   = {1, 1};
+   double MeanAnom[Nm] = {92.474, 296.230};
    double Epoch;
 
    long Ip = MARS;
@@ -3749,6 +3835,32 @@ void LoadMoonsOfMars(void)
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (i = 0; i < Nm; i++) {
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder * 1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         w[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -3800,11 +3912,20 @@ void LoadMoonsOfMars(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-      /* CNH assumed to be same as parent planet */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            M->CNH[i][j] = P->CNH[i][j];
+      if (EphemOption != EPH_SPICE) {
+         /* CNH assumed to be same as parent planet */
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++)
+               M->CNH[i][j] = P->CNH[i][j];
+         }
       }
+      else {
+         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
+             CNJ);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
+      }
+
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
@@ -3821,10 +3942,14 @@ void LoadMoonsOfJupiter(void)
 {
 #define Nm 16
 
-   char Name[Nm][40]        = {"Io",       "Europa",   "Ganymede", "Callisto",
-                               "Amalthea", "Himalia",  "Elara",    "Pasiphae",
-                               "Sinope",   "Lysithea", "Carme",    "Ananke",
-                               "Leda",     "Thebe",    "Adrastea", "Metis"};
+   char Name[Nm][40] = {"Io",       "Europa",   "Ganymede", "Callisto",
+                        "Amalthea", "Himalia",  "Elara",    "Pasiphae",
+                        "Sinope",   "Lysithea", "Carme",    "Ananke",
+                        "Leda",     "Thebe",    "Adrastea", "Metis"};
+   char OrientationName[Nm][40] = {
+       "IO",      "EUROPA",  "GANYMEDE", "CALLISTO", "AMALTHEA", "JUPITER",
+       "JUPITER", "JUPITER", "JUPITER",  "JUPITER",  "JUPITER",  "JUPITER",
+       "JUPITER", "THEBE",   "ADRASTEA", "METIS"};
    char MapFileName[Nm][40] = {
        "NONE", "Iceball", "NONE", "NONE", "NONE", "NONE", "NONE", "NONE",
        "NONE", "NONE",    "NONE", "NONE", "NONE", "NONE", "NONE", "NONE"};
@@ -3837,6 +3962,10 @@ void LoadMoonsOfJupiter(void)
    double w[Nm]   = {
        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
    };
+   double PriMerAngJ2000[Nm];
+   double PoleRA[Nm];
+   double PoleDec[Nm];
+   double CNJ[3][3];
    double SMA[Nm]     = {4.2180E8,  6.7110E8,  1.07040E9, 1.8827E9,
                          1.814E8,   1.1461E10, 1.1741E10, 2.3624E10,
                          2.3939E10, 1.1717E10, 2.3404E10, 2.1276E10,
@@ -3867,6 +3996,32 @@ void LoadMoonsOfJupiter(void)
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (i = 0; i < Nm; i++) {
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder * 1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         w[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -3918,10 +4073,18 @@ void LoadMoonsOfJupiter(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-      /* CNH assumed to be same as parent planet */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            M->CNH[i][j] = P->CNH[i][j];
+      if (EphemOption != EPH_SPICE) {
+         /* CNH assumed to be same as parent planet */
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++)
+               M->CNH[i][j] = P->CNH[i][j];
+         }
+      }
+      else {
+         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
+             CNJ);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -3939,19 +4102,27 @@ void LoadMoonsOfSaturn(void)
        "Mimas",    "Enceladus", "Tethys", "Dione",      "Rhea",       "Titan",
        "Hyperion", "Iapetus",   "Phoebe", "Janus",      "Epimetheus", "Helene",
        "Telesto",  "Calypso",   "Atlas",  "Prometheus", "Pandora",    "Pan"};
+   char OrientationName[Nm][40] = {
+       "MIMAS",   "ENCELADUS", "TETHYS", "DIONE",      "RHEA",       "TITAN",
+       "SATURN",  "IAPETUS",   "PHOEBE", "JANUS",      "EPIMETHEUS", "HELENE",
+       "TELESTO", "CALYPSO",   "ATLAS",  "PROMETHEUS", "PANDORA",    "PAN"};
    char MapFileName[Nm][40] = {"NONE", "Iceball2", "NONE", "NONE", "NONE",
                                "NONE", "NONE",     "NONE", "NONE", "NONE",
                                "NONE", "NONE",     "NONE", "NONE", "NONE",
                                "NONE", "NONE",     "NONE"};
-   double mu[Nm]      = {2.53E9,     7.21E9, 4.121E10, 7.3113E10, 1.5407E11,
-                         8.97819E12, 3.7E8,  1.205E11, 5.531E8,   1.266E8,
-                         3.51E7,     1.7E6,  4.8E5,    2.4E5,     1.4E5,
-                         1.246E7,    9.95E6, 3.3E5};
-   double rad[Nm]     = {198.8E3, 252.3E3, 536.3E3, 562.5E3, 764.5E3, 2575.5E3,
-                         133.0E3, 734.5E3, 106.6E3, 90.4E3,  58.3E3,  16.0E3,
-                         12.0E3,  9.5E3,   10.E3,   46.8e3,  40.6E3,  12.8E3};
-   double w[Nm]       = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+   double mu[Nm]  = {2.53E9,     7.21E9, 4.121E10, 7.3113E10, 1.5407E11,
+                     8.97819E12, 3.7E8,  1.205E11, 5.531E8,   1.266E8,
+                     3.51E7,     1.7E6,  4.8E5,    2.4E5,     1.4E5,
+                     1.246E7,    9.95E6, 3.3E5};
+   double rad[Nm] = {198.8E3, 252.3E3, 536.3E3, 562.5E3, 764.5E3, 2575.5E3,
+                     133.0E3, 734.5E3, 106.6E3, 90.4E3,  58.3E3,  16.0E3,
+                     12.0E3,  9.5E3,   10.E3,   46.8e3,  40.6E3,  12.8E3};
+   double w[Nm]   = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+   double PriMerAngJ2000[Nm];
+   double PoleRA[Nm];
+   double PoleDec[Nm];
+   double CNJ[3][3];
    double SMA[Nm]     = {1.8554E8,  2.3804E8,  2.9467E8,  3.7742E8,    5.2707E8,
                          1.22187E9, 1.50088E9, 3.56084E9, 1.294778E10, 1.5146E8,
                          1.5141E8,  3.7742E8,  2.9471E8,  2.9471E8,    1.3767E8,
@@ -3982,6 +4153,32 @@ void LoadMoonsOfSaturn(void)
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (i = 0; i < Nm; i++) {
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder * 1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         w[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -4033,10 +4230,18 @@ void LoadMoonsOfSaturn(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-      /* CNH assumed to be same as parent planet */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            M->CNH[i][j] = P->CNH[i][j];
+      if (EphemOption != EPH_SPICE) {
+         /* CNH assumed to be same as parent planet */
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++)
+               M->CNH[i][j] = P->CNH[i][j];
+         }
+      }
+      else {
+         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
+             CNJ);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4051,19 +4256,25 @@ void LoadMoonsOfUranus(void)
 #define Nm 5
 
    char Name[Nm][40] = {"Ariel", "Umbriel", "Titania", "Oberon", "Miranda"};
-   char MapFileName[Nm][40] = {"NONE", "NONE", "NONE", "NONE", "NONE"};
-   double mu[Nm]            = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
-   double rad[Nm]           = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
-   double w[Nm]             = {0.0, 0.0, 0.0, 0.0, 0.0};
-   double SMA[Nm]           = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
-   double ecc[Nm]           = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
-   double inc[Nm]           = {0.041, 0.128, 0.079, 0.068, 4.338};
-   double RAAN[Nm]          = {22.394, 33.485, 99.771, 279.771, 326.438};
-   double omg[Nm]           = {115.349, 84.709, 284.4, 104.4, 68.312};
-   long EpochYear[Nm]       = {1980, 1980, 1980, 1980, 1980};
-   long EpochMon[Nm]        = {1, 1, 1, 1, 1};
-   long EpochDay[Nm]        = {1, 1, 1, 1, 1};
-   double MeanAnom[Nm]      = {39.481, 12.469, 24.614, 283.088, 311.33};
+   char OrientationName[Nm][40] = {"ARIEL", "UMBRIEL", "TITANIA", "OBERON",
+                                   "MIRANDA"};
+   char MapFileName[Nm][40]     = {"NONE", "NONE", "NONE", "NONE", "NONE"};
+   double mu[Nm]                = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
+   double rad[Nm]               = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
+   double w[Nm]                 = {0.0, 0.0, 0.0, 0.0, 0.0};
+   double PriMerAngJ2000[Nm];
+   double PoleRA[Nm];
+   double PoleDec[Nm];
+   double CNJ[3][3];
+   double SMA[Nm]      = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
+   double ecc[Nm]      = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
+   double inc[Nm]      = {0.041, 0.128, 0.079, 0.068, 4.338};
+   double RAAN[Nm]     = {22.394, 33.485, 99.771, 279.771, 326.438};
+   double omg[Nm]      = {115.349, 84.709, 284.4, 104.4, 68.312};
+   long EpochYear[Nm]  = {1980, 1980, 1980, 1980, 1980};
+   long EpochMon[Nm]   = {1, 1, 1, 1, 1};
+   long EpochDay[Nm]   = {1, 1, 1, 1, 1};
+   double MeanAnom[Nm] = {39.481, 12.469, 24.614, 283.088, 311.33};
    double Epoch;
 
    long Ip = URANUS;
@@ -4071,6 +4282,32 @@ void LoadMoonsOfUranus(void)
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (i = 0; i < Nm; i++) {
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder * 1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         w[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -4122,10 +4359,18 @@ void LoadMoonsOfUranus(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-      /* CNH assumed to be same as parent planet */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            M->CNH[i][j] = P->CNH[i][j];
+      if (EphemOption != EPH_SPICE) {
+         /* CNH assumed to be same as parent planet */
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++)
+               M->CNH[i][j] = P->CNH[i][j];
+         }
+      }
+      else {
+         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
+             CNJ);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4139,20 +4384,25 @@ void LoadMoonsOfNeptune(void)
 {
 #define Nm 2
 
-   char Name[Nm][40]        = {"Triton", "Nereid"};
-   char MapFileName[Nm][40] = {"NONE", "NONE"};
-   double mu[Nm]            = {1427.9E9, 2.06E9};
-   double rad[Nm]           = {1353.4E3, 170.0E3};
-   double w[Nm]             = {0.0, 0.0};
-   double SMA[Nm]           = {3.548E8, 5.5134E9};
-   double ecc[Nm]           = {0.0, 0.7512};
-   double inc[Nm]           = {156.834, 7.232};
-   double RAAN[Nm]          = {172.431, 334.762};
-   double omg[Nm]           = {344.046, 280.83};
-   long EpochYear[Nm]       = {1989, 1989};
-   long EpochMon[Nm]        = {8, 8};
-   long EpochDay[Nm]        = {25, 25};
-   double MeanAnom[Nm]      = {264.775, 359.341};
+   char Name[Nm][40]            = {"Triton", "Nereid"};
+   char OrientationName[Nm][40] = {"TRITON", "NEPTUNE"};
+   char MapFileName[Nm][40]     = {"NONE", "NONE"};
+   double mu[Nm]                = {1427.9E9, 2.06E9};
+   double rad[Nm]               = {1353.4E3, 170.0E3};
+   double w[Nm]                 = {0.0, 0.0};
+   double PriMerAngJ2000[Nm];
+   double PoleRA[Nm];
+   double PoleDec[Nm];
+   double CNJ[3][3];
+   double SMA[Nm]      = {3.548E8, 5.5134E9};
+   double ecc[Nm]      = {0.0, 0.7512};
+   double inc[Nm]      = {156.834, 7.232};
+   double RAAN[Nm]     = {172.431, 334.762};
+   double omg[Nm]      = {344.046, 280.83};
+   long EpochYear[Nm]  = {1989, 1989};
+   long EpochMon[Nm]   = {8, 8};
+   long EpochDay[Nm]   = {25, 25};
+   double MeanAnom[Nm] = {264.775, 359.341};
    double Epoch;
 
    long Ip = NEPTUNE;
@@ -4160,6 +4410,32 @@ void LoadMoonsOfNeptune(void)
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (i = 0; i < Nm; i++) {
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder * 1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         w[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = Nm;
@@ -4211,10 +4487,18 @@ void LoadMoonsOfNeptune(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-      /* CNH assumed to be same as parent planet */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            M->CNH[i][j] = P->CNH[i][j];
+      if (EphemOption != EPH_SPICE) {
+         /* CNH assumed to be same as parent planet */
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++)
+               M->CNH[i][j] = P->CNH[i][j];
+         }
+      }
+      else {
+         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
+             CNJ);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4228,21 +4512,26 @@ void LoadMoonsOfPluto(void)
 {
 #define Nm 1
 
-   char Name[Nm][40]        = {"Charon"};
-   char MapFileName[Nm][40] = {"Iceball"};
-   double mu[Nm]            = {108.0E9};
-   double rad[Nm]           = {593.0E3};
-   double w[Nm]             = {0.0};
-   double SMA[Nm]           = {1.7536E7};
-   double ecc[Nm]           = {0.0022};
-   double inc[Nm]           = {0.001};
-   double RAAN[Nm]          = {85.187};
-   double omg[Nm]           = {71.255};
-   long EpochYear[Nm]       = {2000};
-   long EpochMon[Nm]        = {1};
-   long EpochDay[Nm]        = {1};
-   long EpochHour[Nm]       = {12};
-   double MeanAnom[Nm]      = {147.848};
+   char Name[Nm][40]            = {"Charon"};
+   char OrientationName[Nm][40] = {"CHARON"};
+   char MapFileName[Nm][40]     = {"Iceball"};
+   double mu[Nm]                = {108.0E9};
+   double rad[Nm]               = {593.0E3};
+   double w[Nm]                 = {0.0};
+   double PriMerAngJ2000[Nm];
+   double PoleRA[Nm];
+   double PoleDec[Nm];
+   double CNJ[3][3];
+   double SMA[Nm]      = {1.7536E7};
+   double ecc[Nm]      = {0.0022};
+   double inc[Nm]      = {0.001};
+   double RAAN[Nm]     = {85.187};
+   double omg[Nm]      = {71.255};
+   long EpochYear[Nm]  = {2000};
+   long EpochMon[Nm]   = {1};
+   long EpochDay[Nm]   = {1};
+   long EpochHour[Nm]  = {12};
+   double MeanAnom[Nm] = {147.848};
    double Epoch;
 
    long Ip = PLUTO;
@@ -4250,6 +4539,32 @@ void LoadMoonsOfPluto(void)
    long i, j;
    struct WorldType *M, *P;
    struct OrbitType *E;
+
+   double tmp_holder;
+   double tmp_holder3[3];
+   int dim;
+
+   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
+                                   // hardcoded values with SPICE values
+      for (i = 0; i < Nm; i++) {
+         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
+         mu[i] = tmp_holder * 1E9;
+
+         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
+         rad[i] = tmp_holder3[0] * 1e3;
+
+         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
+         PriMerAngJ2000[i] = tmp_holder3[0];
+         w[i]              = tmp_holder3[1] * D2R /
+                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+
+         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
+         PoleRA[i] = tmp_holder3[0];
+
+         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
+         PoleDec[i] = tmp_holder3[0];
+      }
+   }
 
    P       = &World[Ip];
    P->Nsat = 1;
@@ -4302,10 +4617,18 @@ void LoadMoonsOfPluto(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-      /* CNH assumed to be same as parent planet */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            M->CNH[i][j] = P->CNH[i][j];
+      if (EphemOption != EPH_SPICE) {
+         /* CNH assumed to be same as parent planet */
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < 3; j++)
+               M->CNH[i][j] = P->CNH[i][j];
+         }
+      }
+      else {
+         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
+             CNJ);
+         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
+         C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
       for (i = 0; i < 4; i++)
@@ -4491,10 +4814,14 @@ void InitLagrangePoints(void)
 
    LagSys[EARTHMOON].Body1  = EARTH;
    LagSys[EARTHMOON].Body2  = LUNA;
+   LagSys[EARTHMOON].LU  = 385692500.0;
    LagSys[SUNEARTH].Body1   = SOL;
    LagSys[SUNEARTH].Body2   = EARTH;
+   LagSys[SUNEARTH].LU  = 149597927000.0;
    LagSys[SUNJUPITER].Body1 = SOL;
    LagSys[SUNJUPITER].Body2 = JUPITER;
+   LagSys[SUNJUPITER].LU  = 778547200000.0 ;
+
 
    for (i = 0; i < 3; i++) {
       LS = &LagSys[i];
@@ -4520,6 +4847,9 @@ void InitLagrangePoints(void)
          LS->tp       = W2->eph.tp;
          LS->MeanRate = sqrt(LS->mu1 / LS->SMA) / LS->SMA;
          LS->Period   = TwoPi / LS->MeanRate;
+
+         LS->TU = sqrt(pow(LS->LU, 3)/ (LS->mu1 + LS->mu2));
+         LS->VU = LS->LU/LS->TU;
 
          FindLagPtParms(LS);
          for (j = 0; j < 5; j++) {
@@ -4910,6 +5240,150 @@ long LoadJplEphems(char EphemPath[80], double JD)
              &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
    }
 
+   return (0);
+}
+long LoadSpiceKernels(char SpicePath[80])
+{
+   char MetaKernelPath[80];
+   strcpy(MetaKernelPath, SpicePath);
+   strcat(MetaKernelPath, "spice_kernels/kernels.txt");
+
+   furnsh_c(MetaKernelPath);
+   return (0);
+}
+
+long LoadSpiceEphems(double JS)
+{
+   long Iw, Ip, Im;
+   int i;
+   double CNJ[3][3];
+
+   char MajorBodiesNamesState[55][15] = {
+       "SUN",        "MERCURY",  "VENUS",     "EARTH",
+       "MARS",       "JUPITER",  "SATURN",    "URANUS",
+       "NEPTUNE",    "PLUTO",    "MOON",      "PHOBOS",
+       "DEIMOS",     "IO",       "EUROPA",    "GANYMEDE",
+       "CALLISTO",   "AMALTHEA", "HIMALIA",   "ELARA",
+       "PASIPHAE",   "SINOPE",   "LYSITHEA",  "CARME",
+       "ANANKE",     "LEDA",     "THEBE",     "ADRASTEA",
+       "METIS",      "MIMAS",    "ENCELADUS", "TETHYS",
+       "DIONE",      "RHEA",     "TITAN",     "HYPERION",
+       "IAPETUS",    "PHOEBE",   "JANUS",     "EPIMETHEUS",
+       "HELENE",     "TELESTO",  "CALYPSO",   "ATLAS",
+       "PROMETHEUS", "PANDORA",  "PAN",       "ARIEL",
+       "UMBRIEL",    "TITANIA",  "OBERON",    "MIRANDA",
+       "TRITON",     "NEREID",   "CHARON"}; // names of "major" bodies
+
+   // Some smaller moons do not have valid orientation data.
+   // We replace these with the orientation of their planet
+
+   char MajorBodiesNamesOrientation[55][15] = {
+       "SUN",       "MERCURY",  "VENUS",    "EARTH",   "MARS",
+       "JUPITER",   "SATURN",   "URANUS",   "NEPTUNE", "PLUTO",
+       "MOON",      "PHOBOS",   "DEIMOS",   "IO",      "EUROPA",
+       "GANYMEDE",  "CALLISTO", "AMALTHEA", "JUPITER", "JUPITER",
+       "JUPITER",   "JUPITER",  "JUPITER",  "JUPITER", "JUPITER",
+       "JUPITER",   "THEBE",    "ADRASTEA", "METIS",   "MIMAS",
+       "ENCELADUS", "TETHYS",   "DIONE",    "RHEA",    "TITAN",
+       "SATURN",    "IAPETUS",  "PHOEBE",   "JANUS",   "EPIMETHEUS",
+       "HELENE",    "TELESTO",  "CALYPSO",  "ATLAS",   "PROMETHEUS",
+       "PANDORA",   "PAN",      "ARIEL",    "UMBRIEL", "TITANIA",
+       "OBERON",    "MIRANDA",  "TRITON",   "NEPTUNE", "CHARON"};
+
+   // Substitutions:
+   // HIMALIA, ELARA, PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA -> JUPITER
+   // HYPERION -> SATURN
+   // NEREID -> NEPTUNE
+
+   struct OrbitType *Eph;
+   struct WorldType *W;
+   double Nstate[6], Hstate[6];
+   double light_time;
+   double ang[3];
+
+   double CWJ[3][3];
+
+   // Read all planets
+   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
+      W   = &World[Iw];
+      Eph = &W->eph;
+      spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+               Nstate,
+               &light_time); // State of major bodies in J2000 wrt Sun center
+
+      for (i = 0; i < 3; i++) {
+         Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
+         W->PosH[i] =
+             Nstate[i] *
+             1e3; // Assign suncentric positions = inertial position (m)
+
+         Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+         W->VelH[i] =
+             Nstate[i + 3] *
+             1e3; // Assign suncentric velocity = inertial velocity (m/s)
+      }
+      char frame_name[25] = "IAU_";
+      strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+
+      // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
+      MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
+
+      pxform_c("J2000", frame_name, JS,
+               CWJ); // matrix from J2000 (ICRF) -> body fixed
+
+      // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
+
+      MxMT(CWJ, CNJ, World[Iw].CWN);
+      C2Q(World[Iw].CWN, World[Iw].qwn);
+      World[Iw].PriMerAng = ang[2];
+   }
+
+   // Read all moons
+   for (Ip = EARTH; Ip <= PLUTO; Ip++) {
+      if (World[Ip].Exists) {
+         for (Im = 0; Im < World[Ip].Nsat; Im++) {
+            Iw  = World[Ip].Sat[Im];
+            W   = &World[Iw];
+            Eph = &W->eph;
+
+            spkezr_c(
+                MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+                Hstate,
+                &light_time); // State of major bodies in J2000 wrt Sun center
+
+            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE",
+                     MajorBodiesNamesState[Ip], Nstate,
+                     &light_time); // State of major bodies in J2000 wrt Planet
+                                   // center
+
+            for (i = 0; i < 3; i++) {
+               Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
+               W->PosH[i]   = Hstate[i] * 1e3;
+
+               Eph->VelN[i] = Nstate[i + 3]; // Assign inertial velocity (m/s)
+               W->VelH[i]   = Hstate[i + 3] * 1e3;
+            }
+
+            char frame_name[25] = "IAU_";
+            strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+
+            pxform_c("J2000", frame_name, JS,
+                     CWJ); // matrix from J2000 (ICRF) -> body fixed
+
+            // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
+            MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
+
+            pxform_c("J2000", frame_name, JS,
+                     CWJ); // matrix from J2000 (ICRF) -> body fixed
+
+            // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
+
+            MxMT(CWJ, CNJ, World[Iw].CWN);
+            C2Q(World[Iw].CWN, World[Iw].qwn);
+            World[Iw].PriMerAng = ang[2];
+         }
+      }
+   }
    return (0);
 }
 /**********************************************************************/
@@ -5532,12 +6006,19 @@ void InitSim(int argc, char **argv)
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
    /* .. Load Sun and Planets */
+   if (EphemOption == EPH_SPICE)
+      LoadSpiceKernels(
+          ModelPath); // Load SPICE to get SPICE-provided values for mu, J2, etc
+
    LoadSun();
    LoadPlanets();
+
    /* JPL planetary ephems */
    if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440)
       LoadJplEphems(ModelPath, TT.JulDay);
-
+   else if (EphemOption == EPH_SPICE) {
+      LoadSpiceEphems(DynTime);
+   }
    /* .. Load Moons */
    if (World[EARTH].Exists)
       LoadMoonOfEarth();
@@ -5649,6 +6130,18 @@ void InitSim(int argc, char **argv)
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          InitSpacecraft(&SC[Isc]);
+      }
+   }
+   long nonDSMFSW = FALSE, DSMFSW = FALSE;
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         DSMFSW    |= SC[Isc].FswTag == DSM_FSW;
+         nonDSMFSW |= SC[Isc].FswTag != DSM_FSW;
+         if (nonDSMFSW && DSMFSW) {
+            printf("Mixing DSM_FSW and non DSM_FSW flightsoftware tags is not "
+                   "supported. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
       }
    }
 

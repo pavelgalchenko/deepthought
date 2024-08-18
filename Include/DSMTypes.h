@@ -19,7 +19,7 @@ extern struct SCType SCType;
 #define REPORT_RESIDUALS FALSE
 
 // Controller Type Definitions
-enum ctrlType {
+enum CtrlType {
    PID_CNTRL = 0,   // Translational and Rotational
    LYA_ATT_CNTRL,   // Attitude
    LYA_2BODY_CNTRL, // 2 Body Relative Orbit Control
@@ -27,7 +27,7 @@ enum ctrlType {
 };
 
 // Controller State Definitions
-enum ctrlState {
+enum CtrlState {
    TRN_STATE = 0, // Translational
    ATT_STATE,     // Attitude
    FULL_STATE,    // 6DOF controller, currently unused
@@ -35,14 +35,14 @@ enum ctrlState {
 };
 
 // Manuever Type Definitions
-enum maneuverType {
+enum ManeuverType {
    INACTIVE = -1,
    CONSTANT,
    SMOOTHED,
 };
 
 // Actuator Type Definitions
-enum actuatorType {
+enum ActuatorType {
    WHL_TYPE = 0,
    THR_TYPE,
    MTB_TYPE,
@@ -162,34 +162,41 @@ struct DSMCmdType {
    double Hvr[3];
    double Hvn[3];
    double OldCRN[3][3];
-   double k_nute[3];      // Nutation Gain
-   double k_prec[3];      // Precession Gain
-   double trn_kp[3];      // Proportional Gain
-   double trn_ki[3];      // Intergral Gain
-   double trn_kr[3];      // Rate / Derivitive Gain
-   double trn_kilimit[3]; // Integral Limit
-   double dmp_kp[3];      // Dumping Proportional Gain
-   double att_kp[3];      // Attitude Proportional Gain
-   double att_ki[3];      // Attitude Intergral Gain
-   double att_kr[3];      // Attitude Rate / Derivitive Gain
-   double att_kilimit[3]; // Attitude Integral Limit
-   double FrcB_max[3];    // Force limit in SC body frame
-   double vel_max[3];     // Velocity limit in SC body frame
-   double Trq_max[3];     // Torque limit in SC body frame
-   double dTrq_max[3];    // Detumble torque limit in SC body frame
-   double w_max[3];       // Angular velocity limit in SC body frame
-   double Pos[3];         // Position Vector of wrt any frame
-   double PosN[3];        // Position Vector of wrt Inertial frame N
-   double PosR[3];        // Position Vector of wrt Inertial frame R
-   double q[4];           // Quaternion wrt any frame
+   double k_nute[3];         // Nutation Gain
+   double k_prec[3];         // Precession Gain
+   double trn_kp[3];         // Proportional Gain
+   double trn_ki[3];         // Intergral Gain
+   double trn_kr[3];         // Rate / Derivitive Gain
+   double trn_kilimit[3];    // Integral Limit
+   double dmp_kp[3];         // Dumping Proportional Gain
+   double att_kp[3];         // Attitude Proportional Gain
+   double att_ki[3];         // Attitude Intergral Gain
+   double att_kr[3];         // Attitude Rate / Derivitive Gain
+   double att_kilimit[3];    // Attitude Integral Limit
+   double FrcB_max[3];       // Force limit in SC body frame
+   double vel_max[3];        // Velocity limit in SC body frame
+   double Trq_max[3];        // Torque limit in SC body frame
+   double dTrq_max[3];       // Detumble torque limit in SC body frame
+   double w_max[3];          // Angular velocity limit in SC body frame
+   double Pos[3];            // Position Vector of wrt any frame
+   double PosN[3];           // Position Vector of wrt Inertial frame N
+   double PosR[3];           // Position Vector of wrt Inertial frame R
+   double q[4];              // Quaternion wrt any frame
+   double Distance;          // target distance for EH maneuver
+   double Phase;             // target degree for EH maneuver
+   double TimeDock;          // target time period for EH docking
+   long ResetTimer;          // resets EH timer
+   double InitTime;          // start of EH guidance law execution
+   double CurrentTimer;      // time after EH start
+   char TranslationType[20]; // Docking or Circumnavigation or Position
    char trn_actuator[20];
    char att_actuator[20];
    char dmp_actuator[20];
-   enum ctrlType trn_controller;
-   enum ctrlType att_controller;
-   enum ctrlType dmp_controller;
-   enum maneuverType ManeuverMode;
-   char AttRefScID[6];
+   enum CtrlType trn_controller;
+   enum CtrlType att_controller;
+   enum CtrlType dmp_controller;
+   enum ManeuverType ManeuverMode;
+   char AttRefScID[20];
    char H_DumpGain[20];
    char H_DumpMode[20];
    double H_DumpLims[2];
@@ -197,7 +204,7 @@ struct DSMCmdType {
    double BurnTime;
    double TrgVelR[3];
    double BurnStopTime;
-   enum actuatorType ActTypes[100];
+   enum ActuatorType ActTypes[100];
    int ActInds[100];
    int ActNumCmds;
    double ActDuties[100];
@@ -276,6 +283,34 @@ struct DSMMeasListType {
    struct DSMMeasType *head;
    long length;
    long measDim;
+};
+
+struct DSMStateType {
+   // TODO: make commState a different structure that is user configurable
+   // I would have already done this, but CBN complicates the issue
+   // (double ** != double [][])
+   // Figuring out how DSM guidance works with data not in commState would also
+   // be interesting
+
+   /*~ Parameters ~*/
+   long ID; /* Spacecraft ID */
+
+   /*~ Inputs ~*/
+   double Time; /* Time since J2000 [[sec]] */
+
+   /*~ Outputs ~*/
+   double VelR[3];   // Velocity in R Frame
+   double PosR[3];   // Position in R Frame
+   double VelN[3];   // Velocity in N Frame
+   double PosN[3];   // Position in N Frame
+   double wbn[3];    // Angular Velocity in the SC Body Frame
+   double qbn[4];    // Quarternion from N to B
+   double CBN[3][3]; // Rotation Matrix from N to B
+
+   double svn[3]; // Sun vector in N frame
+   double svb[3]; // Sun vector in B frame
+   double bvn[3]; // Magnetic field vector in N frame
+   double bvb[3]; // Magnetic field vector in B frame
 };
 
 struct DSMNavType {
@@ -385,26 +420,23 @@ struct DSMNavType {
 struct DSMType {
    /*~ Parameters ~*/
    long ID; /* Spacecraft ID */
-   long Nb;
-   long DsmTag; // Tag to designate DSM fsw modes
 
    /*~ Inputs ~*/
-   double Time; /* Time since J2000 [[sec]] */
    double DT;
    double mass;
    double MOI[3][3];
    long Mode;
 
    /*~ Outputs ~*/
+   struct DSMStateType state;
+   struct DSMStateType commState;
+   // assign a function pointer to allow for this to be more general later
+   void (*CommStateProcessing)(struct DSMStateType *, struct DSMStateType *);
    double Tcmd[3];  // Torque Command
    double Mcmd[3];  // Magnetorquer Command
    double dTcmd[3]; // Dump Torque Command
    double FcmdN[3]; // Force Command in N frame
    double FcmdB[3]; // Force Command in SC B Frame
-   double VelR[3];  // Velocity in R Frame
-   double PosR[3];  // Position in R Frame
-   double VelN[3];  // Velocity in N Frame
-   double PosN[3];  // Position in N Frame
 
    double therr[3]; // Angular Position Error
    double werr[3];  // Angular Velocity Error
@@ -421,9 +453,6 @@ struct DSMType {
 
    double IdealTrq[3]; // Ideal Torque
    double IdealFrc[3]; // Ideal Force
-   double wbn[3];      // Angular Velocity in the SC Body Frame
-   double qbn[4];      // Quarternion from N to B
-   double CBN[3][3];   // Rotation Matrix from N to B
 
    struct fy_node **CmdArray;
    long CmdNum;

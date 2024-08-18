@@ -44,6 +44,7 @@ enum orbitInputType {
    INP_TRV,
    INP_MODES,
    INP_XYZ,
+   INP_XYZ_ROT,
    INP_SPLINE,
 };
 
@@ -99,6 +100,11 @@ struct LagrangeSystemType {
    double D;
    double Ddot;
    double Ddotdot;
+   /* CR3BP ND Units */
+   double LU;
+   double TU;
+   double VU;
+
    /* True anomaly, and derivatives */
    double th;
    double thdot;
@@ -273,6 +279,9 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
 void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
                      struct OrbitType *O);
 void MeanEphToOscEph(struct OrbitType *O, double DynTime);
+
+void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3], double W2_vel[3], double R_R_nd[3], double V_R_nd[3], double R_N[3], double V_N[3]);
+void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3], double W2_vel[3],  double R_N[3], double V_N[3], double R_R_nd[3], double V_R_nd[3]);
 
 /*
 ** #ifdef __cplusplus

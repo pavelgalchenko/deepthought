@@ -44,6 +44,8 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
                                           struct DSMType *const DSM);
 struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
                                             struct DSMType *const DSM);
+void DSM_CommStateProcessing(struct DSMStateType *state,
+                             struct DSMStateType *commState);
 
 /*
 ** #ifdef __cplusplus

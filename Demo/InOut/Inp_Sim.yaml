@@ -1,15 +1,6 @@
 %YAML 1.2
 ---
-# <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
 Simulation Control:
-  # -------------------------------Simulation Control------------------------------
-  #   Mode: [[FAST/REAL/EXTERNAL/NOS3]]
-  #   Duration: [[sec]]
-  #   Step Size: [[sec]]
-  #   File Interval: [[sec]]
-  #   RNG Seed:
-  #   Enable Graphics: [[true/false]]
-  #   Command File:
   Mode: FAST
   Duration: 20000.0
   Step Size: 0.1
@@ -18,17 +9,6 @@ Simulation Control:
   Enable Graphics: true
   Command File: Inp_Cmd.txt
 Time:
-  # -------------------------------Time Configuration------------------------------
-  #   Date:
-  #     Month:  [[]]
-  #     Day:    [[]]
-  #     Year:   [[]]
-  #   Time:
-  #     Hour:   [[]]
-  #     Minute: [[]]
-  #     Second: [[]]
-  #     Millisecond: [[]]
-  #   Leap Seconds:   [[]]
   Date:
     Month: 9
     Day: 29
@@ -40,9 +20,6 @@ Time:
     Millisecond: 0
   Leap Seconds: 37.0
 Orbits:
-  # ------------------------------Orbit Configurations-----------------------------
-  #   - Name:
-  #     Enabled: [[true/false]]
   - Name: Orb_EOS
     Enabled: true
   - Name: Orb_ISS
@@ -60,10 +37,6 @@ Orbits:
   - Name: Orb_LEO
     Enabled: true
 SCs:
-  # ------------------------------SC Configurations-----------------------------
-  #   - Name:
-  #     Orbit:
-  #     Enabled: [[true/false]]
   - Name: SC_Voyager
     Orbit: Orb_Saturn
     Enabled: true
@@ -101,39 +74,6 @@ SCs:
     Orbit: Orb_LEO
     Enabled: true
 Perturbation Models:
-  # ---------------------------Perturbation Configuration--------------------------
-  #   Atmosphere:
-  #     Enabled: [[true/false]]
-  #     Shadows: [[true/false]]
-  #     Models:
-  #     ((Sequence; one element for unique Atmospere Model Definition))
-  #       - World: [[EARTH]]
-  #         Method: [[USER/NOMINAL/TWOSIGMA]]
-  #         F10.7: (Only used if USER)
-  #         Ap: (Only used if USER)
-  #   Magnetic:
-  #     Residual Mag Moment: [[true/false]]
-  #     Models:
-  #     ((Sequence; one element for unique Magnetic Model Definition))
-  #       - World: [[EARTH]]
-  #         Method: [[NONE/IGRF/DIPOLE]]
-  #         Degree: [[0-10]] (Only used if IGRF)
-  #         Order: [[0-Degree]] (Only used if IGRF)
-  #   Gravitation:
-  #     Enabled: [[true/false]]
-  #     Gravity Gradient: [[true/false]]
-  #     ((Sequence; one element for unique Gravitation Model Definition))
-  #       - World: [[EARTH/MARS/LUNA]]
-  #         Degree: [[0-18]]
-  #         Order: [[0-Degree]]
-  #   SRP:
-  #     Enabled: [[true/false]]
-  #     Shadows: [[true/false]]
-  #   Thruster Plume: [[true/false]]
-  #   Contact: [[true/false]]
-  #   CFD Slosh: [[true/false]]
-  #   Albedo on CSS: [[true/false]]
-  #   Output Env Torques to File: [[true/false]]
   Atmosphere:
     Enabled: false
     Shadows: false
@@ -172,17 +112,6 @@ Perturbation Models:
   Output Env Torques to File: false
 Ephem Type: MEAN
 Celestial Bodies:
-  # --------------------------Celestial Body Configuration-------------------------
-  #   Mercury: [[true/false]]
-  #   Venus: [[true/false]]
-  #   Earth and Luna: [[true/false]]
-  #   Mars and its moons: [[true/false]]
-  #   Jupiter and its moons: [[true/false]]
-  #   Saturn and its moons: [[true/false]]
-  #   Uranus and its moons: [[true/false]]
-  #   Neptune and its moons: [[true/false]]
-  #   Pluto and its moons: [[true/false]]
-  #   Asteroids and Comets: [[true/false]]
   Mercury: true
   Venus: true
   Earth and Luna: true
@@ -194,23 +123,10 @@ Celestial Bodies:
   Pluto and its moons: true
   Asteroids and Comets: true
 Lagrange Systems:
-  # -------------------------Lagrange System Configuration-------------------------
-  #   Earth-Moon: [[true/false]]
-  #   Sun-Earth: [[true/false]]
-  #   Sun-Jupiter: [[true/false]]
   Earth-Moon: true
   Sun-Earth: true
   Sun-Jupiter: false
 Ground Stations:
-  # --------------------------Ground Station Configuration-------------------------
-  # ((Sequence; one element for unique Ground Station Definition))
-  #   - Ground Station:
-  #       Index:
-  #       Enabled: [[true/false]]
-  #       World:
-  #       Longitude:
-  #       Latitude:
-  #       Label:
   - Ground Station:
       Index: 0
       Enabled: true

@@ -11,12 +11,12 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#define PI             (3.1415926535897932385)
-#define TWOPI          (6.2831853071795864769)
-#define HALFPI         (1.5707963267948966192)
-#define D2R            (0.017453292519943295769)
-#define R2D            (57.295779513082320877)
-#define SQRTTWO        (1.4142135623730950488)
-#define SQRTHALF       (0.7071067811865475244)
+#define PI             M_PI
+#define TWOPI          (2.0 * PI)
+#define HALFPI         M_PI_2
+#define D2R            ((PI) / (180.0))
+#define R2D            ((180.0) / (PI))
+#define SQRTTWO        M_SQRT2
+#define SQRTHALF       M_SQRT1_2
 #define GOLDENRATIO    (1.6180339887498948482)
 #define SPEED_OF_LIGHT (299792458.0)

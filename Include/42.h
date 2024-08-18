@@ -27,6 +27,7 @@
 #include "42types.h"
 #include "dcmkit.h"
 #include "docoptkit.h"
+#include "dsmkit.h"
 #include "envkit.h"
 #include "fswkit.h"
 #include "geomkit.h"
@@ -226,6 +227,8 @@ void InitOrbits(void);
 void InitSpacecraft(struct SCType *S);
 void LoadPlanets(void);
 long LoadJplEphems(char EphemPath[80], double JD);
+long LoadSpiceKernels(char SpicePath[80]);
+long LoadSpiceEphems(double JS);
 long DecodeString(char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);
