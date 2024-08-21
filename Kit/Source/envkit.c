@@ -79,9 +79,9 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
    if (First) {
       First = 0;
 
-      C    = CreateMatrix(19, 19);
-      S    = CreateMatrix(19, 19);
-      Norm = CreateMatrix(19, 19);
+      C    = CreateMatrix(11, 11);
+      S    = CreateMatrix(11, 11);
+      Norm = CreateMatrix(11, 11);
       /* Get data from IGRF20.txt */
       IGRFfile = FileOpen(ModelPath, "igrf20.txt", "r");
       fscanf(IGRFfile, "%[^\n] %[\n]", junk, &newline);
@@ -98,10 +98,9 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
          for (m = 0; m <= n; m++) {
             Norm[n][m] = 1.0;
             if (m != 0)
-               Norm[n][m] *= factDfact(n + m, n - m) / 2.0;
-            Norm[n][m] = sqrt(Norm[n][m]);
-            C[n][m]    = g[n][m];
-            S[n][m]    = h[n][m];
+               Norm[n][m] = sqrt((double)factDfact(n + m, n - m) / 2.0);
+            C[n][m] = g[n][m];
+            S[n][m] = h[n][m];
          }
       }
    }

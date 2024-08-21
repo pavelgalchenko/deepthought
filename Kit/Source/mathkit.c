@@ -702,9 +702,9 @@ void Legendre(long const N, long const M, double const x,
                     (n - m);
          sdP[n][m] = m * x * Ps[n][m] - ((n + m) * (n - m + 1)) * P[n][m - 1];
       }
+      powsm1  = powsm;
+      powsm  *= s;
    }
-   powsm1  = powsm;
-   powsm  *= s;
 }
 /**********************************************************************/
 /* Finds gradient of the potential V, which is parameterized by       */
@@ -753,7 +753,9 @@ void SphericalHarmonics(const long N, const long M, const double r,
    Rern1[0] = Re / r;
    for (n = 1; n <= N; n++)
       Rern1[n] = Rern1[n - 1] * Rern1[0];
-   for (n = N; n >= 2; n--) {
+
+   // Accumulate from smallest component to largest
+   for (n = N; n >= 1; n--) {
       for (m = ((n < M) ? n : M); m >= 0; m--) {
          double Pbar  = P[n][m] / Norm[n][m];
          CcSs         = C[n][m] * cphi[m] + S[n][m] * sphi[m];
@@ -1949,12 +1951,12 @@ void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
                             double *cph, double *sph, double *r)
 
 {
-   *r           = MAGV(pbe);
-   *cth         = pbe[2] / (*r);
-   *sth         = sqrt(1 - (*cth) * (*cth)); // sin(theta);
-   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
-   *cph         = pbe[0] / denom; // cos(phi);
-   *sph         = pbe[1] / denom; // sin(phi);
+   *r                 = MAGV(pbe);
+   *cth               = pbe[2] / (*r);               // cos(theta)
+   *sth               = sqrt(1.0 - (*cth) * (*cth)); // sin(theta);
+   const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
+   *cph               = pbe[0] / denom; // cos(phi);
+   *sph               = pbe[1] / denom; // sin(phi);
 }
 
 /* #ifdef __cplusplus
