@@ -53,9 +53,9 @@ void MT(double A[3][3], double B[3][3]);
 double VoV(double A[3], double B[3]);
 void VxV(double A[3], double B[3], double C[3]);
 void vxMov(double w[3], double M[3][3], double wxMow[3]);
-double MAGV(double V[3]);
+double MAGV(const double V[3]);
 double UNITV(double V[3]);
-double CopyUnitV(double V[3], double W[3]);
+double CopyUnitV(const double V[3], double W[3]);
 void V2CrossM(double V[3], double M[3][3]);
 void V2DoubleCrossM(double V[3], double M[3][3]);
 void VcrossM(double V[3], double M[3][3], double A[3][3]);
@@ -69,12 +69,13 @@ void QTxV(double QAB[4], double Va[3], double Vb[3]);
 void UNITQ(double Q[4]);
 void RECTIFYQ(double Q[4]);
 void PerpBasis(double A[3], double B[3], double C[3]);
-double fact(long n);
-double oddfact(long n);
+long fact(long const n);
+long oddfact(long const n);
+long factDfact(long const n, long const m);
 void Legendre(long N, long M, double x, double P[19][19], double sdP[19][19]);
-void SphericalHarmonics(long N, long M, double r, double phi, double theta,
-                        double Re, double K, double C[19][19], double S[19][19],
-                        double gradV[3]);
+void SphericalHarmonics(const long N, const long M, const double r,
+                        const double trigs[4], const double Re, const double K,
+                        double **C, double **S, double **Norm, double gradV[3]);
 void MxMG(double **A, double **B, double **C, long N, long K, long M);
 void MxMTG(double **A, double **B, double **C, long N, long K, long M);
 void MTxMG(double **A, double **B, double **C, long N, long K, long M);
@@ -117,7 +118,8 @@ void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      double (*fdf)(double, double *), double *params);
-
+void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
+                            double *cph, double *sph, double *r);
 /*
 ** #ifdef __cplusplus
 ** }

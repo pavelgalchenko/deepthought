@@ -347,7 +347,7 @@ void vxMov(double w[3], double M[3][3], double wxMow[3])
 }
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */
-double MAGV(double V[3])
+double MAGV(const double V[3])
 {
    return (sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]));
 }
@@ -374,7 +374,7 @@ double UNITV(double V[3])
 }
 /**********************************************************************/
 /*  Copy and normalize a 3-vector.  Return its magnitude              */
-double CopyUnitV(double V[3], double W[3])
+double CopyUnitV(const double V[3], double W[3])
 {
    double A;
 
@@ -602,39 +602,52 @@ void PerpBasis(double A[3], double B[3], double C[3])
    UNITV(C);
 }
 /**********************************************************************/
-double fact(long n)
+long fact(long const n)
 {
-   double F = 1.0;
+   long F = 1;
    long i;
 
    for (i = 1; i <= n; i++)
-      F *= (double)i;
+      F *= i;
 
    return F;
 }
 /**********************************************************************/
-double oddfact(long n)
+long oddfact(long const n)
 {
-   double F = 1.0;
+   long F = 1;
    long i;
 
    for (i = 1; i <= n; i += 2)
-      F *= (double)i;
+      F *= i;
 
    return F;
 }
+/**********************************************************************/
+/*  Compute fact(n)/fact(m), where n > m                              */
+long factDfact(long const n, long const m)
+{
+   long out = 1;
+   if (m > n) {
+      printf(
+          "To retain integer precision, use factDfact with n>m. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   for (long i = ((m > 0) ? m : 1); i <= n; i++)
+      out *= i;
+   return out;
+}
+
 /**********************************************************************/
 /*  Legendre Functions P(x) and sdP(x), up to Degree N and Order M    */
 /*  Neumann normalization (see Battin p.390+, Wertz App. G)           */
 /*  Note that dP[n][1] are singular at x = +/- 1.0.                   */
 /*  sdP = sqrt(1-x^2)*dP are not singular, and are how dP's are used  */
 /*  in SphericalHarmonics.                                            */
-#define NMAX 18
-void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
-              double sdP[NMAX + 1][NMAX + 1])
+void Legendre(long const N, long const M, double const x,
+              double P[N + 1][M + 1], double sdP[N + 1][M + 1])
 {
-
-   double Ps[NMAX + 1][NMAX + 1];
+   double Ps[N + 1][M + 1];
    long n, m;
    double s;
 
@@ -642,6 +655,14 @@ void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
    if (M > N) {
       printf("Order %ld can't be greater than Degree %ld\n", M, N);
       exit(1);
+   }
+
+   for (n = 0; n <= N; n++) {
+      for (m = 0; m <= M; m++) {
+         P[n][m]   = 0.0;
+         Ps[n][m]  = 0.0;
+         sdP[n][m] = 0.0;
+      }
    }
 
    s = sqrt(1.0 - x * x);
@@ -660,9 +681,11 @@ void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
    }
 
    /* .. Then there are the rest... */
+   double powsm  = s;
+   double powsm1 = 1.0;
    for (m = 1; m <= M; m++) {
-      P[m][m]   = oddfact(2 * m - 1) * pow(s, m);
-      Ps[m][m]  = oddfact(2 * m - 1) * pow(s, m - 1);
+      P[m][m]   = oddfact(2 * m - 1) * powsm;
+      Ps[m][m]  = oddfact(2 * m - 1) * powsm1;
       sdP[m][m] = m * (x * Ps[m][m] - 2.0 * P[m][m - 1]);
       if (m < N) {
          P[m + 1][m]  = x * (2.0 * m + 1.0) * P[m][m];
@@ -677,9 +700,11 @@ void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
          Ps[n][m] = (x * (2.0 * n - 1.0) * Ps[n - 1][m] -
                      (n + m - 1.0) * Ps[n - 2][m]) /
                     (n - m);
-         sdP[n][m] = m * x * Ps[n][m] - (n + m) * (n - m + 1.0) * P[n][m - 1];
+         sdP[n][m] = m * x * Ps[n][m] - ((n + m) * (n - m + 1)) * P[n][m - 1];
       }
    }
+   powsm1  = powsm;
+   powsm  *= s;
 }
 /**********************************************************************/
 /* Finds gradient of the potential V, which is parameterized by       */
@@ -688,15 +713,15 @@ void Legendre(long N, long M, double x, double P[NMAX + 1][NMAX + 1],
 /* gradV[0] = Radial (positive outward)                               */
 /* gradV[1] = Latitudinal (positive south)                            */
 /* gradV[2] = Longitudinal (positive east)                            */
-void SphericalHarmonics(long N, long M, double r, double phi, double theta,
-                        double Re, double K, double C[NMAX + 1][NMAX + 1],
-                        double S[NMAX + 1][NMAX + 1], double gradV[3])
+void SphericalHarmonics(const long N, const long M, const double r,
+                        const double trigs[4], const double Re, const double K,
+                        double **C, double **S, double **Norm, double gradV[3])
 {
 
-   double P[NMAX + 1][NMAX + 1], sdP[NMAX + 1][NMAX + 1];
+   double P[N + 1][M + 1], sdP[N + 1][M + 1];
    long n, m;
-   double cphi[NMAX + 1], sphi[NMAX + 1];
-   double Rer, Rern1, CcSs, ScCs, sth;
+   double cphi[M + 1], sphi[M + 1];
+   double Rern1[N + 1], CcSs, ScCs;
    double dVdr, dVdphi, dVdtheta;
 
    /* .. Order can't be greater than Degree */
@@ -705,14 +730,16 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
       exit(1);
    }
 
+   const double cth = trigs[0];
+   const double sth = trigs[1];
    /* .. Find Legendre functions */
-   Legendre(N, M, cos(theta), P, sdP);
+   Legendre(N, M, cth, P, sdP);
 
    /* .. Build cos(m*phi) and sin(m*phi) */
    cphi[0] = 1.0;
    sphi[0] = 0.0;
-   cphi[1] = cos(phi);
-   sphi[1] = sin(phi);
+   cphi[1] = trigs[2];
+   sphi[1] = trigs[3];
    for (m = 2; m <= M; m++) {
       cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
       sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
@@ -722,17 +749,18 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
    dVdr     = 0.0;
    dVdphi   = 0.0;
    dVdtheta = 0.0;
-   Rer      = Re / r;
-   Rern1    = Rer;
-   sth      = sin(theta);
-   for (n = 1; n <= N; n++) {
-      Rern1 *= Rer;
-      for (m = 0; m <= n && m <= M; m++) {
-         CcSs      = C[n][m] * cphi[m] + S[n][m] * sphi[m];
-         ScCs      = S[n][m] * cphi[m] - C[n][m] * sphi[m];
-         dVdr     += -(n + 1) * Rern1 * CcSs * P[n][m];
-         dVdphi   += m * Rern1 * ScCs * P[n][m];
-         dVdtheta += -Rern1 * CcSs * sdP[n][m];
+   /* .. Rern1 = (Re/r)^(n+1) */
+   Rern1[0] = Re / r;
+   for (n = 1; n <= N; n++)
+      Rern1[n] = Rern1[n - 1] * Rern1[0];
+   for (n = N; n >= 2; n--) {
+      for (m = ((n < M) ? n : M); m >= 0; m--) {
+         double Pbar  = P[n][m] / Norm[n][m];
+         CcSs         = C[n][m] * cphi[m] + S[n][m] * sphi[m];
+         ScCs         = S[n][m] * cphi[m] - C[n][m] * sphi[m];
+         dVdr        -= (CcSs * Rern1[n]) * ((n + 1) * Pbar);
+         dVdphi      += (ScCs * Rern1[n]) * (m * Pbar);
+         dVdtheta    -= (CcSs * Rern1[n]) * (sdP[n][m] / Norm[n][m]);
       }
    }
    dVdr     *= K / r;
@@ -751,7 +779,6 @@ void SphericalHarmonics(long N, long M, double r, double phi, double theta,
    **printf("gradV: %lf %lf %lf\n",gradV[0],gradV[1],gradV[2]);
    */
 }
-#undef NMAX
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
 void MxMG(double **A, double **B, double **C, long N, long K, long M)
@@ -1914,6 +1941,20 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
       x -= dx;
    } while (fabs(dx) > tol && k++ < nMax);
    return x;
+}
+/******************************************************************************/
+/* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
+/* vector                                                                     */
+void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
+                            double *cph, double *sph, double *r)
+
+{
+   *r           = MAGV(pbe);
+   *cth         = pbe[2] / (*r);
+   *sth         = sqrt(1 - (*cth) * (*cth)); // sin(theta);
+   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
+   *cph         = pbe[0] / denom; // cos(phi);
+   *sph         = pbe[1] / denom; // sin(phi);
 }
 
 /* #ifdef __cplusplus

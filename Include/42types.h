@@ -28,9 +28,14 @@
 
 struct SphereHarmType {
    /*~ Internal Variables ~*/
+   char modelFile[40];
+   long Init;
    long Type;
    long N;
    long M;
+   double **Norm;
+   double **C;
+   double **S;
 };
 
 struct FormationType {
@@ -803,6 +808,7 @@ struct WorldType {
    double DipoleOffset[3]; /* Dipole Offset, m */
    double RingInner, RingOuter;
    double Density; /* For minor bodies, polyhedron gravity */
+   struct SphereHarmType GravModel;
 
    /* Graphical Properties */
    long HasRing;

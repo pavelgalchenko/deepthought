@@ -429,7 +429,7 @@ void C2A(long SEQ, double C[3][3], double *TH1, double *TH2, double *TH3)
 /* simple rotation of THETA radians about a unit vector               */
 /* parallel to AXIS                                                   */
 
-void SimpRot(double AXIS[3], double THETA, double C[3][3])
+void SimpRot(const double AXIS[3], const double THETA, double C[3][3])
 {
    double CTH, STH, CTH1, AX[3];
 
