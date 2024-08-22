@@ -17,6 +17,8 @@
 ** namespace Kit {
 ** #endif
 */
+#define MIN(x, y) ((x) > (y) ? (y) : (x))
+#define MAX(x, y) ((x) < (y) ? (y) : (x))
 
 /**********************************************************************/
 double signum(const double x)
@@ -633,7 +635,7 @@ long factDfact(long const n, long const m)
           "To retain integer precision, use factDfact with n>m. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   for (long i = ((m > 0) ? m : 1); i <= n; i++)
+   for (long i = MAX(m + 1, 1); i <= n; i++)
       out *= i;
    return out;
 }
@@ -755,7 +757,7 @@ void SphericalHarmonics(const long N, const long M, const double r,
 
    // Accumulate from smallest component to largest
    for (n = N; n >= 1; n--) {
-      for (m = ((n < M) ? n : M); m >= 0; m--) {
+      for (m = MIN(n, M); m >= 0; m--) {
          double Pbar  = P[n][m] / Norm[n][m];
          CcSs         = C[n][m] * cphi[m] + S[n][m] * sphi[m];
          ScCs         = S[n][m] * cphi[m] - C[n][m] * sphi[m];
@@ -1249,7 +1251,6 @@ void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
 /*  Imag = Imaginary parts of roots (length n)                          */
 void Bairstow(long n, double *a, double Tol, double *Real, double *Imag)
 {
-#define MAX(x, y) (x > y ? x : y)
 
    double *b, *c;
    double r, s, dr, ds, Disc, Det;
@@ -1339,7 +1340,6 @@ void Bairstow(long n, double *a, double Tol, double *Real, double *Imag)
    }
    free(b);
    free(c);
-#undef MAX
 }
 /**********************************************************************/
 /*  Minimize a cost function by Downhill Simplex Method               */
@@ -1946,16 +1946,17 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */
-void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
-                            double *cph, double *sph, double *r)
+void getTrigSphericalCoords(const double pbe[3], double *const cth,
+                            double *const sth, double *const cph,
+                            double *const sph, double *const r)
 
 {
    *r                 = MAGV(pbe);
+   const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
    *cth               = pbe[2] / (*r);               // cos(theta)
    *sth               = sqrt(1.0 - (*cth) * (*cth)); // sin(theta);
-   const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
-   *cph               = pbe[0] / denom; // cos(phi);
-   *sph               = pbe[1] / denom; // sin(phi);
+   *cph               = pbe[0] / denom;              // cos(phi);
+   *sph               = pbe[1] / denom;              // sin(phi);
 }
 
 /* #ifdef __cplusplus

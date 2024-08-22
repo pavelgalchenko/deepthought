@@ -98,7 +98,7 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
          for (m = 0; m <= n; m++) {
             Norm[n][m] = 1.0;
             if (m != 0)
-               Norm[n][m] = sqrt((double)factDfact(n + m, n - m) / 2.0);
+               Norm[n][m] = sqrt(factDfact(n + m, n - m) / 2.0);
             C[n][m] = g[n][m];
             S[n][m] = h[n][m];
          }
