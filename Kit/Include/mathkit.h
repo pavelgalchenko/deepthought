@@ -33,21 +33,21 @@
 #endif
 #endif
 
-double signum(double x);
-double sinc(double x);
-void MxM(double A[3][3], double B[3][3], double C[3][3]);
-void MxMT(double A[3][3], double B[3][3], double C[3][3]);
-void MTxM(double A[3][3], double B[3][3], double C[3][3]);
-void MTxMT(double A[3][3], double B[3][3], double C[3][3]);
-void VxM(double V[3], double M[3][3], double W[3]);
-void MxV(double M[3][3], double V[3], double W[3]);
-void VxMT(double V[3], double M[3][3], double W[3]);
-void MTxV(double M[3][3], double V[3], double W[3]);
-void SxV(double S, double V[3], double W[3]);
-void SxM(double S, double A[3][3], double B[3][3]);
-void MINV4(double A[4][4], double B[4][4]);
-void MINV3(double A[3][3], double B[3][3]);
-void MINV2(double A[2][2], double B[2][2]);
+double signum(const double x);
+double sinc(const double x);
+void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
+void MxMT(const double A[3][3], const double B[3][3], double C[3][3]);
+void MTxM(const double A[3][3], const double B[3][3], double C[3][3]);
+void MTxMT(const double A[3][3], const double B[3][3], double C[3][3]);
+void VxM(const double V[3], const double M[3][3], double W[3]);
+void MxV(const double M[3][3], const double V[3], double W[3]);
+void VxMT(const double V[3], const double M[3][3], double W[3]);
+void MTxV(const double M[3][3], const double V[3], double W[3]);
+void SxV(const double S, const double V[3], double W[3]);
+void SxM(const double S, const double A[3][3], double B[3][3]);
+void MINV4(const double A[4][4], double B[4][4]);
+void MINV3(const double A[3][3], double B[3][3]);
+void MINV2(const double A[2][2], double B[2][2]);
 void PINV4x3(double A[4][3], double Aplus[3][4]);
 void MT(double A[3][3], double B[3][3]);
 double VoV(double A[3], double B[3]);

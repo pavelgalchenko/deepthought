@@ -19,13 +19,14 @@
 */
 
 /**********************************************************************/
-void SphericalHarmGravForce(long N, long M, struct WorldType *W,
-                            double PriMerAng, double mass, double pbn[3],
+void SphericalHarmGravForce(const long N, const long M,
+                            const struct WorldType *W, const double PriMerAng,
+                            const double mass, const double pbn[3],
                             double FgeoN[3])
 {
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Fr, Fth, Fph, Fe[3];
-   struct SphereHarmType *GravModel = &W->GravModel;
+   const struct SphereHarmType *GravModel = &W->GravModel;
 
    for (int i = 0; i < 3; i++)
       FgeoN[i] = 0.0;
@@ -63,27 +64,26 @@ void SphericalHarmGravForce(long N, long M, struct WorldType *W,
 void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
                   double PriMerAng, double MagVecN[3])
 {
-   double g[11][11], h[11][11];
    static double **C = NULL, **S = NULL, **Norm = NULL;
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
-   double dum1, dum2;
    double AXIS[3] = {0.0, 0.0, 1.0};
    double CEN[3][3];
    static double Re;
-   long i, n, m;
    static long First = 1;
-   FILE *IGRFfile;
-   char junk[120], newline;
 
    if (First) {
       First = 0;
+      double g[11][11], h[11][11];
+      double dum1, dum2;
+      long i, n, m;
+      char junk[120], newline;
 
       C    = CreateMatrix(11, 11);
       S    = CreateMatrix(11, 11);
       Norm = CreateMatrix(11, 11);
       /* Get data from IGRF20.txt */
-      IGRFfile = FileOpen(ModelPath, "igrf20.txt", "r");
+      FILE *IGRFfile = FileOpen(ModelPath, "igrf20.txt", "r");
       fscanf(IGRFfile, "%[^\n] %[\n]", junk, &newline);
       fscanf(IGRFfile, "%lf %lf %lf", &dum1, &Re, &dum2);
       Re *= 1.0E3; /* Convert from km to m */

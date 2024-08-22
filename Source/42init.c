@@ -3231,8 +3231,10 @@ void InitSpacecraft(struct SCType *S)
             S->VelR[j] = wxrn[j] + vsn[j];
          }
          if (O->Regime == ORB_ZERO) {
+            // TODO: ????? should something be here????
          }
          else if (O->Regime == ORB_FLIGHT) {
+            // TODO: ????? should something be here????
          }
          else {
             RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR, S->PosEH,
@@ -3378,10 +3380,11 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
    GravModel->Type = 0;
 
    if (strcmp(GravModel->modelFile, "") == 0) {
-      GravModel->C = NULL;
-      GravModel->S = NULL;
-      GravModel->N = 0;
-      GravModel->M = 0;
+      GravModel->Norm = NULL;
+      GravModel->C    = NULL;
+      GravModel->S    = NULL;
+      GravModel->N    = 0;
+      GravModel->M    = 0;
    }
    else {
       FILE *gravFile = FileOpen(modelPath, GravModel->modelFile, "r");
@@ -3399,9 +3402,9 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
                 GravModel->modelFile, nMax, mMax);
          exit(EXIT_FAILURE);
       }
-      GravModel->C    = CreateMatrix(nMax + 1, nMax + 1);
-      GravModel->S    = CreateMatrix(nMax + 1, nMax + 1);
-      GravModel->Norm = CreateMatrix(nMax + 1, nMax + 1);
+      GravModel->C    = CreateMatrix(nMax + 1, mMax + 1);
+      GravModel->S    = CreateMatrix(nMax + 1, mMax + 1);
+      GravModel->Norm = CreateMatrix(nMax + 1, mMax + 1);
 
       rewind(gravFile);
       while (!feof(gravFile)) {
@@ -3415,7 +3418,7 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
          for (m = 0; m <= n; m++) {
             double tmpNorm = 1.0 / (2 * n + 1);
             if (m != 0)
-               tmpNorm *= ((double)factDfact(n + m, n - m) / 2.0);
+               tmpNorm *= (factDfact(n + m, n - m) / 2.0);
             GravModel->Norm[n][m] = sqrt(tmpNorm);
          }
       }
@@ -3656,12 +3659,9 @@ void LoadPlanets(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &World[i].GravModel;
       strcpy(gravModel->modelFile, GravFileName[i]);
-      gravModel->Init = ((strcmp(GravFileName[i], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 
    World[EARTH].Atmo.GasColor[0]  = 0.17523;
@@ -3873,12 +3873,9 @@ void LoadMoonOfEarth(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 #undef Nm
 }
@@ -4014,12 +4011,9 @@ void LoadMoonsOfMars(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
    strcpy(World[PHOBOS].GeomFileName, "Phobos.obj");
    Geom = LoadWingsObjFile(ModelPath, World[PHOBOS].GeomFileName, &Matl, &Nmatl,
@@ -4188,12 +4182,9 @@ void LoadMoonsOfJupiter(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 #undef Nm
 }
@@ -4363,12 +4354,9 @@ void LoadMoonsOfSaturn(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 #undef Nm
 }
@@ -4505,12 +4493,9 @@ void LoadMoonsOfUranus(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 #undef Nm
 }
@@ -4644,12 +4629,9 @@ void LoadMoonsOfNeptune(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 #undef Nm
 }
@@ -4785,12 +4767,9 @@ void LoadMoonsOfPluto(void)
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &M->GravModel;
       strcpy(gravModel->modelFile, GravFileName[Im]);
-      gravModel->Init = ((strcmp(GravFileName[Im], "") == 0) ? FALSE : TRUE);
-      if (gravModel->Init == 1) {
-         gravModel->Init = 0;
-         LoadGravModel(ModelPath, gravModel);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
          M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-      }
    }
 #undef Nm
 }
@@ -4890,8 +4869,11 @@ void LoadMinorBodies(void)
       /* Gravitation Model */
       if (strcmp(GravFileName, "NONE") == 0)
          strcpy(GravFileName, "");
-      strcpy(W->GravModel.modelFile, GravFileName);
-      W->GravModel.Init = ((strcmp(GravFileName, "") == 0) ? FALSE : TRUE);
+      struct SphereHarmType *gravModel = &W->GravModel;
+      strcpy(gravModel->modelFile, GravFileName);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
    fclose(infile);
 }

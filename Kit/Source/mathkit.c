@@ -19,7 +19,7 @@
 */
 
 /**********************************************************************/
-double signum(double x)
+double signum(const double x)
 {
    return (x >= 0 ? 1.0 : -1.0);
 }
@@ -27,11 +27,11 @@ double signum(double x)
 /* sinc(x) = sin(x)/x                                                 */
 /*  Series expansion: sinc(x) = 1 - x^2/3! + x^4/5! - x^6/7!...       */
 /*  Enough terms kept to be within 2E-10 for x in [-pi:pi]            */
-double sinc(double x)
+double sinc(const double x)
 {
    double x2;
 
-   if (x < -3.14159265358979 || x > 3.14159265358979) {
+   if (x < -PI || x > PI) {
       return (sin(x) / x);
    }
    else {
@@ -57,7 +57,7 @@ double sinc(double x)
 }
 /**********************************************************************/
 /*   3x3 Matrix Product                                               */
-void MxM(double A[3][3], double B[3][3], double C[3][3])
+void MxM(const double A[3][3], const double B[3][3], double C[3][3])
 {
 
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
@@ -72,7 +72,7 @@ void MxM(double A[3][3], double B[3][3], double C[3][3])
 }
 /**********************************************************************/
 /* 3x3 Matrix times Transpose of Matrix                               */
-void MxMT(double A[3][3], double B[3][3], double C[3][3])
+void MxMT(const double A[3][3], const double B[3][3], double C[3][3])
 {
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[0][1] + A[0][2] * B[0][2];
    C[0][1] = A[0][0] * B[1][0] + A[0][1] * B[1][1] + A[0][2] * B[1][2];
@@ -86,7 +86,7 @@ void MxMT(double A[3][3], double B[3][3], double C[3][3])
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Matrix                              */
-void MTxM(double A[3][3], double B[3][3], double C[3][3])
+void MTxM(const double A[3][3], const double B[3][3], double C[3][3])
 {
    C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[1][0] + A[2][0] * B[2][0];
    C[0][1] = A[0][0] * B[0][1] + A[1][0] * B[1][1] + A[2][0] * B[2][1];
@@ -100,7 +100,7 @@ void MTxM(double A[3][3], double B[3][3], double C[3][3])
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Transpose of Matrix                 */
-void MTxMT(double A[3][3], double B[3][3], double C[3][3])
+void MTxMT(const double A[3][3], const double B[3][3], double C[3][3])
 {
    C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[0][1] + A[2][0] * B[0][2];
    C[0][1] = A[0][0] * B[1][0] + A[1][0] * B[1][1] + A[2][0] * B[1][2];
@@ -114,7 +114,7 @@ void MTxMT(double A[3][3], double B[3][3], double C[3][3])
 }
 /**********************************************************************/
 /*  1x3 Vector times 3x3 Matrix                                       */
-void VxM(double V[3], double M[3][3], double W[3])
+void VxM(const double V[3], const double M[3][3], double W[3])
 {
    W[0] = V[0] * M[0][0] + V[1] * M[1][0] + V[2] * M[2][0];
    W[1] = V[0] * M[0][1] + V[1] * M[1][1] + V[2] * M[2][1];
@@ -122,7 +122,7 @@ void VxM(double V[3], double M[3][3], double W[3])
 }
 /**********************************************************************/
 /*  3x3 Matrix times 3x1 Vector                                       */
-void MxV(double M[3][3], double V[3], double W[3])
+void MxV(const double M[3][3], const double V[3], double W[3])
 {
    W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
@@ -130,7 +130,7 @@ void MxV(double M[3][3], double V[3], double W[3])
 }
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
-void VxMT(double V[3], double M[3][3], double W[3])
+void VxMT(const double V[3], const double M[3][3], double W[3])
 {
    W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
@@ -138,7 +138,7 @@ void VxMT(double V[3], double M[3][3], double W[3])
 }
 /**********************************************************************/
 /*  Transpose of 3x3 Matrix times 3x1 Vector                          */
-void MTxV(double M[3][3], double V[3], double W[3])
+void MTxV(const double M[3][3], const double V[3], double W[3])
 {
    W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
    W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
@@ -146,7 +146,7 @@ void MTxV(double M[3][3], double V[3], double W[3])
 }
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
-void SxV(double S, double V[3], double W[3])
+void SxV(const double S, const double V[3], double W[3])
 {
    W[0] = S * V[0];
    W[1] = S * V[1];
@@ -154,7 +154,7 @@ void SxV(double S, double V[3], double W[3])
 }
 /**********************************************************************/
 /*  Scalar times 3x3 Matrix                                           */
-void SxM(double S, double A[3][3], double B[3][3])
+void SxM(const double S, const double A[3][3], double B[3][3])
 {
    B[0][0] = S * A[0][0];
    B[0][1] = S * A[0][1];
@@ -168,7 +168,7 @@ void SxM(double S, double A[3][3], double B[3][3])
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
-void MINV4(double A[4][4], double B[4][4])
+void MINV4(const double A[4][4], double B[4][4])
 {
    double DET = 0.0;
    long r, s, i, j, k, x, y, z;
@@ -194,7 +194,7 @@ void MINV4(double A[4][4], double B[4][4])
    if (DET == 0.0) {
       printf(
           "Attempted inversion of singular matrix in MINV4.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       for (r = 0; r < 4; r++) {
@@ -206,7 +206,7 @@ void MINV4(double A[4][4], double B[4][4])
 }
 /******************************************************************************/
 /*  Inverse of a 3x3 Matrix                                                   */
-void MINV3(double A[3][3], double B[3][3])
+void MINV3(const double A[3][3], double B[3][3])
 {
    double DET;
 
@@ -217,7 +217,7 @@ void MINV3(double A[3][3], double B[3][3])
    if (DET == 0.0) {
       printf(
           "Attempted inversion of singular matrix in MINV3.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       B[0][0] = (A[1][1] * A[2][2] - A[2][1] * A[1][2]) / DET;
@@ -233,7 +233,7 @@ void MINV3(double A[3][3], double B[3][3])
 }
 /******************************************************************************/
 /*  Inverse of a 2x2 Matrix                                                   */
-void MINV2(double A[2][2], double B[2][2])
+void MINV2(const double A[2][2], double B[2][2])
 {
    double DET;
 
@@ -242,7 +242,7 @@ void MINV2(double A[2][2], double B[2][2])
    if (DET == 0.0) {
       printf(
           "Attempted inversion of singular matrix in MINV2.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       B[0][0] = A[1][1] / DET;
@@ -557,7 +557,7 @@ void UNITQ(double Q[4])
       printf("Divide by zero in UNITQ (Line %d of mathkit.c).  You'll want to "
              "fix that.\n",
              __LINE__);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       Q[0] /= A;
@@ -644,17 +644,16 @@ long factDfact(long const n, long const m)
 /*  Note that dP[n][1] are singular at x = +/- 1.0.                   */
 /*  sdP = sqrt(1-x^2)*dP are not singular, and are how dP's are used  */
 /*  in SphericalHarmonics.                                            */
-void Legendre(long const N, long const M, double const x,
+void Legendre(const long N, const long M, const double x,
               double P[N + 1][M + 1], double sdP[N + 1][M + 1])
 {
    double Ps[N + 1][M + 1];
    long n, m;
-   double s;
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
       printf("Order %ld can't be greater than Degree %ld\n", M, N);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    for (n = 0; n <= N; n++) {
@@ -665,7 +664,7 @@ void Legendre(long const N, long const M, double const x,
       }
    }
 
-   s = sqrt(1.0 - x * x);
+   const double s = sqrt(1.0 - x * x);
 
    /* .. Some terms are easy */
    P[0][0]   = 1.0;
@@ -684,22 +683,22 @@ void Legendre(long const N, long const M, double const x,
    double powsm  = s;
    double powsm1 = 1.0;
    for (m = 1; m <= M; m++) {
-      P[m][m]   = oddfact(2 * m - 1) * powsm;
-      Ps[m][m]  = oddfact(2 * m - 1) * powsm1;
+      long oddf = oddfact(2 * m - 1);
+      P[m][m]   = oddf * powsm;
+      Ps[m][m]  = oddf * powsm1;
       sdP[m][m] = m * (x * Ps[m][m] - 2.0 * P[m][m - 1]);
       if (m < N) {
-         P[m + 1][m]  = x * (2.0 * m + 1.0) * P[m][m];
-         Ps[m + 1][m] = x * (2.0 * m + 1.0) * Ps[m][m];
+         P[m + 1][m]  = x * (2 * m + 1) * P[m][m];
+         Ps[m + 1][m] = x * (2 * m + 1) * Ps[m][m];
          sdP[m + 1][m] =
-             m * x * Ps[m + 1][m] - 2.0 * (2.0 * m + 1.0) * P[m + 1][m - 1];
+             m * x * Ps[m + 1][m] - 2.0 * (2 * m + 1) * P[m + 1][m - 1];
       }
       for (n = m + 2; n <= N; n++) {
-         P[n][m] =
-             (x * (2.0 * n - 1.0) * P[n - 1][m] - (n + m - 1.0) * P[n - 2][m]) /
+         P[n][m] = (x * (2 * n - 1) * P[n - 1][m] - (n + m - 1) * P[n - 2][m]) /
+                   (n - m);
+         Ps[n][m] =
+             (x * (2 * n - 1) * Ps[n - 1][m] - (n + m - 1) * Ps[n - 2][m]) /
              (n - m);
-         Ps[n][m] = (x * (2.0 * n - 1.0) * Ps[n - 1][m] -
-                     (n + m - 1.0) * Ps[n - 2][m]) /
-                    (n - m);
          sdP[n][m] = m * x * Ps[n][m] - ((n + m) * (n - m + 1)) * P[n][m - 1];
       }
       powsm1  = powsm;
@@ -727,7 +726,7 @@ void SphericalHarmonics(const long N, const long M, const double r,
    /* .. Order can't be greater than Degree */
    if (M > N) {
       printf("Order %ld can't be greater than Degree %ld\n", M, N);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    const double cth = trigs[0];
@@ -749,7 +748,7 @@ void SphericalHarmonics(const long N, const long M, const double r,
    dVdr     = 0.0;
    dVdphi   = 0.0;
    dVdtheta = 0.0;
-   /* .. Rern1 = (Re/r)^(n+1) */
+   /* .. Rern1[n] = (Re/r)^(n+1) */
    Rern1[0] = Re / r;
    for (n = 1; n <= N; n++)
       Rern1[n] = Rern1[n - 1] * Rern1[0];
@@ -883,7 +882,7 @@ void MINVG(double **A, double **AI, long N)
       }
       if (PIVOT == 0.0) {
          printf("Matrix is singular in MINVG\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
 
       for (J = 0; J < N; J++) {
@@ -948,7 +947,7 @@ void FastMINV6(double A[6][6], double AI[6][6], long N)
       }
       if (PIVOT == 0.0) {
          printf("Matrix is singular in FastMINV6\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
 
       for (J = 0; J < N; J++) {
@@ -1024,12 +1023,12 @@ double **CreateMatrix(long n, long m)
    A = (double **)malloc(sizeof(double *) * n);
    if (A == NULL) {
       printf("malloc failed in CreateMatrix.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    A[0] = (double *)calloc(n * m, sizeof(double));
    if (A[0] == NULL) {
       printf("calloc failed in CreateMatrix.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    for (i = 1; i < n; i++)
       A[i] = A[0] + m * i;
@@ -1782,11 +1781,11 @@ double CubicSpline(double x, double X[4], double Y[4])
 
    if (isnan(u)) {
       printf("Bad spline interval in CubicSpline.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    if (u < 0.0 || u > 1.0) {
       printf("Interpolant out of range in CubicSpline.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    DY0 = Y[0] - Y[1];
@@ -1804,7 +1803,7 @@ double CubicSpline(double x, double X[4], double Y[4])
    Det = (u3 - 1.0) * (u0 - 1.0) * (u3 - u0) * u0 * u3;
    if (fabs(Det) < 1.0E-9) {
       printf("Matrix is close to singular in CubicSpline.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    a = Y[1];
    b = (-z3 * u32 * DY0 + (u3 - u0) * u02 * u32 * DY2 + z0 * u02 * DY3) / Det;
@@ -1823,11 +1822,11 @@ void ChebyPolys(double u, long n, double T[20], double U[20])
 
    if (u < -1.0 || u > 1.0) {
       printf("u out of range in ChebPolys.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    if (n > 20) {
       printf("n out of range in ChebPolys.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    T[0] = 1.0;
@@ -1848,7 +1847,7 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
 
    if (n > 20) {
       printf("n out of range in ChebyInterp.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    *P    = Coef[0] * T[0];
@@ -1867,7 +1866,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
 
    if (Nc > 20) {
       printf("Nc out of range in FindChebyCoefs.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    AtA = CreateMatrix(Nc, Nc);

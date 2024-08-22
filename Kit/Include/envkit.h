@@ -30,8 +30,9 @@
 ** #endif
 */
 
-void SphericalHarmGravForce(long N, long M, struct WorldType *W,
-                            double PriMerAng, double mass, double pbn[3],
+void SphericalHarmGravForce(const long N, const long M,
+                            const struct WorldType *W, const double PriMerAng,
+                            const double mass, const double pbn[3],
                             double FgeoN[3]);
 void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
                   double PriMerAng, double MagVecN[3]);

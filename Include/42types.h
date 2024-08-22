@@ -29,7 +29,6 @@
 struct SphereHarmType {
    /*~ Internal Variables ~*/
    char modelFile[40];
-   long Init;
    long Type;
    long N;
    long M;
