@@ -372,25 +372,6 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
    HV[2][1] = HV[1][2];
 }
 
-struct SphereHarmType *getGravModel(long Iworld)
-{
-   struct SphereHarmType *gravModel = NULL;
-   switch (Iworld) {
-      case EARTH:
-         gravModel = &EarthGravModel;
-         break;
-      case MARS:
-         gravModel = &MarsGravModel;
-         break;
-      case LUNA:
-         gravModel = &LunaGravModel;
-         break;
-      default:
-         break;
-   }
-   return gravModel;
-}
-
 void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
                                double PriMerAng, double pbn[3],
                                double HgeoN[3][3])
@@ -398,7 +379,7 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    double CEN[3][3] = {{0.0}}, cth, sth, cph, sph, pbe[3], HV[3][3] = {{0.0}};
    double r;
    long i, j, k;
-   struct SphereHarmType *GravModel = getGravModel(W - World);
+   struct SphereHarmType *GravModel = &W->GravModel;
 
    double gradV[3] = {0.0};
 
@@ -566,7 +547,7 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
 
    // TODO: maybe make this just 2/0 if it exists
    /* Perturbations due to non-spherical gravity potential */
-   struct SphereHarmType *GravModel = getGravModel(OrbCenter);
+   struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
       double PriMerAng = GetPriMerAng(OrbCenter, date);
       double fGeoN[3], fGeoR[3], PosN[3];
@@ -654,7 +635,7 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
 
    // TODO: maybe make this just 2/0 if it exists
    /* Perturbations due to non-spherical gravity potential */
-   struct SphereHarmType *GravModel = getGravModel(OrbCenter);
+   struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
       double PriMerAng   = GetPriMerAng(OrbCenter, date);
       double HgeoN[3][3] = {{0.0}}, HgeoR[3][3] = {{0.0}}, PosN[3] = {0.0};
