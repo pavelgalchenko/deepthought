@@ -239,7 +239,8 @@ void DSM_PlanetEphemReport(void)
       fflush(suntrackfile[Iw]);
    }
 }
-void DSM_StateRot3BodyReport(void){
+void DSM_StateRot3BodyReport(void)
+{
    static FILE **staterotfile;
    static long First = 1;
    long Isc;
@@ -252,7 +253,7 @@ void DSM_StateRot3BodyReport(void){
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             LS = &LagSys[Orb[SC[Isc].RefOrb].Sys];
-            if (LS->Exists){
+            if (LS->Exists) {
                sprintf(s, "DSM_StateRot3Body_%02li.42", Isc);
                staterotfile[Isc] = FileOpen(OutPath, s, "wt");
                fprintf(staterotfile[Isc], "PosR_X PosR_Y PosR_Z ");
@@ -267,16 +268,20 @@ void DSM_StateRot3BodyReport(void){
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          LS = &LagSys[Orb[SC[Isc].RefOrb].Sys];
-         if (LS->Exists){
-            for (int i = 0; i<3; i++) full_N_state[i] = SC[Isc].PosN[i];
-            for (int i = 0; i<3; i++) full_N_state[i+3] = SC[Isc].VelN[i];
+         if (LS->Exists) {
+            for (int i = 0; i < 3; i++)
+               full_N_state[i] = SC[Isc].PosN[i];
+            for (int i = 0; i < 3; i++)
+               full_N_state[i + 3] = SC[Isc].VelN[i];
 
-            StateN2StateRnd(LS, World[LS->Body2].eph.PosN, World[LS->Body2].eph.VelN, SC[Isc].PosN, SC[Isc].VelN, posRot, velRot);
+            StateN2StateRnd(LS, World[LS->Body2].eph.PosN,
+                            World[LS->Body2].eph.VelN, SC[Isc].PosN,
+                            SC[Isc].VelN, posRot, velRot);
 
-            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ",
-                  posRot[0], posRot[1], posRot[2]);
-            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ",
-                  velRot[0], velRot[1], velRot[2]);
+            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ", posRot[0],
+                    posRot[1], posRot[2]);
+            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ", velRot[0],
+                    velRot[1], velRot[2]);
             fprintf(staterotfile[Isc], "\n");
          }
       }
