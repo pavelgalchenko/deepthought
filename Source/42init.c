@@ -6008,16 +6008,10 @@ void InitSim(int argc, char **argv)
       Iw = DecodeString(response);
       switch (Iw) {
          case EARTH:
-            EarthGravModel.N = N;
-            EarthGravModel.M = M;
-            break;
          case MARS:
-            MarsGravModel.N = N;
-            MarsGravModel.M = M;
-            break;
          case LUNA:
-            LunaGravModel.N = N;
-            LunaGravModel.M = M;
+            World[Iw].GravModel.N = N;
+            World[Iw].GravModel.M = M;
             break;
          default:
             printf("World %119s does not have a configured spherical harmonic "
