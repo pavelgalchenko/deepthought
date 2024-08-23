@@ -5448,7 +5448,7 @@ long LoadSpiceEphems(double JS)
    struct WorldType *W;
    double Nstate[6], Hstate[6];
    double light_time;
-   double ang[3];
+   double ang[3] = {0.0};
 
    double CWJ[3][3];
 
@@ -5481,9 +5481,9 @@ long LoadSpiceEphems(double JS)
                CWJ); // matrix from J2000 (ICRF) -> body fixed
 
       // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-
       MxMT(CWJ, CNJ, World[Iw].CWN);
       C2Q(World[Iw].CWN, World[Iw].qwn);
+      logso3(World[Iw].CWN, ang);
       World[Iw].PriMerAng = ang[2];
    }
 
@@ -5526,9 +5526,9 @@ long LoadSpiceEphems(double JS)
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-
             MxMT(CWJ, CNJ, World[Iw].CWN);
             C2Q(World[Iw].CWN, World[Iw].qwn);
+            logso3(World[Iw].CWN, ang);
             World[Iw].PriMerAng = ang[2];
          }
       }

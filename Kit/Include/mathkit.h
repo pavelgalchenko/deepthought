@@ -120,6 +120,8 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      double (*fdf)(double, double *), double *params);
 void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
                             double *cph, double *sph, double *r);
+void logso3(double const R[3][3], double theta[3]);
+
 /*
 ** #ifdef __cplusplus
 ** }
