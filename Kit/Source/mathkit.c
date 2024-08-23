@@ -1927,22 +1927,32 @@ double WrapTo2Pi(double n)
 /* Simple Newton-Raphson method for function given by f/dfdx = fdf            */
 /* Iterates until tolerance or max iterations are reached; maximum stepsize   */
 /* governed by maxStep. Use params to pass parameters to fdf                  */
+// TODO: This has difficulty with high multiplicity roots and starting on the
+// "other" side of a section of a function with zero derivative. E.g
+// function 12.23459071*x^3 + 54.9176*x^2 - 23.39456*x + 97.1235 and x0 = 15
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
-                     double (*fdf)(double, double *), double *params)
+                     long breakOnZeroF,
+                     void (*fdf)(const double, double *, double *, double *),
+                     double *params)
 {
    if (maxStep < 0)
       maxStep = -maxStep;
    double x = x0;
    double dx;
+   double f = 0.0, fp = 0.0;
+   ;
    long k = 0;
    do {
-      dx = fdf(x, params);
+      fdf(x, params, &f, &fp);
+      // TODO: what to do if fp=f' is small? break or perturb??
+      dx = f / fp;
       if (fabs(dx) > maxStep)
          dx = signum(dx) * maxStep;
       x -= dx;
-   } while (fabs(dx) > tol && k++ < nMax);
+   } while ((!breakOnZeroF || fabs(f) > tol) && fabs(dx) > tol && k++ < nMax);
    return x;
 }
+
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */
