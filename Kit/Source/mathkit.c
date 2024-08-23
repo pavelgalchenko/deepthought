@@ -1954,6 +1954,7 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
    } while ((!breakOnZeroF || fabs(f) > tol) && fabs(dx) > tol && k++ < nMax);
    return x;
 }
+
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */

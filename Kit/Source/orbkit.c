@@ -2146,28 +2146,37 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
    O->Bz = AmpZ * sin(PhiZ);
 }
 /*************************************************************************/
-/*   Conversion of state [nd] in rotating barycentric frame to iNertial frame [dim] (body 1 centric) */
+/*   Conversion of state [nd] in rotating barycentric frame to iNertial  */
+/*   frame [dim] (body 1 centric)                                        */
 /*   Follows algorithm given in TA Pavlak's Ph.D. thesis                 */
 /*   Summary of process:                                                 */
-void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3], double W2_vel[3], double R_R_nd[3], double V_R_nd[3], double R_N[3], double V_N[3]){
+void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
+                     double W2_vel[3], double R_R_nd[3], double V_R_nd[3],
+                     double R_N[3], double V_N[3])
+{
    double bary_p[3], bary_v[3];
    double r2_from_r1[3], v2_from_v1[3], xvec[3], yvec[3], zvec[3];
    double LU, TU, VU;
    double magr, angmom, theta_dot;
    double CRN[3][3], StateCRN[6][6];
    double full_N_state[6], full_R_state[6];
-   
-   for (int i=0; i<3; i++) bary_p[i] = (LS->mu2*W2_pos[i])/(LS->mu1 + LS->mu2);
-   for (int i=0; i<3; i++) bary_v[i] = (LS->mu2*W2_vel[i])/(LS->mu1 + LS->mu2);
 
-   for (int i=0; i<3; i++) r2_from_r1[i] = W2_pos[i]; // World 2 StateN is already centered on Body1
-   for (int i=0; i<3; i++) v2_from_v1[i] = W2_vel[i];
+   for (int i = 0; i < 3; i++)
+      bary_p[i] = (LS->mu2 * W2_pos[i]) / (LS->mu1 + LS->mu2);
+   for (int i = 0; i < 3; i++)
+      bary_v[i] = (LS->mu2 * W2_vel[i]) / (LS->mu1 + LS->mu2);
+
+   for (int i = 0; i < 3; i++)
+      r2_from_r1[i] = W2_pos[i]; // World 2 StateN is already centered on Body1
+   for (int i = 0; i < 3; i++)
+      v2_from_v1[i] = W2_vel[i];
 
    LU = LS->LU;
    TU = LS->TU;
    VU = LS->VU;
 
-   for (int i=0; i<3; i++) xvec[i] = r2_from_r1[i];
+   for (int i = 0; i < 3; i++)
+      xvec[i] = r2_from_r1[i];
    UNITV(xvec);
    VxV(r2_from_r1, v2_from_v1, zvec);
    angmom = UNITV(zvec);
@@ -2175,37 +2184,55 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3], double W2_
 
    magr = MAGV(r2_from_r1);
 
-   theta_dot = angmom/(magr*magr);
-   
-   for (int i=0; i<3; i++) CRN[i][0] = xvec[i];
-   for (int i=0; i<3; i++) CRN[i][1] = yvec[i];
-   for (int i=0; i<3; i++) CRN[i][2] = zvec[i];
+   theta_dot = angmom / (magr * magr);
 
-   for (int i=0; i<6; i++) for (int j=0; j<6; j++) StateCRN[i][j] = 0;
-   for (int i=0; i<3; i++) for (int j=0; j<3; j++) StateCRN[i][j] = CRN[i][j];
-   for (int i=0; i<3; i++) for (int j=0; j<3; j++) StateCRN[i + 3][j + 3] = CRN[i][j];
+   for (int i = 0; i < 3; i++)
+      CRN[i][0] = xvec[i];
+   for (int i = 0; i < 3; i++)
+      CRN[i][1] = yvec[i];
+   for (int i = 0; i < 3; i++)
+      CRN[i][2] = zvec[i];
 
-   for (int i=0; i<3; i++) StateCRN[i+3][0] = theta_dot*CRN[i][1];
-   for (int i=0; i<3; i++) StateCRN[i+3][1] = -theta_dot*CRN[i][0];
+   for (int i = 0; i < 6; i++)
+      for (int j = 0; j < 6; j++)
+         StateCRN[i][j] = 0;
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         StateCRN[i][j] = CRN[i][j];
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         StateCRN[i + 3][j + 3] = CRN[i][j];
+
+   for (int i = 0; i < 3; i++)
+      StateCRN[i + 3][0] = theta_dot * CRN[i][1];
+   for (int i = 0; i < 3; i++)
+      StateCRN[i + 3][1] = -theta_dot * CRN[i][0];
 
    // Transform nd barycenter to nd
-   for (int i=0; i<3; i++) full_R_state[i] = R_R_nd[i]*LU;
-   for (int i=0; i<3; i++) full_R_state[i + 3] = V_R_nd[i]*VU;
+   for (int i = 0; i < 3; i++)
+      full_R_state[i] = R_R_nd[i] * LU;
+   for (int i = 0; i < 3; i++)
+      full_R_state[i + 3] = V_R_nd[i] * VU;
 
    // Transform nd Body 1 Centric to inertial
    double **A = CreateMatrix(6, 6);
-   for (int i = 0; i<6; i++) for (int j = 0; j<6; j++) A[i][j] = StateCRN[i][j];
+   for (int i = 0; i < 6; i++)
+      for (int j = 0; j < 6; j++)
+         A[i][j] = StateCRN[i][j];
 
    MxVG(A, full_R_state, full_N_state, 6, 6);
 
    // Output
-   for (int i=0; i<3; i++) R_N[i] = full_N_state[i] + bary_p[i];
-   for (int i=0; i<3; i++) V_N[i] = full_N_state[i + 3] + bary_v[i];
+   for (int i = 0; i < 3; i++)
+      R_N[i] = full_N_state[i] + bary_p[i];
+   for (int i = 0; i < 3; i++)
+      V_N[i] = full_N_state[i + 3] + bary_v[i];
 
    DestroyMatrix(A);
 }
 /*************************************************************************/
-/*   Conversion of iNertial frame (body 1 centered) [dim] to state [nd] in rotating barycentric frame */
+/*   Conversion of iNertial frame (body 1 centered) [dim] to state [nd]  */
+/*   in rotating barycentric frame                                       */
 /*   Follows algorithm given in TA Pavlak's Ph.D. thesis                 */
 /*   Summary of process:                                                 */
 /*    - Construct position rotation matrix from rotating to inertial     */
@@ -2213,25 +2240,33 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3], double W2_
 /*    - Invert transformation to yield N state to rot state              */
 /*    - Transform to rot state                                           */
 /*    - Center at barycenter                                             */
-void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3], double W2_vel[3], double R_N[3], double V_N[3], double R_R_nd[3], double V_R_nd[3]){
+void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
+                     double W2_vel[3], double R_N[3], double V_N[3],
+                     double R_R_nd[3], double V_R_nd[3])
+{
    double bary_p[3], bary_v[3];
    double r2_from_r1[3], v2_from_v1[3], xvec[3], yvec[3], zvec[3];
    double LU, TU, VU;
    double magr, angmom, theta_dot;
    double CRN[3][3], StateCRN[6][6], StateCNR[6][6];
    double full_N_state[6], full_R_state[6];
-   
-   for (int i=0; i<3; i++) bary_p[i] = (LS->mu2*W2_pos[i])/(LS->mu1 + LS->mu2);
-   for (int i=0; i<3; i++) bary_v[i] = (LS->mu2*W2_vel[i])/(LS->mu1 + LS->mu2);
 
-   for (int i=0; i<3; i++) r2_from_r1[i] = W2_pos[i];
-   for (int i=0; i<3; i++) v2_from_v1[i] = W2_vel[i];
+   for (int i = 0; i < 3; i++)
+      bary_p[i] = (LS->mu2 * W2_pos[i]) / (LS->mu1 + LS->mu2);
+   for (int i = 0; i < 3; i++)
+      bary_v[i] = (LS->mu2 * W2_vel[i]) / (LS->mu1 + LS->mu2);
+
+   for (int i = 0; i < 3; i++)
+      r2_from_r1[i] = W2_pos[i];
+   for (int i = 0; i < 3; i++)
+      v2_from_v1[i] = W2_vel[i];
 
    LU = LS->LU;
    TU = LS->TU;
    VU = LS->VU;
 
-   for (int i=0; i<3; i++) xvec[i] = r2_from_r1[i];
+   for (int i = 0; i < 3; i++)
+      xvec[i] = r2_from_r1[i];
    UNITV(xvec);
    VxV(r2_from_r1, v2_from_v1, zvec);
    angmom = UNITV(zvec);
@@ -2239,36 +2274,53 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3], double W2_
 
    magr = MAGV(r2_from_r1);
 
-   theta_dot = angmom/(magr*magr);
-   
-   for (int i=0; i<3; i++) CRN[i][0] = xvec[i];
-   for (int i=0; i<3; i++) CRN[i][1] = yvec[i];
-   for (int i=0; i<3; i++) CRN[i][2] = zvec[i];
+   theta_dot = angmom / (magr * magr);
 
-   for (int i=0; i<6; i++) for (int j=0; j<6; j++) StateCRN[i][j] = 0;
-   for (int i=0; i<3; i++) for (int j=0; j<3; j++) StateCRN[i][j] = CRN[i][j];
-   for (int i=0; i<3; i++) for (int j=0; j<3; j++) StateCRN[i + 3][j + 3] = CRN[i][j];
+   for (int i = 0; i < 3; i++)
+      CRN[i][0] = xvec[i];
+   for (int i = 0; i < 3; i++)
+      CRN[i][1] = yvec[i];
+   for (int i = 0; i < 3; i++)
+      CRN[i][2] = zvec[i];
 
-   for (int i=0; i<3; i++) StateCRN[i+3][0] = theta_dot*CRN[i][1];
-   for (int i=0; i<3; i++) StateCRN[i+3][1] = -theta_dot*CRN[i][0];
+   for (int i = 0; i < 6; i++)
+      for (int j = 0; j < 6; j++)
+         StateCRN[i][j] = 0;
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         StateCRN[i][j] = CRN[i][j];
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         StateCRN[i + 3][j + 3] = CRN[i][j];
+
+   for (int i = 0; i < 3; i++)
+      StateCRN[i + 3][0] = theta_dot * CRN[i][1];
+   for (int i = 0; i < 3; i++)
+      StateCRN[i + 3][1] = -theta_dot * CRN[i][0];
 
    // inertial to rotating is inverse
    FastMINV6(StateCRN, StateCNR, 6);
 
-   // Assemble State N 
-   for (int i=0; i<3; i++) full_N_state[i] = R_N[i] - bary_p[i]; // transform body centric to barycentric nd
-   for (int i=0; i<3; i++) full_N_state[i+3] = V_N[i] - bary_v[i];
+   // Assemble State N
+   for (int i = 0; i < 3; i++)
+      full_N_state[i] =
+          R_N[i] - bary_p[i]; // transform body centric to barycentric nd
+   for (int i = 0; i < 3; i++)
+      full_N_state[i + 3] = V_N[i] - bary_v[i];
 
    double **A = CreateMatrix(6, 6);
-   for (int i = 0; i<6; i++) for (int j = 0; j<6; j++) A[i][j] = StateCNR[i][j];
+   for (int i = 0; i < 6; i++)
+      for (int j = 0; j < 6; j++)
+         A[i][j] = StateCNR[i][j];
 
    MxVG(A, full_N_state, full_R_state, 6, 6);
-   for (int i=0; i<3; i++) R_R_nd[i] = full_R_state[i]/LU; // barycentric nd -> rotating nd
-   for (int i=0; i<3; i++) V_R_nd[i] = full_R_state[i + 3]/VU;
+   for (int i = 0; i < 3; i++)
+      R_R_nd[i] = full_R_state[i] / LU; // barycentric nd -> rotating nd
+   for (int i = 0; i < 3; i++)
+      V_R_nd[i] = full_R_state[i + 3] / VU;
 
    DestroyMatrix(A);
 }
-
 /**********************************************************************/
 /*   Notional position and velocities for TDRS satellites             */
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
