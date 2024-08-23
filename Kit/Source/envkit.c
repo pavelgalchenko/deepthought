@@ -19,230 +19,71 @@
 */
 
 /**********************************************************************/
-/*  Earth Gravity Model 96, published by NIMA as part of the WGS84    */
-void EGM96(const char *ModelPath, long N, long M, double C[19][19],
-           double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3])
+void SphericalHarmGravForce(const long N, const long M,
+                            const struct WorldType *W, const double PriMerAng,
+                            const double mass, const double pbn[3],
+                            double FgeoN[3])
 {
-   double Cbar[19][19], Sbar[19][19];
-   double ReNorm;
    double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Fr, Fth, Fph, Fe[3];
-   double dum1, dum2;
-   double Re = 6378.145E3;
-   double mu = 3.986004E14;
-   long i, n, m;
-   static long First = 1;
-   FILE *EGM96file;
+   const struct SphereHarmType *GravModel = &W->GravModel;
 
-   if (First) {
-      First = 0;
-      /* Get data from EGM96.txt */
-      EGM96file = FileOpen(ModelPath, "EGM96.txt", "r");
-      for (i = 1; i <= 187; i++) {
-         fscanf(EGM96file, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         Cbar[n][m] = dum1;
-         Sbar[n][m] = dum2;
-      }
-      fclose(EGM96file);
-      /* Transform from EGM96 normalization to Neumann normalization */
-      for (n = 2; n <= 18; n++) {
-         for (m = 0; m <= n; m++) {
-            ReNorm = sqrt((2 * n + 1) * fact(n - m) / fact(n + m));
-            if (m != 0)
-               ReNorm *= sqrt(2.0);
-            C[n][m] = Cbar[n][m] * ReNorm;
-            S[n][m] = Sbar[n][m] * ReNorm;
-         }
-      }
+   for (int i = 0; i < 3; i++)
+      FgeoN[i] = 0.0;
+   if (GravModel->C != NULL && GravModel->N >= 2) {
+      /*    Transform p to spherical coords in Earth frame */
+      CEN[0][0] = cos(PriMerAng);
+      CEN[1][1] = CEN[0][0];
+      CEN[2][2] = 1.0;
+      CEN[0][1] = sin(PriMerAng);
+      CEN[1][0] = -CEN[0][1];
+      CEN[0][2] = 0.0;
+      CEN[1][2] = 0.0;
+      CEN[2][0] = 0.0;
+      CEN[2][1] = 0.0;
+      MxV(CEN, pbn, pbe);
+      getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+      const double trigs[4] = {cth, sth, cph, sph};
+
+      SphericalHarmonics(N, M, r, trigs, W->rad, W->mu / W->rad, GravModel->C,
+                         GravModel->S, GravModel->Norm, gradV);
+      Fr  = mass * gradV[0];
+      Fth = mass * gradV[1];
+      Fph = mass * gradV[2];
+
+      /*    Transform back to cartesian coords in Newtonian frame */
+      Fe[0] = (Fr * sth + Fth * cth) * cph - Fph * sph;
+      Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
+      Fe[2] = Fr * cth - Fth * sth;
+
+      MTxV(CEN, Fe, FgeoN);
    }
-
-   /*    Transform p to spherical coords in Earth frame */
-   CEN[0][0] = cos(PriMerAng);
-   CEN[1][1] = CEN[0][0];
-   CEN[2][2] = 1.0;
-   CEN[0][1] = sin(PriMerAng);
-   CEN[1][0] = -CEN[0][1];
-   CEN[0][2] = 0.0;
-   CEN[1][2] = 0.0;
-   CEN[2][0] = 0.0;
-   CEN[2][1] = 0.0;
-   MxV(CEN, pbn, pbe);
-   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-   double trigs[4] = {cth, sth, cph, sph};
-
-   /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, trigs, Re, mu / Re, C, S, gradV);
-   Fr  = mass * gradV[0];
-   Fth = mass * gradV[1];
-   Fph = mass * gradV[2];
-
-   /*    Transform back to cartesian coords in Newtonian frame */
-   Fe[0] = (Fr * sth + Fth * cth) * cph - Fph * sph;
-   Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
-   Fe[2] = Fr * cth - Fth * sth;
-
-   MTxV(CEN, Fe, FgeoN);
-}
-/**********************************************************************/
-/*  Goddard Mars Model 2B.  Truncated to 18x18                        */
-/*  Ref:  http://bowie.gsfc.nasa.gov/926/MARS/GMM2B.html              */
-void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
-           double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3])
-{
-   double Cbar[19][19], Sbar[19][19];
-   double ReNorm;
-   double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
-   double r, Fr, Fth, Fph, Fe[3];
-   double dum1, dum2;
-   double Re = 3397.0E3;
-   double mu = 4.28283719E13;
-   long i, n, m;
-   static long First = 1;
-   FILE *GMM2Bfile;
-
-   if (First) {
-      First = 0;
-      /* Get data from GMM2B.txt */
-      GMM2Bfile = FileOpen(ModelPath, "GMM2B.txt", "r");
-      for (i = 1; i <= 187; i++) {
-         fscanf(GMM2Bfile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         Cbar[n][m] = dum1;
-         Sbar[n][m] = dum2;
-      }
-      fclose(GMM2Bfile);
-      /* Transform from GMM2B normalization to Neumann normalization */
-      for (n = 2; n <= 18; n++) {
-         for (m = 0; m <= n; m++) {
-            ReNorm = sqrt((2 * n + 1) * fact(n - m) / fact(n + m));
-            if (m != 0)
-               ReNorm *= sqrt(2.0);
-            C[n][m] = Cbar[n][m] * ReNorm;
-            S[n][m] = Sbar[n][m] * ReNorm;
-         }
-      }
-   }
-
-   /*    Transform p to spherical coords in Mars N frame */
-   CEN[0][0] = cos(PriMerAng);
-   CEN[1][1] = CEN[0][0];
-   CEN[2][2] = 1.0;
-   CEN[0][1] = sin(PriMerAng);
-   CEN[1][0] = -CEN[0][1];
-   CEN[0][2] = 0.0;
-   CEN[1][2] = 0.0;
-   CEN[2][0] = 0.0;
-   CEN[2][1] = 0.0;
-   MxV(CEN, pbn, pbe);
-   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-   double trigs[4] = {cth, sth, cph, sph};
-
-   /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, trigs, Re, mu / Re, C, S, gradV);
-   Fr  = mass * gradV[0];
-   Fth = mass * gradV[1];
-   Fph = mass * gradV[2];
-
-   /*    Transform back to cartesian coords in Newtonian frame */
-   Fe[0] = (Fr * sth + Fth * cth) * cph - Fph * sph;
-   Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
-   Fe[2] = Fr * cth - Fth * sth;
-
-   MTxV(CEN, Fe, FgeoN);
-}
-/**********************************************************************/
-/*  Goddard Luna Gravity Model 2.  Truncated to 18x18                 */
-/*  Ref:
- * http://pds-geosciences.wustl.edu/geodata/clem1-gravity-topo-v1/cl_xxxx/gravity/glgm2sh.tab
- */
-void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
-           double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3])
-{
-   double Cbar[19][19], Sbar[19][19];
-   double ReNorm;
-   double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
-   double r, Fr, Fth, Fph, Fe[3];
-   double dum1, dum2;
-   double Re = 1738.0E3;
-   double mu = 4.903E12;
-   long i, n, m;
-   static long First = 1;
-   FILE *GLGM2file;
-
-   if (First) {
-      First = 0;
-      /* Get data from GLGM2.txt */
-      GLGM2file = FileOpen(ModelPath, "GLGM2.txt", "r");
-      for (i = 1; i <= 187; i++) {
-         fscanf(GLGM2file, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         Cbar[n][m] = dum1;
-         Sbar[n][m] = dum2;
-      }
-      fclose(GLGM2file);
-      /* Transform from GLGM2 normalization to Neumann normalization */
-      for (n = 2; n <= 18; n++) {
-         for (m = 0; m <= n; m++) {
-            ReNorm = sqrt((2 * n + 1) * fact(n - m) / fact(n + m));
-            if (m != 0)
-               ReNorm *= sqrt(2.0);
-            C[n][m] = Cbar[n][m] * ReNorm;
-            S[n][m] = Sbar[n][m] * ReNorm;
-         }
-      }
-   }
-
-   /*    Transform p to spherical coords in Luna N frame */
-   CEN[0][0] = cos(PriMerAng);
-   CEN[1][1] = CEN[0][0];
-   CEN[2][2] = 1.0;
-   CEN[0][1] = sin(PriMerAng);
-   CEN[1][0] = -CEN[0][1];
-   CEN[0][2] = 0.0;
-   CEN[1][2] = 0.0;
-   CEN[2][0] = 0.0;
-   CEN[2][1] = 0.0;
-   MxV(CEN, pbn, pbe);
-   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-   double trigs[4] = {cth, sth, cph, sph};
-
-   /*    Find Fr, Fth, Fph */
-   SphericalHarmonics(N, M, r, trigs, Re, mu / Re, C, S, gradV);
-   Fr  = mass * gradV[0];
-   Fth = mass * gradV[1];
-   Fph = mass * gradV[2];
-
-   /*    Transform back to cartesian coords in Newtonian frame */
-   Fe[0] = (Fr * sth + Fth * cth) * cph - Fph * sph;
-   Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
-   Fe[2] = Fr * cth - Fth * sth;
-
-   MTxV(CEN, Fe, FgeoN);
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
 void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
                   double PriMerAng, double MagVecN[3])
 {
-   double g[11][11], h[11][11];
-   double ReNorm;
-   static double C[19][19], S[19][19];
+   static double **C = NULL, **S = NULL, **Norm = NULL;
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
-   double dum1, dum2;
    double AXIS[3] = {0.0, 0.0, 1.0};
    double CEN[3][3];
    static double Re;
-   long i, n, m;
    static long First = 1;
-   FILE *IGRFfile;
-   char junk[120], newline;
 
    if (First) {
       First = 0;
+      double g[11][11], h[11][11];
+      double dum1, dum2;
+      long i, n, m;
+      char junk[120], newline;
+
+      C    = CreateMatrix(11, 11);
+      S    = CreateMatrix(11, 11);
+      Norm = CreateMatrix(11, 11);
       /* Get data from IGRF20.txt */
-      IGRFfile = FileOpen(ModelPath, "igrf20.txt", "r");
+      FILE *IGRFfile = FileOpen(ModelPath, "igrf20.txt", "r");
       fscanf(IGRFfile, "%[^\n] %[\n]", junk, &newline);
       fscanf(IGRFfile, "%lf %lf %lf", &dum1, &Re, &dum2);
       Re *= 1.0E3; /* Convert from km to m */
@@ -255,11 +96,11 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
       /* Transform from Schmidt normalization to Neumann normalization */
       for (n = 1; n <= 10; n++) {
          for (m = 0; m <= n; m++) {
-            ReNorm = sqrt(fact(n - m) / fact(n + m));
+            Norm[n][m] = 1.0;
             if (m != 0)
-               ReNorm *= sqrt(2.0);
-            C[n][m] = g[n][m] * ReNorm;
-            S[n][m] = h[n][m] * ReNorm;
+               Norm[n][m] = sqrt((double)(factDfact(n + m, n - m) / 2));
+            C[n][m] = g[n][m];
+            S[n][m] = h[n][m];
          }
       }
    }
@@ -269,10 +110,10 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
    /*    Transform p to spherical coords in Earth frame */
    MxV(CEN, pbn, pbe);
    getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-   double trigs[4] = {cth, sth, cph, sph};
+   const double trigs[4] = {cth, sth, cph, sph};
 
    /*    Find Br, Bth, Bph */
-   SphericalHarmonics(N, M, r, trigs, Re, Re, C, S, gradV);
+   SphericalHarmonics(N, M, r, trigs, Re, Re, C, S, Norm, gradV);
    Br  = -gradV[0];
    Bth = -gradV[1];
    Bph = -gradV[2];
@@ -290,6 +131,7 @@ void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
    **printf("BVE: %lf %lf %lf\n\n",BVE[0],BVE[1],BVE[2]);
    */
 }
+
 /**********************************************************************/
 /*  Computes planetary dipole magnetic field vector at S/C position.  */
 void DipoleMagField(double DipoleMoment, double DipoleAxis[3],

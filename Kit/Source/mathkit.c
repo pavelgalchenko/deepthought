@@ -31,7 +31,7 @@ double sinc(const double x)
 {
    double x2;
 
-   if (x < -3.14159265358979 || x > 3.14159265358979) {
+   if (x < -PI || x > PI) {
       return (sin(x) / x);
    }
    else {
@@ -194,7 +194,7 @@ void MINV4(const double A[4][4], double B[4][4])
    if (DET == 0.0) {
       printf(
           "Attempted inversion of singular matrix in MINV4.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       for (r = 0; r < 4; r++) {
@@ -217,7 +217,7 @@ void MINV3(const double A[3][3], double B[3][3])
    if (DET == 0.0) {
       printf(
           "Attempted inversion of singular matrix in MINV3.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       B[0][0] = (A[1][1] * A[2][2] - A[2][1] * A[1][2]) / DET;
@@ -242,7 +242,7 @@ void MINV2(const double A[2][2], double B[2][2])
    if (DET == 0.0) {
       printf(
           "Attempted inversion of singular matrix in MINV2.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       B[0][0] = A[1][1] / DET;
@@ -557,7 +557,7 @@ void UNITQ(double Q[4])
       printf("Divide by zero in UNITQ (Line %d of mathkit.c).  You'll want to "
              "fix that.\n",
              __LINE__);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    else {
       Q[0] /= A;
@@ -602,49 +602,69 @@ void PerpBasis(const double A[3], double B[3], double C[3])
    UNITV(C);
 }
 /**********************************************************************/
-double fact(const long n)
+long fact(long const n)
 {
-   double F = 1.0;
+   long F = 1;
    long i;
 
    for (i = 1; i <= n; i++)
-      F *= (double)i;
+      F *= i;
 
    return F;
 }
 /**********************************************************************/
-double oddfact(const long n)
+long oddfact(long const n)
 {
-   double F = 1.0;
+   long F = 1;
    long i;
 
    for (i = 1; i <= n; i += 2)
-      F *= (double)i;
+      F *= i;
 
    return F;
 }
+/**********************************************************************/
+/*  Compute fact(n)/fact(m), where n > m                              */
+long factDfact(long const n, long const m)
+{
+   long out = 1;
+   if (m > n) {
+      printf(
+          "To retain integer precision, use factDfact with n>m. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   for (long i = MAX(m + 1, 1); i <= n; i++)
+      out *= i;
+   return out;
+}
+
 /**********************************************************************/
 /*  Legendre Functions P(x) and sdP(x), up to Degree N and Order M    */
 /*  Neumann normalization (see Battin p.390+, Wertz App. G)           */
 /*  Note that dP[n][1] are singular at x = +/- 1.0.                   */
 /*  sdP = sqrt(1-x^2)*dP are not singular, and are how dP's are used  */
 /*  in SphericalHarmonics.                                            */
-#define NMAX 18
 void Legendre(const long N, const long M, const double x,
-              double P[NMAX + 1][NMAX + 1], double sdP[NMAX + 1][NMAX + 1])
+              double P[N + 1][M + 1], double sdP[N + 1][M + 1])
 {
-
-   double Ps[NMAX + 1][NMAX + 1];
+   double Ps[N + 1][M + 1];
    long n, m;
-   double s;
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
       printf("Order %ld can't be greater than Degree %ld\n", M, N);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
-   s = sqrt(1.0 - x * x);
+   for (n = 0; n <= N; n++) {
+      for (m = 0; m <= M; m++) {
+         P[n][m]   = 0.0;
+         Ps[n][m]  = 0.0;
+         sdP[n][m] = 0.0;
+      }
+   }
+
+   const double s = sqrt(1.0 - x * x);
 
    /* .. Some terms are easy */
    P[0][0]   = 1.0;
@@ -663,23 +683,23 @@ void Legendre(const long N, const long M, const double x,
    double powsm1 = 1.0;
    /* .. Then there are the rest... */
    for (m = 1; m <= M; m++) {
-      P[m][m]   = oddfact(2 * m - 1) * powsm;
-      Ps[m][m]  = oddfact(2 * m - 1) * powsm1;
+      long oddf = oddfact(2 * m - 1);
+      P[m][m]   = oddf * powsm;
+      Ps[m][m]  = oddf * powsm1;
       sdP[m][m] = m * (x * Ps[m][m] - 2.0 * P[m][m - 1]);
       if (m < N) {
-         P[m + 1][m]  = x * (2.0 * m + 1.0) * P[m][m];
-         Ps[m + 1][m] = x * (2.0 * m + 1.0) * Ps[m][m];
+         P[m + 1][m]  = x * (2 * m + 1) * P[m][m];
+         Ps[m + 1][m] = x * (2 * m + 1) * Ps[m][m];
          sdP[m + 1][m] =
-             m * x * Ps[m + 1][m] - 2.0 * (2.0 * m + 1.0) * P[m + 1][m - 1];
+             m * x * Ps[m + 1][m] - 2.0 * (2 * m + 1) * P[m + 1][m - 1];
       }
       for (n = m + 2; n <= N; n++) {
-         P[n][m] =
-             (x * (2.0 * n - 1.0) * P[n - 1][m] - (n + m - 1.0) * P[n - 2][m]) /
+         P[n][m] = (x * (2 * n - 1) * P[n - 1][m] - (n + m - 1) * P[n - 2][m]) /
+                   (n - m);
+         Ps[n][m] =
+             (x * (2 * n - 1) * Ps[n - 1][m] - (n + m - 1) * Ps[n - 2][m]) /
              (n - m);
-         Ps[n][m] = (x * (2.0 * n - 1.0) * Ps[n - 1][m] -
-                     (n + m - 1.0) * Ps[n - 2][m]) /
-                    (n - m);
-         sdP[n][m] = m * x * Ps[n][m] - (n + m) * (n - m + 1) * P[n][m - 1];
+         sdP[n][m] = m * x * Ps[n][m] - ((n + m) * (n - m + 1)) * P[n][m - 1];
       }
       powsm1  = powsm;
       powsm  *= s;
@@ -694,24 +714,23 @@ void Legendre(const long N, const long M, const double x,
 /* gradV[2] = Longitudinal (positive east)                            */
 void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
-                        const double C[NMAX + 1][NMAX + 1],
-                        const double S[NMAX + 1][NMAX + 1], double gradV[3])
+                        double **C, double **S, double **Norm, double gradV[3])
 {
 
-   double P[NMAX + 1][NMAX + 1], sdP[NMAX + 1][NMAX + 1];
+   double P[N + 1][M + 1], sdP[N + 1][M + 1];
    long n, m;
-   double cphi[NMAX + 1], sphi[NMAX + 1];
-   double Rer, Rern1, CcSs, ScCs;
+   double cphi[M + 1], sphi[M + 1];
+   double Rern1[N + 1], CcSs, ScCs;
    double dVdr, dVdphi, dVdtheta;
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
       printf("Order %ld can't be greater than Degree %ld\n", M, N);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
-   double cth = trigs[0];
-   double sth = trigs[1];
+   const double cth = trigs[0];
+   const double sth = trigs[1];
    /* .. Find Legendre functions */
    Legendre(N, M, cth, P, sdP);
 
@@ -729,16 +748,20 @@ void SphericalHarmonics(const long N, const long M, const double r,
    dVdr     = 0.0;
    dVdphi   = 0.0;
    dVdtheta = 0.0;
-   Rer      = Re / r;
-   Rern1    = Rer;
-   for (n = 1; n <= N; n++) {
-      Rern1 *= Rer;
-      for (m = 0; m <= n && m <= M; m++) {
-         CcSs      = C[n][m] * cphi[m] + S[n][m] * sphi[m];
-         ScCs      = S[n][m] * cphi[m] - C[n][m] * sphi[m];
-         dVdr     += -(n + 1) * Rern1 * CcSs * P[n][m];
-         dVdphi   += m * Rern1 * ScCs * P[n][m];
-         dVdtheta += -Rern1 * CcSs * sdP[n][m];
+   /* .. Rern1[n] = (Re/r)^(n+1) */
+   Rern1[0] = Re / r;
+   for (n = 1; n <= N; n++)
+      Rern1[n] = Rern1[n - 1] * Rern1[0];
+
+   // Accumulate from smallest component to largest
+   for (n = N; n >= 1; n--) {
+      for (m = MIN(n, M); m >= 0; m--) {
+         double Pbar  = P[n][m] / Norm[n][m];
+         CcSs         = C[n][m] * cphi[m] + S[n][m] * sphi[m];
+         ScCs         = S[n][m] * cphi[m] - C[n][m] * sphi[m];
+         dVdr        -= (CcSs * Rern1[n]) * ((n + 1) * Pbar);
+         dVdphi      += (ScCs * Rern1[n]) * (m * Pbar);
+         dVdtheta    -= (CcSs * Rern1[n]) * (sdP[n][m] / Norm[n][m]);
       }
    }
    dVdr     *= K / r;
@@ -757,7 +780,6 @@ void SphericalHarmonics(const long N, const long M, const double r,
    **printf("gradV: %lf %lf %lf\n",gradV[0],gradV[1],gradV[2]);
    */
 }
-#undef NMAX
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
 void MxMG(double **A, double **B, double **C, const long N, const long K,
@@ -863,7 +885,7 @@ void MINVG(double **A, double **AI, const long N)
       }
       if (PIVOT == 0.0) {
          printf("Matrix is singular in MINVG\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
 
       for (J = 0; J < N; J++) {
@@ -928,7 +950,7 @@ void FastMINV6(const double A[6][6], double AI[6][6], const long N)
       }
       if (PIVOT == 0.0) {
          printf("Matrix is singular in FastMINV6\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
 
       for (J = 0; J < N; J++) {
@@ -1004,12 +1026,12 @@ double **CreateMatrix(const long n, const long m)
    A = (double **)malloc(sizeof(double *) * n);
    if (A == NULL) {
       printf("malloc failed in CreateMatrix.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    A[0] = (double *)calloc(n * m, sizeof(double));
    if (A[0] == NULL) {
       printf("calloc failed in CreateMatrix.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    for (i = 1; i < n; i++)
       A[i] = A[0] + m * i;
@@ -1230,7 +1252,6 @@ void ConjGradSolve(double **A, double *x, double *b, const long n,
 /*  Imag = Imaginary parts of roots (length n)                          */
 void Bairstow(long n, double *a, const double Tol, double *Real, double *Imag)
 {
-#define MAX(x, y) (x > y ? x : y)
 
    double *b, *c;
    double r, s, dr, ds, Disc, Det;
@@ -1320,7 +1341,6 @@ void Bairstow(long n, double *a, const double Tol, double *Real, double *Imag)
    }
    free(b);
    free(c);
-#undef MAX
 }
 /**********************************************************************/
 /*  Minimize a cost function by Downhill Simplex Method               */
@@ -1764,11 +1784,11 @@ double CubicSpline(double x, double X[4], double Y[4])
 
    if (isnan(u)) {
       printf("Bad spline interval in CubicSpline.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    if (u < 0.0 || u > 1.0) {
       printf("Interpolant out of range in CubicSpline.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    DY0 = Y[0] - Y[1];
@@ -1786,7 +1806,7 @@ double CubicSpline(double x, double X[4], double Y[4])
    Det = (u3 - 1.0) * (u0 - 1.0) * (u3 - u0) * u0 * u3;
    if (fabs(Det) < 1.0E-9) {
       printf("Matrix is close to singular in CubicSpline.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    a = Y[1];
    b = (-z3 * u32 * DY0 + (u3 - u0) * u02 * u32 * DY2 + z0 * u02 * DY3) / Det;
@@ -1805,11 +1825,11 @@ void ChebyPolys(double u, long n, double T[20], double U[20])
 
    if (u < -1.0 || u > 1.0) {
       printf("u out of range in ChebPolys.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
    if (n > 20) {
       printf("n out of range in ChebPolys.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    T[0] = 1.0;
@@ -1830,7 +1850,7 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
 
    if (n > 20) {
       printf("n out of range in ChebyInterp.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    *P    = Coef[0] * T[0];
@@ -1849,7 +1869,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
 
    if (Nc > 20) {
       printf("Nc out of range in FindChebyCoefs.  Bailing out.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    AtA = CreateMatrix(Nc, Nc);
@@ -1937,16 +1957,16 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */
-void getTrigSphericalCoords(double pbe[3], double *cth, double *sth,
-                            double *cph, double *sph, double *r)
-
+void getTrigSphericalCoords(const double pbe[3], double *const cth,
+                            double *const sth, double *const cph,
+                            double *const sph, double *const r)
 {
-   *r           = MAGV(pbe);
-   *cth         = pbe[2] / (*r);
-   *sth         = sqrt(1 - (*cth) * (*cth)); // sin(theta);
-   double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
-   *cph         = pbe[0] / denom; // cos(phi);
-   *sph         = pbe[1] / denom; // sin(phi);
+   *r                 = MAGV(pbe);
+   const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
+   *cth               = pbe[2] / (*r);               // cos(theta)
+   *sth               = sqrt(1.0 - (*cth) * (*cth)); // sin(theta);
+   *cph               = pbe[0] / denom;              // cos(phi);
+   *sph               = pbe[1] / denom;              // sin(phi);
 }
 /******************************************************************************/
 // Calculate SO(3) adjoint operation: for rotation matrix C and matrix A,

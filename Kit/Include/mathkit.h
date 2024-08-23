@@ -33,8 +33,15 @@
 #endif
 #endif
 
-double signum(double x);
-double sinc(double x);
+#ifndef MIN
+#define MIN(x, y) ((x) > (y) ? (y) : (x))
+#endif
+#ifndef MAX
+#define MAX(x, y) ((x) < (y) ? (y) : (x))
+#endif
+
+double signum(const double x);
+double sinc(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
 void MxMT(const double A[3][3], const double B[3][3], double C[3][3]);
 void MTxM(const double A[3][3], const double B[3][3], double C[3][3]);
@@ -69,14 +76,14 @@ void QTxV(const double QAB[4], const double Va[3], double Vb[3]);
 void UNITQ(double Q[4]);
 void RECTIFYQ(double Q[4]);
 void PerpBasis(const double A[3], double B[3], double C[3]);
-double fact(const long n);
-double oddfact(const long n);
-void Legendre(const long N, const long M, const double x, double P[19][19],
-              double sdP[19][19]);
-void SphericalHarmonics(const long N, const long M, double r,
+long fact(long const n);
+long oddfact(long const n);
+long factDfact(long const n, long const m);
+void Legendre(const long N, const long M, const double x,
+              double P[N + 1][M + 1], double sdP[N + 1][M + 1]);
+void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
-                        const double C[19][19], const double S[19][19],
-                        double gradV[3]);
+                        double **C, double **S, double **Norm, double gradV[3]);
 void MxMG(double **A, double **B, double **C, const long N, const long K,
           const long M);
 void MxMTG(double **A, double **B, double **C, const long N, const long K,
@@ -127,7 +134,7 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      long breakOnZero,
                      void (*fdf)(const double, double *, double *, double *),
                      double *params);
-void getTrigSphericalCoords(double pbe[3], double *cth, double *sth,
+void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
                             double *cph, double *sph, double *r);
 void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]);
 void AdjointT(const double C[3][3], const double A[3][3], double CACT[3][3]);

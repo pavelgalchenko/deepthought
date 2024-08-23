@@ -15,6 +15,7 @@
 #define __ENVKIT_H__
 
 #include "42constants.h"
+#include "42types.h"
 #include "dcmkit.h"
 #include "geomkit.h"
 #include "iokit.h"
@@ -29,15 +30,10 @@
 ** #endif
 */
 
-void EGM96(const char *ModelPath, long N, long M, double C[19][19],
-           double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3]);
-void GMM2B(const char *ModelPath, long N, long M, double C[19][19],
-           double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3]);
-void GLGM2(const char *ModelPath, long N, long M, double C[19][19],
-           double S[19][19], double mass, double pbn[3], double PriMerAng,
-           double FgeoN[3]);
+void SphericalHarmGravForce(const long N, const long M,
+                            const struct WorldType *W, const double PriMerAng,
+                            const double mass, const double pbn[3],
+                            double FgeoN[3]);
 void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
                   double PriMerAng, double MagVecN[3]);
 void DipoleMagField(double DipoleMoment, double DipoleAxis[3],

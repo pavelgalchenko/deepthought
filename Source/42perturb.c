@@ -437,7 +437,7 @@ void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
 void GravPertForce(struct SCType *S)
 {
    struct OrbitType *O;
-   double FgeoN[3], ph[3], p[3], s[3], FrcN[3];
+   double ph[3], p[3], s[3], FrcN[3];
    long Iw, Im, j;
    long OrbCenter, SecCenter;
 
@@ -450,7 +450,6 @@ void GravPertForce(struct SCType *S)
       OrbCenter = O->Body1;
       SecCenter = O->Body2;
    }
-
    struct WorldType *WCenter = &World[OrbCenter];
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
@@ -498,25 +497,12 @@ void GravPertForce(struct SCType *S)
       }
    }
 
-   /* Perturbations due to non-spherical gravity potential */
-   if (OrbCenter == EARTH) {
-      EGM96(ModelPath, EarthGravModel.N, EarthGravModel.M, EarthGravModel.C,
-            EarthGravModel.S, S->mass, S->PosN, World[EARTH].PriMerAng, FgeoN);
-      for (j = 0; j < 3; j++)
-         S->FrcN[j] += FgeoN[j];
-   }
-   else if (OrbCenter == MARS) {
-      GMM2B(ModelPath, MarsGravModel.N, MarsGravModel.M, MarsGravModel.C,
-            MarsGravModel.S, S->mass, S->PosN, World[MARS].PriMerAng, FgeoN);
-      for (j = 0; j < 3; j++)
-         S->FrcN[j] += FgeoN[j];
-   }
-   else if (OrbCenter == LUNA) {
-      GLGM2(ModelPath, LunaGravModel.N, LunaGravModel.M, LunaGravModel.C,
-            LunaGravModel.S, S->mass, S->PosN, World[LUNA].PriMerAng, FgeoN);
-      for (j = 0; j < 3; j++)
-         S->FrcN[j] += FgeoN[j];
-   }
+   struct SphereHarmType *gravModel = &WCenter->GravModel;
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                          WCenter->PriMerAng, S->mass, S->PosN, FrcN);
+   for (j = 0; j < 3; j++)
+      S->FrcN[j] += FrcN[j];
+
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/

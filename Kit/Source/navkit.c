@@ -290,8 +290,8 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
 //------------------------------------------------------------------------------
 void SphericalHarmonicsJacobian(const long N, const long M, const double r,
                                 const double trigs[4], const double Re,
-                                const double K, double C[19][19],
-                                double S[19][19], double HV[3][3])
+                                const double K, double **C, double **S,
+                                double **Norm, double HV[3][3])
 {
    double P[19][19], sdP[19][19];
    long n, m;
@@ -326,16 +326,18 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
    double d2Vdr2 = 0.0, d2Vdphi2 = 0.0, d2Vdtheta2 = 0.0, d2Vdrdphi = 0.0,
           d2Vdrdtheta = 0.0, d2Vdphidtheta = 0.0;
    /* .. Find Jacobian of V */
-   /* .. Rern1 = (Re/r)^(n+1) */
+   /* .. Rern1[n] = (Re/r)^(n+1) */
    Rern1[0] = Re / r;
    for (n = 1; n <= N; n++)
       Rern1[n] = Rern1[n - 1] * Rern1[0];
    for (n = N; n >= 2; n--) {
       for (m = MIN(n, M); m >= 0; m--) {
-         double Pbar    = P[n][m];
-         double sdPbar  = sdP[n][m];
-         double CcSsbar = (C[n][m] * cphi[m] + S[n][m] * sphi[m]) * Rern1[n];
-         double ScCsbar = (S[n][m] * cphi[m] - C[n][m] * sphi[m]) * Rern1[n];
+         const double Pbar   = P[n][m] / Norm[n][m];
+         const double sdPbar = sdP[n][m] / Norm[n][m];
+         const double CcSsbar =
+             (C[n][m] * cphi[m] + S[n][m] * sphi[m]) * Rern1[n];
+         const double ScCsbar =
+             (S[n][m] * cphi[m] - C[n][m] * sphi[m]) * Rern1[n];
 
          double tmp = (double)(n * (n + 1));
          if (m != 0 && sth != 0.0)
@@ -418,7 +420,7 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
 
    /*    Find Jacobian */
    SphericalHarmonicsJacobian(N, M, r, trigs, W->rad, W->mu / W->rad,
-                              GravModel->C, GravModel->S, HV);
+                              GravModel->C, GravModel->S, GravModel->Norm, HV);
 
    /*   Calculate scaled Christoffel Symbols */
    /*     sCS^k_{ij} = CS^k_{ij} * sqrt(g_{kk}) / (sqrt(g_{ii})*sqrt(g_{jj})) */
@@ -437,7 +439,7 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    sCS[2][2][1] = sCS[2][1][2];
 
    SphericalHarmonics(N, M, r, trigs, W->rad, W->mu / W->rad, GravModel->C,
-                      GravModel->S, gradV);
+                      GravModel->S, GravModel->Norm, gradV);
    for (k = 0; k < 3; k++)
       for (i = 0; i < 3; i++)
          for (j = 0; j < 3; j++)
@@ -569,26 +571,8 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
       double PriMerAng = GetPriMerAng(OrbCenter, date);
       double fGeoN[3], fGeoR[3], PosN[3];
       MTxV(Nav->refCRN, PosR, PosN);
-      void (*SphericalHarmGravForce)(const char *ModelPath, long N, long M,
-                                     double C[19][19], double S[19][19],
-                                     double mass, double pbn[3],
-                                     double PriMerAng, double FgeoN[3]) = NULL;
-      switch (OrbCenter) {
-         case EARTH:
-            SphericalHarmGravForce = &EGM96;
-            break;
-         case MARS:
-            SphericalHarmGravForce = &GMM2B;
-            break;
-         case LUNA:
-            SphericalHarmGravForce = &GLGM2;
-            break;
-         default:
-            break;
-      }
-      SphericalHarmGravForce(ModelPath, GravModel->N, GravModel->M,
-                             GravModel->C, GravModel->S, mass, PosN, PriMerAng,
-                             fGeoN);
+      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, PriMerAng,
+                             mass, PosN, fGeoN);
       MxV(Nav->refCRN, fGeoN, fGeoR);
       for (j = 0; j < 3; j++)
          VelRdot[j] += fGeoR[j] / mass;

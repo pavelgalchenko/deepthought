@@ -22,9 +22,7 @@
 
 #define AU2m 149597870000.0
 
-#define ABS(X)    ((X) > 0 ? (X) : (-X))
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define ABS(X) ((X) > 0 ? (X) : (-X))
 
 #define IDX2(x, y, Ny)        ((x) * (Ny) + (y))
 #define IDX3(x, y, z, Ny, Nz) (((x) * (Ny) + (y)) * (Nz) + (z))
