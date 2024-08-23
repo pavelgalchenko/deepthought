@@ -235,8 +235,7 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
 /* offset angle of a given world.                                     */
 double GetPriMerAng(const long orbCenter, const struct DateType *date)
 {
-   // Subtract the memory location of the starting index of the World array from
-   // the memory location of W to get the index of W
+   // TODO: change for spice
    struct WorldType *W = &World[orbCenter];
    double PriMerAng    = 0.0;
 
@@ -293,7 +292,7 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
                                 const double K, double **C, double **S,
                                 double **Norm, double HV[3][3])
 {
-   double P[19][19], sdP[19][19];
+   double P[N + 1][M + 1], sdP[N + 1][M + 1];
    long n, m;
    double cphi[M + 1], sphi[M + 1];
    double Rern1[N + 1], sth, cth;
@@ -664,7 +663,7 @@ void getAeroForceAndTorque(struct DSMType *const DSM, double const CRB[3][3],
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
    // change much if torque is trivial
-   // Higher fidelity model requires information only in SCType
+   // Higher fidelity model requires information that exists only in SCType
 
    struct DSMNavType *Nav = &DSM->DsmNav;
    double worldWR[3] = {0.0}, VrelR[3] = {0.0};
@@ -696,7 +695,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
    // change much if torque is trivial
-   // Higher fidelity model requires information only in SCType
+   // Higher fidelity model requires information that exists only in SCType
 
    struct DSMNavType *Nav = &DSM->DsmNav;
    double worldWR[3] = {0.0}, VrelR[3] = {0.0};
