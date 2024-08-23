@@ -1949,7 +1949,6 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
 void getTrigSphericalCoords(const double pbe[3], double *const cth,
                             double *const sth, double *const cph,
                             double *const sph, double *const r)
-
 {
    *r                 = MAGV(pbe);
    const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);

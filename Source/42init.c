@@ -3418,7 +3418,7 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
          for (m = 0; m <= n; m++) {
             double tmpNorm = 1.0 / (2 * n + 1);
             if (m != 0)
-               tmpNorm *= (factDfact(n + m, n - m) / 2.0);
+               tmpNorm *= (double)(factDfact(n + m, n - m) / 2);
             GravModel->Norm[n][m] = sqrt(tmpNorm);
          }
       }
