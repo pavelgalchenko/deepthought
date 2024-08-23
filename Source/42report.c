@@ -353,7 +353,7 @@ void DSM_StateRot3BodyReport(void)
    static FILE **staterotfile;
    static long First = 1;
    long Isc;
-   char s[40];
+   char s[50];
    double full_N_state[6], posRot[3], velRot[3];
    struct LagrangeSystemType *LS;
 
