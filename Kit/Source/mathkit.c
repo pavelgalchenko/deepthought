@@ -1915,6 +1915,20 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
    } while (fabs(dx) > tol && k++ < nMax);
    return x;
 }
+/******************************************************************************/
+// Matrix Logarithm for SO(3)
+void logso3(double const R[3][3], double theta[3])
+{
+   double tMag, dSincTMag;
+
+   tMag      = acos((R[0][0] + R[1][1] + R[2][2] - 1) / 2.0);
+   dSincTMag = 2.0;
+   if (tMag > __DBL_EPSILON__)
+      dSincTMag *= sinc(tMag);
+   theta[0] = (R[2][1] - R[1][2]) / dSincTMag;
+   theta[1] = (R[0][2] - R[2][0]) / dSincTMag;
+   theta[2] = (R[1][0] - R[0][1]) / dSincTMag;
+}
 
 /* #ifdef __cplusplus
 ** }

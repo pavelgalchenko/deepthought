@@ -117,6 +117,7 @@ void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      double (*fdf)(double, double *), double *params);
+void logso3(double const R[3][3], double theta[3]);
 
 /*
 ** #ifdef __cplusplus
