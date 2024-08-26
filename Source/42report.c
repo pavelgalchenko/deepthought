@@ -11,8 +11,10 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#include "42.h"
+#ifdef _ENABLE_SPICE_
 #include "SpiceUsr.h"
+#endif
+#include "42.h"
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -498,6 +500,7 @@ void DSM_THRReport(void)
    }
 }
 /*********************************************************************/
+#ifdef _ENABLE_SPICE_
 void DSM_GroundTrackReport(void)
 {
    static FILE **gtrackfile;
@@ -535,6 +538,7 @@ void DSM_GroundTrackReport(void)
       fflush(gtrackfile[Isc]);
    }
 }
+#endif
 /*********************************************************************/
 void OrbPropReport(void)
 {
