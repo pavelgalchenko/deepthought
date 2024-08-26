@@ -48,6 +48,9 @@ GMSECFLAG =
 RBTFLAG =
 #RBTFLAG = -D _ENABLE_RBT_
 
+SPICEFLAG = -D _ENABLE_SPICE_
+# SPICEFLAG =
+
 ifeq ($(strip $(GMSECFLAG)),)
    GMSECDIR =
    GMSECINC =
@@ -61,6 +64,8 @@ else
 endif
 
 # Basic directories
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 HOMEDIR = ./
 PROJDIR = ./
 KITDIR = $(PROJDIR)Kit/
@@ -83,11 +88,18 @@ else
    LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
 endif
 # CSPICE library
-CSPICEDIR = $(PROJDIR)cspice/
+CSPICEDIR = $(current_dir)/cspice/
 CSPICEINC = $(CSPICEDIR)include/
 CSPICESRC = $(CSPICEDIR)src/
 CSPICELIB = $(CSPICEDIR)lib/
 
+ifeq ($(strip $(SPICEFLAG)),)
+   SPICEFLAGS =
+   SPICELIBFLAGS =
+else
+   SPICEFLAGS =  -I $(CSPICEINC)
+   SPICELIBFLAGS = -L $(CSPICELIB)
+endif
 
 ifeq ($(42PLATFORM),__APPLE__)
    # Mac Macros
@@ -119,6 +131,13 @@ ifeq ($(42PLATFORM),__APPLE__)
       LIBS =
       GUIOBJ =
    endif
+
+   ifneq ($(strip $(SPICEFLAG)),)
+      # g++ requires the lib prefix, so make a symbolic link to do this
+      $(shell ln -s $(CSPICELIB)cspice.a $(CSPICELIB)libcspice.a)
+      SPICELIBFLAGS += -lcspice
+   endif
+
    XWARN =
    EXENAME = 42
    CC = gcc
@@ -153,6 +172,11 @@ ifeq ($(42PLATFORM),__linux__)
       LIBS = -ldl -lm -lpthread
       LFLAGS =
    endif
+
+   ifneq ($(strip $(SPICEFLAG)),)
+      SPICELIBFLAGS += -l:cspice.a
+   endif
+
    XWARN = -Wno-unused-variable -Wno-unused-but-set-variable -Wno-stringop-overread
    EXENAME = 42
    CC = gcc
@@ -266,16 +290,15 @@ $(OBJ)42nos3.o $(OBJ)42dsm.o
 #ANSIFLAGS = -Wstrict-prototypes -pedantic -ansi -Werror
 ANSIFLAGS =
 
-CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG)
+CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG) $(SPICEFLAG)
 
 CFLAGS+= `pkg-config --cflags libfyaml`
 LFLAGS+= `pkg-config --libs libfyaml`
-SPICEFLAGS =  -I $(CSPICEDIR) -I $(CSPICEINC) -I $(CSPICESRC)
 
 ##########################  Rules to link 42  #############################
 
 42 : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
-	$(CC) $(LFLAGS) $(LDFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) -L $(CSPICELIB) -lcspice
+	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) $(SPICELIBFLAGS)
 
 Test : $(TESTOBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS)  -o Test $(TESTOBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB)

@@ -565,19 +565,18 @@ void Ephemerides(void)
    struct WorldType *W;
    struct RegionType *R;
    struct SCType *S;
-   double svh[3], p, pvn[3], SoP, Rp, GMST;
+   double svh[3], p, pvn[3], SoP, Rp;
    double r1[3], rh[3], vh[3];
    double ptn[10][3], vtn[10][3], ptw[3];
    double ZAxis[3] = {0.0, 0.0, 1.0};
    double EarthMoonBaryPosH[3], EarthMoonBaryVelH[3];
    struct LagrangeSystemType *LS;
-   long i, j, Ip, Im, Iw, Imb, Ir, Isc;
+   long i, j, Ip, Iw, Imb, Ir, Isc;
    long Ic;
    struct Cheb3DType *C;
    double u, dudJD, T[20], U[20], P, dPdu;
    double EMRAT = 81.30056907419062; /* Earth-Moon mass ratio */
    double PosJ[3], VelJ[3];
-   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
    double MagR1, MeanMotion;
 
    /* .. Locate Planets and Luna */
@@ -688,9 +687,11 @@ void Ephemerides(void)
       World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
    }
+#ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE) {
       LoadSpiceEphems(DynTime);
    }
+#endif
    else {
       printf("Bogus Ephem Option in Ephemerides.  Bailing out.\n");
       exit(1);
@@ -712,19 +713,22 @@ void Ephemerides(void)
       }
    }
 
-   if (EphemOption !=
-       EPH_SPICE) { // If we use SPICE, all rotations are handled via SPICE
+#ifdef _ENABLE_SPICE_
+   if (EphemOption != EPH_SPICE) {
+      // If we use SPICE, all rotations are handled via SPICE
       /* .. Earth rotation is a special case */
-      GMST                   = JD2GMST(UTC.JulDay);
-      World[EARTH].PriMerAng = TwoPi * GMST;
+      double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
+             C_TETE_J2000[3][3] = {{0.0}};
+      double GMST               = JD2GMST(UTC.JulDay);
+      World[EARTH].PriMerAng    = TwoPi * GMST;
       HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
       SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
       MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
 
       /* .. Other planets' moons */
-      for (Ip = MARS; Ip <= PLUTO; Ip++) {
-         if (World[Ip].Exists) {
-            for (Im = 0; Im < World[Ip].Nsat; Im++) {
+      for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
+         if (Ip != EARTH && World[Ip].Exists) {
+            for (long Im = 0; Im < World[Ip].Nsat; Im++) {
                Iw  = World[Ip].Sat[Im];
                Eph = &World[Iw].eph;
                Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN,
@@ -742,6 +746,7 @@ void Ephemerides(void)
          }
       }
    }
+#endif
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    for (i = 0; i < 3; i++) {
