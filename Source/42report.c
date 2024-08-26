@@ -294,9 +294,9 @@ void DSM_PlanetEphemReport(void)
    }
    for (Iw = 1; Iw < NWORLD; Iw++) { // Skip Sun
       if (World[Iw].Exists) {
-         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
+         fprintf(ephemfile[Iw], "%18.36le %18.36le %18.36le ",
                  World[Iw].PosH[0], World[Iw].PosH[1], World[Iw].PosH[2]);
-         fprintf(ephemfile[Iw], "%18.12le %18.12le %18.12le ",
+         fprintf(ephemfile[Iw], "%18.36le %18.36le %18.36le ",
                  World[Iw].VelH[0], World[Iw].VelH[1], World[Iw].VelH[2]);
          fprintf(ephemfile[Iw], "\n");
 
@@ -309,7 +309,7 @@ void DSM_PlanetEphemReport(void)
          Lng = atan2(svw[1], svw[0]) * R2D;
          Lat = asin(svw[2]) * R2D;
 
-         fprintf(suntrackfile[Iw], "%18.12le %18.12le ", Lat, Lng);
+         fprintf(suntrackfile[Iw], "%18.36le %18.36le ", Lat, Lng);
          fprintf(suntrackfile[Iw], "\n");
       }
       fflush(ephemfile[Iw]);
@@ -389,9 +389,9 @@ void DSM_StateRot3BodyReport(void)
                             World[LS->Body2].eph.VelN, SC[Isc].PosN,
                             SC[Isc].VelN, posRot, velRot);
 
-            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ", posRot[0],
+            fprintf(staterotfile[Isc], "%18.36le %18.36le %18.36le ", posRot[0],
                     posRot[1], posRot[2]);
-            fprintf(staterotfile[Isc], "%18.12le %18.12le %18.12le ", velRot[0],
+            fprintf(staterotfile[Isc], "%18.36le %18.36le %18.36le ", velRot[0],
                     velRot[1], velRot[2]);
             fprintf(staterotfile[Isc], "\n");
          }
@@ -740,17 +740,17 @@ void DSM_ATT_ControlReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.therr[0], SC[Isc].DSM.therr[1],
                  SC[Isc].DSM.therr[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.werr[0], SC[Isc].DSM.werr[1], SC[Isc].DSM.werr[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.Tcmd[0], SC[Isc].DSM.Tcmd[1], SC[Isc].DSM.Tcmd[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.dTcmd[0], SC[Isc].DSM.dTcmd[1],
                  SC[Isc].DSM.dTcmd[2]);
-         fprintf(attcontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.Mcmd[0], SC[Isc].DSM.Mcmd[1], SC[Isc].DSM.Mcmd[2]);
          fprintf(attcontrolfile[Isc], "\n");
       }
@@ -783,14 +783,14 @@ void DSM_POS_ControlReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.perr[0], SC[Isc].DSM.perr[1], SC[Isc].DSM.perr[2]);
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.verr[0], SC[Isc].DSM.verr[1], SC[Isc].DSM.verr[2]);
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.FcmdN[0], SC[Isc].DSM.FcmdN[1],
                  SC[Isc].DSM.FcmdN[2]);
-         fprintf(poscontrolfile[Isc], "%18.12le %18.12le %18.12le ",
+         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].DSM.FcmdB[0], SC[Isc].DSM.FcmdB[1],
                  SC[Isc].DSM.FcmdB[2]);
          fprintf(poscontrolfile[Isc], "\n");
@@ -837,14 +837,14 @@ void DSM_EphemReport(void)
          orb_anom = WrapTo2Pi(Orb[SC[Isc].RefOrb].anom);
          orb_time = TwoPi / sqrt(Orb[SC[Isc].RefOrb].mu /
                                  (pow(Orb[SC[Isc].RefOrb].SMA, 3)));
-         fprintf(ephemfile[Isc], "%18.12le ", orb_beta);
-         fprintf(ephemfile[Isc], "%18.12le ", orb_inc);
-         fprintf(ephemfile[Isc], "%18.12le ", orb_AOP);
-         fprintf(ephemfile[Isc], "%18.12le ", orb_RAAN);
-         fprintf(ephemfile[Isc], "%18.12le ", orb_anom);
-         fprintf(ephemfile[Isc], "%18.12le ", Orb[SC[Isc].RefOrb].SMA);
-         fprintf(ephemfile[Isc], "%18.12le ", Orb[SC[Isc].RefOrb].ecc);
-         fprintf(ephemfile[Isc], "%18.12le", orb_time);
+         fprintf(ephemfile[Isc], "%18.36le ", orb_beta);
+         fprintf(ephemfile[Isc], "%18.36le ", orb_inc);
+         fprintf(ephemfile[Isc], "%18.36le ", orb_AOP);
+         fprintf(ephemfile[Isc], "%18.36le ", orb_RAAN);
+         fprintf(ephemfile[Isc], "%18.36le ", orb_anom);
+         fprintf(ephemfile[Isc], "%18.36le ", Orb[SC[Isc].RefOrb].SMA);
+         fprintf(ephemfile[Isc], "%18.36le ", Orb[SC[Isc].RefOrb].ecc);
+         fprintf(ephemfile[Isc], "%18.36le", orb_time);
          fprintf(ephemfile[Isc], "\n");
       }
       fflush(ephemfile[Isc]);
@@ -955,7 +955,7 @@ void DSM_GroundTrackReport(void)
          MxV(W->CWN, SC[Isc].PosN, p);
          reclat_c(p, &junk, &Lng, &Lat);
 
-         fprintf(gtrackfile[Isc], "%18.12le %18.12le ", Lat * R2D, Lng * R2D);
+         fprintf(gtrackfile[Isc], "%18.36le %18.36le ", Lat * R2D, Lng * R2D);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);
@@ -1126,22 +1126,22 @@ void Report(void)
          if (SC[Isc].Exists) {
             D = &SC[Isc].Dyn;
             for (i = 0; i < D->Nu; i++)
-               fprintf(ufile[Isc], "%18.12le ", D->u[i]);
+               fprintf(ufile[Isc], "%18.36le ", D->u[i]);
             fprintf(ufile[Isc], "\n");
             for (i = 0; i < D->Nx; i++)
-               fprintf(xfile[Isc], "%18.12le ", D->x[i]);
+               fprintf(xfile[Isc], "%18.36le ", D->x[i]);
             fprintf(xfile[Isc], "\n");
             if (SC[Isc].FlexActive) {
                for (i = 0; i < D->Nf; i++)
-                  fprintf(uffile[Isc], "%18.12le ", D->uf[i]);
+                  fprintf(uffile[Isc], "%18.36le ", D->uf[i]);
                fprintf(uffile[Isc], "\n");
                for (i = 0; i < D->Nf; i++)
-                  fprintf(xffile[Isc], "%18.12le ", D->xf[i]);
+                  fprintf(xffile[Isc], "%18.36le ", D->xf[i]);
                fprintf(xffile[Isc], "\n");
             }
             if (SC[Isc].ConstraintsRequested) {
                for (i = 0; i < D->Nc; i++)
-                  fprintf(ConstraintFile[Isc], "%18.12le ",
+                  fprintf(ConstraintFile[Isc], "%18.36le ",
                           D->GenConstraintFrc[i]);
                fprintf(ConstraintFile[Isc], "\n");
             }
@@ -1161,9 +1161,9 @@ void Report(void)
             VelN[i] = SC[0].VelN[i] - wxR[i];
          MxV(W->CWN, SC[0].PosN, PosW);
          MxV(W->CWN, VelN, VelW);
-         fprintf(PosWfile, "%18.12le %18.12le %18.12le\n", PosW[0], PosW[1],
+         fprintf(PosWfile, "%18.36le %18.36le %18.36le\n", PosW[0], PosW[1],
                  PosW[2]);
-         fprintf(VelWfile, "%18.12le %18.12le %18.12le\n", VelW[0], VelW[1],
+         fprintf(VelWfile, "%18.36le %18.36le %18.36le\n", VelW[0], VelW[1],
                  VelW[2]);
          if (Orb[SC[0].RefOrb].Regime == ORB_FLIGHT) {
             MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].PosR, PosR);
@@ -1181,16 +1181,16 @@ void Report(void)
                  SC[0].B[0].qn[1], SC[0].B[0].qn[2], SC[0].B[0].qn[3]);
          fprintf(wbnfile, "%le %le %le\n", SC[0].B[0].wn[0], SC[0].B[0].wn[1],
                  SC[0].B[0].wn[2]);
-         fprintf(Hvnfile, "%18.12le %18.12le %18.12le\n", SC[0].Hvn[0],
+         fprintf(Hvnfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvn[0],
                  SC[0].Hvn[1], SC[0].Hvn[2]);
-         fprintf(Hvbfile, "%18.12le %18.12le %18.12le\n", SC[0].Hvb[0],
+         fprintf(Hvbfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvb[0],
                  SC[0].Hvb[1], SC[0].Hvb[2]);
-         fprintf(svnfile, "%18.12le %18.12le %18.12le\n", SC[0].svn[0],
+         fprintf(svnfile, "%18.36le %18.36le %18.36le\n", SC[0].svn[0],
                  SC[0].svn[1], SC[0].svn[2]);
-         fprintf(svbfile, "%18.12le %18.12le %18.12le\n", SC[0].svb[0],
+         fprintf(svbfile, "%18.36le %18.36le %18.36le\n", SC[0].svb[0],
                  SC[0].svb[1], SC[0].svb[2]);
-         fprintf(KEfile, "%18.12le\n", FindTotalKineticEnergy(&SC[0]));
-         // fprintf(ProjAreaFile,"%18.12le %18.12le\n",
+         fprintf(KEfile, "%18.36le\n", FindTotalKineticEnergy(&SC[0]));
+         // fprintf(ProjAreaFile,"%18.36le %18.36le\n",
          //    FindTotalProjectedArea(&SC[0],ZAxis),
          //    FindTotalUnshadedProjectedArea(&SC[0],ZAxis));
          MxM(CRL, SC[0].CLN, CRN);
