@@ -64,11 +64,14 @@ else
 endif
 
 # Basic directories
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 HOMEDIR = ./
 PROJDIR = ./
 KITDIR = $(PROJDIR)Kit/
 OBJ = $(PROJDIR)Object/
 INC = $(PROJDIR)Include/
+TESTS = $(PROJDIR)Tests/
 SRC = $(PROJDIR)Source/
 KITINC = $(KITDIR)Include/
 KITSRC = $(KITDIR)Source/
@@ -85,7 +88,7 @@ else
    LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
 endif
 # CSPICE library
-CSPICEDIR = $(PROJDIR)cspice/
+CSPICEDIR = $(current_dir)/cspice/
 CSPICEINC = $(CSPICEDIR)include/
 CSPICESRC = $(CSPICEDIR)src/
 CSPICELIB = $(CSPICEDIR)lib/
@@ -130,7 +133,9 @@ ifeq ($(42PLATFORM),__APPLE__)
    endif
 
    ifneq ($(strip $(SPICEFLAG)),)
-      SPICELIBFLAGS +=  -lcspice
+      # g++ requires the lib prefix, so make a symbolic link to do this
+      $(shell ln -s $(CSPICELIB)cspice.a $(CSPICELIB)libcspice.a)
+      SPICELIBFLAGS += -lcspice
    endif
 
    XWARN =
