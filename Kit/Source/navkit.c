@@ -708,9 +708,10 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
    for (int i = 0; i < 3; i++)
       VrelR[i] += VelR[i] + Nav->refVel[i];
 
-   double WindSpeed = 0, Coef1 = 0, VrelRHat[3] = {0.0};
-   WindSpeed = CopyUnitV(VrelR, VrelRHat);
-   Coef1     = -0.5 * AtmoDensity * WindSpeed * DSM->mass / Nav->ballisticCoef;
+   double VrelRHat[3]     = {0.0};
+   const double WindSpeed = CopyUnitV(VrelR, VrelRHat);
+   const double Coef1 =
+       -0.5 * AtmoDensity * WindSpeed * DSM->mass / Nav->ballisticCoef;
    for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
          dAeroFrcdVRel[i][j] = VrelRHat[i] * VrelRHat[j] * Coef1;
@@ -2738,9 +2739,9 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
       Nav->torqueB[i] = AC->IdealTrq[i];
    }
    for (j = 0; j < AC->Nthr; j++) {
-      struct AcThrType *thr = &AC->Thr[j];
+      const struct AcThrType *thr = &AC->Thr[j];
       if (thr->ThrustLevelCmd > 0.0) {
-         double appliedForce = thr->ThrustLevelCmd * thr->Fmax;
+         const double appliedForce = thr->ThrustLevelCmd * thr->Fmax;
          for (i = 0; i < 3; i++) {
             Nav->forceB[i]  += thr->Axis[i] * appliedForce;
             Nav->torqueB[i] += thr->rxA[i] * appliedForce;
@@ -2749,7 +2750,7 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
    }
 
    for (j = 0; j < AC->Nwhl; j++) {
-      struct AcWhlType *whl = &AC->Whl[j];
+      const struct AcWhlType *whl = &AC->Whl[j];
       if ((whlH[j] * signum(whl->Tcmd)) < whl->Hmax)
          for (i = 0; i < 3; i++)
             Nav->torqueB[i] -= whl->Axis[i] * whl->Tcmd;
@@ -2758,8 +2759,8 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
    MTxM(CRB, Nav->refCRN, CBN);
    MxV(CBN, AC->bvn, bvb);
    for (j = 0; j < AC->Nmtb; j++) {
-      struct AcMtbType *mtb = &AC->MTB[j];
-      double AxBvb[3]       = {0.0};
+      const struct AcMtbType *mtb = &AC->MTB[j];
+      double AxBvb[3]             = {0.0};
       VxV(mtb->Axis, bvb, AxBvb);
       for (i = 0; i < 3; i++)
          Nav->torqueB[i] += AxBvb[i] * mtb->Mcmd;
