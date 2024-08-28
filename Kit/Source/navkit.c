@@ -731,18 +731,15 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
-   double **jacobian;
-   struct DSMNavType *Nav;
-   struct AcGyroType *gyro;
+   struct DSMNavType *Nav  = &DSM->DsmNav;
+   struct AcGyroType *gyro = &AC->Gyro[Igyro];
    long i;
-
-   Nav  = &DSM->DsmNav;
-   gyro = &AC->Gyro[Igyro];
 
    if (B == NULL)
       B = CreateMatrix(1, 3);
 
-   jacobian = CreateMatrix(Nav->measTypes[GYRO_SENSOR][Igyro].dim, Nav->navDim);
+   double **jacobian =
+       CreateMatrix(Nav->measTypes[GYRO_SENSOR][Igyro].dim, Nav->navDim);
 
    switch (Nav->type) {
       case LIEKF_NAV:
@@ -795,21 +792,19 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Imag)
 {
-   double **jacobian, tmp[3] = {0.0}, tmp2[3] = {0.0};
+   double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
-   struct DSMNavType *Nav;
-   struct AcMagnetometerType *mag;
-   const double T2mG = 1.0e7; // tesla to milligauss
+   struct DSMNavType *Nav         = &DSM->DsmNav;
+   struct AcMagnetometerType *mag = &AC->MAG[Imag];
+   const double T2mG              = 1.0e7; // tesla to milligauss
    long i;
-
-   Nav = &DSM->DsmNav;
-   mag = &AC->MAG[Imag];
 
    if (B == NULL)
       B = CreateMatrix(1, 3);
 
-   jacobian = CreateMatrix(Nav->measTypes[MAG_SENSOR][Imag].dim, Nav->navDim);
+   double **jacobian =
+       CreateMatrix(Nav->measTypes[MAG_SENSOR][Imag].dim, Nav->navDim);
 
    switch (Nav->type) {
       case LIEKF_NAV:
@@ -849,22 +844,20 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Icss)
 {
-   double **jacobian, tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
+   double tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
-   struct DSMNavType *Nav;
-   struct AcCssType *css;
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   struct AcCssType *css  = &AC->CSS[Icss];
    long i;
-
-   Nav = &DSM->DsmNav;
-   css = &AC->CSS[Icss];
 
    if (B == NULL)
       B = CreateMatrix(1, 3);
 
    MxV(Nav->refCRN, AC->svn, svr);
 
-   jacobian = CreateMatrix(Nav->measTypes[CSS_SENSOR][Icss].dim, Nav->navDim);
+   double **jacobian =
+       CreateMatrix(Nav->measTypes[CSS_SENSOR][Icss].dim, Nav->navDim);
 
    switch (Nav->type) { // will need to figure something out with albedo if that
                         // is active
@@ -901,22 +894,19 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Ifss)
 {
-   double **jacobian, B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
-   struct AcFssType *fss;
+   double B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
+   struct AcFssType *fss     = &AC->FSS[Ifss];
    static double **tmpAssign = NULL;
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav    = &DSM->DsmNav;
    double svb[3], svs[3], CBN[3][3];
    double bhat[3] = {0.0}, hhat[3] = {0.0}, vhat[3] = {0.0};
    double svsb, svsh, svsv, bxsvs[3], hxsvs[3], vxsvs[3];
    double denomA, denomB;
-   long H_Axis, V_Axis, BoreAxis;
    long i, j;
 
-   Nav      = &DSM->DsmNav;
-   fss      = &AC->FSS[Ifss];
-   H_Axis   = fss->H_Axis;
-   V_Axis   = fss->V_Axis;
-   BoreAxis = fss->BoreAxis;
+   long H_Axis   = fss->H_Axis;
+   long V_Axis   = fss->V_Axis;
+   long BoreAxis = fss->BoreAxis;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(2, 3);
@@ -939,7 +929,8 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    VxV(hhat, svs, hxsvs);
    VxV(vhat, svs, vxsvs);
 
-   jacobian = CreateMatrix(Nav->measTypes[FSS_SENSOR][Ifss].dim, Nav->navDim);
+   double **jacobian =
+       CreateMatrix(Nav->measTypes[FSS_SENSOR][Ifss].dim, Nav->navDim);
 
    for (i = 0; i < 3; i++) {
       B[0][i] = (svsh * bxsvs[i] - svsb * hxsvs[i]) * denomA;
@@ -980,19 +971,16 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **startrackJacobianFun(struct AcType *const AC,
                               struct DSMType *const DSM, const long Ist)
 {
-   double **jacobian, tmpM[3][3] = {{0.0}}, CSB[3][3];
-   static double **tmpAssign = NULL;
-   struct DSMNavType *Nav;
-   struct AcStarTrackerType *st;
+   double tmpM[3][3]            = {{0.0}}, CSB[3][3];
+   static double **tmpAssign    = NULL;
+   struct DSMNavType *Nav       = &DSM->DsmNav;
+   struct AcStarTrackerType *st = &AC->ST[Ist];
    long i, j;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
 
-   Nav = &DSM->DsmNav;
-   st  = &AC->ST[Ist];
-
-   jacobian =
+   double **jacobian =
        CreateMatrix(Nav->measTypes[STARTRACK_SENSOR][Ist].errDim, Nav->navDim);
    Q2C(st->qb, CSB);
 
@@ -1026,19 +1014,17 @@ double **startrackJacobianFun(struct AcType *const AC,
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Igps)
 {
-   double **jacobian, tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}},
-                      tmp3[3][3] = {{0.0}}, tmpX[3][3] = {{0.0}},
-                      tmpV[3] = {0.0};
-   static double **tmpAssign  = NULL;
-   struct DSMNavType *Nav;
+   double tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}}, tmp3[3][3] = {{0.0}},
+          tmpX[3][3] = {{0.0}}, tmpV[3] = {0.0};
+   static double **tmpAssign = NULL;
+   struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j;
-
-   Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
 
-   jacobian = CreateMatrix(Nav->measTypes[GPS_SENSOR][Igps].dim, Nav->navDim);
+   double **jacobian =
+       CreateMatrix(Nav->measTypes[GPS_SENSOR][Igps].dim, Nav->navDim);
 
    switch (Nav->type) {
       case LIEKF_NAV:
@@ -1135,12 +1121,9 @@ double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                           const long Iaccel)
 {
-   double **jacobian;
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav = &DSM->DsmNav;
 
-   Nav = &DSM->DsmNav;
-
-   jacobian =
+   double **jacobian =
        CreateMatrix(Nav->measTypes[ACCEL_SENSOR][Iaccel].dim, Nav->navDim);
 
    switch (Nav->type) {
@@ -1162,15 +1145,12 @@ double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
                 const long Ig)
 {
-   struct AcGyroType *G;
-   struct DSMNavType *Nav;
-   double wbn[3], wrn[3], *gyroEst;
+   struct AcGyroType *G   = &AC->Gyro[Ig];
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   double wbn[3], wrn[3];
    long i;
 
-   gyroEst = calloc(1, sizeof(double));
-
-   Nav = &DSM->DsmNav;
-   G   = &AC->Gyro[Ig];
+   double *gyroEst = calloc(1, sizeof(double));
 
    MTxV(Nav->CRB, Nav->refOmega, wrn);
    for (i = 0; i < 3; i++)
@@ -1182,16 +1162,13 @@ double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
 double *magFun(struct AcType *const AC, struct DSMType *const DSM,
                const long Imag)
 {
-   struct AcMagnetometerType *MAG;
-   struct DSMNavType *Nav;
-   double bvb[3], bvn[3], CBN[3][3], *magEst;
+   struct AcMagnetometerType *MAG = &AC->MAG[Imag];
+   struct DSMNavType *Nav         = &DSM->DsmNav;
+   double bvb[3], bvn[3], CBN[3][3];
    const double T2mG = 1.0e7; // tesla to milligauss
    long i;
 
-   magEst = calloc(1, sizeof(double));
-
-   Nav = &DSM->DsmNav;
-   MAG = &AC->MAG[Imag];
+   double *magEst = calloc(1, sizeof(double));
 
    // Not to really be used.
    for (i = 0; i < 3; i++)
@@ -1207,14 +1184,11 @@ double *magFun(struct AcType *const AC, struct DSMType *const DSM,
 double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
                const long Icss)
 {
-   struct AcCssType *css;
-   struct DSMNavType *Nav;
-   double *IllumEst, svb[3], CBN[3][3];
+   struct AcCssType *css  = &AC->CSS[Icss];
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   double svb[3], CBN[3][3];
 
-   IllumEst = calloc(1, sizeof(double));
-
-   Nav = &DSM->DsmNav;
-   css = &AC->CSS[Icss];
+   double *IllumEst = calloc(1, sizeof(double));
 
    MTxM(Nav->CRB, Nav->refCRN, CBN);
    MxV(CBN, AC->svn, svb);
@@ -1226,18 +1200,15 @@ double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
 double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
                const long Ifss)
 {
-   struct AcFssType *fss;
-   struct DSMNavType *Nav;
-   double *SunAngEst, svb[3], svs[3], CBN[3][3];
-   long H_Axis, V_Axis, BoreAxis;
+   struct AcFssType *fss  = &AC->FSS[Ifss];
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   double svb[3], svs[3], CBN[3][3];
 
-   SunAngEst = calloc(3, sizeof(double));
+   double *SunAngEst = calloc(2, sizeof(double));
 
-   Nav      = &DSM->DsmNav;
-   fss      = &AC->FSS[Ifss];
-   H_Axis   = fss->H_Axis;
-   V_Axis   = fss->V_Axis;
-   BoreAxis = fss->BoreAxis;
+   long H_Axis   = fss->H_Axis;
+   long V_Axis   = fss->V_Axis;
+   long BoreAxis = fss->BoreAxis;
 
    MTxM(Nav->CRB, Nav->refCRN, CBN);
    MxV(CBN, AC->svn, svb);
@@ -1252,13 +1223,11 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
 double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
                      const long Ist)
 {
-   struct AcStarTrackerType *st;
-   struct DSMNavType *Nav;
-   double qbn[4], qrn[4], *qsnEst;
+   struct AcStarTrackerType *st = &AC->ST[Ist];
+   struct DSMNavType *Nav       = &DSM->DsmNav;
+   double qbn[4], qrn[4];
 
-   qsnEst = calloc(4, sizeof(double));
-   Nav    = &DSM->DsmNav;
-   st     = &AC->ST[Ist];
+   double *qsnEst = calloc(4, sizeof(double));
 
    C2Q(Nav->refCRN, qrn);
    QxQ(Nav->qbr, qrn, qbn);
@@ -1270,12 +1239,11 @@ double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
 double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
                const long Igps)
 {
-   struct DSMNavType *Nav;
-   double *posNVelNEst, tmp3V[3], tmpPosN[3], tmpVelN[3];
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   double tmp3V[3], tmpPosN[3], tmpVelN[3];
    long i;
 
-   posNVelNEst = calloc(6, sizeof(double));
-   Nav         = &DSM->DsmNav;
+   double *posNVelNEst = calloc(6, sizeof(double));
 
    for (i = 0; i < 3; i++)
       tmp3V[i] = Nav->PosR[i] + Nav->refPos[i];
@@ -1410,11 +1378,9 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
    double wrnd[3]            = {0.0};
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j, rowInd;
    enum States state;
-
-   Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -1659,8 +1625,8 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++) {
-                              // dAeroFrcdVRel[i][j] /= DSM->mass;
-                              tmpAssign[i][j] = dAeroFrcdVRel[i][j];
+                              dAeroFrcdVRel[i][j] /= DSM->mass;
+                              tmpAssign[i][j]      = dAeroFrcdVRel[i][j];
                            }
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
                                   3);
@@ -1823,11 +1789,9 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
    double wrnd[3]            = {0.0};
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j, rowInd;
    enum States state;
-
-   Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -2058,9 +2022,9 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      subMatAdd(Nav->jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      if (AeroActive) {
-                        // for (i = 0; i < 3; i++)
-                        //    for (j = 0; j < 3; j++)
-                        //       dAeroFrcdVRel[i][j] /= DSM->mass;
+                        for (i = 0; i < 3; i++)
+                           for (j = 0; j < 3; j++)
+                              dAeroFrcdVRel[i][j] /= DSM->mass;
                         AdjointT(CRB, dAeroFrcdVRel, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
@@ -2068,6 +2032,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
                                   3);
                         V2CrossM(worldWR, tmpM2);
+                        // TODO: double check these two lines
                         MxM(tmpM3, tmpM2, tmpM);
                         MxM(tmpM, CRB, tmpM3);
                         for (i = 0; i < 3; i++)
@@ -2201,11 +2166,9 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
    static double **tmpAssign = NULL;
    double wrnd[3]            = {0.0};
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j, rowInd;
    enum States state;
-
-   Nav = &DSM->DsmNav;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -2570,7 +2533,7 @@ void configureRefFrame(struct DSMNavType *const Nav,
          }
       } break;
       case ORI_OP: {
-         struct OrbitType const *O = Nav->refOriPtr;
+         const struct OrbitType *O = Nav->refOriPtr;
          for (i = 0; i < 3; i++) {
             targetPosN[i] = O->PosN[i];
             targetVelN[i] = O->VelN[i];
@@ -2873,7 +2836,7 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
 
                      if (AeroActive)
                         for (i = 0; i < 3; i++)
-                           VelRdot[i] += aeroFrc[i]; /// DSM->mass;
+                           VelRdot[i] += aeroFrc[i] / DSM->mass;
                      break;
                   }
                   default:
@@ -3200,9 +3163,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
 void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 {
    long i, j;
-   struct DSMNavType *Nav;
-
-   Nav = &DSM->DsmNav;
+   struct DSMNavType *Nav = &DSM->DsmNav;
 
    // TODO: will maybe need to do something to preserve information if a new Nav
    // filter is called
