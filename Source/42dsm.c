@@ -1665,7 +1665,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          // This is all to avoid calling SC[] directly in Nav
          {
             struct SCType *TrgS = &SC[Nav->refOriType];
-            Nav->refOriPtr      = &TrgS->DSM;
+            Nav->refOriPtr      = &TrgS->DSM.commState;
             Nav->refBodyPtr     = TrgS->B;
          }
       }
@@ -3096,7 +3096,7 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    KalmanFilt(AC, DSM);
-  const struct DateType *navDate = &Nav->Date;
+   const struct DateType *navDate = &Nav->Date;
    DSMState->Time = DateToTime(navDate->Year, navDate->Month, navDate->Day,
                                navDate->Hour, navDate->Minute, navDate->Second);
    // Overwrite data in AC structure with filtered data
