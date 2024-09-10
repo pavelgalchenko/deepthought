@@ -42,6 +42,8 @@ struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path)
    return (fy_node_by_path(node, path, -1, FYNWF_PTR_YAML));
 }
 /**********************************************************************/
+/* Get boolean value from YAML. Defaults to FALSE=0 if node cannot be */
+/* found.                                                             */
 long getYAMLBool(struct fy_node *node)
 {
    size_t strLen    = 0;

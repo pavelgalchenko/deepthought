@@ -27,31 +27,35 @@
 ** #endif
 */
 
-#define CAM_MENU_SIZE 18
-#define N_AXES        0
-#define L_AXES        1
-#define F_AXES        2
-#define B_AXES        3
-#define N_GRID        4
-#define L_GRID        5
-#define F_GRID        6
-#define B_GRID        7
-#define G_GRID        8
-#define CAM_FOV       9
-#define PROX_OPS      10
-#define TDRS          11
-#define CAM_SHADOWS   12
-#define ASTRO         13
-#define TRUTH_VECTORS 14
-#define FSW_VECTORS   15
-#define MILKY_WAY     16
-#define FERMI_SKY     17
+enum CAM_MENU {
+   N_AXES = 0,
+   L_AXES,
+   F_AXES,
+   B_AXES,
+   N_GRID,
+   L_GRID,
+   F_GRID,
+   B_GRID,
+   G_GRID,
+   CAM_FOV,
+   PROX_OPS,
+   TDRS,
+   CAM_SHADOWS,
+   ASTRO,
+   TRUTH_VECTORS,
+   FSW_VECTORS,
+   MILKY_WAY,
+   FERMI_SKY,
+};
+#define CAM_MENU_SIZE (FERMI_SKY + 1)
 
-#define MAP_MENU_SIZE 4
-#define MAP_CLOCK     0
-#define MAP_TLM_CLOCK 1
-#define MAP_CREDITS   2
-#define MAP_NIGHT     3
+enum MAP_MENU {
+   MAP_CLOCK = 0,
+   MAP_TLM_CLOCK,
+   MAP_CREDITS,
+   MAP_NIGHT,
+};
+#define MAP_MENU_SIZE (MAP_NIGHT + 1)
 
 #define MONOCULAR 0
 #define LEFTEYE   1
