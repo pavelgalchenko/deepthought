@@ -922,6 +922,7 @@ void DrawCamHUD(void)
       }
       glRasterPos2i(CamWidth - 80 - 4 * strlen(s), CamHeight - 104);
       DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
+      glLineWidth(1.0);
    }
 
    glColor4fv(Black);
