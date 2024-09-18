@@ -1623,8 +1623,6 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         tmpV2[i] = PosR[i] + Nav->refPos[i];
                      getDGravFrcDPos(World[orbCenter].mu, tmpV2, tmpM2);
                      if (GravPertActive) {
-                        for (i = 0; i < 3; i++)
-                           tmpV2[i] = PosR[i] + Nav->refPos[i];
                         NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
                                               tmpM);
                         for (i = 0; i < 3; i++)
@@ -2576,12 +2574,12 @@ void configureRefFrame(struct DSMNavType *const Nav,
       default: {
          // make sure if you do sc relative nav, you initialize that sc's nav
          // before you start this sc's
-         struct DSMStateType *TrgState = Nav->refOriPtr;
-         struct BodyType *TrgSB        = Nav->refBodyPtr;
+         const struct DSMStateType *TrgState = Nav->refOriPtr;
+         const struct BodyType *TrgSB        = Nav->refBodyPtr;
          for (i = 0; i < 3; i++) {
             // TODO: pn is position of body origin relative to sc origin or cm??
-            targetPosN[i] = TrgState->PosN[i] + TrgSB[Nav->refOriBody].pn[i];
-            targetVelN[i] = TrgState->VelN[i] + TrgSB[Nav->refOriBody].vn[i];
+            targetPosN[i] = TrgState->PosN[i] + TrgSB->pn[i];
+            targetVelN[i] = TrgState->VelN[i] + TrgSB->vn[i];
          }
       } break;
    }
@@ -2626,7 +2624,7 @@ void configureRefFrame(struct DSMNavType *const Nav,
    }
 
    if (Nav->Init == TRUE && fabs(1.0 - Nav->refLerpAlpha) > __DBL_EPSILON__) {
-      double dt = (1.0 - Nav->refLerpAlpha) * Nav->DT;
+      const double dt = (1.0 - Nav->refLerpAlpha) * Nav->DT;
       for (i = 0; i < 3; i++)
          Nav->refAccel[i] = (targetVelN[i] - Nav->refVel[i]) / dt;
    }

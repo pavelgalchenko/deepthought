@@ -16,6 +16,8 @@
 #include "42gl.h"
 #undef EXTERN
 
+double **GetStateLinTForm(struct DSMNavType *);
+
 /* #ifdef __cplusplus
 ** namespace _42 {
 ** using namespace Kit;
@@ -429,6 +431,94 @@ void GeomToDisplayLists(struct GeomType *G)
          }
       }
    }
+   glEndList();
+
+   /* .. Opaque Alpha Polys Pass */
+   G->OpaqueAlphaListTag = glGenLists(1);
+   glNewList(G->OpaqueAlphaListTag, GL_COMPILE);
+
+   glUniform1i(ColorTexSamplerLoc, 0);
+   glUniform1i(BumpTexSamplerLoc, 1);
+   glUniform1i(EnvMapSamplerLoc, 2);
+   glUniform1i(NoiseTexSamplerLoc, 3);
+   glUniform1i(SpectrumTexSamplerLoc, 4);
+   // glUniform1i(ShadowSamplerLoc, 5);
+
+   for (Im = 0; Im < G->Nmatl; Im++) {
+      M = &Matl[G->Matl[Im]];
+      if (M->Kd[3] == 1.0) { /* Draw only opaque polys on this pass */
+         float KaAlpha[4], KdAlpha[4], KsAlpha[4], KeAlpha[4];
+         for (int i = 0; i < 3; i++) {
+            KaAlpha[i] = M->Ka[i];
+            KdAlpha[i] = M->Kd[i];
+            KsAlpha[i] = M->Ks[i];
+            KeAlpha[i] = M->Ke[i];
+         }
+         const float alpha = 0.4f;
+         KaAlpha[3]        = alpha;
+         KdAlpha[3]        = alpha;
+         KsAlpha[3]        = alpha;
+         KeAlpha[3]        = alpha;
+
+         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, KaAlpha);
+         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, KdAlpha);
+         glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, KsAlpha);
+         glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, KeAlpha);
+         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, M->Ns);
+         glUniform1i(ColorTexEnabledLoc, FALSE);
+         glUniform1i(BumpTexEnabledLoc, FALSE);
+         glUniform1i(ReflectEnabledLoc, FALSE);
+         glUniform1i(NoiseColEnabledLoc, FALSE);
+         glUniform1i(NoiseBumpEnabledLoc, FALSE);
+
+         /* Sweep for triangles */
+         glBegin(GL_TRIANGLES);
+         for (Ip = 0; Ip < G->Npoly; Ip++) {
+            P = &G->Poly[Ip];
+            if (P->Matl == G->Matl[Im]) {
+               if (P->Nv == 3) {
+                  for (Iv = 0; Iv < 3; Iv++) {
+                     if (P->HasNorm)
+                        glNormal3dv(G->Vn[P->Vn[Iv]]);
+                     glVertex3dv(G->V[P->V[Iv]]);
+                  }
+               }
+            }
+         }
+         glEnd();
+         /* Sweep for quads */
+         glBegin(GL_QUADS);
+         for (Ip = 0; Ip < G->Npoly; Ip++) {
+            P = &G->Poly[Ip];
+            if (P->Matl == G->Matl[Im]) {
+               if (P->Nv == 4) {
+                  for (Iv = 0; Iv < 4; Iv++) {
+                     if (P->HasNorm)
+                        glNormal3dv(G->Vn[P->Vn[Iv]]);
+                     glVertex3dv(G->V[P->V[Iv]]);
+                  }
+               }
+            }
+         }
+         glEnd();
+         /* Sweep for all other polygons */
+         for (Ip = 0; Ip < G->Npoly; Ip++) {
+            P = &G->Poly[Ip];
+            if (P->Matl == G->Matl[Im]) {
+               if (P->Nv > 4) {
+                  glBegin(GL_POLYGON);
+                  for (Iv = 0; Iv < P->Nv; Iv++) {
+                     if (P->HasNorm)
+                        glNormal3dv(G->Vn[P->Vn[Iv]]);
+                     glVertex3dv(G->V[P->V[Iv]]);
+                  }
+                  glEnd();
+               }
+            }
+         }
+      }
+   }
+
    glEndList();
 
    /* .. SeeThru Polys Pass */
@@ -1861,6 +1951,10 @@ void OpaquePass(void)
    struct ShadowFBOType *SM;
    long Ir;
    double PosR[3];
+   static GLUquadric *Sphere = NULL;
+   if (Sphere == NULL) {
+      Sphere = gluNewQuadric();
+   }
 
    SM = &ShadowMap;
 
@@ -1907,6 +2001,84 @@ void OpaquePass(void)
          }
       }
    }
+   glDisable(GL_LIGHTING);
+   glDisable(GL_CULL_FACE);
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+         struct DSMType *dsm = &S->DSM;
+         if (CamShow[NAV_STATE] && dsm->DsmNav.NavigationActive) {
+            struct DSMStateType *dsm_state = &dsm->state;
+            for (Ib = 0; Ib < S->Nb; Ib++) {
+               B                            = &S->B[Ib];
+               G                            = &Geom[B->GeomTag];
+               float navBodyModelMatrix[16] = {0.0};
+               double BCN[3][3]             = {{0.0}};
+               if (Ib == 0) {
+                  for (int i = 0; i < 3; i++) {
+                     for (int j = 0; j < 3; j++) {
+                        BCN[i][j] = dsm_state->CBN[i][j];
+                     }
+                  }
+               }
+               else {
+                  double CbB[3][3] = {{0.0}};
+                  MxMT(B->CN, S->B[0].CN, CbB);
+                  MxM(CbB, dsm_state->CBN, BCN);
+               }
+               double pcmn[3] = {0.0}, pbn[3] = {0.0};
+               if (S->RefPt == REFPT_CM) {
+                  MTxV(BCN, B->cm, pcmn);
+               }
+               else {
+                  for (int i = 0; i < 3; i++)
+                     pcmn[i] = 0.0;
+               }
+               for (int i = 0; i < 3; i++)
+                  pbn[i] = dsm_state->PosR[i] + B->pn[i] - pcmn[i];
+               BuildModelMatrix(BCN, pbn, navBodyModelMatrix);
+               if (Ib == 0 && dsm->DsmNav.stateActive[POS_STATE]) {
+                  struct DSMNavType *Nav = &dsm->DsmNav;
+
+                  const long navDim = Nav->navDim;
+                  double **linTForm = GetStateLinTForm(&SC[Isc].DSM.DsmNav);
+
+                  MxMG(linTForm, Nav->S, Nav->NxN, navDim, navDim, navDim);
+                  MxMTG(Nav->NxN, Nav->NxN, Nav->NxN2, navDim, navDim, navDim);
+                  DestroyMatrix(linTForm);
+
+                  double **P_pos = CreateMatrix(3, 3), **V = CreateMatrix(3, 3);
+                  double d[3] = {0.0};
+                  for (int i = 0; i < 3; i++)
+                     for (int j = 0; j < 3; j++)
+                        P_pos[i][j] = Nav->P[Nav->navInd[POS_STATE] + i]
+                                            [Nav->navInd[POS_STATE] + j];
+                  jacobiEValueEVector(P_pos, 3, 150, V, d);
+
+                  double rot[3][3] = {{0.0}};
+                  for (int i = 0; i < 3; i++)
+                     for (int j = 0; j < 3; j++)
+                        rot[i][j] = V[j][i];
+                  float modMat[16] = {0.0f};
+                  BuildModelMatrix(rot, pbn, modMat);
+
+                  DestroyMatrix(P_pos);
+                  DestroyMatrix(V);
+
+                  glPushMatrix();
+                  glMultMatrixf(modMat);
+                  glScaled(sqrt(d[0]), sqrt(d[1]), sqrt(d[2]));
+                  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                  gluSphere(Sphere, 3.0, 8, 8);
+                  glPopMatrix();
+                  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+               }
+            }
+         }
+      }
+   }
+   glEnable(GL_CULL_FACE);
+   glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
 void SeeThruPass(void)
@@ -1957,6 +2129,47 @@ void SeeThruPass(void)
             glPushMatrix();
             glMultMatrixf(B->ModelMatrix);
             glCallList(G->SeeThruListTag);
+            glPopMatrix();
+         }
+      }
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S                   = &SC[Isc];
+      struct DSMType *dsm = &S->DSM;
+      if (CamShow[NAV_STATE] && dsm->DsmNav.NavigationActive) {
+         struct DSMStateType *dsm_state = &dsm->state;
+         for (Ib = 0; Ib < S->Nb; Ib++) {
+            B                            = &S->B[Ib];
+            G                            = &Geom[B->GeomTag];
+            float navBodyModelMatrix[16] = {0.0};
+            double BCN[3][3]             = {{0.0}};
+            if (Ib == 0) {
+               for (int i = 0; i < 3; i++) {
+                  for (int j = 0; j < 3; j++) {
+                     BCN[i][j] = dsm_state->CBN[i][j];
+                  }
+               }
+            }
+            else {
+               double CbB[3][3] = {{0.0}};
+               MxMT(B->CN, S->B[0].CN, CbB);
+               MxM(CbB, dsm_state->CBN, BCN);
+            }
+            double pcmn[3] = {0.0}, pbn[3] = {0.0};
+            if (S->RefPt == REFPT_CM) {
+               MTxV(BCN, B->cm, pcmn);
+            }
+            else {
+               for (int i = 0; i < 3; i++)
+                  pcmn[i] = 0.0;
+            }
+            for (int i = 0; i < 3; i++)
+               pbn[i] = dsm_state->PosR[i] + B->pn[i] - pcmn[i];
+            BuildModelMatrix(BCN, pbn, navBodyModelMatrix);
+            glPushMatrix();
+            glMultMatrixf(navBodyModelMatrix);
+            glCallList(G->OpaqueAlphaListTag);
             glPopMatrix();
          }
       }
@@ -3657,7 +3870,8 @@ void DrawSphereHUD(void)
       DrawBitmapString(GLUT_BITMAP_8_BY_13, top[i]);
    }
 
-   /* Text displayed for spots 7-10 changes based on which axis is selected */
+   /* Text displayed for spots 7-10 changes based on which axis is selected
+    */
    if (W->Spot[0].Selected == 1 || W->Spot[1].Selected == 1)
       j = 0;
    else if (W->Spot[2].Selected == 1 || W->Spot[3].Selected == 1)
@@ -5364,6 +5578,8 @@ char *CamShowNodeLabel(const enum CAM_MENU menu_it)
          return "/Truth Vectors";
       case FSW_VECTORS:
          return "/FSW Vectors";
+      case NAV_STATE:
+         return "/Nav State";
       case MILKY_WAY:
          return "/Milky Way";
       case FERMI_SKY:
@@ -5434,8 +5650,8 @@ void ReadGraphicsInpFile(void)
    }
    POV.Host.Type = DecodeString(response);
    if (!fy_node_scanf(node, "/Target/Type %119s", response)) {
-      printf(
-          "Could not find Target Type for POV in Inp_Graphics. Exiting...\n");
+      printf("Could not find Target Type for POV in Inp_Graphics. "
+             "Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.Target.Type = DecodeString(response);
@@ -5511,7 +5727,7 @@ void ReadGraphicsInpFile(void)
    }
 
    node = fy_node_by_path_def(node, "/Cam Show");
-   for (int i = 0; i < CAM_MENU_SIZE; i++) {
+   for (enum CAM_MENU i = 0; i < CAM_MENU_SIZE; i++) {
       char show[50] = {0}, label[50] = {0};
       const char *camNodeLabel = CamShowNodeLabel(i);
       strcat(show, camNodeLabel);
@@ -5608,9 +5824,9 @@ void LoadFOVs(void)
       }
 
       if (FOV[Ifov].Width >= 180.0) {
-         printf(
-             "FOV[%ld] Width >= 180 deg.  This is not allowed.  Bailing out.\n",
-             Ifov);
+         printf("FOV[%ld] Width >= 180 deg.  This is not allowed.  Bailing "
+                "out.\n",
+                Ifov);
          exit(1);
       }
       if (FOV[Ifov].Height >= 180.0) {

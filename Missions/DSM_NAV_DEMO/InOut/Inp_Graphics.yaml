@@ -171,6 +171,9 @@ Cam:
     FSW Vectors:
       Show: false
       Label: FSW Vectors
+    Nav State:
+      Show: true
+      Label: Nav State
     Milky Way:
       Show: true
       Label: Milky Way

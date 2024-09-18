@@ -1666,7 +1666,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          {
             struct SCType *TrgS = &SC[Nav->refOriType];
             Nav->refOriPtr      = &TrgS->DSM.commState;
-            Nav->refBodyPtr     = TrgS->B;
+            Nav->refBodyPtr     = &TrgS->B[Nav->refOriBody];
          }
       }
       else {

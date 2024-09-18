@@ -111,12 +111,12 @@ Joints:
   #       Pos wrt Inner Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Pos wrt Outer Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Parm File Name:             [[NONE/filename]]
-    []
+  []
 Wheel Params:
   # -------------------------------Wheel Parameters--------------------------------
   #   Drag:     [[true/false]]
   #   Jitter:   [[true/false]]
-    {Drag: false, Jitter: false}
+  { Drag: false, Jitter: false }
 Wheels:
   # ------------------------------------Wheels-------------------------------------
   # ((Sequence, one element for each wheel))
@@ -618,7 +618,7 @@ GPSs:
   #       Node:           [[Node Index]]
   - GPS:
       Index: 0
-      Sample Time: 0.1
+      Sample Time: 1.0
       Position Noise: 0.63282032
       Velocity Noise: 0.0173
       Time Noise: 0.0
@@ -639,4 +639,4 @@ Accelerometers:
   #       DV Noise:                   [[]]    [[m/s]]
   #       Initial Bias:               [[]]    [[m/s^2]]
   #       Node:                       [[Node Index]]""",
-    []
+  []
