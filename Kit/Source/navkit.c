@@ -2528,6 +2528,26 @@ double **GetStateLinTForm(struct DSMNavType *const Nav)
    return (tForm);
 }
 
+/******************************************************************************/
+/* Use unscented transform to calculate statistics in typical error definition*/
+/* WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP WIP*/
+/* Right now only does linear transformation                                  */
+void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean, double **P)
+{
+   const long navDim = Nav->navDim;
+   switch (Nav->type) {
+      default: {
+         for (long i = 0; i < navDim; i++)
+            mean[i] = 0;
+         double **linTForm = GetStateLinTForm(Nav);
+
+         MxMG(linTForm, Nav->S, Nav->NxN, navDim, navDim, navDim);
+         MxMTG(Nav->NxN, Nav->NxN, P, navDim, navDim, navDim);
+         DestroyMatrix(linTForm);
+      } break;
+   }
+}
+
 void configureRefFrame(struct DSMNavType *const Nav,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset)

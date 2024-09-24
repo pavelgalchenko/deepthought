@@ -542,13 +542,10 @@ void DSM_NAV_StateReport(void)
             fflush(timeFile[Isc]);
          }
 
-         long navDim       = Nav->navDim;
-         double **linTForm = GetStateLinTForm(&SC[Isc].DSM.DsmNav);
+         const long navDim = Nav->navDim;
+         double m[navDim];
+         UnscentedStateTForm(Nav, m, Nav->P);
 
-         MxMTG(Nav->S, Nav->S, Nav->P, navDim, navDim, navDim);
-         MxMG(linTForm, Nav->P, Nav->NxN, navDim, navDim, navDim);
-         MxMTG(Nav->NxN, linTForm, Nav->NxN2, navDim, navDim, navDim);
-         DestroyMatrix(linTForm);
          for (state = INIT_STATE; state <= FIN_STATE; state++) {
             int stateInd = Nav->navInd[state];
             if (Nav->stateActive[state] == TRUE) {

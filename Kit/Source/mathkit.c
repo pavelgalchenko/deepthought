@@ -2542,7 +2542,7 @@ long isSignificant(int const m, int const n, double **A, double **B)
 /******************************************************************************/
 // Calculates eigenvalues of real symmetric matrix by Jacobi iteration,
 // adapted from John Burkardt https://people.sc.fsu.edu/~jburkardt
-// TODO: d in decreasing order?
+// eigenvalues are in descending order
 void jacobiEValue(double **A, int const n, int const maxIter, double d[n])
 {
    double *bw, *zw, c, g, gapq, h;
@@ -2680,7 +2680,7 @@ void jacobiEValue(double **A, int const n, int const maxIter, double d[n])
 /******************************************************************************/
 // Calculates eigenvalues & eigenvectors of real symmetric matrix by Jacobi
 // iteration, adapted from John Burkardt https://people.sc.fsu.edu/~jburkardt
-// TODO: d in decreasing order?
+// eigenvalues & eigenvectors are in descending order
 void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
                          double d[n])
 {
@@ -2809,12 +2809,12 @@ void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
       }
    }
    /*
-   Ascending sort the eigenvalues and eigenvectors.
+   Descending sort the eigenvalues and eigenvectors.
    */
    for (k = 0; k < n - 1; k++) {
       m = k;
       for (l = k + 1; l < n; l++) {
-         if (d[l] < d[m]) {
+         if (d[l] > d[m]) {
             m = l;
          }
       }
@@ -2828,6 +2828,19 @@ void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
             V[i][m] = V[i][k];
             V[i][k] = w;
          }
+      }
+   }
+   /*
+   Normalize eigenvectors
+   */
+   for (k = 0; k < n; k++) {
+      double norm = 0;
+      for (l = 0; l < n; l++)
+         norm += V[k][l] * V[k][l];
+      norm = sqrt(norm);
+      if (norm > __DBL_EPSILON__) {
+         for (l = 0; l < n; l++)
+            V[k][l] /= norm;
       }
    }
 
