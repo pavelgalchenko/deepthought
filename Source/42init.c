@@ -3099,7 +3099,7 @@ void InitSpacecraft(struct SCType *S)
                            "/Quantization %lf "
                            "/DV Random Walk %lf "
                            "/Bias Stability %lf "
-                           "/Bias Stability TimeSpan %lf "
+                           "/Bias Stability Timespan %lf "
                            "/DV Noise %lf "
                            "/Initial Bias %lf "
                            "/Node %ld",
