@@ -16,7 +16,8 @@
 #include "42gl.h"
 #undef EXTERN
 
-double **GetStateLinTForm(struct DSMNavType *);
+void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
+                         double **P);
 
 /* #ifdef __cplusplus
 ** namespace _42 {
@@ -2041,11 +2042,8 @@ void OpaquePass(void)
                   struct DSMNavType *Nav = &dsm->DsmNav;
 
                   const long navDim = Nav->navDim;
-                  double **linTForm = GetStateLinTForm(&SC[Isc].DSM.DsmNav);
-
-                  MxMG(linTForm, Nav->S, Nav->NxN, navDim, navDim, navDim);
-                  MxMTG(Nav->NxN, Nav->NxN, Nav->NxN2, navDim, navDim, navDim);
-                  DestroyMatrix(linTForm);
+                  double m[navDim];
+                  UnscentedStateTForm(Nav, m, Nav->P);
 
                   double **P_pos = CreateMatrix(3, 3), **V = CreateMatrix(3, 3);
                   double d[3] = {0.0};

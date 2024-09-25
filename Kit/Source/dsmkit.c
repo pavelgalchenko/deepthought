@@ -66,10 +66,10 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, GYRO_SENSOR, Ig);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
-            meas->data[0] = G->Rate * R2D;
+            meas                  = CreateMeas(Nav, GYRO_SENSOR, Ig);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = G->Rate * R2D;
             appendMeas(measList, meas);
          }
       }
@@ -136,10 +136,10 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, MAG_SENSOR, Im);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
-            meas->data[0] = M->Field * T2mG;
+            meas                  = CreateMeas(Nav, MAG_SENSOR, Im);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = M->Field * T2mG;
             appendMeas(measList, meas);
          }
       }
@@ -205,10 +205,10 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, CSS_SENSOR, Ic);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
-            meas->data[0] = Css->Illum;
+            meas                  = CreateMeas(Nav, CSS_SENSOR, Ic);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = Css->Illum;
             appendMeas(measList, meas);
          }
       }
@@ -289,11 +289,11 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, FSS_SENSOR, Ifss);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
-            meas->data[0] = FSS->SunAng[0];
-            meas->data[1] = FSS->SunAng[1];
+            meas                  = CreateMeas(Nav, FSS_SENSOR, Ifss);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = FSS->SunAng[0];
+            meas->data[1]         = FSS->SunAng[1];
             appendMeas(measList, meas);
          }
       }
@@ -341,9 +341,9 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, STARTRACK_SENSOR, Ist);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
+            meas                  = CreateMeas(Nav, STARTRACK_SENSOR, Ist);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
             for (i = 0; i < 4; i++)
                meas->data[i] = ST->qn[i];
             appendMeas(measList, meas);
@@ -399,9 +399,9 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, GPS_SENSOR, Igps);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
+            meas                  = CreateMeas(Nav, GPS_SENSOR, Igps);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
             for (i = 0; i < 3; i++) {
                meas->data[i]     = G->PosN[i];
                meas->data[3 + i] = G->VelN[i];
@@ -447,10 +447,10 @@ struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas          = CreateMeas(Nav, ACCEL_SENSOR, Iacc);
-            meas->step    = Nav->step;
-            meas->subStep = Nav->subStep;
-            meas->data[0] = Acc->Acc;
+            meas                  = CreateMeas(Nav, ACCEL_SENSOR, Iacc);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = Acc->Acc;
             appendMeas(measList, meas);
          }
       }

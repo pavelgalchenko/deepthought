@@ -259,8 +259,8 @@ struct AcType;
 struct DSMMeasType {
    /*~ Parameters ~*/
    double time;
-   long step;
-   long subStep;
+   ccsdsCoarse ccsdsSeconds;
+   ccsdsFine ccsdsSubseconds;
    double *data;
 
    /*~ Internal Variables ~*/
@@ -346,21 +346,22 @@ struct DSMNavType {
 
    /*~ Internal Variables ~*/
    long Init;
-   long subStep;
-   long subStepMax;
+   unsigned long steps;
+   double subStepSize;
+   long subStepSteps; // number of ccsdsSubseconds counts per subStepSize
+   ccsdsCoarse ccsdsSeconds;
+   ccsdsFine ccsdsSubseconds;
    long stateDim; // total dimension of navigation state space
    long navDim;   // total dimension of estimation error space
    long stateSize[FIN_STATE + 1];
    long navSize[FIN_STATE + 1];
    long stateInd[FIN_STATE + 1];
    long navInd[FIN_STATE + 1];
-   long step;
    struct DateType Date0;
    struct DateType Date;
    double DT;
-   double subStepSize;
    double **P; // Estimation Error Covariance
-   double **S; // U from UDU factorization with D along diagonal
+   double **S; // Lower-triangular Cholesky factorization of P
    double *delta;
 
    // maybe will make this an array with the size being the number of bodys for
@@ -387,7 +388,8 @@ struct DSMNavType {
    double **NxN2;     // Pre-allocated navDim x navDim matrix for use in
                       // intermediary steps
    double **jacobian; // EOM jacobian
-   double **STM;      // state transition matrix
+   double **STM;      // state transition matrix for subStepSize
+   double **STMStep;  // STM for +1 CCSDS counts
    double **M;        // dynamics noise mapping matrix
    double *sqrQ;      // Diagonal elements of noise covariance
    void (*EOMJacobianFun)(struct AcType *const, struct DSMType *const,

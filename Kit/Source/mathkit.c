@@ -2542,7 +2542,7 @@ long isSignificant(int const m, int const n, double **A, double **B)
 /******************************************************************************/
 // Calculates eigenvalues of real symmetric matrix by Jacobi iteration,
 // adapted from John Burkardt https://people.sc.fsu.edu/~jburkardt
-// TODO: d in decreasing order?
+// eigenvalues are in descending order
 void jacobiEValue(double **A, int const n, int const maxIter, double d[n])
 {
    double *bw, *zw, c, g, gapq, h;
@@ -2680,7 +2680,7 @@ void jacobiEValue(double **A, int const n, int const maxIter, double d[n])
 /******************************************************************************/
 // Calculates eigenvalues & eigenvectors of real symmetric matrix by Jacobi
 // iteration, adapted from John Burkardt https://people.sc.fsu.edu/~jburkardt
-// TODO: d in decreasing order?
+// eigenvalues & eigenvectors are in descending order
 void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
                          double d[n])
 {
@@ -2809,12 +2809,12 @@ void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
       }
    }
    /*
-   Ascending sort the eigenvalues and eigenvectors.
+   Descending sort the eigenvalues and eigenvectors.
    */
    for (k = 0; k < n - 1; k++) {
       m = k;
       for (l = k + 1; l < n; l++) {
-         if (d[l] < d[m]) {
+         if (d[l] > d[m]) {
             m = l;
          }
       }
@@ -2830,9 +2830,89 @@ void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
          }
       }
    }
+   /*
+   Normalize eigenvectors
+   */
+   for (k = 0; k < n; k++) {
+      double norm = 0;
+      for (l = 0; l < n; l++)
+         norm += V[k][l] * V[k][l];
+      norm = sqrt(norm);
+      if (norm > __DBL_EPSILON__) {
+         for (l = 0; l < n; l++)
+            V[k][l] /= norm;
+      }
+   }
 
    free(bw);
    free(zw);
+}
+/******************************************************************************/
+double **matPow(const long n, double **A, const unsigned long p)
+// computes the positive pth power of nxn matrix A
+{
+   double **out = CreateMatrix(n, n);
+   double **B   = CreateMatrix(n, n);
+   double **C   = CreateMatrix(n, n);
+   for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+         C[i][j] = A[i][j];
+
+   unsigned long iterator = p;
+   for (long i = 0; i < n; i++)
+      out[i][i] = 1.0;
+
+   while (iterator > 0) {
+      if (iterator & 1) {
+         MxMG(out, C, B, n, n, n);
+         for (int i = 0; i < n; i++)
+            for (int j = 0; j < n; j++)
+               out[i][j] = B[i][j];
+      }
+      // swap pointers for temporaries; should be faster than assigning elements
+      // of C to B
+      double **t = C;
+      C          = B;
+      B          = t;
+
+      MxMG(B, B, C, n, n, n);
+      iterator = iterator >> 1;
+   }
+   DestroyMatrix(B);
+   DestroyMatrix(C);
+   return out;
+}
+/******************************************************************************/
+/* compute the positive pth integer power of nxn matrix A with precomputed    */
+/* positive sth power of A                                                    */
+void QuickMatPow(const long n, double **A, double **As, const long s,
+                 double **Ap, const long p)
+{
+   double **Ar = NULL;
+   if (s < 2) {
+      double **tmp = matPow(n, A, p);
+      for (long i = 0; i < n; i++)
+         for (long j = 0; j < n; j++)
+            Ap[i][j] = tmp[i][j];
+      return;
+   }
+
+   long q       = p / s;
+   const long r = p % s;
+   if (s - r < r) {
+      q++;
+      double **Ainv = CreateMatrix(n, n);
+      MINVG(A, Ainv, n);
+      Ar = matPow(n, Ainv, s - r);
+      DestroyMatrix(Ainv);
+   }
+   else {
+      Ar = matPow(n, A, r);
+   }
+   double **Asq = matPow(n, As, q);
+   MxMG(Asq, Ar, Ap, n, n, n);
+   DestroyMatrix(Ar);
+   DestroyMatrix(Asq);
 }
 
 /* #ifdef __cplusplus

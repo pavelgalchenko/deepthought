@@ -1,5 +1,5 @@
-/*    This file is distributed with 42,                               */
 /*    the (mostly harmless) spacecraft dynamics simulation            */
+/*    This file is distributed with 42,                               */
 /*    created by Eric Stoneking of NASA Goddard Space Flight Center   */
 
 /*    Copyright 2010 United States Government                         */
@@ -18,6 +18,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
 ** #ifdef __cplusplus
@@ -158,6 +159,9 @@ long isSignificant(int const m, int const n, double **A, double **B);
 void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);
 void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
                          double d[n]);
+double **matPow(const long n, double **A, const unsigned long p);
+void QuickMatPow(const long n, double **A, double **As, const long s,
+                 double **Ap, const long p);
 /*
 ** #ifdef __cplusplus
 ** }
