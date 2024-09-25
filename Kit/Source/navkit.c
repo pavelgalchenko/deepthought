@@ -191,13 +191,13 @@ int comparator_DSMMeas(const void *v1, const void *v2)
 {
    const struct DSMMeasType *m1 = *(struct DSMMeasType **)v1;
    const struct DSMMeasType *m2 = *(struct DSMMeasType **)v2;
-   if (m1->step < m2->step)
+   if (m1->ccsdsSeconds < m2->ccsdsSeconds)
       return -1;
-   else if (m1->step > m2->step)
+   else if (m1->ccsdsSeconds > m2->ccsdsSeconds)
       return +1;
-   else if (m1->subStep < m2->subStep)
+   else if (m1->ccsdsSubseconds < m2->ccsdsSubseconds)
       return -1;
-   else if (m1->subStep > m2->subStep)
+   else if (m1->ccsdsSubseconds > m2->ccsdsSubseconds)
       return +1;
    else if (m1->type < m2->type)
       return -1;
@@ -220,7 +220,7 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
    const double daysperRollover = 7168.0;
    const double jdGPSt0    = 2444244.5 + (32.184 + 19.0) / secPerDay; // In TT
    const double jdJ2000    = 2451545.0;
-   const double gpst0J2000 = jdGPSt0 - jdJ2000; // -7300.49940759...
+   const double gpst0J2000 = jdGPSt0 - jdJ2000; // -7300.499407592695
 
    double DaysSinceWeek, DaysSinceRollover, DaysSinceEpoch;
 
@@ -243,7 +243,7 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
    switch (orbCenter) {
       case EARTH: {
          struct DateType dateUTC = *date;
-         updateNavTime(&dateUTC, -(32.184 + (double)LeapSec));
+         updateTime(&dateUTC, -(32.184 + LeapSec));
          PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
       } break;
       case LUNA: {
@@ -2904,53 +2904,24 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
       whlHdot[Iw] = AC->Whl[Iw].Tcmd;
 }
 
-void updateNavTime(struct DateType *Time, const double dSeconds)
+void updateNavCCSDS(ccsdsCoarse *sec, ccsdsFine *subsec, const double dSeconds)
 {
-   if (fabs(dSeconds) > 0.0) {
-      Time->Second  += dSeconds;
-      long quotient  = Time->Second / 60.0;
-      Time->Second   = fmod(Time->Second, 60.0);
-      if (Time->Second < 0) {
-         Time->Second += 60;
-         quotient--;
-      }
-
-      if (quotient != 0.0) {
-         Time->Minute += quotient;
-         quotient      = Time->Minute / 60;
-         Time->Minute %= 60;
-         if (Time->Minute < 0) {
-            Time->Minute += 60;
-            quotient--;
-         }
-
-         if (quotient != 0) {
-            Time->Hour += quotient;
-            quotient    = Time->Hour / 24;
-            Time->Hour %= 24;
-            if (Time->Hour < 0) {
-               Time->Hour += 24;
-               quotient--;
-            }
-
-            if (quotient != 0) {
-               Time->JulDay =
-                   floor(Time->JulDay + 0.5 + (double)quotient) - 0.5;
-               long tmpHr = 0, tmpMin = 0;
-               double tmpSec = 0.0;
-               JDToDate(Time->JulDay, &Time->Year, &Time->Month, &Time->Day,
-                        &tmpHr, &tmpMin, &tmpSec);
-               Time->doy = MD2DOY(Time->Year, Time->Month, Time->Day);
-            }
-         }
-      }
-      Time->JulDay = DateToJD(Time->Year, Time->Month, Time->Day, Time->Hour,
-                              Time->Minute, Time->Second);
-   }
+   const double sizeCheck = 1.0 / (CCSDS_FINE_MAX << 1);
+   double integral;
+   const double fractional = modf(dSeconds, &integral);
+   const ccsdsFine dSubSec = (fractional * CCSDS_FINE_MAX + .5);
+   if ((*subsec) > (ccsdsFine)(*subsec + dSubSec) && fractional > sizeCheck)
+      (*sec) += 1;
+   else if ((*subsec) < (ccsdsFine)(*subsec + dSubSec) &&
+            fractional < sizeCheck)
+      (*sec) -= 1;
+   *subsec += dSubSec;
+   *sec    += integral;
 }
 
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
-                  const long dSubStep, const long dStep)
+                  const long dCCSDSSec, const long dCCSDSSubSec,
+                  const long init)
 {
    double lerpAlphaState, AtmoDensity = 0.0;
 
@@ -2959,10 +2930,11 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
 
    struct DSMNavType *Nav = &DSM->DsmNav;
    lerpAlphaState         = Nav->refLerpAlpha;
-   const double DT        = (dSubStep * Nav->subStepSize) + (dStep * Nav->DT);
+   const double ccsdsStep = 1.0 / CCSDS_FINE_MAX;
+   const double DT = (double)(dCCSDSSec) + (double)(dCCSDSSubSec * ccsdsStep);
 
    GetM(AC, Nav, Nav->CRB, Nav->qbr, Nav->PosR, Nav->VelR, Nav->wbr);
-   if (Nav->subStep == 0) {
+   if (init == TRUE) {
       if (AeroActive) {
          const long orbCenter = DSM->refOrb->World;
          double worldWR[3]    = {0.0};
@@ -3002,6 +2974,13 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       }
       (*Nav->EOMJacobianFun)(AC, DSM, &Nav->Date, Nav->CRB, Nav->qbr, Nav->PosR,
                              Nav->VelR, Nav->wbr, Nav->whlH, AtmoDensity);
+      // TODO: find a better way to simplify the STM calculation. This is bound
+      // to be quite slow due to the number of multiplications.
+      for (i = 0; i < Nav->navDim; i++)
+         for (j = 0; j < Nav->navDim; j++)
+            Nav->NxN2[i][j] = Nav->jacobian[i][j] * ccsdsStep;
+      expm(Nav->NxN2, Nav->STMStep, Nav->navDim);
+
       for (i = 0; i < Nav->navDim; i++)
          for (j = 0; j < Nav->navDim; j++)
             Nav->NxN2[i][j] = Nav->jacobian[i][j] * Nav->subStepSize;
@@ -3021,7 +3000,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
 #endif
    for (k = 0; k < ORDRK; k++) {
       struct DateType date = Nav->Date;
-      updateNavTime(&date, Nav->subStep * Nav->subStepSize + DTk[k]);
+      updateTime(&date, DTk[k]);
       Nav->refLerpAlpha = lerpAlphaState;
       dLerpAlpha        = DTk[k] / Nav->DT;
       double CRB[3][3], qbr[4], PosR[3], VelR[3], wbr[3], whlH[AC->Nwhl];
@@ -3166,23 +3145,15 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       }
    }
 
-   double **STM = CreateMatrix(Nav->navDim, Nav->navDim);
-   for (i = 0; i < Nav->navDim; i++) {
-      for (j = 0; j < Nav->navDim; j++) {
-         STM[i][j]      = Nav->STM[i][j];
+   for (i = 0; i < Nav->navDim; i++)
+      for (j = 0; j < Nav->navDim; j++)
          Nav->NxN[i][j] = Nav->M[i][j] * Nav->sqrQ[j];
-      }
-   }
-   const long subSteps = dSubStep + dStep * Nav->subStepMax;
-   double **A          = CreateMatrix(Nav->navDim, Nav->navDim);
-   for (k = 1; k < subSteps; k++) {
-      // Swap the pointers; should be faster than assigning elements of A
-      double **t = A;
-      A          = STM;
-      STM        = t;
-      MxMG(Nav->STM, A, STM, Nav->navDim, Nav->navDim, Nav->navDim);
-   }
-   DestroyMatrix(A);
+
+   const long subSteps = dCCSDSSec * CCSDS_FINE_MAX + dCCSDSSubSec;
+   double **STM        = CreateMatrix(Nav->navDim, Nav->navDim);
+
+   QuickMatPow(Nav->navDim, Nav->STMStep, Nav->STM, Nav->subStepSteps, STM,
+               subSteps);
 
    MxMG(STM, Nav->NxN, Nav->NxN2, Nav->navDim, Nav->navDim, Nav->navDim);
    MxMG(STM, Nav->S, Nav->NxN, Nav->navDim, Nav->navDim, Nav->navDim);
@@ -3215,6 +3186,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 {
    long i, j;
    struct DSMNavType *Nav = &DSM->DsmNav;
+   Nav->steps++;
 
    // TODO: will maybe need to do something to preserve information if a new Nav
    // filter is called
@@ -3222,21 +3194,25 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
       configureRefFrame(Nav, DSM->refOrb, 0.0, TRUE);
 
    // Accumulate information from measurements based upon batching method.
-   Nav->subStep                     = 0;
    struct DSMMeasListType *measList = &Nav->measList;
+   DateToCCSDS(Nav->Date, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
+   updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
+                  -(32.184 + LeapSec));
+   ccsdsCoarse finSeconds  = Nav->ccsdsSeconds;
+   ccsdsFine finSubseconds = Nav->ccsdsSubseconds;
+   updateNavCCSDS(&finSeconds, &finSubseconds, Nav->DT);
    if (measList->head == NULL) {
-      // TODO: problems might occur if Nav->DT is not a whole number multiple of
-      // Nav->subStepSize
-      PropagateNav(AC, DSM, Nav->subStepMax, 0.0);
-      Nav->step++;
-      Nav->subStep = 0;
+      PropagateNav(
+          AC, DSM, finSeconds - Nav->ccsdsSeconds,
+          (signed long)finSubseconds - (signed long)Nav->ccsdsSubseconds, TRUE);
    }
    else {
+      long init = TRUE;
       while (measList->head != NULL) {
          long measDim                    = 0;
          const enum SensorType senseType = measList->head->type;
-         const long measStep             = measList->head->step;
-         const long measSubStep          = measList->head->subStep;
+         const long measSec              = measList->head->ccsdsSeconds;
+         const long measSubsec           = measList->head->ccsdsSubseconds;
 
          // TODO: avoid this preallocation mess and go with realloc (maybe?)
          switch (Nav->batching) {
@@ -3246,14 +3222,16 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
             case SENSOR_BATCH: {
                struct DSMMeasType *meas = measList->head;
                while (meas != NULL && meas->type == senseType &&
-                      meas->subStep == measSubStep) {
+                      meas->ccsdsSeconds == measSec &&
+                      meas->ccsdsSubseconds == measSubsec) {
                   measDim += meas->errDim;
                   meas     = meas->nextMeas;
                }
             } break;
             case TIME_BATCH: {
                struct DSMMeasType *meas = measList->head;
-               while (meas != NULL && meas->subStep == measSubStep) {
+               while (meas != NULL && meas->ccsdsSeconds == measSec &&
+                      meas->ccsdsSubseconds == measSubsec) {
                   measDim += meas->errDim;
                   meas     = meas->nextMeas;
                }
@@ -3266,9 +3244,13 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                break;
          }
 
-         const long dSubStep = measSubStep - Nav->subStep;
-         const long dStep    = measStep - Nav->step;
-         if ((dSubStep > 0 && dStep >= 0) || (dSubStep >= 0 && dStep > 0)) {
+         const long dSec = measSec - Nav->ccsdsSeconds;
+         const long dSubsec =
+             ((signed long)measSubsec) - ((signed long)Nav->ccsdsSubseconds);
+
+         const double ccsdsStep = 1.0 / CCSDS_FINE_MAX;
+         const double dt        = dSec + dSubsec * ccsdsStep;
+         if (dt >= 0) {
 #if REPORT_RESIDUALS ==                                                        \
     TRUE // TODO: set a report residuals "bool" in nav and use that instead of
          // these compile-time directives
@@ -3277,9 +3259,11 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 #endif
             // TODO: investigate only prop once per Kalman filt call and use STM
             // and linearization to prop measurements through time
-            PropagateNav(AC, DSM, dSubStep, dStep);
-            Nav->step    = measStep;
-            Nav->subStep = measSubStep;
+            PropagateNav(AC, DSM, dSec, dSubsec, init);
+            if (init)
+               init = FALSE;
+            Nav->ccsdsSeconds    = measSec;
+            Nav->ccsdsSubseconds = measSubsec;
 #if REPORT_RESIDUALS == TRUE
             for (enum SensorType sensor = INIT_SENSOR; sensor < FIN_SENSOR;
                  sensor++) {
@@ -3292,7 +3276,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
             }
 #endif
          }
-         else if (dSubStep < 0 || dStep < 0.0) {
+         else {
             printf("Attempted to propagate Navigation state backwards in time. "
                    "How did that happen? Exiting...\n");
             exit(EXIT_FAILURE);
@@ -3348,7 +3332,8 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
             DestroyMeas(meas);
 
             if ((Nav->batching == NONE_BATCH) || (measList->head == NULL) ||
-                (measList->head->subStep != measSubStep) || // TIME_BATCH
+                (measList->head->ccsdsSubseconds != measSubsec ||
+                 measList->head->ccsdsSeconds != measSec) || // TIME_BATCH
                 (Nav->batching == SENSOR_BATCH &&
                  measList->head->type != senseType)) {
                break;
@@ -3442,14 +3427,17 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
          free(bigResid);
          free(bigR);
       }
-      if (Nav->subStep < Nav->subStepMax)
-         PropagateNav(AC, DSM, Nav->subStepMax - Nav->subStep, 0.0);
-
-      Nav->step++;
-      Nav->subStep = 0;
+      if (Nav->ccsdsSeconds < finSeconds ||
+          Nav->ccsdsSubseconds < finSubseconds)
+         PropagateNav(AC, DSM, finSeconds - Nav->ccsdsSeconds,
+                      finSubseconds - Nav->ccsdsSubseconds, FALSE);
    }
    Nav->Date = Nav->Date0;
-   updateNavTime(&Nav->Date, Nav->step * Nav->DT);
+
+   updateTime(&Nav->Date, Nav->DT * Nav->steps);
+   DateToCCSDS(Nav->Date, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
+   updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
+                  -(32.184 + LeapSec));
    configureRefFrame(Nav, DSM->refOrb, 1.0 - Nav->refLerpAlpha, TRUE);
    for (i = 0; i < AC->Nwhl; i++)
       Nav->whlH[i] = AC->Whl[i].H;

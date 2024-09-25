@@ -12,7 +12,7 @@ Simulation Control:
   #   Command File:
   Mode: FAST
   Duration: 2400.1
-  Step Size: 0.02
+  Step Size: 0.019989013671875
   File Interval: 0.1
   RNG Seed: 0
   Enable Graphics: true
@@ -182,4 +182,4 @@ Ground Stations:
       World: EARTH
       Longitude: -77.0
       Latitude: 37.0
-      Label: ''
+      Label: ""

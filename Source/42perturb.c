@@ -1110,11 +1110,11 @@ void Perturbations(struct SCType *S)
    if (ContactActive)
       ContactFrcTrq(S);
 
-      /* .. CFD Slosh Forces and Torques */
+   /* .. CFD Slosh Forces and Torques */
 #ifdef _ENABLE_CFD_SLOSH_
    if (SloshActive)
       CfdSlosh(S);
-      /* FakeCfdSlosh(S); */
+   /* FakeCfdSlosh(S); */
 #endif
 
    /* .. Find Momentum Accumulation for Actuator Sizing */

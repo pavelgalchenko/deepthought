@@ -11,9 +11,9 @@
          "program": "${workspaceFolder}/42",
          "args": [
             "-d",
-            "Missions/DSM_DEMO",
+            "Missions/DSM_NAV_DEMO",
             "-o",
-            "Missions/DSM_DEMO/blah",
+            "Missions/DSM_NAV_DEMO/blah",
             "-g",
             "0",
          ],
@@ -43,9 +43,9 @@
          "program": "${workspaceFolder}/42",
          "args": [
             "-d",
-            "Missions/DSM_DEMO",
+            "Missions/DSM_NAV_DEMO",
             "-o",
-            "Missions/DSM_DEMO/blah",
+            "Missions/DSM_NAV_DEMO/blah",
             "-g",
             "0",
          ],

@@ -92,6 +92,52 @@ double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
    return (JD);
 }
 /**********************************************************************/
+/* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
+/* midnight, Jan 1st, 1958                                            */
+void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,
+                 ccsdsFine *ccsdsSubSeconds)
+{
+   long Year     = date.Year;
+   long Month    = date.Month;
+   long Day      = date.Day;
+   long Hour     = date.Hour;
+   long Minute   = date.Minute;
+   double Second = date.Second;
+
+   const double epoch = DateToJD(1958, 1, 1, 0, 0, 0);
+   double JD          = DateToJD(Year, Month, Day, 0, 0, 0) - epoch;
+
+   *ccsdsSeconds = JD * 86400.0 + Hour * 3600.0 + Minute * 60.0 + Second;
+   double integral;
+   *ccsdsSubSeconds = modf(Second, &integral) * CCSDS_FINE_MAX;
+}
+/**********************************************************************/
+/* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
+/* midnight, Jan 1st, 1958                                            */
+void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
+                 ccsdsFine *ccsdsSubSeconds)
+{
+   struct DateType date;
+   const double LSB = 1.0 / CCSDS_FINE_MAX;
+   TimeToDate(UTC, &date.Year, &date.Month, &date.Day, &date.Hour, &date.Minute,
+              &date.Second, LSB);
+   DateToCCSDS(date, ccsdsSeconds, ccsdsSubSeconds);
+}
+/**********************************************************************/
+/* Convert CCSDS Seconds and Subseconds to UTC Date with epoch        */
+/* midnight, Jan 1st, 1958                                            */
+void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
+                 struct DateType *date)
+{
+   const double epoch     = DateToJD(1958, 1, 1, 0, 0, 0);
+   const double ccsdsStep = 1.0 / CCSDS_FINE_MAX;
+   const double subDay    = fmod((double)ccsdsSeconds, 86400.0);
+   const long days        = ccsdsSeconds / 86400;
+   JDToDate(epoch + days, &date->Year, &date->Month, &date->Day, &date->Hour,
+            &date->Minute, &date->Second);
+   updateTime(date, subDay + (double)ccsdsSubSeconds * ccsdsStep);
+}
+/**********************************************************************/
 /*   Convert Julian Day to Year, Month, Day, Hour, Minute, and Second */
 /*   Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991. */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
@@ -400,6 +446,51 @@ double RealRunTime(double *RealTimeDT, double LSB)
    RunTime += *RealTimeDT;
 
    return (RunTime);
+}
+
+void updateTime(struct DateType *Time, const double dSeconds)
+{
+   if (fabs(dSeconds) > 0.0) {
+      Time->Second  += dSeconds;
+      long quotient  = Time->Second / 60.0;
+      Time->Second   = fmod(Time->Second, 60.0);
+      if (Time->Second < 0) {
+         Time->Second += 60;
+         quotient--;
+      }
+
+      if (quotient != 0.0) {
+         Time->Minute += quotient;
+         quotient      = Time->Minute / 60;
+         Time->Minute %= 60;
+         if (Time->Minute < 0) {
+            Time->Minute += 60;
+            quotient--;
+         }
+
+         if (quotient != 0) {
+            Time->Hour += quotient;
+            quotient    = Time->Hour / 24;
+            Time->Hour %= 24;
+            if (Time->Hour < 0) {
+               Time->Hour += 24;
+               quotient--;
+            }
+
+            if (quotient != 0) {
+               Time->JulDay =
+                   floor(Time->JulDay + 0.5 + (double)quotient) - 0.5;
+               long tmpHr = 0, tmpMin = 0;
+               double tmpSec = 0.0;
+               JDToDate(Time->JulDay, &Time->Year, &Time->Month, &Time->Day,
+                        &tmpHr, &tmpMin, &tmpSec);
+               Time->doy = MD2DOY(Time->Year, Time->Month, Time->Day);
+            }
+         }
+      }
+      Time->JulDay = DateToJD(Time->Year, Time->Month, Time->Day, Time->Hour,
+                              Time->Minute, Time->Second);
+   }
 }
 
 /* #ifdef __cplusplus

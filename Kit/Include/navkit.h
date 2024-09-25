@@ -46,7 +46,7 @@ struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
                                long const sensorNum);
 int comparator_DSMMeas(const void *v1, const void *v2);
 
-void updateNavTime(struct DateType *Time, const double dSeconds);
+void updateNavCCSDS(ccsdsCoarse *sec, ccsdsFine *subsec, const double dSeconds);
 double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
                         const double gpsSec);
 
@@ -62,7 +62,8 @@ void configureRefFrame(struct DSMNavType *const Nav,
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
                        double const CRB[3][3], double const *whlH);
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
-                  const long dSubStep, const long dStep);
+                  const long dCCSDSSec, const long dCCSDSSubSec,
+                  const long init);
 void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 
 /*--------------------------------------------------------------------*/

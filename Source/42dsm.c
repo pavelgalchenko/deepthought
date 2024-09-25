@@ -208,18 +208,18 @@ void InitDSM(struct SCType *S)
    Nav->refFrame         = FRAME_N;
    Nav->NavigationActive = FALSE;
    Nav->DT               = S->AC.DT;
-   // Nav->Time             = 0.0;
-   // Nav->step         = 0;
-   Nav->subStep      = 0;
-   Nav->Date0.JulDay = 0;
-   Nav->Date0.Year   = 0;
-   Nav->Date0.Month  = 0;
-   Nav->Date0.Day    = 0;
-   Nav->Date0.doy    = 0;
-   Nav->Date0.Hour   = 0;
-   Nav->Date0.Minute = 0;
-   Nav->Date0.Second = 0;
-   Nav->Date         = Nav->Date0;
+   Nav->ccsdsSeconds     = 0;
+   Nav->ccsdsSubseconds  = 0;
+   Nav->steps            = 0;
+   Nav->Date0.JulDay     = 0;
+   Nav->Date0.Year       = 0;
+   Nav->Date0.Month      = 0;
+   Nav->Date0.Day        = 0;
+   Nav->Date0.doy        = 0;
+   Nav->Date0.Hour       = 0;
+   Nav->Date0.Minute     = 0;
+   Nav->Date0.Second     = 0;
+   Nav->Date             = Nav->Date0;
 
    for (enum States i = INIT_STATE; i <= FIN_STATE; i++)
       Nav->stateActive[i] = FALSE;
@@ -236,6 +236,7 @@ void InitDSM(struct SCType *S)
    Nav->delta      = NULL;
    Nav->jacobian   = NULL;
    Nav->STM        = NULL;
+   Nav->STMStep    = NULL;
    Nav->NxN        = NULL;
    Nav->NxN2       = NULL;
    Nav->whlH       = NULL;
@@ -1347,12 +1348,13 @@ long ConfigureNavigationSensors(struct AcType *const AC,
          exit(EXIT_FAILURE);
       }
 
-      meas->nextMeas  = NULL;
-      meas->data      = NULL;
-      meas->time      = 0.0;
-      meas->step      = 0;
-      meas->sensorNum = sensorNum;
-      meas->type      = sensor;
+      meas->nextMeas        = NULL;
+      meas->data            = NULL;
+      meas->time            = 0.0;
+      meas->ccsdsSeconds    = 0;
+      meas->ccsdsSubseconds = 0;
+      meas->sensorNum       = sensorNum;
+      meas->type            = sensor;
       numSensors[sensor]++;
       Nav->residuals[sensor][sensorNum] = calloc(meas->errDim, sizeof(double));
    }
@@ -1557,15 +1559,20 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
                              senSetNode != NULL && statesNode != NULL;
 
    if (NavigationCmdProcessed == TRUE) {
-      // TODO: not the biggest fan of DTSIM being here, but I'm coming around
-      Nav->DT          = DSM->DT;
-      Nav->subStepSize = DTSIM;
-      Nav->subStep     = 0;
-      Nav->step        = 0;
-      double t0        = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
+      Nav->DT = DSM->DT;
+      // round to nearest ccsds step
+      Nav->subStepSteps = DTSIM * CCSDS_FINE_MAX + 0.5;
+      Nav->subStepSize  = DTSIM;
+      Nav->steps        = 0;
+      double t0         = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
+
       TimeToDate(t0, &Nav->Date0.Year, &Nav->Date0.Month, &Nav->Date0.Day,
                  &Nav->Date0.Hour, &Nav->Date0.Minute, &Nav->Date0.Second,
-                 DTSIM);
+                 1.0 / CCSDS_FINE_MAX);
+      DateToCCSDS(Nav->Date0, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
+      updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
+                     -(32.184 + LeapSec));
+
       Nav->Date0.doy =
           MD2DOY(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day);
       Nav->Date0.JulDay =
@@ -1573,7 +1580,6 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
                    Nav->Date0.Hour, Nav->Date0.Minute, Nav->Date0.Second);
       Nav->Date = Nav->Date0;
 
-      Nav->subStepMax       = (long)(Nav->DT / Nav->subStepSize + 0.5);
       Nav->Init             = FALSE;
       Nav->reportConfigured = FALSE;
       if (Nav->sqrQ != NULL) {
@@ -1581,6 +1587,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          free(Nav->delta);
          DestroyMatrix(Nav->P);
          DestroyMatrix(Nav->STM);
+         DestroyMatrix(Nav->STMStep);
          Nav->sqrQ     = NULL;
          Nav->M        = NULL;
          Nav->delta    = NULL;
@@ -1588,6 +1595,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          Nav->S        = NULL;
          Nav->jacobian = NULL;
          Nav->STM      = NULL;
+         Nav->STMStep  = NULL;
          Nav->NxN      = NULL;
          Nav->NxN2     = NULL;
          Nav->whlH     = NULL;
@@ -1783,10 +1791,13 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       Nav->jacobian = CreateMatrix(Nav->navDim, Nav->navDim);
       Nav->STM      = CreateMatrix(Nav->navDim, Nav->navDim);
+      Nav->STMStep  = CreateMatrix(Nav->navDim, Nav->navDim);
       Nav->NxN      = CreateMatrix(Nav->navDim, Nav->navDim);
       Nav->NxN2     = CreateMatrix(Nav->navDim, Nav->navDim);
-      for (i = 0; i < Nav->navDim; i++)
-         Nav->STM[i][i] = 1.0;
+      for (i = 0; i < Nav->navDim; i++) {
+         Nav->STM[i][i]     = 1.0;
+         Nav->STMStep[i][i] = 1.0;
+      }
 
       if (GetNavigationData(Nav, x0Node, IC_DAT) == FALSE) {
          printf("Navigation data is an invalid data set for the initial "

@@ -13,7 +13,7 @@ Configuration:
   Label: S/C
   Sprite File: GenScSpriteAlpha.ppm
   FSW Identifier: DSM_FSW
-  FSW Sample Time: 0.1
+  FSW Sample Time: 0.099945068359375
 Orbit:
   # -------------------------------Orbit Parameters--------------------------------
   #   Prop Type:      [[FIXED/EULER_HILL/ENCKE/COWELL]]
@@ -111,12 +111,12 @@ Joints:
   #       Pos wrt Inner Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Pos wrt Outer Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Parm File Name:             [[NONE/filename]]
-    []
+  []
 Wheel Params:
   # -------------------------------Wheel Parameters--------------------------------
   #   Drag:     [[true/false]]
   #   Jitter:   [[true/false]]
-    {Drag: false, Jitter: false}
+  { Drag: false, Jitter: false }
 Wheels:
   # ------------------------------------Wheels-------------------------------------
   # ((Sequence, one element for each wheel))
@@ -379,7 +379,7 @@ Gyros:
   #       Node:                       [[Node Index]]
   - Gyro:
       Index: 0
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [1.0, 0.0, 0.0]
       Max Rate: 1000.0
       Scale Factor: 0.0
@@ -392,7 +392,7 @@ Gyros:
       Node: 0
   - Gyro:
       Index: 1
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [0.0, 1.0, 0.0]
       Max Rate: 1000.0
       Scale Factor: 0.0
@@ -405,7 +405,7 @@ Gyros:
       Node: 0
   - Gyro:
       Index: 2
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [0.0, 0.0, 1.0]
       Max Rate: 1000.0
       Scale Factor: 0.0
@@ -469,7 +469,7 @@ CSSs:
   #       Node:               [[Node Index]]
   - CSS:
       Index: 0
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [1.0, 1.0, 1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -478,7 +478,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 1
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [-1.0, 1.0, 1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -487,7 +487,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 2
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [1.0, -1.0, 1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -496,7 +496,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 3
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [1.0, 1.0, -1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -505,7 +505,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 4
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [-1.0, -1.0, 1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -514,7 +514,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 5
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [-1.0, 1.0, -1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -523,7 +523,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 6
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [1.0, -1.0, -1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -532,7 +532,7 @@ CSSs:
       Node: 0
   - CSS:
       Index: 7
-      Sample Time: 0.02
+      Sample Time: 0.019989013671875
       Axis: [-1.0, -1.0, -1.0]
       Half Cone Angle: 90.0
       Scale Factor: 1.0
@@ -555,7 +555,7 @@ FSSs:
   #       Node:                   [[Node Index]]
   - FSS:
       Index: 0
-      Sample Time: 0.2
+      Sample Time: 0.19989013671875
       Mounting Angles:
         Angles: [0.0, 0.0, 0.0]
         Sequence: 132
@@ -566,7 +566,7 @@ FSSs:
       Node: 0
   - FSS:
       Index: 1
-      Sample Time: 0.2
+      Sample Time: 0.19989013671875
       Mounting Angles:
         Angles: [180.0, 0.0, 0.0]
         Sequence: 132
@@ -594,7 +594,7 @@ STs:
   #       Node:                   [[Node Index]]
   - ST:
       Index: 0
-      Sample Time: 0.2
+      Sample Time: 0.19989013671875
       Mounting Angles:
         Angles: [45.0, 0.0, 0.0]
         Sequence: 321
@@ -639,4 +639,4 @@ Accelerometers:
   #       DV Noise:                   [[]]    [[m/s]]
   #       Initial Bias:               [[]]    [[m/s^2]]
   #       Node:                       [[Node Index]]""",
-    []
+  []
