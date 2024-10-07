@@ -1066,8 +1066,10 @@ void InitOrbit(struct OrbitType *O)
                    3, fy_node_by_path_def(node, "/Position"), vec3_p);
                assignYAMLToDoubleArray(
                    3, fy_node_by_path_def(node, "/Velocity"), vec3_v);
-                  
-               StateRnd2StateN(LS, World[LS->Body2].eph.PosN, World[LS->Body2].eph.VelN, vec3_p, vec3_v, O->PosN, O->VelN);
+
+               StateRnd2StateN(LS, World[LS->Body2].eph.PosN,
+                               World[LS->Body2].eph.VelN, vec3_p, vec3_v,
+                               O->PosN, O->VelN);
             } break;
             case INP_FILE: {
                char elementFileName[50] = {0}, elementLabel[50] = {0};
@@ -1954,6 +1956,7 @@ void InitFlexModes(struct SCType *S)
 /**********************************************************************/
 void InitNodes(struct BodyType *B)
 {
+   // TODO: put node sequence in relevant spacecraft file
    if (strcmp(B->NodeFileName, "NONE")) {
       char fileName[40] = {0};
       strcpy(fileName, B->NodeFileName);
@@ -3096,7 +3099,7 @@ void InitSpacecraft(struct SCType *S)
                            "/Quantization %lf "
                            "/DV Random Walk %lf "
                            "/Bias Stability %lf "
-                           "/Bias Stability TimeSpan %lf "
+                           "/Bias Stability Timespan %lf "
                            "/DV Noise %lf "
                            "/Initial Bias %lf "
                            "/Node %ld",
@@ -4813,14 +4816,13 @@ void InitLagrangePoints(void)
 
    LagSys[EARTHMOON].Body1  = EARTH;
    LagSys[EARTHMOON].Body2  = LUNA;
-   LagSys[EARTHMOON].LU  = 385692500.0;
+   LagSys[EARTHMOON].LU     = 385692500.0;
    LagSys[SUNEARTH].Body1   = SOL;
    LagSys[SUNEARTH].Body2   = EARTH;
-   LagSys[SUNEARTH].LU  = 149597927000.0;
+   LagSys[SUNEARTH].LU      = 149597927000.0;
    LagSys[SUNJUPITER].Body1 = SOL;
    LagSys[SUNJUPITER].Body2 = JUPITER;
-   LagSys[SUNJUPITER].LU  = 778547200000.0 ;
-
+   LagSys[SUNJUPITER].LU    = 778547200000.0;
 
    for (i = 0; i < 3; i++) {
       LS = &LagSys[i];
@@ -4847,8 +4849,8 @@ void InitLagrangePoints(void)
          LS->MeanRate = sqrt(LS->mu1 / LS->SMA) / LS->SMA;
          LS->Period   = TwoPi / LS->MeanRate;
 
-         LS->TU = sqrt(pow(LS->LU, 3)/ (LS->mu1 + LS->mu2));
-         LS->VU = LS->LU/LS->TU;
+         LS->TU = sqrt(pow(LS->LU, 3) / (LS->mu1 + LS->mu2));
+         LS->VU = LS->LU / LS->TU;
 
          FindLagPtParms(LS);
          for (j = 0; j < 5; j++) {
@@ -5298,7 +5300,7 @@ long LoadSpiceEphems(double JS)
    struct WorldType *W;
    double Nstate[6], Hstate[6];
    double light_time;
-   double ang[3];
+   double ang[3] = {0.0};
 
    double CWJ[3][3];
 
@@ -5331,9 +5333,9 @@ long LoadSpiceEphems(double JS)
                CWJ); // matrix from J2000 (ICRF) -> body fixed
 
       // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-
       MxMT(CWJ, CNJ, World[Iw].CWN);
       C2Q(World[Iw].CWN, World[Iw].qwn);
+      logso3(World[Iw].CWN, ang);
       World[Iw].PriMerAng = ang[2];
    }
 
@@ -5376,9 +5378,9 @@ long LoadSpiceEphems(double JS)
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-
             MxMT(CWJ, CNJ, World[Iw].CWN);
             C2Q(World[Iw].CWN, World[Iw].qwn);
+            logso3(World[Iw].CWN, ang);
             World[Iw].PriMerAng = ang[2];
          }
       }

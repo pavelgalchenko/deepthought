@@ -487,19 +487,16 @@ long GetActuators(struct AcType *const AC, struct DSMType *const DSM,
 }
 //------------------------- TRANSLATIONAL CMD ----------------------------------
 long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
-                       struct fy_node *trnCmdNode, const double DsmCmdTime,
-                       struct fy_node *dsmRoot)
+                       struct fy_node *trnCmdNode, const double DsmCmdTime)
 {
-   struct fy_node *iterNode = NULL, *ctrlNode = NULL, *actNode = NULL,
-                  *limNode      = NULL;
+   struct fy_node *ctrlNode = NULL, *actNode = NULL, *limNode = NULL;
    long TranslationCmdProcessed = FALSE;
 
-   struct DSMCmdType *Cmd = &DSM->Cmd;
+   struct DSMCmdType *const Cmd = &DSM->Cmd;
 
    char subType[FIELDWIDTH + 1] = {};
-   long cmdInd;
-   const char *searchStr = "/Subtype %" STR(FIELDWIDTH) "s /Index %ld";
-   fy_node_scanf(trnCmdNode, searchStr, subType, &cmdInd);
+   const char *searchStr        = "/Subtype %" STR(FIELDWIDTH) "[^\n]";
+   fy_node_scanf(trnCmdNode, searchStr, subType);
    if (!strcmp(subType, "NO_CHANGE")) {
       TranslationCmdProcessed = TRUE;
       return (TranslationCmdProcessed);
@@ -509,147 +506,115 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
       TranslationCmdProcessed    = TRUE;
       return (TranslationCmdProcessed);
    }
-   else if (!strcmp(subType, "Position")) {
+
+   struct fy_node *cmdNode = fy_node_by_path_def(trnCmdNode, "/Command Data");
+
+   if (cmdNode == NULL) {
+      printf("Could not find Command Data for Translation command of subtype "
+             "%s. Exiting...\n",
+             subType);
+      exit(EXIT_FAILURE);
+   }
+   const char *cmdName =
+       fy_node_get_scalar0(fy_node_by_path_def(cmdNode, "/Description"));
+
+   if (!strcmp(subType, "Position")) {
       Cmd->TranslationCtrlActive = TRUE;
-      struct fy_node *cmdNode =
-          fy_node_by_path_def(dsmRoot, "/Position Configurations");
+      long isGood                = fy_node_scanf(cmdNode,
+                                                 "/Origin %19s "
+                                                                "/Frame %19s",
+                                                 Cmd->RefOrigin, Cmd->RefFrame) == 2;
+      if (!strcmp(Cmd->RefFrame, "E")) {
+         isGood &= fy_node_scanf(cmdNode,
+                                 "/Distance %lf "
+                                 "/Phase %lf",
+                                 &Cmd->Distance, &Cmd->Phase) == 2;
 
-      WHILE_FY_ITER(cmdNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Position/Index %ld", &ind);
-         if (ind == cmdInd) {
-            iterNode    = fy_node_by_path_def(iterNode, "/Position");
-            long isGood = fy_node_scanf(iterNode,
-                                        "/Origin %19s "
-                                        "/Frame %19s",
-                                        Cmd->RefOrigin, Cmd->RefFrame) == 2;
-            if (!strcmp(Cmd->RefFrame, "E")) {
-               isGood     &= fy_node_scanf(iterNode,
-                                           "/Distance %lf "
-                                               "/Phase %lf",
-                                           &Cmd->Distance, &Cmd->Phase) == 2;
-               Cmd->Phase *= M_PI / 180;
-               strcpy(Cmd->TranslationType, "Position");
-            }
-            else {
-               isGood &= assignYAMLToDoubleArray(
-                             3, fy_node_by_path_def(iterNode, "/Position"),
-                             Cmd->Pos) == 3;
-            }
-            ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
-            actNode   = fy_node_by_path_def(iterNode, "/Actuator");
-            isGood   &= ctrlNode != NULL && actNode != NULL;
-
-            if (isGood) {
-               TranslationCmdProcessed = TRUE;
-               Cmd->ManeuverMode       = INACTIVE;
-            }
-            break;
-         }
+         Cmd->Phase *= D2R;
+         strcpy(Cmd->TranslationType, "Position");
       }
+      else {
+         isGood &=
+             assignYAMLToDoubleArray(
+                 3, fy_node_by_path_def(cmdNode, "/Position"), Cmd->Pos) == 3;
+      }
+      ctrlNode  = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode   = fy_node_by_path_def(cmdNode, "/Actuator");
+      isGood   &= ctrlNode != NULL && actNode != NULL;
+
+      if (isGood) {
+         TranslationCmdProcessed = TRUE;
+         Cmd->ManeuverMode       = INACTIVE;
+      }
+
       if (TranslationCmdProcessed == FALSE) {
-         printf(
-             "Could not find Translation Command index %ld or invalid format. "
-             "Exiting...\n",
-             cmdInd);
+         printf("Position Command %s has invalid format. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
    }
    else if (!strcmp(subType, "Translation")) {
       Cmd->TranslationCtrlActive = TRUE;
-      struct fy_node *cmdNode =
-          fy_node_by_path_def(dsmRoot, "/Translation Configurations");
 
-      WHILE_FY_ITER(cmdNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Translation/Index %ld", &ind);
-         if (ind == cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Translation");
-            // Cmd->TranslationCmdType == "Translation";
-            long isGood  = fy_node_scanf(iterNode,
-                                         "/Origin %19s "
-                                          "/Frame %19s ",
-                                         Cmd->RefOrigin, Cmd->RefFrame) == 2;
-            isGood      &= fy_node_scanf(iterNode, "/Translation Type %19s ",
-                                         Cmd->TranslationType) == 1;
-            if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
-               isGood          &= fy_node_scanf(iterNode,
-                                                "/Distance %lf "
-                                                         "/Phase %lf ",
-                                                &Cmd->Distance, &Cmd->Phase) == 2;
-               Cmd->Phase      *= M_PI / 180;
-               Cmd->ResetTimer  = 1;
-            }
-            else if (!strcmp(Cmd->TranslationType, "Docking")) {
-               isGood          &= fy_node_scanf(iterNode, "/Time to Dock %lf ",
-                                                &Cmd->TimeDock) == 1;
-               Cmd->ResetTimer  = 1;
-            }
-            ctrlNode  = fy_node_by_path_def(iterNode, "/Controller");
-            actNode   = fy_node_by_path_def(iterNode, "/Actuator");
-            isGood   &= ctrlNode != NULL && actNode != NULL;
+      long isGood  = fy_node_scanf(cmdNode,
+                                   "/Origin %19s "
+                                    "/Frame %19s",
+                                   Cmd->RefOrigin, Cmd->RefFrame) == 2;
+      isGood      &= fy_node_scanf(cmdNode, "/Translation Type %19s ",
+                                   Cmd->TranslationType) == 1;
+      if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
+         isGood &= fy_node_scanf(cmdNode,
+                                 "/Distance %lf "
+                                 "/Phase %lf ",
+                                 &Cmd->Distance, &Cmd->Phase) == 2;
 
-            if (isGood) {
-               TranslationCmdProcessed = TRUE;
-               Cmd->ManeuverMode       = INACTIVE;
-            }
-            break;
-         }
+         Cmd->Phase      *= D2R;
+         Cmd->ResetTimer  = 1;
       }
-      if (TranslationCmdProcessed == FALSE) {
-         printf(
-             "Could not find Translation Command index %ld or invalid format. "
-             "Exiting...\n",
-             cmdInd);
-         exit(EXIT_FAILURE);
+      else if (!strcmp(Cmd->TranslationType, "Docking")) {
+         isGood &=
+             fy_node_scanf(cmdNode, "/Time to Dock %lf ", &Cmd->TimeDock) == 1;
+         Cmd->ResetTimer = 1;
+      }
+      ctrlNode  = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode   = fy_node_by_path_def(cmdNode, "/Actuator");
+      isGood   &= ctrlNode != NULL && actNode != NULL;
+
+      if (isGood) {
+         TranslationCmdProcessed = TRUE;
+         Cmd->ManeuverMode       = INACTIVE;
       }
    }
    else if (!strcmp(subType, "Maneuver")) {
-      Cmd->TranslationCtrlActive = TRUE;
-      struct fy_node *cmdNode =
-          fy_node_by_path_def(dsmRoot, "/Maneuver Configurations");
-      WHILE_FY_ITER(cmdNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Maneuver/Index %ld", &ind);
-         if (ind == cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Maneuver");
-            char manType[FIELDWIDTH + 1] = {};
-            const char *searchManStr =
-                "/Type %" STR(FIELDWIDTH) "s /Frame %19s /Duration %lf";
+      Cmd->TranslationCtrlActive   = TRUE;
+      char manType[FIELDWIDTH + 1] = {0};
+      const char *searchManStr =
+          "/Type %" STR(FIELDWIDTH) "s /Frame %19s /Duration %lf";
 
-            long isGood  = fy_node_scanf(iterNode, searchManStr, manType,
-                                         Cmd->RefFrame, &Cmd->BurnTime) == 3;
-            limNode      = fy_node_by_path_def(iterNode, "/Limits");
-            actNode      = fy_node_by_path_def(iterNode, "/Actuator");
-            isGood      &= assignYAMLToDoubleArray(
-                          3, fy_node_by_path_def(iterNode, "/Delta V"),
-                          Cmd->DeltaV) == 3;
-            if (isGood) {
-               TranslationCmdProcessed = TRUE;
-               Cmd->BurnStopTime       = DsmCmdTime + Cmd->BurnTime;
-               if (!strcmp(manType, "CONSTANT"))
-                  Cmd->ManeuverMode = CONSTANT;
-               else if (!strcmp(manType, "SMOOTHED"))
-                  Cmd->ManeuverMode = SMOOTHED;
-               else {
-                  printf(
-                      "%s is an invalid maneuver mode for Maneuver index %ld. "
-                      "Exiting...",
-                      manType, cmdInd);
-                  exit(EXIT_FAILURE);
-               }
-            }
-            break;
+      long isGood = fy_node_scanf(cmdNode, searchManStr, manType, Cmd->RefFrame,
+                                  &Cmd->BurnTime) == 3;
+      limNode     = fy_node_by_path_def(cmdNode, "/Limits");
+      actNode     = fy_node_by_path_def(cmdNode, "/Actuator");
+      isGood &=
+          assignYAMLToDoubleArray(3, fy_node_by_path_def(cmdNode, "/Delta V"),
+                                  Cmd->DeltaV) == 3;
+      if (isGood) {
+         TranslationCmdProcessed = TRUE;
+         Cmd->BurnStopTime       = DsmCmdTime + Cmd->BurnTime;
+         if (!strcmp(manType, "CONSTANT"))
+            Cmd->ManeuverMode = CONSTANT;
+         else if (!strcmp(manType, "SMOOTHED"))
+            Cmd->ManeuverMode = SMOOTHED;
+         else {
+            printf("%s is an invalid maneuver mode for Maneuver %s. "
+                   "Exiting...",
+                   manType, cmdName);
+            exit(EXIT_FAILURE);
          }
       }
       if (TranslationCmdProcessed == FALSE) {
-         printf(
-             "Could not find Translation Command index %ld or invalid format. "
-             "Exiting...\n",
-             cmdInd);
+         printf("Translation Command %s has invalid format. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
    }
@@ -657,27 +622,29 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
    if (TranslationCmdProcessed == TRUE && Cmd->TranslationCtrlActive == TRUE) {
       if (Cmd->ManeuverMode == INACTIVE) {
          if (GetController(DSM, ctrlNode, TRN_STATE) == FALSE) {
-            printf("For %s index %ld, could not find Controller alias %s or "
+            printf("For %s command %s, could not find Controller alias %s or "
                    "invalid format. Exiting...\n",
-                   subType, cmdInd,
+                   subType, cmdName,
                    fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
             exit(EXIT_FAILURE);
          }
       }
       else {
          if (GetLimits(DSM, limNode, TRN_STATE) == FALSE) {
-            printf("For %s index %ld, could not find Limit alias %s or invalid "
-                   "format. Exiting...\n",
-                   subType, cmdInd,
-                   fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
+            printf(
+                "For %s command %s, could not find Limit alias %s or invalid "
+                "format. Exiting...\n",
+                subType, cmdName,
+                fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
             exit(EXIT_FAILURE);
          }
       }
       if (GetActuators(AC, DSM, actNode, TRN_STATE) == FALSE) {
-         printf("For %s index %ld, could not find Actuator alias %s or invalid "
-                "format. Exiting...\n",
-                subType, cmdInd,
-                fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
+         printf(
+             "For %s command %s, could not find Actuator alias %s or invalid "
+             "format. Exiting...\n",
+             subType, cmdName,
+             fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
@@ -686,14 +653,12 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
 }
 //-----------------------ATTITUDE CMD ---------------------------------------
 long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
-                    struct fy_node *attCmdNode, struct fy_node *dsmRoot)
+                    struct fy_node *attCmdNode)
 {
-   struct fy_node *iterNode = NULL, *ctrlNode = NULL, *actNode = NULL;
+   struct fy_node *ctrlNode = NULL, *actNode = NULL;
    long AttitudeCmdProcessed = FALSE, AttPriCmdProcessed = FALSE,
         AttSecCmdProcessed = FALSE;
    char GroundStationCmd[30];
-   long AttPriCmdMode, AttSecCmdMode, AttCmdMode;
-   long *cmdInd;
 
    enum CtrlState state   = ATT_STATE;
    struct DSMCmdType *Cmd = &DSM->Cmd;
@@ -703,154 +668,144 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    fy_node_scanf(attCmdNode, searchStr, subType);
    if (!strcmp(subType, "NO_CHANGE")) {
       AttitudeCmdProcessed = TRUE;
+      return (AttitudeCmdProcessed);
    }
    else if (!strcmp(subType, "Passive")) {
       Cmd->AttitudeCtrlActive = FALSE;
       AttitudeCmdProcessed    = TRUE;
+      return (AttitudeCmdProcessed);
    }
-   else if (!strcmp(subType, "Two Vector Pointing") ||
-            !strcmp(subType, "One Vector Pointing")) {
-      long kMax;
-      long inds[2]                 = {0};
-      struct DSMCmdVecType *vecs[] = {&Cmd->PriVec, NULL};
-      long *cmdModes[]             = {&AttPriCmdMode, &AttSecCmdMode};
-      struct fy_node *nodes[]      = {NULL, NULL};
-      char *cmdRefFrm[]            = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
-      long *attcmdProc[]           = {&AttPriCmdProcessed, &AttSecCmdProcessed};
-      struct fy_node *indNode      = fy_node_by_path_def(attCmdNode, "/Index");
 
-      if (!strcmp(subType, "Two Vector Pointing")) {
-         kMax    = 2;
-         vecs[1] = &Cmd->SecVec;
-         assignYAMLToLongArray(2, indNode, inds);
-         for (int k = 0; k < kMax; k++)
-            *cmdModes[k] = inds[k];
+   struct fy_node *cmdNode = fy_node_by_path_def(attCmdNode, "/Command Data");
+
+   if (cmdNode == NULL) {
+      printf("Could not find Command Data for Attitude command of subtype %s. "
+             "Exiting...\n",
+             subType);
+      exit(EXIT_FAILURE);
+   }
+   const char *cmdName =
+       fy_node_get_scalar0(fy_node_by_path_def(cmdNode, "/Description"));
+
+   if (!strcmp(subType, "Two Vector") || !strcmp(subType, "One Vector")) {
+      long kMax;
+      struct DSMCmdVecType *const vecs[] = {&Cmd->PriVec, &Cmd->SecVec};
+      struct fy_node *const nodes[]      = {
+          fy_node_by_path_def(cmdNode, "/Primary Vector"),
+          fy_node_by_path_def(cmdNode, "/Secondary Vector")};
+      char *const cmdRefFrm[]  = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
+      long *const attcmdProc[] = {&AttPriCmdProcessed, &AttSecCmdProcessed};
+
+      if (nodes[0] == NULL) {
+         printf("For Vector command %s, could not find Primary Vector. "
+                "Exiting...\n",
+                cmdName);
+         exit(EXIT_FAILURE);
+      }
+
+      if (!strcmp(subType, "Two Vector")) {
+         kMax        = 2;
          Cmd->Method = PARM_VECTORS;
+
+         if (nodes[1] == NULL) {
+            printf("For Two Vector command %s, could not find Secondary "
+                   "Vector. Exiting...\n",
+                   cmdName);
+            exit(EXIT_FAILURE);
+         }
       }
       else {
-         kMax        = 1;
-         Cmd->Method = PARM_UNITVECTOR;
-         cmdModes[0] = &AttCmdMode;
-         fy_node_scanf(indNode, "/ %ld", cmdModes[0]);
+         kMax               = 1;
+         Cmd->Method        = PARM_UNITVECTOR;
          AttSecCmdProcessed = TRUE;
       }
 
       for (int k = 0; k < kMax; k++) {
-         struct fy_node *searchNode = fy_node_by_path_def(
-             dsmRoot, (k == 0) ? ("/Primary Vector Configurations")
-                               : ("/Secondary Vector Configurations"));
-         WHILE_FY_ITER(searchNode, nodes[k])
-         {
-            long ind = 0;
-            fy_node_scanf(nodes[k],
-                          (k == 0) ? ("/Primary Vector/Index %ld")
-                                   : ("/Secondary Vector/Index %ld"),
-                          &ind);
-            if (ind == *cmdModes[k]) {
-               nodes[k] = fy_node_by_path_def(nodes[k],
-                                              (k == 0) ? ("/Primary Vector")
-                                                       : ("/Secondary Vector"));
-               break;
-            }
-         }
-      }
-      if (nodes[0] != NULL &&
-          (Cmd->Method == PARM_UNITVECTOR || nodes[1] != NULL)) {
-         struct fy_node *tgtNode = NULL;
-         ctrlNode                = fy_node_by_path_def(nodes[0], "/Controller");
-         actNode                 = fy_node_by_path_def(nodes[0], "/Actuator");
-         for (int k = 0; k < kMax; k++) {
-            tgtNode = fy_node_by_path_def(nodes[k], "/Target");
-            assignYAMLToDoubleArray(3, fy_node_by_path_def(nodes[k], "/Axis"),
-                                    vecs[k]->cmd_axis);
-            char tgtType[50] = {};
-            fy_node_scanf(tgtNode, "/Type %49s", tgtType);
+         struct fy_node *tgtNode = fy_node_by_path_def(nodes[k], "/Target");
+         assignYAMLToDoubleArray(3, fy_node_by_path_def(nodes[k], "/Axis"),
+                                 vecs[k]->cmd_axis);
+         char tgtType[50] = {0};
+         fy_node_scanf(tgtNode, "/Type %49s", tgtType);
 
-            if (!strcmp(tgtType, "BODY") || !strcmp(tgtType, "SC")) {
-               vecs[k]->CmdMode = CMD_TARGET;
-               char target[50]  = {};
-               fy_node_scanf(tgtNode, "/Target %51s", target);
-               if (!strcmp(tgtType, "BODY")) {
-                  vecs[k]->TrgType = TARGET_WORLD;
-                  long gsNum;
-                  strcpy(GroundStationCmd, "GroundStation_[%ld]");
-                  if (sscanf(target, GroundStationCmd, &gsNum) == 1) {
-                     vecs[k]->TrgWorld = GroundStation[gsNum].World;
-                     for (int i = 0; i < 3; i++)
-                        vecs[k]->W[i] = GroundStation[gsNum].PosW[i];
-                  }
-                  else {
-                     vecs[k]->TrgWorld = DecodeString(target);
-                     for (int i = 0; i < 3; i++)
-                        vecs[k]->W[i] = 0.0;
-                  }
+         if (!strcmp(tgtType, "BODY") || !strcmp(tgtType, "SC")) {
+            vecs[k]->CmdMode = CMD_TARGET;
+            char target[50]  = {0};
+            fy_node_scanf(tgtNode, "/Target %49s", target);
+            if (!strcmp(tgtType, "BODY")) {
+               vecs[k]->TrgType = TARGET_WORLD;
+               long gsNum;
+               strcpy(GroundStationCmd, "GroundStation_[%ld]");
+               if (sscanf(target, GroundStationCmd, &gsNum) == 1) {
+                  vecs[k]->TrgWorld = GroundStation[gsNum].World;
+                  for (int i = 0; i < 3; i++)
+                     vecs[k]->W[i] = GroundStation[gsNum].PosW[i];
                }
-               else if (!strcmp(tgtType, "SC")) {
-                  vecs[k]->TrgType = TARGET_SC;
-                  if (sscanf(target, "SC[%ld].B[%ld]", &vecs[k]->TrgSC,
-                             &vecs[k]->TrgBody) == 2) {
-                     // Decode Current SC ID Number
-                     if (vecs[k]->TrgSC >= Nsc) {
-                        printf("This mission only has %ld spacecraft, but "
-                               "spacecraft %ld was attempted to be set as the "
-                               "primary target vector. Exiting...\n",
-                               Nsc, vecs[k]->TrgSC);
-                        exit(EXIT_FAILURE);
-                     }
-
-                     if (vecs[k]->TrgBody >= SC[vecs[k]->TrgSC].Nb) {
-                        printf("Spacecraft %ld only has %ld bodies, but the "
-                               "primary target was attempted to be set as body "
-                               "%ld. Exiting...\n",
-                               vecs[k]->TrgSC, SC[vecs[k]->TrgSC].Nb,
-                               vecs[k]->TrgBody);
-                        exit(EXIT_FAILURE);
-                     }
+               else {
+                  vecs[k]->TrgWorld = DecodeString(target);
+                  for (int i = 0; i < 3; i++)
+                     vecs[k]->W[i] = 0.0;
+               }
+            }
+            else if (!strcmp(tgtType, "SC")) {
+               vecs[k]->TrgType = TARGET_SC;
+               if (sscanf(target, "SC[%ld].B[%ld]", &vecs[k]->TrgSC,
+                          &vecs[k]->TrgBody) == 2) {
+                  // Decode Current SC ID Number
+                  if (vecs[k]->TrgSC >= Nsc) {
+                     printf("This mission only has %ld spacecraft, but "
+                            "spacecraft %ld was attempted to be set as the "
+                            "primary target vector. Exiting...\n",
+                            Nsc, vecs[k]->TrgSC);
+                     exit(EXIT_FAILURE);
                   }
-                  else {
-                     printf("%s is in incorrect format. Exiting...", target);
+
+                  if (vecs[k]->TrgBody >= SC[vecs[k]->TrgSC].Nb) {
+                     printf("Spacecraft %ld only has %ld bodies, but the "
+                            "primary target was attempted to be set as body "
+                            "%ld. Exiting...\n",
+                            vecs[k]->TrgSC, SC[vecs[k]->TrgSC].Nb,
+                            vecs[k]->TrgBody);
                      exit(EXIT_FAILURE);
                   }
                }
                else {
-                  printf("%s Vector index %ld has improper format for SC or "
-                         "BODY targeting. Exiting...\n",
-                         (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
-                  exit(EXIT_FAILURE);
-               }
-               *attcmdProc[k] = TRUE;
-            }
-            else if (!strcmp(tgtType, "VEC")) {
-               vecs[k]->CmdMode = CMD_DIRECTION;
-               vecs[k]->TrgType = TARGET_VEC;
-               *attcmdProc[k] =
-                   fy_node_scanf(tgtNode, "/Frame %19s", cmdRefFrm[k]);
-               *attcmdProc[k] &= assignYAMLToDoubleArray(
-                                     3, fy_node_by_path_def(tgtNode, "/Axis"),
-                                     vecs[k]->cmd_vec) == 3;
-               if (*attcmdProc[k] == FALSE) {
-                  printf("%s Vector index %ld has improper format for VEC "
-                         "targeting. Exiting...\n",
-                         (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k]);
+                  printf("%s is in incorrect format. Exiting...", target);
                   exit(EXIT_FAILURE);
                }
             }
             else {
-               printf(
-                   "For %s Vector index %ld, %s is an invalid targeting type. "
-                   "Exiting...\n",
-                   (k == 0) ? ("Primary") : ("Secondary"), *cmdModes[k],
-                   tgtType);
+               printf("%s Vector for command %s has improper format for SC or "
+                      "BODY targeting. Exiting...\n",
+                      (k == 0) ? ("Primary") : ("Secondary"), cmdName);
+               exit(EXIT_FAILURE);
+            }
+            *attcmdProc[k] = TRUE;
+         }
+         else if (!strcmp(tgtType, "VEC")) {
+            vecs[k]->CmdMode = CMD_DIRECTION;
+            vecs[k]->TrgType = TARGET_VEC;
+            *attcmdProc[k] =
+                fy_node_scanf(tgtNode, "/Frame %19s", cmdRefFrm[k]);
+            *attcmdProc[k] &= assignYAMLToDoubleArray(
+                                  3, fy_node_by_path_def(tgtNode, "/Axis"),
+                                  vecs[k]->cmd_vec) == 3;
+            if (*attcmdProc[k] == FALSE) {
+               printf("%s Vector for command %s has improper format for VEC "
+                      "targeting. Exiting...\n",
+                      (k == 0) ? ("Primary") : ("Secondary"), cmdName);
                exit(EXIT_FAILURE);
             }
          }
+         else {
+            printf("For %s Vector for command %s, %s is an invalid targeting "
+                   "type. Exiting...\n",
+                   (k == 0) ? ("Primary") : ("Secondary"), cmdName, tgtType);
+            exit(EXIT_FAILURE);
+         }
       }
-      else {
-         printf("Could not find either Primary Vector command index %ld or "
-                "Secondary Vector command index %ld. Exiting...\n",
-                *cmdModes[0], *cmdModes[1]);
-         exit(EXIT_FAILURE);
-      }
+
+      ctrlNode = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode  = fy_node_by_path_def(cmdNode, "/Actuator");
 
       if (AttPriCmdProcessed == TRUE && AttSecCmdProcessed == TRUE)
          AttitudeCmdProcessed = TRUE;
@@ -858,135 +813,80 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       Cmd->AttitudeCtrlActive = TRUE;
    }
    else if (!strcmp(subType, "Quaternion")) {
-      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
-      cmdInd      = &AttCmdMode;
       Cmd->Method = PARM_QUATERNION;
 
-      struct fy_node *searchNode =
-          fy_node_by_path_def(dsmRoot, "/Quaternion Configurations");
-      WHILE_FY_ITER(searchNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Quaternion/Index %ld", &ind);
-         if (ind == *cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Quaternion");
-            break;
-         }
-      }
-      if (iterNode == NULL) {
-         printf("Could not find Quaternion Configuration with index %ld. "
-                "Exiting...\n",
-                *cmdInd);
+      AttitudeCmdProcessed =
+          assignYAMLToDoubleArray(
+              4, fy_node_by_path_def(cmdNode, "/Quaternion"), Cmd->q) == 4;
+      AttitudeCmdProcessed &=
+          fy_node_scanf(cmdNode, "/Frame %19s", Cmd->AttRefFrame) == 1;
+      ctrlNode              = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode               = fy_node_by_path_def(cmdNode, "/Actuator");
+      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
+
+      if (AttitudeCmdProcessed == FALSE) {
+         printf("Quaternion Command %s has invalid format. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
-      searchNode = fy_node_by_path_def(iterNode, "/Quaternion");
-      AttitudeCmdProcessed =
-          assignYAMLToDoubleArray(4, searchNode, Cmd->q) == 4;
-      AttitudeCmdProcessed &=
-          fy_node_scanf(iterNode, "/Frame %19s", Cmd->AttRefFrame) == 1;
-      ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
-      actNode               = fy_node_by_path_def(iterNode, "/Actuator");
-      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
       Cmd->AttitudeCtrlActive = TRUE;
    }
    else if (!strcmp(subType, "Mirror")) {
-      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
-      cmdInd      = &AttCmdMode;
       Cmd->Method = PARM_MIRROR;
 
-      struct fy_node *searchNode =
-          fy_node_by_path_def(dsmRoot, "/Mirror Configurations");
-      WHILE_FY_ITER(searchNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Mirror/Index %ld", &ind);
-         if (ind == *cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Mirror");
-            break;
-         }
-      }
-      if (iterNode == NULL) {
-         printf(
-             "Could not find Mirror Configuration with index %ld. Exiting...\n",
-             *cmdInd);
+      AttitudeCmdProcessed =
+          fy_node_scanf(cmdNode, "/Target %19s", Cmd->AttRefScID) == 1;
+      ctrlNode              = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode               = fy_node_by_path_def(cmdNode, "/Actuator");
+      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
+
+      if (AttitudeCmdProcessed == FALSE) {
+         printf("Mirror Command %s has invalid format. Exiting...\n", cmdName);
          exit(EXIT_FAILURE);
       }
-      AttitudeCmdProcessed =
-          fy_node_scanf(iterNode, "/Target %19s", Cmd->AttRefScID) == 1;
-      ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
-      actNode               = fy_node_by_path_def(iterNode, "/Actuator");
-      AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
       Cmd->AttitudeCtrlActive = TRUE;
    }
    else if (!strcmp(subType, "Detumble")) {
-      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
-      cmdInd      = &AttCmdMode;
       Cmd->Method = PARM_DETUMBLE;
 
-      struct fy_node *searchNode =
-          fy_node_by_path_def(dsmRoot, "/Detumble Configurations");
-      WHILE_FY_ITER(searchNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Detumble/Index %ld", &ind);
-         if (ind == *cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Detumble");
-            break;
-         }
-      }
-      if (iterNode == NULL) {
-         printf("Could not find Detumble Configuration with index %ld. "
-                "Exiting...\n",
-                *cmdInd);
+      ctrlNode             = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode              = fy_node_by_path_def(cmdNode, "/Actuator");
+      AttitudeCmdProcessed = ctrlNode != NULL && actNode != NULL;
+
+      if (AttitudeCmdProcessed == FALSE) {
+         printf("Detumble Command %s has invalid format. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
-      ctrlNode             = fy_node_by_path_def(iterNode, "/Controller");
-      actNode              = fy_node_by_path_def(iterNode, "/Actuator");
-      AttitudeCmdProcessed = ctrlNode != NULL && actNode != NULL;
 
       Cmd->AttitudeCtrlActive = TRUE;
    }
    else if (!strcmp(subType, "Whl H Manage")) {
-      fy_node_scanf(attCmdNode, "/Index %ld", &AttCmdMode);
-      cmdInd = &AttCmdMode;
-
-      struct fy_node *searchNode =
-          fy_node_by_path_def(dsmRoot, "/Whl H Manage Configurations");
-      WHILE_FY_ITER(searchNode, iterNode)
-      {
-         long ind = 0;
-         fy_node_scanf(iterNode, "/Whl H Manage/Index %ld", &ind);
-         if (ind == *cmdInd) {
-            iterNode = fy_node_by_path_def(iterNode, "/Whl H Manage");
-            break;
-         }
-      }
-      if (iterNode == NULL) {
-         printf("Could not find Whl H Manage Configuration with index %ld. "
-                "Exiting...\n",
-                *cmdInd);
-         exit(EXIT_FAILURE);
-      }
       AttitudeCmdProcessed =
-          fy_node_scanf(iterNode,
+          fy_node_scanf(cmdNode,
                         "/Minimum H_norm %lf "
                         "/Maximum H_norm %lf",
                         &Cmd->H_DumpLims[0], &Cmd->H_DumpLims[1]) == 2;
 
-      ctrlNode              = fy_node_by_path_def(iterNode, "/Controller");
-      actNode               = fy_node_by_path_def(iterNode, "/Actuator");
+      ctrlNode              = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode               = fy_node_by_path_def(cmdNode, "/Actuator");
       AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
-      struct fy_node *dumpNode  = fy_node_by_path_def(iterNode, "/Dumping");
+      struct fy_node *dumpNode  = fy_node_by_path_def(cmdNode, "/Dumping");
       AttitudeCmdProcessed     &= dumpNode != NULL;
-      Cmd->H_DumpActive         = fy_node_compare_string(dumpNode, "true", -1);
+      Cmd->H_DumpActive         = getYAMLBool(dumpNode);
       state                     = DMP_STATE;
       if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
          printf("Maximum momentum dump limit must be more than the minimum for "
-                "Whl H Manage Command index %ld. Exiting...\n",
-                *cmdInd);
+                "Whl H Manage Command %s Exiting...\n",
+                cmdName);
+         exit(EXIT_FAILURE);
+      }
+      if (AttitudeCmdProcessed == FALSE) {
+         printf("Whl H Manage Command %s has invalid format. Exiting...\n",
+                cmdName);
          exit(EXIT_FAILURE);
       }
    }
@@ -995,18 +895,19 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    }
    if (AttitudeCmdProcessed == TRUE && Cmd->AttitudeCtrlActive == TRUE) {
       if (GetController(DSM, ctrlNode, state) == FALSE) {
-         printf("For %s index %ld, could not find Controller alias %s or "
+         printf("For %s command %s, could not find Controller alias %s or "
                 "invalid format. Exiting...\n",
-                subType, *cmdInd,
+                subType, cmdName,
                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
          exit(EXIT_FAILURE);
       }
 
       if (GetActuators(AC, DSM, actNode, state) == FALSE) {
-         printf("For %s index %ld, could not find Actuator alias %s or invalid "
-                "format. Exiting...\n",
-                subType, *cmdInd,
-                fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
+         printf(
+             "For %s command %s, could not find Actuator alias %s or invalid "
+             "format. Exiting...\n",
+             subType, cmdName,
+             fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
@@ -1014,26 +915,24 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
 }
 //-------------------------------- ACTUATOR CMD --------------------------------
 long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
-                    struct fy_node *actCmdNode, struct fy_node *dsmRoot)
+                    struct fy_node *actCmdNode)
 {
    struct fy_node *iterNode = NULL, *actSeqNode = NULL;
    long ActuatorCmdProcessed = FALSE;
-   long i = 0, actCmdInd = 0;
+   long i                    = 0;
 
    struct DSMCmdType *Cmd = &DSM->Cmd;
 
-   fy_node_scanf(actCmdNode, "/Index %ld", &actCmdInd);
-   struct fy_node *actConfigNode =
-       fy_node_by_path_def(dsmRoot, "/Actuator Cmd Configurations");
-   WHILE_FY_ITER(actConfigNode, iterNode)
-   {
-      long ind = 0;
-      fy_node_scanf(iterNode, "/Actuator Cmd/Index %ld", &ind);
-      if (ind == actCmdInd) {
-         actSeqNode = fy_node_by_path_def(iterNode, "/Actuator Cmd/Actuators");
-         break;
-      }
+   struct fy_node *cmdNode = fy_node_by_path_def(actCmdNode, "/Command Data");
+
+   if (cmdNode == NULL) {
+      printf("Could not find Command Data for Actuator command. Exiting...\n");
+      exit(EXIT_FAILURE);
    }
+   const char *cmdName =
+       fy_node_get_scalar0(fy_node_by_path_def(cmdNode, "/Description"));
+
+   actSeqNode      = fy_node_by_path_def(cmdNode, "/Actuators");
    Cmd->ActNumCmds = fy_node_sequence_item_count(actSeqNode);
    iterNode        = NULL;
    WHILE_FY_ITER(actSeqNode, iterNode)
@@ -1050,16 +949,16 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
          else if (!strcmp(type, "MTB"))
             Cmd->ActTypes[i] = MTB_TYPE;
          else {
-            printf("Actuator Command index %ld has improper actuator type %s. "
+            printf("Actuator Command index %s has improper actuator type %s. "
                    "Exiting...",
-                   actCmdInd, type);
+                   cmdName, type);
             exit(EXIT_FAILURE);
          }
       }
       else {
          printf(
-             "Actuator Command index %ld is impropertly formatted. Exiting...",
-             actCmdInd);
+             "Actuator Command index %s is impropertly formatted. Exiting...",
+             cmdName);
          exit(EXIT_FAILURE);
       }
       if (Cmd->ActTypes[i] == WHL_TYPE && Cmd->ActInds[i] > AC->Nwhl) {
@@ -1164,50 +1063,31 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
    {
       char typeToken[FIELDWIDTH + 1] = {}, subType[FIELDWIDTH + 1] = {};
 
-      const char *searchTypeStr = "/Type %" STR(FIELDWIDTH) "[^\n]";
-      const char *searchSubtypeIndexStr =
-          "/Subtype %" STR(FIELDWIDTH) "[^\n] /Index %ld";
+      const char *searchTypeStr    = "/Type %" STR(FIELDWIDTH) "[^\n]";
+      const char *searchSubtypeStr = "/Subtype %" STR(FIELDWIDTH) "[^\n]";
       fy_node_scanf(iterNode, searchTypeStr, typeToken);
       if (!strcmp(typeToken, "Translation")) {
-         if (GetTranslationCmd(AC, DSM, iterNode, DSM->CmdNextTime, dsmRoot) ==
-             FALSE) {
-            long index;
-            fy_node_scanf(iterNode, searchSubtypeIndexStr, subType, &index);
-            printf("Translational command of subtype %*s and index %ld cannot "
-                   "be found in Inp_DSM.yaml. Exiting...\n",
-                   FIELDWIDTH, subType, index);
+         if (GetTranslationCmd(AC, DSM, iterNode, DSM->CmdNextTime) == FALSE) {
+            fy_node_scanf(iterNode, searchSubtypeStr, subType);
+            printf("Translation command of subtype %s cannot be found in "
+                   "Inp_DSM.yaml. Exiting...\n",
+                   subType);
             exit(EXIT_FAILURE);
          }
       }
       else if (!strcmp(typeToken, "Attitude")) {
-         if (GetAttitudeCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
-            const char *searchSubtypeStr = "/Sub Type %" STR(FIELDWIDTH) "s";
+         if (GetAttitudeCmd(AC, DSM, iterNode) == FALSE) {
             fy_node_scanf(iterNode, searchSubtypeStr, subType);
-            if (!strncmp(subType, "Two", 3)) {
-               long indicies[2];
-               assignYAMLToLongArray(2, fy_node_by_path_def(iterNode, "/Index"),
-                                     indicies);
-               printf("Actuator command of subtype %*s and indicies [%ld %ld]"
-                      "cannot be found in Inp_DSM.yaml. Exiting...\n",
-                      FIELDWIDTH, subType, indicies[0], indicies[1]);
-            }
-            else {
-               long index;
-               fy_node_scanf(iterNode, "/Index %ld", &index);
-               printf("Actuator command of subtype %*s and index %ld cannot "
-                      "method found in Inp_DSM.yaml. Exiting...\n",
-                      FIELDWIDTH, subType, index);
-            }
+            printf("Actuator command of subtype %s cannot be found in "
+                   "Inp_DSM.yaml. Exiting...\n",
+                   subType);
             exit(EXIT_FAILURE);
          }
       }
       else if (!strcmp(typeToken, "Actuator")) {
-         if (GetActuatorCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
-            long index;
-            fy_node_scanf(iterNode, "/Index %ld", &index);
-            printf("Actuator command of index %ld cannot be found in "
-                   "Inp_DSM.yaml. Exiting...\n",
-                   index);
+         if (GetActuatorCmd(AC, DSM, iterNode) == FALSE) {
+            printf("Actuator command cannot be found in Inp_DSM.yaml. "
+                   "Exiting...\n");
             exit(EXIT_FAILURE);
          }
       }

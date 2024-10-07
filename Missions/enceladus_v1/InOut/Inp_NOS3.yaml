@@ -1,9 +1,5 @@
 %YAML 1.2
 ---
-# <<<<<<<<<<<<<<<<<<  42 NOS3 Time Configuration File  >>>>>>>>>>>>>>>>>>>
 Configuration:
-  # -------------------------------NOS3 Configuration------------------------------
-  #   Bus:
-  #   Connection String: [[tcp://(hostname):(port)]]
   Bus: command
   Connection String: tcp://127.0.0.1:12001

@@ -280,8 +280,12 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
                      struct OrbitType *O);
 void MeanEphToOscEph(struct OrbitType *O, double DynTime);
 
-void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3], double W2_vel[3], double R_R_nd[3], double V_R_nd[3], double R_N[3], double V_N[3]);
-void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3], double W2_vel[3],  double R_N[3], double V_N[3], double R_R_nd[3], double V_R_nd[3]);
+void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
+                     double W2_vel[3], double R_R_nd[3], double V_R_nd[3],
+                     double R_N[3], double V_N[3]);
+void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
+                     double W2_vel[3], double R_N[3], double V_N[3],
+                     double R_R_nd[3], double V_R_nd[3]);
 
 /*
 ** #ifdef __cplusplus

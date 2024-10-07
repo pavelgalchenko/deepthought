@@ -922,6 +922,7 @@ void DrawCamHUD(void)
       }
       glRasterPos2i(CamWidth - 80 - 4 * strlen(s), CamHeight - 104);
       DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
+      glLineWidth(1.0);
    }
 
    glColor4fv(Black);
@@ -5328,6 +5329,62 @@ void LoadMapShaders(void)
 }
 #endif
 /*********************************************************************/
+char *CamShowNodeLabel(const enum CAM_MENU menu_it)
+{
+   switch (menu_it) {
+      case N_AXES:
+         return "/N Axes";
+      case L_AXES:
+         return "/L Axes";
+      case F_AXES:
+         return "/F Axes";
+      case B_AXES:
+         return "/B Axes";
+      case N_GRID:
+         return "/N Grid";
+      case L_GRID:
+         return "/L Grid";
+      case F_GRID:
+         return "/F Grid";
+      case B_GRID:
+         return "/B Grid";
+      case G_GRID:
+         return "/G Grid";
+      case CAM_FOV:
+         return "/Fields of View";
+      case PROX_OPS:
+         return "/Prox Ops";
+      case TDRS:
+         return "/TDRS Satellites";
+      case CAM_SHADOWS:
+         return "/Shadows";
+      case ASTRO:
+         return "/Astro Labels";
+      case TRUTH_VECTORS:
+         return "/Truth Vectors";
+      case FSW_VECTORS:
+         return "/FSW Vectors";
+      case MILKY_WAY:
+         return "/Milky Way";
+      case FERMI_SKY:
+         return "/Fermi Sky";
+   }
+}
+/*********************************************************************/
+char *MapShowNodeLabel(const enum MAP_MENU menu_it)
+{
+   switch (menu_it) {
+      case MAP_CLOCK:
+         return "/Clock";
+      case MAP_TLM_CLOCK:
+         return "/Tlm Clock";
+      case MAP_CREDITS:
+         return "/Credits";
+      case MAP_NIGHT:
+         return "/Night";
+   }
+}
+/*********************************************************************/
 void ReadGraphicsInpFile(void)
 {
    /* .. Initialize POV */
@@ -5452,25 +5509,31 @@ void ReadGraphicsInpFile(void)
       printf("Improperly configured Cam field in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   const char camShowFields[CAM_MENU_SIZE][20] = {
-       {"/N Axes"},         {"/L Axes"},       {"/F Axes"},
-       {"/B Axes"},         {"/N Grid"},       {"/L Grid"},
-       {"/F Grid"},         {"/B Grid"},       {"/G Grid"},
-       {"/Fields of View"}, {"/Prox Ops"},     {"/TDRS Satellites"},
-       {"/Shadows"},        {"/Astro Labels"}, {"/Truth Vectors"},
-       {"/FSW Vectors"},    {"/Milky Way"},    {"/Fermi Sky"}};
 
    node = fy_node_by_path_def(node, "/Cam Show");
    for (int i = 0; i < CAM_MENU_SIZE; i++) {
       char show[50] = {0}, label[50] = {0};
-      strcat(show, camShowFields[i]);
+      const char *camNodeLabel = CamShowNodeLabel(i);
+      strcat(show, camNodeLabel);
       strcat(show, "/Show");
-      strcat(label, camShowFields[i]);
+      strcat(label, camNodeLabel);
       strcat(label, "/Label %39[^\n]s");
       CamShow[i] = getYAMLBool(fy_node_by_path_def(node, show));
       if (!fy_node_scanf(node, label, CamShowLabel[i])) {
-         printf("Could not find label for Cam configuration %s. Exiting...\n",
-                &camShowFields[i][1]);
+         switch (i) {
+            case CAM_FOV:
+               strcpy(CamShowLabel[i], "FOVs");
+               break;
+            case TDRS:
+               strcpy(CamShowLabel[i], "TDRS");
+               break;
+            default:
+               strcpy(CamShowLabel[i], &camNodeLabel[1]);
+               break;
+         }
+         printf("Could not find label for Cam configuration %s. Using "
+                "default: %s\n",
+                &camNodeLabel[1], CamShowLabel[i]);
       }
    }
    ShadowsEnabled = CamShow[CAM_SHADOWS];
@@ -5485,19 +5548,20 @@ void ReadGraphicsInpFile(void)
       printf("Improperly configured Map field in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   const char mapShowFields[MAP_MENU_SIZE][20] = {
-       {"/Clock"}, {"/Tlm Clock"}, {"/Credits"}, {"/Night"}};
    node = fy_node_by_path_def(node, "/Map Show");
-   for (int i = 0; i < MAP_MENU_SIZE; i++) {
+   for (enum MAP_MENU i = 0; i < MAP_MENU_SIZE; i++) {
       char show[50] = {0}, label[50] = {0};
-      strcat(show, mapShowFields[i]);
+      const char *mapNodeLabel = MapShowNodeLabel(i);
+      strcat(show, mapNodeLabel);
       strcat(show, "/Show");
-      strcat(label, mapShowFields[i]);
+      strcat(label, mapNodeLabel);
       strcat(label, "/Label %39[^\n]s");
       MapShow[i] = getYAMLBool(fy_node_by_path_def(node, show));
       if (!fy_node_scanf(node, label, MapShowLabel[i])) {
-         printf("Could not find label for Map configuration %s. Exiting...\n",
-                &camShowFields[i][1]);
+         strcpy(MapShowLabel[i], &mapNodeLabel[1]);
+         printf("Could not find label for Map Show configuration %s. Using "
+                "default: %s\n",
+                &mapNodeLabel[1], MapShowLabel[i]);
       }
    }
    node = fy_node_by_path_def(root, "/Constellations Show");
