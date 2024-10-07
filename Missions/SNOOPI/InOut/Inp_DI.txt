@@ -1,0 +1,63 @@
+************  DI Input File ***************************
+
+********************ST 200 Parameters ****************
+* Col: 1-4 -> Body to Sensor Attitude Quaternion     *
+
+st200_param_0    0.0  0.0  7.071068e-01  7.071068e-01
+
+********************STIM 300 Parameters ****************
+* Col: 1-4 -> Body to Sensor Attitude Quaternion       *
+* Col: 5-7 -> Position Vector in Body Frame            *
+* Col: 8   -> Gravitational Acceleration               *
+* Col: 9   -> Max Integer Uses for ADC                 *
+
+stim300_param_0    0.5    0.5    0.5    0.5    0.0    0.0    0.0    9.80665    4294967295
+
+******************* CSS Parameters **********************
+* Col: 1-3 -> Body Mount Axis                          *
+* Col: 4   -> Min Voltage                              *
+* Col: 5   -> Max Voltage                              *
+
+css_param_0     0.0     1.0     0.0       0.661       5.0
+css_param_1     0.0     0.0     1.0       0.701       5.0
+css_param_2     1.0     0.0     0.0       0.600       5.0
+css_param_3     0.0    -1.0     0.0       0.661       5.0
+css_param_4    -1.0     0.0     0.0       0.700       5.0
+css_param_5     0.0     0.0    -1.0       0.645       5.0
+
+******************GPS Parameters ************************************
+leap_seconds    37.0                  %leap seconds corresponding to launch date
+
+********************M315 Parameters ****************
+* Col: 1-4 -> Body to Sensor Attitude Quaternion              *
+* Col: 5   -> Magnotometer Range (+/-nT)                      *
+* Col: 6   -> Max Integer Uses for ADC                        *
+* Col: 7   -> Conversion (LSB/micro-T)     *
+* Col: 8-10 -> Calibration gain x, y, z
+* Col: 11-13 -> Calibration offset x, y, z  (nano-T)         *
+
+m315_param_0    0.0    0.0    0.7071068    -0.7071068    800.0    16777215    75   1.05   1.16   1.04  -25970  9970  -14195
+
+********************CubeWheel Parameters ***************
+* Col: 1-3 -> Body to Mount Axis                       *
+* Col: 4   -> Inertia                                  *
+* Col: 5   -> kW Parameter                             *
+* Col: 6   -> kWRef Parameter                          *
+* Col: 7   -> kWCurrent Parameter                      *
+
+cubewheel_param_0    1.0    0.0    0.0    1.72e-5    2.0    2.0    0.48828125   0.01082   
+cubewheel_param_1    0.0    -1.0    0.0    1.72e-5   2.0   2.0    0.48828125    0.01082   
+cubewheel_param_2    0.0    0.0    1.0    1.72e-5    2.0    2.0    0.48828125    0.01082  
+
+*********************GOMS Parameers*******************
+* Col: 1-4 -> Attitude Quaternon                     *
+* Col: 5 -> Maximum Theta                            *
+* Col: 6 -> h                                        *
+* Col: 7 -> del                                      *
+* Col: 8 -> x0                                       *
+* Col: 9 -> y0                                       *
+* Col: 10 -> Minimum Expected ADC Value              *
+* Col: 11 -> Maximum ADC Expected Value              *
+
+goms_param_0    0.7071068  0.0  0.0  0.7071068   56.0    0.53591    0.0011942    -0.014989    0.029617   10   32768   5608
+

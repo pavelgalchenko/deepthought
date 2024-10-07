@@ -1,0 +1,132 @@
+#This file contains GNC associated inputs
+
+dt                      0.1                  #(time step for simulation)
+file_output_interval    2.0                  #(output file interval)
+enable_ATS              0                    #(flag to enable mission time line be driven via ATS file)
+
+Inertia_tensor_diag      0.177   0.125   0.078     ! Moments of Inertia (kg-m^2)
+Inertia_tensor_offdiag   0.0    -0.001   0.0        ! Products of Inertia (xy,xz,yz)
+
+******************** Momentum Management Command Parameters ********************************
+* Col: 1   -> Kb ( Control gain )                                                          *
+* Col: 2   -> Bfield range where control is active ( Tesla  )                              *
+* Col: 3   -> Preserve MTB direction flag ( 0 = off, 1 = on )                              *
+* Col: 4 -> Wheel capacity fraction below which Controoler disabled *
+* Col: 5 -> Wheel Capacity fraction above which Contoller enableled *
+
+Momentum_Management  1.0  4.096E-6  0   0.1   0.5
+
+
+******************** TWO AXIS Command Parameters ********************************************************
+* num_twoAxis -> number of modes that use two axis                                         *
+* Col: 1   -> FSW Mode ID                                                                  *
+* Col: 2   -> Enable Momentum Management                                                   *
+* Col: 3-5 -> Primary Body {x,y,z}                                                         *
+* Col: 6   -> Primary Target ID  (-1=FLOAT, 0=Position, 1=Velocity, 2=SUN, 3=Orbit Normal) *
+* Col: 7-9 -> Secondary Body {x,y,z}                                                       *
+* Col: 10  -> Secondary Target ID (-1=FLOAT,0=Position, 1=Velocity, 2=SUN, 3=Orbit Normal) *
+* Col: 11  -> max Euler angle used for attitude error limiting                             *
+* Col: 12  -> (deg) Largest angle at which Two axis algorithm assumes collinearity         *
+* Col: 13  -> Preserve wheel direction flag ( 0 = off, 1 = on )                            *
+* Col: 14-16  -> wn^2 ( Scaled Proportional Gain for x, y and z, kp = (wn&2)*I )           *
+* Col: 17-19  -> 2*wn*zeta ( Scaled Derivative Gain for x, y and z, kd = (2*wn*zeta)*I )   *
+* Col: 20-22  -> k ( Scaled Integral Gain for x, y and z, ki = k*I )                       *                                           *
+
+num_twoAxis  2                                                                # number of modes that use two axis
+twoAxis_0    3  1  1.0   0.0   0.0   2   0.0   0.0   -1.0   0    10   0.1   1   0.004  0.004  0.004    0.147    0.147    0.147   0.0   0.0   0.0 # science_mode, P->R, S ->V
+twoAxis_1    4  1  0.0   0.0   -1.0   0   0.0   0.0   0.0   -1     10   0.1   1   0.004  0.004  0.004    0.147    0.147    0.147   0.0   0.0   0.0 # science_mode, P->R, S ->V
+
+******************** SUNSAFE Command Parameters ********************************************************
+* num_sunsafe -> number of modes that use SunSafe
+* Col: 1   -> FSW Mode ID                                                                  *
+* Col: 2   -> Enable Momentum Management                                                   *
+* Col: 3-5 -> Primary Body {x,y,z}                                                         *
+* Col: 6-8 -> wbn command                                                                  *
+* Col: 9   -> Rate Limit (m/s)                                                             *
+* Col: 10   -> Preserve wheel direction flag ( 0 = off, 1 = on )                            *
+* Col: 11-13   -> wn^2 ( Scaled Proportional Gain for x, y and z, kp = (wn&2)*I )           *
+* Col: 14-16  -> 2*wn*zeta ( Scaled Derivative Gain for x, y and z, kd = (2*wn*zeta)*I )   *
+
+num_sunsafe  1                                                                # number of modes that use two axis
+sunsafe_0    2   1   1.0   0.0   0.0  0.0  0.0  0.0  0.5   1   0.004  0.004  0.004    0.2    0.2    0.2  #
+
+******************** BDOT Command Parameters ********************************************************
+* num_bdot -> number of modes that use two axis
+* Col: 1   -> FSW Mode ID
+* Col: 2   -> kb gain
+* Col: 3   -> bmag range
+* Col: 4   -> Preserve MTB direction ( 0=off, 1 = on)                                  *
+
+num_bdot  1                                                                # number of modes that use two axis
+bdot_0    1   0.4   4.096E-6   0   #
+
+******************** Tracking Command Parameters *******************************************
+* num_tracking -> number of modes that use two axis                                        *
+* Col: 1   -> FSW Mode ID                                                                  *
+* Col: 2   -> Enable Momentum Management                                                   *                                                                         *
+* Col: 3   -> max euler angle used for attitude error limiting                             *
+* Col: 4   -> Preserve wheel direction flag ( 0 = off, 1 = on )                            *
+* Col: 5-7   -> wn^2 ( Scaled Proportional Gain for x, y and z, kp = (wn&2)*I )           *
+* Col: 8-10  -> 2*wn*zeta ( Scaled Derivative Gain for x, y and z, kd = (2*wn*zeta)*I )   *
+* Col: 11-13  -> k ( Scaled Integral Gain for x, y and z, ki = k*I )                       *
+
+num_tracking  2   # number of modes that use tracking
+tracking_0    5   1     10.0   1    0.04    0.04    0.04    0.65    0.65    0.65    0.0    0.0    0.0
+tracking_1    6   0     10.0   1    0.04    0.04    0.04    0.65    0.65    0.65    0.0    0.0    0.0
+
+******************** Inertial Command Parameters *******************************************
+* num_inertial -> number of modes that use two axis                                        *
+* Col: 1   -> FSW Mode ID                                                                  *
+* Col: 2   -> Enable Momentum Management                                                   *
+* Col: 3-6 -> qbn                                                                          *
+* Col: 7   -> max euler angle used for attitude error limiting                             *
+* Col: 8   -> Preserve wheel direction flag ( 0 = off, 1 = on )                            *
+* Col: 9-11   -> wn^2 ( Scaled Proportional Gain for x, y and z, kp = (wn&2)*I )           *
+* Col: 12-14  -> 2*wn*zeta ( Scaled Derivative Gain for x, y and z, kd = (2*wn*zeta)*I )   *
+* Col: 15-17  -> k ( Scaled Integral Gain for x, y and z, ki = k*I )                       *
+
+num_inertial  1   # number of modes that use inertial
+inertial_0    7   0   0.5  0.5 0.5  0.5   10.0   1    0.04    0.04    0.04    0.65    0.65    0.65    0.0    0.0    0.0
+
+******************** Slew Command Parameters *************************
+* num_slew -> number of modes that use two axis                                            *
+* Col: 1   -> FSW Mode ID                                                                  *
+* Col: 2   -> Enable Momentum Management                                                   *
+* Col: 3   -> delta                                                                        *
+* Col: 4   -> tg                                                                           *
+* Col: 5-7   -> Hmax                             *
+* Col: 8-10  -> Tmax                            *
+* Col: 11 -> max euler angle used for attitude error limiting *
+* Col: 12  -> Preserve wheel direction flag ( 0 = off, 1 = on ) *
+* Col: 13-15  -> wn^2 ( Scaled Proportional Gain for x, y and z, kp = (wn&2)*I )           *
+* Col: 16-18  -> 2*wn*zeta ( Scaled Derivative Gain for x, y and z, kd = (2*wn*zeta)*I )   *
+* Col: 19-21  -> k ( Scaled Integral Gain for x, y and z, ki = k*I )                       *
+
+num_slew  0   # number of modes that use slew
+slew_0    8   1   1.0   1.5   0.01082   0.01082   0.01082   0.001   0.001   0.001   0.5   1   0.0047   0.0047   0.0047   0.132   0.132   0.132   0.0   0.0   0.0 #
+
+******************** LVLH Command Parameters ***********************************************
+* num_lvlh -> number of modes that use two axis                                            *
+* Col: 1   -> FSW Mode ID                                                                  *
+* Col: 2   -> Enable Momentum Management                                                   *
+* Col: 3-6 -> qbl                                                                          *
+* Col: 7   -> max euler angle used for attitude error limiting                             *
+* Col: 8   -> Preserve wheel direction flag ( 0 = off, 1 = on )                            *
+* Col: 9-11   -> wn^2 ( Scaled Proportional Gain for x, y and z, kp = (wn&2)*I )           *
+* Col: 12-14  -> 2*wn*zeta ( Scaled Derivative Gain for x, y and z, kd = (2*wn*zeta)*I )   *
+* Col: 15-17  -> k ( Scaled Integral Gain for x, y and z, ki = k*I )                       *
+
+num_lvlh  0   # number of modes that use lvlh
+lvlh_0    0   1   0.5   0.5   0.5   0.5   10.0   1    0.04    0.04    0.04    0.42    0.42    0.42    0.0    0.0    0.0  #
+
+num_sunpointGTO  0
+num_spinupGTO    0
+num_scienceGTO   0
+
+--------------- Mission Specific Params -------------------------
+
+read_dione_params        0                          # flag to enable/disable read of dione parameters
+read_petitsat_params     0                          # flag to enable/disable read of petitsat parameters
+read_gtosat_params       0                          # flag to enable/disable read of gtosat parameters
+read_burstcube_params    0                          # flag to enable/disable read of burstcube parameters
+read_snoopi_params       0                          # flag to enable/disable read of snoopi parameters

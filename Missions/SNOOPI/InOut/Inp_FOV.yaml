@@ -1,0 +1,43 @@
+%YAML 1.2
+---
+FOVs:
+  - FOV:
+      Label: Star Tracker
+      Sides:
+        Number: 30
+        Length: 4.0
+      Width: 90.0
+      Height: 90.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.5
+      Type: WIREFRAME
+      Near Field: true
+      Far Field: true
+      SC: 0
+      Body: 0
+      Position: [0.0, 0.0, 0.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, -90.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: FSS-PlusX
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 120.0
+      Height: 120.0
+      Color:
+        RGB: [0.0, 0.0, 1.0]
+        Alpha: 0.5
+      Type: WIREFRAME
+      Near Field: true
+      Far Field: true
+      SC: 0
+      Body: 0
+      Position: [0.0, 0.0, 0.0]
+      Euler Angles:
+        Angles: [0.0, 90.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS

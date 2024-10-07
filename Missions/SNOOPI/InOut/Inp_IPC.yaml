@@ -1,0 +1,15 @@
+%YAML 1.2
+---
+IPCs:
+  - IPC:
+      Mode: ACS
+      AC ID: 0
+      File Name: State00.42
+      Socket:
+        Role: SERVER
+        Host:
+          Name: localhost
+          Port: 10001
+        Blocking: true
+      Echo to stdout: false
+      Prefixes: ["SC[0].AC"]

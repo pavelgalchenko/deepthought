@@ -1,0 +1,14 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Nodes_Simple.txt
+  Description: Simple Nodes
+Nodes:
+  - Node:
+      Index: 0
+      Location: [0.0, 0.0, 0.0]
+      Comment: Default central node
+  - Node:
+      Index: 1
+      Location: [0.5, 1.0, 1.5]
+      Comment: Accelerometer

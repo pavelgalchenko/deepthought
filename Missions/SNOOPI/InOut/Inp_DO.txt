@@ -1,0 +1,22 @@
+********************CubeWheel Parameters ***************
+* Col: 1-3 -> Body to Mount Axis                       *
+* Col: 4   -> Inertia (kg-m^2)                         *
+* Col: 5   -> Max Torque  (N-m)                        *
+* Col: 6   -> Max Momentum (N-m-sec)                   *
+* Col: 7   -> kWRef Parameter                          *
+* Col: 8   -> Scale Factor
+* Col: 9   -> {0=IDLE, 1=NO_CNTRL, 2=DUTY_CYCLE, 3=SPD_CNTRL}
+
+cubewheel_param_0    1.0    0.0    0.0    1.72e-5    0.001    0.01082    2.0    100.0    2
+cubewheel_param_1    0.0   -1.0    0.0    1.72e-5    0.001    0.01082    2.0    100.0    2
+cubewheel_param_2    0.0    0.0    1.0    1.72e-5    0.001    0.01082    2.0    100.0    2
+
+******************** MTB Parameters ********************
+* Col: 1-3 -> Body to Mount Axis                       *
+* Col: 4   -> Max Dipole (A-m^2)                       *
+* Col: 5   -> Scale Factor for ADC                     *
+* Col: 6-8 -> curve fit coefficients                   *
+
+mtb_param_0   0.0 -1.0  0.0  0.15  100.0  0.0  1.0  0
+mtb_param_1  -1.0  0.0  0.0  0.15  100.0  0.0  1.0  0
+mtb_param_2   0.0  0.0  1.0  0.15  100.0  0.0  1.0  0

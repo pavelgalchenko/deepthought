@@ -1,0 +1,22 @@
+# This file used to construct ATS Mission Time driven Parameter Update sequence
+
+**************** Snoopi ATS Parameters *******************
+* Col: 1 -> Mission Mode ID                          *
+*    0  = PASSIVE                                    *
+*    1  = BDOT                                       *
+*    2  = SUNSAFE                                    *
+*    3  = SCIENCE                                    *
+*    13  = SLEW                                   *
+                        *
+* Col: 2 -> Mission Elapsed Time                     *
+* Col: 3 -> Panel Angle                              *
+
+ats_snoopi      2               #number of rows in Snoopi ATS table
+snoopi_ats_0    2       0.0        0.0
+snoopi_ats_1    2       130.0      0.0
+
+
+ats_burstcube      0               #number of rows in Snoopi ATS table
+ats_gtosat         0               #number of rows in Snoopi ATS table
+ats_dione         0               #number of rows in Snoopi ATS table
+ats_petitsat       0               #number of rows in Snoopi ATS table

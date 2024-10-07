@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Snoopi
+  Description: ISS Orbit
+Orbit:
+  Type: CENTRAL
+  World: EARTH
+  J2 Secular Drift: true
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 420.0
+    Apoapsis: 420.0
+    Inclination: 51.5
+    RAAN: -160.0
+    Arg of Periapsis: 202.7876
+    True Anomaly: 260.0
+Formation:
+  Fixed Frame: L
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

@@ -1,0 +1,12 @@
+*************************** Input for Ephemeris Models*********************
+
+***** Inputs for Solar Ephemeris*****************
+date_epoch      2451545.0                           #(Day) Reference Julian Day
+G_coeff         357.5291092     0.9856002831        #(-)
+L_coeff         280.46          0.9856473922        #(-)
+coeff_long      1.914666471     0.019994643         #(-)
+cos_obliq_eclp  0.91748                             # sin(23.4)
+sin_obliq_eclp  0.39779                             # cos(23.4)
+
+*********** input for IGRF **********************
+nmax            8                          # max order/degree

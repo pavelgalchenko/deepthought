@@ -1,0 +1,35 @@
+************************* Inputs for Attitude determination tasks *****************************
+
+***** Inputs for AD SOL ******************
+pgt                 0                               # Flag to enable/disable propogation
+
+***** Inputs for AD ST ******************
+st_pref             0         # (-) Flag to enable/disable propogation
+
+***** Inputs for Mur-AKF ****************
+sig_u               4.59934839e-8                   # variance associated to gyro drift, from datasheet
+sig_v               6.571167e-5                     # variance associated with random drift, from datasheet
+sensor_noise_init     1.0e-2    0.005   0.000581776    # (sig-mag, sig-sun, sig-star) Initial diagonal terms of covariance matrix
+cov_init            1.0e-6   1.0e-12                # Elements of top half and bottom right diagonals
+bias_init           0.0   0.0  0.0                  # Initial bias associated with gyro drift
+ek_ST_bound          0.5                          # ST residual bound in degrees
+ek_FSS_bound         1.0e-1                         # FSS residual bound
+ek_MG_bound         1.0e-4                          # Mag residual bound in Tesla
+Mag_range           1.0e-12                         # Mag Validity in Tesla
+Dvg_tol             1.0e-4                         # Mag Validity in Tesla
+
+
+***** Inputs for AD magRKF ******************
+P_ul_diag           0.1       #(deg) Upper Left Diagonal Element of state covariance matrix
+P_lr_diag           1.0e-10   #(-) lower right diagonal elements of state covariance matrix
+Q_ul_diag           1.0       #(-) Upper Left Diagonal Elements of process noise covariance matrix
+Q_lr_diag           1.5e-9    #(-) Lower Left Diagonal Elements of process noise covariance matrix
+R_diag              1.0e-10   #(-) Left Diagonal Elements of measurement noise covariance matrix
+rk_bound            1.0e-7    #(-) Bounding parameter for rate filter
+
+******* Inputs for Rate Estimator ************
+enable_filter         1                  # (-) 1 = apply moving average filter, 0 = do not apply moving average filter)
+sample_size           40                 # (-) Number of Samples to be used in moving average filter (MAX = 100)
+
+********* Low Pass Filter ***************
+alpha               0.0                              # filter coeffient for IMU wbn data
