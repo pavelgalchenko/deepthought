@@ -549,16 +549,9 @@ void DSM_NAV_StateReport(void)
          for (state = INIT_STATE; state <= FIN_STATE; state++) {
             int stateInd = Nav->navInd[state];
             if (Nav->stateActive[state] == TRUE) {
-               switch (state) {
-                  case TIME_STATE:
-                     fprintf(covFile[Isc], "%18.36le ",
-                             sqrt(Nav->NxN2[stateInd][stateInd]));
-                     break;
-                  default:
-                     for (int i = 0; i < 3; i++)
-                        fprintf(covFile[Isc], "%18.36le ",
-                                sqrt(Nav->NxN2[stateInd + i][stateInd + i]));
-                     break;
+               for (int i = 0; i < Nav->navSize[state]; i++) {
+                  fprintf(covFile[Isc], "%18.36le ",
+                          sqrt(Nav->P[stateInd + i][stateInd + i]));
                }
             }
          }

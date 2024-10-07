@@ -50,6 +50,8 @@ typedef uint8_t ccsdsFine;
 typedef uint16_t ccsdsFine;
 #define CCSDS_FINE_MAX (65536)
 #endif
+
+#define CCSDS_STEP_SIZE ((1.0) / (CCSDS_FINE_MAX))
 /*************************** END CCSDS CONFIGURATION **************************/
 
 /* #ifdef __cplusplus
@@ -80,6 +82,10 @@ void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds);
 void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
                  struct DateType *date);
+double CCSDSAdd(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
+                const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
+double CCSDSSub(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
+                const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
 void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
               long *Minute, double *Second);
 void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
@@ -89,7 +95,7 @@ void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
 double JD2GMST(double JD);
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
-double GpsDateToGpsTime(long ccGpsRollover, long GpsWeek, double GpsSecond);
+double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);
 double usec(void);
 void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
                     long *Minute, double *Second, double LSB);
