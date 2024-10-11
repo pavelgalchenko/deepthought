@@ -713,7 +713,6 @@ void Ephemerides(void)
       }
    }
 
-#ifdef _ENABLE_SPICE_
    if (EphemOption != EPH_SPICE) {
       // If we use SPICE, all rotations are handled via SPICE
       /* .. Earth rotation is a special case */
@@ -746,7 +745,6 @@ void Ephemerides(void)
          }
       }
    }
-#endif
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    for (i = 0; i < 3; i++) {

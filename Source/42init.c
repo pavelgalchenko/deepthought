@@ -3233,8 +3233,10 @@ void InitSpacecraft(struct SCType *S)
             S->VelR[j] = wxrn[j] + vsn[j];
          }
          if (O->Regime == ORB_ZERO) {
+            // TODO: ????? should something be here????
          }
          else if (O->Regime == ORB_FLIGHT) {
+            // TODO: ????? should something be here????
          }
          else {
             RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR, S->PosEH,
@@ -3371,6 +3373,61 @@ void LoadTdrs(void)
    fy_document_destroy(fyd);
 }
 /*********************************************************************/
+void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
+{
+
+   double dum1, dum2;
+   long n, m;
+
+   GravModel->Type = 0;
+
+   if (strcmp(GravModel->modelFile, "") == 0) {
+      GravModel->Norm = NULL;
+      GravModel->C    = NULL;
+      GravModel->S    = NULL;
+      GravModel->N    = 0;
+      GravModel->M    = 0;
+   }
+   else {
+      FILE *gravFile = FileOpen(modelPath, GravModel->modelFile, "r");
+      long nMax = 0, mMax = 0;
+      while (!feof(gravFile)) {
+         fscanf(gravFile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
+         if (n > nMax)
+            nMax = n;
+         if (m > mMax)
+            mMax = m;
+      }
+      if (mMax > nMax) {
+         printf("Model file %s has maximum Degree %ld, but maximum Order %ld. "
+                "Exiting...\n",
+                GravModel->modelFile, nMax, mMax);
+         exit(EXIT_FAILURE);
+      }
+      GravModel->C    = CreateMatrix(nMax + 1, mMax + 1);
+      GravModel->S    = CreateMatrix(nMax + 1, mMax + 1);
+      GravModel->Norm = CreateMatrix(nMax + 1, mMax + 1);
+
+      rewind(gravFile);
+      while (!feof(gravFile)) {
+         fscanf(gravFile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
+         GravModel->C[n][m] = dum1;
+         GravModel->S[n][m] = dum2;
+      }
+      fclose(gravFile);
+      /* Transform from EGM96 normalization to Neumann normalization */
+      for (n = 1; n <= nMax; n++) {
+         for (m = 0; m <= n; m++) {
+            double tmpNorm = 1.0 / (2 * n + 1);
+            if (m != 0)
+               tmpNorm *= (double)(factDfact(n + m, n - m) / 2);
+            GravModel->Norm[n][m] = sqrt(tmpNorm);
+         }
+      }
+   }
+}
+
+/*********************************************************************/
 void LoadSun(void)
 {
    /* Rumor is, Sun's magfield is highly variable, poorly modeled */
@@ -3454,9 +3511,8 @@ void LoadSun(void)
 /*********************************************************************/
 void LoadPlanets(void)
 {
-
    struct OrbitType *Eph;
-   double Zaxis[3] = {0.0, 0.0, 1.0};
+   const double Zaxis[3] = {0.0, 0.0, 1.0};
    double GMST;
    double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
 
@@ -3466,6 +3522,8 @@ void LoadPlanets(void)
    char MapFileName[10][20] = {
        "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
+   const char GravFileName[10][20] = {"", "", "", "EGM96.txt", "GMM2B.txt",
+                                      "", "", "", "",          ""};
    double Mu[10]  = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
                      1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
    double J2[10]  = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
@@ -3486,11 +3544,11 @@ void LoadPlanets(void)
    const char OrientationName[10][20] = {
        "SUN",     "MERCURY", "VENUS",  "EARTH",   "MARS",
        "JUPITER", "SATURN",  "URANUS", "NEPTUNE", "PLUTO"};
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
                                    // hardcoded values with SPICE values
+      double tmp_holder     = 0;
+      double tmp_holder3[3] = {0};
+      int dim               = 0;
       for (int i = 0; i < 10; i++) {
          bodvrd_c(PlanetName[i], "GM", 1, &dim, &tmp_holder);
          Mu[i] = tmp_holder * 1E9;
@@ -3523,34 +3581,36 @@ void LoadPlanets(void)
 
    double CNJ[3][3];
    /* Magnetic Field Dipole Strength, Wb-m */
-   double DipoleMoment[10] = {0.0, 0.0, 0.0, 7.943E15, 0.0,
-                              0.0, 0.0, 0.0, 0.0,      0.0};
+   const double DipoleMoment[10] = {0.0, 0.0, 0.0, 7.943E15, 0.0,
+                                    0.0, 0.0, 0.0, 0.0,      0.0};
    /* Magnetic Field Dipole Axis Unit Vector */
-   double DipoleAxis[10][3] = {
+   const double DipoleAxis[10][3] = {
        {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
        {0.0, 0.0, 1.0}, {-6.53286E-2, 0.186549, -0.980271},
        {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
        {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
        {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0}};
    /* Magnetic Field Dipole Offset from Center, m */
-   double DipoleOffset[10][3] = {
+   const double DipoleOffset[10][3] = {
        {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
        {0.0, 0.0, 0.0}, {-3.74461E5, 2.44108E5, -1.58291E5},
        {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
        {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
        {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   float Color[11][3]          = {{1.0f, 1.0f, 0.9f},                /* Sun */
-                                  {0.400318f, 0.347338f, 0.253973f}, /* Mercury */
-                                  {0.716824f, 0.676952f, 0.623907f}, /* Venus */
-                                  {0.212f, 0.293502f, 0.522072f},    /* Earth */
-                                  {0.687493f, 0.454481f, 0.365368f}, /* Mars */
-                                  {0.793131f, 0.627618f, 0.477430f}, /* Jupiter */
-                                  {0.705187f, 0.677713f, 0.620916f}, /* Saturn */
-                                  {0.486074f, 0.584573f, 0.769742f}, /* Uranus */
-                                  {0.187558f, 0.243884f, 0.413025f}, /* Neptune */
-                                  {0.268063f, 0.268183f, 0.268204f}, /* Pluto */
-                                  {0.440417f, 0.441343f, 0.441084f}}; /* Luna */
-   unsigned char Glyph[11][14] = {
+
+   const float Color[11][3] = {{1.0f, 1.0f, 0.9f},                 /* Sun */
+                               {0.400318f, 0.347338f, 0.253973f},  /* Mercury */
+                               {0.716824f, 0.676952f, 0.623907f},  /* Venus */
+                               {0.212f, 0.293502f, 0.522072f},     /* Earth */
+                               {0.687493f, 0.454481f, 0.365368f},  /* Mars */
+                               {0.793131f, 0.627618f, 0.477430f},  /* Jupiter */
+                               {0.705187f, 0.677713f, 0.620916f},  /* Saturn */
+                               {0.486074f, 0.584573f, 0.769742f},  /* Uranus */
+                               {0.187558f, 0.243884f, 0.413025f},  /* Neptune */
+                               {0.268063f, 0.268183f, 0.268204f},  /* Pluto */
+                               {0.440417f, 0.441343f, 0.441084f}}; /* Luna */
+
+   const unsigned char Glyph[11][14] = {
        {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x66, 0x42, 0x99, 0x99, 0x42, 0x66, 0x18,
         0x00, 0x00}, /* Sun */
        {0xc0, 0xc0, 0x00, 0x10, 0x7c, 0x10, 0x38, 0x44, 0x82, 0x82, 0x44, 0x38,
@@ -3573,7 +3633,7 @@ void LoadPlanets(void)
         0x00, 0x00}, /* Pluto */
        {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60, 0xe0, 0xe0, 0x60, 0x70, 0x18,
         0x00, 0x00}}; /* Luna */
-   long HasAtmo[11] = {0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0};
+   const long HasAtmo[11] = {0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0};
    long i, j;
 
    for (i = MERCURY; i <= PLUTO; i++) {
@@ -3599,6 +3659,13 @@ void LoadPlanets(void)
       for (j = 0; j < 14; j++)
          World[i].Glyph[j] = Glyph[i][j];
       World[i].Atmo.Exists = HasAtmo[i];
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &World[i].GravModel;
+      strcpy(gravModel->modelFile, GravFileName[i]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 
    World[EARTH].Atmo.GasColor[0]  = 0.17523;
@@ -3696,26 +3763,27 @@ void LoadMoonOfEarth(void)
 {
 #define Nm 1
 
-   char Name[Nm][40]        = {"Luna"};
-   char MapFileName[Nm][40] = {"Luna.ppm"};
-   float Color[4]           = {0.440417f, 0.441343f, 0.441084f, 1.0f};
-   double mu[Nm]            = {4.902801E12};
-   double J2[Nm]            = {2.027E-4};
-   double rad[Nm]           = {1.738E6};
-   double w[Nm]             = {2.66E-6};
-   double SMA[Nm]           = {384400000.0};
-   double ecc[Nm]           = {0.0549};
-   double inc[Nm]           = {0.0};
-   double RAAN[Nm]          = {0.0};
-   double omg[Nm]           = {0.0};
-   long EpochYear[Nm]       = {2000};
-   long EpochMon[Nm]        = {1};
-   long EpochDay[Nm]        = {1};
-   long EpochHour[Nm]       = {12};
-   double MeanAnom[Nm]      = {0.0};
+   const char Name[Nm][40]         = {"Luna"};
+   const char MapFileName[Nm][40]  = {"Luna.ppm"};
+   const char GravFileName[Nm][20] = {"GLGM2.txt"};
+   const float Color[4]            = {0.440417f, 0.441343f, 0.441084f, 1.0f};
+   double mu[Nm]                   = {4.902801E12};
+   double J2[Nm]                   = {2.027E-4};
+   double rad[Nm]                  = {1.738E6};
+   double w[Nm]                    = {2.66E-6};
+   const double SMA[Nm]            = {384400000.0};
+   const double ecc[Nm]            = {0.0549};
+   const double inc[Nm]            = {0.0};
+   const double RAAN[Nm]           = {0.0};
+   const double omg[Nm]            = {0.0};
+   const long EpochYear[Nm]        = {2000};
+   const long EpochMon[Nm]         = {1};
+   const long EpochDay[Nm]         = {1};
+   const long EpochHour[Nm]        = {12};
+   const double MeanAnom[Nm]       = {0.0};
+   const unsigned char Glyph[14]   = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
+                                      0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
    double Epoch;
-   unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
-                              0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
 
    long Ip = EARTH;
    long Iw, Im;
@@ -3806,6 +3874,13 @@ void LoadMoonOfEarth(void)
       C2Q(M->CNH, M->qnh);
       M->PriMerAng = LunaPriMerAng(TT.JulDay);
       M->Type      = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 #undef Nm
 }
@@ -3815,23 +3890,24 @@ void LoadMoonsOfMars(void)
 {
 #define Nm 2
 
-   const char Name[Nm][40]        = {"Phobos", "Deimos"};
-   const char MapFileName[Nm][40] = {"Rockball", "Rockball"};
-   double mu[Nm]                  = {7.158E5, 9.8E4};
-   double rad[Nm]                 = {11.1E3, 6.2E3};
-   double w[Nm]                   = {0.0, 0.0};
+   const char Name[Nm][40]         = {"Phobos", "Deimos"};
+   const char MapFileName[Nm][40]  = {"Rockball", "Rockball"};
+   const char GravFileName[Nm][20] = {"", ""};
+   double mu[Nm]                   = {7.158E5, 9.8E4};
+   double rad[Nm]                  = {11.1E3, 6.2E3};
+   double w[Nm]                    = {0.0, 0.0};
    double PoleRA[Nm];
    double PoleDec[Nm];
    double CNJ[3][3];
-   double SMA[Nm]      = {9380.0E3, 23460.0E3};
-   double ecc[Nm]      = {0.0151, 0.0002};
-   double inc[Nm]      = {1.075, 1.793};
-   double RAAN[Nm]     = {164.931, 339.600};
-   double omg[Nm]      = {150.247, 290.496};
-   long EpochYear[Nm]  = {1950, 1950};
-   long EpochMon[Nm]   = {1, 1};
-   long EpochDay[Nm]   = {1, 1};
-   double MeanAnom[Nm] = {92.474, 296.230};
+   const double SMA[Nm]      = {9380.0E3, 23460.0E3};
+   const double ecc[Nm]      = {0.0151, 0.0002};
+   const double inc[Nm]      = {1.075, 1.793};
+   const double RAAN[Nm]     = {164.931, 339.600};
+   const double omg[Nm]      = {150.247, 290.496};
+   const long EpochYear[Nm]  = {1950, 1950};
+   const long EpochMon[Nm]   = {1, 1};
+   const long EpochDay[Nm]   = {1, 1};
+   const double MeanAnom[Nm] = {92.474, 296.230};
    double Epoch;
 
    long Ip = MARS;
@@ -3940,6 +4016,13 @@ void LoadMoonsOfMars(void)
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
    strcpy(World[PHOBOS].GeomFileName, "Phobos.obj");
    Geom = LoadWingsObjFile(ModelPath, World[PHOBOS].GeomFileName, &Matl, &Nmatl,
@@ -3959,6 +4042,9 @@ void LoadMoonsOfJupiter(void)
    const char MapFileName[Nm][40] = {
        "NONE", "Iceball", "NONE", "NONE", "NONE", "NONE", "NONE", "NONE",
        "NONE", "NONE",    "NONE", "NONE", "NONE", "NONE", "NONE", "NONE"};
+   const char GravFileName[Nm][20] = {"", "", "", "", "", "", "", "",
+                                      "", "", "", "", "", "", "", ""};
+
    double mu[Nm]  = {5.959E9, 3202.739E9, 9887.834E9, 7179.289E9, 1.38E8, 4.5E8,
                      5.8E7,   2.0E7,      5.0E6,      4.2E6,      8.8E6,  2.0E6,
                      7.3E5,   1.0E8,      5.0E5,      8.0E6};
@@ -3971,29 +4057,30 @@ void LoadMoonsOfJupiter(void)
    double PoleRA[Nm];
    double PoleDec[Nm];
    double CNJ[3][3];
-   double SMA[Nm]     = {4.2180E8,  6.7110E8,  1.07040E9, 1.8827E9,
-                         1.814E8,   1.1461E10, 1.1741E10, 2.3624E10,
-                         2.3939E10, 1.1717E10, 2.3404E10, 2.1276E10,
-                         1.1165E10, 2.219E8,   1.29E8,    1.28E8};
-   double ecc[Nm]     = {0.0041, 0.0094, 0.0013, 0.0074, 0.0032, 0.1623,
-                         0.2174, 0.4090, 0.2495, 0.1124, 0.2533, 0.2435,
-                         0.1636, 0.0176, 0.0018, 0.0012};
-   double inc[Nm]     = {0.036,  0.466,   0.177,   0.192,  0.380,   27.496,
-                         26.627, 151.431, 158.109, 28.302, 164.907, 148.889,
-                         27.457, 1.08,    0.054,   0.019};
-   double RAAN[Nm]    = {43.977,  219.106, 63.552,  298.848, 108.946, 57.245,
-                         109.373, 312.990, 303.081, 5.528,   113.738, 7.615,
-                         217.137, 235.694, 228.378, 146.912};
-   double omg[Nm]     = {84.129,  88.97,   192.417, 52.643, 155.873, 331.995,
-                         143.591, 170.45,  346.394, 49.486, 28.199,  100.619,
-                         272.349, 234.269, 328.047, 297.177};
-   long EpochYear[Nm] = {1997, 1997, 1997, 1997, 1997, 2000, 2000, 2000,
-                         2000, 2000, 2000, 2000, 2000, 1997, 1997, 1997};
-   long EpochMon[Nm]  = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-   long EpochDay[Nm] = {16, 16, 16, 16, 16, 1, 1, 1, 1, 1, 1, 1, 1, 16, 16, 16};
-   double MeanAnom[Nm] = {342.021, 171.016, 317.54,  181.408, 185.194, 68.721,
-                          332.962, 280.193, 168.397, 329.121, 234.027, 248.793,
-                          228.076, 135.956, 135.673, 276.047};
+   const double SMA[Nm]  = {4.2180E8,  6.7110E8,  1.07040E9, 1.8827E9,
+                            1.814E8,   1.1461E10, 1.1741E10, 2.3624E10,
+                            2.3939E10, 1.1717E10, 2.3404E10, 2.1276E10,
+                            1.1165E10, 2.219E8,   1.29E8,    1.28E8};
+   const double ecc[Nm]  = {0.0041, 0.0094, 0.0013, 0.0074, 0.0032, 0.1623,
+                            0.2174, 0.4090, 0.2495, 0.1124, 0.2533, 0.2435,
+                            0.1636, 0.0176, 0.0018, 0.0012};
+   const double inc[Nm]  = {0.036,  0.466,   0.177,   0.192,  0.380,   27.496,
+                            26.627, 151.431, 158.109, 28.302, 164.907, 148.889,
+                            27.457, 1.08,    0.054,   0.019};
+   const double RAAN[Nm] = {43.977,  219.106, 63.552,  298.848, 108.946, 57.245,
+                            109.373, 312.990, 303.081, 5.528,   113.738, 7.615,
+                            217.137, 235.694, 228.378, 146.912};
+   const double omg[Nm]  = {84.129,  88.97,   192.417, 52.643, 155.873, 331.995,
+                            143.591, 170.45,  346.394, 49.486, 28.199,  100.619,
+                            272.349, 234.269, 328.047, 297.177};
+   const long EpochYear[Nm]  = {1997, 1997, 1997, 1997, 1997, 2000, 2000, 2000,
+                                2000, 2000, 2000, 2000, 2000, 1997, 1997, 1997};
+   const long EpochMon[Nm]   = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+   const long EpochDay[Nm]   = {16, 16, 16, 16, 16, 1,  1,  1,
+                                1,  1,  1,  1,  1,  16, 16, 16};
+   const double MeanAnom[Nm] = {
+       342.021, 171.016, 317.54,  181.408, 185.194, 68.721,  332.962, 280.193,
+       168.397, 329.121, 234.027, 248.793, 228.076, 135.956, 135.673, 276.047};
    double Epoch;
 
    long Ip = JUPITER;
@@ -4104,6 +4191,13 @@ void LoadMoonsOfJupiter(void)
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 #undef Nm
 }
@@ -4120,6 +4214,9 @@ void LoadMoonsOfSaturn(void)
                                      "NONE", "NONE",     "NONE", "NONE", "NONE",
                                      "NONE", "NONE",     "NONE", "NONE", "NONE",
                                      "NONE", "NONE",     "NONE"};
+   const char GravFileName[Nm][20] = {"", "", "", "", "", "", "", "", "",
+                                      "", "", "", "", "", "", "", "", ""};
+
    double mu[Nm]  = {2.53E9,     7.21E9, 4.121E10, 7.3113E10, 1.5407E11,
                      8.97819E12, 3.7E8,  1.205E11, 5.531E8,   1.266E8,
                      3.51E7,     1.7E6,  4.8E5,    2.4E5,     1.4E5,
@@ -4132,29 +4229,34 @@ void LoadMoonsOfSaturn(void)
    double PoleRA[Nm];
    double PoleDec[Nm];
    double CNJ[3][3];
-   double SMA[Nm]     = {1.8554E8,  2.3804E8,  2.9467E8,  3.7742E8,    5.2707E8,
-                         1.22187E9, 1.50088E9, 3.56084E9, 1.294778E10, 1.5146E8,
-                         1.5141E8,  3.7742E8,  2.9471E8,  2.9471E8,    1.3767E8,
-                         1.3938E8,  1.4172E8,  1.3358E8};
-   double ecc[Nm]     = {0.0196, 0.0047, 0.0001, 0.0022, 0.001,  0.0288,
-                         0.0274, 0.0283, 0.1635, 0.0068, 0.0098, 0.0071,
-                         0.0002, 0.0005, 0.0012, 0.0022, 0.0042, 0.0};
-   double inc[Nm]     = {1.572, 0.009, 1.091,   0.028, 0.331, 0.28,
-                         0.63,  7.489, 175.986, 0.163, 0.351, 0.213,
-                         1.18,  1.499, 0.003,   0.008, 0.05,  0.001};
-   double RAAN[Nm]    = {153.152, 93.204, 330.882, 168.909, 311.531, 24.502,
-                         264.022, 75.831, 241.57,  46.899,  85.244,  40.039,
-                         300.256, 25.327, 0.5,     259.504, 327.215, 40.557};
-   double omg[Nm]     = {14.352,  211.923, 262.845, 168.82,  256.609, 185.671,
-                         324.183, 275.921, 345.582, 241.778, 312.63,  292.056,
-                         341.795, 234.788, 331.521, 164.389, 83.461,  139.318};
-   long EpochYear[Nm] = {2004, 2004, 2004, 2004, 2004, 2004, 2004, 2004, 2004,
-                         2004, 2004, 2004, 2004, 2004, 2004, 2004, 2004, 2004};
-   long EpochMon[Nm]  = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-   long EpochDay[Nm]  = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-   double MeanAnom[Nm] = {255.312, 197.047, 189.003, 65.99,   311.551, 15.154,
-                          295.906, 356.029, 287.593, 242.754, 308.322, 134.07,
-                          200.143, 101.961, 157.738, 242.224, 202.697, 246.065};
+   const double SMA[Nm] = {
+       1.8554E8,  2.3804E8,  2.9467E8,    3.7742E8, 5.2707E8, 1.22187E9,
+       1.50088E9, 3.56084E9, 1.294778E10, 1.5146E8, 1.5141E8, 3.7742E8,
+       2.9471E8,  2.9471E8,  1.3767E8,    1.3938E8, 1.4172E8, 1.3358E8};
+   const double ecc[Nm]  = {0.0196, 0.0047, 0.0001, 0.0022, 0.001,  0.0288,
+                            0.0274, 0.0283, 0.1635, 0.0068, 0.0098, 0.0071,
+                            0.0002, 0.0005, 0.0012, 0.0022, 0.0042, 0.0};
+   const double inc[Nm]  = {1.572, 0.009, 1.091,   0.028, 0.331, 0.28,
+                            0.63,  7.489, 175.986, 0.163, 0.351, 0.213,
+                            1.18,  1.499, 0.003,   0.008, 0.05,  0.001};
+   const double RAAN[Nm] = {153.152, 93.204, 330.882, 168.909, 311.531, 24.502,
+                            264.022, 75.831, 241.57,  46.899,  85.244,  40.039,
+                            300.256, 25.327, 0.5,     259.504, 327.215, 40.557};
+   const double omg[Nm]  = {14.352,  211.923, 262.845, 168.82,  256.609,
+                            185.671, 324.183, 275.921, 345.582, 241.778,
+                            312.63,  292.056, 341.795, 234.788, 331.521,
+                            164.389, 83.461,  139.318};
+   const long EpochYear[Nm]  = {2004, 2004, 2004, 2004, 2004, 2004,
+                                2004, 2004, 2004, 2004, 2004, 2004,
+                                2004, 2004, 2004, 2004, 2004, 2004};
+   const long EpochMon[Nm]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                1, 1, 1, 1, 1, 1, 1, 1, 1};
+   const long EpochDay[Nm]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                1, 1, 1, 1, 1, 1, 1, 1, 1};
+   const double MeanAnom[Nm] = {255.312, 197.047, 189.003, 65.99,   311.551,
+                                15.154,  295.906, 356.029, 287.593, 242.754,
+                                308.322, 134.07,  200.143, 101.961, 157.738,
+                                242.224, 202.697, 246.065};
    double Epoch;
 
    long Ip = SATURN;
@@ -4265,6 +4367,13 @@ void LoadMoonsOfSaturn(void)
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 #undef Nm
 }
@@ -4273,24 +4382,25 @@ void LoadMoonsOfUranus(void)
 {
 #define Nm 5
 
-   const char Name[Nm][40]        = {"Ariel", "Umbriel", "Titania", "Oberon",
-                                     "Miranda"};
-   const char MapFileName[Nm][40] = {"NONE", "NONE", "NONE", "NONE", "NONE"};
-   double mu[Nm]                  = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
+   const char Name[Nm][40]         = {"Ariel", "Umbriel", "Titania", "Oberon",
+                                      "Miranda"};
+   const char MapFileName[Nm][40]  = {"NONE", "NONE", "NONE", "NONE", "NONE"};
+   const char GravFileName[Nm][20] = {"", "", "", "", ""};
+   double mu[Nm]                   = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
    double rad[Nm] = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
    double w[Nm]   = {0.0, 0.0, 0.0, 0.0, 0.0};
    double PoleRA[Nm];
    double PoleDec[Nm];
    double CNJ[3][3];
-   double SMA[Nm]      = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
-   double ecc[Nm]      = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
-   double inc[Nm]      = {0.041, 0.128, 0.079, 0.068, 4.338};
-   double RAAN[Nm]     = {22.394, 33.485, 99.771, 279.771, 326.438};
-   double omg[Nm]      = {115.349, 84.709, 284.4, 104.4, 68.312};
-   long EpochYear[Nm]  = {1980, 1980, 1980, 1980, 1980};
-   long EpochMon[Nm]   = {1, 1, 1, 1, 1};
-   long EpochDay[Nm]   = {1, 1, 1, 1, 1};
-   double MeanAnom[Nm] = {39.481, 12.469, 24.614, 283.088, 311.33};
+   const double SMA[Nm]      = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
+   const double ecc[Nm]      = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
+   const double inc[Nm]      = {0.041, 0.128, 0.079, 0.068, 4.338};
+   const double RAAN[Nm]     = {22.394, 33.485, 99.771, 279.771, 326.438};
+   const double omg[Nm]      = {115.349, 84.709, 284.4, 104.4, 68.312};
+   const long EpochYear[Nm]  = {1980, 1980, 1980, 1980, 1980};
+   const long EpochMon[Nm]   = {1, 1, 1, 1, 1};
+   const long EpochDay[Nm]   = {1, 1, 1, 1, 1};
+   const double MeanAnom[Nm] = {39.481, 12.469, 24.614, 283.088, 311.33};
    double Epoch;
 
    long Ip = URANUS;
@@ -4399,6 +4509,13 @@ void LoadMoonsOfUranus(void)
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 #undef Nm
 }
@@ -4407,23 +4524,24 @@ void LoadMoonsOfNeptune(void)
 {
 #define Nm 2
 
-   const char Name[Nm][40]        = {"Triton", "Nereid"};
-   const char MapFileName[Nm][40] = {"NONE", "NONE"};
-   double mu[Nm]                  = {1427.9E9, 2.06E9};
-   double rad[Nm]                 = {1353.4E3, 170.0E3};
-   double w[Nm]                   = {0.0, 0.0};
+   const char Name[Nm][40]         = {"Triton", "Nereid"};
+   const char MapFileName[Nm][40]  = {"NONE", "NONE"};
+   const char GravFileName[Nm][20] = {"", ""};
+   double mu[Nm]                   = {1427.9E9, 2.06E9};
+   double rad[Nm]                  = {1353.4E3, 170.0E3};
+   double w[Nm]                    = {0.0, 0.0};
    double PoleRA[Nm];
    double PoleDec[Nm];
    double CNJ[3][3];
-   double SMA[Nm]      = {3.548E8, 5.5134E9};
-   double ecc[Nm]      = {0.0, 0.7512};
-   double inc[Nm]      = {156.834, 7.232};
-   double RAAN[Nm]     = {172.431, 334.762};
-   double omg[Nm]      = {344.046, 280.83};
-   long EpochYear[Nm]  = {1989, 1989};
-   long EpochMon[Nm]   = {8, 8};
-   long EpochDay[Nm]   = {25, 25};
-   double MeanAnom[Nm] = {264.775, 359.341};
+   const double SMA[Nm]      = {3.548E8, 5.5134E9};
+   const double ecc[Nm]      = {0.0, 0.7512};
+   const double inc[Nm]      = {156.834, 7.232};
+   const double RAAN[Nm]     = {172.431, 334.762};
+   const double omg[Nm]      = {344.046, 280.83};
+   const long EpochYear[Nm]  = {1989, 1989};
+   const long EpochMon[Nm]   = {8, 8};
+   const long EpochDay[Nm]   = {25, 25};
+   const double MeanAnom[Nm] = {264.775, 359.341};
    double Epoch;
 
    long Ip = NEPTUNE;
@@ -4531,6 +4649,13 @@ void LoadMoonsOfNeptune(void)
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 #undef Nm
 }
@@ -4539,24 +4664,25 @@ void LoadMoonsOfPluto(void)
 {
 #define Nm 1
 
-   const char Name[Nm][40]        = {"Charon"};
-   const char MapFileName[Nm][40] = {"Iceball"};
-   double mu[Nm]                  = {108.0E9};
-   double rad[Nm]                 = {593.0E3};
-   double w[Nm]                   = {0.0};
+   const char Name[Nm][40]         = {"Charon"};
+   const char MapFileName[Nm][40]  = {"Iceball"};
+   const char GravFileName[Nm][20] = {""};
+   double mu[Nm]                   = {108.0E9};
+   double rad[Nm]                  = {593.0E3};
+   double w[Nm]                    = {0.0};
    double PoleRA[Nm];
    double PoleDec[Nm];
    double CNJ[3][3];
-   double SMA[Nm]      = {1.7536E7};
-   double ecc[Nm]      = {0.0022};
-   double inc[Nm]      = {0.001};
-   double RAAN[Nm]     = {85.187};
-   double omg[Nm]      = {71.255};
-   long EpochYear[Nm]  = {2000};
-   long EpochMon[Nm]   = {1};
-   long EpochDay[Nm]   = {1};
-   long EpochHour[Nm]  = {12};
-   double MeanAnom[Nm] = {147.848};
+   const double SMA[Nm]      = {1.7536E7};
+   const double ecc[Nm]      = {0.0022};
+   const double inc[Nm]      = {0.001};
+   const double RAAN[Nm]     = {85.187};
+   const double omg[Nm]      = {71.255};
+   const long EpochYear[Nm]  = {2000};
+   const long EpochMon[Nm]   = {1};
+   const long EpochDay[Nm]   = {1};
+   const long EpochHour[Nm]  = {12};
+   const double MeanAnom[Nm] = {147.848};
    double Epoch;
 
    long Ip = PLUTO;
@@ -4665,12 +4791,22 @@ void LoadMoonsOfPluto(void)
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
+
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &M->GravModel;
+      strcpy(gravModel->modelFile, GravFileName[Im]);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
 #undef Nm
 }
 /**********************************************************************/
 void LoadMinorBodies(void)
 {
+   // TODO: change minorbodies.txt to yaml
+   // TODO: Arbitrarily many minor bodies (this will take effort)
+   // TODO: SPICE minor bodies??
    FILE *infile;
    struct WorldType *W;
    struct OrbitType *E;
@@ -4678,7 +4814,8 @@ void LoadMinorBodies(void)
    long Ib, i;
    long EpochYear, EpochMon, EpochDay, EpochHour;
    double CNJ[3][3], PoleRA, PoleDec, Epoch;
-   double ZAxis[3] = {0.0, 0.0, 1.0};
+   const double ZAxis[3] = {0.0, 0.0, 1.0};
+   char GravFileName[32] = {0};
 
    infile = FileOpen(ModelPath, "MinorBodies.txt", "r");
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -4702,6 +4839,7 @@ void LoadMinorBodies(void)
       fscanf(infile, "%s %[^\n] %[\n]", W->BumpTexFileName, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &W->mu, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &W->rad, junk, &newline);
+      fscanf(infile, "%s %[^\n] %[\n]", GravFileName, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &W->w, junk, &newline);
       fscanf(infile, "%lf %lf %[^\n] %[\n]", &PoleRA, &PoleDec, junk, &newline);
       A2C(312, (PoleRA + 90.0) * D2R, (90.0 - PoleDec) * D2R, 0.0, CNJ);
@@ -4755,6 +4893,15 @@ void LoadMinorBodies(void)
       W->PriMerAng = fmod(W->w * DynTime, TwoPi);
       SimpRot(ZAxis, W->PriMerAng, W->CWN);
       C2Q(W->CWN, W->qwn);
+
+      /* Gravitation Model */
+      if (strcmp(GravFileName, "NONE") == 0)
+         strcpy(GravFileName, "");
+      struct SphereHarmType *gravModel = &W->GravModel;
+      strcpy(gravModel->modelFile, GravFileName);
+      LoadGravModel(ModelPath, gravModel);
+      if (gravModel->C != NULL)
+         W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
    }
    fclose(infile);
 }
@@ -5890,16 +6037,10 @@ void InitSim(int argc, char **argv)
       Iw = DecodeString(response);
       switch (Iw) {
          case EARTH:
-            EarthGravModel.N = N;
-            EarthGravModel.M = M;
-            break;
          case MARS:
-            MarsGravModel.N = N;
-            MarsGravModel.M = M;
-            break;
          case LUNA:
-            LunaGravModel.N = N;
-            LunaGravModel.M = M;
+            World[Iw].GravModel.N = N;
+            World[Iw].GravModel.M = M;
             break;
          default:
             printf("World %119s does not have a configured spherical harmonic "

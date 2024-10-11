@@ -80,12 +80,6 @@ EXTERN long OutFlag, GLOutFlag, GLEnable, CleanUpFlag;
 /* Environment */
 EXTERN struct SphereHarmType MagModel; /* -3,...,10 */
 EXTERN long SurfaceModel;              /* 0=Brick, 1=CylPlate */
-EXTERN struct SphereHarmType
-    EarthGravModel; /* Degree and Order of Earth gravitational model */
-EXTERN struct SphereHarmType
-    MarsGravModel; /* Degree and Order of Mars gravitational model */
-EXTERN struct SphereHarmType
-    LunaGravModel; /* Degree and Order of Luna gravitational model */
 EXTERN long AeroActive;
 EXTERN long AeroShadowsActive;
 EXTERN long GGActive;
