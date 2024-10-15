@@ -31,7 +31,7 @@ void SphericalHarmGravForce(const long N, const long M,
    for (int i = 0; i < 3; i++)
       FgeoN[i] = 0.0;
    if (GravModel->C != NULL && GravModel->N >= 2) {
-      /*    Transform p to spherical coords in Earth frame */
+      /*    Transform p to spherical coords in World frame */
       CEN[0][0] = cos(PriMerAng);
       CEN[1][1] = CEN[0][0];
       CEN[2][2] = 1.0;
