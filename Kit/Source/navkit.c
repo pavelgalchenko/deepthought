@@ -2594,10 +2594,11 @@ void configureRefFrame(struct DSMNavType *const Nav,
       default: {
          // make sure if you do sc relative nav, you initialize that sc's nav
          // before you start this sc's
+         // TODO: due to comm state, this is a time step behind...
          const struct DSMStateType *TrgState = Nav->refOriPtr;
          const struct BodyType *TrgSB        = Nav->refBodyPtr;
          for (i = 0; i < 3; i++) {
-            // TODO: pn is position of body origin relative to sc origin or cm??
+            // pn is position of body origin relative to sc origin
             targetPosN[i] = TrgState->PosN[i] + TrgSB->pn[i];
             targetVelN[i] = TrgState->VelN[i] + TrgSB->vn[i];
          }
@@ -2906,32 +2907,48 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
 
 void updateNavCCSDS(ccsdsCoarse *sec, ccsdsFine *subsec, const double dSeconds)
 {
-   const double sizeCheck = 1.0 / (CCSDS_FINE_MAX << 1);
+   const double sizeCheck = 1.0 / (((unsigned long)(CCSDS_FINE_MAX)) << 1);
    double integral;
    const double fractional = modf(dSeconds, &integral);
-   const ccsdsFine dSubSec = (fractional * CCSDS_FINE_MAX + .5);
-   if ((*subsec) > (ccsdsFine)(*subsec + dSubSec) && fractional > sizeCheck)
-      (*sec) += 1;
-   else if ((*subsec) < (ccsdsFine)(*subsec + dSubSec) &&
-            fractional < sizeCheck)
-      (*sec) -= 1;
-   *subsec += dSubSec;
-   *sec    += integral;
+
+   *sec += integral;
+   if (fractional > sizeCheck) {
+      const ccsdsFine dSubSec = fractional * CCSDS_FINE_MAX + .5;
+      ccsdsFine test          = 0;
+      if (__builtin_add_overflow(*subsec, dSubSec, &test))
+         (*sec)++;
+      *subsec += dSubSec;
+   }
+   else if (fractional < -sizeCheck) {
+      const ccsdsFine dSubSec = -fractional * CCSDS_FINE_MAX + .5;
+      ccsdsFine test          = 0;
+      if (__builtin_sub_overflow(*subsec, dSubSec, &test))
+         (*sec)--;
+      *subsec -= dSubSec;
+   }
 }
 
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
                   const long dCCSDSSec, const long dCCSDSSubSec,
                   const long init)
 {
-   double lerpAlphaState, AtmoDensity = 0.0;
+   double AtmoDensity = 0.0;
 
    long i, j, k;
    enum States Istate;
 
-   struct DSMNavType *Nav = &DSM->DsmNav;
-   lerpAlphaState         = Nav->refLerpAlpha;
-   const double ccsdsStep = 1.0 / CCSDS_FINE_MAX;
-   const double DT = (double)(dCCSDSSec) + (double)(dCCSDSSubSec * ccsdsStep);
+   struct DSMNavType *Nav     = &DSM->DsmNav;
+   double lerpAlphaState      = Nav->refLerpAlpha;
+   const double ccsdsStepSize = CCSDS_STEP_SIZE;
+   const double DT =
+       (double)(dCCSDSSec) + (double)(dCCSDSSubSec * ccsdsStepSize);
+
+   ccsdsCoarse dateSec;
+   ccsdsFine dateSubsec;
+   DateToCCSDS(Nav->Date, &dateSec, &dateSubsec);
+   updateNavCCSDS(&dateSec, &dateSubsec, -(32.184 + LeapSec));
+   const double dateOffset =
+       CCSDSSub(Nav->ccsdsSeconds, Nav->ccsdsSubseconds, dateSec, dateSubsec);
 
    GetM(AC, Nav, Nav->CRB, Nav->qbr, Nav->PosR, Nav->VelR, Nav->wbr);
    if (init == TRUE) {
@@ -2978,7 +2995,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       // to be quite slow due to the number of multiplications.
       for (i = 0; i < Nav->navDim; i++)
          for (j = 0; j < Nav->navDim; j++)
-            Nav->NxN2[i][j] = Nav->jacobian[i][j] * ccsdsStep;
+            Nav->NxN2[i][j] = Nav->jacobian[i][j] * ccsdsStepSize;
       expm(Nav->NxN2, Nav->STMStep, Nav->navDim);
 
       for (i = 0; i < Nav->navDim; i++)
@@ -3000,7 +3017,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
 #endif
    for (k = 0; k < ORDRK; k++) {
       struct DateType date = Nav->Date;
-      updateTime(&date, DTk[k]);
+      updateTime(&date, dateOffset + DTk[k]);
       Nav->refLerpAlpha = lerpAlphaState;
       dLerpAlpha        = DTk[k] / Nav->DT;
       double CRB[3][3], qbr[4], PosR[3], VelR[3], wbr[3], whlH[AC->Nwhl];
@@ -3186,7 +3203,6 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 {
    long i, j;
    struct DSMNavType *Nav = &DSM->DsmNav;
-   Nav->steps++;
 
    // TODO: will maybe need to do something to preserve information if a new Nav
    // filter is called
@@ -3205,6 +3221,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
       PropagateNav(
           AC, DSM, finSeconds - Nav->ccsdsSeconds,
           (signed long)finSubseconds - (signed long)Nav->ccsdsSubseconds, TRUE);
+      Nav->steps++;
    }
    else {
       long init = TRUE;
@@ -3244,12 +3261,13 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                break;
          }
 
-         const long dSec = measSec - Nav->ccsdsSeconds;
+         const long dSec =
+             (signed long)measSec - (signed long)Nav->ccsdsSeconds;
          const long dSubsec =
              ((signed long)measSubsec) - ((signed long)Nav->ccsdsSubseconds);
 
-         const double ccsdsStep = 1.0 / CCSDS_FINE_MAX;
-         const double dt        = dSec + dSubsec * ccsdsStep;
+         const double ccsdsStepSize = CCSDS_STEP_SIZE;
+         const double dt            = dSec + dSubsec * ccsdsStepSize;
          if (dt >= 0) {
 #if REPORT_RESIDUALS ==                                                        \
     TRUE // TODO: set a report residuals "bool" in nav and use that instead of
@@ -3260,7 +3278,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
             // TODO: investigate only prop once per Kalman filt call and use STM
             // and linearization to prop measurements through time
             PropagateNav(AC, DSM, dSec, dSubsec, init);
-            if (init)
+            if (init == TRUE)
                init = FALSE;
             Nav->ccsdsSeconds    = measSec;
             Nav->ccsdsSubseconds = measSubsec;
@@ -3430,7 +3448,11 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
       if (Nav->ccsdsSeconds < finSeconds ||
           Nav->ccsdsSubseconds < finSubseconds)
          PropagateNav(AC, DSM, finSeconds - Nav->ccsdsSeconds,
-                      finSubseconds - Nav->ccsdsSubseconds, FALSE);
+                      (signed long)finSubseconds -
+                          (signed long)Nav->ccsdsSubseconds,
+                      FALSE);
+
+      Nav->steps++;
    }
    Nav->Date = Nav->Date0;
 

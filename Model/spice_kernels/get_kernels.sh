@@ -32,6 +32,16 @@ mkdir ../../pck
 cd ../../pck
 for i in $planetary_constants_kernels; do
     wget_kernels pck $i
+    if [[ $i == "Gravity.tpc" ]]; then
+        # Typo in J2 data for Luna. This corrects it
+        unameOut="$(uname -s)"
+        case "${unameOut}" in
+            Darwin*)sed_cmd="sed -i '' ";;
+            Linux*)sed_cmd="sed -i ";;
+            *) echo "Unknown output for uname -s: $unameSOut"
+        esac
+        eval "${sed_cmd} '82s/[ ]*begindata/      \\\begindata /' ${i}"
+    fi
 done
 
 mkdir ../lsk

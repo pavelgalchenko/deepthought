@@ -97,19 +97,19 @@ double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
 void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds)
 {
-   long Year     = date.Year;
-   long Month    = date.Month;
-   long Day      = date.Day;
-   long Hour     = date.Hour;
-   long Minute   = date.Minute;
-   double Second = date.Second;
+   const long Year     = date.Year;
+   const long Month    = date.Month;
+   const long Day      = date.Day;
+   const long Hour     = date.Hour;
+   const long Minute   = date.Minute;
+   const double Second = date.Second;
 
    const double epoch = DateToJD(1958, 1, 1, 0, 0, 0);
    double JD          = DateToJD(Year, Month, Day, 0, 0, 0) - epoch;
 
-   *ccsdsSeconds = JD * 86400.0 + Hour * 3600.0 + Minute * 60.0 + Second;
    double integral;
-   *ccsdsSubSeconds = modf(Second, &integral) * CCSDS_FINE_MAX;
+   *ccsdsSubSeconds = (modf(Second, &integral) * CCSDS_FINE_MAX) + 0.5;
+   *ccsdsSeconds    = JD * 86400.0 + Hour * 3600.0 + Minute * 60.0 + integral;
 }
 /**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
@@ -118,7 +118,7 @@ void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds)
 {
    struct DateType date;
-   const double LSB = 1.0 / CCSDS_FINE_MAX;
+   const double LSB = CCSDS_STEP_SIZE;
    TimeToDate(UTC, &date.Year, &date.Month, &date.Day, &date.Hour, &date.Minute,
               &date.Second, LSB);
    DateToCCSDS(date, ccsdsSeconds, ccsdsSubSeconds);
@@ -130,12 +130,42 @@ void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
                  struct DateType *date)
 {
    const double epoch     = DateToJD(1958, 1, 1, 0, 0, 0);
-   const double ccsdsStep = 1.0 / CCSDS_FINE_MAX;
+   const double ccsdsStep = CCSDS_STEP_SIZE;
    const double subDay    = fmod((double)ccsdsSeconds, 86400.0);
    const long days        = ccsdsSeconds / 86400;
    JDToDate(epoch + days, &date->Year, &date->Month, &date->Day, &date->Hour,
             &date->Minute, &date->Second);
    updateTime(date, subDay + (double)ccsdsSubSeconds * ccsdsStep);
+}
+/**********************************************************************/
+double CCSDSAdd(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
+                const ccsdsCoarse b_coarse, const ccsdsFine b_fine)
+{
+   const double ccsdsStepSize = CCSDS_STEP_SIZE;
+
+   double out =
+       (double)(a_coarse + b_coarse) + (a_fine + b_fine) * ccsdsStepSize;
+
+   ccsdsFine test;
+   if (__builtin_add_overflow(a_fine, b_fine, &test))
+      out += 1.0;
+
+   return out;
+}
+/**********************************************************************/
+double CCSDSSub(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
+                const ccsdsCoarse b_coarse, const ccsdsFine b_fine)
+{
+   const double ccsdsStepSize = CCSDS_STEP_SIZE;
+
+   double out =
+       (double)(a_coarse - b_coarse) + (a_fine - b_fine) * ccsdsStepSize;
+
+   ccsdsFine test;
+   if (__builtin_sub_overflow(a_fine, b_fine, &test))
+      out -= 1.0;
+
+   return out;
 }
 /**********************************************************************/
 /*   Convert Julian Day to Year, Month, Day, Hour, Minute, and Second */

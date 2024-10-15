@@ -1564,11 +1564,11 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       Nav->subStepSteps = DTSIM * CCSDS_FINE_MAX + 0.5;
       Nav->subStepSize  = DTSIM;
       Nav->steps        = 0;
-      double t0         = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
+      const double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
 
       TimeToDate(t0, &Nav->Date0.Year, &Nav->Date0.Month, &Nav->Date0.Day,
                  &Nav->Date0.Hour, &Nav->Date0.Minute, &Nav->Date0.Second,
-                 1.0 / CCSDS_FINE_MAX);
+                 CCSDS_STEP_SIZE);
       DateToCCSDS(Nav->Date0, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
       updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
                      -(32.184 + LeapSec));
