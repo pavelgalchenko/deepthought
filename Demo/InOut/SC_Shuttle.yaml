@@ -42,7 +42,7 @@ Bodies:
       Node File Name: NONE
       Flex File Name: NONE
 Joints: []
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels: []
 MTBs: []
 Thrusters: []
@@ -52,4 +52,5 @@ CSSs: []
 FSSs: []
 STs: []
 GPSs: []
+FGSs: []
 Accelerometers: []

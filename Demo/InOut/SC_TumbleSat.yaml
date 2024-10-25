@@ -182,7 +182,7 @@ Joints:
       Pos wrt Inner Body: [0.0, -0.5, 2.5]
       Pos wrt Outer Body: [0.0, 0.0, 0.0]
       Parm File Name: Jnt_Tumble13.txt
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels: []
 MTBs: []
 Thrusters: []
@@ -193,3 +193,4 @@ FSSs: []
 STs: []
 GPSs: []
 Accelerometers: []
+FGSs: []

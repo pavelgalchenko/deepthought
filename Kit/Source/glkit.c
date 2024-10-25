@@ -248,8 +248,8 @@ GLuint LoadFont8x11(void)
         0x10}, /* | */
        {0x00, 0x00, 0x20, 0x10, 0x10, 0x10, 0x08, 0x10, 0x10, 0x10,
         0x20}, /* } */
-       {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x92, 0x60,
-        0x00} /* ~ */
+       {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x92, 0x60, 0x00}
+       /* ~ */
    };
    GLuint i, j;
    GLuint Offset;
@@ -679,7 +679,7 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
 /*********************************************************************/
 void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
                 long H_Axis, long V_Axis, long Type, GLfloat Color[4],
-                const char Label[40], double SkyDistance)
+                const char *Label, double SkyDistance)
 {
    double r[4];
    double daz = TWOPI / ((double)Nv);
@@ -942,7 +942,7 @@ void BuildViewMatrix(double CEN[3][3], double pen[3], float ViewMatrix[16])
    ViewMatrix[15] = 1.0f;
 }
 /**********************************************************************/
-void CaptureScreenToPpm(const char path[40], const char filename[40], long Nh,
+void CaptureScreenToPpm(const char *path, const char *filename, long Nh,
                         long Nw)
 {
    GLubyte *Data, *p;
@@ -971,11 +971,11 @@ void CaptureScreenToPpm(const char path[40], const char filename[40], long Nh,
    free(Data);
 }
 /**********************************************************************/
-void TexToPpm(const char path[40], const char filename[40], long Nh, long Nw,
-              long Nb, float *Data)
+void TexToPpm(const char *path, const char *filename, long Nh, long Nw, long Nb,
+              float *Data)
 {
    FILE *file;
-   long i, Nc;
+   long i, j, k, Nc;
    GLubyte c;
 
    file = FileOpen(path, filename, "wb");
@@ -984,17 +984,29 @@ void TexToPpm(const char path[40], const char filename[40], long Nh, long Nw,
    else
       fprintf(file, "P6\n#.\n%ld %ld\n255\n", Nw, Nh);
    fflush(file);
-   Nc = Nh * Nw * Nb;
-   for (i = 0; i < Nc; i++) {
-      c = (GLubyte)(255.0 * Data[i]);
-      fprintf(file, "%c", c);
+   if (Nb == 4) { /* Discard alpha */
+      for (j = 0; j < Nh; j++) {
+         for (i = 0; i < Nw; i++) {
+            for (k = 0; k < 3; k++) {
+               c = (GLubyte)(255.0 * Data[4 * (Nw * j + i) + k]);
+               fprintf(file, "%c", c);
+            }
+         }
+      }
+   }
+   else {
+      Nc = Nh * Nw * Nb;
+      for (i = 0; i < Nc; i++) {
+         c = (GLubyte)(255.0 * Data[i]);
+         fprintf(file, "%c", c);
+      }
    }
    fclose(file);
 }
 /**********************************************************************/
 /* wrap parm is usually either GL_REPEAT or GL_CLAMP                  */
-GLuint PpmToTexTag(const char path[40], const char filename[40],
-                   int BytesPerPixel, GLuint wrap)
+GLuint PpmToTexTag(const char *path, const char *filename, int BytesPerPixel,
+                   GLuint wrap)
 {
    FILE *infile;
    long N, i;
@@ -1043,8 +1055,8 @@ GLuint PpmToTexTag(const char path[40], const char filename[40],
 }
 /**********************************************************************/
 /* wrap parm is usually either GL_REPEAT or GL_CLAMP                  */
-GLuint Ppm1DToTexTag(const char path[40], const char filename[40],
-                     int BytesPerPixel, GLuint wrap)
+GLuint Ppm1DToTexTag(const char *path, const char *filename, int BytesPerPixel,
+                     GLuint wrap)
 {
    FILE *infile;
    long N, i;
@@ -1092,7 +1104,7 @@ GLuint Ppm1DToTexTag(const char path[40], const char filename[40],
 }
 /*********************************************************************/
 #if 1
-GLuint PpmToCubeTag(const char path[40], const char file[40], int BytesPerPixel)
+GLuint PpmToCubeTag(const char *path, const char *file, int BytesPerPixel)
 {
    FILE *infile;
    long N, i, If;
@@ -1164,7 +1176,7 @@ GLuint PpmToCubeTag(const char path[40], const char file[40], int BytesPerPixel)
 }
 #endif
 /*********************************************************************/
-GLuint PpmToRingTexTag(const char path[80], const char filename[80])
+GLuint PpmToRingTexTag(const char *path, const char *filename)
 {
    FILE *infile;
    long N;
@@ -1211,8 +1223,8 @@ GLuint PpmToRingTexTag(const char path[80], const char filename[80])
    return (TexTag);
 }
 /**********************************************************************/
-void CubeToPpm(GLubyte *Cube, long N, const char pathname[40],
-               const char filename[40])
+void CubeToPpm(GLubyte *Cube, long N, const char *pathname,
+               const char *filename)
 {
    FILE *outfile;
    char outfilename[40];
@@ -1297,7 +1309,7 @@ void LoadBucky(double BuckyPf[32][3], long BuckyNeighbor[32][6])
    }
 }
 /**********************************************************************/
-void LoadStars(const char StarFileName[40], double BuckyPf[32][3],
+void LoadStars(const char *StarFileName, double BuckyPf[32][3],
                long BuckyNeighbor[32][6], GLuint StarList[32],
                double SkyDistance)
 {
@@ -1859,10 +1871,11 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
                         0x19, 0x98, 0x0c, 0x30, 0x0e, 0x70, 0x06, 0x60, 0x03,
                         0xc0, 0x03, 0xc0, 0x01, 0x80}, /* pwn: Diamond-dot */
 
-                       {0xff, 0xff, 0xff, 0xff, 0xf0, 0x0f, 0xf8, 0x1f, 0xdc,
-                        0x3b, 0xce, 0x73, 0xc7, 0xe3, 0xc3, 0xc3, 0xc3, 0xc3,
-                        0xc7, 0xe3, 0xce, 0x73, 0xdc, 0x3b, 0xf8, 0x1f, 0xf0,
-                        0x0f, 0xff, 0xff, 0xff, 0xff} /* MQO: X-Square */
+                       {0xff, 0xff, 0xff, 0xff, 0xf0, 0x0f, 0xf8, 0x1f,
+                        0xdc, 0x3b, 0xce, 0x73, 0xc7, 0xe3, 0xc3, 0xc3,
+                        0xc3, 0xc3, 0xc7, 0xe3, 0xce, 0x73, 0xdc, 0x3b,
+                        0xf8, 0x1f, 0xf0, 0x0f, 0xff, 0xff, 0xff, 0xff}
+                       /* MQO: X-Square */
                    };
 
    FILE *infile;
@@ -2455,7 +2468,7 @@ void DrawBullseye(GLfloat Color[4], double p[4])
    glMaterialfv(GL_FRONT, GL_EMISSION, Black);
 }
 /*********************************************************************/
-void DrawVector(double v[3], const char Label[8], const char Units[8],
+void DrawVector(double v[3], const char *Label, const char *Units,
                 GLfloat Color[4], double VisScale, double MagScale,
                 long UnitVec)
 {

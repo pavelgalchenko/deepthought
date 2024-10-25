@@ -615,6 +615,7 @@ void Report(void)
    static FILE *IllumFile;
    // static FILE *ProjAreaFile;
    static FILE *AccFile;
+   static FILE *GpsFile;
    // static FILE *Kepfile;
    // static FILE *EHfile;
    static char First = TRUE;
@@ -691,6 +692,9 @@ void Report(void)
       if (SC[0].Ncss > 0) {
          AlbedoFile = FileOpen(OutPath, "Albedo.42", "w");
          IllumFile  = FileOpen(OutPath, "Illum.42", "w");
+      }
+      if (SC[0].Ngps > 0) {
+         GpsFile = FileOpen(InOutPath, "Gps.42", "w");
       }
    }
 
@@ -795,6 +799,10 @@ void Report(void)
                fprintf(AccFile, "%le %le ", SC[0].Accel[i].TrueAcc,
                        SC[0].Accel[i].MeasAcc);
             fprintf(AccFile, "\n");
+         }
+         if (SC[0].Ngps > 0) {
+            fprintf(GpsFile, "%le %le %le\n", SC[0].GPS[0].PosN[0],
+                    SC[0].GPS[0].PosN[1], SC[0].GPS[0].PosN[2]);
          }
          if (SC[0].Ncss > 0) {
             for (i = 0; i < SC[0].Ncss; i++) {
