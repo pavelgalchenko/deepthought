@@ -1300,28 +1300,32 @@ long ConfigureNavigationSensors(struct AcType *const AC,
       long isGood;
       switch (sensor) {
          case STARTRACK_SENSOR: {
-            isGood = assignYAMLToDoubleArray(
+            double tmp[3] = {0.0};
+            isGood        = assignYAMLToDoubleArray(
                          3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
-                         meas->R) == 3;
-            for (j = 0; j < meas->errDim; j++)
-               meas->R[j] = meas->R[j] / 3600.0 * D2R;
+                         tmp) == 3;
+            for (j = 0; j < meas->errDim; j++) {
+               long const ind = (AC->ST[sensorNum].BoreAxis + j) % 3;
+               meas->R[ind]   = tmp[j] * D2R / 3600.0;
+            }
          } break;
          case GPS_SENSOR: {
-            isGood = assignYAMLToDoubleArray(
+            double tmp[2] = {0.0};
+            isGood        = assignYAMLToDoubleArray(
                          2, fy_node_by_path_def(iterNode, "/Sensor Noise"),
-                         meas->R) == 2;
-            for (j = meas->errDim - 1; j >= 0; j--) {
+                         tmp) == 2;
+            for (j = 0; j < meas->errDim; j++) {
                if (j < 3)
-                  meas->R[j] = meas->R[0];
+                  meas->R[j] = tmp[0];
                else
-                  meas->R[j] = meas->R[1];
+                  meas->R[j] = tmp[1];
             }
          } break;
          case FSS_SENSOR: {
             isGood = assignYAMLToDoubleArray(
                          1, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                          meas->R) == 1;
-            for (j = 0; j < meas->errDim; j++)
+            for (j = meas->errDim - 1; j >= 0; j--)
                meas->R[j] = meas->R[0] * D2R;
          } break;
          case CSS_SENSOR:
@@ -3110,6 +3114,7 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    const struct DateType *navDate = &Nav->Date;
    DSMState->Time = DateToTime(navDate->Year, navDate->Month, navDate->Day,
                                navDate->Hour, navDate->Minute, navDate->Second);
+   AC->Time       = DSMState->Time;
    // Overwrite data in AC structure with filtered data
    for (enum States state = INIT_STATE; state <= FIN_STATE; state++) {
       if (Nav->stateActive[state] == TRUE) {

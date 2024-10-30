@@ -218,15 +218,13 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
    const double secPerDay       = 86400.0;
    const double dayperWk        = 7.0;
    const double daysperRollover = 7168.0;
-   const double jdGPSt0    = 2444244.5 + (32.184 + 19.0) / secPerDay; // In TT
-   const double jdJ2000    = 2451545.0;
-   const double gpst0J2000 = jdGPSt0 - jdJ2000; // -7300.499407592695
+   const double gpst0J2000 =
+       -7300.5 + (32.184 + 19) / secPerDay; // -7300.499407592695
 
-   double DaysSinceWeek, DaysSinceRollover, DaysSinceEpoch;
-
-   DaysSinceWeek     = gpsSec / secPerDay;
-   DaysSinceRollover = DaysSinceWeek + dayperWk * gpsWk;
-   DaysSinceEpoch    = DaysSinceRollover + daysperRollover * gpsRollover;
+   const double DaysSinceWeek     = gpsSec / secPerDay;
+   const double DaysSinceRollover = DaysSinceWeek + dayperWk * gpsWk;
+   const double DaysSinceEpoch =
+       DaysSinceRollover + daysperRollover * gpsRollover;
    return ((DaysSinceEpoch + gpst0J2000) * secPerDay);
 }
 
@@ -238,13 +236,20 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
    // TODO: change for spice
    struct WorldType *W = &World[orbCenter];
    double PriMerAng    = 0.0;
+   const double time   = DateToTime(date->Year, date->Month, date->Day,
+                                    date->Hour, date->Minute, date->Second);
 
    /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
       case EARTH: {
-         struct DateType dateUTC = *date;
-         updateTime(&dateUTC, -(32.184 + LeapSec));
-         PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
+         if (EphemOption == EPH_MEAN) {
+            PriMerAng = W->PriMerAngJ2000 + W->w * time;
+         }
+         else {
+            struct DateType dateUTC = *date;
+            updateTime(&dateUTC, -(32.184 + LeapSec));
+            PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
+         }
       } break;
       case LUNA: {
          PriMerAng = LunaPriMerAng(date->JulDay);
@@ -258,8 +263,7 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
       case URANUS:
       case NEPTUNE:
       case PLUTO:
-         PriMerAng = W->w * DateToTime(date->Year, date->Month, date->Day,
-                                       date->Hour, date->Minute, date->Second);
+         PriMerAng = W->w * time;
 
          // TODO: This is from Ephemerides() in 42ephem.c
          if (EphemOption == EPH_MEAN)
@@ -276,8 +280,7 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
       case MINORBODY_8:
       case MINORBODY_9:
       default:
-         PriMerAng = W->w * DateToTime(date->Year, date->Month, date->Day,
-                                       date->Hour, date->Minute, date->Second);
+         PriMerAng = W->w * time;
          break;
    }
    PriMerAng = fmod(PriMerAng, TwoPi);
@@ -905,13 +908,12 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    static double **tmpAssign    = NULL;
    double svb[3], svs[3], CBN[3][3];
    double bhat[3] = {0.0}, hhat[3] = {0.0}, vhat[3] = {0.0};
-   double svsb, svsh, svsv, bxsvs[3], hxsvs[3], vxsvs[3];
-   double denomA, denomB;
+   double bxsvs[3], hxsvs[3], vxsvs[3];
    long i, j;
 
+   const long BoreAxis = fss->BoreAxis;
    const long H_Axis   = fss->H_Axis;
    const long V_Axis   = fss->V_Axis;
-   const long BoreAxis = fss->BoreAxis;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(2, 3);
@@ -924,11 +926,11 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    MxV(CBN, AC->svn, svb);
    MxV(fss->CB, svb, svs);
 
-   svsb   = svs[BoreAxis];
-   svsh   = svs[H_Axis];
-   svsv   = svs[V_Axis];
-   denomA = 1.0 / (svsb * svsb + svsh * svsh);
-   denomB = 1.0 / (svsb * svsb + svsv * svsv);
+   const double svsb   = svs[BoreAxis];
+   const double svsh   = svs[H_Axis];
+   const double svsv   = svs[V_Axis];
+   const double denomA = 1.0 / (svsb * svsb + svsh * svsh);
+   const double denomB = 1.0 / (svsb * svsb + svsv * svsv);
 
    bhat[BoreAxis] = 1.0;
    hhat[H_Axis]   = 1.0;
@@ -1223,9 +1225,9 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
 
    double *SunAngEst = calloc(2, sizeof(double));
 
+   const long BoreAxis = fss->BoreAxis;
    const long H_Axis   = fss->H_Axis;
    const long V_Axis   = fss->V_Axis;
-   const long BoreAxis = fss->BoreAxis;
 
    MTxM(Nav->CRB, Nav->refCRN, CBN);
    MxV(CBN, AC->svn, svb);

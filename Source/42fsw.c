@@ -990,6 +990,7 @@ void InitAC(struct SCType *S)
          }
          for (i = 0; i < 4; i++)
             AC->ST[k].qb[i] = S->ST[k].qb[i];
+         AC->ST[k].BoreAxis = S->ST[k].BoreAxis;
       }
    }
 
