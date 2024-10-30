@@ -155,6 +155,7 @@ struct AcStarTrackerType {
    long Valid;   /* [~>~] */
    double qn[4]; /* [~>~] */
    double qbn[4];
+   long BoreAxis; /* X_AXIS, Y_AXIS, Z_AXIS */
 };
 
 struct AcGpsType {

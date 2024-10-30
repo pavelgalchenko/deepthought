@@ -289,6 +289,7 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
+            AC->SunValid          = 1;
             meas                  = CreateMeas(Nav, FSS_SENSOR, Ifss);
             meas->ccsdsSeconds    = Nav->ccsdsSeconds;
             meas->ccsdsSubseconds = Nav->ccsdsSubseconds;

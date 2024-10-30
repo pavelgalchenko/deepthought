@@ -2920,7 +2920,7 @@ void InitSpacecraft(struct SCType *S)
                             ang, &seq);
          A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FSS->CB);
          C2Q(FSS->CB, FSS->qb);
-         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/FOV Size"),
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  FSS->FovHalfAng);
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
@@ -2977,9 +2977,10 @@ void InitSpacecraft(struct SCType *S)
          C2Q(ST->CB, ST->qb);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  ST->FovHalfAng);
+
+         double tmp[3] = {0.0};
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Noise Equivalent Angle"),
-             ST->NEA);
+             3, fy_node_by_path_def(seqNode, "/Noise Equivalent Angle"), tmp);
          struct fy_node *excAng =
              fy_node_by_path_def(seqNode, "/Exclusion Angles");
          if (fy_node_scanf(excAng,
@@ -3028,7 +3029,7 @@ void InitSpacecraft(struct SCType *S)
          ST->CosEarthExclAng  = cos(ST->EarthExclAng);
          ST->CosMoonExclAng   = cos(ST->MoonExclAng);
          for (i = 0; i < 3; i++)
-            ST->NEA[i] *= D2R / 3600.0;
+            ST->NEA[(ST->BoreAxis + i) % 3] = tmp[i] * D2R / 3600.0;
       }
    }
 

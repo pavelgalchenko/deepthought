@@ -398,11 +398,16 @@ Two Vector Configurations:
           Frame: L
           Axis: [1.0, 0.0, 0.0]
         Axis: [0.0, 0.0, 1.0]
-      Secondary Vector:
+      Secondary Vector: &ST-Point
         Target:
           Type: BODY
           Target: EARTH
-        Axis: [-1.0, 0.0, 0.0]
+        Axis: [1.0, 0.0, 0.0]
+      # Secondary Vector: &ST-Point
+      #   Target:
+      #     Type: BODY
+      #     Target: SUN
+      #   Axis: [0.0, -1.0, 0.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_1
@@ -412,11 +417,12 @@ Two Vector Configurations:
           Type: SC
           Target: SC[4].B[0]
         Axis: [0.0, 0.0, 1.0]
-      Secondary Vector:
-        Target:
-          Type: BODY
-          Target: SUN
-        Axis: [1.0, 0.0, 0.0]
+      Secondary Vector: *ST-Point
+      # Secondary Vector: &ST-Point
+      #   Target:
+      #     Type: BODY
+      #     Target: SUN
+      #   Axis: [1.0, 0.0, 0.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_2
@@ -427,11 +433,7 @@ Two Vector Configurations:
           Frame: L
           Axis: [0.0, -1.0, 0.0]
         Axis: [0.0, 0.0, 1.0]
-      Secondary Vector:
-        Target:
-          Type: BODY
-          Target: EARTH
-        Axis: [-1.0, 0.0, 0.0]
+      Secondary Vector: *ST-Point
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_3
@@ -442,11 +444,7 @@ Two Vector Configurations:
           Frame: L
           Axis: [-1.0, 0.0, 0.0]
         Axis: [0.0, 0.0, 1.0]
-      Secondary Vector:
-        Target:
-          Type: BODY
-          Target: EARTH
-        Axis: [-1.0, 0.0, 0.0]
+      Secondary Vector: *ST-Point
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_4
@@ -457,11 +455,7 @@ Two Vector Configurations:
           Frame: L
           Axis: [0.0, 1.0, 0.0]
         Axis: [0.0, 0.0, 1.0]
-      Secondary Vector:
-        Target:
-          Type: BODY
-          Target: EARTH
-        Axis: [-1.0, 0.0, 0.0]
+      Secondary Vector: *ST-Point
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_5
@@ -471,13 +465,8 @@ Two Vector Configurations:
           Type: VEC
           Frame: N
           Axis: [0.0, 0.0, -1.0]
-        Axis: [1.0, 0.0, 0.0]
-      Secondary Vector:
-        Target:
-          Type: VEC
-          Frame: N
-          Axis: [0.0, 1.0, 0.0]
-        Axis: [0.0, 0.0, 1.0]
+        Axis: [0.0, 1.0, 0.0]
+      Secondary Vector: *ST-Point
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_6
@@ -487,13 +476,8 @@ Two Vector Configurations:
           Type: VEC
           Frame: N
           Axis: [-1.0, 0.0, 0.0]
-        Axis: [1.0, 0.0, 0.0]
-      Secondary Vector:
-        Target:
-          Type: VEC
-          Frame: N
-          Axis: [0.0, 1.0, 0.0]
-        Axis: [0.0, 0.0, 1.0]
+        Axis: [0.0, 1.0, 0.0]
+      Secondary Vector: *ST-Point
       Controller: *Controller_2
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_7
@@ -503,13 +487,8 @@ Two Vector Configurations:
           Type: VEC
           Frame: N
           Axis: [0.0, -1.0, 0.0]
-        Axis: [1.0, 0.0, 0.0]
-      Secondary Vector:
-        Target:
-          Type: VEC
-          Frame: N
-          Axis: [0.0, 0.0, 1.0]
         Axis: [0.0, 1.0, 0.0]
+      Secondary Vector: *ST-Point
       Controller: *Controller_2
       Actuator: *Actuator_2
 Sensor Configurations:
@@ -517,21 +496,21 @@ Sensor Configurations:
       Description: Sensor_[0]
       Type: GYRO
       Sensor Index: 0
-      Sensor Noise: [0.01414213562373095]
+      Sensor Noise: [0.026870057685088808]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
   - Sensor: &Gyro_y
       Description: Sensor_[1]
       Type: GYRO
       Sensor Index: 1
-      Sensor Noise: [0.01414213562373095]
+      Sensor Noise: [0.026870057685088808]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
   - Sensor: &Gyro_z
       Description: Sensor_[2]
       Type: GYRO
       Sensor Index: 2
-      Sensor Noise: [0.01414213562373095]
+      Sensor Noise: [0.026870057685088808]
       Underweighting Factor: 0.833333333
       Residual Editing Gate: 0.9999
   - Sensor: &Mag_x
@@ -657,8 +636,8 @@ Sensor Set Configurations:
         # - *CSS_5
         # - *CSS_6
         # - *CSS_7
-        # - *FSS_0
-        # - *FSS_1
+        - *FSS_0
+        - *FSS_1
         - *ST_0
         - *GPS_0
 Navigation Data Configurations:
@@ -678,12 +657,11 @@ Navigation Data Configurations:
   #         Sequence:           [[Sequence]]
   - Navigation Data: &Navigation_Data_Q
       Description: Dat_[0]
-      Attitude: [1e-4, 1e-4, 1e-4]
-      Velocity: [7e-05, 7e-05, 7e-05]
+      Velocity: [5e-04, 5e-04, 5e-04]
       Omega: [3e-06, 3e-06, 3e-06]
   - Navigation Data: &Navigation_Data_P
       Description: Dat_[1]
-      Attitude: [1.0, 1.0, 1.0]
+      Attitude: [1.1, 1.1, 1.1]
       Position: [50.0, 50.0, 50.0]
       Velocity: [1.0, 1.0, 1.0]
       Omega: [0.4, 0.4, 0.4]
