@@ -140,6 +140,7 @@ struct AcFssType {
    long BoreAxis;
 
    /*~ Internal Variables ~*/
+   enum fssTypes type;
    long Valid;       /* [~>~] */
    double SunAng[2]; /* [[rad]] [~>~] */
    double SunVecS[3];

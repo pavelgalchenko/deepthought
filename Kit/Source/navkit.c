@@ -926,12 +926,6 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    MxV(CBN, AC->svn, svb);
    MxV(fss->CB, svb, svs);
 
-   const double svsb   = svs[BoreAxis];
-   const double svsh   = svs[H_Axis];
-   const double svsv   = svs[V_Axis];
-   const double denomA = 1.0 / (svsb * svsb + svsh * svsh);
-   const double denomB = 1.0 / (svsb * svsb + svsv * svsv);
-
    bhat[BoreAxis] = 1.0;
    hhat[H_Axis]   = 1.0;
    vhat[V_Axis]   = 1.0;
@@ -940,13 +934,37 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    VxV(hhat, svs, hxsvs);
    VxV(vhat, svs, vxsvs);
 
+   const double svsb = svs[BoreAxis];
+   const double svsh = svs[H_Axis];
+   const double svsv = svs[V_Axis];
+
+   switch (fss->type) {
+      case CONVENTIONAL_FSS: {
+         const double denomA = 1.0 / (svsb * svsb + svsh * svsh);
+         const double denomB = 1.0 / (svsb * svsb + svsv * svsv);
+         for (i = 0; i < 3; i++) {
+            B[0][i] = (svsh * bxsvs[i] - svsb * hxsvs[i]) * denomA;
+            B[1][i] = (svsv * bxsvs[i] - svsb * vxsvs[i]) * denomB;
+         }
+      } break;
+      case GS_FSS: {
+         const double factor = (svsv * svsv + svsh * svsh);
+         const double denom  = 1.0 / factor;
+         for (i = 0; i < 3; i++) {
+            B[0][i] = (svsv * hxsvs[i] - svsh * vxsvs[i]) * denom;
+            B[1][i] = (factor * bxsvs[i] -
+                       svsb * denom * (svsv * vxsvs[i] + svsh * hxsvs[i]));
+         }
+      } break;
+      default:
+         printf("Invalid FSS Type. How did it get this far? "
+                "Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
+
    double **jacobian =
        CreateMatrix(Nav->measTypes[FSS_SENSOR][Ifss].dim, Nav->navDim);
 
-   for (i = 0; i < 3; i++) {
-      B[0][i] = (svsh * bxsvs[i] - svsb * hxsvs[i]) * denomA;
-      B[1][i] = (svsv * bxsvs[i] - svsb * vxsvs[i]) * denomB;
-   }
    switch (Nav->type) {
       case LIEKF_NAV:
          MxM(B, fss->CB, tmp3x3);
@@ -1233,8 +1251,22 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
    MxV(CBN, AC->svn, svb);
    MxV(fss->CB, svb, svs);
 
-   SunAngEst[0] = atan2(svs[H_Axis], svs[BoreAxis]);
-   SunAngEst[1] = atan2(svs[V_Axis], svs[BoreAxis]);
+   switch (fss->type) {
+      case CONVENTIONAL_FSS: {
+         SunAngEst[0] = atan2(svs[H_Axis], svs[BoreAxis]);
+         SunAngEst[1] = atan2(svs[V_Axis], svs[BoreAxis]);
+      } break;
+      case GS_FSS: {
+         SunAngEst[0] = atan2(svs[V_Axis], svs[H_Axis]);
+         SunAngEst[1] =
+             atan2(sqrt(svs[V_Axis] * svs[V_Axis] + svs[H_Axis] * svs[H_Axis]),
+                   svs[BoreAxis]);
+      } break;
+      default:
+         printf("Invalid FSS Type. How did it get this far? "
+                "Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
 
    return (SunAngEst);
 }

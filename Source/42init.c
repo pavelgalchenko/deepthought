@@ -455,6 +455,11 @@ long DecodeString(char *s)
    else if (!strcmp(s, "PROPORTIONAL"))
       return THR_PROPORTIONAL;
 
+   else if (!strcmp(s, "CONVENTIONAL"))
+      return CONVENTIONAL_FSS;
+   else if (!strcmp(s, "GSFSS"))
+      return GS_FSS;
+
    else {
       printf("Bogus input %s in DecodeString (42init.c:%d)\n", s, __LINE__);
       exit(EXIT_FAILURE);
@@ -2947,6 +2952,11 @@ void InitSpacecraft(struct SCType *S)
             printf("SC[%ld].FSS[%ld] Node out of range\n", S->ID, If);
             exit(EXIT_FAILURE);
          }
+         if (!fy_node_scanf(seqNode, "/Type %49s", dummy))
+            FSS->type = CONVENTIONAL_FSS;
+         else
+            FSS->type = DecodeString(dummy);
+
          for (i = 0; i < 2; i++)
             FSS->FovHalfAng[i] *= 0.5 * D2R;
          FSS->NEA   *= D2R;

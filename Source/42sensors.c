@@ -267,11 +267,29 @@ void FssModel(struct SCType *S)
          }
          else {
             MxV(FSS->CB, S->svb, svs);
-            SunAng[0] = atan2(svs[FSS->H_Axis], svs[FSS->BoreAxis]);
-            SunAng[1] = atan2(svs[FSS->V_Axis], svs[FSS->BoreAxis]);
-            if (fabs(SunAng[0]) < FSS->FovHalfAng[0] &&
-                fabs(SunAng[1]) < FSS->FovHalfAng[1] &&
-                svs[FSS->BoreAxis] > 0.0) {
+            long fov_condition = TRUE;
+            const double svsh  = svs[FSS->H_Axis];
+            const double svsv  = svs[FSS->V_Axis];
+            const double svsb  = svs[FSS->BoreAxis];
+
+            switch (FSS->type) {
+               case CONVENTIONAL_FSS: {
+                  SunAng[0]     = atan2(svsh, svsb);
+                  SunAng[1]     = atan2(svsv, svsb);
+                  fov_condition = fabs(SunAng[0]) < FSS->FovHalfAng[0] &&
+                                  fabs(SunAng[1]) < FSS->FovHalfAng[1];
+               } break;
+               case GS_FSS: {
+                  SunAng[0]     = atan2(svsv, svsh);
+                  SunAng[1]     = atan2(sqrt(svsv * svsv + svsh * svsh), svsb);
+                  fov_condition = SunAng[0] < FSS->FovHalfAng[0];
+               } break;
+               default:
+                  printf("Invalid FSS Type. How did it get this far? "
+                         "Exiting...\n");
+                  exit(EXIT_FAILURE);
+            }
+            if (fov_condition && svs[FSS->BoreAxis] > 0.0) {
                FSS->Valid = TRUE;
             }
             else {

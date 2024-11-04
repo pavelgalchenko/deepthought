@@ -975,6 +975,7 @@ void InitAC(struct SCType *S)
          AC->FSS[k].H_Axis   = S->FSS[k].H_Axis;
          AC->FSS[k].V_Axis   = S->FSS[k].V_Axis;
          AC->FSS[k].BoreAxis = S->FSS[k].BoreAxis;
+         AC->FSS[k].type     = S->FSS[k].type;
       }
    }
 

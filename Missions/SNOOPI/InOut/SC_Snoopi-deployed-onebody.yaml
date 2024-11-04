@@ -232,6 +232,7 @@ FSSs:
       FOV Size: [120.0, 120.0]
       Noise Equivalent Angle: 0.5
       Quantization: 0.1
+      Type: GSFSS
       Node: 0
 STs:
   - ST:

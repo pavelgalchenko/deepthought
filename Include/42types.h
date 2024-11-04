@@ -41,6 +41,11 @@ enum fswType {
    DSM_FSW,
 };
 
+enum fssTypes {
+   CONVENTIONAL_FSS = 0,
+   GS_FSS,
+};
+
 struct SphereHarmType {
    /*~ Internal Variables ~*/
    char modelFile[40];
@@ -455,6 +460,7 @@ struct FssType {
    /*~ Internal Variables ~*/
    long SampleCounter;
    long Valid;
+   enum fssTypes type;
    double SunAng[2];
    double SunVecS[3];
    double SunVecB[3];
