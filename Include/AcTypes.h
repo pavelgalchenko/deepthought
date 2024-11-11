@@ -28,6 +28,11 @@
 /* Example: [~!=~] means this variable can be read from command, and is sent
  * both ways */
 
+enum fssTypes {
+   CONVENTIONAL_FSS = 0,
+   GS_FSS,
+};
+
 struct CmdVecType {
    /*~ Internal Variables ~*/
    long Mode;
@@ -372,6 +377,7 @@ struct AcType {
    long Nmag;
    long Ncss;
    long Nfss;
+   long Ngsfss;
    long Nst;
    long Ngps;
    long Nacc;
@@ -432,6 +438,7 @@ struct AcType {
    struct AcMagnetometerType *MAG; /* [*Nmag*] */
    struct AcCssType *CSS;          /* [*Ncss*] */
    struct AcFssType *FSS;          /* [*Nfss*] */
+   struct AcGsFssType *GSFSS;      /* [*Ngsfss*] */
    struct AcStarTrackerType *ST;   /* [*Nst*] */
    struct AcGpsType *GPS;          /* [*Ngps*] */
    struct AcAccelType *Accel;      /* [*Nacc*] */

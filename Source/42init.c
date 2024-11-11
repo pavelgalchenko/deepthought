@@ -2939,7 +2939,8 @@ void InitSpacecraft(struct SCType *S)
                    If);
             exit(EXIT_FAILURE);
          }
-         FSS->BoreAxis   = DecodeString(dummy);
+         FSS->BoreAxis = DecodeString(dummy);
+
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
             printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", If);
@@ -5788,7 +5789,6 @@ void InitSim(int argc, char **argv)
    printf("SC Model Path: %s \n \n", SCModelPath);
 
    /* .. Read from file Inp_Sim.txt */
-
    struct fy_document *fyd =
        fy_document_build_and_check(NULL, InOutPath, "Inp_Sim.yaml");
 

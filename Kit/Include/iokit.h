@@ -21,6 +21,7 @@
 */
 
 #include "libfyaml.h"
+#include "sqlite3.h"
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>

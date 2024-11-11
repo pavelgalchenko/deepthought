@@ -41,11 +41,6 @@ enum fswType {
    DSM_FSW,
 };
 
-enum fssTypes {
-   CONVENTIONAL_FSS = 0,
-   GS_FSS,
-};
-
 struct SphereHarmType {
    /*~ Internal Variables ~*/
    char modelFile[40];

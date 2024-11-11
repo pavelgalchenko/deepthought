@@ -184,16 +184,23 @@ extern void InitDSM(struct SCType *S);
 void InterProcessComm(void);
 void InitInterProcessComm(void);
 
-// extern void LoadSun(void);
-// extern void LoadPlanets(void);
-// extern void LoadMoonOfEarth(void);
-// extern void LoadMoonsOfMars(void);
-// extern void LoadMoonsOfJupiter(void);
-// extern void LoadMoonsOfSaturn(void);
-// extern void LoadMoonsOfUranus(void);
-// extern void LoadMoonsOfNeptune(void);
-// extern void LoadMoonsOfPluto(void);
-// extern void LoadMinorBodies(void);
+extern void LoadSun(void);
+extern void LoadPlanets(void);
+extern void LoadMoonOfEarth(void);
+extern void LoadMoonsOfMars(void);
+extern void LoadMoonsOfJupiter(void);
+extern void LoadMoonsOfSaturn(void);
+extern void LoadMoonsOfUranus(void);
+extern void LoadMoonsOfNeptune(void);
+extern void LoadMoonsOfPluto(void);
+extern void LoadMinorBodies(void);
 
-#undef BUFSIZE
+extern void InitOrbit(struct OrbitType *);
+
+extern void LoadRegions();
+extern void InitLagrangePoints();
+extern void OrbitMotion(double);
+extern void LoadTdrs();
+extern void LoadSchatten();
+// #undef BUFSIZE
 #endif

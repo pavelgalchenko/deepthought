@@ -39,8 +39,8 @@ FFTBFLAG =
 GSFCFLAG =
 #GSFCFLAG = -D _USE_GSFC_WATERMARK_
 
-STANDALONEFLAG =
-#STANDALONEFLAG = -D _AC_STANDALONE_
+# STANDALONEFLAG =
+STANDALONEFLAG = -D _AC_STANDALONE_
 
 GMSECFLAG =
 #GMSECFLAG = -D _ENABLE_GMSEC_
@@ -71,6 +71,8 @@ PROJDIR = ./
 KITDIR = $(PROJDIR)Kit/
 OBJ = $(PROJDIR)Object/
 INC = $(PROJDIR)Include/
+TESTS = $(PROJDIR)Tests/
+DATAFILTER = $(PROJDIR)data_filter/
 SRC = $(PROJDIR)Source/
 KITINC = $(KITDIR)Include/
 KITSRC = $(KITDIR)Source/
@@ -279,6 +281,17 @@ ACKITOBJ = $(OBJ)dcmkit.o $(OBJ)mathkit.o $(OBJ)fswkit.o $(OBJ)iokit.o $(OBJ)tim
 ACIPCOBJ = $(OBJ)AppReadFromFile.o \
 $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
 
+DFKITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
+$(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o \
+$(OBJ)orbkit.o $(OBJ)radbeltkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o \
+$(OBJ)docoptkit.o $(OBJ)dsmkit.o $(OBJ)navkit.o
+
+DFOBJ = $(OBJ)dataFilter.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
+$(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
+$(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
+$(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
+$(OBJ)42nos3.o $(OBJ)42dsm.o
+
 TESTOBJ = $(OBJ)tests.o $(OBJ)mathkit_tests.o $(OBJ)navkit_tests.o\
 $(OBJ)test_lib.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
 $(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
@@ -305,11 +318,19 @@ Test : $(TESTOBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOB
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
 
+DataFilter : $(DFOBJ) $(DFKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
+	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) -o DataFilter $(DFOBJ) $(DFKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS) $(SPICELIBFLAGS)
+DataFilter : CFLAGS+= `pkg-config --cflags sqlite3`
+DataFilter : LFLAGS+= `pkg-config --libs sqlite3`
+
 42kit : $(LIBKITOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS) -shared -o $(KITDIR)42kit.so $(LIBKITOBJ)
 
 
 ####################  Rules to compile objects  ###########################
+
+$(OBJ)dataFilter.o  : $(DATAFILTER)dataFilter.c
+	$(CC) $(CFLAGS) -c $(DATAFILTER)dataFilter.c -o $(OBJ)dataFilter.o
 
 $(OBJ)tests.o       : $(TESTS)tests.c $(TESTS)mathkit_tests.h
 	$(CC) $(CFLAGS) -c $(TESTS)tests.c -o $(OBJ)tests.o
@@ -491,11 +512,11 @@ $(OBJ)42dsm.o       : $(SRC)42dsm.c $(INC)Ac.h $(INC)AcTypes.h $(INC)DSMTypes.h
 ########################  Miscellaneous Rules  ############################
 clean :
 ifeq ($(42PLATFORM),_WIN32)
-	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp ./DataFilter .\InOut\*.42
 else ifeq ($(42PLATFORM),_WIN64)
-	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp ./DataFilter .\InOut\*.42
 else
-	rm -f $(OBJ)*.o ./$(EXENAME) ./AcApp $(KITDIR)42kit.so $(INOUT)*.42 ./Standalone/*.42 ./Demo/*.42 ./Rx/*.42 ./Tx/*.42
+	rm -f $(OBJ)*.o ./$(EXENAME) ./AcApp ./DataFilter $(KITDIR)42kit.so $(INOUT)*.42 ./Standalone/*.42 ./Demo/*.42 ./Rx/*.42 ./Tx/*.42
 endif
 
 profile: CFLAGS+=-pg
@@ -505,3 +526,6 @@ profile: 42
 deploy: CFLAGS+=-O3
 deploy: LFLAGS+=-O3
 deploy: 42
+
+DataFilter: STANDALONEFLAG = -D _AC_STANDALONE_
+DataFilter: GUIFLAG =

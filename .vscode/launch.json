@@ -11,9 +11,9 @@
          "program": "${workspaceFolder}/42",
          "args": [
             "-d",
-            "Missions/DSM_NAV_DEMO",
+            "Missions/SNOOPI",
             "-o",
-            "Missions/DSM_NAV_DEMO/blah",
+            "Missions/SNOOPI/blah",
             "-g",
             "0",
          ],
@@ -43,9 +43,9 @@
          "program": "${workspaceFolder}/42",
          "args": [
             "-d",
-            "Missions/DSM_NAV_DEMO",
+            "Missions/SNOOPI",
             "-o",
-            "Missions/DSM_NAV_DEMO/blah",
+            "Missions/SNOOPI/blah",
             "-g",
             "0",
          ],

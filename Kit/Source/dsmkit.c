@@ -300,18 +300,28 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Nfss != 0) {
-      double tanx, tany, z;
 
       for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
          FSS = &AC->FSS[Ifss];
          if (FSS->Valid) {
-            AC->SunValid    = 1;
-            tanx            = tan(FSS->SunAng[0]);
-            tany            = tan(FSS->SunAng[1]);
-            z               = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
-            FSS->SunVecS[0] = z * tanx;
-            FSS->SunVecS[1] = z * tany;
-            FSS->SunVecS[2] = z;
+            AC->SunValid = 1;
+            if (FSS->type == CONVENTIONAL_FSS) {
+               double tanx     = tan(FSS->SunAng[0]);
+               double tany     = tan(FSS->SunAng[1]);
+               double z        = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
+               FSS->SunVecS[0] = z * tanx;
+               FSS->SunVecS[1] = z * tany;
+               FSS->SunVecS[2] = z;
+            }
+            else {
+               double ct       = cos(FSS->SunAng[0]);
+               double st       = sin(FSS->SunAng[0]);
+               double cp       = cos(FSS->SunAng[1]);
+               double sp       = sin(FSS->SunAng[1]);
+               FSS->SunVecS[0] = ct;
+               FSS->SunVecS[1] = st * cp;
+               FSS->SunVecS[2] = st * sp;
+            }
             MTxV(FSS->CB, FSS->SunVecS, FSS->SunVecB);
             for (i = 0; i < 3; i++)
                AC->svb[i] = FSS->SunVecB[i];

@@ -948,12 +948,11 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       } break;
       case GS_FSS: {
-         const double factor = (svsv * svsv + svsh * svsh);
-         const double denom  = 1.0 / factor;
+         const double denomA = -1.0 / sqrt(1.0 - svsb * svsb);
+         const double denomB = 1.0 / (svsh * svsh + svsv * svsv);
          for (i = 0; i < 3; i++) {
-            B[0][i] = (svsv * hxsvs[i] - svsh * vxsvs[i]) * denom;
-            B[1][i] = (factor * bxsvs[i] -
-                       svsb * denom * (svsv * vxsvs[i] + svsh * hxsvs[i]));
+            B[0][i] = bxsvs[i] * denomA;
+            B[1][i] = (svsh * vxsvs[i] - svsv * hxsvs[i]) * denomB;
          }
       } break;
       default:

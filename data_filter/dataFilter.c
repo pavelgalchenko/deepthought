@@ -47,6 +47,11 @@ void InitFilter(int argc, char **argv)
    if (argc > 2)
       sprintf(ModelPath, "./%s/", argv[2]);
 
+   char tempargs[BUFSIZE];
+   char *ret;
+   DIR *OutDir;
+   DIR *ModelDir;
+
 #ifdef __linux__
    strcpy(ExeDir, realpath("/proc/self/exe", NULL));
    ret = strrchr(ExeDir, '/');
@@ -165,8 +170,8 @@ void InitFilter(int argc, char **argv)
    if (fy_node_scanf(node,
                      "/Mode %119s "
                      "/Duration %lf "
-                     "/Step Size %lf " response,
-                     &STOPTIME, &DTSIM) != 3) {
+                     "/Step Size %lf ",
+                     response, &STOPTIME, &DTSIM) != 3) {
       printf("Simulation Control in Inp_Sim is improperly configured. "
              "Exiting...\n");
       exit(EXIT_FAILURE);
