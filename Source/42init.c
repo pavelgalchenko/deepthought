@@ -2209,15 +2209,15 @@ void InitWhlDragAndJitter(struct WhlType *W)
 void InitOptics(struct FgsType *F)
 {
    FILE *infile;
-   struct SCType *S;
-   struct BodyType *B;
-   struct NodeType *N;
+   // struct SCType *S;
+   // struct BodyType *B;
+   // struct NodeType *N;
    struct OpticsType *O;
-   struct OpticsType *Ap, *Det;
    char junk[256], newline, response[120];
-   double ApPntN[3], FocPntN[3], DetPntN[3], RelPosN[3];
-   long Io, i;
-   long HasFocus;
+   // double ApPntN[3], FocPntN[3], DetPntN[3], RelPosN[3];
+   long Io;
+   // long i;
+   // long HasFocus;
 
    if (strcmp(F->OpticsFileName, "NONE")) {
       infile = FileOpen(InOutPath, F->OpticsFileName, "r");
@@ -3248,13 +3248,14 @@ void InitSpacecraft(struct SCType *S)
                            "/Optics File Name %49s "
                            "/PSF Image File %49s "
                            "/Body/Index %ld",
-                           &FGS->SampleTime, &FGS->BoreAxis, &FGS->NEA,
-                           &FGS->Scl, &FGS->Node, FGS->OpticsFileName,
-                           FGS->PsfFileName, &FGS->Body)) {
+                           &FGS->SampleTime, dummy, &FGS->NEA, &FGS->Scl,
+                           &FGS->Node, FGS->OpticsFileName, FGS->PsfFileName,
+                           &FGS->Body)) {
             printf("Spacecraft FGS %ld is improperly configured. Exiting...\n",
                    Ifgs);
             exit(EXIT_FAILURE);
          }
+         FGS->BoreAxis = DecodeString(dummy);
          if (FGS->Body >= S->Nb) {
             printf("SC[%ld].FGS[%ld] Body out of range\n", S->ID, Ifgs);
             exit(EXIT_FAILURE);
@@ -3280,7 +3281,7 @@ void InitSpacecraft(struct SCType *S)
             FGS->FovHalfAng[i] *= 0.5 * A2R;
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/FOV Frame Angles"),
-                            ang, seq);
+                            ang, &seq);
          A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CR);
          C2Q(FGS->CR, FGS->qr);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/Guide Star"),

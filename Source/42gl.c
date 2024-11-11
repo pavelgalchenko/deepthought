@@ -3812,9 +3812,6 @@ void DrawUnitSphere(void)
    struct FssType *F;
    struct StarTrackerType *ST;
 
-   struct FssType *F;
-   struct StarTrackerType *ST;
-
    double CVB0[3][3]; /* DCM from Body0 frame to Viewing frame */
    double CVB[3][3];
    double CVL[3][3];

@@ -605,9 +605,6 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
          O->VelN[i] += wxr[i];
    }
 }
-#undef TWOPI
-#undef PI
-#undef D2R
 /**********************************************************************/
 /* TLEs use UTC.  42 orbits use TT.  So LeapSec are needed.           */
 long LoadTleFromFile(const char *Path, const char *TleFileName,

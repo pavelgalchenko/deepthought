@@ -513,7 +513,7 @@ struct AccelType {
 
    /*~ Internal Variables ~*/
    double AccumAccN[3];
-   double Bias; /* m/s^2 */
+   double Bias;        /* m/s^2 */
    double PrevVelN[3]; /* m/s */
    double PrevQN[4];
    double DV;      /* Change in velocity m/s */
@@ -568,18 +568,18 @@ struct FgsType {
    long MaxCounter;
    double qb[4];
    double CB[3][3];
-   double qr[4]; /* q_fr_r */
+   double qr[4];    /* q_fr_r */
    double CR[3][3]; /* CFrR */
    double NEA;
    long Body;
    long Node;
    long BoreAxis; /* X_AXIS, Y_AXIS, Z_AXIS */
-   long H_Axis; /* (BoreAxis+1)%3 */
-   long V_Axis; /* (BoreAxis+2)%3 */
+   long H_Axis;   /* (BoreAxis+1)%3 */
+   long V_Axis;   /* (BoreAxis+2)%3 */
    double FovHalfAng[2];
    double Scl; /* rad/pixel */
-   double Hr; /* Guide Star in Fr */
-   double Vr; /* Guide Star in Fr */
+   double Hr;  /* Guide Star in Fr */
+   double Vr;  /* Guide Star in Fr */
 
    /*~ Internal Variables ~*/
    long SampleCounter;
@@ -688,14 +688,14 @@ struct SCType {
    long Nthr; /* Number of thrusters */
 
    long Ngyro; /* Number of Gyro axes */
-   long Nmag; /* Number of magnetometer axes */
-   long Ncss; /* Number of coarse sun sensors */
-   long Nfss; /* Number of Fine Sun Sensors */
-   long Nst; /* Number of star trackers */
-   long Ngps; /* Number of GPS receivers */
-   long Nacc; /* Number of accelerometer axes */
-   long Nfgs; /* Number of Fine Guidance Sensors */
-   long Nsh; /* Number of shakers */
+   long Nmag;  /* Number of magnetometer axes */
+   long Ncss;  /* Number of coarse sun sensors */
+   long Nfss;  /* Number of Fine Sun Sensors */
+   long Nst;   /* Number of star trackers */
+   long Ngps;  /* Number of GPS receivers */
+   long Nacc;  /* Number of accelerometer axes */
+   long Nfgs;  /* Number of Fine Guidance Sensors */
+   long Nsh;   /* Number of shakers */
 
    double mass;
    double cm[3];     /* wrt B0 origin, expressed in B0 frame */
@@ -708,18 +708,21 @@ struct SCType {
    double PosN[3];   /* Position of cm wrt origin of N, m, expressed in N */
    double VelN[3];   /* Velocity of cm wrt origin of N, m/sec, expressed in N */
    double CLN[3][3]; /* Note that SC.CLN != Orb[RefOrb].CLN if SC.PosR != 0.0 */
-   double CEN[3][3]; /* E = Equatorial frame: e1 = North, e2 = East, e3 = Nadir */
-   double wln[3]; /* Expressed in N */
-   double PosH[3];  /* Position of cm wrt H frame, expressed in H */
-   double VelH[3];  /* Velocity of cm wrt H frame, expressed in H */
+   double CEN[3]
+             [3];  /* E = Equatorial frame: e1 = North, e2 = East, e3 = Nadir */
+   double wln[3];  /* Expressed in N */
+   double PosH[3]; /* Position of cm wrt H frame, expressed in H */
+   double VelH[3]; /* Velocity of cm wrt H frame, expressed in H */
    double FrcN[3]; /* Force, N, expressed in N */
-   double AccN[3]; /* Acceleration due to external force, for accelerometer model */
-   double svn[3]; /* Sun-pointing unit vector, expressed in N */
-   double svb[3]; /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
-   double bvn[3]; /* Magfield, Tesla, expressed in N */
-   double bvb[3]; /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
-   double Hvn[3]; /* Total SC angular momentum, Nms, expressed in N */
-   double Hvb[3]; /* Total SC angular momentum [[Nms]], expressed in SC.B[0] [~=~] */
+   double AccN[3]; /* Acceleration due to external force, for accelerometer
+                      model */
+   double svn[3];  /* Sun-pointing unit vector, expressed in N */
+   double svb[3];  /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
+   double bvn[3];  /* Magfield, Tesla, expressed in N */
+   double bvb[3];  /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
+   double Hvn[3];  /* Total SC angular momentum, Nms, expressed in N */
+   double Hvb[3];  /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
+                      [~=~] */
    long Eclipse;
    double AtmoDensity;
    double DragCoef;
@@ -909,8 +912,9 @@ struct WorldType {
 
    double CNH[3][3]; /* DCM from heliocentric ecliptic frame
                         to world-centric equatorial inertial frame */
-   double qnh[4]; /* ~*/
-   double CNJ[3][3]; /* DCM from J2000 frame to world-centric equatorial inertial frame */
+   double qnh[4];    /* ~*/
+   double CNJ[3][3]; /* DCM from J2000 frame to world-centric equatorial
+                        inertial frame */
    double qnj[4];
 
    /*~ Internal Variables ~*/
