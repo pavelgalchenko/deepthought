@@ -13,7 +13,10 @@
 
 #include "dataFilter.h"
 
-void InitFilter(int argc, char **argv)
+extern void WriteToSocket(SOCKET Socket, struct AcType *AC);
+extern void ReadFromSocket(SOCKET Socket, struct AcType *AC);
+
+struct fy_document *InitFilter(int argc, char **argv)
 {
    struct OrbitType *Eph;
    char response[120], response1[120], response2[120];
@@ -160,6 +163,9 @@ void InitFilter(int argc, char **argv)
 
    struct fy_node *root = fy_document_root(fyd);
    struct fy_node *node = fy_node_by_path_def(root, "/Simulation Control");
+
+   const char *config_file =
+       fy_node_get_scalar0(fy_node_by_path_def(node, "/Sensor Config File"));
 
    /* .. Time Mode */
    /* .. Duration, Step size */
@@ -661,19 +667,47 @@ void InitFilter(int argc, char **argv)
 
    LoadTdrs();
    LoadSchatten();
+   return fy_document_build_and_check(NULL, InOutPath, config_file);
+}
+
+// don't output as measlist, also has actuator data to output
+struct DSMMeasListType *read_db(const char *db_name, struct DateType *db_time)
+{
+   static sqlite3 *db = NULL;
+   int rc;
+
+   if (db == NULL) {
+      rc = sqlite3_open(db_name, &db);
+      if (rc) {
+         fprintf(stderr, "Can't open database %s: %s\n", db_name,
+                 sqlite3_errmsg(db));
+         exit(EXIT_FAILURE);
+      }
+
+      // get db state up to db_time
+      return NULL;
+   }
+
+   // output db data from last db state up to db_time
 }
 
 int main(int argc, char **argv)
 {
+
+   const char *hostname = "localhost";
+   const int port       = 10001;
 
    /* INIT */
    /* Init SC, World, Orbit                                                   */
    /* Init AC                                                                 */
    /* S->FswTag to DSM_FSW                                                    */
    /* Init time from Inp_Sim.yaml                                             */
+   /* Init db                                                                 */
+
    /* load sensor map yaml                                                    */
-   InitFilter(argc, argv);
-   InitInterProcessComm();
+   struct fy_document *config_fyd = InitFilter(argc, argv);
+   struct DateType db_time        = UTC;
+   SOCKET socket                  = InitSocketClient(hostname, port, 1);
 
    /* LOOP */
    /* Every loop: */
@@ -685,5 +719,16 @@ int main(int argc, char **argv)
    /*    Set S state from AC state */
    /*    return data on IPC */
 
+   struct SCType *const S  = &SC[0];
+   struct AcType *const AC = &S->AC;
+   DsmFSW(S); // Init DSM
+
+   while (TRUE) {
+      ReadFromSocket(socket, AC);
+      DsmFSW(S);
+      WriteToSocket(socket, AC);
+   }
+
+   fy_document_destroy(config_fyd);
    return (EXIT_SUCCESS);
 }

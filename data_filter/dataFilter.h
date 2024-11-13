@@ -21,7 +21,10 @@
 #include <string.h>
 
 #include "42defines.h"
+#include "42dsm.h"
 #include "42types.h"
+#include "AcTypes.h"
+#include "DSMTypes.h"
 #include "dcmkit.h"
 #include "docoptkit.h"
 #include "dsmkit.h"

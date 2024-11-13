@@ -1,0 +1,61 @@
+%YAML 1.2
+---
+Data Mapping Configurations:
+  Gyro:
+    - Rate:
+        data: ANG_RATE_BODY_1
+    - Rate:
+        data: ANG_RATE_BODY_2
+    - Rate:
+        data: ANG_RATE_BODY_3
+  MAG:
+    - Field:
+        data: BVB_1
+    - Field:
+        data: BVB_2
+    - Field:
+        data: BVB_3
+  CSS:
+    - Illum:
+        data: CSS0_+Y
+    - Illum:
+        data: CSS1_+Z
+    - Illum:
+        data: CSS2_+X
+    - Illum:
+        data: CSS3_-Y
+    - Illum:
+        data: CSS4_-X
+    - Illum:
+        data: CSS5_-Z
+  FSS:
+    - SunAng:
+        data: [GSFSS_PHI_0, GSFSS_THETA_0]
+  ST:
+    - qn:
+        data: [QBN_1, QBN_2, QBN_3, QBN_4]
+  GPS:
+    - PosN:
+        data: [GPS_POSN_1, GPS_POSN_2, GPS_POSN_3]
+      VelN:
+        data: [GPS_VELN_1, GPS_VELN_2, GPS_VELN_3]
+  Whl:
+    - H:
+        data: WHL1_WHL_H
+      Tcmd:
+        data: TCMD_1
+    - H:
+        data: WHL2_WHL_H
+      Tcmd:
+        data: TCMD_2
+    - H:
+        data: WHL3_WHL_H
+      Tcmd:
+        data: TCMD_3
+  MTB:
+    - Mcmd:
+        data: MCMD_1
+    - Mcmd:
+        data: MCMD_2
+    - Mcmd:
+        data: MCMD_3

@@ -652,9 +652,9 @@ struct SCType {
    double PosH[3];   /* Position of cm wrt H frame, expressed in H */
    double VelH[3];   /* Velocity of cm wrt H frame, expressed in H */
    double FrcN[3];   /* Force, N, expressed in N */
-   double svn[3];    /* Sun-pointing unit vector, expressed in N */
+   double svn[3];    /* Sun-pointing unit vector, expressed in N [~>~]*/
    double svb[3];    /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
-   double bvn[3];    /* Magfield, Tesla, expressed in N */
+   double bvn[3];    /* Magfield, Tesla, expressed in N [~>~]*/
    double bvb[3];    /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
    double Hvn[3];    /* Total SC angular momentum, Nms, expressed in N */
    double Hvb[3];    /* Total SC angular momentum [[Nms]], expressed in SC.B[0]

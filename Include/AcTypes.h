@@ -438,7 +438,6 @@ struct AcType {
    struct AcMagnetometerType *MAG; /* [*Nmag*] */
    struct AcCssType *CSS;          /* [*Ncss*] */
    struct AcFssType *FSS;          /* [*Nfss*] */
-   struct AcGsFssType *GSFSS;      /* [*Ngsfss*] */
    struct AcStarTrackerType *ST;   /* [*Nst*] */
    struct AcGpsType *GPS;          /* [*Ngps*] */
    struct AcAccelType *Accel;      /* [*Nacc*] */

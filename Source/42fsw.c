@@ -1956,6 +1956,29 @@ void FlightSoftWare(struct SCType *S)
    if (S->FswSampleCounter >= S->FswMaxCounter) {
       S->FswSampleCounter = 0;
 
+#ifdef _AC_STANDALONE_
+      for (Iipc = 0; Iipc < Nipc; Iipc++) {
+         I = &IPC[Iipc];
+         if (I->Mode == IPC_ACS && I->AcsID == S->AC.ID) {
+            if (I->Init) {
+               I->Init               = 0;
+               S->AC.ParmLoadEnabled = 1;
+               S->AC.ParmDumpEnabled = 1;
+               S->AC.EchoEnabled     = 1;
+
+               WriteToSocket(I->Socket, I->Prefix, I->Nprefix, I->EchoEnabled);
+               ReadFromSocket(I->Socket, I->EchoEnabled);
+
+               S->AC.ParmLoadEnabled = 0;
+               S->AC.ParmDumpEnabled = 0;
+            }
+            else {
+               WriteToSocket(I->Socket, I->Prefix, I->Nprefix, I->EchoEnabled);
+               ReadFromSocket(I->Socket, I->EchoEnabled);
+            }
+         }
+      }
+#else
       switch (S->FswTag) {
          case PASSIVE_FSW:
             break;
@@ -1987,33 +2010,7 @@ void FlightSoftWare(struct SCType *S)
             DsmFSW(S);
             break;
          case CFS_FSW:
-#ifdef _AC_STANDALONE_
-            for (Iipc = 0; Iipc < Nipc; Iipc++) {
-               I = &IPC[Iipc];
-               if (I->Mode == IPC_ACS && I->AcsID == S->AC.ID) {
-                  if (I->Init) {
-                     I->Init               = 0;
-                     S->AC.ParmLoadEnabled = 1;
-                     S->AC.ParmDumpEnabled = 1;
-                     S->AC.EchoEnabled     = 1;
-
-                     WriteToSocket(I->Socket, I->Prefix, I->Nprefix,
-                                   I->EchoEnabled);
-                     ReadFromSocket(I->Socket, I->EchoEnabled);
-
-                     S->AC.ParmLoadEnabled = 0;
-                     S->AC.ParmDumpEnabled = 0;
-                  }
-                  else {
-                     WriteToSocket(I->Socket, I->Prefix, I->Nprefix,
-                                   I->EchoEnabled);
-                     ReadFromSocket(I->Socket, I->EchoEnabled);
-                  }
-               }
-            }
-#else
             AcFsw(&S->AC);
-#endif
             break;
          case RBT_FSW:
 #ifdef _ENABLE_RBT_
@@ -2021,6 +2018,7 @@ void FlightSoftWare(struct SCType *S)
 #endif
             break;
       }
+#endif
    }
 
    MapCmdsToActuators(S);

@@ -13,6 +13,11 @@
 
 #include "navkit.h"
 
+/* REQUIRED GLOBALS                                                   */
+/*    WorldType World                                                 */
+/*    long AtmoOption                                                 */
+/*    double SchattenTable[5][410]                                    */
+
 /* #ifdef __cplusplus
 ** namespace Kit {
 ** #endif
@@ -1635,6 +1640,8 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                            for (i = 0; i < 3; i++)
                               VelRdot[i] += accelR[i];
                         }
+                        // TODO: transition to Encke's method, but refAccel for
+                        // SC reference would need to be gravity free
                         for (i = 0; i < 3; i++)
                            tmpV[i] = PosR[i] + Nav->refPos[i];
                         getGravAccel(DSM->refOrb->mu, tmpV, tmpV2);
