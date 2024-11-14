@@ -77,7 +77,7 @@ Joints:
       Pos wrt Inner Body: [4.1, -1.17, -0.75]
       Pos wrt Outer Body: [0.0, 0.0, 0.0]
       Parm File Name: NONE
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels:
   - Wheel:
       Index: 0
@@ -133,3 +133,4 @@ FSSs: []
 STs: []
 GPSs: []
 Accelerometers: []
+FGSs: []

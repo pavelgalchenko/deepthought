@@ -430,7 +430,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 
    strncpy(RAANstring, &Line2[17], 9);
    RAANstring[9] = 0;
-   O->RAAN       = ((double)atof(RAANstring)) * D2R;
+   O->RAAN0      = ((double)atof(RAANstring)) * D2R;
 
    strncpy(EccString, &Line2[26], 7);
    EccString[7] = 0;
@@ -438,11 +438,11 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 
    strncpy(omgstring, &Line2[34], 8);
    omgstring[8] = 0;
-   O->ArgP      = ((double)atof(omgstring)) * D2R;
+   O->ArgP0     = ((double)atof(omgstring)) * D2R;
 
    strncpy(MeanAnomString, &Line2[43], 8);
    MeanAnomString[8] = 0;
-   O->MeanAnom       = ((double)atof(MeanAnomString)) * D2R;
+   O->MeanAnom0      = ((double)atof(MeanAnomString)) * D2R;
 
    strncpy(MeanMotionString, &Line2[52], 11);
    MeanMotionString[11] = 0;
@@ -450,10 +450,10 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
    O->Period            = TWOPI / (O->MeanMotion);
 
    /* Time of Periapsis passage given in seconds since J2000 */
-   O->tp = O->Epoch - O->MeanAnom / (O->MeanMotion);
-   while ((O->tp - DynTime) < -(O->Period))
+   O->tp = O->Epoch - O->MeanAnom0 / (O->MeanMotion);
+   while ((DynTime - O->tp) > O->Period)
       O->tp += O->Period;
-   while ((O->tp - DynTime) > O->Period)
+   while ((DynTime - O->tp) < -(O->Period))
       O->tp -= O->Period;
 
    O->MeanSMA = pow(mu / (O->MeanMotion * O->MeanMotion), 1.0 / 3.0);
@@ -462,7 +462,8 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
    O->SLR     = O->SMA * (1.0 - O->ecc * O->ecc);
    O->rmin    = O->SLR / (1.0 + O->ecc);
 
-   O->anom = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
+   O->MeanAnom = O->MeanMotion * (DynTime - O->tp);
+   O->anom     = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
 
    /* Initialize J2 Drift Parameters (ref Markley and Crassidis, Ch. 10) */
    /* 10.121 */
@@ -470,23 +471,26 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
       Coef       = 1.5 * J2 * Re * Re / (O->SLR * O->SLR) * O->MeanMotion;
       O->RAANdot = -Coef * cos(O->inc);
       O->ArgPdot = Coef * (2.0 - 2.5 * sin(O->inc) * sin(O->inc));
-      O->RAAN0   = O->RAAN - O->RAANdot * (DynTime - O->Epoch);
-      O->ArgP0   = O->ArgP - O->ArgPdot * (DynTime - O->Epoch);
-      /* 10.122 */
-      O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
+      O->RAAN    = O->RAAN0 + O->RAANdot * (DynTime - O->Epoch);
+      while (O->RAAN > PI)
+         O->RAAN -= TWOPI;
+      while (O->RAAN < -PI)
+         O->RAAN += TWOPI;
+      O->ArgP = O->ArgP0 + O->ArgPdot * (DynTime - O->Epoch);
+      while (O->ArgP > PI)
+         O->ArgP -= TWOPI;
+      while (O->ArgP < -PI)
+         O->ArgP += TWOPI;
       /* 10.126 */
       O->J2Rw2bya = J2 * Re * Re / O->MeanSMA;
    }
    else {
       O->RAANdot  = 0.0;
       O->ArgPdot  = 0.0;
-      O->RAAN0    = O->RAAN;
-      O->ArgP0    = O->ArgP;
+      O->RAAN     = O->RAAN0;
+      O->ArgP     = O->ArgP0;
       O->J2Rw2bya = 0.0;
-      /* 10.122 */
-      O->MeanAnom0 = O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch);
    }
-#undef EPS
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
@@ -1309,6 +1313,19 @@ void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3])
       CLN[1][i] = L2[i];
       CLN[2][i] = L3[i];
    }
+}
+/**********************************************************************/
+/* E = Equatorial Frame.  e1 = n3, e2 = East, e3 points to axis of World */
+void FindCEN(double r[3], double CEN[3][3])
+{
+   CEN[0][0] = 0.0;
+   CEN[0][1] = 0.0;
+   CEN[0][2] = 1.0;
+   CEN[2][0] = -r[0];
+   CEN[2][1] = -r[1];
+   CEN[2][2] = 0.0;
+   UNITV(CEN[2]);
+   VxV(CEN[2], CEN[0], CEN[1]);
 }
 /**********************************************************************/
 void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])

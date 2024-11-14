@@ -455,6 +455,20 @@ long DecodeString(char *s)
    else if (!strcmp(s, "PROPORTIONAL"))
       return THR_PROPORTIONAL;
 
+   else if (!strcmp(s, "APERTURE"))
+      return OPT_APERTURE;
+   else if (!strcmp(s, "CONIC"))
+      return OPT_CONIC;
+   else if (!strcmp(s, "DETECTOR"))
+      return OPT_DETECTOR;
+   else if (!strcmp(s, "THINLENS"))
+      return OPT_THINLENS;
+
+   else if (!strcmp(s, "CONCAVE"))
+      return OPT_CONCAVE;
+   else if (!strcmp(s, "CONVEX"))
+      return OPT_CONVEX;
+
    else {
       printf("Bogus input %s in DecodeString (42init.c:%d)\n", s, __LINE__);
       exit(EXIT_FAILURE);
@@ -750,10 +764,10 @@ void InitOrbit(struct OrbitType *O)
             O->VelN[j] = R->VelN[j];
             for (k = 0; k < 3; k++)
                O->CLN[j][k] = R->CN[j][k];
-            O->wln[0] = 0.0;
-            O->wln[1] = 0.0;
-            O->wln[2] = World[O->World].w;
          }
+         O->wln[0] = 0.0;
+         O->wln[1] = 0.0;
+         O->wln[2] = World[O->World].w;
          O->PolyhedronGravityEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
@@ -2192,6 +2206,64 @@ void InitWhlDragAndJitter(struct WhlType *W)
    }
 }
 /**********************************************************************/
+void InitOptics(struct FgsType *F)
+{
+   FILE *infile;
+   // struct SCType *S;
+   // struct BodyType *B;
+   // struct NodeType *N;
+   struct OpticsType *O;
+   char junk[256], newline, response[120];
+   // double ApPntN[3], FocPntN[3], DetPntN[3], RelPosN[3];
+   long Io;
+   // long i;
+   // long HasFocus;
+
+   if (strcmp(F->OpticsFileName, "NONE")) {
+      infile = FileOpen(InOutPath, F->OpticsFileName, "r");
+      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+      fscanf(infile, "%ld  %[^\n] %[\n]", &F->Nopt, junk, &newline);
+      F->Opt = (struct OpticsType *)calloc(F->Nopt, sizeof(struct OpticsType));
+      for (Io = 0; Io < F->Nopt; Io++) {
+         O = &F->Opt[Io];
+         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+         fscanf(infile, "%ld %ld %ld %[^\n] %[\n]", &O->SC, &O->Body, &O->Node,
+                junk, &newline);
+         fscanf(infile, "%lf %[^\n] %[\n]", &O->ApRad, junk, &newline);
+         O->ApRad /= 2.0;
+         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &O->Axis[0], &O->Axis[1],
+                &O->Axis[2], junk, &newline);
+         UNITV(O->Axis);
+         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+         O->Type = DecodeString(response);
+         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+         O->ConicSign = (double)DecodeString(response);
+         fscanf(infile, "%lf %[^\n] %[\n]", &O->FocLen, junk, &newline);
+         fscanf(infile, "%lf %[^\n] %[\n]", &O->ConicConst, junk, &newline);
+      }
+      fclose(infile);
+      F->HasOptics = TRUE;
+
+      /* Check for Aperture, Detector */
+      if (F->Opt[0].Type != OPT_APERTURE) {
+         printf("Optical Train must have Aperture as first element.\n");
+         exit(1);
+      }
+      if (F->Opt[F->Nopt - 1].Type != OPT_DETECTOR) {
+         printf("Optical Train must have Detector as last element.\n");
+      }
+
+      /* TODO: Find erect/inverted, lump in Det->FocLen */
+   }
+   else {
+      F->HasOptics = FALSE;
+   }
+
+   printf("Exiting InitOptics\n");
+}
+/**********************************************************************/
 void InitOrderNDynamics(struct SCType *S)
 {
    struct BodyType *B;
@@ -2354,6 +2426,17 @@ void InitSpacecraft(struct SCType *S)
                CBF[j][k] = CBN[j][k];
          }
          MxM(CBF, Frm[S->RefOrb].CN, CBN);
+         C2Q(CBN, qbn);
+      } break;
+      case 'E': {
+         /* Adjust CBN */
+         double CBE[3][3], CEN[3][3];
+         for (j = 0; j < 3; j++) {
+            for (k = 0; k < 3; k++)
+               CBE[j][k] = CBN[j][k];
+         }
+         FindCEN(Orb[S->RefOrb].PosN, CEN);
+         MxM(CBE, CEN, CBN);
          C2Q(CBN, qbn);
       } break;
    }
@@ -2890,6 +2973,10 @@ void InitSpacecraft(struct SCType *S)
             printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ic);
             exit(EXIT_FAILURE);
          }
+         if (CSS->Body >= S->Nb) {
+            printf("SC[%ld].CSS[%ld] Body out of range\n", S->ID, Ic);
+            exit(EXIT_FAILURE);
+         }
          if (CSS->Node >= S->B[CSS->Body].NumNodes) {
             printf("SC[%ld].CSS[%ld] Node out of range\n", S->ID, Ic);
             exit(EXIT_FAILURE);
@@ -3134,6 +3221,79 @@ void InitSpacecraft(struct SCType *S)
          Accel->DVNoiseCoef = Accel->SigE / sqrt(Accel->SampleTime);
          Accel->CorrCoef    = 1.0 - Accel->SampleTime / (biasTime * 3600.0);
          Accel->DV          = 0.0;
+      }
+   }
+
+   /* .. Fine Guidance Sensors */
+   node    = fy_node_by_path_def(root, "/FGSs");
+   S->Nfgs = fy_node_sequence_item_count(node);
+   S->Fgs  = (struct FgsType *)calloc(S->Nfgs, sizeof(struct FgsType));
+   if (S->Nfgs > 0) {
+      iterNode = NULL;
+      WHILE_FY_ITER(node, iterNode)
+      {
+         long Ifgs               = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FGS");
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ifgs)) {
+            printf("Could not find spacecraft FGS index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
+         struct FgsType *FGS = &S->Fgs[i];
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Boresight Axis %49s "
+                           "/Noise Equivalent Angle %lf "
+                           "/Detector Scale %lf "
+                           "/Node %ld "
+                           "/Optics File Name %49s "
+                           "/PSF Image File %49s "
+                           "/Body/Index %ld",
+                           &FGS->SampleTime, dummy, &FGS->NEA, &FGS->Scl,
+                           &FGS->Node, FGS->OpticsFileName, FGS->PsfFileName,
+                           &FGS->Body)) {
+            printf("Spacecraft FGS %ld is improperly configured. Exiting...\n",
+                   Ifgs);
+            exit(EXIT_FAILURE);
+         }
+         FGS->BoreAxis = DecodeString(dummy);
+         if (FGS->Body >= S->Nb) {
+            printf("SC[%ld].FGS[%ld] Body out of range\n", S->ID, Ifgs);
+            exit(EXIT_FAILURE);
+         }
+         if (FGS->Node >= S->B[FGS->Body].NumNodes) {
+            printf("SC[%ld].FGS[%ld] Node out of range\n", S->ID, Ifgs);
+            exit(EXIT_FAILURE);
+         }
+         FGS->MaxCounter     = (long)(FGS->SampleTime / DTSIM + 0.5);
+         FGS->SampleCounter  = FGS->MaxCounter;
+         FGS->H_Axis         = (FGS->BoreAxis + 1) % 3;
+         FGS->V_Axis         = (FGS->BoreAxis + 2) % 3;
+         FGS->NEA           *= A2R;
+         FGS->Scl           *= A2R;
+
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
+                            ang, &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CB);
+         C2Q(FGS->CB, FGS->qb);
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
+                                 FGS->FovHalfAng);
+         for (i = 0; i < 2; i++)
+            FGS->FovHalfAng[i] *= 0.5 * A2R;
+
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/FOV Frame Angles"),
+                            ang, &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CR);
+         C2Q(FGS->CR, FGS->qr);
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/Guide Star"),
+                                 ang);
+         FGS->Hr = ang[0] * A2R;
+         FGS->Vr = ang[1] * A2R;
+         InitOptics(FGS);
+         if (strcmp(FGS->PsfFileName, "NONE")) {
+            struct PsfType *PSF = &FGS->PSF;
+            PSF->Image = PpmToPsf(ModelPath, FGS->PsfFileName, &PSF->Ncol,
+                                  &PSF->Nrow, &PSF->BytesPerPixel);
+         }
       }
    }
 
@@ -3507,6 +3667,7 @@ void LoadSun(void)
       W->qnh[i]    = 0.0;
    }
    W->qnh[3] = 1.0;
+   QxQT(W->qnh, qjh, W->qnj);
 }
 /*********************************************************************/
 void LoadPlanets(void)
@@ -3715,12 +3876,16 @@ void LoadPlanets(void)
    /* Planetocentric Inertial Reference Frames */
    A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
    C2Q(World[EARTH].CNH, World[EARTH].qnh);
+   for (i = 0; i < 3; i++)
+      World[EARTH].qnj[i] = 0.0;
+   World[EARTH].qnj[3] = 1.0;
    for (i = MERCURY; i <= PLUTO; i++) {
       if (i != EARTH) {
          A2C(312, (PoleRA[i] + 90.0) * D2R, (90.0 - PoleDec[i]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[i].CNH);
          C2Q(World[i].CNH, World[i].qnh);
+         QxQT(World[i].qnh, qjh, World[i].qnj);
       }
    }
 
@@ -3872,6 +4037,7 @@ void LoadMoonOfEarth(void)
       LunaInertialFrame(TT.JulDay, CNJ);
       MxM(CNJ, World[EARTH].CNH, M->CNH);
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       M->PriMerAng = LunaPriMerAng(TT.JulDay);
       M->Type      = MOON;
 
@@ -4013,6 +4179,7 @@ void LoadMoonsOfMars(void)
       }
 
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4188,6 +4355,7 @@ void LoadMoonsOfJupiter(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4364,6 +4532,7 @@ void LoadMoonsOfSaturn(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4506,6 +4675,7 @@ void LoadMoonsOfUranus(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4646,6 +4816,7 @@ void LoadMoonsOfNeptune(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4788,6 +4959,7 @@ void LoadMoonsOfPluto(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4845,6 +5017,7 @@ void LoadMinorBodies(void)
       A2C(312, (PoleRA + 90.0) * D2R, (90.0 - PoleDec) * D2R, 0.0, CNJ);
       MxM(CNJ, World[EARTH].CNH, W->CNH);
       C2Q(W->CNH, W->qnh);
+      QxQT(W->qnh, qjh, W->qnj);
       E->Exists = TRUE;
       E->Regime = ORB_CENTRAL;
       E->World  = SOL;
@@ -5365,8 +5538,8 @@ long LoadJplEphems(char EphemPath[80], double JD)
          PosJ[i] = 1000.0 * P;
          VelJ[i] = 1000.0 * dPdu * dudJD / 86400.0;
       }
-      QTxV(qJ2000H, PosJ, Eph->PosN);
-      QTxV(qJ2000H, VelJ, Eph->VelN);
+      QTxV(qjh, PosJ, Eph->PosN);
+      QTxV(qjh, VelJ, Eph->VelN);
    }
    /* Adjust for barycenters */
    /* Move planets from barycentric to Sun-centered */
@@ -5633,11 +5806,16 @@ void InitSim(int argc, char **argv)
    long Iorb, Isc, i, j, Ip, Im, Iw, Nm;
    long MinorBodiesExist;
    long JunkTag;
-   double CGJ2000[3][3] = {
+   double CGJ[3][3] = {
        {-0.054873956175539, -0.873437182224835, -0.483835031431981},
        {0.494110775064704, -0.444828614979805, 0.746981957785302},
        {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
-   double CJ2000H[3][3];
+   double CJH[3][3];
+
+   qjh[0] = -0.203123038887;
+   qjh[1] = 0.0;
+   qjh[2] = 0.0;
+   qjh[3] = 0.979153221449;
 
    Pi          = PI;
    TwoPi       = TWOPI;
@@ -5645,11 +5823,8 @@ void InitSim(int argc, char **argv)
    SqrtTwo     = SQRTTWO;
    SqrtHalf    = SQRTHALF;
    GoldenRatio = GOLDENRATIO;
-
-   qJ2000H[0] = -0.203123038887;
-   qJ2000H[1] = 0.0;
-   qJ2000H[2] = 0.0;
-   qJ2000H[3] = 0.979153221449;
+   A2R         = D2R / 3600.0;
+   R2A         = R2D * 3600.0;
 
 #ifdef _ENABLE_RBT_
    sprintf(InOutPath, "../../GSFC/RBT/InOut/");
@@ -5945,7 +6120,8 @@ void InitSim(int argc, char **argv)
       if (atmoType == USER_ATMO)
          if (fy_node_scanf(iterNode, "/F10.7 %lf /Ap %lf", &f10p7, &geomag) !=
              2) {
-            printf("Could not find user defined F10.7 and/or Ap. Exiting...\n");
+            printf("Could not find user defined F10.7 and/or Ap. "
+                   "Exiting...\n");
             exit(EXIT_FAILURE);
          }
 
@@ -5956,7 +6132,8 @@ void InitSim(int argc, char **argv)
             GeomagIndex = geomag;
             break;
          default:
-            printf("World %119s does not have a configured atmospheric model. "
+            printf("World %119s does not have a configured atmospheric "
+                   "model. "
                    "Exiting...\n",
                    response1);
             exit(EXIT_FAILURE);
@@ -6030,7 +6207,8 @@ void InitSim(int argc, char **argv)
                         "/Degree %ld "
                         "/Order %ld",
                         response, &N, &M) != 3) {
-         printf("Could not find World, Degree, and/or Order for Gravitational "
+         printf("Could not find World, Degree, and/or Order for "
+                "Gravitational "
                 "Model. Exiting...\n");
          exit(EXIT_FAILURE);
       }
@@ -6043,7 +6221,8 @@ void InitSim(int argc, char **argv)
             World[Iw].GravModel.M = M;
             break;
          default:
-            printf("World %119s does not have a configured spherical harmonic "
+            printf("World %119s does not have a configured spherical "
+                   "harmonic "
                    "gravity model. Exiting...\n",
                    response);
             exit(EXIT_FAILURE);
@@ -6079,8 +6258,8 @@ void InitSim(int argc, char **argv)
    }
    EphemOption = DecodeString(response);
    node        = fy_node_by_path_def(root, "/Celestial Bodies");
-   // I wish this was more programmatic, but it doesn't really need to be I
-   // guess
+   // I wish this was more programmatic, but it doesn't really need to be
+   // I guess
    World[MERCURY].Exists = getYAMLBool(fy_node_by_path_def(node, "/Mercury"));
    World[VENUS].Exists   = getYAMLBool(fy_node_by_path_def(node, "/Venus"));
    World[EARTH].Exists =
@@ -6180,8 +6359,8 @@ void InitSim(int argc, char **argv)
 /* .. Load Sun and Planets */
 #ifdef _ENABLE_SPICE_
    if (EphemOption == EPH_SPICE)
-      LoadSpiceKernels(
-          ModelPath); // Load SPICE to get SPICE-provided values for mu, J2, etc
+      LoadSpiceKernels(ModelPath); // Load SPICE to get SPICE-provided
+                                   // values for mu, J2, etc
 #endif
 
    LoadSun();
@@ -6220,8 +6399,8 @@ void InitSim(int argc, char **argv)
    LoadRegions();
 
    /* .. Galactic Frame */
-   Q2C(qJ2000H, CJ2000H);
-   MxM(CGJ2000, CJ2000H, CGH);
+   Q2C(qjh, CJH);
+   MxM(CGJ, CJH, CGH);
 
    /* .. Ground Station Locations */
    for (i = 0; i < Ngnd; i++) {
@@ -6313,7 +6492,8 @@ void InitSim(int argc, char **argv)
          DSMFSW    |= SC[Isc].FswTag == DSM_FSW;
          nonDSMFSW |= SC[Isc].FswTag != DSM_FSW;
          if (nonDSMFSW && DSMFSW) {
-            printf("Mixing DSM_FSW and non DSM_FSW flightsoftware tags is not "
+            printf("Mixing DSM_FSW and non DSM_FSW flightsoftware tags "
+                   "is not "
                    "supported. Exiting...\n");
             exit(EXIT_FAILURE);
          }

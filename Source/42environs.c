@@ -97,7 +97,7 @@ void Environment(struct SCType *S)
    else
       S->AtmoDensity = 0.0;
 
-      /* .. Radiation Belt Electron and Proton Fluxes, particles/cm^2/sec */
+   /* .. Radiation Belt Electron and Proton Fluxes, particles/cm^2/sec */
 #ifdef _RADBELT_
    if (O->World == EARTH) {
       MxV(World[EARTH].CWN, S->PosN, PosW);
