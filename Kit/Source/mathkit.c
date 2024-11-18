@@ -604,9 +604,9 @@ void PerpBasis(double A[3], double B[3], double C[3])
    UNITV(C);
 }
 /**********************************************************************/
-long fact(long const n)
+double fact(long const n)
 {
-   long F = 1;
+   double F = 1.0;
    long i;
 
    for (i = 1; i <= n; i++)
@@ -615,9 +615,9 @@ long fact(long const n)
    return F;
 }
 /**********************************************************************/
-long oddfact(long const n)
+double oddfact(long const n)
 {
-   long F = 1;
+   double F = 1.0;
    long i;
 
    for (i = 1; i <= n; i += 2)
@@ -627,14 +627,9 @@ long oddfact(long const n)
 }
 /**********************************************************************/
 /*  Compute fact(n)/fact(m), where n > m                              */
-long factDfact(long const n, long const m)
+double factDfact(long const n, long const m)
 {
-   long out = 1;
-   if (m > n) {
-      printf(
-          "To retain integer precision, use factDfact with n>m. Exiting...\n");
-      exit(EXIT_FAILURE);
-   }
+   double out = 1.0;
    for (long i = MAX(m + 1, 1); i <= n; i++)
       out *= i;
    return out;
@@ -685,10 +680,10 @@ void Legendre(const long N, const long M, const double x,
    double powsm  = s;
    double powsm1 = 1.0;
    for (m = 1; m <= M; m++) {
-      long oddf = oddfact(2 * m - 1);
-      P[m][m]   = oddf * powsm;
-      Ps[m][m]  = oddf * powsm1;
-      sdP[m][m] = m * (x * Ps[m][m] - 2.0 * P[m][m - 1]);
+      double oddf = oddfact(2 * m - 1);
+      P[m][m]     = oddf * powsm;
+      Ps[m][m]    = oddf * powsm1;
+      sdP[m][m]   = m * (x * Ps[m][m] - 2.0 * P[m][m - 1]);
       if (m < N) {
          P[m + 1][m]  = x * (2 * m + 1) * P[m][m];
          Ps[m + 1][m] = x * (2 * m + 1) * Ps[m][m];
@@ -758,12 +753,12 @@ void SphericalHarmonics(const long N, const long M, const double r,
    // Accumulate from smallest component to largest
    for (n = N; n >= 1; n--) {
       for (m = MIN(n, M); m >= 0; m--) {
-         double Pbar  = P[n][m] / Norm[n][m];
+         double Pbar  = P[n][m] * Norm[n][m];
          CcSs         = C[n][m] * cphi[m] + S[n][m] * sphi[m];
          ScCs         = S[n][m] * cphi[m] - C[n][m] * sphi[m];
          dVdr        -= (CcSs * Rern1[n]) * ((n + 1) * Pbar);
          dVdphi      += (ScCs * Rern1[n]) * (m * Pbar);
-         dVdtheta    -= (CcSs * Rern1[n]) * (sdP[n][m] / Norm[n][m]);
+         dVdtheta    -= (CcSs * Rern1[n]) * (sdP[n][m] * Norm[n][m]);
       }
    }
    dVdr     *= K / r;

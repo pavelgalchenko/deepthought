@@ -35,6 +35,7 @@ struct SphereHarmType {
    double **Norm;
    double **C;
    double **S;
+   double r_ref;
 };
 
 struct FormationType {

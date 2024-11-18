@@ -20,6 +20,7 @@
 #include "geomkit.h"
 #include "iokit.h"
 #include "mathkit.h"
+#include "timekit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,8 +35,9 @@ void SphericalHarmGravForce(const long N, const long M,
                             const struct WorldType *W, const double PriMerAng,
                             const double mass, const double pbn[3],
                             double FgeoN[3]);
-void IGRFMagField(const char *ModelPath, long N, long M, double pbn[3],
-                  double PriMerAng, double MagVecN[3]);
+void IGRFMagField(const char *ModelPath, const struct DateType UTC,
+                  const long N, const long M, const double pbn[3],
+                  const double PriMerAng, double MagVecN[3]);
 void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
                     double DipoleOffset[3], double p[3], double PriMerAng,
                     double MagVecN[3]);

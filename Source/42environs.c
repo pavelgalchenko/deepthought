@@ -53,8 +53,8 @@ void Environment(struct SCType *S)
                      P->PriMerAng, S->bvn);
    }
    else if (MagModel.Type == IGRF && O->World == EARTH) {
-      IGRFMagField(ModelPath, MagModel.N, MagModel.M, S->PosN, P->PriMerAng,
-                   S->bvn);
+      IGRFMagField(ModelPath, UTC, MagModel.N, MagModel.M, S->PosN,
+                   P->PriMerAng, S->bvn);
    }
    else {
       S->bvn[0] = 0.0;
