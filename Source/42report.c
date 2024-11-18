@@ -159,6 +159,7 @@ void DSM_InertialReport(void)
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
+   double PosL[3];
    char s[40];
 
    if (First) {
@@ -169,6 +170,7 @@ void DSM_InertialReport(void)
             inertialfile[Isc] = FileOpen(OutPath, s, "wt");
             fprintf(inertialfile[Isc], "PosN_X PosN_Y PosN_Z ");
             fprintf(inertialfile[Isc], "VelN_X VelN_Y VelN_Z ");
+            fprintf(inertialfile[Isc], "PosL_X PosL_Y PosL_Z ");
             fprintf(inertialfile[Isc], "\n");
          }
       }
@@ -177,10 +179,13 @@ void DSM_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
+         MxV(SC[0].CLN,SC[Isc].PosN,PosL);
          fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
          fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
+                 PosL[0], PosL[1], PosL[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);

@@ -48,6 +48,9 @@ GMSECFLAG =
 RBTFLAG =
 #RBTFLAG = -D _ENABLE_RBT_
 
+DEBUGFLAG =
+# DEBUGFLAG = -D _DEBUG_GRAV_ -D _DEBUG_MAG_
+
 SPICEFLAG = -D _ENABLE_SPICE_
 # SPICEFLAG =
 
@@ -282,7 +285,7 @@ $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
 #ANSIFLAGS = -Wstrict-prototypes -pedantic -ansi -Werror
 ANSIFLAGS =
 
-CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG) $(SPICEFLAG)
+CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG) $(SPICEFLAG) $(DEBUGFLAG)
 
 CFLAGS+= `pkg-config --cflags libfyaml`
 LFLAGS+= `pkg-config --libs libfyaml`

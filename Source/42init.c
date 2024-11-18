@@ -3541,7 +3541,7 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
 
    GravModel->Type = 0;
 
-   if (strcmp(GravModel->modelFile, "") == 0) {
+   if (strcmp(GravModel->modelFile, "") == 0 || GravModel->N <= 1) {
       GravModel->Norm = NULL;
       GravModel->C    = NULL;
       GravModel->S    = NULL;
@@ -3549,40 +3549,44 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
       GravModel->M    = 0;
    }
    else {
-      FILE *gravFile = FileOpen(modelPath, GravModel->modelFile, "r");
-      long nMax = 0, mMax = 0;
-      while (!feof(gravFile)) {
-         fscanf(gravFile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         if (n > nMax)
-            nMax = n;
-         if (m > mMax)
-            mMax = m;
-      }
-      if (mMax > nMax) {
-         printf("Model file %s has maximum Degree %ld, but maximum Order %ld. "
-                "Exiting...\n",
-                GravModel->modelFile, nMax, mMax);
-         exit(EXIT_FAILURE);
-      }
-      GravModel->C    = CreateMatrix(nMax + 1, mMax + 1);
-      GravModel->S    = CreateMatrix(nMax + 1, mMax + 1);
-      GravModel->Norm = CreateMatrix(nMax + 1, mMax + 1);
+      FILE *gravFile  = FileOpen(modelPath, GravModel->modelFile, "r");
+      GravModel->C    = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->S    = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->Norm = CreateMatrix(GravModel->N + 3, GravModel->M + 3);
 
       rewind(gravFile);
+      long succesful = FALSE;
       while (!feof(gravFile)) {
-         fscanf(gravFile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         GravModel->C[n][m] = dum1;
-         GravModel->S[n][m] = dum2;
+         fscanf(gravFile, "%ld %ld %lf %lf %*[^\n] %*[\n]", &n, &m, &dum1,
+                &dum2);
+         if (n <= GravModel->N && m <= GravModel->M) {
+            GravModel->C[n][m] = dum1;
+            GravModel->S[n][m] = dum2;
+            if (n == GravModel->N && m == GravModel->M) {
+               succesful = TRUE;
+               break;
+            }
+         }
       }
       fclose(gravFile);
-      /* Transform from EGM96 normalization to Neumann normalization */
-      for (n = 1; n <= nMax; n++) {
-         for (m = 0; m <= n; m++) {
-            double tmpNorm = 1.0 / (2 * n + 1);
-            if (m != 0)
-               tmpNorm *= (double)(factDfact(n + m, n - m) / 2);
-            GravModel->Norm[n][m] = sqrt(tmpNorm);
+      if (!succesful) {
+         printf("Got to end of Gravity Model File, %s, before fulfilling "
+                "Requested degree and/or order. File has maximum degree %ld, "
+                "maximum order %ld. Exiting...\n",
+                GravModel->modelFile, n, m);
+         exit(EXIT_FAILURE);
+      }
+      /* Transform from EGM normalization to Neumann normalization */
+      // From GMAT Source, Harmonic.cpp, line 289-297
+      // for the moment, not sure why up to n+2, m+2
+      for (n = 0; n <= GravModel->N + 2; n++) {
+         // initializer for following loop
+         GravModel->Norm[n][0] = sqrt(2 * (2 * n + 1));
+         for (m = 1; m <= n + 2 && n <= GravModel->M + 2; m++) {
+            GravModel->Norm[n][m] =
+                GravModel->Norm[n][m - 1] / sqrt((n + m) * (n - m + 1));
          }
+         GravModel->Norm[n][0] = sqrt(2 * n + 1);
       }
    }
 }
@@ -3683,7 +3687,7 @@ void LoadPlanets(void)
    char MapFileName[10][20] = {
        "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
-   const char GravFileName[10][20] = {"", "", "", "EGM96.txt", "GMM2B.txt",
+   const char GravFileName[10][20] = {"", "", "", "EGM08.txt", "GMM2B.txt",
                                       "", "", "", "",          ""};
    double Mu[10]  = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
                      1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
@@ -3700,6 +3704,18 @@ void LoadPlanets(void)
                                 64.496, 83.537, -15.175, 42.95, -6.145};
    double PriMerAngJ2000[10] = {0.0,    329.71, 160.26, 190.16, 176.868,
                                 284.95, 38.90,  203.81, 253.18, 236.77};
+
+   double grav_r_ref[10];
+   for (int i = 0; i < 10; i++) {
+      switch (i) {
+         case EARTH:
+            grav_r_ref[i] = 6378136.3;
+            break;
+         default:
+            grav_r_ref[i] = Rad[i];
+            break;
+      }
+   }
 
 #ifdef _ENABLE_SPICE_
    const char OrientationName[10][20] = {
@@ -3821,12 +3837,16 @@ void LoadPlanets(void)
          World[i].Glyph[j] = Glyph[i][j];
       World[i].Atmo.Exists = HasAtmo[i];
 
-      /* Gravitation Model */
-      struct SphereHarmType *gravModel = &World[i].GravModel;
-      strcpy(gravModel->modelFile, GravFileName[i]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         /* Gravitation Model */
+         struct SphereHarmType *gravModel = &World[i].GravModel;
+         strcpy(gravModel->modelFile, GravFileName[i]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = grav_r_ref[i];
+            World[i].J2      = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 
    World[EARTH].Atmo.GasColor[0]  = 0.17523;
@@ -4042,11 +4062,15 @@ void LoadMoonOfEarth(void)
       M->Type      = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         strcpy(gravModel->modelFile, GravFileName[Im]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = rad[i];
+            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4185,11 +4209,15 @@ void LoadMoonsOfMars(void)
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         strcpy(gravModel->modelFile, GravFileName[Im]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = rad[i];
+            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
    strcpy(World[PHOBOS].GeomFileName, "Phobos.obj");
    Geom = LoadWingsObjFile(ModelPath, World[PHOBOS].GeomFileName, &Matl, &Nmatl,
@@ -4361,11 +4389,15 @@ void LoadMoonsOfJupiter(void)
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         strcpy(gravModel->modelFile, GravFileName[Im]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = rad[i];
+            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4538,11 +4570,15 @@ void LoadMoonsOfSaturn(void)
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         strcpy(gravModel->modelFile, GravFileName[Im]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = rad[i];
+            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4681,11 +4717,15 @@ void LoadMoonsOfUranus(void)
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         strcpy(gravModel->modelFile, GravFileName[Im]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = rad[i];
+            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4965,11 +5005,15 @@ void LoadMoonsOfPluto(void)
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         strcpy(gravModel->modelFile, GravFileName[Im]);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = rad[i];
+            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -5068,13 +5112,17 @@ void LoadMinorBodies(void)
       C2Q(W->CWN, W->qwn);
 
       /* Gravitation Model */
-      if (strcmp(GravFileName, "NONE") == 0)
-         strcpy(GravFileName, "");
-      struct SphereHarmType *gravModel = &W->GravModel;
-      strcpy(gravModel->modelFile, GravFileName);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         if (strcmp(GravFileName, "NONE") == 0)
+            strcpy(GravFileName, "");
+         struct SphereHarmType *gravModel = &W->GravModel;
+         strcpy(gravModel->modelFile, GravFileName);
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            gravModel->r_ref = W->rad;
+            W->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
    fclose(infile);
 }
