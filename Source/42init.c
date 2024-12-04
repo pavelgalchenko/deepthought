@@ -888,8 +888,8 @@ void InitOrbit(struct OrbitType *O)
                char elementFileName[50] = {0}, elementLabel[50] = {0};
                if (!fy_node_scanf(node,
                                   "/File Type %49s "
-                                  "/File Name %49s "
-                                  "/Label in File %49s",
+                                  "/File Name %49[^\n] "
+                                  "/Label in File %49[^\n]",
                                   response, elementFileName, elementLabel)) {
                   printf(
                       "Could not configure File initialization. Exiting...\n");
@@ -1091,8 +1091,8 @@ void InitOrbit(struct OrbitType *O)
                char elementFileName[50] = {0}, elementLabel[50] = {0};
                if (fy_node_scanf(node,
                                  "/Lagrange Point %49s "
-                                 "/File Name %49s "
-                                 "/Label in File %49s",
+                                 "/File Name %49[^\n] "
+                                 "/Label in File %49[^\n]",
                                  response, elementFileName,
                                  elementLabel) != 3) {
                   printf(
@@ -2462,7 +2462,7 @@ void InitSpacecraft(struct SCType *S)
    S->RefPt = DecodeString(dummy);
    if (fy_node_scanf(node,
                      "/Drag Coefficient %lf "
-                     "/Shaker File Name %39s",
+                     "/Shaker File Name %39[^\n]",
                      &S->DragCoef, S->ShakerFileName) != 2) {
       printf("Could not find Drag Coefficient or Shaker File Name for "
              "spacecraft. Exiting...\n");
@@ -2511,9 +2511,9 @@ void InitSpacecraft(struct SCType *S)
       double moi[3], poi[3];
       if (fy_node_scanf(seqNode,
                         "/Mass %lf "
-                        "/Geometry File Name %39s "
-                        "/Node File Name %39s "
-                        "/Flex File Name %39s",
+                        "/Geometry File Name %39[^\n] "
+                        "/Node File Name %39[^\n] "
+                        "/Flex File Name %39[^\n]",
                         &B->mass, B->GeomFileName, B->NodeFileName,
                         B->FlexFileName) != 4) {
          printf("Could not find spacecraft body %ld configuration information. "
@@ -2635,7 +2635,7 @@ void InitSpacecraft(struct SCType *S)
          assignYAMLToBoolArray(
              3, fy_node_by_path_def(seqNode, "/Trn DOF Locked"), G->TrnLocked);
          for (i = 0; i < 3; i++)
-            SomeJointsLocked = G->RotLocked[i] || G->TrnLocked[i];
+            SomeJointsLocked |= G->RotLocked[i] || G->TrnLocked[i];
 
          /* Load in initial angles and angular rates */
          assignYAMLToDoubleArray(
@@ -2688,7 +2688,7 @@ void InitSpacecraft(struct SCType *S)
                G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
             }
          }
-         if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]s",
+         if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]",
                             G->ParmFileName)) {
             printf("Could not find spacecraft Joint %ld's parameter file name. "
                    "Exiting...\n",
@@ -3245,7 +3245,7 @@ void InitSpacecraft(struct SCType *S)
                            "/Noise Equivalent Angle %lf "
                            "/Detector Scale %lf "
                            "/Node %ld "
-                           "/Optics File Name %49s "
+                           "/Optics File Name %[^\n] "
                            "/PSF Image File %49s "
                            "/Body/Index %ld",
                            &FGS->SampleTime, dummy, &FGS->NEA, &FGS->Scl,
@@ -5151,7 +5151,7 @@ void LoadRegions(void)
                         "/Coefficients/Elasticity %lf "
                         "/Coefficients/Damping %lf "
                         "/Coefficients/Friction %lf "
-                        "/Geometry File Name %39s",
+                        "/Geometry File Name %39[^\n]",
                         R->Name, WorldID, IsPosW, &R->ElastCoef, &R->DampCoef,
                         &R->FricCoef, R->GeomFileName) != 7) {
          printf("Region has improper configuration. Exiting...\n");
@@ -6026,6 +6026,7 @@ void InitSim(int argc, char **argv)
              "Exiting...\n");
       exit(EXIT_FAILURE);
    }
+   TimeMode = DecodeString(response);
    GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
    if (CLI_ARGS.graphics != NULL) {
