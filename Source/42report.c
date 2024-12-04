@@ -505,6 +505,36 @@ void DSM_THRReport(void)
    }
 }
 /*********************************************************************/
+void DSM_SVBReport(void)
+{
+   static FILE **SVBFile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+
+   if (First) {
+      SVBFile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_SVB_%02li.42", Isc);
+            SVBFile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(SVBFile[Isc], "SVB_X SVB_Y SVB_Z ");
+            fprintf(SVBFile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         fprintf(SVBFile[Isc], "%18.36le %18.36le %18.36le ",
+                 SC[Isc].svb[0], SC[Isc].svb[1], SC[Isc].svb[2]);
+         fprintf(SVBFile[Isc], "\n");
+      }
+      fflush(SVBFile[Isc]);
+   }
+}
+/*********************************************************************/
 #ifdef _ENABLE_SPICE_
 void DSM_GroundTrackReport(void)
 {
@@ -833,8 +863,8 @@ void Report(void)
             DSM_EphemReport();
             DSM_WHLReport();
             DSM_THRReport();
+            DSM_SVBReport();
             // DSM_GroundTrackReport();
-
             DSM_StateRot3BodyReport();
          }
       }

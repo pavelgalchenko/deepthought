@@ -675,6 +675,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    }
    else if (!strcmp(subType, "Passive")) {
       Cmd->AttitudeCtrlActive = FALSE;
+      Cmd->H_DumpActive       = FALSE;
       AttitudeCmdProcessed    = TRUE;
       return (AttitudeCmdProcessed);
    }
@@ -896,6 +897,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    else if (!strcmp(subType, "Spin Vector")) {
       Cmd->Method = PARM_AXIS_SPIN;
 
+      // Configure Primary Vector
       struct DSMCmdVecType *vec = &Cmd->PriVec;
       struct fy_node *tgtNode   = fy_node_by_path_def(cmdNode, "/Target");
       assignYAMLToDoubleArray(3, fy_node_by_path_def(cmdNode, "/Axis"),
@@ -977,45 +979,17 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                 cmdName, tgtType);
          exit(EXIT_FAILURE);
       }
+      // Load Desired Angular Rate in Cmd->AngRate[2], then construct vector as
+      // parallel to Cmd->PriVec.cmd_axis
       AttitudeCmdProcessed &=
-          fy_node_scanf(cmdNode, "/Rate %lf", &Cmd->Ang[0]) == 1;
-      Cmd->Ang[0] *= D2R;
-      Cmd->Ang[1]  = 0.0;
+          fy_node_scanf(cmdNode, "/Rate %lf", &Cmd->AngRate[2]) == 1;
+      Cmd->AngRate[2] *= D2R;
+      for (int i = 0; i < 3; i++)
+         Cmd->AngRate[i] = Cmd->PriVec.cmd_axis[i] * Cmd->AngRate[2];
 
-      Cmd->SecVec.CmdMode         = Cmd->PriVec.CmdMode;
-      Cmd->SecVec.TrgType         = Cmd->PriVec.TrgType;
-      double *const check_vecs[2] = {vec->cmd_vec, vec->cmd_axis};
-      double *const gen_vecs[2]   = {Cmd->SecVec.cmd_vec, Cmd->SecVec.cmd_axis};
-      for (int i = 0; i < 2; i++) {
-         for (int k = 0; k < 3; k++) {
-            if (fabs(check_vecs[i][k]) >= EPS_DSM) {
-               const double c = check_vecs[i][k];
-               if (fabs(check_vecs[i][(k + 1) % 3]) <= EPS_DSM) {
-                  const double b           = check_vecs[i][(k + 2) % 3];
-                  const double rat         = b / c;
-                  gen_vecs[i][(k + 1) % 3] = 0.0;
-                  gen_vecs[i][(k + 2) % 3] = sqrt(1.0 / (1.0 + rat * rat));
-                  gen_vecs[i][k]           = -rat * gen_vecs[i][(k + 2) % 3];
-               }
-               else {
-                  const double b           = check_vecs[i][(k + 1) % 3];
-                  const double rat         = b / c;
-                  gen_vecs[i][(k + 1) % 3] = sqrt(1.0 / (1.0 + rat * rat));
-                  gen_vecs[i][(k + 2) % 3] = 0.0;
-                  gen_vecs[i][k]           = -rat * gen_vecs[i][(k + 1) % 3];
-               }
-               break;
-            }
-         }
-         UNITV(gen_vecs[i]);
-      }
-      if (VoV(gen_vecs[0], gen_vecs[1]) > 0) {
-         for (int i = 0; i < 3; i++)
-            gen_vecs[1][i] = -gen_vecs[1][i];
-      }
-
-      ctrlNode = fy_node_by_path_def(cmdNode, "/Controller");
-      actNode  = fy_node_by_path_def(cmdNode, "/Actuator");
+      Cmd->AttitudeCtrlActive = TRUE;
+      ctrlNode                = fy_node_by_path_def(cmdNode, "/Controller");
+      actNode                 = fy_node_by_path_def(cmdNode, "/Actuator");
    }
    else {
       AttitudeCmdProcessed = FALSE;
@@ -1410,7 +1384,7 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
 {
    /*Clone of FindCmdVecN()from 42fsw.c with new structure type */
 
-   ;
+   // TODO: find angular rate of command vector
    double RelPosB[3], vb[3];
    double RelPosN[3], RelPosH[3], RelVelN[3], RelVelH[3];
    double pn[3], vn[3], ph[3], vh[3];
@@ -2060,8 +2034,7 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
    struct DSMStateType *state = &DSM->state;
 
    switch (Cmd->Method) {
-      case (PARM_VECTORS):
-      case (PARM_AXIS_SPIN): {
+      case (PARM_VECTORS): {
          double cmdVecB[2][3]          = {{0.0}};
          double cmdVecN[2][3]          = {{0.0}};
          struct DSMCmdVecType *vecs[2] = {&Cmd->PriVec, &Cmd->SecVec};
@@ -2075,20 +2048,6 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                       k == 0 ? "Primary" : "Secondary");
                exit(EXIT_FAILURE);
             }
-         }
-
-         if (Cmd->Method == PARM_AXIS_SPIN) {
-            double axis[3]    = {0.0};
-            double rot[3][3]  = {{0.0}};
-            Cmd->Ang[1]      -= Cmd->Ang[0] * DSM->DT;
-            Cmd->Ang[1]       = fmod(Cmd->Ang[1], TwoPi);
-            SimpRot(vecs[0]->cmd_axis, Cmd->Ang[1], rot);
-            MxV(rot, cmdVecB[1], axis);
-            for (i = 0; i < 3; i++)
-               cmdVecB[1][i] = axis[i];
-            UNITV(cmdVecB[1]);
-            QTxV(state->qbn, cmdVecB[1], cmdVecN[1]);
-            UNITV(cmdVecN[1]);
          }
 
          /*construct body to target DCM and Inertial to Target DCMS*/
@@ -2162,6 +2121,30 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          QTxQ(q_tb, q_tn, qbn_cmd);
          UNITQ(qbn_cmd);
          QxQT(state->qbn, qbn_cmd, Cmd->qbr);
+      } break;
+      case (PARM_AXIS_SPIN): {
+         double cmdVecB[3] = {0.0};
+         double cmdVecN[3] = {0.0};
+
+         if (!getCmdVecs(DSM, F, &Cmd->PriVec, Cmd->PriAttRefFrame, state,
+                         cmdVecB, cmdVecN)) {
+            printf("Invalid Target type for Primary Spin vector. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
+
+         double therr[3] = {0.0};
+         for (i = 0; i < 3; i++)
+            therr[i] = cmdVecB[i] - Cmd->PriVec.cmd_axis[i];
+         double therr_o_axis = VoV(Cmd->PriVec.cmd_axis, therr);
+         for (i = 0; i < 3; i++)
+            therr[i] -= Cmd->PriVec.cmd_axis[i] * therr_o_axis;
+         double therr_mag = UNITV(therr);
+         Cmd->qbr[3]      = cos(therr_mag / 2);
+         double tmp       = sqrt(1.0 - Cmd->qbr[3] * Cmd->qbr[3]);
+         for (i = 0; i < 3; i++)
+            Cmd->qbr[i] = tmp * therr[i];
+
+         QTxV(state->qbn, Cmd->AngRate, Cmd->wrn);
       } break;
       case (PARM_UNITVECTOR): {
          printf("Feature for Singular Primary Unit Vector Pointing not "
