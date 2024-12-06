@@ -64,12 +64,12 @@ void InitInterProcessComm(void)
                         "/Socket/Host/Port %ld",
                         response, &I->AcsID, FileName, I->HostName,
                         &I->Port) != 5) {
-         printf("IPC is improperly configured. Exiting...\n");
+         fprintf(stderr, "IPC is improperly configured. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       I->Mode = DecodeString(response);
       if (!fy_node_scanf(seqNode, "/Socket/Role %119s", response)) {
-         printf("Could not find Socket Role for IPC. Exiting...\n");
+         fprintf(stderr, "Could not find Socket Role for IPC. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       I->SocketRole = DecodeString(response);
@@ -111,10 +111,10 @@ void InitInterProcessComm(void)
          }
 #endif
          else {
-            printf("Oops.  Unknown SocketRole %ld for IPC[%ld] in "
+          fprintf(stderr,"Oops.  Unknown SocketRole %ld for IPC[%ld] in "
                    "InitInterProcessComm.  Bailing out.\n",
                    I->SocketRole, Iipc);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
       }
       else if (I->Mode == IPC_RX) {
@@ -135,10 +135,10 @@ void InitInterProcessComm(void)
          }
 #endif
          else {
-            printf("Oops.  Unknown SocketRole %ld for IPC[%ld] in "
+            fprintf(stderr,"Oops.  Unknown SocketRole %ld for IPC[%ld] in "
                    "InitInterProcessComm.  Bailing out.\n",
                    I->SocketRole, Iipc);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
       }
       else if (I->Mode == IPC_TXRX) {
@@ -159,10 +159,10 @@ void InitInterProcessComm(void)
          }
 #endif
          else {
-            printf("Oops.  Unknown SocketRole %ld for IPC[%ld] in "
+            fprintf(stderr,"Oops.  Unknown SocketRole %ld for IPC[%ld] in "
                    "InitInterProcessComm.  Bailing out.\n",
                    I->SocketRole, Iipc);
-            exit(1);
+            exit(EXIT_FAILURE);
          }
       }
       else if (I->Mode == IPC_ACS) {

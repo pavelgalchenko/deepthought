@@ -83,7 +83,7 @@ Perturbation Models:
         Degree: 8
         Order: 8
   Gravitation:
-    Enabled: false
+    Enabled: true
     Gravity Gradient: false
     Models:
       - World: EARTH
@@ -95,6 +95,12 @@ Perturbation Models:
       - World: LUNA
         Degree: 2
         Order: 0
+      - World: ENCELADUS
+        Model File: sol1_enceladus1.grv
+        Degree: 3
+        Order: 3
+        Gravitational Parameter: 7.209544428892310e+09
+        Reference Radius: 256300
   SRP:
     Enabled: false
     Shadows: false

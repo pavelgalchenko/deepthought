@@ -324,8 +324,8 @@ double usec(void)
    return (1.0E6 * now.tv_sec + now.tv_usec);
 #else
 #error "This OS not supported by usec function"
-   printf("This OS not supported by usec function.  Bailing out.\n");
-   exit(1);
+   fprintf(stderr,"This OS not supported by usec function.  Bailing out.\n");
+   exit(EXIT_FAILURE);
    return (0.0);
 #endif
 }
@@ -392,8 +392,8 @@ double RealRunTime(double *RealTimeDT, double LSB)
    OldSysTime  = SysTime;
 #else
 #error "Unknown operating system in RealRunTime.  Fix that!"
-   printf("Unknown operating system in RealRunTime.  Bailing out.\n");
-   exit(1);
+   fprintf(stderr,"Unknown operating system in RealRunTime.  Bailing out.\n");
+   exit(EXIT_FAILURE);
 #endif
 
    if (*RealTimeDT < 0.0)

@@ -26,8 +26,8 @@ struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb)
    NewOrb =
        (struct OrbitType *)realloc(OldOrb, (*Norb) * sizeof(struct OrbitType));
    if (NewOrb == NULL) {
-      printf("Realloc failed in CloneOrbit\n");
-      exit(1);
+      fprintf(stderr, "Realloc failed in CloneOrbit\n");
+      exit(EXIT_FAILURE);
    }
    memcpy(&NewOrb[(*Norb) - 1], &NewOrb[Iorb], sizeof(struct OrbitType));
    return (NewOrb);

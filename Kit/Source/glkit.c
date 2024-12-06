@@ -670,8 +670,8 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
       glEnd();
    }
    else {
-      printf("Invalid FOV Type %ld in DrawNearFOV\n", Type);
-      exit(1);
+      fprintf(stderr, "Invalid FOV Type %ld in DrawNearFOV\n", Type);
+      exit(EXIT_FAILURE);
    }
 
    glEnable(GL_CULL_FACE);
@@ -750,8 +750,8 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
       }
    }
    else {
-      printf("Invalid FOV Type %ld in DrawNearFOV\n", Type);
-      exit(1);
+      fprintf(stderr, "Invalid FOV Type %ld in DrawNearFOV\n", Type);
+      exit(EXIT_FAILURE);
    }
 }
 /*********************************************************************/
@@ -952,9 +952,10 @@ void CaptureScreenToPpm(const char *path, const char *filename, long Nh,
    Nr   = 3 * Nw;
    Data = (GLubyte *)calloc(3 * Nh * Nw, sizeof(GLubyte));
    if (Data == NULL) {
-      printf("calloc returned null pointer in CaptureScreenToPpm.  Bailing "
-             "out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in CaptureScreenToPpm.  Bailing "
+              "out!\n");
+      exit(EXIT_FAILURE);
    }
    glReadPixels(0, 0, Nw, Nh, GL_RGB, GL_UNSIGNED_BYTE, Data);
    file = FileOpen(path, filename, "wb");
@@ -1021,8 +1022,9 @@ GLuint PpmToTexTag(const char *path, const char *filename, int BytesPerPixel,
    N   = Nw * Nh * BytesPerPixel;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
    if (Tex == NULL) {
-      printf("calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (i = 0; i < N; i++) {
       Tex[i] = (GLubyte)fgetc(infile);
@@ -1071,8 +1073,9 @@ GLuint Ppm1DToTexTag(const char *path, const char *filename, int BytesPerPixel,
    N   = Nw * BytesPerPixel;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
    if (Tex == NULL) {
-      printf("calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (i = 0; i < N; i++) {
       Tex[i] = (GLubyte)fgetc(infile);
@@ -1151,9 +1154,10 @@ GLuint PpmToCubeTag(const char *path, const char *file, int BytesPerPixel)
       N   = Nw * Nh * BytesPerPixel;
       Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
       if (Tex == NULL) {
-         printf(
+         fprintf(
+             stderr,
              "calloc returned null pointer in PpmToCubeTag.  Bailing out!\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
       for (i = 0; i < N; i++) {
          Tex[i] = (GLubyte)fgetc(infile);
@@ -1194,8 +1198,9 @@ GLuint PpmToRingTexTag(const char *path, const char *filename)
    N   = Nw * 4;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
    if (Tex == NULL) {
-      printf("calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (k = 0; k < Nw; k++) {
       fscanf(infile, "%c%c%c%c", &InByte[0], &InByte[1], &InByte[2],
@@ -1342,21 +1347,25 @@ void LoadStars(const char *StarFileName, double BuckyPf[32][3],
    fscanf(StarFile, "%ld", &Nstar);
    ID = (long **)calloc(32, sizeof(long *));
    if (ID == NULL) {
-      printf("ID calloc returned null pointer in LoadStars.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "ID calloc returned null pointer in LoadStars.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (k = 0; k < 32; k++) {
       ID[k] = (long *)calloc(Nstar, sizeof(long));
       if (ID[k] == NULL) {
-         printf("ID[k] calloc returned null pointer in LoadStars.  Bailing "
-                "out!\n");
-         exit(1);
+         fprintf(stderr,
+                 "ID[k] calloc returned null pointer in LoadStars.  Bailing "
+                 "out!\n");
+         exit(EXIT_FAILURE);
       }
    }
    Star = (struct StarType *)calloc(Nstar, sizeof(struct StarType));
    if (Star == NULL) {
-      printf("Star calloc returned null pointer in LoadStars.  Bailing out!\n");
-      exit(1);
+      fprintf(
+          stderr,
+          "Star calloc returned null pointer in LoadStars.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
 
    for (i = 0; i < Nstar; i++) {

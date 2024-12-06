@@ -254,12 +254,13 @@ struct FilterType *CreateFirstOrderLowpassFilter(double w, double T,
    struct FilterType *F;
 
    if (6.28 / w < 10.0 * T) {
-      printf("Error in CreateSecondeOrderLowpassFilter.\n");
-      printf("Filter break frequency is too high to be sampled at given sample "
-             "rate.\n");
-      printf("Recommend sample interval be reduced to %lf sec or less.\n",
-             0.628 / w);
-      exit(1);
+      fprintf(
+          stderr,
+          "Error in CreateSecondeOrderLowpassFilter. Filter break frequency "
+          "is too high to be sampled at given sample rate. Recommend sample "
+          "interval be reduced to %lf sec or less.\n",
+          0.628 / w);
+      exit(EXIT_FAILURE);
    }
 
    F = (struct FilterType *)calloc(1, sizeof(struct FilterType));
@@ -285,12 +286,13 @@ struct FilterType *CreateFirstOrderHighpassFilter(double w, double T,
    struct FilterType *F;
 
    if (6.28 / w < 10.0 * T) {
-      printf("Error in CreateSecondeOrderLowpassFilter.\n");
-      printf("Filter break frequency is too high to be sampled at given sample "
-             "rate.\n");
-      printf("Recommend sample interval be reduced to %lf sec or less.\n",
-             0.628 / w);
-      exit(1);
+      fprintf(
+          stderr,
+          "Error in CreateSecondeOrderLowpassFilter. Filter break frequency "
+          "is too high to be sampled at given sample rate. Recommend sample "
+          "interval be reduced to %lf sec or less.\n",
+          0.628 / w);
+      exit(EXIT_FAILURE);
    }
 
    F = (struct FilterType *)calloc(1, sizeof(struct FilterType));
@@ -317,12 +319,12 @@ struct FilterType *CreateSecondOrderLowpassFilter(double w, double z, double T,
    double a;
 
    if (6.28 / w < 10.0 * T) {
-      printf("Error in CreateSecondeOrderLowpassFilter.\n");
-      printf("Filter break frequency is too high to be sampled at given sample "
-             "rate.\n");
-      printf("Recommend sample interval be reduced to %lf sec or less.\n",
-             0.628 / w);
-      exit(1);
+      fprintf(stderr,
+              "Error in CreateSecondeOrderLowpassFilter. Filter break "
+              "frequency is too high to be sampled at given sample rate. "
+              "Recommend sample interval be reduced to %lf sec or less.\n",
+              0.628 / w);
+      exit(EXIT_FAILURE);
    }
 
    F = (struct FilterType *)calloc(1, sizeof(struct FilterType));
@@ -352,12 +354,12 @@ struct FilterType *CreateSecondOrderHighpassFilter(double w, double z, double T,
    double a;
 
    if (6.28 / w < 10.0 * T) {
-      printf("Error in CreateSecondeOrderLowpassFilter.\n");
-      printf("Filter break frequency is too high to be sampled at given sample "
-             "rate.\n");
-      printf("Recommend sample interval be reduced to %lf sec or less.\n",
-             0.628 / w);
-      exit(1);
+      fprintf(stderr,
+              "Error in CreateSecondeOrderLowpassFilter. Filter break "
+              "frequency is too high to be sampled at given sample rate. "
+              "Recommend sample interval be reduced to %lf sec or less.\n",
+              0.628 / w);
+      exit(EXIT_FAILURE);
    }
 
    F = (struct FilterType *)calloc(1, sizeof(struct FilterType));

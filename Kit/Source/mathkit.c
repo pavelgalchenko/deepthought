@@ -194,7 +194,8 @@ void MINV4(const double A[4][4], double B[4][4])
       DET += A[0][r] * B[r][0];
 
    if (DET == 0.0) {
-      printf(
+      fprintf(
+          stderr,
           "Attempted inversion of singular matrix in MINV4.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
@@ -217,7 +218,8 @@ void MINV3(const double A[3][3], double B[3][3])
          A[2][1] * A[1][2] * A[0][0] - A[2][2] * A[1][0] * A[0][1];
 
    if (DET == 0.0) {
-      printf(
+      fprintf(
+          stderr,
           "Attempted inversion of singular matrix in MINV3.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
@@ -242,7 +244,8 @@ void MINV2(const double A[2][2], double B[2][2])
    DET = A[0][0] * A[1][1] - A[1][0] * A[0][1];
 
    if (DET == 0.0) {
-      printf(
+      fprintf(
+          stderr,
           "Attempted inversion of singular matrix in MINV2.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
@@ -556,9 +559,10 @@ void UNITQ(double Q[4])
 
    A = sqrt(Q[0] * Q[0] + Q[1] * Q[1] + Q[2] * Q[2] + Q[3] * Q[3]);
    if (A == 0.0) {
-      printf("Divide by zero in UNITQ (Line %d of mathkit.c).  You'll want to "
-             "fix that.\n",
-             __LINE__);
+      fprintf(stderr,
+              "Divide by zero in UNITQ (Line %d of mathkit.c).  You'll want to "
+              "fix that.\n",
+              __LINE__);
       exit(EXIT_FAILURE);
    }
    else {
@@ -649,7 +653,7 @@ void Legendre(const long N, const long M, const double x,
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
-      printf("Order %ld can't be greater than Degree %ld\n", M, N);
+      fprintf(stderr, "Order %ld can't be greater than Degree %ld\n", M, N);
       exit(EXIT_FAILURE);
    }
 
@@ -722,7 +726,7 @@ void SphericalHarmonics(const long N, const long M, const double r,
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
-      printf("Order %ld can't be greater than Degree %ld\n", M, N);
+      fprintf(stderr, "Order %ld can't be greater than Degree %ld\n", M, N);
       exit(EXIT_FAILURE);
    }
 
@@ -878,7 +882,7 @@ void MINVG(double **A, double **AI, long N)
          }
       }
       if (PIVOT == 0.0) {
-         printf("Matrix is singular in MINVG\n");
+         fprintf(stderr, "Matrix is singular in MINVG\n");
          exit(EXIT_FAILURE);
       }
 
@@ -943,7 +947,7 @@ void FastMINV6(double A[6][6], double AI[6][6], long N)
          }
       }
       if (PIVOT == 0.0) {
-         printf("Matrix is singular in FastMINV6\n");
+         fprintf(stderr, "Matrix is singular in FastMINV6\n");
          exit(EXIT_FAILURE);
       }
 
@@ -1019,12 +1023,12 @@ double **CreateMatrix(long n, long m)
    // Guarantee the allocation for A is a contiguous block
    A = (double **)malloc(sizeof(double *) * n);
    if (A == NULL) {
-      printf("malloc failed in CreateMatrix.  Bailing out.\n");
+      fprintf(stderr,"malloc failed in CreateMatrix.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    A[0] = (double *)calloc(n * m, sizeof(double));
    if (A[0] == NULL) {
-      printf("calloc failed in CreateMatrix.  Bailing out.\n");
+      fprintf(stderr,"calloc failed in CreateMatrix.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    for (i = 1; i < n; i++)
@@ -1775,11 +1779,11 @@ double CubicSpline(double x, double X[4], double Y[4])
    u = (x - X[1]) / (X[2] - X[1]);
 
    if (isnan(u)) {
-      printf("Bad spline interval in CubicSpline.\n");
+      fprintf(stderr,"Bad spline interval in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
    if (u < 0.0 || u > 1.0) {
-      printf("Interpolant out of range in CubicSpline.\n");
+      fprintf(stderr,"Interpolant out of range in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1797,7 +1801,7 @@ double CubicSpline(double x, double X[4], double Y[4])
 
    Det = (u3 - 1.0) * (u0 - 1.0) * (u3 - u0) * u0 * u3;
    if (fabs(Det) < 1.0E-9) {
-      printf("Matrix is close to singular in CubicSpline.\n");
+      fprintf(stderr,"Matrix is close to singular in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
    a = Y[1];
@@ -1816,11 +1820,11 @@ void ChebyPolys(double u, long n, double T[20], double U[20])
    long k;
 
    if (u < -1.0 || u > 1.0) {
-      printf("u out of range in ChebPolys.  Bailing out.\n");
+      fprintf(stderr,"u out of range in ChebPolys.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    if (n > 20) {
-      printf("n out of range in ChebPolys.  Bailing out.\n");
+      fprintf(stderr,"n out of range in ChebPolys.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1841,7 +1845,7 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
    long k;
 
    if (n > 20) {
-      printf("n out of range in ChebyInterp.  Bailing out.\n");
+      fprintf(stderr,"n out of range in ChebyInterp.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1860,7 +1864,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
    double **AtA, *x, *Atb;
 
    if (Nc > 20) {
-      printf("Nc out of range in FindChebyCoefs.  Bailing out.\n");
+    fprintf(stderr,"Nc out of range in FindChebyCoefs.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 

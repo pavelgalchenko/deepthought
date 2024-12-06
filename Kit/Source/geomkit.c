@@ -48,8 +48,8 @@ struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
             NewMatl = (struct MatlType *)realloc(
                 NewMatl, (*Nmatl) * sizeof(struct MatlType));
             if (NewMatl == NULL) {
-               printf("Realloc failed in AddMtlLib\n");
-               exit(1);
+               fprintf(stderr, "Realloc failed in AddMtlLib\n");
+               exit(EXIT_FAILURE);
             }
             M = &NewMatl[(*Nmatl) - 1];
             strcpy(M->Label, MatlName);
@@ -124,8 +124,8 @@ struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
    fclose(MtlLib);
 
    if ((*Nmatl) == 0) {
-      printf("No materials loaded!\n");
-      exit(1);
+      fprintf(stderr, "No materials loaded!\n");
+      exit(EXIT_FAILURE);
    }
 
    return (NewMatl);
@@ -177,12 +177,11 @@ void SurfaceForceProps(struct GeomType *G)
       for (j = 0; j < 3; j++)
          P->Norm[j] = nhat[j];
       if (MAGV(nhat) == 0.0) {
-         printf("Zero-length unit vector in SurfaceForceProps.\n");
-         printf("Check for zero-area polys or polys with three colinear "
-                "vertices.\n");
-         printf("Tesselating your model to all triangles is highly "
-                "recommended.\n");
-         exit(1);
+         fprintf(stderr, "Zero-length unit vector in SurfaceForceProps. Check "
+                         "for zero-area polys or polys with three colinear "
+                         "vertices. Tesselating your model to all triangles is "
+                         "highly recommended.\n");
+         exit(EXIT_FAILURE);
       }
 
       /* Compute in-plane basis vectors */
@@ -218,8 +217,8 @@ void SurfaceForceProps(struct GeomType *G)
       uvbar[2] /= (double)P->Nv;
       MTxV(C, uvbar, P->Centroid);
       if (isnan(P->Centroid[0])) {
-         printf("NaN Centroid in SurfaceForceProps\n");
-         exit(1);
+         fprintf(stderr, "NaN Centroid in SurfaceForceProps\n");
+         exit(EXIT_FAILURE);
       }
       P->UnshadedArea   = P->Area;
       P->UnshadedCtr[0] = P->Centroid[0];
@@ -885,10 +884,12 @@ long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
             for (Ip = 0; Ip < OC->Npoly; Ip++) {
                P = &G->Poly[OC->Poly[Ip]];
                if (P->Nv != 3) {
-                  printf("Error.  ProjectPointOntoGeom doesn't handle polygons "
-                         "with %ld vertices.\n",
-                         P->Nv);
-                  exit(1);
+                  fprintf(
+                      stderr,
+                      "Error.  ProjectPointOntoGeom doesn't handle polygons "
+                      "with %ld vertices.\n",
+                      P->Nv);
+                  exit(EXIT_FAILURE);
                }
                for (Iv = 0; Iv < P->Nv; Iv++) {
                   for (i = 0; i < 3; i++)
@@ -930,8 +931,8 @@ long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
    return (FoundPoly);
 }
 /*********************************************************************/
-struct GeomType *LoadWingsObjFile(const char ModelPath[80],
-                                  const char ObjFilename[40],
+struct GeomType *LoadWingsObjFile(const char *ModelPath,
+                                  const char *ObjFilename,
                                   struct MatlType **MatlPtr, long *Nmatl,
                                   struct GeomType *Geom, long *Ngeom,
                                   long *GeomTag, long EdgesEnabled)
@@ -999,8 +1000,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
    /* These will be expanded as needed */
    G->Matl = (long *)calloc(2, sizeof(long));
    if (G->Matl == NULL) {
-      printf("G->Matl calloc returned null pointer.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr, "G->Matl calloc returned null pointer.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
 
    infile = FileOpen(ModelPath, ObjFilename, "rt");
@@ -1057,8 +1058,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
    G->Vn   = CreateMatrix(G->Nvn, 3);
    G->Poly = (struct PolyType *)calloc(G->Npoly, sizeof(struct PolyType));
    if (G->Poly == NULL) {
-      printf("G->Poly calloc returned null pointer.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr, "G->Poly calloc returned null pointer.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
 
    /* .. Second pass to read things in */
@@ -1123,18 +1124,21 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
          P->Matl = MatlIdx;
          P->V    = (long *)calloc(3, sizeof(long));
          if (P->V == NULL) {
-            printf("P->V calloc returned null pointer.  Bailing out!\n");
-            exit(1);
+            fprintf(stderr,
+                    "P->V calloc returned null pointer.  Bailing out!\n");
+            exit(EXIT_FAILURE);
          }
          P->Vt = (long *)calloc(3, sizeof(long));
          if (P->Vt == NULL) {
-            printf("P->Vt calloc returned null pointer.  Bailing out!\n");
-            exit(1);
+            fprintf(stderr,
+                    "P->Vt calloc returned null pointer.  Bailing out!\n");
+            exit(EXIT_FAILURE);
          }
          P->Vn = (long *)calloc(3, sizeof(long));
          if (P->Vn == NULL) {
-            printf("P->Vn calloc returned null pointer.  Bailing out!\n");
-            exit(1);
+            fprintf(stderr,
+                    "P->Vn calloc returned null pointer.  Bailing out!\n");
+            exit(EXIT_FAILURE);
          }
          strcpy(vtxstring, line);
          vtxtoken = strtok(vtxstring, " "); /* Discards "f" */
@@ -1202,8 +1206,8 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
             while (MatlIdx < *Nmatl && strcmp(MatlName, Matl[MatlIdx].Label))
                MatlIdx++;
             if (MatlIdx >= *Nmatl) {
-               printf("default material not found either\n");
-               exit(1);
+               fprintf(stderr, "default material not found either\n");
+               exit(EXIT_FAILURE);
             }
          }
          FirstUse = 1;
@@ -1283,15 +1287,15 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
                if (G->Nedge == 1) {
                   Ptr = calloc(1, sizeof(struct EdgeType));
                   if (Ptr == NULL) {
-                     printf("Realloc failed in LoadWingsObjFile\n");
-                     exit(1);
+                     fprintf(stderr, "Realloc failed in LoadWingsObjFile\n");
+                     exit(EXIT_FAILURE);
                   }
                }
                else {
                   Ptr = realloc(G->Edge, G->Nedge * sizeof(struct EdgeType));
                   if (Ptr == NULL) {
-                     printf("Realloc failed in LoadWingsObjFile\n");
-                     exit(1);
+                     fprintf(stderr, "Realloc failed in LoadWingsObjFile\n");
+                     exit(EXIT_FAILURE);
                   }
                }
                G->Edge                     = (struct EdgeType *)Ptr;
@@ -1335,7 +1339,7 @@ struct GeomType *LoadWingsObjFile(const char ModelPath[80],
 }
 /*********************************************************************/
 void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
-                        const char Path[80], const char FileName[40])
+                        const char *Path, const char *FileName)
 {
    char MtlFileName[80], ObjFileName[80];
    FILE *MtlFile, *ObjFile;

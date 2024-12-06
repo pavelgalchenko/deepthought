@@ -968,8 +968,8 @@ void InitCamWindow(void)
    CamWindow = glfwCreateWindow(CamWidth, CamHeight, CamTitle, NULL, NULL);
 #if (defined(GLEW_BUILD) || defined(GLEW_STATIC))
    if (GLEW_OK != glewInit()) {
-      printf("glew failed to initialize in InitCamWindow\n");
-      exit(1);
+      fprintf(stderr, "glew failed to initialize in InitCamWindow\n");
+      exit(EXIT_FAILURE);
    }
 #endif
 
@@ -1417,8 +1417,8 @@ void HandoffToGui(int argc, char **argv)
    glutInit(&argc, argv);
    glfwSetErrorCallback(GlfwErrorHandler);
    if (!glfwInit()) {
-      printf("Error initializing glfw\n");
-      exit(1);
+      fprintf(stderr, "Error initializing glfw\n");
+      exit(EXIT_FAILURE);
    }
    printf("Initializing Cam Window\n");
    InitCamWindow();

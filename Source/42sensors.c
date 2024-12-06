@@ -464,8 +464,8 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
 
    InAp = OpticalFieldPoint(StarVecB, O, FldPntB, FldDirB);
    if (!InAp) {
-      printf("Hmm.  FGS field point is not within aperture.\n");
-      exit(1);
+      fprintf(stderr, "Hmm.  FGS field point is not within aperture.\n");
+      exit(EXIT_FAILURE);
    }
 
    NumOptPassed =

@@ -286,7 +286,8 @@ long GetGains(struct DSMType *const DSM, struct fy_node *gainsNode,
    }
    else if (!strcmp(gainMode, "MomentumDump")) {
       if (controllerState != DMP_STATE) {
-         printf(
+         fprintf(
+             stderr,
              "Gain alias %s gain sets can only be used for momentum dumping. "
              "Exiting...",
              fy_anchor_get_text(fy_node_get_anchor(gainsNode), NULL));
@@ -374,25 +375,28 @@ long GetController(struct DSMType *const DSM, struct fy_node *ctrlNode,
       else if (!strcmp(ctrlType, "H_DUMP_CNTRL"))
          controller = H_DUMP_CNTRL;
       else {
-         printf("%s is an invalid control type. Exiting...\n", ctrlType);
+         fprintf(stderr, "%s is an invalid control type. Exiting...\n",
+                 ctrlType);
          exit(EXIT_FAILURE);
       }
       // There should be a nicer way to handle this that doesn't require
       // hardcoding for things...
       if (controller == LYA_ATT_CNTRL && controllerState != ATT_STATE) {
-         printf(
-             "%s\n",
+         fprintf(
+             stderr, "%s\n",
              "Can only use LYA_ATT_CNTRL for attitude control. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (controller == H_DUMP_CNTRL && controllerState != DMP_STATE) {
-         printf("%s\n", "Can only use H_DUMP_CNTRL for momentum dumping "
-                        "control. Exiting...\n");
+         fprintf(stderr, "%s\n",
+                 "Can only use H_DUMP_CNTRL for momentum dumping control. "
+                 "Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (controller == LYA_2BODY_CNTRL && controllerState != TRN_STATE) {
-         printf("%s\n", "Can only use LYA_2BODY_CNTRL for translation control. "
-                        "Exiting...\n");
+         fprintf(stderr, "%s\n",
+                 "Can only use LYA_2BODY_CNTRL for translation control. "
+                 "Exiting...\n");
          exit(EXIT_FAILURE);
       }
       CntrlProcessed = TRUE;
@@ -413,17 +417,19 @@ long GetController(struct DSMType *const DSM, struct fy_node *ctrlNode,
             break;
       }
       if (GetGains(DSM, gainNode, controllerState) == FALSE) {
-         printf("For Controller alias %s, could not find Gain alias %s or "
-                "invalid format. Exiting...\n",
-                fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
-                fy_anchor_get_text(fy_node_get_anchor(gainNode), NULL));
+         fprintf(stderr,
+                 "For Controller alias %s, could not find Gain alias %s or "
+                 "invalid format. Exiting...\n",
+                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
+                 fy_anchor_get_text(fy_node_get_anchor(gainNode), NULL));
          exit(EXIT_FAILURE);
       }
       if (GetLimits(DSM, limNode, controllerState) == FALSE) {
-         printf("For Controller alias %s, could not find Limit alias %s or "
-                "invalid format. Exiting...\n",
-                fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
-                fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
+         fprintf(stderr,
+                 "For Controller alias %s, could not find Limit alias %s or "
+                 "invalid format. Exiting...\n",
+                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL),
+                 fy_anchor_get_text(fy_node_get_anchor(limNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
@@ -513,9 +519,10 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
    struct fy_node *cmdNode = fy_node_by_path_def(trnCmdNode, "/Command Data");
 
    if (cmdNode == NULL) {
-      printf("Could not find Command Data for Translation command of subtype "
-             "%s. Exiting...\n",
-             subType);
+      fprintf(stderr,
+              "Could not find Command Data for Translation command of subtype "
+              "%s. Exiting...\n",
+              subType);
       exit(EXIT_FAILURE);
    }
    const char *cmdName =
@@ -551,8 +558,8 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
 
       if (TranslationCmdProcessed == FALSE) {
-         printf("Position Command %s has invalid format. Exiting...\n",
-                cmdName);
+         fprintf(stderr, "Position Command %s has invalid format. Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
    }
@@ -609,15 +616,17 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          else if (!strcmp(manType, "SMOOTHED"))
             Cmd->ManeuverMode = SMOOTHED;
          else {
-            printf("%s is an invalid maneuver mode for Maneuver %s. "
-                   "Exiting...",
-                   manType, cmdName);
+            fprintf(
+                stderr,
+                "%s is an invalid maneuver mode for Maneuver %s. Exiting...",
+                manType, cmdName);
             exit(EXIT_FAILURE);
          }
       }
       if (TranslationCmdProcessed == FALSE) {
-         printf("Translation Command %s has invalid format. Exiting...\n",
-                cmdName);
+         fprintf(stderr,
+                 "Translation Command %s has invalid format. Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
    }
@@ -625,16 +634,18 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
    if (TranslationCmdProcessed == TRUE && Cmd->TranslationCtrlActive == TRUE) {
       if (Cmd->ManeuverMode == INACTIVE) {
          if (GetController(DSM, ctrlNode, TRN_STATE) == FALSE) {
-            printf("For %s command %s, could not find Controller alias %s or "
-                   "invalid format. Exiting...\n",
-                   subType, cmdName,
-                   fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
+            fprintf(stderr,
+                    "For %s command %s, could not find Controller alias %s or "
+                    "invalid format. Exiting...\n",
+                    subType, cmdName,
+                    fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
             exit(EXIT_FAILURE);
          }
       }
       else {
          if (GetLimits(DSM, limNode, TRN_STATE) == FALSE) {
-            printf(
+            fprintf(
+                stderr,
                 "For %s command %s, could not find Limit alias %s or invalid "
                 "format. Exiting...\n",
                 subType, cmdName,
@@ -643,7 +654,8 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       if (GetActuators(AC, DSM, actNode, TRN_STATE) == FALSE) {
-         printf(
+         fprintf(
+             stderr,
              "For %s command %s, could not find Actuator alias %s or invalid "
              "format. Exiting...\n",
              subType, cmdName,
@@ -683,9 +695,10 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    struct fy_node *cmdNode = fy_node_by_path_def(attCmdNode, "/Command Data");
 
    if (cmdNode == NULL) {
-      printf("Could not find Command Data for Attitude command of subtype %s. "
-             "Exiting...\n",
-             subType);
+      fprintf(stderr,
+              "Could not find Command Data for Attitude command of subtype %s. "
+              "Exiting...\n",
+              subType);
       exit(EXIT_FAILURE);
    }
    const char *cmdName =
@@ -701,9 +714,10 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       long *const attcmdProc[] = {&AttPriCmdProcessed, &AttSecCmdProcessed};
 
       if (nodes[0] == NULL) {
-         printf("For Vector command %s, could not find Primary Vector. "
-                "Exiting...\n",
-                cmdName);
+         fprintf(stderr,
+                 "For Vector command %s, could not find Primary Vector. "
+                 "Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -712,9 +726,10 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
          Cmd->Method = PARM_VECTORS;
 
          if (nodes[1] == NULL) {
-            printf("For Two Vector command %s, could not find Secondary "
-                   "Vector. Exiting...\n",
-                   cmdName);
+            fprintf(stderr,
+                    "For Two Vector command %s, could not find Secondary "
+                    "Vector. Exiting...\n",
+                    cmdName);
             exit(EXIT_FAILURE);
          }
       }
@@ -756,31 +771,35 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                           &vecs[k]->TrgBody) == 2) {
                   // Decode Current SC ID Number
                   if (vecs[k]->TrgSC >= Nsc) {
-                     printf("This mission only has %ld spacecraft, but "
-                            "spacecraft %ld was attempted to be set as the "
-                            "primary target vector. Exiting...\n",
-                            Nsc, vecs[k]->TrgSC);
+                     fprintf(stderr,
+                             "This mission only has %ld spacecraft, but "
+                             "spacecraft %ld was attempted to be set as the "
+                             "primary target vector. Exiting...\n",
+                             Nsc, vecs[k]->TrgSC);
                      exit(EXIT_FAILURE);
                   }
 
                   if (vecs[k]->TrgBody >= SC[vecs[k]->TrgSC].Nb) {
-                     printf("Spacecraft %ld only has %ld bodies, but the "
-                            "primary target was attempted to be set as body "
-                            "%ld. Exiting...\n",
-                            vecs[k]->TrgSC, SC[vecs[k]->TrgSC].Nb,
-                            vecs[k]->TrgBody);
+                     fprintf(stderr,
+                             "Spacecraft %ld only has %ld bodies, but the "
+                             "primary target was attempted to be set as body "
+                             "%ld. Exiting...\n",
+                             vecs[k]->TrgSC, SC[vecs[k]->TrgSC].Nb,
+                             vecs[k]->TrgBody);
                      exit(EXIT_FAILURE);
                   }
                }
                else {
-                  printf("%s is in incorrect format. Exiting...", target);
+                  fprintf(stderr, "%s is in incorrect format. Exiting...",
+                          target);
                   exit(EXIT_FAILURE);
                }
             }
             else {
-               printf("%s Vector for command %s has improper format for SC or "
-                      "BODY targeting. Exiting...\n",
-                      (k == 0) ? ("Primary") : ("Secondary"), cmdName);
+               fprintf(stderr,
+                       "%s Vector for command %s has improper format for SC or "
+                       "BODY targeting. Exiting...\n",
+                       (k == 0) ? ("Primary") : ("Secondary"), cmdName);
                exit(EXIT_FAILURE);
             }
             *attcmdProc[k] = TRUE;
@@ -794,16 +813,18 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                                   3, fy_node_by_path_def(tgtNode, "/Axis"),
                                   vecs[k]->cmd_vec) == 3;
             if (*attcmdProc[k] == FALSE) {
-               printf("%s Vector for command %s has improper format for VEC "
-                      "targeting. Exiting...\n",
-                      (k == 0) ? ("Primary") : ("Secondary"), cmdName);
+               fprintf(stderr,
+                       "%s Vector for command %s has improper format for VEC "
+                       "targeting. Exiting...\n",
+                       (k == 0) ? ("Primary") : ("Secondary"), cmdName);
                exit(EXIT_FAILURE);
             }
          }
          else {
-            printf("For %s Vector for command %s, %s is an invalid targeting "
-                   "type. Exiting...\n",
-                   (k == 0) ? ("Primary") : ("Secondary"), cmdName, tgtType);
+            fprintf(stderr,
+                    "For %s Vector for command %s, %s is an invalid targeting "
+                    "type. Exiting...\n",
+                    (k == 0) ? ("Primary") : ("Secondary"), cmdName, tgtType);
             exit(EXIT_FAILURE);
          }
       }
@@ -829,8 +850,9 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
       if (AttitudeCmdProcessed == FALSE) {
-         printf("Quaternion Command %s has invalid format. Exiting...\n",
-                cmdName);
+         fprintf(stderr,
+                 "Quaternion Command %s has invalid format. Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -846,7 +868,8 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       AttitudeCmdProcessed &= ctrlNode != NULL && actNode != NULL;
 
       if (AttitudeCmdProcessed == FALSE) {
-         printf("Mirror Command %s has invalid format. Exiting...\n", cmdName);
+         fprintf(stderr, "Mirror Command %s has invalid format. Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -860,8 +883,8 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       AttitudeCmdProcessed = ctrlNode != NULL && actNode != NULL;
 
       if (AttitudeCmdProcessed == FALSE) {
-         printf("Detumble Command %s has invalid format. Exiting...\n",
-                cmdName);
+         fprintf(stderr, "Detumble Command %s has invalid format. Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
 
@@ -883,14 +906,17 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       Cmd->H_DumpActive         = getYAMLBool(dumpNode);
       state                     = DMP_STATE;
       if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
-         printf("Maximum momentum dump limit must be more than the minimum for "
-                "Whl H Manage Command %s Exiting...\n",
-                cmdName);
+         fprintf(
+             stderr,
+             "Maximum momentum dump limit must be more than the minimum for "
+             "Whl H Manage Command %s Exiting...\n",
+             cmdName);
          exit(EXIT_FAILURE);
       }
       if (AttitudeCmdProcessed == FALSE) {
-         printf("Whl H Manage Command %s has invalid format. Exiting...\n",
-                cmdName);
+         fprintf(stderr,
+                 "Whl H Manage Command %s has invalid format. Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
    }
@@ -930,30 +956,33 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                 2) {
                // Decode Current SC ID Number
                if (vec->TrgSC >= Nsc) {
-                  printf("This mission only has %ld spacecraft, but "
-                         "spacecraft %ld was attempted to be set as the "
-                         "primary target vector. Exiting...\n",
-                         Nsc, vec->TrgSC);
+                  fprintf(stderr,
+                          "This mission only has %ld spacecraft, but "
+                          "spacecraft %ld was attempted to be set as the "
+                          "primary target vector. Exiting...\n",
+                          Nsc, vec->TrgSC);
                   exit(EXIT_FAILURE);
                }
 
                if (vec->TrgBody >= SC[vec->TrgSC].Nb) {
-                  printf("Spacecraft %ld only has %ld bodies, but the "
-                         "primary target was attempted to be set as body "
-                         "%ld. Exiting...\n",
-                         vec->TrgSC, SC[vec->TrgSC].Nb, vec->TrgBody);
+                  fprintf(stderr,
+                          "Spacecraft %ld only has %ld bodies, but the primary "
+                          "target was attempted to be set as body %ld. "
+                          "Exiting...\n",
+                          vec->TrgSC, SC[vec->TrgSC].Nb, vec->TrgBody);
                   exit(EXIT_FAILURE);
                }
             }
             else {
-               printf("%s is in incorrect format. Exiting...", target);
+               fprintf(stderr, "%s is in incorrect format. Exiting...", target);
                exit(EXIT_FAILURE);
             }
          }
          else {
-            printf("Vector for command %s has improper format for SC or "
-                   "BODY targeting. Exiting...\n",
-                   cmdName);
+            fprintf(stderr,
+                    "Vector for command %s has improper format for SC or BODY "
+                    "targeting. Exiting...\n",
+                    cmdName);
             exit(EXIT_FAILURE);
          }
          AttitudeCmdProcessed = TRUE;
@@ -967,16 +996,18 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
              assignYAMLToDoubleArray(3, fy_node_by_path_def(tgtNode, "/Axis"),
                                      vec->cmd_vec) == 3;
          if (AttitudeCmdProcessed == FALSE) {
-            printf("Vector for command %s has improper format for VEC "
-                   "targeting. Exiting...\n",
-                   cmdName);
+            fprintf(stderr,
+                    "Vector for command %s has improper format for VEC "
+                    "targeting. Exiting...\n",
+                    cmdName);
             exit(EXIT_FAILURE);
          }
       }
       else {
-         printf("For Vector for command %s, %s is an invalid targeting "
-                "type. Exiting...\n",
-                cmdName, tgtType);
+         fprintf(stderr,
+                 "For Vector for command %s, %s is an invalid targeting type. "
+                 "Exiting...\n",
+                 cmdName, tgtType);
          exit(EXIT_FAILURE);
       }
       // Load Desired Angular Rate in Cmd->AngRate[2], then construct vector as
@@ -996,15 +1027,17 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
    }
    if (AttitudeCmdProcessed == TRUE && Cmd->AttitudeCtrlActive == TRUE) {
       if (GetController(DSM, ctrlNode, state) == FALSE) {
-         printf("For %s command %s, could not find Controller alias %s or "
-                "invalid format. Exiting...\n",
-                subType, cmdName,
-                fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
+         fprintf(stderr,
+                 "For %s command %s, could not find Controller alias %s or "
+                 "invalid format. Exiting...\n",
+                 subType, cmdName,
+                 fy_anchor_get_text(fy_node_get_anchor(ctrlNode), NULL));
          exit(EXIT_FAILURE);
       }
 
       if (GetActuators(AC, DSM, actNode, state) == FALSE) {
-         printf(
+         fprintf(
+             stderr,
              "For %s command %s, could not find Actuator alias %s or invalid "
              "format. Exiting...\n",
              subType, cmdName,
@@ -1027,7 +1060,8 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
    struct fy_node *cmdNode = fy_node_by_path_def(actCmdNode, "/Command Data");
 
    if (cmdNode == NULL) {
-      printf("Could not find Command Data for Actuator command. Exiting...\n");
+      fprintf(stderr,
+              "Could not find Command Data for Actuator command. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    const char *cmdName =
@@ -1050,34 +1084,40 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
          else if (!strcmp(type, "MTB"))
             Cmd->ActTypes[i] = MTB_TYPE;
          else {
-            printf("Actuator Command index %s has improper actuator type %s. "
-                   "Exiting...",
-                   cmdName, type);
+            fprintf(stderr,
+                    "Actuator Command index %s has improper actuator type %s. "
+                    "Exiting...",
+                    cmdName, type);
             exit(EXIT_FAILURE);
          }
       }
       else {
-         printf(
+         fprintf(
+             stderr,
              "Actuator Command index %s is impropertly formatted. Exiting...",
              cmdName);
          exit(EXIT_FAILURE);
       }
       if (Cmd->ActTypes[i] == WHL_TYPE && Cmd->ActInds[i] > AC->Nwhl) {
-         printf("SC[%ld] only has %ld wheels, but an actuator command was sent "
-                "to wheel %d. Exiting...\n",
-                AC->ID, AC->Nwhl, Cmd->ActInds[i]);
+         fprintf(
+             stderr,
+             "SC[%ld] only has %ld wheels, but an actuator command was sent "
+             "to wheel %d. Exiting...\n",
+             AC->ID, AC->Nwhl, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
       if (Cmd->ActTypes[i] == THR_TYPE && Cmd->ActInds[i] > AC->Nthr) {
-         printf("SC[%ld] only has %ld thrusters, but an actuator command was "
-                "sent to thruster %d. Exiting...\n",
-                AC->ID, AC->Nthr, Cmd->ActInds[i]);
+         fprintf(stderr,
+                 "SC[%ld] only has %ld thrusters, but an actuator command was "
+                 "sent to thruster %d. Exiting...\n",
+                 AC->ID, AC->Nthr, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
       if (Cmd->ActTypes[i] == MTB_TYPE && Cmd->ActInds[i] > AC->Nmtb) {
-         printf("SC[%ld] only has %ld MTBs, but an actuator command was sent "
-                "to MTB %d. Exiting...\n",
-                AC->ID, AC->Nmtb, Cmd->ActInds[i]);
+         fprintf(stderr,
+                 "SC[%ld] only has %ld MTBs, but an actuator command was sent "
+                 "to MTB %d. Exiting...\n",
+                 AC->ID, AC->Nmtb, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
       i++;
@@ -1117,14 +1157,17 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
    {
       long scInd = 0;
       if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
-         printf("Improperly configured DSM Commands SC sequence. Exiting...\n");
+         fprintf(
+             stderr,
+             "Improperly configured DSM Commands SC sequence. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (scInd == DSM->ID) {
          scCmdsNode = fy_node_by_path_def(iterNode, "/Command Sequence");
          if (scCmdsNode == NULL) {
-            printf("Could not find Command Sequence for SC[%li]. Exiting...\n",
-                   DSM->ID);
+            fprintf(stderr,
+                    "Could not find Command Sequence for SC[%li]. Exiting...\n",
+                    DSM->ID);
             exit(EXIT_FAILURE);
          }
          long i       = DSM->CmdCnt;
@@ -1153,9 +1196,10 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
        fy_node_by_path_def(DSM->CmdArray[DSM->CmdNum], "/Commands");
 
    if (cmdsNode == NULL) {
-      printf("Could not find command for SC[%ld] at time %lf. "
-             "How did this happen? Exiting...\n",
-             DSM->ID, DSM->CmdNextTime);
+      fprintf(stderr,
+              "Could not find command for SC[%ld] at time %lf. "
+              "How did this happen? Exiting...\n",
+              DSM->ID, DSM->CmdNextTime);
       exit(EXIT_FAILURE);
    }
 
@@ -1170,30 +1214,33 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
       if (!strcmp(typeToken, "Translation")) {
          if (GetTranslationCmd(AC, DSM, iterNode, DSM->CmdNextTime) == FALSE) {
             fy_node_scanf(iterNode, searchSubtypeStr, subType);
-            printf("Translation command of subtype %s cannot be found in "
-                   "Inp_DSM.yaml. Exiting...\n",
-                   subType);
+            fprintf(stderr,
+                    "Translation command of subtype %s cannot be found in "
+                    "Inp_DSM.yaml. Exiting...\n",
+                    subType);
             exit(EXIT_FAILURE);
          }
       }
       else if (!strcmp(typeToken, "Attitude")) {
          if (GetAttitudeCmd(AC, DSM, iterNode) == FALSE) {
             fy_node_scanf(iterNode, searchSubtypeStr, subType);
-            printf("Attitude command of subtype %s cannot be found in "
-                   "Inp_DSM.yaml. Exiting...\n",
-                   subType);
+            fprintf(stderr,
+                    "Attitude command of subtype %s cannot be found in "
+                    "Inp_DSM.yaml. Exiting...\n",
+                    subType);
             exit(EXIT_FAILURE);
          }
       }
       else if (!strcmp(typeToken, "Actuator")) {
          if (GetActuatorCmd(AC, DSM, iterNode) == FALSE) {
-            printf("Actuator command cannot be found in Inp_DSM.yaml. "
-                   "Exiting...\n");
+            fprintf(stderr, "Actuator command cannot be found in Inp_DSM.yaml. "
+                            "Exiting...\n");
             exit(EXIT_FAILURE);
          }
       }
       else {
-         printf("%s is not a supported command type. Exiting...\n", typeToken);
+         fprintf(stderr, "%s is not a supported command type. Exiting...\n",
+                 typeToken);
          exit(EXIT_FAILURE);
       }
    }
@@ -1210,10 +1257,11 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
          (!strcmp(Cmd->att_actuator, "THR_3DOF") ||
           (!strcmp(Cmd->dmp_actuator, "THR_3DOF"))) &&
          Cmd->H_DumpActive))) {
-      printf("If the Translation actuator is 6DOF Thruster and Attitude "
-             "actuator is Thruster, then it must be 6DOF (and vice "
-             "versa).\nAdditionally, if the translation actuator is 3DOF "
-             "thruster, then Attitude cannot also be 3DOF. Exiting...\n");
+      fprintf(stderr,
+              "If the Translation actuator is 6DOF Thruster and Attitude "
+              "actuator is Thruster, then it must be 6DOF (and vice "
+              "versa).\nAdditionally, if the translation actuator is 3DOF "
+              "thruster, then Attitude cannot also be 3DOF. Exiting...\n");
       exit(EXIT_FAILURE);
    }
 }
@@ -1327,8 +1375,9 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
       if ((Cmd->AttitudeCtrlActive == TRUE &&
            strcmp(Cmd->att_actuator, "WHL")) ||
           Cmd->AttitudeCtrlActive == FALSE) {
-         printf("You many only enable momentum dumping when the attitude is "
-                "actively controlled with WHLs. Exiting...\n");
+         fprintf(stderr,
+                 "You many only enable momentum dumping when the attitude is "
+                 "actively controlled with WHLs. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (DSM->DsmCtrl.H_DumpActive == TRUE &&
@@ -1601,8 +1650,9 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                goodOriginFrame = TRUE;
             } break;
             default: {
-               printf("Invalid Formation fixed frame. How did this happen? "
-                      "Exiting...\n");
+               fprintf(stderr,
+                       "Invalid Formation fixed frame. How did this happen? "
+                       "Exiting...\n");
                exit(EXIT_FAILURE);
             } break;
          }
@@ -1649,7 +1699,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             if (sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
                        &frame_body) == 2) {
                if (Isc_Ref == DSM->ID) {
-                  printf(
+                  fprintf(
+                      stderr,
                       "Spacecraft %ld called Euler Hill guidance law on itself."
                       "Exiting...\n",
                       Isc_Ref);
@@ -1670,8 +1721,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
             }
             else {
-               printf("Invalid Translational Control Reference Frame. "
-                      "Exiting...\n");
+               fprintf(stderr, "Invalid Translational Control Reference Frame. "
+                               "Exiting...\n");
                exit(EXIT_FAILURE);
             }
          }
@@ -1681,10 +1732,11 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             if (sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
                        &frame_body) == 2) {
                if (Isc_Ref == DSM->ID) {
-                  printf("Spacecraft %ld called Euler Hill guidance law on "
-                         "itself. "
-                         "Exiting...\n",
-                         Isc_Ref);
+                  fprintf(stderr,
+                          "Spacecraft %ld called Euler Hill guidance law on "
+                          "itself. "
+                          "Exiting...\n",
+                          Isc_Ref);
                   exit(EXIT_FAILURE);
                }
 
@@ -1751,8 +1803,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                }
             }
             else {
-               printf("Invalid Translational Control Reference Frame. "
-                      "Exiting...\n");
+               fprintf(stderr, "Invalid Translational Control Reference Frame. "
+                               "Exiting...\n");
                exit(EXIT_FAILURE);
             }
          }
@@ -1769,23 +1821,27 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          if (sscanf(Cmd->RefFrame, "SC[%ld].B[%ld]", &Isc_Ref, &frame_body) ==
              2) {
             if (Isc_Ref == DSM->ID) {
-               printf("SC[%ld] is attempting to translate relative to its "
-                      "own body frame. Exiting...\n",
-                      DSM->ID);
+               fprintf(stderr,
+                       "SC[%ld] is attempting to translate relative to its "
+                       "own body frame. Exiting...\n",
+                       DSM->ID);
                exit(EXIT_FAILURE);
             }
             // Specify disp from OP, in SC B frame directions, control to OP
             if (Isc_Ref >= Nsc) {
-               printf("This mission only has %ld spacecraft, but spacecraft "
-                      "%ld was attempted to be set as the reference frame. "
-                      "Exiting...\n",
-                      Nsc, Isc_Ref);
+               fprintf(stderr,
+                       "This mission only has %ld spacecraft, but spacecraft "
+                       "%ld was attempted to be set as the reference frame. "
+                       "Exiting...\n",
+                       Nsc, Isc_Ref);
                exit(EXIT_FAILURE);
             }
             if (frame_body >= SC[Isc_Ref].Nb) {
-               printf("Spacecraft %ld only has %ld bodies, but the reference "
-                      "frame was attempted to be set as body %ld. Exiting...\n",
-                      Isc_Ref, SC[Isc_Ref].Nb, frame_body);
+               fprintf(
+                   stderr,
+                   "Spacecraft %ld only has %ld bodies, but the reference "
+                   "frame was attempted to be set as body %ld. Exiting...\n",
+                   Isc_Ref, SC[Isc_Ref].Nb, frame_body);
                exit(EXIT_FAILURE);
             }
             // TODO: don't use other sc truth
@@ -1831,8 +1887,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             goodOriginFrame = TRUE;
          }
          else {
-            printf("Invalid Translational Control Reference Frame. "
-                   "Exiting...\n");
+            fprintf(stderr, "Invalid Translational Control Reference Frame. "
+                            "Exiting...\n");
             exit(EXIT_FAILURE);
          }
       } break;
@@ -1851,15 +1907,17 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
       sscanf(Cmd->RefOrigin, "SC[%ld].B[%ld]", &Isc_Ref,
              &origin_body); // Decode ref SC ID Number
       if (Isc_Ref >= Nsc) {
-         printf("This mission only has %ld spacecraft, but spacecraft %ld was "
-                "attempted to be set as the reference origin. Exiting...\n",
-                Nsc, Isc_Ref);
+         fprintf(stderr,
+                 "This mission only has %ld spacecraft, but spacecraft %ld was "
+                 "attempted to be set as the reference origin. Exiting...\n",
+                 Nsc, Isc_Ref);
          exit(EXIT_FAILURE);
       }
       if (origin_body >= SC[Isc_Ref].Nb) {
-         printf("Spacecraft %ld only has %ld bodies, but the reference origin "
-                "was attempted to be set as body %ld. Exiting...\n",
-                Isc_Ref, SC[Isc_Ref].Nb, origin_body);
+         fprintf(stderr,
+                 "Spacecraft %ld only has %ld bodies, but the reference origin "
+                 "was attempted to be set as body %ld. Exiting...\n",
+                 Isc_Ref, SC[Isc_Ref].Nb, origin_body);
          exit(EXIT_FAILURE);
       }
       struct BodyType *TrgSB        = NULL;
@@ -1882,9 +1940,10 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    }
 
    if (goodOriginFrame == FALSE) {
-      printf("Invalid Ref origin/frame combo %s/%s in Translation Command "
-             "at %lf. Exiting...\n",
-             Cmd->RefOrigin, Cmd->RefFrame, SimTime);
+      fprintf(stderr,
+              "Invalid Ref origin/frame combo %s/%s in Translation Command "
+              "at %lf. Exiting...\n",
+              Cmd->RefOrigin, Cmd->RefFrame, SimTime);
       exit(EXIT_FAILURE);
    }
    for (i = 0; i < 3; i++) {
@@ -1956,23 +2015,26 @@ long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
                if (sscanf(attRefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
                           &frame_body) == 2) {
                   if (Isc_Ref == DSM->ID) {
-                     printf("SC[%ld] is attempting to point relative "
-                            "to its own body frame. Exiting...\n",
-                            DSM->ID);
+                     fprintf(stderr,
+                             "SC[%ld] is attempting to point relative "
+                             "to its own body frame. Exiting...\n",
+                             DSM->ID);
                      exit(EXIT_FAILURE);
                   }
                   if (Isc_Ref >= Nsc) {
-                     printf("This mission only has %ld spacecraft, "
-                            "but spacecraft %ld was attempted to be "
-                            "set as the reference frame. Exiting...\n",
-                            Nsc, Isc_Ref);
+                     fprintf(stderr,
+                             "This mission only has %ld spacecraft, "
+                             "but spacecraft %ld was attempted to be "
+                             "set as the reference frame. Exiting...\n",
+                             Nsc, Isc_Ref);
                      exit(EXIT_FAILURE);
                   }
                   if (frame_body >= SC[Isc_Ref].Nb) {
-                     printf("Spacecraft %ld only has %ld bodies, but "
-                            "the reference frame was attempted to be "
-                            "set as body %ld. Exiting...\n",
-                            Isc_Ref, SC[Isc_Ref].Nb, frame_body);
+                     fprintf(stderr,
+                             "Spacecraft %ld only has %ld bodies, but "
+                             "the reference frame was attempted to be "
+                             "set as body %ld. Exiting...\n",
+                             Isc_Ref, SC[Isc_Ref].Nb, frame_body);
                      exit(EXIT_FAILURE);
                   }
                   // TODO: don't use other sc truth
@@ -2005,8 +2067,8 @@ long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
                   QxV(qbbs, vec->cmd_vec, cmdVecB);
                }
                else {
-                  printf("Invalid attitude reference frame for "
-                         "pointing vector. Exiting...\n");
+                  fprintf(stderr, "Invalid attitude reference frame for "
+                                  "pointing vector. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
             } break;
@@ -2044,8 +2106,9 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          for (int k = 0; k < 2; k++) {
             if (!getCmdVecs(DSM, F, vecs[k], attRefFrame[k], state, cmdVecB[k],
                             cmdVecN[k])) {
-               printf("Invalid Target type for %s vector. Exiting...\n",
-                      k == 0 ? "Primary" : "Secondary");
+               fprintf(stderr,
+                       "Invalid Target type for %s vector. Exiting...\n",
+                       k == 0 ? "Primary" : "Secondary");
                exit(EXIT_FAILURE);
             }
          }
@@ -2057,13 +2120,14 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          }
 
          if (fabs(VoV(vecs[0]->cmd_axis, vecs[1]->cmd_axis) - 1.0) < EPS_DSM) {
-            printf("PV Axis [%lf  %lf  %lf] in %s and SV Axis [%lf  %lf  %lf] "
-                   "in %s are parallel, resulting in an infeasible attitude "
-                   "command. Exiting...\n",
-                   vecs[0]->cmd_axis[0], vecs[0]->cmd_axis[1],
-                   vecs[0]->cmd_axis[2], Cmd->PriAttRefFrame,
-                   vecs[1]->cmd_axis[0], vecs[1]->cmd_axis[1],
-                   vecs[1]->cmd_axis[2], Cmd->SecAttRefFrame);
+            fprintf(stderr,
+                    "PV Axis [%lf  %lf  %lf] in %s and SV Axis [%lf  %lf  %lf] "
+                    "in %s are parallel, resulting in an infeasible attitude "
+                    "command. Exiting...\n",
+                    vecs[0]->cmd_axis[0], vecs[0]->cmd_axis[1],
+                    vecs[0]->cmd_axis[2], Cmd->PriAttRefFrame,
+                    vecs[1]->cmd_axis[0], vecs[1]->cmd_axis[1],
+                    vecs[1]->cmd_axis[2], Cmd->SecAttRefFrame);
             exit(EXIT_FAILURE);
          }
 
@@ -2091,9 +2155,10 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                      break;
                }
             }
-            printf("PV Target, %s, and SV Target, %s, are parallel, resulting "
-                   "in an infeasible attitude command. Exiting...\n",
-                   tgts[0], tgts[1]);
+            fprintf(stderr,
+                    "PV Target, %s, and SV Target, %s, are parallel, resulting "
+                    "in an infeasible attitude command. Exiting...\n",
+                    tgts[0], tgts[1]);
             exit(EXIT_FAILURE);
          }
 
@@ -2128,7 +2193,9 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
 
          if (!getCmdVecs(DSM, F, &Cmd->PriVec, Cmd->PriAttRefFrame, state,
                          cmdVecB, cmdVecN)) {
-            printf("Invalid Target type for Primary Spin vector. Exiting...\n");
+            fprintf(
+                stderr,
+                "Invalid Target type for Primary Spin vector. Exiting...\n");
             exit(EXIT_FAILURE);
          }
 
@@ -2147,8 +2214,9 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          QTxV(state->qbn, Cmd->AngRate, Cmd->wrn);
       } break;
       case (PARM_UNITVECTOR): {
-         printf("Feature for Singular Primary Unit Vector Pointing not "
-                "currently fully implemented. Exiting...\n");
+         fprintf(stderr,
+                 "Feature for Singular Primary Unit Vector Pointing not "
+                 "currently fully implemented. Exiting...\n");
          exit(EXIT_FAILURE);
       } break;
       case (PARM_QUATERNION): {
@@ -2178,8 +2246,9 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                         Cmd->wrn[i] = 0.0;
                   } break;
                   default: {
-                     printf("Invalid Formation fixed frame. How did this "
-                            "happen? Exiting...\n");
+                     fprintf(stderr,
+                             "Invalid Formation fixed frame. How did this "
+                             "happen? Exiting...\n");
                      exit(EXIT_FAILURE);
                   } break;
                }
@@ -2202,23 +2271,26 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                if (sscanf(Cmd->AttRefFrame, "SC[%ld].B[%ld]", &Isc_Ref,
                           &frame_body) == 2) {
                   if (Isc_Ref == DSM->ID) {
-                     printf("SC[%ld] is attempting to point relative to its "
-                            "own body frame. Exiting...\n",
-                            DSM->ID);
+                     fprintf(stderr,
+                             "SC[%ld] is attempting to point relative to its "
+                             "own body frame. Exiting...\n",
+                             DSM->ID);
                      exit(EXIT_FAILURE);
                   }
                   if (Isc_Ref >= Nsc) {
-                     printf("This mission only has %ld spacecraft, but "
-                            "spacecraft %ld was attempted to be set as the "
-                            "reference frame. Exiting...\n",
-                            Nsc, Isc_Ref);
+                     fprintf(stderr,
+                             "This mission only has %ld spacecraft, but "
+                             "spacecraft %ld was attempted to be set as the "
+                             "reference frame. Exiting...\n",
+                             Nsc, Isc_Ref);
                      exit(EXIT_FAILURE);
                   }
                   if (frame_body >= SC[Isc_Ref].Nb) {
-                     printf("Spacecraft %ld only has %ld bodies, but the "
-                            "reference frame was attempted to be set as body "
-                            "%ld. Exiting...\n",
-                            Isc_Ref, SC[Isc_Ref].Nb, frame_body);
+                     fprintf(stderr,
+                             "Spacecraft %ld only has %ld bodies, but the "
+                             "reference frame was attempted to be set as body "
+                             "%ld. Exiting...\n",
+                             Isc_Ref, SC[Isc_Ref].Nb, frame_body);
                      exit(EXIT_FAILURE);
                   }
                   // TODO: don't use other sc truth
@@ -2251,8 +2323,9 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                   QxQT(qbbs, Cmd->q, Cmd->qbr);
                }
                else {
-                  printf("Invlaid attitude reference frame for quaternion. "
-                         "Exiting...\n");
+                  fprintf(stderr,
+                          "Invlaid attitude reference frame for quaternion. "
+                          "Exiting...\n");
                   exit(EXIT_FAILURE);
                }
             } break;
@@ -2263,16 +2336,18 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          // Decode ref SC ID Number
          sscanf(Cmd->AttRefScID, "SC[%ld].B[%ld]", &Isc_Ref, &target_num);
          if (Isc_Ref >= Nsc) {
-            printf(
+            fprintf(
+                stderr,
                 "This mission only has %ld spacecraft, but spacecraft %ld was "
                 "attempted to be set as the spacecraft to mirror. Exiting...\n",
                 Nsc, Isc_Ref);
             exit(EXIT_FAILURE);
          }
          if (target_num >= SC[Isc_Ref].Nb) {
-            printf("Spacecraft %ld only has %ld bodies, but the mirror target "
-                   "was attempted to be set as body %ld. Exiting...\n",
-                   Isc_Ref, SC[Isc_Ref].Nb, target_num);
+            fprintf(stderr,
+                    "Spacecraft %ld only has %ld bodies, but the mirror target "
+                    "was attempted to be set as body %ld. Exiting...\n",
+                    Isc_Ref, SC[Isc_Ref].Nb, target_num);
             exit(EXIT_FAILURE);
          }
          // TODO: not truth of other body
@@ -2318,7 +2393,8 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             Cmd->wrn[i] = 0.0;
       } break;
       default:
-         printf("Invalid Command Method for Attitude Guidance. Exiting...\n");
+         fprintf(stderr,
+                 "Invalid Command Method for Attitude Guidance. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -2495,7 +2571,8 @@ void TranslationCtrl(struct DSMType *DSM)
             QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
          } break;
          default:
-            printf("Invalid Translational Controller type. Exiting...\n");
+            fprintf(stderr,
+                    "Invalid Translational Controller type. Exiting...\n");
             exit(EXIT_FAILURE);
             break;
       }
@@ -2575,7 +2652,7 @@ void TranslationCtrl(struct DSMType *DSM)
                     CTRL->FcmdN); // Converting back to Inertial from body frame
             } break;
             default:
-               printf("Invalid maneuver mode. Exiting...\n");
+               fprintf(stderr, "Invalid maneuver mode. Exiting...\n");
                exit(EXIT_FAILURE);
                break;
          }
@@ -2666,7 +2743,7 @@ void AttitudeCtrl(struct DSMType *DSM)
             }
          } break;
          default:
-            printf("Invalid Attitude controller type. Exiting...\n");
+            fprintf(stderr, "Invalid Attitude controller type. Exiting...\n");
             exit(EXIT_FAILURE);
             break;
       }
@@ -2714,8 +2791,10 @@ void MomentumDumpCtrl(struct DSMType *DSM, double TotalWhlH[3])
                CTRL->dTcmd[i] = -CTRL->dmp_kp[i] * TotalWhlH[i];
             break;
          default:
-            printf("Invalid controller type for Momentum Dumping. How did this "
-                   "happen? Exiting...\n");
+            fprintf(
+                stderr,
+                "Invalid controller type for Momentum Dumping. How did this "
+                "happen? Exiting...\n");
             exit(EXIT_FAILURE);
             break;
       }
