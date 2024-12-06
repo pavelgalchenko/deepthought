@@ -3818,7 +3818,8 @@ void LoadPlanets(void)
       strcpy(World[i].MapFileName, MapFileName[i]);
       strcpy(World[i].ColTexFileName, "NONE");
       strcpy(World[i].BumpTexFileName, "NONE");
-      World[i].mu             = Mu[i];
+      if (World[i].mu == 0)
+         World[i].mu = Mu[i];
       World[i].J2             = J2[i];
       World[i].rad            = Rad[i];
       World[i].w              = W[i];
@@ -3840,11 +3841,24 @@ void LoadPlanets(void)
       if (GravPertActive) {
          /* Gravitation Model */
          struct SphereHarmType *gravModel = &World[i].GravModel;
-         strcpy(gravModel->modelFile, GravFileName[i]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[i], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      World[i].Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[i]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = grav_r_ref[i];
-            World[i].J2      = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = grav_r_ref[i];
+            World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -4022,7 +4036,8 @@ void LoadMoonOfEarth(void)
          M->Color[i] = Color[i];
       for (i = 0; i < 14; i++)
          M->Glyph[i] = Glyph[i];
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->J2        = J2[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
@@ -4064,11 +4079,24 @@ void LoadMoonOfEarth(void)
       /* Gravitation Model */
       if (GravPertActive) {
          struct SphereHarmType *gravModel = &M->GravModel;
-         strcpy(gravModel->modelFile, GravFileName[Im]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = rad[i];
-            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -4155,7 +4183,8 @@ void LoadMoonsOfMars(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4211,11 +4240,24 @@ void LoadMoonsOfMars(void)
       /* Gravitation Model */
       if (GravPertActive) {
          struct SphereHarmType *gravModel = &M->GravModel;
-         strcpy(gravModel->modelFile, GravFileName[Im]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = rad[i];
-            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -4336,7 +4378,8 @@ void LoadMoonsOfJupiter(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4391,11 +4434,24 @@ void LoadMoonsOfJupiter(void)
       /* Gravitation Model */
       if (GravPertActive) {
          struct SphereHarmType *gravModel = &M->GravModel;
-         strcpy(gravModel->modelFile, GravFileName[Im]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = rad[i];
-            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -4517,7 +4573,8 @@ void LoadMoonsOfSaturn(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4572,11 +4629,24 @@ void LoadMoonsOfSaturn(void)
       /* Gravitation Model */
       if (GravPertActive) {
          struct SphereHarmType *gravModel = &M->GravModel;
-         strcpy(gravModel->modelFile, GravFileName[Im]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = rad[i];
-            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -4664,7 +4734,8 @@ void LoadMoonsOfUranus(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4719,11 +4790,24 @@ void LoadMoonsOfUranus(void)
       /* Gravitation Model */
       if (GravPertActive) {
          struct SphereHarmType *gravModel = &M->GravModel;
-         strcpy(gravModel->modelFile, GravFileName[Im]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = rad[i];
-            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -4951,7 +5035,8 @@ void LoadMoonsOfPluto(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -5007,11 +5092,24 @@ void LoadMoonsOfPluto(void)
       /* Gravitation Model */
       if (GravPertActive) {
          struct SphereHarmType *gravModel = &M->GravModel;
-         strcpy(gravModel->modelFile, GravFileName[Im]);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = rad[i];
-            M->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -5053,7 +5151,10 @@ void LoadMinorBodies(void)
       fscanf(infile, "%s %[^\n] %[\n]", W->GeomFileName, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", W->ColTexFileName, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", W->BumpTexFileName, junk, &newline);
-      fscanf(infile, "%lf %[^\n] %[\n]", &W->mu, junk, &newline);
+      double mu = 0;
+      fscanf(infile, "%lf %[^\n] %[\n]", &mu, junk, &newline);
+      if (W->mu == 0) // TODO: maybe, maybe not
+         W->mu = mu;
       fscanf(infile, "%lf %[^\n] %[\n]", &W->rad, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", GravFileName, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &W->w, junk, &newline);
@@ -5116,11 +5217,24 @@ void LoadMinorBodies(void)
          if (strcmp(GravFileName, "NONE") == 0)
             strcpy(GravFileName, "");
          struct SphereHarmType *gravModel = &W->GravModel;
-         strcpy(gravModel->modelFile, GravFileName);
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName, "") && gravModel->N > 1) {
+               printf("World %s was requested to use a spherical harmonic "
+                      "gravity model, but does not have a file configured, "
+                      "neither in 'Inp_Sim' or in source. Add the file to the "
+                      "main 'Model' directory and add the file name as a "
+                      "'Model File' field to the Gravitation Model for this "
+                      "world in 'Inp_Sim'. Exiting...\n",
+                      W->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName);
+         }
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
-            gravModel->r_ref = W->rad;
-            W->J2            = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = W->rad;
+            W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
@@ -6244,11 +6358,17 @@ void InitSim(int argc, char **argv)
    }
 
    /* .. Earth, Mars, Luna Gravity Models */
-   // TODO: make gravfield a property of worlds, so each world can have a
-   // configurable gravitational
-   // TODO: make gravfield coefficent files a field for models?
+   for (Iw = 0; Iw <= NWORLD; Iw++) {
+      struct SphereHarmType *gravModel = &World[Iw].GravModel;
+      strcpy(gravModel->modelFile, "");
+      gravModel->N     = 0;
+      gravModel->r_ref = 0;
+      World[Iw].mu     = 0;
+   }
    iterNode = NULL;
-   WHILE_FY_ITER(fy_node_by_path_def(node, "/Gravitation/Models"), iterNode)
+   struct fy_node *grav_model_list =
+       fy_node_by_path_def(node, "/Gravitation/Models");
+   WHILE_FY_ITER(grav_model_list, iterNode)
    {
       long N = 0, M = 0;
       if (fy_node_scanf(iterNode,
@@ -6257,26 +6377,37 @@ void InitSim(int argc, char **argv)
                         "/Order %ld",
                         response, &N, &M) != 3) {
          printf("Could not find World, Degree, and/or Order for "
-                "Gravitational "
-                "Model. Exiting...\n");
+                "Gravitational Model. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-      Iw = DecodeString(response);
-      switch (Iw) {
-         case EARTH:
-         case MARS:
-         case LUNA:
-            World[Iw].GravModel.N = N;
-            World[Iw].GravModel.M = M;
-            break;
-         default:
-            printf("World %119s does not have a configured spherical "
-                   "harmonic "
-                   "gravity model. Exiting...\n",
-                   response);
-            exit(EXIT_FAILURE);
-            break;
+      Iw                               = DecodeString(response);
+      struct SphereHarmType *gravModel = &World[Iw].GravModel;
+      gravModel->N                     = N;
+      gravModel->M                     = M;
+
+      // Load model file name from Inp_Sim if it is there, otherwise leave blank
+      // to use default later
+      struct fy_node *file_node = fy_node_by_path_def(iterNode, "/Model File");
+      if (file_node != NULL) {
+         size_t len            = 0;
+         const char *modelFile = fy_node_get_scalar(file_node, &len);
+         strncpy(gravModel->modelFile, modelFile, 39);
+         gravModel->modelFile[39] = 0; // ensure null termination
       }
+
+      // override the reference radius of the model hardcoded in source, usually
+      // hardcoded as the equatorial radius of the body
+      struct fy_node *r_node =
+          fy_node_by_path_def(iterNode, "/Reference Radius");
+      if (r_node != NULL)
+         fy_node_scanf(r_node, "/ %lf", &gravModel->r_ref);
+
+      // override the hard coded gravitational parameter. For a minor body,
+      // overrides the gravitational parameter in the minor body file
+      struct fy_node *gm_node =
+          fy_node_by_path_def(iterNode, "/Gravitational Parameter");
+      if (gm_node != NULL)
+         fy_node_scanf(gm_node, "/ %lf", &World[Iw].mu);
    }
 
    /* .. Toggle on/off various environmental effects */
