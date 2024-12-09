@@ -101,13 +101,13 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
                   const double PriMerAng, double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
-#define nYears 25
+#define nYears 26
 
    static double **Cdat[nYears + 1] = {NULL}, **Sdat[nYears + 1] = {NULL};
    double t[nYears] = {1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0,
                        1935.0, 1940.0, 1945.0, 1950.0, 1955.0, 1960.0, 1965.0,
                        1970.0, 1975.0, 1980.0, 1985.0, 1990.0, 1995.0, 2000.0,
-                       2005.0, 2010.0, 2015.0, 2020.0};
+                       2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
    const double AXIS[3] = {0.0, 0.0, 1.0};
@@ -138,7 +138,7 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       }
 
       /* Get data from IGRF20.txt */
-      const char *file_name = "igrf13coeffs.txt";
+      const char *file_name = "igrf14coeffs.txt";
       FILE *IGRFfile        = FileOpen(ModelPath, file_name, "r");
       // skip first 4 lines
 
@@ -148,12 +148,12 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       while (fgets(buffer, sizeof(buffer), IGRFfile) != NULL) {
          sscanf(buffer,
                 "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
-                "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
                 &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4],
                 &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11],
                 &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17],
                 &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23],
-                &dum[24], &dum[25]);
+                &dum[24], &dum[25], &dum[26]);
          switch (gh) {
             case 'g':
                for (k = 0; k < nYears + 1; k++)
