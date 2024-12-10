@@ -1,0 +1,1037 @@
+{
+    "definitions": {
+        "three_vector": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+                "type": "number"
+            }
+        },
+        "Euler Angles": {
+            "type": "object",
+            "properties": {
+                "Angles": {
+                    "$ref": "#/definitions/three_vector"
+                },
+                "Sequence": {
+                    "type": "number",
+                    "enum": [
+                        2,
+                        3,
+                        12,
+                        13,
+                        21,
+                        23,
+                        31,
+                        32,
+                        123,
+                        231,
+                        312,
+                        132,
+                        213,
+                        321,
+                        121,
+                        131,
+                        212,
+                        232,
+                        313,
+                        323
+                    ]
+                }
+            }
+        },
+        "Body": {
+            "type": "object",
+            "properties": {
+                "Index": {
+                    "type": "integer"
+                },
+                "Mass": {
+                    "type": "number"
+                },
+                "MOI": {
+                    "$ref": "#/definitions/three_vector"
+                },
+                "POI": {
+                    "$ref": "#/definitions/three_vector"
+                },
+                "Pos of CM": {
+                    "$ref": "#/definitions/three_vector"
+                },
+                "Constant Momentum": {
+                    "$ref": "#/definitions/three_vector"
+                },
+                "Constant Dipole": {
+                    "$ref": "#/definitions/three_vector"
+                },
+                "Geometry File Name": {
+                    "type": "string"
+                },
+                "Node File Name": {
+                    "type": "string"
+                },
+                "Flex File Name": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Index",
+                "Mass",
+                "MOI",
+                "POI",
+                "Pos of CM",
+                "Constant Momentum",
+                "Constant Dipole",
+                "Geometry File Name",
+                "Node File Name",
+                "Flex File Name"
+            ]
+        }
+    },
+    "title": "SC",
+    "type": "object",
+    "properties": {
+        "Name": {
+            "type": "string"
+        },
+        "Configuration": {
+            "type": "object",
+            "properties": {
+                "Description": {
+                    "type": "string"
+                },
+                "Label": {
+                    "type": "string"
+                },
+                "Sprite File": {
+                    "type": "string"
+                },
+                "FSW Identifier": {
+                    "type": "string",
+                    "enum": [
+                        "PASSIVE_FSW",
+                        "PROTOTYPE_FSW",
+                        "AD_HOC_FSW",
+                        "SPINNER_FSW",
+                        "MOMBIAS_FSW",
+                        "THREE_AXIS_FSW",
+                        "ISS_FSW",
+                        "CMG_FSW",
+                        "THR_FSW",
+                        "CFS_FSW",
+                        "RBT_FSW",
+                        "DSM_FSW"
+                    ]
+                },
+                "FSW Sample Time": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "Label",
+                "Sprite File",
+                "FSW Identifier",
+                "FSW Sample Time"
+            ]
+        },
+        "Orbit": {
+            "type": "object",
+            "properties": {
+                "Prop Type": {
+                    "type": "string",
+                    "enum": [
+                        "FIXED",
+                        "EULER_HILL",
+                        "ENCKE",
+                        "COWELL"
+                    ]
+                },
+                "Pos Specifier": {
+                    "type": "string",
+                    "enum": [
+                        "CM",
+                        "ORIGIN"
+                    ]
+                },
+                "Pos wrt F": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                        "type": "number"
+                    }
+                },
+                "Vel wrt F": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            },
+            "required": [
+                "Prop Type",
+                "Pos Specifier",
+                "Pos wrt F",
+                "Vel wrt F"
+            ]
+        },
+        "Attitude": {
+            "type": "object",
+            "properties": {
+                "Ang Vel Frame": {
+                    "type": "string",
+                    "enum": [
+                        "N",
+                        "L"
+                    ]
+                },
+                "Att Representation": {
+                    "type": "string",
+                    "enum": [
+                        "Q",
+                        "A"
+                    ]
+                },
+                "Att Frame": {
+                    "type": "string",
+                    "enum": [
+                        "N",
+                        "L",
+                        "F"
+                    ]
+                },
+                "Ang Vel": {
+                    "$ref": "#/definitions/three_vector"
+                }
+            },
+            "required": [
+                "Ang Vel Frame",
+                "Att Representation",
+                "Att Frame",
+                "Ang Vel"
+            ],
+            "if": {
+                "properties": {
+                    "Att Representation": {
+                        "const": "Q"
+                    }
+                }
+            },
+            "then": {
+                "required": [
+                    "Quaternion"
+                ],
+                "properties": {
+                    "Quaternion": {
+                        "$id": "#/Attitude/Quaternion",
+                        "type": "array",
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "items": {
+                            "type": "number"
+                        }
+                    }
+                }
+            },
+            "else": {
+                "required": [
+                    "Euler Angles"
+                ],
+                "properties": {
+                    "Euler Angles": {
+                        "$ref": "#/definitions/Euler Angles"
+                    }
+                }
+            }
+        },
+        "Dynamics Flags": {
+            "type": "object",
+            "properties": {
+                "Method": {
+                    "type": "string",
+                    "enum": [
+                        "GAUSS_ELIM",
+                        "ORDER_N"
+                    ]
+                },
+                "Compute Constraints": {
+                    "type": "boolean"
+                },
+                "Mass Reference Point": {
+                    "type": "string",
+                    "enum": [
+                        "REFPT_CM",
+                        "REFPT_JOINT"
+                    ]
+                },
+                "Flex Active": {
+                    "type": "boolean"
+                },
+                "2nd Order Flex": {
+                    "type": "boolean"
+                },
+                "Shaker File Name": {
+                    "type": "string"
+                },
+                "Drag Coefficient": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "Method",
+                "Compute Constraints",
+                "Mass Reference Point",
+                "Flex Active",
+                "2nd Order Flex",
+                "Shaker File Name",
+                "Drag Coefficient"
+            ]
+        },
+        "Bodies": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "properties": {
+                        "$ref": "#/definitions/Body"
+                    }
+                }
+            }
+        },
+        "Joints": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Joint": {
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Body Indicies": {
+                                "type": "array",
+                                "minItems": 2,
+                                "maxItems": 2,
+                                "items": {
+                                    "type": "integer"
+                                }
+                            },
+                            "Joint Type": {
+                                "type": "string",
+                                "enum": [
+                                    "PASSIVE",
+                                    "ACTUATED"
+                                ]
+                            },
+                            "Rot DOF": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 3
+                            },
+                            "Rot Sequence": {
+                                "type": "integer",
+                                "enum": [
+                                    123,
+                                    231,
+                                    312,
+                                    132,
+                                    213,
+                                    321,
+                                    121,
+                                    131,
+                                    212,
+                                    232,
+                                    313,
+                                    323
+                                ]
+                            },
+                            "Rot Type": {
+                                "type": "string",
+                                "enum": [
+                                    "GIMBAL",
+                                    "SPHERICAL"
+                                ]
+                            },
+                            "Trn DOF": {
+                                "$ref": "#/properties/Joints/items/properties/Joint/properties/Rot DOF"
+                            },
+                            "Trn Sequence": {
+                                "$ref": "#/properties/Joints/items/properties/Joint/properties/Rot Sequence"
+                            },
+                            "Rot DOF Locked": {
+                                "type": "array",
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "items": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "Trn DOF Locked": {
+                                "$ref": "#/properties/Joints/items/properties/Joint/properties/Rot DOF Locked"
+                            },
+                            "Init Angles": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Init Angle Rates": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Init Displacement": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Init Displacement Rates": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Bi-Gi Angles": {
+                                "$ref": "#/definitions/Euler Angles"
+                            },
+                            "Bo-Go Angles": {
+                                "$ref": "#/definitions/Euler Angles"
+                            },
+                            "Pos wrt Inner Body": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Pos wrt Outer Body": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Parm File Name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Body Indicies",
+                            "Joint Type",
+                            "Rot DOF",
+                            "Rot Sequence",
+                            "Rot Type",
+                            "Trn DOF",
+                            "Trn Sequence",
+                            "Rot DOF Locked",
+                            "Trn DOF Locked",
+                            "Init Angles",
+                            "Init Angle Rates",
+                            "Init Displacement",
+                            "Init Displacement Rates",
+                            "Bi-Gi Angles",
+                            "Bo-Go Angles",
+                            "Pos wrt Inner Body",
+                            "Pos wrt Outer Body",
+                            "Parm File Name"
+                        ]
+                    }
+                }
+            }
+        },
+        "Wheel Params": {
+            "type": "object",
+            "properties": {
+                "Drag": {
+                    "type": "boolean"
+                },
+                "Jitter": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "Drag",
+                "Jitter"
+            ]
+        },
+        "Wheels": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Wheel": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer"
+                            },
+                            "Initial Momentum": {
+                                "type": "number"
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Max Torque": {
+                                "type": "number"
+                            },
+                            "Max Momentum": {
+                                "type": "number"
+                            },
+                            "Rotor Inertia": {
+                                "type": "number"
+                            },
+                            "Body": {
+                                "$ref": "#/definitions/Body"
+                            },
+                            "Node": {
+                                "type": "integer"
+                            },
+                            "Drag-Jitter File Name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Initial Momentum",
+                            "Axis",
+                            "Max Torque",
+                            "Max Momentum",
+                            "Rotor Inertia",
+                            "Body",
+                            "Node",
+                            "Drag-Jitter File Name"
+                        ]
+                    }
+                }
+            }
+        },
+        "MTBs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "MTB": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer"
+                            },
+                            "Saturation": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Saturation",
+                            "Axis",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "Thrusters": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Thruster": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer"
+                            },
+                            "Mode": {
+                                "type": "string",
+                                "enum": [
+                                    "PULSED",
+                                    "PROPORTIONAL"
+                                ]
+                            },
+                            "Force": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Body": {
+                                "$ref": "#/definitions/Body"
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Mode",
+                            "Force",
+                            "Axis",
+                            "Body",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "Gyros": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Gyro": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Max Rate": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Scale Factor": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Quantization": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Angle Random Walk": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Bias Stability": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Bias Stability Timespan": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Angle Noise": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Initial Bias": {
+                                "type": "number"
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Axis",
+                            "Max Rate",
+                            "Scale Factor",
+                            "Quantization",
+                            "Angle Random Walk",
+                            "Bias Stability",
+                            "Bias Stability Timespan",
+                            "Angle Noise",
+                            "Initial Bias",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "Magnetometers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Magnetometer": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Saturation": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Scale Factor": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Quantization": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Noise": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Axis",
+                            "Saturation",
+                            "Scale Factor",
+                            "Quantization",
+                            "Noise",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "CSSs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "CSS": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Half Cone Angle": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Scale Factor": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Quantization": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Body": {
+                                "$ref": "#/definitions/Body"
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Axis",
+                            "Half Cone Angle",
+                            "Scale Factor",
+                            "Quantization",
+                            "Body",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "FSSs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "FSS": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Mounting Angles": {
+                                "$ref": "#/definitions/Euler Angles"
+                            },
+                            "Boresight Axis": {
+                                "type": "string",
+                                "enum": [
+                                    "X_AXIS",
+                                    "Y_AXIS",
+                                    "Z_AXIS"
+                                ]
+                            },
+                            "FOV Size": {
+                                "type": "array",
+                                "minItems": 2,
+                                "maxItems": 2,
+                                "items": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            },
+                            "Noise Equivalent Angle": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Quantization": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Mounting Angles",
+                            "Boresight Axis",
+                            "FOV Size",
+                            "Noise Equivalent Angle",
+                            "Quantization",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "STs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ST": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Mounting Angles": {
+                                "$ref": "#/definitions/Euler Angles"
+                            },
+                            "Boresight Axis": {
+                                "type": "string",
+                                "enum": [
+                                    "X_AXIS",
+                                    "Y_AXIS",
+                                    "Z_AXIS"
+                                ]
+                            },
+                            "FOV Size": {
+                                "type": "array",
+                                "minItems": 2,
+                                "maxItems": 2,
+                                "items": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            },
+                            "Exclusion Angles": {
+                                "type": "object",
+                                "properties": {
+                                    "Sun": {
+                                        "type": "number",
+                                        "minimum": 0
+                                    },
+                                    "Earth": {
+                                        "type": "number",
+                                        "minimum": 0
+                                    },
+                                    "Luna": {
+                                        "type": "number",
+                                        "minimum": 0
+                                    }
+                                }
+                            },
+                            "Noise Equivalent Angle": {
+                                "type": "array",
+                                "minItems": 3,
+                                "maxItems": 3,
+                                "items": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Mounting Angles",
+                            "Boresight Axis",
+                            "FOV Size",
+                            "Exclusion Angles",
+                            "Noise Equivalent Angle",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "GPSs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "GPS": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Position Noise": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Velocity Noise": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Time Noise": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Position Noise",
+                            "Velocity Noise",
+                            "Time Noise",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        },
+        "Accelerometers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Accelerometer": {
+                        "type": "object",
+                        "properties": {
+                            "Index": {
+                                "type": "integer",
+                                "minimum": 0
+                            },
+                            "Sample Time": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Axis": {
+                                "$ref": "#/definitions/three_vector"
+                            },
+                            "Max Acceleration": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Scale Factor": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Quantization": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "DV Random Walk": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Bias Stability": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Bias Stability Timespan": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "DV Noise": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "Initial Bias": {
+                                "type": "number"
+                            },
+                            "Node": {
+                                "type": "integer",
+                                "minimum": 0
+                            }
+                        },
+                        "required": [
+                            "Index",
+                            "Sample Time",
+                            "Axis",
+                            "Max Acceleration",
+                            "Scale Factor",
+                            "Quantization",
+                            "DV Random Walk",
+                            "Bias Stability",
+                            "Bias Stability Timespan",
+                            "DV Noise",
+                            "Initial Bias",
+                            "Node"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "Name",
+        "Configuration",
+        "Orbit",
+        "Attitude",
+        "Dynamics Flags",
+        "Bodies",
+        "Joints",
+        "Wheel Params",
+        "Wheels",
+        "MTBs",
+        "Thrusters",
+        "Gyros",
+        "Magnetometers",
+        "CSSs",
+        "FSSs",
+        "STs",
+        "GPSs",
+        "Accelerometers"
+    ]
+}
