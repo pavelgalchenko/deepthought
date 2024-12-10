@@ -684,11 +684,11 @@ struct DSMMeasListType *read_db(const char *db_name, struct DateType *db_time)
          exit(EXIT_FAILURE);
       }
 
-      // get db state up to db_time
+      // TODO: get db state up to db_time
       return NULL;
    }
 
-   // output db data from last db state up to db_time
+   // TODO: output db data from last db state up to db_time
 }
 
 int main(int argc, char **argv)

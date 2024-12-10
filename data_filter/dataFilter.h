@@ -42,11 +42,7 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#if defined __MINGW32__
-#include <Windows.h>
-#elif defined _WIN32
-#include <Windows.h>
-#elif defined _WIN64
+#if defined(__MINGW32__) || (_WIN32) || (_WIN64)
 #include <Windows.h>
 #elif defined __APPLE__
 #include <mach-o/dyld.h>
