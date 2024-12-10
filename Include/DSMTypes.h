@@ -286,6 +286,8 @@ struct DSMMeasListType {
 };
 
 struct DSMStateType {
+   // TODO: A HASH TABLE WILL DO WHAT I WANT!!!!! to make this more configurable
+   // if this were C++, this would be MUCH easier
    // TODO: make commState a different structure that is user configurable
    // I would have already done this, but CBN complicates the issue
    // (double ** != double [][])

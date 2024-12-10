@@ -1,27 +1,13 @@
 # BEGINCOMMENT
 #
-#
-#
+# This script converts an existing .txt configured DeepThought mission to .yaml
+# use as:
+#   run MissionsTxt2YAML.py [location of yamlTranslationParams.yaml] [location of mission directory to convert] [True/False if you want the yaml commented]
+# the mission directory should have an 'InOut' subdirectory
 #
 # ENDCOMMENT
 
-#################################
-# BEGIN USER PLOTTING FUNCTIONS #
-#################################
-
-###############################################################################
-# STOP STOP STOP STOP STOP STOP STOP  STOP STOP STOP STOP STOP STOP STOP STOP #
-###############################################################################
-
-# NO FURTHER USER EDITABLE PARAMETERS, EDITING CODE BELOW SHALL DESTROY WORLD #
-
-###############################################################################
-# STOP STOP STOP STOP STOP STOP STOP  STOP STOP STOP STOP STOP STOP STOP STOP #
-###############################################################################
-
-# Required Packages
-
-# %%
+# %% Required Packages
 import numbers
 import numpy as np
 import sys
@@ -35,7 +21,7 @@ import ruamel.yaml.comments
 
 
 # %%
-def convertSC(missionDir, yaml, fileName, commentDict=None):
+def convertSC(missionDir, fileName, commentDict=None):
     scName = fileName[3:-4]
     scDict = dict()
     scDict["Name"] = scName
@@ -588,7 +574,7 @@ def convertSC(missionDir, yaml, fileName, commentDict=None):
 
 
 # %%
-def convertOrb(missionDir, yaml, fileName, commentDict=None):
+def convertOrb(missionDir, fileName, commentDict=None):
     orbName = fileName[4:-4]
 
     orbDict = dict()
@@ -752,7 +738,7 @@ def convertOrb(missionDir, yaml, fileName, commentDict=None):
 
 
 # %%
-def convertNodes(missionDir, yaml, fileName, commentDict=None):
+def convertNodes(missionDir, fileName, commentDict=None):
     nodeDict = dict()
     confDict = nodeDict["Configuration"] = dict()
     confDict["Name"] = fileName
@@ -779,7 +765,7 @@ def convertNodes(missionDir, yaml, fileName, commentDict=None):
 
 
 # %%
-def convertFOV(missionDir, yaml, fovFileName="Inp_FOV.txt", commentDict=None):
+def convertFOV(missionDir, fovFileName="Inp_FOV.txt", commentDict=None):
     fovDict = dict()
     fovDict["FOVs"] = fovs = list()
     with open(missionDir + "/InOut/" + fovFileName, "r") as f:
@@ -837,9 +823,7 @@ def convertFOV(missionDir, yaml, fovFileName="Inp_FOV.txt", commentDict=None):
 
 
 # %%
-def convertGraphics(
-    missionDir, yaml, graphicsFileName="Inp_Graphics.txt", commentDict=None
-):
+def convertGraphics(missionDir, graphicsFileName="Inp_Graphics.txt", commentDict=None):
     graphicsDict = dict()
     graphicsDict["Configuration"] = configDict = dict()
     configDict["Name"] = graphicsFileName
@@ -966,7 +950,7 @@ def convertGraphics(
 
 
 # %%
-def convertIPC(missionDir, yaml, ipcFileName="Inp_IPC.txt", commentDict=None):
+def convertIPC(missionDir, ipcFileName="Inp_IPC.txt", commentDict=None):
     ipcDict = dict()
     ipcDict["IPCs"] = ipcs = list()
     with open(missionDir + "/InOut/" + ipcFileName, "r") as f:
@@ -1020,7 +1004,7 @@ def convertIPC(missionDir, yaml, ipcFileName="Inp_IPC.txt", commentDict=None):
 
 
 # %%
-def convertRegion(missionDir, yaml, regionFileName="Inp_Region.txt", commentDict=None):
+def convertRegion(missionDir, regionFileName="Inp_Region.txt", commentDict=None):
     regDict = dict()
     regDict["Regions"] = regions = list()
     with open(missionDir + "/InOut/" + regionFileName, "r") as f:
@@ -1072,7 +1056,7 @@ def convertRegion(missionDir, yaml, regionFileName="Inp_Region.txt", commentDict
 
 
 # %%
-def convertTDRS(missionDir, yaml, tdrsFileName="Inp_TDRS.txt", commentDict=None):
+def convertTDRS(missionDir, tdrsFileName="Inp_TDRS.txt", commentDict=None):
     tdrs = dict()
     tdrsList = tdrs["TDRSs"] = list()
     with open(missionDir + "/InOut/" + tdrsFileName, "r") as f:
@@ -1095,7 +1079,7 @@ def convertTDRS(missionDir, yaml, tdrsFileName="Inp_TDRS.txt", commentDict=None)
 
 
 # %%
-def convertNOS3(missionDir, yaml, nos3FileName="Inp_NOS3.txt", commentDict=None):
+def convertNOS3(missionDir, nos3FileName="Inp_NOS3.txt", commentDict=None):
     outDict = dict()
     nos3 = outDict["Configuration"] = dict()
     with open(missionDir + "/InOut/" + nos3FileName, "r") as f:
@@ -1123,7 +1107,7 @@ def nukeIndex(dsmMap):
             nukeIndex(item)
 
 
-def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
+def convertDSM(missionDir, dsmFileName="Inp_DSM.txt", commentDict=None):
     dsm = ruamel.yaml.comments.CommentedMap()
     dsmTypes = [
         "Gains",
@@ -1602,7 +1586,7 @@ def convertDSM(missionDir, yaml, dsmFileName="Inp_DSM.txt", commentDict=None):
 
 
 # %%
-def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
+def convertSim(missionDir, simFileName="Inp_Sim.txt", commentDict=None):
     sim = dict()
     with open(missionDir + "/InOut/" + simFileName, "r") as f:
         lines = f.readlines()
@@ -1816,6 +1800,7 @@ def convertSim(missionDir, yaml, simFileName="Inp_Sim.txt", commentDict=None):
 
 #  %%
 def traverseAndSetNumericArray(data):
+    # Traverses the yaml in data and sets lists of numbers or strings to flow style so its easier to read
     if data:
         match data:
             case dict():
@@ -1834,6 +1819,7 @@ def traverseAndSetNumericArray(data):
 
 
 def convertToYamlAndComment(data, commentDict):
+    # Applies comments in comment dict to appear after the corresponding key in data
     data = convertToYamlObjects(data)
     if commentDict is not None:
         for key in commentDict.keys():
@@ -1843,6 +1829,7 @@ def convertToYamlAndComment(data, commentDict):
 
 
 def convertToYamlObjects(data):
+    # makes sure that everything in data is a ruamel.yaml object so comments and other operations happen smoothly
     if data:
         match data:
             case dict():
@@ -1904,7 +1891,7 @@ startswith_type = {
 
 # %%
 if __name__ == "__main__":
-    yaml_file = sys.argv[1]
+    yaml_file = sys.argv[1] # configuration file used mainly to indicate sizes of blocks in sc txt files
     missionDir = sys.argv[2]
     doComment = sys.argv[3] == "True"
 
