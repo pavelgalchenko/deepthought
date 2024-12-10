@@ -4019,7 +4019,7 @@ void DrawUnitSphere(void)
 {
    double lat, lng;
    long i, j, Im;
-   char label[20];
+   char label[40];
 
    struct FssType *F;
    struct StarTrackerType *ST;
@@ -5612,8 +5612,8 @@ void ReadGraphicsInpFile(void)
    /* .. GL Output Interval */
    if (fy_node_scanf(node, "/Output Interval %lf /Star Catalog File %79[^\n]s",
                      &DTOUTGL, StarCatFileName) != 2) {
-      printf("Invalid graphics output interval or star catalog file. "
-             "Exiting...\n");
+      fprintf(stderr, "Invalid graphics output interval or star catalog file. "
+                      "Exiting...\n");
       exit(EXIT_FAILURE);
    }
 
@@ -5637,32 +5637,34 @@ void ReadGraphicsInpFile(void)
                      "/POV Vertical Angle %lf",
                      response, &POV.Host.SC, &POV.Host.Body, &POV.Target.SC,
                      &POV.Target.Body, &Frame, &POV.Range, &POV.Angle) != 8) {
-      printf("Improperly formatted POV in Inp_Graphics. Exiting...\n");
+      fprintf(stderr, "Improperly formatted POV in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.Mode = DecodeString(response);
 
    if (!fy_node_scanf(node, "/Host/Type %119s", response)) {
-      printf("Could not find Host Type for POV in Inp_Graphics. Exiting...\n");
+      fprintf(stderr,
+              "Could not find Host Type for POV in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.Host.Type = DecodeString(response);
    if (!fy_node_scanf(node, "/Target/Type %119s", response)) {
-      printf("Could not find Target Type for POV in Inp_Graphics. "
-             "Exiting...\n");
+      fprintf(
+          stderr,
+          "Could not find Target Type for POV in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.Target.Type = DecodeString(response);
 
    if (POV.Host.SC >= Nsc || !SC[POV.Host.SC].Exists) {
-      printf("POV Host SC %ld doesn't exist.\n", POV.Host.SC);
-      exit(1);
+      fprintf(stderr, "POV Host SC %ld doesn't exist.\n", POV.Host.SC);
+      exit(EXIT_FAILURE);
    }
    POV.Host.RefOrb = SC[POV.Host.SC].RefOrb;
    POV.Host.World  = Orb[POV.Host.RefOrb].World;
    if (POV.Target.SC >= Nsc || !SC[POV.Target.SC].Exists) {
-      printf("POV Target SC %ld doesn't exist.\n", POV.Target.SC);
-      exit(1);
+      fprintf(stderr, "POV Target SC %ld doesn't exist.\n", POV.Target.SC);
+      exit(EXIT_FAILURE);
    }
    POV.Target.RefOrb = SC[POV.Target.SC].RefOrb;
    POV.Target.World  = Orb[POV.Target.RefOrb].World;
@@ -5686,24 +5688,26 @@ void ReadGraphicsInpFile(void)
          POV.Frame = FRAME_B;
          break;
       default:
-         printf("Nonsense frame in Inp_Graphics.txt\n");
-         exit(1);
+         fprintf(stderr,"Nonsense frame in Inp_Graphics.txt\n");
+         exit(EXIT_FAILURE);
          break;
    }
 
    if (!fy_node_scanf(node, "/Boresight Axis %119s", response)) {
-      printf("Could not find Boresight Axis for POV in Inp_Graphics. "
-             "Exiting...\n");
+      fprintf(stderr, "Could not find Boresight Axis for POV in Inp_Graphics. "
+                      "Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.BoreAxis = DecodeString(response);
    if (!fy_node_scanf(node, "/Up Axis %119s", response)) {
-      printf("Could not find Up Axis for POV in Inp_Graphics. Exiting...\n");
+      fprintf(stderr,
+              "Could not find Up Axis for POV in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.UpAxis = DecodeString(response);
    if (!fy_node_scanf(node, "/POV View %119s", response)) {
-      printf("Could not find POV View for POV in Inp_Graphics. Exiting...\n");
+      fprintf(stderr,
+              "Could not find POV View for POV in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    POV.View = DecodeString(response);
@@ -5720,7 +5724,8 @@ void ReadGraphicsInpFile(void)
                      "/Gamma Exponent %lf",
                      CamTitle, &CamWidth, &CamHeight, &MouseScaleFactor,
                      &GammaCorrection) != 5) {
-      printf("Improperly configured Cam field in Inp_Graphics. Exiting...\n");
+      fprintf(stderr,
+              "Improperly configured Cam field in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
 
@@ -5759,7 +5764,8 @@ void ReadGraphicsInpFile(void)
                      "/Dimensions/Width %ld "
                      "/Dimensions/Height %ld",
                      MapTitle, &MapWidth, &MapHeight) != 3) {
-      printf("Improperly configured Map field in Inp_Graphics. Exiting...\n");
+      fprintf(stderr,
+              "Improperly configured Map field in Inp_Graphics. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    node = fy_node_by_path_def(node, "/Map Show");
@@ -5817,32 +5823,34 @@ void LoadFOVs(void)
                         &FOV[Ifov].Width, &FOV[Ifov].Height,
                         &FOV[Ifov].Color[3], response1, &FOV[Ifov].SC,
                         &FOV[Ifov].Body, response2) != 10) {
-         printf("Bad FOV Configuration. Exiting...\n");
+         fprintf(stderr, "Bad FOV Configuration. Exiting...\n");
          exit(EXIT_FAILURE);
       }
 
       if (FOV[Ifov].Width >= 180.0) {
-         printf("FOV[%ld] Width >= 180 deg.  This is not allowed.  Bailing "
-                "out.\n",
-                Ifov);
-         exit(1);
+         fprintf(
+             stderr,
+             "FOV[%ld] Width >= 180 deg.  This is not allowed.  Bailing out.\n",
+             Ifov);
+         exit(EXIT_FAILURE);
       }
       if (FOV[Ifov].Height >= 180.0) {
-         printf("FOV[%ld] Height >= 180 deg.  This is not allowed.  Bailing "
-                "out.\n",
-                Ifov);
-         exit(1);
+         fprintf(stderr,
+                 "FOV[%ld] Height >= 180 deg.  This is not allowed.  Bailing "
+                 "out.\n",
+                 Ifov);
+         exit(EXIT_FAILURE);
       }
       FOV[Ifov].Width  *= D2R;
       FOV[Ifov].Height *= D2R;
       FOV[Ifov].Type    = DecodeString(response1);
       if (FOV[Ifov].SC >= Nsc) {
-         printf("FOV[%ld].SC is out of range.\n", Ifov);
-         exit(1);
+         fprintf(stderr, "FOV[%ld].SC is out of range.\n", Ifov);
+         exit(EXIT_FAILURE);
       }
       if (SC[FOV[Ifov].SC].Exists && FOV[Ifov].Body >= SC[FOV[Ifov].SC].Nb) {
-         printf("FOV[%ld].Body is out of range.\n", Ifov);
-         exit(1);
+         fprintf(stderr, "FOV[%ld].Body is out of range.\n", Ifov);
+         exit(EXIT_FAILURE);
       }
       assignYAMLToFloatArray(3, fy_node_by_path_def(seqNode, "/Color/RGB"),
                              FOV[Ifov].Color);

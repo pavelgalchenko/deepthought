@@ -2444,32 +2444,36 @@ void KaneNBodyRK4(struct SCType *S)
    /* .. NaN Check */
    for (i = 0; i < Nu; i++) {
       if (isnan(u[i])) {
-         printf("Oops!  u[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                "Better fix that.\n",
-                i, SimTime);
-         exit(1);
+         fprintf(stderr,
+                 "Oops!  u[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
+                 "Better fix that.\n",
+                 i, SimTime);
+         exit(EXIT_FAILURE);
       }
    }
    for (i = 0; i < Nx; i++) {
       if (isnan(x[i])) {
-         printf("Oops!  x[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                "Better fix that.\n",
-                i, SimTime);
-         exit(1);
+         fprintf(stderr,
+                 "Oops!  x[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
+                 "Better fix that.\n",
+                 i, SimTime);
+         exit(EXIT_FAILURE);
       }
    }
    for (i = 0; i < Nf; i++) {
       if (isnan(uf[i])) {
-         printf("Oops!  uf[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                "Better fix that.\n",
-                i, SimTime);
-         exit(1);
+         fprintf(stderr,
+                 "Oops!  uf[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
+                 "Better fix that.\n",
+                 i, SimTime);
+         exit(EXIT_FAILURE);
       }
       if (isnan(xf[i])) {
-         printf("Oops!  xf[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                "Better fix that.\n",
-                i, SimTime);
-         exit(1);
+         fprintf(stderr,
+                 "Oops!  xf[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
+                 "Better fix that.\n",
+                 i, SimTime);
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -2809,9 +2813,10 @@ void OrderNJointPartials(struct JointType *G)
          Pwdot[i3][0] = -c2 * G->AngRate[1];
       }
       else {
-         printf("RotSeq %ld is not a Body-3 Sequence, so is not supported.\n",
-                G->RotSeq);
-         exit(1);
+         fprintf(stderr,
+                 "RotSeq %ld is not a Body-3 Sequence, so is not supported.\n",
+                 G->RotSeq);
+         exit(EXIT_FAILURE);
       }
       MxM(G->CBoGo, Pw, G->Pw);
       MxM(G->CBoGo, Pwdot, G->Pwdot);
@@ -2859,8 +2864,8 @@ void MINV1to6(double A[6][6], double AI[6][6], long N)
          }
       }
       if (PIVOT == 0.0) {
-         printf("Matrix is singular in MINV1to6\n");
-         exit(1);
+         fprintf(stderr, "Matrix is singular in MINV1to6\n");
+         exit(EXIT_FAILURE);
       }
 
       for (J = 0; J < N; J++) {
@@ -4300,9 +4305,10 @@ void PartitionForces(struct SCType *S)
          FextN[i] += S->B[Ib].FrcN[i];
    }
 
-   S->FrcN[0] += FextN[0];
-   S->FrcN[1] += FextN[1];
-   S->FrcN[2] += FextN[2];
+   for (i = 0; i < 3; i++) {
+      S->FrcN[i] += FextN[i];
+      S->AccN[i]  = FextN[i] / S->mass; /* For accelerometer model */
+   }
    for (Ib = 0; Ib < Nb; Ib++) {
       MxV(S->B[Ib].CN, FextN, FextB);
       for (i = 0; i < 3; i++) {
@@ -4327,8 +4333,8 @@ void Dynamics(struct SCType *S)
          OrderNMultiBodyRK4(S);
          break;
       default:
-         printf("Unknown Dynamics Solution option.  Bailing out.\n");
-         exit(1);
+         fprintf(stderr,"Unknown Dynamics Solution option.  Bailing out.\n");
+         exit(EXIT_FAILURE);
    }
    //}
    // else OneBodyRK4(S);
@@ -4373,8 +4379,8 @@ void Dynamics(struct SCType *S)
          }
          break;
       default:
-         printf("Unknown Orbit Regime in Dynamics.  Bailing out.\n");
-         exit(1);
+         fprintf(stderr,"Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         exit(EXIT_FAILURE);
    }
 }
 

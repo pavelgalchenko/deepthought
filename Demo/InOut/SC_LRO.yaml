@@ -287,7 +287,7 @@ Joints:
       Pos wrt Inner Body: [0.009, -0.012, -0.219]
       Pos wrt Outer Body: [0.014, 0.0, 0.0]
       Parm File Name: NONE
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels:
   - Wheel:
       Index: 0
@@ -302,7 +302,7 @@ Wheels:
   - Wheel:
       Index: 1
       Initial Momentum: 0.0
-      Axis: [0.0, 0.0, 1.0, 0.0]
+      Axis: [0.0, 1.0, 0.0]
       Max Torque: 0.14
       Max Momentum: 50.0
       Rotor Inertia: 0.012
@@ -312,7 +312,7 @@ Wheels:
   - Wheel:
       Index: 2
       Initial Momentum: 0.0
-      Axis: [0.0, 0.0, 0.0, 1.0]
+      Axis: [0.0, 0.0, 1.0]
       Max Torque: 0.14
       Max Momentum: 50.0
       Rotor Inertia: 0.012
@@ -327,4 +327,5 @@ CSSs: []
 FSSs: []
 STs: []
 GPSs: []
+FGSs: []
 Accelerometers: []

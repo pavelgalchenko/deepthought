@@ -26,8 +26,8 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    long i;
 
    if (Iorb < 0 || Iorb >= Norb) {
-      printf("Desired orbit is out of bounds.\n");
-      exit(1);
+      fprintf(stderr,"Desired orbit is out of bounds.\n");
+      exit(EXIT_FAILURE);
    }
 
    OldOrb         = &Orb[S->RefOrb];
@@ -35,9 +35,9 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    NewOrb->Exists = TRUE;
 
    if (NewOrb->World != OldOrb->World) {
-      printf("New Orbit and Old Orbit must (for the present) be in same "
+      fprintf(stderr,"New Orbit and Old Orbit must (for the present) be in same "
              "gravitational system.\n");
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 
    /* .. Update PosR, VelR, PosEH, VelEH */
@@ -424,8 +424,8 @@ void SplineToPosVel(struct OrbitType *O)
          O->NodeVel[3][j] *= 1000.0;
       }
       if (feof(O->SplineFile)) {
-         printf("Oops.  Reached end of Spline file.\n");
-         exit(1);
+         fprintf(stderr,"Oops.  Reached end of Spline file.\n");
+         exit(EXIT_FAILURE);
       }
    }
 
@@ -460,8 +460,8 @@ void SplineToPosVel(struct OrbitType *O)
       }
    }
    else {
-      printf("Invalid Orbit Regime in SplineToPosVel.\n");
-      exit(1);
+      fprintf(stderr,"Invalid Orbit Regime in SplineToPosVel.\n");
+      exit(EXIT_FAILURE);
    }
 }
 /**********************************************************************/
@@ -542,8 +542,8 @@ void OrbitMotion(double Time)
                FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
                break;
             default:
-               printf("Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
-               exit(1);
+               fprintf(stderr,"Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
+               exit(EXIT_FAILURE);
          }
 
          /* Update Formation Frame */
@@ -642,8 +642,8 @@ void Ephemerides(void)
             PosJ[i] = 1000.0 * P;
             VelJ[i] = 1000.0 * dPdu * dudJD / 86400.0;
          }
-         QTxV(qJ2000H, PosJ, Eph->PosN);
-         QTxV(qJ2000H, VelJ, Eph->VelN);
+         QTxV(qjh, PosJ, Eph->PosN);
+         QTxV(qjh, VelJ, Eph->VelN);
       }
       /* Adjust for barycenters */
       /* Move planets from barycentric to Sun-centered */
@@ -682,8 +682,8 @@ void Ephemerides(void)
          World[LUNA].VelH[i] = World[EARTH].VelH[i] + World[LUNA].eph.VelN[i];
       }
       /* Rotate Moon into ECI */
-      QxV(qJ2000H, rh, World[LUNA].eph.PosN);
-      QxV(qJ2000H, vh, World[LUNA].eph.VelN);
+      QxV(qjh, rh, World[LUNA].eph.PosN);
+      QxV(qjh, vh, World[LUNA].eph.VelN);
       World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
    }
@@ -693,8 +693,8 @@ void Ephemerides(void)
    }
 #endif
    else {
-      printf("Bogus Ephem Option in Ephemerides.  Bailing out.\n");
-      exit(1);
+      fprintf(stderr,"Bogus Ephem Option in Ephemerides.  Bailing out.\n");
+      exit(EXIT_FAILURE);
    }
 
    /* .. Locate Asteroids and Comets */
@@ -834,6 +834,8 @@ void Ephemerides(void)
                        S->VelEH);
             FindCLN(S->PosN, S->VelN, S->CLN, S->wln);
          }
+         /* Equatorial Frame: e1 = n3, e2 = East, e3 points to World axis */
+         FindCEN(S->PosN, S->CEN);
 
          /* Locate Spacecraft in H frame */
          MTxV(W->CNH, S->PosN, S->PosH);

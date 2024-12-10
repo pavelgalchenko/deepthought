@@ -127,7 +127,7 @@ void InitAlbedo(void)
 /* Significant contributions to this algorithm were made by           */
 /* Daniel Wilkinson, summer intern 2020, and                          */
 /* Emily Ballantyne, summer intern 2021.                              */
-void FindAlbedo(struct SCType *S, struct CssType *CSS)
+void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
 {
    struct BodyType *B;
    struct WorldType *W;

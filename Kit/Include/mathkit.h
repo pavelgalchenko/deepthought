@@ -77,9 +77,9 @@ void QTxV(const double QAB[4], const double Va[3], double Vb[3]);
 void UNITQ(double Q[4]);
 void RECTIFYQ(double Q[4]);
 void PerpBasis(const double A[3], double B[3], double C[3]);
-long fact(long const n);
-long oddfact(long const n);
-long factDfact(long const n, long const m);
+double fact(long const n);
+double oddfact(long const n);
+double factDfact(long const n, long const m);
 void Legendre(const long N, const long M, const double x,
               double P[N + 1][M + 1], double sdP[N + 1][M + 1]);
 void SphericalHarmonics(const long N, const long M, const double r,

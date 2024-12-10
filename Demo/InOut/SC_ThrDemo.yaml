@@ -2,134 +2,134 @@
 ---
 Name: ThrDemo
 Configuration:
-  Description: Demonstrate Thrusters
-  Label: Thr
-  Sprite File: GenScSpriteAlpha.ppm
-  FSW Identifier: THR_FSW
-  FSW Sample Time: 0.2
+    Description: Demonstrate Thrusters
+    Label: Thr
+    Sprite File: GenScSpriteAlpha.ppm
+    FSW Identifier: THR_FSW
+    FSW Sample Time: 0.2
 Orbit:
-  Prop Type: ENCKE
-  Pos Specifier: CM
-  Pos wrt F: [0.0, 0.0, 0.0]
-  Vel wrt F: [0.0, 0.0, 0.0]
+    Prop Type: ENCKE
+    Pos Specifier: CM
+    Pos wrt F: [0.0, 0.0, 0.0]
+    Vel wrt F: [0.0, 0.0, 0.0]
 Attitude:
-  Ang Vel Frame: N
-  Att Representation: A
-  Att Frame: N
-  Ang Vel: [0.0, 0.0, 0.0]
-  Quaternion: [0.0, 0.0, 0.0, 1.0]
-  Euler Angles:
-    Angles: [60.0, 50.0, 40.0]
-    Sequence: 213
+    Ang Vel Frame: N
+    Att Representation: A
+    Att Frame: N
+    Ang Vel: [0.0, 0.0, 0.0]
+    Quaternion: [0.0, 0.0, 0.0, 1.0]
+    Euler Angles:
+        Angles: [60.0, 50.0, 40.0]
+        Sequence: 213
 Dynamics Flags:
-  Method: GAUSS_ELIM
-  Compute Constraints: false
-  Mass Reference Point: REFPT_CM
-  Flex Active: false
-  2nd Order Flex: false
-  Shaker File Name: NONE
-  Drag Coefficient: 2.0
+    Method: GAUSS_ELIM
+    Compute Constraints: false
+    Mass Reference Point: REFPT_CM
+    Flex Active: false
+    2nd Order Flex: false
+    Shaker File Name: NONE
+    Drag Coefficient: 2.0
 Bodies:
-  - Body: &Body_0
-      Index: 0
-      Mass: 100.0
-      MOI: [100.0, 200.0, 300.0]
-      POI: [0.0, 0.0, 0.0]
-      Pos of CM: [0.0, 0.0, 0.0]
-      Constant Momentum: [0.0, 0.0, 0.0]
-      Constant Dipole: [0.0, 0.0, 0.0]
-      Geometry File Name: JustACube.obj
-      Node File Name: Nodes_ThrDemo.txt
-      Flex File Name: NONE
+    - Body: &Body_0
+          Index: 0
+          Mass: 100.0
+          MOI: [100.0, 200.0, 300.0]
+          POI: [0.0, 0.0, 0.0]
+          Pos of CM: [0.0, 0.0, 0.0]
+          Constant Momentum: [0.0, 0.0, 0.0]
+          Constant Dipole: [0.0, 0.0, 0.0]
+          Geometry File Name: JustACube.obj
+          Node File Name: Nodes_ThrDemo.txt
+          Flex File Name: NONE
 Joints: []
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels: []
 MTBs: []
 Thrusters:
-  - Thruster:
-      Index: 0
-      Mode: PULSED
-      Force: 1.0
-      Axis: [-1.0, 0.0, 0.0]
-      Body: *Body_0
-      Node: 0
-  - Thruster:
-      Index: 1
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, -1.0, 0.0]
-      Body: *Body_0
-      Node: 0
-  - Thruster:
-      Index: 2
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, 0.0, -1.0]
-      Body: *Body_0
-      Node: 0
-  - Thruster:
-      Index: 3
-      Mode: PULSED
-      Force: 1.0
-      Axis: [-1.0, 0.0, 0.0]
-      Body: *Body_0
-      Node: 1
-  - Thruster:
-      Index: 4
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, 1.0, 0.0]
-      Body: *Body_0
-      Node: 1
-  - Thruster:
-      Index: 5
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, 0.0, 1.0]
-      Body: *Body_0
-      Node: 1
-  - Thruster:
-      Index: 6
-      Mode: PULSED
-      Force: 1.0
-      Axis: [1.0, 0.0, 0.0]
-      Body: *Body_0
-      Node: 2
-  - Thruster:
-      Index: 7
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, -1.0, 0.0]
-      Body: *Body_0
-      Node: 2
-  - Thruster:
-      Index: 8
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, 0.0, 1.0]
-      Body: *Body_0
-      Node: 2
-  - Thruster:
-      Index: 9
-      Mode: PULSED
-      Force: 1.0
-      Axis: [1.0, 0.0, 0.0]
-      Body: *Body_0
-      Node: 3
-  - Thruster:
-      Index: 10
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, 1.0, 0.0]
-      Body: *Body_0
-      Node: 3
-  - Thruster:
-      Index: 11
-      Mode: PULSED
-      Force: 1.0
-      Axis: [0.0, 0.0, -1.0]
-      Body: *Body_0
-      Node: 3
+    - Thruster:
+          Index: 0
+          Mode: PULSED
+          Force: 1.0
+          Axis: [-1.0, 0.0, 0.0]
+          Body: *Body_0
+          Node: 0
+    - Thruster:
+          Index: 1
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, -1.0, 0.0]
+          Body: *Body_0
+          Node: 0
+    - Thruster:
+          Index: 2
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, 0.0, -1.0]
+          Body: *Body_0
+          Node: 0
+    - Thruster:
+          Index: 3
+          Mode: PULSED
+          Force: 1.0
+          Axis: [-1.0, 0.0, 0.0]
+          Body: *Body_0
+          Node: 1
+    - Thruster:
+          Index: 4
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, 1.0, 0.0]
+          Body: *Body_0
+          Node: 1
+    - Thruster:
+          Index: 5
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, 0.0, 1.0]
+          Body: *Body_0
+          Node: 1
+    - Thruster:
+          Index: 6
+          Mode: PULSED
+          Force: 1.0
+          Axis: [1.0, 0.0, 0.0]
+          Body: *Body_0
+          Node: 2
+    - Thruster:
+          Index: 7
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, -1.0, 0.0]
+          Body: *Body_0
+          Node: 2
+    - Thruster:
+          Index: 8
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, 0.0, 1.0]
+          Body: *Body_0
+          Node: 2
+    - Thruster:
+          Index: 9
+          Mode: PULSED
+          Force: 1.0
+          Axis: [1.0, 0.0, 0.0]
+          Body: *Body_0
+          Node: 3
+    - Thruster:
+          Index: 10
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, 1.0, 0.0]
+          Body: *Body_0
+          Node: 3
+    - Thruster:
+          Index: 11
+          Mode: PULSED
+          Force: 1.0
+          Axis: [0.0, 0.0, -1.0]
+          Body: *Body_0
+          Node: 3
 Gyros: []
 Magnetometers: []
 CSSs: []
@@ -137,3 +137,4 @@ FSSs: []
 STs: []
 GPSs: []
 Accelerometers: []
+FGSs: []

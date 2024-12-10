@@ -460,8 +460,23 @@ long DecodeString(char *s)
    else if (!strcmp(s, "GSFSS"))
       return GS_FSS;
 
+   else if (!strcmp(s, "APERTURE"))
+      return OPT_APERTURE;
+   else if (!strcmp(s, "CONIC"))
+      return OPT_CONIC;
+   else if (!strcmp(s, "DETECTOR"))
+      return OPT_DETECTOR;
+   else if (!strcmp(s, "THINLENS"))
+      return OPT_THINLENS;
+
+   else if (!strcmp(s, "CONCAVE"))
+      return OPT_CONCAVE;
+   else if (!strcmp(s, "CONVEX"))
+      return OPT_CONVEX;
+
    else {
-      printf("Bogus input %s in DecodeString (42init.c:%d)\n", s, __LINE__);
+      fprintf(stderr, "Bogus input %s in DecodeString (42init.c:%d)\n", s,
+              __LINE__);
       exit(EXIT_FAILURE);
    }
 }
@@ -705,7 +720,7 @@ void InitOrbit(struct OrbitType *O)
    O->SplineActive   = FALSE;
    char response[50] = {0};
    if (!fy_node_scanf(node, "/Type %49s", response)) {
-      printf("Could not find orbit type. Exiting...\n");
+      fprintf(stderr, "Could not find orbit type. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    O->Regime = DecodeString(response);
@@ -713,14 +728,15 @@ void InitOrbit(struct OrbitType *O)
    switch (O->Regime) {
       case ORB_ZERO: {
          if (!fy_node_scanf(node, "/World %49s", response)) {
-            printf("Could not find World for orbit. Exiting...\n");
+            fprintf(stderr, "Could not find World for orbit. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          O->World = DecodeString(response);
          if (!World[O->World].Exists) {
-            printf("Oops.  Orbit %ld depends on a World that doesn't exist.\n",
-                   O->Tag);
-            exit(1);
+            fprintf(stderr,
+                    "Oops.  Orbit %ld depends on a World that doesn't exist.\n",
+                    O->Tag);
+            exit(EXIT_FAILURE);
          }
 
          O->mu = World[O->World].mu;
@@ -738,12 +754,14 @@ void InitOrbit(struct OrbitType *O)
       case ORB_FLIGHT: {
          long Ir = 0;
          if (!fy_node_scanf(node, "/Region %ld", &Ir)) {
-            printf("Could not find region for orbit. Exiting...\n");
+            fprintf(stderr, "Could not find region for orbit. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          if (!Rgn[Ir].Exists) {
-            printf("Oops.  Orbit %ld depends on a Region that doesn't exist.\n",
-                   O->Tag);
+            fprintf(
+                stderr,
+                "Oops.  Orbit %ld depends on a Region that doesn't exist.\n",
+                O->Tag);
             exit(EXIT_FAILURE);
          }
          O->Region            = Ir;
@@ -755,22 +773,23 @@ void InitOrbit(struct OrbitType *O)
             O->VelN[j] = R->VelN[j];
             for (k = 0; k < 3; k++)
                O->CLN[j][k] = R->CN[j][k];
-            O->wln[0] = 0.0;
-            O->wln[1] = 0.0;
-            O->wln[2] = World[O->World].w;
          }
+         O->wln[0] = 0.0;
+         O->wln[1] = 0.0;
+         O->wln[2] = World[O->World].w;
          O->PolyhedronGravityEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
       case ORB_CENTRAL: {
          if (!fy_node_scanf(node, "/World %49s", response)) {
-            printf("Could not find World for orbit. Exiting...\n");
+            fprintf(stderr, "Could not find World for orbit. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          O->World = DecodeString(response);
          if (!World[O->World].Exists) {
-            printf("Oops.  Orbit %ld depends on a World that doesn't exist.\n",
-                   O->Tag);
+            fprintf(stderr,
+                    "Oops.  Orbit %ld depends on a World that doesn't exist.\n",
+                    O->Tag);
             exit(EXIT_FAILURE);
          }
          O->J2DriftEnabled =
@@ -780,8 +799,9 @@ void InitOrbit(struct OrbitType *O)
          double J2  = World[O->World].J2;
          node       = fy_node_by_path_def(node, "/Init");
          if (!fy_node_scanf(node, "/Method %49s", response)) {
-            printf("Could not find Central orbit initialization method. "
-                   "Exiting...\n");
+            fprintf(stderr,
+                    "Could not find Central orbit initialization method. "
+                    "Exiting...\n");
             exit(EXIT_FAILURE);
          }
          inputType = DecodeString(response);
@@ -795,7 +815,8 @@ void InitOrbit(struct OrbitType *O)
                                  "/True Anomaly %lf",
                                  response, &O->inc, &O->RAAN, &O->ArgP,
                                  &O->anom) != 5) {
-                  printf("Invalid Keplarian initialization. Exiting...\n");
+                  fprintf(stderr,
+                          "Invalid Keplarian initialization. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
                long usePA = DecodeString(response);
@@ -805,8 +826,9 @@ void InitOrbit(struct OrbitType *O)
                                      "/Periapsis %lf "
                                      "/Apoapsis %lf",
                                      &alt1, &alt2)) {
-                     printf("Could not find Periapsis and/or Apoapsis. "
-                            "Exiting...\n");
+                     fprintf(stderr,
+                             "Could not find Periapsis and/or Apoapsis. "
+                             "Exiting...\n");
                      exit(EXIT_FAILURE);
                   }
                   O->SMA        = rad + 0.5 * (alt1 + alt2) * 1.0E3;
@@ -822,8 +844,8 @@ void InitOrbit(struct OrbitType *O)
                                      "/Minimum Altitude %lf "
                                      "/Eccentricity %lf",
                                      &alt1, &O->ecc)) {
-                     printf("Could not find Minimum Altitude and/or "
-                            "Eccentricity. Exiting...\n");
+                     fprintf(stderr, "Could not find Minimum Altitude and/or "
+                                     "Eccentricity. Exiting...\n");
                      exit(EXIT_FAILURE);
                   }
                   O->rmin  = rad + alt1 * 1.0E3;
@@ -846,8 +868,9 @@ void InitOrbit(struct OrbitType *O)
                if (O->ecc > 1.0) {
                   double maxAnom = Pi - acos(1.0 / O->ecc);
                   if (fabs(O->anom) > maxAnom) {
-                     printf("True Anomaly out of range for Orbit %ld\n",
-                            O->Tag);
+                     fprintf(stderr,
+                             "True Anomaly out of range for Orbit %ld\n",
+                             O->Tag);
                      exit(EXIT_FAILURE);
                   }
                }
@@ -879,10 +902,11 @@ void InitOrbit(struct OrbitType *O)
                char elementFileName[50] = {0}, elementLabel[50] = {0};
                if (!fy_node_scanf(node,
                                   "/File Type %49s "
-                                  "/File Name %49s "
-                                  "/Label in File %49s",
+                                  "/File Name %49[^\n] "
+                                  "/Label in File %49[^\n]",
                                   response, elementFileName, elementLabel)) {
-                  printf(
+                  fprintf(
+                      stderr,
                       "Could not configure File initialization. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
@@ -890,15 +914,16 @@ void InitOrbit(struct OrbitType *O)
                switch (inputType) {
                   case INP_TLE: {
                      if (O->World != EARTH) {
-                        printf(
+                        fprintf(
+                            stderr,
                             "TLEs are only defined for Earth-orbiting S/C.\n");
                         exit(EXIT_FAILURE);
                      }
                      if (!LoadTleFromFile(InOutPath, elementFileName,
                                           elementLabel, DynTime, TT.JulDay,
                                           LeapSec, O)) {
-                        printf("Error loading TLE %s from file %s.\n",
-                               elementLabel, elementFileName);
+                        fprintf(stderr, "Error loading TLE %s from file %s.\n",
+                                elementLabel, elementFileName);
                         exit(EXIT_FAILURE);
                      }
                      MeanEph2RV(O, DynTime);
@@ -906,8 +931,8 @@ void InitOrbit(struct OrbitType *O)
                   case INP_TRV: {
                      if (!LoadTRVfromFile(InOutPath, elementFileName,
                                           elementLabel, CivilTime, O)) {
-                        printf("Error loading TRV %s from file %s.\n",
-                               elementLabel, elementFileName);
+                        fprintf(stderr, "Error loading TRV %s from file %s.\n",
+                                elementLabel, elementFileName);
                         exit(EXIT_FAILURE);
                      }
                      // O->tp = O->Epoch -
@@ -947,25 +972,29 @@ void InitOrbit(struct OrbitType *O)
                            O->NodeVel[i][j] *= 1000.0;
                         }
                         if (DynTime < O->NodeDynTime[1]) {
-                           printf("Oops.  Spline file beginning is in the "
-                                  "future.\n");
+                           fprintf(stderr,
+                                   "Oops.  Spline file beginning is in the "
+                                   "future.\n");
                            exit(EXIT_FAILURE);
                         }
                      }
                      SplineToPosVel(O);
                   } break;
                   default:
-                     printf("Invalid filetype in Orbit %ld. Exiting...\n",
-                            O->Tag);
+                     fprintf(stderr,
+                             "Invalid filetype in Orbit %ld. Exiting...\n",
+                             O->Tag);
                      exit(EXIT_FAILURE);
                      break;
                }
 
             } break;
             default:
-               printf("Invalid central orbit initialization type in Orbit %ld. "
-                      "Exiting...\n",
-                      O->Tag);
+               fprintf(
+                   stderr,
+                   "Invalid central orbit initialization type in Orbit %ld. "
+                   "Exiting...\n",
+                   O->Tag);
                exit(EXIT_FAILURE);
                break;
          }
@@ -974,15 +1003,18 @@ void InitOrbit(struct OrbitType *O)
       } break;
       case ORB_THREE_BODY: {
          if (!fy_node_scanf(node, "/Lagrange System %49s", response)) {
-            printf("Could not find Lagrange System for Three Body orbit. "
-                   "Exiting...\n");
+            fprintf(stderr,
+                    "Could not find Lagrange System for Three Body orbit. "
+                    "Exiting...\n");
             exit(EXIT_FAILURE);
          }
          O->Sys = DecodeString(response);
          if (!LagSys[O->Sys].Exists) {
-            printf("Oops.  Orbit %ld depends on a Lagrange System that doesn't "
-                   "exist.\n",
-                   O->Tag);
+            fprintf(
+                stderr,
+                "Oops.  Orbit %ld depends on a Lagrange System that doesn't "
+                "exist.\n",
+                O->Tag);
             exit(EXIT_FAILURE);
          }
          O->Body1 = LagSys[O->Sys].Body1;
@@ -990,16 +1022,18 @@ void InitOrbit(struct OrbitType *O)
          O->mu1   = LagSys[O->Sys].mu1;
          O->mu2   = LagSys[O->Sys].mu2;
          if (!fy_node_scanf(node, "/Propagation Method %49s", response)) {
-            printf("Could not find Propagation Method for Three Body orbit. "
-                   "Exiting...\n");
+            fprintf(stderr,
+                    "Could not find Propagation Method for Three Body orbit. "
+                    "Exiting...\n");
             exit(EXIT_FAILURE);
          }
          O->LagDOF = DecodeString(response);
 
          node = fy_node_by_path_def(node, "/Init");
          if (!fy_node_scanf(node, "/Method %49s", response)) {
-            printf("Could not find Three Body orbit Initialization Method. "
-                   "Exiting...\n");
+            fprintf(stderr,
+                    "Could not find Three Body orbit Initialization Method. "
+                    "Exiting...\n");
             exit(EXIT_FAILURE);
          }
          inputType = DecodeString(response);
@@ -1009,8 +1043,8 @@ void InitOrbit(struct OrbitType *O)
                double ampXY1, ampXY2 = 0.0, phiXY1, phiXY2 = 0.0, ampZ, phiZ;
 
                if (!fy_node_scanf(node, "/Lagrange Point %49s", response)) {
-                  printf("Could not find Lagrange point of modal "
-                         "initialization. Exiting...\n");
+                  fprintf(stderr, "Could not find Lagrange point of modal "
+                                  "initialization. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
                O->LP = DecodeString(response);
@@ -1022,8 +1056,8 @@ void InitOrbit(struct OrbitType *O)
                                  "/Z Phase %lf",
                                  &ampXY1, &phiXY1, response, &ampZ,
                                  &phiZ) != 5) {
-                  printf("Invalid configuration for Modal Three Body "
-                         "Initialization. Exiting...\n");
+                  fprintf(stderr, "Invalid configuration for Modal Three Body "
+                                  "Initialization. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
                if (DecodeString(response) == DIR_CW)
@@ -1034,8 +1068,9 @@ void InitOrbit(struct OrbitType *O)
                                     "/XY 2nd Phase %lf "
                                     "/2nd Sense %49s",
                                     &ampXY2, &phiXY2, response) != 3) {
-                     printf("Invalid configuration for Triangular Lagrange "
-                            "Point modal initialization. Exiting...\n");
+                     fprintf(stderr,
+                             "Invalid configuration for Triangular Lagrange "
+                             "Point modal initialization. Exiting...\n");
                      exit(EXIT_FAILURE);
                   }
                   if (DecodeString(response) == DIR_CW)
@@ -1082,18 +1117,20 @@ void InitOrbit(struct OrbitType *O)
                char elementFileName[50] = {0}, elementLabel[50] = {0};
                if (fy_node_scanf(node,
                                  "/Lagrange Point %49s "
-                                 "/File Name %49s "
-                                 "/Label in File %49s",
+                                 "/File Name %49[^\n] "
+                                 "/Label in File %49[^\n]",
                                  response, elementFileName,
                                  elementLabel) != 3) {
-                  printf(
+                  fprintf(
+                      stderr,
                       "Could not configure File initialization. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
                O->LP = DecodeString(response);
                if (!fy_node_scanf(node, "/File Type %49s", response)) {
-                  printf("Could not find File Type for Three Body Orbit "
-                         "Initialization. Exiting...\n");
+                  fprintf(stderr,
+                          "Could not find File Type for Three Body Orbit "
+                          "Initialization. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
                inputType = DecodeString(response);
@@ -1101,8 +1138,8 @@ void InitOrbit(struct OrbitType *O)
                   case INP_TRV: {
                      if (!LoadTRVfromFile(InOutPath, elementFileName,
                                           elementLabel, CivilTime, O)) {
-                        printf("Error loading TRV %s from file %s.\n",
-                               elementLabel, elementFileName);
+                        fprintf(stderr, "Error loading TRV %s from file %s.\n",
+                                elementLabel, elementFileName);
                         exit(EXIT_FAILURE);
                      }
                   } break;
@@ -1132,8 +1169,9 @@ void InitOrbit(struct OrbitType *O)
                            O->NodeVel[i][j] *= 1000.0;
                         }
                         if (DynTime < O->NodeDynTime[1]) {
-                           printf("Oops.  Spline file beginning is in the "
-                                  "future.\n");
+                           fprintf(stderr,
+                                   "Oops.  Spline file beginning is in the "
+                                   "future.\n");
                            exit(EXIT_FAILURE);
                         }
                      }
@@ -1146,7 +1184,8 @@ void InitOrbit(struct OrbitType *O)
                }
             } break;
             default:
-               printf(
+               fprintf(
+                   stderr,
                    "Invalid three body orbit initialization type in Orbit %ld. "
                    "Exiting...\n",
                    O->Tag);
@@ -1161,7 +1200,7 @@ void InitOrbit(struct OrbitType *O)
          O->Period     = TwoPi / O->MeanMotion;
       } break;
       default:
-         printf("Bogus Orbit Regime in file %s\n", O->FileName);
+         fprintf(stderr, "Bogus Orbit Regime in file %s\n", O->FileName);
          exit(EXIT_FAILURE);
          break;
    }
@@ -1175,7 +1214,8 @@ void InitOrbit(struct OrbitType *O)
                      "/Fixed Frame %c "
                      "/Expression Frame %c",
                      &F->FixedInFrame, &FrmExpressedIn) != 2) {
-      printf("Could not find configuration for formation frame. Exiting...\n");
+      fprintf(stderr,
+              "Could not find configuration for formation frame. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    double ang[3] = {0.0};
@@ -1643,16 +1683,19 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %ld %lf %[^\n] %[\n]", &Im, &Ig, &Ia,
                    &value, junk, &newline);
             if (Ig >= S->Ng) {
-               printf("Error in InitFlexModes: Joint %ld out of range\n", Ig);
+               fprintf(stderr,
+                       "Error in InitFlexModes: Joint %ld out of range\n", Ig);
                exit(EXIT_FAILURE);
             }
             if (Ia > 2) {
-               printf("Error in InitFlexModes (PSI): Axis %ld out of range\n",
-                      Ia);
+               fprintf(stderr,
+                       "Error in InitFlexModes (PSI): Axis %ld out of range\n",
+                       Ia);
                exit(EXIT_FAILURE);
             }
             if (Im >= B->Nf) {
-               printf(
+               fprintf(
+                   stderr,
                    "Error in InitFlexModes (PSI): Flex Mode %ld out of range\n",
                    Im);
                exit(EXIT_FAILURE);
@@ -1663,9 +1706,11 @@ void InitFlexModes(struct SCType *S)
             else if (Ib == G->Bout)
                G->PSIo[Ia][Im] = value;
             else {
-               printf("Error in InitFlexModes (PSI): Body %ld not connected to "
-                      "Joint %ld\n",
-                      Ib, Ig);
+               fprintf(
+                   stderr,
+                   "Error in InitFlexModes (PSI): Body %ld not connected to "
+                   "Joint %ld\n",
+                   Ib, Ig);
                exit(EXIT_FAILURE);
             }
          }
@@ -1676,18 +1721,22 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %ld %lf %[^\n] %[\n]", &Im, &Ig, &Ia,
                    &value, junk, &newline);
             if (Ig >= S->Ng) {
-               printf("Error in InitFlexModes: Joint %ld out of range\n", Ig);
+               fprintf(stderr,
+                       "Error in InitFlexModes: Joint %ld out of range\n", Ig);
                exit(EXIT_FAILURE);
             }
             if (Ia > 2) {
-               printf("Error in InitFlexModes (THETA): Axis %ld out of range\n",
-                      Ia);
+               fprintf(
+                   stderr,
+                   "Error in InitFlexModes (THETA): Axis %ld out of range\n",
+                   Ia);
                exit(EXIT_FAILURE);
             }
             if (Im >= B->Nf) {
-               printf("Error in InitFlexModes (THETA): Flex Mode %ld out of "
-                      "range\n",
-                      Im);
+               fprintf(stderr,
+                       "Error in InitFlexModes (THETA): Flex Mode %ld out of "
+                       "range\n",
+                       Im);
                exit(EXIT_FAILURE);
             }
             G = &S->G[Ig];
@@ -1696,9 +1745,10 @@ void InitFlexModes(struct SCType *S)
             else if (Ib == G->Bout)
                G->THETAo[Ia][Im] = value;
             else {
-               printf("Error in InitFlexModes (THETA): Body %ld not connected "
-                      "to Joint %ld\n",
-                      Ib, Ig);
+               fprintf(stderr,
+                       "Error in InitFlexModes (THETA): Body %ld not connected "
+                       "to Joint %ld\n",
+                       Ib, Ig);
                exit(EXIT_FAILURE);
             }
          }
@@ -1712,18 +1762,21 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %ld %lf %[^\n] %[\n]", &Im, &In, &Ia,
                    &value, junk, &newline);
             if (In > B->NumNodes - 1) {
-               printf("Error in InitFlexModes (PSI):  Node %ld out of range\n",
-                      In);
+               fprintf(stderr,
+                       "Error in InitFlexModes (PSI):  Node %ld out of range\n",
+                       In);
                exit(EXIT_FAILURE);
             }
             FN = &B->Node[In];
             if (Ia > 2) {
-               printf("Error in InitFlexModes (PSI): Axis %ld out of range\n",
-                      Ia);
+               fprintf(stderr,
+                       "Error in InitFlexModes (PSI): Axis %ld out of range\n",
+                       Ia);
                exit(EXIT_FAILURE);
             }
             if (Im >= B->Nf) {
-               printf(
+               fprintf(
+                   stderr,
                    "Error in InitFlexModes (PSI): Flex Mode %ld out of range\n",
                    Im);
                exit(EXIT_FAILURE);
@@ -1739,20 +1792,24 @@ void InitFlexModes(struct SCType *S)
                    &value, junk, &newline);
             FN = &B->Node[In];
             if (In > B->NumNodes - 1) {
-               printf(
+               fprintf(
+                   stderr,
                    "Error in InitFlexModes (THETA):  Node %ld out of range\n",
                    In);
                exit(EXIT_FAILURE);
             }
             if (Ia > 2) {
-               printf("Error in InitFlexModes (THETA): Axis %ld out of range\n",
-                      Ia);
+               fprintf(
+                   stderr,
+                   "Error in InitFlexModes (THETA): Axis %ld out of range\n",
+                   Ia);
                exit(EXIT_FAILURE);
             }
             if (Im >= B->Nf) {
-               printf("Error in InitFlexModes (THETA): Flex Mode %ld out of "
-                      "range\n",
-                      Im);
+               fprintf(stderr,
+                       "Error in InitFlexModes (THETA): Flex Mode %ld out of "
+                       "range\n",
+                       Im);
                exit(EXIT_FAILURE);
             }
             FN->THETA[Ia][Im] = value;
@@ -1765,9 +1822,10 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %lf %[^\n] %[\n]", &i, &j, &value, junk,
                    &newline);
             if (i >= B->Nf || j >= B->Nf) {
-               printf("Error in InitFlexModes: Mass Matrix index [%ld][%ld] "
-                      "out of range\n",
-                      i, j);
+               fprintf(stderr,
+                       "Error in InitFlexModes: Mass Matrix index [%ld][%ld] "
+                       "out of range\n",
+                       i, j);
                exit(EXIT_FAILURE);
             }
             B->Mf[i][j] = value;
@@ -1779,9 +1837,10 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %lf %[^\n] %[\n]", &i, &j, &value, junk,
                    &newline);
             if (i >= B->Nf || j >= B->Nf) {
-               printf("Error in InitFlexModes: Stiffness Matrix index "
-                      "[%ld][%ld] out of range\n",
-                      i, j);
+               fprintf(stderr,
+                       "Error in InitFlexModes: Stiffness Matrix index "
+                       "[%ld][%ld] out of range\n",
+                       i, j);
                exit(EXIT_FAILURE);
             }
             B->Kf[i][j] = value;
@@ -1793,9 +1852,11 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %lf %[^\n] %[\n]", &i, &j, &value, junk,
                    &newline);
             if (i >= B->Nf || j >= B->Nf) {
-               printf("Error in InitFlexModes: Damping Matrix index [%ld][%ld] "
-                      "out of range\n",
-                      i, j);
+               fprintf(
+                   stderr,
+                   "Error in InitFlexModes: Damping Matrix index [%ld][%ld] "
+                   "out of range\n",
+                   i, j);
                exit(EXIT_FAILURE);
             }
             B->Cf[i][j] = value;
@@ -1805,12 +1866,13 @@ void InitFlexModes(struct SCType *S)
          for (i = 0; i < B->Nf; i++) {
             wf = sqrt(B->Kf[i][i] / B->Mf[i][i]);
             if (Pi / wf < DTSIM) {
-               printf(
+               fprintf(
+                   stderr,
                    "Oops.  Natural frequency of Flex Mode %ld of Body %ld of "
                    "SC %ld is too high to be sampled at time step of %lf.\n",
                    i, Ib, S->ID, DTSIM);
-               printf("Suggest setting DTSIM < %lf sec\n",
-                      0.2 * TwoPi / wf); /* 5 samples/cycle */
+               fprintf(stderr, "Suggest setting DTSIM < %lf sec\n",
+                       0.2 * TwoPi / wf); /* 5 samples/cycle */
                exit(EXIT_FAILURE);
             }
          }
@@ -1849,9 +1911,10 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %ld %lf %[^\n] %[\n]", &i, &j, &Im, &value,
                    junk, &newline);
             if (i >= 3 || j >= 3 || Im >= B->Nf) {
-               printf("Error in InitFlexModes: L index [%ld][%ld][%ld] out of "
-                      "range\n",
-                      i, j, Im);
+               fprintf(stderr,
+                       "Error in InitFlexModes: L index [%ld][%ld][%ld] out of "
+                       "range\n",
+                       i, j, Im);
                exit(EXIT_FAILURE);
             }
             L[i][j][Im] = value;
@@ -1886,9 +1949,10 @@ void InitFlexModes(struct SCType *S)
             fscanf(infile, "%ld %ld %ld %ld %lf %[^\n] %[\n]", &i, &j, &Im, &Jm,
                    &value, junk, &newline);
             if (i >= 3 || j >= 3 || Im >= B->Nf || Jm >= B->Nf) {
-               printf("Error in InitFlexModes: N index [%ld][%ld][%ld][%ld] "
-                      "out of range\n",
-                      i, j, Im, Jm);
+               fprintf(stderr,
+                       "Error in InitFlexModes: N index [%ld][%ld][%ld][%ld] "
+                       "out of range\n",
+                       i, j, Im, Jm);
                exit(EXIT_FAILURE);
             }
             N[i][j][Im][Jm] = value;
@@ -1985,12 +2049,12 @@ void InitNodes(struct BodyType *B)
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Node");
          long In                 = 0;
          if (!fy_node_scanf(seqNode, "/Index %ld", &In)) {
-            printf("Could not find index for node. Exiting...\n");
+            fprintf(stderr, "Could not find index for node. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct NodeType *N = &B->Node[In];
          if (!fy_node_scanf(seqNode, "/Comment %79[^\n]s", N->comment)) {
-            printf("Could not find comment for node. Exiting...\n");
+            fprintf(stderr, "Could not find comment for node. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Location"),
@@ -2149,8 +2213,10 @@ void InitWhlDragAndJitter(struct WhlType *W)
       fscanf(infile, "%lf  %[^\n] %[\n]", &Stiction, junk, &newline);
       W->StribeckCoef = Stiction - W->CoulCoef;
       if (W->StribeckCoef < 0.0) {
-         printf("Error: Stiction < Coulomb friction in %s.  Better fix that.\n",
-                W->DragJitterFileName);
+         fprintf(
+             stderr,
+             "Error: Stiction < Coulomb friction in %s.  Better fix that.\n",
+             W->DragJitterFileName);
          exit(EXIT_FAILURE);
       }
       fscanf(infile, "%lf  %[^\n] %[\n]", &W->ViscCoef, junk, &newline);
@@ -2195,6 +2261,65 @@ void InitWhlDragAndJitter(struct WhlType *W)
       }
       fclose(infile);
    }
+}
+/**********************************************************************/
+void InitOptics(struct FgsType *F)
+{
+   FILE *infile;
+   // struct SCType *S;
+   // struct BodyType *B;
+   // struct NodeType *N;
+   struct OpticsType *O;
+   char junk[256], newline, response[120];
+   // double ApPntN[3], FocPntN[3], DetPntN[3], RelPosN[3];
+   long Io;
+   // long i;
+   // long HasFocus;
+
+   if (strcmp(F->OpticsFileName, "NONE")) {
+      infile = FileOpen(InOutPath, F->OpticsFileName, "r");
+      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+      fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+      fscanf(infile, "%ld  %[^\n] %[\n]", &F->Nopt, junk, &newline);
+      F->Opt = (struct OpticsType *)calloc(F->Nopt, sizeof(struct OpticsType));
+      for (Io = 0; Io < F->Nopt; Io++) {
+         O = &F->Opt[Io];
+         fscanf(infile, "%[^\n] %[\n]", junk, &newline);
+         fscanf(infile, "%ld %ld %ld %[^\n] %[\n]", &O->SC, &O->Body, &O->Node,
+                junk, &newline);
+         fscanf(infile, "%lf %[^\n] %[\n]", &O->ApRad, junk, &newline);
+         O->ApRad /= 2.0;
+         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &O->Axis[0], &O->Axis[1],
+                &O->Axis[2], junk, &newline);
+         UNITV(O->Axis);
+         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+         O->Type = DecodeString(response);
+         fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
+         O->ConicSign = (double)DecodeString(response);
+         fscanf(infile, "%lf %[^\n] %[\n]", &O->FocLen, junk, &newline);
+         fscanf(infile, "%lf %[^\n] %[\n]", &O->ConicConst, junk, &newline);
+      }
+      fclose(infile);
+      F->HasOptics = TRUE;
+
+      /* Check for Aperture, Detector */
+      if (F->Opt[0].Type != OPT_APERTURE) {
+         fprintf(stderr,
+                 "Optical Train must have Aperture as first element.\n");
+         exit(EXIT_FAILURE);
+      }
+      if (F->Opt[F->Nopt - 1].Type != OPT_DETECTOR) {
+         printf("Optical Train must have Detector as last element.\n");
+      }
+
+      /* TODO: Find erect/inverted, lump in Det->FocLen */
+   }
+   else {
+      F->HasOptics = FALSE;
+   }
+
+   printf("Exiting InitOptics\n");
 }
 /**********************************************************************/
 void InitOrderNDynamics(struct SCType *S)
@@ -2287,14 +2412,15 @@ void InitSpacecraft(struct SCType *S)
                      "/FSW Sample Time %lf",
                      S->Label, S->SpriteFileName, dummy,
                      &S->FswSampleTime) != 4) {
-      printf(
+      fprintf(
+          stderr,
           "Could not find spacecraft Configuration information. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    S->FswTag        = DecodeString(dummy);
    S->FswMaxCounter = (long)(S->FswSampleTime / DTSIM + 0.5);
    if (S->FswSampleTime < DTSIM) {
-      printf("Error:  FswSampleTime smaller than DTSIM.\n");
+      fprintf(stderr, "Error:  FswSampleTime smaller than DTSIM.\n");
       exit(EXIT_FAILURE);
    }
    S->FswSampleCounter = S->FswMaxCounter;
@@ -2303,12 +2429,14 @@ void InitSpacecraft(struct SCType *S)
 
    node = fy_node_by_path_def(root, "/Orbit");
    if (!fy_node_scanf(node, "/Prop Type %49s", dummy)) {
-      printf("Could not find propagation type for spacecraft. Exiting...\n");
+      fprintf(stderr,
+              "Could not find propagation type for spacecraft. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    S->OrbDOF = DecodeString(dummy);
    if (!fy_node_scanf(node, "/Pos Specifier %49s", dummy)) {
-      printf("Could not find Position Specifier for spacecraft. Exiting...\n");
+      fprintf(stderr,
+              "Could not find Position Specifier for spacecraft. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    long useCM = DecodeString(dummy);
@@ -2325,7 +2453,8 @@ void InitSpacecraft(struct SCType *S)
                      "Att Representation %c "
                      "Att Frame %c",
                      &rateFrame, &attParm, &attFrame) != 3) {
-      printf("Could not find spacecraft Attitude information. Exiting...\n");
+      fprintf(stderr,
+              "Could not find spacecraft Attitude information. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Ang Vel"), wbn);
@@ -2361,6 +2490,17 @@ void InitSpacecraft(struct SCType *S)
          MxM(CBF, Frm[S->RefOrb].CN, CBN);
          C2Q(CBN, qbn);
       } break;
+      case 'E': {
+         /* Adjust CBN */
+         double CBE[3][3], CEN[3][3];
+         for (j = 0; j < 3; j++) {
+            for (k = 0; k < 3; k++)
+               CBE[j][k] = CBN[j][k];
+         }
+         FindCEN(Orb[S->RefOrb].PosN, CEN);
+         MxM(CBE, CEN, CBN);
+         C2Q(CBN, qbn);
+      } break;
    }
    if (rateFrame == 'L') {
       /* Add LVLH rate to wn */
@@ -2373,21 +2513,23 @@ void InitSpacecraft(struct SCType *S)
 
    node = fy_node_by_path_def(root, "/Dynamics Flags");
    if (!fy_node_scanf(node, "/Method %49s", dummy)) {
-      printf("Could not find spacraft propagation method. Exiting...\n");
+      fprintf(stderr,
+              "Could not find spacraft propagation method. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    S->DynMethod = DecodeString(dummy);
    if (!fy_node_scanf(node, "/Mass Reference Point %49s", dummy)) {
-      printf("Could not find spacecraft mass reference point. Exiting...\n");
+      fprintf(stderr,
+              "Could not find spacecraft mass reference point. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    S->RefPt = DecodeString(dummy);
    if (fy_node_scanf(node,
                      "/Drag Coefficient %lf "
-                     "/Shaker File Name %39s",
+                     "/Shaker File Name %39[^\n]",
                      &S->DragCoef, S->ShakerFileName) != 2) {
-      printf("Could not find Drag Coefficient or Shaker File Name for "
-             "spacecraft. Exiting...\n");
+      fprintf(stderr, "Could not find Drag Coefficient or Shaker File Name for "
+                      "spacecraft. Exiting...\n");
       exit(EXIT_FAILURE);
    }
 
@@ -2401,12 +2543,12 @@ void InitSpacecraft(struct SCType *S)
    S->Ng = S->Nb - 1;
    S->B  = (struct BodyType *)calloc(S->Nb, sizeof(struct BodyType));
    if (S->B == NULL) {
-      printf("S->B calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr, "S->B calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
    S->G = (struct JointType *)calloc(S->Ng, sizeof(struct JointType));
    if (S->G == NULL) {
-      printf("S->G calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr, "S->G calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -2426,21 +2568,23 @@ void InitSpacecraft(struct SCType *S)
       long Ib;
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Body");
       if (!fy_node_scanf(seqNode, "/Index %ld", &Ib)) {
-         printf("Could not find Body index. Exiting...\n");
+         fprintf(stderr, "Could not find Body index. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       struct BodyType *B = &S->B[Ib];
       double moi[3], poi[3];
       if (fy_node_scanf(seqNode,
                         "/Mass %lf "
-                        "/Geometry File Name %39s "
-                        "/Node File Name %39s "
-                        "/Flex File Name %39s",
+                        "/Geometry File Name %39[^\n] "
+                        "/Node File Name %39[^\n] "
+                        "/Flex File Name %39[^\n]",
                         &B->mass, B->GeomFileName, B->NodeFileName,
                         B->FlexFileName) != 4) {
-         printf("Could not find spacecraft body %ld configuration information. "
-                "Exiting...\n",
-                Ib);
+         fprintf(
+             stderr,
+             "Could not find spacecraft body %ld configuration information. "
+             "Exiting...\n",
+             Ib);
          exit(EXIT_FAILURE);
       }
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/MOI"), moi);
@@ -2481,14 +2625,16 @@ void InitSpacecraft(struct SCType *S)
          long Ig;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Joint");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Ig)) {
-            printf("Could not find spacecraft Joint index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft Joint index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct JointType *G = &S->G[Ig];
 
          if (!fy_node_scanf(seqNode, "/Joint Type %49s", dummy)) {
-            printf("Could not find spacecraft Joint %ld's type. Exiting...\n",
-                   Ig);
+            fprintf(stderr,
+                    "Could not find spacecraft Joint %ld's type. Exiting...\n",
+                    Ig);
             exit(EXIT_FAILURE);
          }
          G->Type          = DecodeString(dummy);
@@ -2498,11 +2644,14 @@ void InitSpacecraft(struct SCType *S)
          G->Bin  = bodyInds[0];
          G->Bout = bodyInds[1];
          if (G->Bin > G->Bout) {
-            printf("Yo!  SC[%ld].G[%ld] inner body index (%ld) is greater than "
-                   "outer body index "
-                   "(%ld)\n",
-                   S->ID, Ig, G->Bin, G->Bout);
-            printf("You must define inner bodies before outer bodies!\n");
+            fprintf(
+                stderr,
+                "Yo!  SC[%ld].G[%ld] inner body index (%ld) is greater than "
+                "outer body index "
+                "(%ld)\n",
+                S->ID, Ig, G->Bin, G->Bout);
+            fprintf(stderr,
+                    "You must define inner bodies before outer bodies!\n");
             exit(EXIT_FAILURE);
          }
          S->B[G->Bout].Gin = Ig;
@@ -2512,18 +2661,20 @@ void InitSpacecraft(struct SCType *S)
                            "/Rot Sequence %ld "
                            "/Rot Type %49s",
                            &G->RotDOF, &G->RotSeq, dummy) != 3) {
-            printf("Could not find spacecraft Joint %ld's rotation "
-                   "information. Exiting...\n",
-                   Ig);
+            fprintf(stderr,
+                    "Could not find spacecraft Joint %ld's rotation "
+                    "information. Exiting...\n",
+                    Ig);
             exit(EXIT_FAILURE);
          }
          long i3 = G->RotSeq % 10;         /* Pick off third digit */
          long i2 = (G->RotSeq % 100) / 10; /* Extract second digit */
          long i1 = G->RotSeq / 100;        /* Pick off first digit */
          if (i1 == i2 || i1 == i3 || i2 == i3) {
-            printf("Invalid RotSeq %ld for SC[%ld].G[%ld].  Repeated indices "
-                   "are not allowed.\n",
-                   G->RotSeq, S->ID, Ig);
+            fprintf(stderr,
+                    "Invalid RotSeq %ld for SC[%ld].G[%ld].  Repeated indices "
+                    "are not allowed.\n",
+                    G->RotSeq, S->ID, Ig);
             exit(EXIT_FAILURE);
          }
 
@@ -2531,25 +2682,28 @@ void InitSpacecraft(struct SCType *S)
                            "/Trn DOF %ld "
                            "/Trn Sequence %ld",
                            &G->TrnDOF, &G->TrnSeq) != 2) {
-            printf("Could not find spacecraft Joint %ld's translational "
-                   "information. Exiting...\n",
-                   Ig);
+            fprintf(stderr,
+                    "Could not find spacecraft Joint %ld's translational "
+                    "information. Exiting...\n",
+                    Ig);
             exit(EXIT_FAILURE);
          }
          if (G->TrnSeq < 100) {
-            printf("Invalid TrnSeq %ld for SC[%ld].G[%ld].  All three axes "
-                   "required.\n",
-                   G->TrnSeq, S->ID, Ig);
-            exit(1);
+            fprintf(stderr,
+                    "Invalid TrnSeq %ld for SC[%ld].G[%ld].  All three axes "
+                    "required.\n",
+                    G->TrnSeq, S->ID, Ig);
+            exit(EXIT_FAILURE);
          }
          i3 = G->TrnSeq % 10;         /* Pick off third digit */
          i2 = (G->TrnSeq % 100) / 10; /* Extract second digit */
          i1 = G->TrnSeq / 100;        /* Pick off first digit */
          if (i1 == i2 || i1 == i3 || i2 == i3) {
-            printf("Invalid TrnSeq %ld for SC[%ld].G[%ld].  Repeated indices "
-                   "are not allowed.\n",
-                   G->TrnSeq, S->ID, Ig);
-            exit(1);
+            fprintf(stderr,
+                    "Invalid TrnSeq %ld for SC[%ld].G[%ld].  Repeated indices "
+                    "are not allowed.\n",
+                    G->TrnSeq, S->ID, Ig);
+            exit(EXIT_FAILURE);
          }
 
          assignYAMLToBoolArray(
@@ -2557,7 +2711,7 @@ void InitSpacecraft(struct SCType *S)
          assignYAMLToBoolArray(
              3, fy_node_by_path_def(seqNode, "/Trn DOF Locked"), G->TrnLocked);
          for (i = 0; i < 3; i++)
-            SomeJointsLocked = G->RotLocked[i] || G->TrnLocked[i];
+            SomeJointsLocked |= G->RotLocked[i] || G->TrnLocked[i];
 
          /* Load in initial angles and angular rates */
          assignYAMLToDoubleArray(
@@ -2610,11 +2764,13 @@ void InitSpacecraft(struct SCType *S)
                G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
             }
          }
-         if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]s",
+         if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]",
                             G->ParmFileName)) {
-            printf("Could not find spacecraft Joint %ld's parameter file name. "
-                   "Exiting...\n",
-                   Ig);
+            fprintf(
+                stderr,
+                "Could not find spacecraft Joint %ld's parameter file name. "
+                "Exiting...\n",
+                Ig);
             exit(EXIT_FAILURE);
          }
 
@@ -2658,13 +2814,14 @@ void InitSpacecraft(struct SCType *S)
                            "/Drag-Jitter File Name %39s",
                            &W->H, &W->Tmax, &W->Hmax, &W->J, &W->Body, &W->Node,
                            W->DragJitterFileName) != 7) {
-            printf(
+            fprintf(
+                stderr,
                 "Spacecraft Wheel %ld is improperly configured. Exiting...\n",
                 Iw);
             exit(EXIT_FAILURE);
          }
          if (W->Node >= S->B[W->Body].NumNodes) {
-            printf("SC[%ld].Whl[%ld] Node out of range\n", S->ID, Iw);
+            fprintf(stderr, "SC[%ld].Whl[%ld] Node out of range\n", S->ID, Iw);
             exit(EXIT_FAILURE);
          }
          InitWhlDragAndJitter(W);
@@ -2682,7 +2839,8 @@ void InitSpacecraft(struct SCType *S)
          long Im                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/MTB");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Im)) {
-            printf("Could not find spacecraft MTB index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft MTB index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct MTBType *MTB = &S->MTB[Im];
@@ -2693,13 +2851,14 @@ void InitSpacecraft(struct SCType *S)
                            "/Saturation %lf "
                            "/Node %ld",
                            &MTB->Mmax, &MTB->Node) != 2) {
-            printf("Could not find configuration for spacecraft MTB %ld. "
-                   "Exiting...\n",
-                   Im);
+            fprintf(stderr,
+                    "Could not find configuration for spacecraft MTB %ld. "
+                    "Exiting...\n",
+                    Im);
             exit(EXIT_FAILURE);
          }
          if (MTB->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].Whl[%ld] Node out of range\n", S->ID, Im);
+            fprintf(stderr, "SC[%ld].Whl[%ld] Node out of range\n", S->ID, Im);
             exit(EXIT_FAILURE);
          }
       }
@@ -2716,7 +2875,8 @@ void InitSpacecraft(struct SCType *S)
          long It                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Thruster");
          if (!fy_node_scanf(seqNode, "/Index %ld", &It)) {
-            printf("Could not find spacecraft Thruster Index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft Thruster Index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct ThrType *T = &S->Thr[It];
@@ -2729,14 +2889,15 @@ void InitSpacecraft(struct SCType *S)
                            "/Body/Index %ld "
                            "/Node %ld",
                            dummy, &T->Fmax, &T->Body, &T->Node) != 4) {
-            printf("Could not find spacecraft Thruster %ld configuration. "
-                   "Exiting...\n",
-                   It);
+            fprintf(stderr,
+                    "Could not find spacecraft Thruster %ld configuration. "
+                    "Exiting...\n",
+                    It);
             exit(EXIT_FAILURE);
          }
          T->Mode = DecodeString(dummy);
          if (T->Node >= S->B[T->Body].NumNodes) {
-            printf("SC[%ld].Thr[%ld] Node out of range\n", S->ID, It);
+            fprintf(stderr, "SC[%ld].Thr[%ld] Node out of range\n", S->ID, It);
             exit(EXIT_FAILURE);
          }
       }
@@ -2753,7 +2914,8 @@ void InitSpacecraft(struct SCType *S)
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Gyro");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Ig)) {
-            printf("Could not find spacecraft Gyro Index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft Gyro Index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct GyroType *Gyro = &S->Gyro[Ig];
@@ -2775,7 +2937,8 @@ void InitSpacecraft(struct SCType *S)
                            &Gyro->SampleTime, &Gyro->MaxRate, &Gyro->Scale,
                            &Gyro->Quant, &Gyro->SigV, &Gyro->SigU, &biasTime,
                            &Gyro->SigE, &Gyro->Bias, &Gyro->Node) != 10) {
-            printf(
+            fprintf(
+                stderr,
                 "Spacecraft Gyro %ld has improper configuration. Exiting...\n",
                 Ig);
             exit(EXIT_FAILURE);
@@ -2783,7 +2946,8 @@ void InitSpacecraft(struct SCType *S)
 
          Gyro->MaxCounter = (long)(Gyro->SampleTime / DTSIM + 0.5);
          if (Gyro->SampleTime < DTSIM) {
-            printf("Error:  Gyro[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            fprintf(stderr,
+                    "Error:  Gyro[%ld].SampleTime smaller than DTSIM.\n", Ig);
             exit(EXIT_FAILURE);
          }
          Gyro->SampleCounter  = Gyro->MaxCounter;
@@ -2795,7 +2959,7 @@ void InitSpacecraft(struct SCType *S)
          Gyro->SigE          *= D2R / 3600.0;
          Gyro->Bias          *= D2R / 3600.0;
          if (Gyro->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].Gyro[%ld] Node out of range\n", S->ID, Ig);
+            fprintf(stderr, "SC[%ld].Gyro[%ld] Node out of range\n", S->ID, Ig);
             exit(EXIT_FAILURE);
          }
          Gyro->BiasStabCoef = Gyro->SigU * sqrt(Gyro->SampleTime);
@@ -2821,7 +2985,8 @@ void InitSpacecraft(struct SCType *S)
          struct fy_node *seqNode =
              fy_node_by_path_def(iterNode, "/Magnetometer");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Im)) {
-            printf(
+            fprintf(
+                stderr,
                 "Could not find spacecraft Magnetometer Index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
@@ -2838,20 +3003,22 @@ void InitSpacecraft(struct SCType *S)
                            "/Node %ld",
                            &MAG->SampleTime, &MAG->Saturation, &MAG->Scale,
                            &MAG->Quant, &MAG->Noise, &MAG->Node) != 6) {
-            printf("Could not find spacecraft Magnetometer %ld configuration. "
-                   "Exiting...\n",
-                   Im);
+            fprintf(stderr,
+                    "Could not find spacecraft Magnetometer %ld configuration. "
+                    "Exiting...\n",
+                    Im);
             exit(EXIT_FAILURE);
          }
 
          MAG->MaxCounter = (long)(MAG->SampleTime / DTSIM + 0.5);
          if (MAG->SampleTime < DTSIM) {
-            printf("Error:  MAG[%ld].SampleTime smaller than DTSIM.\n", Im);
+            fprintf(stderr, "Error:  MAG[%ld].SampleTime smaller than DTSIM.\n",
+                    Im);
             exit(EXIT_FAILURE);
          }
          MAG->SampleCounter = MAG->MaxCounter;
          if (MAG->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].MAG[%ld] Node out of range\n", S->ID, Im);
+            fprintf(stderr, "SC[%ld].MAG[%ld] Node out of range\n", S->ID, Im);
             exit(EXIT_FAILURE);
          }
          MAG->Scale = 1.0 + 1.0E-6 * MAG->Scale;
@@ -2869,7 +3036,8 @@ void InitSpacecraft(struct SCType *S)
          long Ic                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/CSS");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Ic)) {
-            printf("Could not find spacecraft CSS Index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft CSS Index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct CssType *CSS = &S->CSS[Ic];
@@ -2885,18 +3053,24 @@ void InitSpacecraft(struct SCType *S)
                            "/Node %ld",
                            &CSS->SampleTime, &CSS->FovHalfAng, &CSS->Scale,
                            &CSS->Quant, &CSS->Body, &CSS->Node) != 6) {
-            printf("Spacecraft CSS %ld is improperly configured. Exiting...\n",
-                   Ic);
+            fprintf(stderr,
+                    "Spacecraft CSS %ld is improperly configured. Exiting...\n",
+                    Ic);
             exit(EXIT_FAILURE);
          }
 
          CSS->MaxCounter = (long)(CSS->SampleTime / DTSIM + 0.5);
          if (CSS->SampleTime < DTSIM) {
-            printf("Error:  CSS[%ld].SampleTime smaller than DTSIM.\n", Ic);
+            fprintf(stderr, "Error:  CSS[%ld].SampleTime smaller than DTSIM.\n",
+                    Ic);
+            exit(EXIT_FAILURE);
+         }
+         if (CSS->Body >= S->Nb) {
+            fprintf(stderr, "SC[%ld].CSS[%ld] Body out of range\n", S->ID, Ic);
             exit(EXIT_FAILURE);
          }
          if (CSS->Node >= S->B[CSS->Body].NumNodes) {
-            printf("SC[%ld].CSS[%ld] Node out of range\n", S->ID, Ic);
+            fprintf(stderr, "SC[%ld].CSS[%ld] Node out of range\n", S->ID, Ic);
             exit(EXIT_FAILURE);
          }
          CSS->Scale       = 1.0 + 1.0E-6 * CSS->Scale;
@@ -2916,7 +3090,8 @@ void InitSpacecraft(struct SCType *S)
          long If                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FSS");
          if (!fy_node_scanf(seqNode, "/Index %ld", &If)) {
-            printf("Could not find spacecraft FSS index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft FSS index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct FssType *FSS = &S->FSS[If];
@@ -2935,22 +3110,24 @@ void InitSpacecraft(struct SCType *S)
                            "/Node %ld",
                            &FSS->SampleTime, dummy, &FSS->NEA, &FSS->Quant,
                            &FSS->Node) != 5) {
-            printf("Spacecraft FSS %ld is improperly configured. Exiting...\n",
-                   If);
+            fprintf(stderr,
+                    "Spacecraft FSS %ld is improperly configured. Exiting...\n",
+                    If);
             exit(EXIT_FAILURE);
          }
          FSS->BoreAxis = DecodeString(dummy);
 
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
-            printf("Error:  FSS[%ld].SampleTime smaller than DTSIM.\n", If);
+            fprintf(stderr, "Error:  FSS[%ld].SampleTime smaller than DTSIM.\n",
+                    If);
             exit(EXIT_FAILURE);
          }
          FSS->SampleCounter = FSS->MaxCounter;
          FSS->H_Axis        = (FSS->BoreAxis + 1) % 3;
          FSS->V_Axis        = (FSS->BoreAxis + 2) % 3;
          if (FSS->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].FSS[%ld] Node out of range\n", S->ID, If);
+            fprintf(stderr, "SC[%ld].FSS[%ld] Node out of range\n", S->ID, If);
             exit(EXIT_FAILURE);
          }
          if (!fy_node_scanf(seqNode, "/Type %49s", dummy))
@@ -2977,7 +3154,9 @@ void InitSpacecraft(struct SCType *S)
          long Ist                = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/ST");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Ist)) {
-            printf("Could not find spacecraft Startracker Index. Exiting...\n");
+            fprintf(
+                stderr,
+                "Could not find spacecraft Startracker Index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          struct StarTrackerType *ST = &S->ST[Ist];
@@ -3000,9 +3179,10 @@ void InitSpacecraft(struct SCType *S)
                            "/Luna %lf",
                            &ST->SunExclAng, &ST->EarthExclAng,
                            &ST->MoonExclAng) != 3) {
-            printf("For spacecraft Startracker %ld, Could not find "
-                   "Sun/Earth/Moon Exclusion Angles. Exiting...\n",
-                   Ist);
+            fprintf(stderr,
+                    "For spacecraft Startracker %ld, Could not find "
+                    "Sun/Earth/Moon Exclusion Angles. Exiting...\n",
+                    Ist);
             exit(EXIT_FAILURE);
          }
 
@@ -3011,22 +3191,24 @@ void InitSpacecraft(struct SCType *S)
                            "/Boresight Axis %49s "
                            "/Node %ld",
                            &ST->SampleTime, dummy, &ST->Node) != 3) {
-            printf("Spacecraft Startracker %ld is improperly configured. "
-                   "Exiting...\n",
-                   Ist);
+            fprintf(stderr,
+                    "Spacecraft Startracker %ld is improperly configured. "
+                    "Exiting...\n",
+                    Ist);
             exit(EXIT_FAILURE);
          }
          ST->BoreAxis   = DecodeString(dummy);
          ST->MaxCounter = (long)(ST->SampleTime / DTSIM + 0.5);
          if (ST->SampleTime < DTSIM) {
-            printf("Error:  ST[%ld].SampleTime smaller than DTSIM.\n", Ist);
+            fprintf(stderr, "Error:  ST[%ld].SampleTime smaller than DTSIM.\n",
+                    Ist);
             exit(EXIT_FAILURE);
          }
          ST->SampleCounter = ST->MaxCounter;
          ST->H_Axis        = (ST->BoreAxis + 1) % 3;
          ST->V_Axis        = (ST->BoreAxis + 2) % 3;
          if (ST->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].ST[%ld] Node out of range\n", S->ID, Ist);
+            fprintf(stderr, "SC[%ld].ST[%ld] Node out of range\n", S->ID, Ist);
             exit(EXIT_FAILURE);
          }
          for (i = 0; i < 2; i++) {
@@ -3055,7 +3237,8 @@ void InitSpacecraft(struct SCType *S)
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/GPS");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Ig)) {
-            printf("Could not find spacecraft GPS Index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft GPS Index. Exiting...\n");
          }
          struct GpsType *GPS = &S->GPS[Ig];
 
@@ -3067,19 +3250,21 @@ void InitSpacecraft(struct SCType *S)
                            "/Node %ld",
                            &GPS->SampleTime, &GPS->PosNoise, &GPS->VelNoise,
                            &GPS->TimeNoise, &GPS->Node) != 5) {
-            printf("Spacecraft GPS %ld is improperly configured. Exiting...\n",
-                   Ig);
+            fprintf(stderr,
+                    "Spacecraft GPS %ld is improperly configured. Exiting...\n",
+                    Ig);
             exit(EXIT_FAILURE);
          }
 
          GPS->MaxCounter = (long)(GPS->SampleTime / DTSIM + 0.5);
          if (GPS->SampleTime < DTSIM) {
-            printf("Error:  GPS[%ld].SampleTime smaller than DTSIM.\n", Ig);
+            fprintf(stderr, "Error:  GPS[%ld].SampleTime smaller than DTSIM.\n",
+                    Ig);
             exit(EXIT_FAILURE);
          }
          GPS->SampleCounter = GPS->MaxCounter;
          if (GPS->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].GPS[%ld] Node out of range\n", S->ID, Ig);
+            fprintf(stderr, "SC[%ld].GPS[%ld] Node out of range\n", S->ID, Ig);
             exit(EXIT_FAILURE);
          }
       }
@@ -3097,7 +3282,8 @@ void InitSpacecraft(struct SCType *S)
          struct fy_node *seqNode =
              fy_node_by_path_def(iterNode, "/Accelerometer");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Ia)) {
-            printf(
+            fprintf(
+                stderr,
                 "Could not find spacecraft Accelerometer index. Exiting...\n");
             exit(EXIT_FAILURE);
          }
@@ -3120,20 +3306,23 @@ void InitSpacecraft(struct SCType *S)
                            &Accel->SampleTime, &Accel->MaxAcc, &Accel->Scale,
                            &Accel->Quant, &Accel->SigV, &Accel->SigU, &biasTime,
                            &Accel->SigE, &Accel->Bias, &Accel->Node) != 10) {
-            printf("Spacecraft Accelerometer %ld is improperly configured. "
-                   "Exiting...\n",
-                   Ia);
+            fprintf(stderr,
+                    "Spacecraft Accelerometer %ld is improperly configured. "
+                    "Exiting...\n",
+                    Ia);
             exit(EXIT_FAILURE);
          }
 
          Accel->MaxCounter = (long)(Accel->SampleTime / DTSIM + 0.5);
          if (Accel->SampleTime < DTSIM) {
-            printf("Error:  Accel[%ld].SampleTime smaller than DTSIM.\n", Ia);
+            fprintf(stderr,
+                    "Error:  Accel[%ld].SampleTime smaller than DTSIM.\n", Ia);
             exit(EXIT_FAILURE);
          }
          Accel->SampleCounter = Accel->MaxCounter;
          if (Accel->Node >= S->B[0].NumNodes) {
-            printf("SC[%ld].Accel[%ld] Node out of range\n", S->ID, Ia);
+            fprintf(stderr, "SC[%ld].Accel[%ld] Node out of range\n", S->ID,
+                    Ia);
             exit(EXIT_FAILURE);
          }
          Accel->Scale         = 1.0 + 1.0E-6 * Accel->Scale;
@@ -3146,6 +3335,83 @@ void InitSpacecraft(struct SCType *S)
          Accel->DVNoiseCoef = Accel->SigE / sqrt(Accel->SampleTime);
          Accel->CorrCoef    = 1.0 - Accel->SampleTime / (biasTime * 3600.0);
          Accel->DV          = 0.0;
+      }
+   }
+
+   /* .. Fine Guidance Sensors */
+   node    = fy_node_by_path_def(root, "/FGSs");
+   S->Nfgs = fy_node_sequence_item_count(node);
+   S->Fgs  = (struct FgsType *)calloc(S->Nfgs, sizeof(struct FgsType));
+   if (S->Nfgs > 0) {
+      iterNode = NULL;
+      WHILE_FY_ITER(node, iterNode)
+      {
+         long Ifgs               = 0;
+         struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FGS");
+         if (!fy_node_scanf(seqNode, "/Index %ld", &Ifgs)) {
+            fprintf(stderr,
+                    "Could not find spacecraft FGS index. Exiting...\n");
+            exit(EXIT_FAILURE);
+         }
+         struct FgsType *FGS = &S->Fgs[i];
+         if (fy_node_scanf(seqNode,
+                           "/Sample Time %lf "
+                           "/Boresight Axis %49s "
+                           "/Noise Equivalent Angle %lf "
+                           "/Detector Scale %lf "
+                           "/Node %ld "
+                           "/Optics File Name %[^\n] "
+                           "/PSF Image File %49s "
+                           "/Body/Index %ld",
+                           &FGS->SampleTime, dummy, &FGS->NEA, &FGS->Scl,
+                           &FGS->Node, FGS->OpticsFileName, FGS->PsfFileName,
+                           &FGS->Body)) {
+            fprintf(stderr,
+                    "Spacecraft FGS %ld is improperly configured. Exiting...\n",
+                    Ifgs);
+            exit(EXIT_FAILURE);
+         }
+         FGS->BoreAxis = DecodeString(dummy);
+         if (FGS->Body >= S->Nb) {
+            fprintf(stderr, "SC[%ld].FGS[%ld] Body out of range\n", S->ID,
+                    Ifgs);
+            exit(EXIT_FAILURE);
+         }
+         if (FGS->Node >= S->B[FGS->Body].NumNodes) {
+            fprintf(stderr, "SC[%ld].FGS[%ld] Node out of range\n", S->ID,
+                    Ifgs);
+            exit(EXIT_FAILURE);
+         }
+         FGS->MaxCounter     = (long)(FGS->SampleTime / DTSIM + 0.5);
+         FGS->SampleCounter  = FGS->MaxCounter;
+         FGS->H_Axis         = (FGS->BoreAxis + 1) % 3;
+         FGS->V_Axis         = (FGS->BoreAxis + 2) % 3;
+         FGS->NEA           *= A2R;
+         FGS->Scl           *= A2R;
+
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
+                            ang, &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CB);
+         C2Q(FGS->CB, FGS->qb);
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
+                                 FGS->FovHalfAng);
+         for (i = 0; i < 2; i++)
+            FGS->FovHalfAng[i] *= 0.5 * A2R;
+
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/FOV Frame Angles"),
+                            ang, &seq);
+         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CR);
+         C2Q(FGS->CR, FGS->qr);
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/Guide Star"),
+                                 ang);
+         FGS->Hr = ang[0] * A2R;
+         FGS->Vr = ang[1] * A2R;
+         InitOptics(FGS);
+         if (strcmp(FGS->PsfFileName, "NONE")) {
+            struct PsfType *PSF = &FGS->PSF;
+            PSF->Image = PpmToPsf(ModelPath, FGS->PsfFileName, &PSF->Ncol,
+                                  &PSF->Nrow, &PSF->BytesPerPixel);
+         }
       }
    }
 
@@ -3369,7 +3635,7 @@ void LoadTdrs(void)
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/TDRS");
       long i                  = 0;
       if (!fy_node_scanf(seqNode, "/Number %ld", &i)) {
-         printf("Could not find TDRS Number. Exiting...\n");
+         fprintf(stderr, "Could not find TDRS Number. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (i > 10)
@@ -3377,7 +3643,7 @@ void LoadTdrs(void)
 
       if (!fy_node_scanf(seqNode, "/Label %39[^\n]s",
                          Tdrs[i - 1].Designation)) {
-         printf("Could not find TDRS %ld's Label. Exiting...\n", i);
+         fprintf(stderr, "Could not find TDRS %ld's Label. Exiting...\n", i);
          exit(EXIT_FAILURE);
       }
       Tdrs[i - 1].Exists = getYAMLBool(fy_node_by_path_def(seqNode, "/Exists"));
@@ -3387,13 +3653,13 @@ void LoadTdrs(void)
 /*********************************************************************/
 void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
 {
-
    double dum1, dum2;
    long n, m;
+   long n_max = -10, m_max = -10;
 
    GravModel->Type = 0;
 
-   if (strcmp(GravModel->modelFile, "") == 0) {
+   if (strcmp(GravModel->modelFile, "") == 0 || GravModel->N <= 1) {
       GravModel->Norm = NULL;
       GravModel->C    = NULL;
       GravModel->S    = NULL;
@@ -3401,40 +3667,48 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
       GravModel->M    = 0;
    }
    else {
-      FILE *gravFile = FileOpen(modelPath, GravModel->modelFile, "r");
-      long nMax = 0, mMax = 0;
-      while (!feof(gravFile)) {
-         fscanf(gravFile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         if (n > nMax)
-            nMax = n;
-         if (m > mMax)
-            mMax = m;
-      }
-      if (mMax > nMax) {
-         printf("Model file %s has maximum Degree %ld, but maximum Order %ld. "
-                "Exiting...\n",
-                GravModel->modelFile, nMax, mMax);
-         exit(EXIT_FAILURE);
-      }
-      GravModel->C    = CreateMatrix(nMax + 1, mMax + 1);
-      GravModel->S    = CreateMatrix(nMax + 1, mMax + 1);
-      GravModel->Norm = CreateMatrix(nMax + 1, mMax + 1);
+      FILE *gravFile  = FileOpen(modelPath, GravModel->modelFile, "r");
+      GravModel->C    = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->S    = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->Norm = CreateMatrix(GravModel->N + 3, GravModel->M + 3);
 
       rewind(gravFile);
-      while (!feof(gravFile)) {
-         fscanf(gravFile, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
-         GravModel->C[n][m] = dum1;
-         GravModel->S[n][m] = dum2;
+      long succesful      = FALSE;
+      char buffer[BUFSIZ] = {0};
+      while (fgets(buffer, sizeof(buffer), gravFile) != NULL) {
+         sscanf(buffer, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
+         if (n > n_max)
+            n_max = n;
+         if (m > m_max)
+            m_max = m;
+         if (n <= GravModel->N && m <= GravModel->M) {
+            GravModel->C[n][m] = dum1;
+            GravModel->S[n][m] = dum2;
+            if (n == GravModel->N && m == GravModel->M) {
+               succesful = TRUE;
+            }
+         }
       }
       fclose(gravFile);
-      /* Transform from EGM96 normalization to Neumann normalization */
-      for (n = 1; n <= nMax; n++) {
-         for (m = 0; m <= n; m++) {
-            double tmpNorm = 1.0 / (2 * n + 1);
-            if (m != 0)
-               tmpNorm *= (double)(factDfact(n + m, n - m) / 2);
-            GravModel->Norm[n][m] = sqrt(tmpNorm);
+      if (!succesful) {
+         fprintf(stderr,
+                 "Got to end of Gravity Model File, %s, before fulfilling "
+                 "Requested degree and/or order. File has maximum degree %ld, "
+                 "maximum order %ld. Exiting...\n",
+                 GravModel->modelFile, n_max, m_max);
+         exit(EXIT_FAILURE);
+      }
+      /* Transform from EGM normalization to Neumann normalization */
+      // From GMAT Source, Harmonic.cpp, line 289-297
+      // for the moment, not sure why up to n+2, m+2
+      for (n = 0; n <= GravModel->N + 2; n++) {
+         // initializer for following loop
+         GravModel->Norm[n][0] = sqrt(2 * (2 * n + 1));
+         for (m = 1; m <= n + 2 && m <= GravModel->M + 2; m++) {
+            GravModel->Norm[n][m] =
+                GravModel->Norm[n][m - 1] / sqrt((n + m) * (n - m + 1));
          }
+         GravModel->Norm[n][0] = sqrt(2 * n + 1);
       }
    }
 }
@@ -3461,7 +3735,7 @@ void LoadSun(void)
    W->Nsat = 9;
    W->Sat  = (long *)calloc(W->Nsat, sizeof(long));
    if (W->Sat == NULL) {
-      printf("W->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr, "W->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
    for (i = 0; i < W->Nsat; i++)
@@ -3519,6 +3793,7 @@ void LoadSun(void)
       W->qnh[i]    = 0.0;
    }
    W->qnh[3] = 1.0;
+   QxQT(W->qnh, qjh, W->qnj);
 }
 /*********************************************************************/
 void LoadPlanets(void)
@@ -3534,7 +3809,7 @@ void LoadPlanets(void)
    char MapFileName[10][20] = {
        "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
-   const char GravFileName[10][20] = {"", "", "", "EGM96.txt", "GMM2B.txt",
+   const char GravFileName[10][20] = {"", "", "", "EGM08.txt", "GMM2B.txt",
                                       "", "", "", "",          ""};
    double Mu[10]  = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
                      1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
@@ -3551,6 +3826,18 @@ void LoadPlanets(void)
                                 64.496, 83.537, -15.175, 42.95, -6.145};
    double PriMerAngJ2000[10] = {0.0,    329.71, 160.26, 190.16, 176.868,
                                 284.95, 38.90,  203.81, 253.18, 236.77};
+
+   double grav_r_ref[10];
+   for (int i = 0; i < 10; i++) {
+      switch (i) {
+         case EARTH:
+            grav_r_ref[i] = 6378136.3;
+            break;
+         default:
+            grav_r_ref[i] = Rad[i];
+            break;
+      }
+   }
 
 #ifdef _ENABLE_SPICE_
    const char OrientationName[10][20] = {
@@ -3653,7 +3940,8 @@ void LoadPlanets(void)
       strcpy(World[i].MapFileName, MapFileName[i]);
       strcpy(World[i].ColTexFileName, "NONE");
       strcpy(World[i].BumpTexFileName, "NONE");
-      World[i].mu             = Mu[i];
+      if (World[i].mu == 0)
+         World[i].mu = Mu[i];
       World[i].J2             = J2[i];
       World[i].rad            = Rad[i];
       World[i].w              = W[i];
@@ -3672,12 +3960,30 @@ void LoadPlanets(void)
          World[i].Glyph[j] = Glyph[i][j];
       World[i].Atmo.Exists = HasAtmo[i];
 
-      /* Gravitation Model */
-      struct SphereHarmType *gravModel = &World[i].GravModel;
-      strcpy(gravModel->modelFile, GravFileName[i]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         /* Gravitation Model */
+         struct SphereHarmType *gravModel = &World[i].GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[i], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       World[i].Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[i]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = grav_r_ref[i];
+            World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 
    World[EARTH].Atmo.GasColor[0]  = 0.17523;
@@ -3727,12 +4033,16 @@ void LoadPlanets(void)
    /* Planetocentric Inertial Reference Frames */
    A2C(123, -23.4392911 * D2R, 0.0, 0.0, World[EARTH].CNH);
    C2Q(World[EARTH].CNH, World[EARTH].qnh);
+   for (i = 0; i < 3; i++)
+      World[EARTH].qnj[i] = 0.0;
+   World[EARTH].qnj[3] = 1.0;
    for (i = MERCURY; i <= PLUTO; i++) {
       if (i != EARTH) {
          A2C(312, (PoleRA[i] + 90.0) * D2R, (90.0 - PoleDec[i]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[i].CNH);
          C2Q(World[i].CNH, World[i].qnh);
+         QxQT(World[i].qnh, qjh, World[i].qnj);
       }
    }
 
@@ -3829,7 +4139,8 @@ void LoadMoonOfEarth(void)
    P->Nsat = 1;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Earth P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Earth P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -3849,7 +4160,8 @@ void LoadMoonOfEarth(void)
          M->Color[i] = Color[i];
       for (i = 0; i < 14; i++)
          M->Glyph[i] = Glyph[i];
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->J2        = J2[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
@@ -3884,15 +4196,34 @@ void LoadMoonOfEarth(void)
       LunaInertialFrame(TT.JulDay, CNJ);
       MxM(CNJ, World[EARTH].CNH, M->CNH);
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       M->PriMerAng = LunaPriMerAng(TT.JulDay);
       M->Type      = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -3961,7 +4292,8 @@ void LoadMoonsOfMars(void)
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Mars P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Mars P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -3977,7 +4309,8 @@ void LoadMoonsOfMars(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4025,16 +4358,35 @@ void LoadMoonsOfMars(void)
       }
 
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
    strcpy(World[PHOBOS].GeomFileName, "Phobos.obj");
    Geom = LoadWingsObjFile(ModelPath, World[PHOBOS].GeomFileName, &Matl, &Nmatl,
@@ -4137,7 +4489,8 @@ void LoadMoonsOfJupiter(void)
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Jupiter P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Jupiter P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -4153,7 +4506,8 @@ void LoadMoonsOfJupiter(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4200,16 +4554,35 @@ void LoadMoonsOfJupiter(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4313,7 +4686,8 @@ void LoadMoonsOfSaturn(void)
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Saturn P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Saturn P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -4329,7 +4703,8 @@ void LoadMoonsOfSaturn(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4376,16 +4751,35 @@ void LoadMoonsOfSaturn(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4455,7 +4849,8 @@ void LoadMoonsOfUranus(void)
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Uranus P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Uranus P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -4471,7 +4866,8 @@ void LoadMoonsOfUranus(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4518,16 +4914,35 @@ void LoadMoonsOfUranus(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4595,7 +5010,8 @@ void LoadMoonsOfNeptune(void)
    P->Nsat = Nm;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Neptune P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Neptune P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -4658,6 +5074,7 @@ void LoadMoonsOfNeptune(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
@@ -4736,7 +5153,8 @@ void LoadMoonsOfPluto(void)
    P->Nsat = 1;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
-      printf("Pluto P->Sat calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr,
+              "Pluto P->Sat calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -4752,7 +5170,8 @@ void LoadMoonsOfPluto(void)
       strcpy(M->MapFileName, MapFileName[Im]);
       strcpy(M->ColTexFileName, "NONE");
       strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
+      if (M->mu == 0)
+         M->mu = mu[Im];
       M->rad       = rad[Im];
       M->w         = w[Im];
       M->PriMerAng = 0.0;
@@ -4800,16 +5219,35 @@ void LoadMoonsOfPluto(void)
          C2Q(World[Iw].CNH, World[Iw].qnh);
       }
       C2Q(M->CNH, M->qnh);
+      QxQT(M->qnh, qjh, M->qnj);
       for (i = 0; i < 4; i++)
          M->Color[i] = 1.0;
       M->Type = MOON;
 
       /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         struct SphereHarmType *gravModel = &M->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       M->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName[Im]);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad[i];
+            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
 #undef Nm
 }
@@ -4833,7 +5271,8 @@ void LoadMinorBodies(void)
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
    fscanf(infile, "%ld %[^\n] %[\n]", &Nmb, junk, &newline);
    if (Nmb > 10) {
-      printf("Only 10 minor bodies are supported.  Adjust NWORLD to suit.\n");
+      fprintf(stderr,
+              "Only 10 minor bodies are supported.  Adjust NWORLD to suit.\n");
       exit(EXIT_FAILURE);
    }
    for (Ib = 0; Ib < Nmb; Ib++) {
@@ -4849,7 +5288,10 @@ void LoadMinorBodies(void)
       fscanf(infile, "%s %[^\n] %[\n]", W->GeomFileName, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", W->ColTexFileName, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", W->BumpTexFileName, junk, &newline);
-      fscanf(infile, "%lf %[^\n] %[\n]", &W->mu, junk, &newline);
+      double mu = 0;
+      fscanf(infile, "%lf %[^\n] %[\n]", &mu, junk, &newline);
+      if (W->mu == 0) // TODO: maybe, maybe not
+         W->mu = mu;
       fscanf(infile, "%lf %[^\n] %[\n]", &W->rad, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", GravFileName, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &W->w, junk, &newline);
@@ -4857,6 +5299,7 @@ void LoadMinorBodies(void)
       A2C(312, (PoleRA + 90.0) * D2R, (90.0 - PoleDec) * D2R, 0.0, CNJ);
       MxM(CNJ, World[EARTH].CNH, W->CNH);
       C2Q(W->CNH, W->qnh);
+      QxQT(W->qnh, qjh, W->qnj);
       E->Exists = TRUE;
       E->Regime = ORB_CENTRAL;
       E->World  = SOL;
@@ -4907,13 +5350,31 @@ void LoadMinorBodies(void)
       C2Q(W->CWN, W->qwn);
 
       /* Gravitation Model */
-      if (strcmp(GravFileName, "NONE") == 0)
-         strcpy(GravFileName, "");
-      struct SphereHarmType *gravModel = &W->GravModel;
-      strcpy(gravModel->modelFile, GravFileName);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+      if (GravPertActive) {
+         if (strcmp(GravFileName, "NONE") == 0)
+            strcpy(GravFileName, "");
+         struct SphereHarmType *gravModel = &W->GravModel;
+         if (!strcmp(gravModel->modelFile, "")) {
+            if (!strcmp(GravFileName, "") && gravModel->N > 1) {
+               fprintf(stderr,
+                       "World %s was requested to use a spherical harmonic "
+                       "gravity model, but does not have a file configured, "
+                       "neither in 'Inp_Sim' or in source. Add the file to the "
+                       "main 'Model' directory and add the file name as a "
+                       "'Model File' field to the Gravitation Model for this "
+                       "world in 'Inp_Sim'. Exiting...\n",
+                       W->Name);
+               exit(EXIT_FAILURE);
+            }
+            strcpy(gravModel->modelFile, GravFileName);
+         }
+         LoadGravModel(ModelPath, gravModel);
+         if (gravModel->C != NULL) {
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = W->rad;
+            W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+         }
+      }
    }
    fclose(infile);
 }
@@ -4942,16 +5403,17 @@ void LoadRegions(void)
                         "/Coefficients/Elasticity %lf "
                         "/Coefficients/Damping %lf "
                         "/Coefficients/Friction %lf "
-                        "/Geometry File Name %39s",
+                        "/Geometry File Name %39[^\n]",
                         R->Name, WorldID, IsPosW, &R->ElastCoef, &R->DampCoef,
                         &R->FricCoef, R->GeomFileName) != 7) {
-         printf("Region has improper configuration. Exiting...\n");
+         fprintf(stderr, "Region has improper configuration. Exiting...\n");
          exit(EXIT_FAILURE);
       }
 
       R->World = DecodeString(WorldID);
       if (R->World < 0 || R->World > NWORLD) {
-         printf(
+         fprintf(
+             stderr,
              "Region's World is out of range in LoadRegions.  Bailing out.\n");
          exit(EXIT_FAILURE);
       }
@@ -5019,9 +5481,10 @@ void InitLagrangePoints(void)
       strcpy(LS->Name, LagsysName[i]);
       if (LS->Exists) {
          if (!(W1->Exists && W2->Exists)) {
-            printf("Lagrange System %s depends on worlds that don't exist.  "
-                   "Check Inp_Sim.txt\n",
-                   LS->Name);
+            fprintf(stderr,
+                    "Lagrange System %s depends on worlds that don't exist.  "
+                    "Check Inp_Sim.txt\n",
+                    LS->Name);
             exit(EXIT_FAILURE);
          }
          LS->mu1      = W1->mu;
@@ -5071,8 +5534,8 @@ long LoadJplEphems(char EphemPath[80], double JD)
 
    /* .. Select input file */
    if (JD < 2433264.5) {
-      printf("JD earlier than JPL ephem input files.  Falling back to "
-             "lower-precision planetary ephemerides.\n");
+      fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
+                      "lower-precision planetary ephemerides.\n");
       return (1);
    }
    else if (JD < 2469808.5) {
@@ -5081,7 +5544,7 @@ long LoadJplEphems(char EphemPath[80], double JD)
       else if (EphemOption == EPH_DE440)
          infile = FileOpen(EphemPath, "ascp01950.440", "rt");
       else {
-         printf("Unknown Ephem Option in LoadJplEphems.\n");
+         fprintf(stderr, "Unknown Ephem Option in LoadJplEphems.\n");
          exit(EXIT_FAILURE);
       }
    }
@@ -5091,7 +5554,7 @@ long LoadJplEphems(char EphemPath[80], double JD)
       else if (EphemOption == EPH_DE440)
          infile = FileOpen(EphemPath, "ascp02050.440", "rt");
       else {
-         printf("Unknown Ephem Option in LoadJplEphems.\n");
+         fprintf(stderr, "Unknown Ephem Option in LoadJplEphems.\n");
          exit(EXIT_FAILURE);
       }
    }
@@ -5101,7 +5564,7 @@ long LoadJplEphems(char EphemPath[80], double JD)
       else if (EphemOption == EPH_DE440)
          infile = FileOpen(EphemPath, "ascp02150.440", "rt");
       else {
-         printf("Unknown Ephem Option in LoadJplEphems.\n");
+         fprintf(stderr, "Unknown Ephem Option in LoadJplEphems.\n");
          exit(EXIT_FAILURE);
       }
    }
@@ -5377,8 +5840,8 @@ long LoadJplEphems(char EphemPath[80], double JD)
          PosJ[i] = 1000.0 * P;
          VelJ[i] = 1000.0 * dPdu * dudJD / 86400.0;
       }
-      QTxV(qJ2000H, PosJ, Eph->PosN);
-      QTxV(qJ2000H, VelJ, Eph->VelN);
+      QTxV(qjh, PosJ, Eph->PosN);
+      QTxV(qjh, VelJ, Eph->VelN);
    }
    /* Adjust for barycenters */
    /* Move planets from barycentric to Sun-centered */
@@ -5645,11 +6108,16 @@ void InitSim(int argc, char **argv)
    long Iorb, Isc, i, j, Ip, Im, Iw, Nm;
    long MinorBodiesExist;
    long JunkTag;
-   double CGJ2000[3][3] = {
+   double CGJ[3][3] = {
        {-0.054873956175539, -0.873437182224835, -0.483835031431981},
        {0.494110775064704, -0.444828614979805, 0.746981957785302},
        {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
-   double CJ2000H[3][3];
+   double CJH[3][3];
+
+   qjh[0] = -0.203123038887;
+   qjh[1] = 0.0;
+   qjh[2] = 0.0;
+   qjh[3] = 0.979153221449;
 
    Pi          = PI;
    TwoPi       = TWOPI;
@@ -5657,11 +6125,8 @@ void InitSim(int argc, char **argv)
    SqrtTwo     = SQRTTWO;
    SqrtHalf    = SQRTHALF;
    GoldenRatio = GOLDENRATIO;
-
-   qJ2000H[0] = -0.203123038887;
-   qJ2000H[1] = 0.0;
-   qJ2000H[2] = 0.0;
-   qJ2000H[3] = 0.979153221449;
+   A2R         = D2R / 3600.0;
+   R2A         = R2D * 3600.0;
 
 #ifdef _ENABLE_RBT_
    sprintf(InOutPath, "../../GSFC/RBT/InOut/");
@@ -5810,10 +6275,11 @@ void InitSim(int argc, char **argv)
                      "/Command File %999s",
                      response, &STOPTIME, &DTSIM, &DTOUT, &RngSeed,
                      CmdFileName) != 6) {
-      printf("Simulation Control in Inp_Sim is improperly configured. "
-             "Exiting...\n");
+      fprintf(stderr, "Simulation Control in Inp_Sim is improperly configured. "
+                      "Exiting...\n");
       exit(EXIT_FAILURE);
    }
+   TimeMode = DecodeString(response);
    GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
    if (CLI_ARGS.graphics != NULL) {
@@ -5844,13 +6310,13 @@ void InitSim(int argc, char **argv)
    Orb  = NULL;
    Orb  = (struct OrbitType *)calloc(Norb, sizeof(struct OrbitType));
    if (Orb == NULL) {
-      printf("Orb calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr, "Orb calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
    Frm = NULL;
    Frm = (struct FormationType *)calloc(Norb, sizeof(struct FormationType));
    if (Frm == NULL) {
-      printf("Frm calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr, "Frm calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -5859,7 +6325,7 @@ void InitSim(int argc, char **argv)
    WHILE_FY_ITER(node, iterNode)
    {
       if (!fy_node_scanf(iterNode, "/Name %39[^\n]s", Orb[Iorb].FileName)) {
-         printf("Could not find Orbit name. Exiting...\n");
+         fprintf(stderr, "Could not find Orbit name. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       strcat(Orb[Iorb].FileName, ".yaml");
@@ -5874,7 +6340,7 @@ void InitSim(int argc, char **argv)
    SC   = NULL;
    SC   = (struct SCType *)calloc(Nsc, sizeof(struct SCType));
    if (SC == NULL) {
-      printf("SC calloc returned null pointer.  Bailing out!\n");
+      fprintf(stderr, "SC calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
 
@@ -5886,7 +6352,8 @@ void InitSim(int argc, char **argv)
                         "/Name %49s "
                         "/Orbit %19s",
                         SC[Isc].FileName, response) != 2) {
-         printf("Could not find SC's name and/or its orbit. Exiting...\n");
+         fprintf(stderr,
+                 "Could not find SC's name and/or its orbit. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       strcat(SC[Isc].FileName, ".yaml");
@@ -5899,16 +6366,17 @@ void InitSim(int argc, char **argv)
          }
       }
       if (SC[Isc].RefOrb == -1) {
-         printf("SC[%ld] named %49s is assigned to invalid orbit %19s. "
-                "Exiting...\n",
-                Isc, SC[Isc].FileName, response);
+         fprintf(stderr,
+                 "SC[%ld] named %49s is assigned to invalid orbit %19s. "
+                 "Exiting...\n",
+                 Isc, SC[Isc].FileName, response);
          exit(EXIT_FAILURE);
       }
       SC[Isc].Exists = getYAMLBool(fy_node_by_path_def(iterNode, "/Enabled"));
       if ((SC[Isc].Exists && !Orb[SC[Isc].RefOrb].Exists) ||
           (SC[Isc].RefOrb > Norb)) {
-         printf("Yo!  SC[%ld] is assigned to non-existent Orb[%ld]\n", Isc,
-                SC[Isc].RefOrb);
+         fprintf(stderr, "Yo!  SC[%ld] is assigned to non-existent Orb[%ld]\n",
+                 Isc, SC[Isc].RefOrb);
          exit(EXIT_FAILURE);
       }
       SC[Isc].ID = Isc;
@@ -5930,7 +6398,7 @@ void InitSim(int argc, char **argv)
                      "/Leap Seconds %lf",
                      &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
                      &UTC.Second, &millisec, &LeapSec) != 8) {
-      printf("Time is improperly configured in Inp_Sim. Exiting...\n");
+      fprintf(stderr, "Time is improperly configured in Inp_Sim. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    UTC.Second += millisec / 1000.0;
@@ -5946,8 +6414,9 @@ void InitSim(int argc, char **argv)
                         "/World %119s "
                         "/Method %119s",
                         response1, response2) != 2) {
-         printf("Could not find World and/or Method for Atmospheric Model. "
-                "Exiting...\n");
+         fprintf(stderr,
+                 "Could not find World and/or Method for Atmospheric Model. "
+                 "Exiting...\n");
          exit(EXIT_FAILURE);
       }
       Iw            = DecodeString(response1);
@@ -5956,7 +6425,9 @@ void InitSim(int argc, char **argv)
       if (atmoType == USER_ATMO)
          if (fy_node_scanf(iterNode, "/F10.7 %lf /Ap %lf", &f10p7, &geomag) !=
              2) {
-            printf("Could not find user defined F10.7 and/or Ap. Exiting...\n");
+            fprintf(
+                stderr,
+                "Could not find user defined F10.7 and/or Ap. Exiting...\n");
             exit(EXIT_FAILURE);
          }
 
@@ -5967,9 +6438,10 @@ void InitSim(int argc, char **argv)
             GeomagIndex = geomag;
             break;
          default:
-            printf("World %119s does not have a configured atmospheric model. "
-                   "Exiting...\n",
-                   response1);
+            fprintf(stderr,
+                    "World %119s does not have a configured atmospheric model. "
+                    "Exiting...\n",
+                    response1);
             exit(EXIT_FAILURE);
             break;
       }
@@ -5986,8 +6458,9 @@ void InitSim(int argc, char **argv)
                         "/World %119s "
                         "/Method %119s",
                         response1, response2) != 2) {
-         printf("Could not find World and/or Method for Magnetic Model. "
-                "Exiting...\n");
+         fprintf(stderr,
+                 "Could not find World and/or Method for Magnetic Model. "
+                 "Exiting...\n");
          exit(EXIT_FAILURE);
       }
       Iw           = DecodeString(response1);
@@ -5997,9 +6470,10 @@ void InitSim(int argc, char **argv)
             MagModel.Type = magType;
             break;
          default:
-            printf("World %119s does not have a configured magnetic field "
-                   "model. Exiting...\n",
-                   response1);
+            fprintf(stderr,
+                    "World %119s does not have a configured magnetic field "
+                    "model. Exiting...\n",
+                    response1);
             exit(EXIT_FAILURE);
             break;
       }
@@ -6009,8 +6483,9 @@ void InitSim(int argc, char **argv)
                            "/Degree %ld "
                            "/Order %ld",
                            &N, &M) != 2) {
-            printf("Could not find Degree and/or Order for Magnetic Field "
-                   "Model. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find Degree and/or Order for Magnetic Field "
+                    "Model. Exiting...\n");
             exit(EXIT_FAILURE);
          }
          switch (Iw) {
@@ -6019,9 +6494,10 @@ void InitSim(int argc, char **argv)
                MagModel.M = M;
                break;
             default:
-               printf("World %119s does not have a configured spherical "
-                      "harmonic magnetic field model. Exiting...\n",
-                      response1);
+               fprintf(stderr,
+                       "World %119s does not have a configured spherical "
+                       "harmonic magnetic field model. Exiting...\n",
+                       response1);
                exit(EXIT_FAILURE);
                break;
          }
@@ -6029,11 +6505,17 @@ void InitSim(int argc, char **argv)
    }
 
    /* .. Earth, Mars, Luna Gravity Models */
-   // TODO: make gravfield a property of worlds, so each world can have a
-   // configurable gravitational
-   // TODO: make gravfield coefficent files a field for models?
+   for (Iw = 0; Iw <= NWORLD; Iw++) {
+      struct SphereHarmType *gravModel = &World[Iw].GravModel;
+      strcpy(gravModel->modelFile, "");
+      gravModel->N     = 0;
+      gravModel->r_ref = 0;
+      World[Iw].mu     = 0;
+   }
    iterNode = NULL;
-   WHILE_FY_ITER(fy_node_by_path_def(node, "/Gravitation/Models"), iterNode)
+   struct fy_node *grav_model_list =
+       fy_node_by_path_def(node, "/Gravitation/Models");
+   WHILE_FY_ITER(grav_model_list, iterNode)
    {
       long N = 0, M = 0;
       if (fy_node_scanf(iterNode,
@@ -6041,25 +6523,38 @@ void InitSim(int argc, char **argv)
                         "/Degree %ld "
                         "/Order %ld",
                         response, &N, &M) != 3) {
-         printf("Could not find World, Degree, and/or Order for Gravitational "
-                "Model. Exiting...\n");
+         fprintf(stderr, "Could not find World, Degree, and/or Order for "
+                         "Gravitational Model. Exiting...\n");
          exit(EXIT_FAILURE);
       }
-      Iw = DecodeString(response);
-      switch (Iw) {
-         case EARTH:
-         case MARS:
-         case LUNA:
-            World[Iw].GravModel.N = N;
-            World[Iw].GravModel.M = M;
-            break;
-         default:
-            printf("World %119s does not have a configured spherical harmonic "
-                   "gravity model. Exiting...\n",
-                   response);
-            exit(EXIT_FAILURE);
-            break;
+      Iw                               = DecodeString(response);
+      struct SphereHarmType *gravModel = &World[Iw].GravModel;
+      gravModel->N                     = N;
+      gravModel->M                     = M;
+
+      // Load model file name from Inp_Sim if it is there, otherwise leave blank
+      // to use default later
+      struct fy_node *file_node = fy_node_by_path_def(iterNode, "/Model File");
+      if (file_node != NULL) {
+         size_t len            = 0;
+         const char *modelFile = fy_node_get_scalar(file_node, &len);
+         strncpy(gravModel->modelFile, modelFile, 39);
+         gravModel->modelFile[39] = 0; // ensure null termination
       }
+
+      // override the reference radius of the model hardcoded in source, usually
+      // hardcoded as the equatorial radius of the body
+      struct fy_node *r_node =
+          fy_node_by_path_def(iterNode, "/Reference Radius");
+      if (r_node != NULL)
+         fy_node_scanf(r_node, "/ %lf", &gravModel->r_ref);
+
+      // override the hard coded gravitational parameter. For a minor body,
+      // overrides the gravitational parameter in the minor body file
+      struct fy_node *gm_node =
+          fy_node_by_path_def(iterNode, "/Gravitational Parameter");
+      if (gm_node != NULL)
+         fy_node_scanf(gm_node, "/ %lf", &World[Iw].mu);
    }
 
    /* .. Toggle on/off various environmental effects */
@@ -6085,13 +6580,13 @@ void InitSim(int argc, char **argv)
 
    /* .. Celestial Bodies */
    if (!fy_node_scanf(root, "/Ephem Type %119s", response)) {
-      printf("Could not find Ephemeris Type in Inp_Sim. Exiting...\n");
+      fprintf(stderr, "Could not find Ephemeris Type in Inp_Sim. Exiting...\n");
       exit(EXIT_FAILURE);
    }
    EphemOption = DecodeString(response);
    node        = fy_node_by_path_def(root, "/Celestial Bodies");
-   // I wish this was more programmatic, but it doesn't really need to be I
-   // guess
+   // I wish this was more programmatic, but it doesn't really need to be
+   // I guess
    World[MERCURY].Exists = getYAMLBool(fy_node_by_path_def(node, "/Mercury"));
    World[VENUS].Exists   = getYAMLBool(fy_node_by_path_def(node, "/Venus"));
    World[EARTH].Exists =
@@ -6132,7 +6627,7 @@ void InitSim(int argc, char **argv)
           fy_node_by_path_def(iterNode, "/Ground Station");
       long Ignd = 0;
       if (!fy_node_scanf(seqNode, "/Index %ld", &Ignd)) {
-         printf("Could not find Ground Station Index. Exiting...\n");
+         fprintf(stderr, "Could not find Ground Station Index. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (fy_node_scanf(seqNode,
@@ -6141,8 +6636,9 @@ void InitSim(int argc, char **argv)
                         "/Latitude %lf",
                         response, &GroundStation[Ignd].lng,
                         &GroundStation[Ignd].lat) != 3) {
-         printf("Ground Station %ld is improperly configured. Exiting...\n",
-                Ignd);
+         fprintf(stderr,
+                 "Ground Station %ld is improperly configured. Exiting...\n",
+                 Ignd);
          exit(EXIT_FAILURE);
       }
       size_t str_len;
@@ -6191,8 +6687,8 @@ void InitSim(int argc, char **argv)
 /* .. Load Sun and Planets */
 #ifdef _ENABLE_SPICE_
    if (EphemOption == EPH_SPICE)
-      LoadSpiceKernels(
-          ModelPath); // Load SPICE to get SPICE-provided values for mu, J2, etc
+      LoadSpiceKernels(ModelPath); // Load SPICE to get SPICE-provided
+                                   // values for mu, J2, etc
 #endif
 
    LoadSun();
@@ -6231,8 +6727,8 @@ void InitSim(int argc, char **argv)
    LoadRegions();
 
    /* .. Galactic Frame */
-   Q2C(qJ2000H, CJ2000H);
-   MxM(CGJ2000, CJ2000H, CGH);
+   Q2C(qjh, CJH);
+   MxM(CGJ, CJH, CGH);
 
    /* .. Ground Station Locations */
    for (i = 0; i < Ngnd; i++) {
@@ -6324,8 +6820,9 @@ void InitSim(int argc, char **argv)
          DSMFSW    |= SC[Isc].FswTag == DSM_FSW;
          nonDSMFSW |= SC[Isc].FswTag != DSM_FSW;
          if (nonDSMFSW && DSMFSW) {
-            printf("Mixing DSM_FSW and non DSM_FSW flightsoftware tags is not "
-                   "supported. Exiting...\n");
+            fprintf(stderr,
+                    "Mixing DSM_FSW and non DSM_FSW flightsoftware tags is not "
+                    "supported. Exiting...\n");
             exit(EXIT_FAILURE);
          }
       }

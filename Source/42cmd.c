@@ -83,8 +83,8 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
          O->VelN[2] += Vec[2];
       }
       else {
-         printf("Bogus DvFrame %c in SimCmdInterpreter\n", DvFrame);
-         exit(1);
+         fprintf(stderr, "Bogus DvFrame %c in SimCmdInterpreter\n", DvFrame);
+         exit(EXIT_FAILURE);
       }
       RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
              &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha, &O->rmin,

@@ -25,12 +25,14 @@ struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
    struct fy_document *fyd = fy_document_build_from_fp(NULL, f);
    fclose(f);
    if (fy_document_resolve(fyd)) {
-      printf("Unable to resolve links in %127s. Exiting...\n", fileName);
+      fprintf(stderr, "Unable to resolve links in %127s. Exiting...\n",
+              fileName);
       exit(EXIT_FAILURE);
    }
 
    if (!fyd) {
-      printf("Failed to build yaml from %127s. Exiting...\n", fileName);
+      fprintf(stderr, "Failed to build yaml from %127s. Exiting...\n",
+              fileName);
       fy_document_destroy(fyd);
       exit(EXIT_FAILURE);
    }
@@ -62,9 +64,10 @@ long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
    {
       if (!fy_node_scanf(iterNode, "/ %lf", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
-         printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
-                "in %s on line %d. Exiting...\n",
-                parentAddress, __FILE__, __LINE__);
+         fprintf(stderr,
+                 "Problem reading YAML sequence %s in assignYAMLToDoubleArray "
+                 "in %s on line %d. Exiting...\n",
+                 parentAddress, __FILE__, __LINE__);
          exit(EXIT_FAILURE);
       }
       i++;
@@ -83,10 +86,11 @@ long assignYAMLToFloatArray(const long n, struct fy_node *yamlSequence,
    {
       if (!fy_node_scanf(iterNode, "/ %f", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
-         printf("Problem reading YAML sequence %s in assignYAMLTofloatArray "
-                "in %s on line %d. "
-                "Exiting...\n",
-                parentAddress, __FILE__, __LINE__);
+         fprintf(stderr,
+                 "Problem reading YAML sequence %s in assignYAMLTofloatArray "
+                 "in %s on line %d. "
+                 "Exiting...\n",
+                 parentAddress, __FILE__, __LINE__);
          exit(EXIT_FAILURE);
       }
       i++;
@@ -105,9 +109,10 @@ long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
    {
       if (!fy_node_scanf(iterNode, "/ %ld", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
-         printf("Problem reading YAML sequence %s in assignYAMLToDoubleArray "
-                "in %s on line %d. Exiting...\n",
-                parentAddress, __FILE__, __LINE__);
+         fprintf(stderr,
+                 "Problem reading YAML sequence %s in assignYAMLToDoubleArray "
+                 "in %s on line %d. Exiting...\n",
+                 parentAddress, __FILE__, __LINE__);
          exit(EXIT_FAILURE);
       }
       i++;
@@ -139,9 +144,11 @@ long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq)
        3, fy_node_by_path(yamlEuler, "/Angles", -1, FYNWF_PTR_YAML), angles);
    i += fy_node_scanf(yamlEuler, "/Sequence %ld", seq);
    if (i != 4) {
-      printf("Problem reading Euler Angles in getYAMLEulerAngles in %s on line "
-             "%d. Exiting...\n",
-             __FILE__, __LINE__);
+      fprintf(
+          stderr,
+          "Problem reading Euler Angles in getYAMLEulerAngles in %s on line "
+          "%d. Exiting...\n",
+          __FILE__, __LINE__);
       exit(EXIT_FAILURE);
    }
    return (i);
@@ -156,8 +163,8 @@ FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
    strcat(FileName, File);
    FilePtr = fopen(FileName, CtrlCode);
    if (FilePtr == NULL) {
-      printf("Error opening %s: %s\n", FileName, strerror(errno));
-      exit(1);
+      fprintf(stderr, "Error opening %s: %s\n", FileName, strerror(errno));
+      exit(EXIT_FAILURE);
    }
    return (FilePtr);
 }
@@ -202,11 +209,51 @@ int FileToString(const char *file_name, char **result_string,
       printf("Error reading from file %s\n", file_name);
       return -1;
    }
+   if (ret > file_len) {
+      printf("Error: Number of characters read (%d) exceeds expected file size "
+             "(%d) for file %s\n",
+             ret, (int)file_len, file_name);
+      return -1;
+   }
+   (*result_string)[ret] = '\0';
 
    close(fd);
 
    *string_len = file_len;
    return 0;
+}
+/**********************************************************************/
+double *PpmToPsf(const char *path, const char *filename, long *width,
+                 long *height, long *BytesPerPixel)
+{
+   FILE *infile;
+   long N, i;
+   long Nh, Nw, Nb, junk;
+   char format[20], comment[80];
+   double *PSF;
+
+   infile = FileOpen(path, filename, "rb");
+   fscanf(infile, "%s\n%[^\n]\n", format, comment);
+   if (!strcmp(format, "P6"))
+      Nb = 3;
+   else if (!strcmp(format, "P5"))
+      Nb = 1;
+   else {
+      fprintf(stderr, "Unknown format in PpmToImage.\n");
+      exit(EXIT_FAILURE);
+   }
+   fscanf(infile, "%ld %ld\n%ld\n", &Nw, &Nh, &junk);
+   N   = Nw * Nh * Nb;
+   PSF = (double *)calloc(N, sizeof(double));
+   for (i = 0; i < N; i++) {
+      PSF[i] = ((double)fgetc(infile)) / 255.0;
+   }
+   fclose(infile);
+   *width         = Nw;
+   *height        = Nh;
+   *BytesPerPixel = Nb;
+
+   return (PSF);
 }
 /**********************************************************************/
 SOCKET InitSocketServer(int Port, int AllowBlocking)
@@ -222,30 +269,30 @@ SOCKET InitSocketServer(int Port, int AllowBlocking)
 
    /* Initialize winsock */
    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-      printf("Error initializing winsock in InitSocketClient.\n");
-      exit(1);
+      fprintf(stderr, "Error initializing winsock in InitSocketClient.\n");
+      exit(EXIT_FAILURE);
    }
 
    init_sockfd = socket(AF_INET, SOCK_STREAM, 0);
    if (init_sockfd < 0) {
-      printf("Error opening server socket.\n");
-      exit(1);
+      fprintf(stderr, "Error opening server socket.\n");
+      exit(EXIT_FAILURE);
    }
    memset((char *)&Server, 0, sizeof(Server));
    Server.sin_family      = AF_INET;
    Server.sin_addr.s_addr = INADDR_ANY;
    Server.sin_port        = htons(Port);
    if (bind(init_sockfd, (struct sockaddr *)&Server, sizeof(Server)) < 0) {
-      printf("Error on binding server socket.\n");
-      exit(1);
+      fprintf(stderr, "Error on binding server socket.\n");
+      exit(EXIT_FAILURE);
    }
    printf("Server is listening on port %i\n", Port);
    listen(init_sockfd, 5);
    clilen = sizeof(Client);
    sockfd = accept(init_sockfd, (struct sockaddr *)&Client, &clilen);
    if (sockfd < 0) {
-      printf("Error on accepting client socket.\n");
-      exit(1);
+      fprintf(stderr, "Error on accepting client socket.\n");
+      exit(EXIT_FAILURE);
    }
    printf("Server side of socket established.\n");
    closesocket(init_sockfd);
@@ -274,16 +321,16 @@ SOCKET InitSocketServer(int Port, int AllowBlocking)
 
    init_sockfd = socket(AF_INET, SOCK_STREAM, 0);
    if (init_sockfd < 0) {
-      printf("Error opening server socket.\n");
-      exit(1);
+      fprintf(stderr, "Error opening server socket.\n");
+      exit(EXIT_FAILURE);
    }
 
    /* Allowing reuse while in TIME_WAIT might make port available */
    /* more quickly after a socket has been broken */
    if (setsockopt(init_sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) ==
        -1) {
-      printf("Error setting socket option.\n");
-      exit(1);
+      fprintf(stderr, "Error setting socket option.\n");
+      exit(EXIT_FAILURE);
    }
 
    memset((char *)&Server, 0, sizeof(Server));
@@ -291,16 +338,16 @@ SOCKET InitSocketServer(int Port, int AllowBlocking)
    Server.sin_addr.s_addr = INADDR_ANY;
    Server.sin_port        = htons(Port);
    if (bind(init_sockfd, (struct sockaddr *)&Server, sizeof(Server)) < 0) {
-      printf("Error on binding server socket.\n");
-      exit(1);
+      fprintf(stderr, "Error on binding server socket.\n");
+      exit(EXIT_FAILURE);
    }
    printf("Server is listening on port %i\n", Port);
    listen(init_sockfd, 5);
    clilen = sizeof(Client);
    sockfd = accept(init_sockfd, (struct sockaddr *)&Client, &clilen);
    if (sockfd < 0) {
-      printf("Error on accepting client socket.\n");
-      exit(1);
+      fprintf(stderr, "Error on accepting client socket.\n");
+      exit(EXIT_FAILURE);
    }
    printf("Server side of socket established.\n");
    close(init_sockfd);
@@ -334,18 +381,18 @@ SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
 
    /* Initialize winsock */
    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-      printf("Error initializing winsock in InitSocketClient.\n");
-      exit(1);
+      fprintf(stderr, "Error initializing winsock in InitSocketClient.\n");
+      exit(EXIT_FAILURE);
    }
    sockfd = socket(AF_INET, SOCK_STREAM, 0);
    if (sockfd < 0) {
-      printf("Error opening client socket.\n");
-      exit(1);
+      fprintf(stderr, "Error opening client socket.\n");
+      exit(EXIT_FAILURE);
    }
    Host = gethostbyname(hostname);
    if (Host == NULL) {
-      printf("Server not found by client socket.\n");
-      exit(1);
+      fprintf(stderr, "Server not found by client socket.\n");
+      exit(EXIT_FAILURE);
    }
    memset((char *)&Server, 0, sizeof(Server));
    Server.sin_family = AF_INET;
@@ -354,8 +401,8 @@ SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
    Server.sin_port = htons(Port);
    printf("Client connecting to Server on Port %i\n", Port);
    if (connect(sockfd, (struct sockaddr *)&Server, sizeof(Server)) < 0) {
-      printf("Error connecting client socket: %s.\n", strerror(errno));
-      exit(1);
+      fprintf(stderr, "Error connecting client socket: %s.\n", strerror(errno));
+      exit(EXIT_FAILURE);
    }
    printf("Client side of socket established.\n");
 
@@ -376,13 +423,13 @@ SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
 
    sockfd = socket(AF_INET, SOCK_STREAM, 0);
    if (sockfd < 0) {
-      printf("Error opening client socket.\n");
-      exit(1);
+      fprintf(stderr, "Error opening client socket.\n");
+      exit(EXIT_FAILURE);
    }
    Host = gethostbyname(hostname);
    if (Host == NULL) {
-      printf("Server not found by client socket.\n");
-      exit(1);
+      fprintf(stderr, "Server not found by client socket.\n");
+      exit(EXIT_FAILURE);
    }
    memset((char *)&Server, 0, sizeof(Server));
    Server.sin_family = AF_INET;
@@ -391,8 +438,8 @@ SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
    Server.sin_port = htons(Port);
    printf("Client connecting to Server on Port %i\n", Port);
    if (connect(sockfd, (struct sockaddr *)&Server, sizeof(Server)) < 0) {
-      printf("Error connecting client socket: %s.\n", strerror(errno));
-      exit(1);
+      fprintf(stderr, "Error connecting client socket: %s.\n", strerror(errno));
+      exit(EXIT_FAILURE);
    }
    printf("Client side of socket established.\n");
 

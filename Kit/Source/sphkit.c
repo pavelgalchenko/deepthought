@@ -36,7 +36,7 @@ GLuint KernelToTexTag(void)
       Tex = (GLubyte *) calloc(N,sizeof(GLubyte));
       if (Tex == NULL) {
          printf("calloc returned null pointer in KernelToTexTag.  Bailing out!\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
       for(i=0;i<64;i++) {
          x = ((float) i)/16.0 - 2.0 + 0.5/64.0;
@@ -81,8 +81,8 @@ double CubicKernel(double r, double h, long Ndim)
          K = 1.0 / (4.0 * PI * h * h * h);
          break;
       default:
-         printf("Bad Ndim = %ld in CubicGradKernel\n", Ndim);
-         exit(1);
+         fprintf(stderr, "Bad Ndim = %ld in CubicGradKernel\n", Ndim);
+         exit(EXIT_FAILURE);
    }
 
    if (q < 1.0) {
@@ -115,8 +115,8 @@ double CubicGradKernel(double r, double h, long Ndim)
          K = -3.0 / (4.0 * PI * h * h * h);
          break;
       default:
-         printf("Bad Ndim = %ld in CubicGradKernel\n", Ndim);
-         exit(1);
+         fprintf(stderr, "Bad Ndim = %ld in CubicGradKernel\n", Ndim);
+         exit(EXIT_FAILURE);
    }
 
    if (q < 1.0) {
@@ -149,8 +149,8 @@ double Poly6Kernel(double r, double h, long Ndim)
          K = 315.0 / (32768.0 * h * h * h);
          break;
       default:
-         printf("Bad Ndim = %ld in Poly6Kernel\n", Ndim);
-         exit(1);
+         fprintf(stderr, "Bad Ndim = %ld in Poly6Kernel\n", Ndim);
+         exit(EXIT_FAILURE);
    }
 
    if (q < 2.0) {
@@ -178,8 +178,8 @@ double Poly6GradKernel(double r, double h, long Ndim)
          K = -6.0 * 315.0 / (32768.0 * h * h * h);
          break;
       default:
-         printf("Bad Ndim = %ld in Poly6GradKernel\n", Ndim);
-         exit(1);
+         fprintf(stderr, "Bad Ndim = %ld in Poly6GradKernel\n", Ndim);
+         exit(EXIT_FAILURE);
    }
 
    if (q < 2.0) {
@@ -207,8 +207,8 @@ double SpikyKernel(double r, double h, long Ndim)
          K = 15.0 / (64.0 * PI * h * h * h);
          break;
       default:
-         printf("Bad Ndim = %ld in SpikyKernel\n", Ndim);
-         exit(1);
+         fprintf(stderr,"Bad Ndim = %ld in SpikyKernel\n", Ndim);
+         exit(EXIT_FAILURE);
    }
 
    if (q < 2.0)
@@ -234,8 +234,8 @@ double SpikyGradKernel(double r, double h, long Ndim)
          K = -45.0 / (64.0 * PI * h * h * h);
          break;
       default:
-         printf("Bad Ndim = %ld in SpikyGradKernel\n", Ndim);
-         exit(1);
+         fprintf(stderr,"Bad Ndim = %ld in SpikyGradKernel\n", Ndim);
+         exit(EXIT_FAILURE);
    }
 
    if (q < 2.0)

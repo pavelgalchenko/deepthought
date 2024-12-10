@@ -194,6 +194,7 @@ void DSM_InertialReport(void)
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
+   double PosL[3];
    char s[40];
 
    if (First) {
@@ -204,6 +205,7 @@ void DSM_InertialReport(void)
             inertialfile[Isc] = FileOpen(OutPath, s, "wt");
             fprintf(inertialfile[Isc], "PosN_X PosN_Y PosN_Z ");
             fprintf(inertialfile[Isc], "VelN_X VelN_Y VelN_Z ");
+            fprintf(inertialfile[Isc], "PosL_X PosL_Y PosL_Z ");
             fprintf(inertialfile[Isc], "\n");
          }
       }
@@ -212,10 +214,13 @@ void DSM_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
+         MxV(SC[0].CLN,SC[Isc].PosN,PosL);
          fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
          fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
+                 PosL[0], PosL[1], PosL[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
@@ -913,6 +918,36 @@ void DSM_THRReport(void)
    }
 }
 /*********************************************************************/
+void DSM_SVBReport(void)
+{
+   static FILE **SVBFile;
+   static long First = 1;
+   long Isc;
+   char s[40];
+
+   if (First) {
+      SVBFile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            sprintf(s, "DSM_SVB_%02li.42", Isc);
+            SVBFile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(SVBFile[Isc], "SVB_X SVB_Y SVB_Z ");
+            fprintf(SVBFile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         fprintf(SVBFile[Isc], "%18.36le %18.36le %18.36le ",
+                 SC[Isc].svb[0], SC[Isc].svb[1], SC[Isc].svb[2]);
+         fprintf(SVBFile[Isc], "\n");
+      }
+      fflush(SVBFile[Isc]);
+   }
+}
+/*********************************************************************/
 #ifdef _ENABLE_SPICE_
 void DSM_GroundTrackReport(void)
 {
@@ -1028,6 +1063,7 @@ void Report(void)
    static FILE *IllumFile;
    // static FILE *ProjAreaFile;
    static FILE *AccFile;
+   static FILE *GpsFile;
    // static FILE *Kepfile;
    // static FILE *EHfile;
    static char First = TRUE;
@@ -1104,6 +1140,9 @@ void Report(void)
       if (SC[0].Ncss > 0) {
          AlbedoFile = FileOpen(OutPath, "Albedo.42", "w");
          IllumFile  = FileOpen(OutPath, "Illum.42", "w");
+      }
+      if (SC[0].Ngps > 0) {
+         GpsFile = FileOpen(InOutPath, "Gps.42", "w");
       }
    }
 
@@ -1209,6 +1248,10 @@ void Report(void)
                        SC[0].Accel[i].MeasAcc);
             fprintf(AccFile, "\n");
          }
+         if (SC[0].Ngps > 0) {
+            fprintf(GpsFile, "%le %le %le\n", SC[0].GPS[0].PosN[0],
+                    SC[0].GPS[0].PosN[1], SC[0].GPS[0].PosN[2]);
+         }
          if (SC[0].Ncss > 0) {
             for (i = 0; i < SC[0].Ncss; i++) {
                fprintf(IllumFile, "%le ", SC[0].CSS[i].Illum);
@@ -1237,8 +1280,8 @@ void Report(void)
             DSM_EphemReport();
             DSM_WHLReport();
             DSM_THRReport();
+            DSM_SVBReport();
             // DSM_GroundTrackReport();
-
             DSM_StateRot3BodyReport();
          }
       }

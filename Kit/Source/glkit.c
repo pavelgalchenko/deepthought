@@ -670,8 +670,8 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
       glEnd();
    }
    else {
-      printf("Invalid FOV Type %ld in DrawNearFOV\n", Type);
-      exit(1);
+      fprintf(stderr, "Invalid FOV Type %ld in DrawNearFOV\n", Type);
+      exit(EXIT_FAILURE);
    }
 
    glEnable(GL_CULL_FACE);
@@ -679,7 +679,7 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
 /*********************************************************************/
 void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
                 long H_Axis, long V_Axis, long Type, GLfloat Color[4],
-                const char Label[40], double SkyDistance)
+                const char *Label, double SkyDistance)
 {
    double r[4];
    double daz = TWOPI / ((double)Nv);
@@ -750,8 +750,8 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
       }
    }
    else {
-      printf("Invalid FOV Type %ld in DrawNearFOV\n", Type);
-      exit(1);
+      fprintf(stderr, "Invalid FOV Type %ld in DrawNearFOV\n", Type);
+      exit(EXIT_FAILURE);
    }
 }
 /*********************************************************************/
@@ -942,7 +942,7 @@ void BuildViewMatrix(double CEN[3][3], double pen[3], float ViewMatrix[16])
    ViewMatrix[15] = 1.0f;
 }
 /**********************************************************************/
-void CaptureScreenToPpm(const char path[40], const char filename[40], long Nh,
+void CaptureScreenToPpm(const char *path, const char *filename, long Nh,
                         long Nw)
 {
    GLubyte *Data, *p;
@@ -952,9 +952,10 @@ void CaptureScreenToPpm(const char path[40], const char filename[40], long Nh,
    Nr   = 3 * Nw;
    Data = (GLubyte *)calloc(3 * Nh * Nw, sizeof(GLubyte));
    if (Data == NULL) {
-      printf("calloc returned null pointer in CaptureScreenToPpm.  Bailing "
-             "out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in CaptureScreenToPpm.  Bailing "
+              "out!\n");
+      exit(EXIT_FAILURE);
    }
    glReadPixels(0, 0, Nw, Nh, GL_RGB, GL_UNSIGNED_BYTE, Data);
    file = FileOpen(path, filename, "wb");
@@ -971,11 +972,11 @@ void CaptureScreenToPpm(const char path[40], const char filename[40], long Nh,
    free(Data);
 }
 /**********************************************************************/
-void TexToPpm(const char path[40], const char filename[40], long Nh, long Nw,
-              long Nb, float *Data)
+void TexToPpm(const char *path, const char *filename, long Nh, long Nw, long Nb,
+              float *Data)
 {
    FILE *file;
-   long i, Nc;
+   long i, j, k, Nc;
    GLubyte c;
 
    file = FileOpen(path, filename, "wb");
@@ -984,17 +985,29 @@ void TexToPpm(const char path[40], const char filename[40], long Nh, long Nw,
    else
       fprintf(file, "P6\n#.\n%ld %ld\n255\n", Nw, Nh);
    fflush(file);
-   Nc = Nh * Nw * Nb;
-   for (i = 0; i < Nc; i++) {
-      c = (GLubyte)(255.0 * Data[i]);
-      fprintf(file, "%c", c);
+   if (Nb == 4) { /* Discard alpha */
+      for (j = 0; j < Nh; j++) {
+         for (i = 0; i < Nw; i++) {
+            for (k = 0; k < 3; k++) {
+               c = (GLubyte)(255.0 * Data[4 * (Nw * j + i) + k]);
+               fprintf(file, "%c", c);
+            }
+         }
+      }
+   }
+   else {
+      Nc = Nh * Nw * Nb;
+      for (i = 0; i < Nc; i++) {
+         c = (GLubyte)(255.0 * Data[i]);
+         fprintf(file, "%c", c);
+      }
    }
    fclose(file);
 }
 /**********************************************************************/
 /* wrap parm is usually either GL_REPEAT or GL_CLAMP                  */
-GLuint PpmToTexTag(const char path[40], const char filename[40],
-                   int BytesPerPixel, GLuint wrap)
+GLuint PpmToTexTag(const char *path, const char *filename, int BytesPerPixel,
+                   GLuint wrap)
 {
    FILE *infile;
    long N, i;
@@ -1009,8 +1022,9 @@ GLuint PpmToTexTag(const char path[40], const char filename[40],
    N   = Nw * Nh * BytesPerPixel;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
    if (Tex == NULL) {
-      printf("calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (i = 0; i < N; i++) {
       Tex[i] = (GLubyte)fgetc(infile);
@@ -1043,8 +1057,8 @@ GLuint PpmToTexTag(const char path[40], const char filename[40],
 }
 /**********************************************************************/
 /* wrap parm is usually either GL_REPEAT or GL_CLAMP                  */
-GLuint Ppm1DToTexTag(const char path[40], const char filename[40],
-                     int BytesPerPixel, GLuint wrap)
+GLuint Ppm1DToTexTag(const char *path, const char *filename, int BytesPerPixel,
+                     GLuint wrap)
 {
    FILE *infile;
    long N, i;
@@ -1059,8 +1073,9 @@ GLuint Ppm1DToTexTag(const char path[40], const char filename[40],
    N   = Nw * BytesPerPixel;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
    if (Tex == NULL) {
-      printf("calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (i = 0; i < N; i++) {
       Tex[i] = (GLubyte)fgetc(infile);
@@ -1092,7 +1107,7 @@ GLuint Ppm1DToTexTag(const char path[40], const char filename[40],
 }
 /*********************************************************************/
 #if 1
-GLuint PpmToCubeTag(const char path[40], const char file[40], int BytesPerPixel)
+GLuint PpmToCubeTag(const char *path, const char *file, int BytesPerPixel)
 {
    FILE *infile;
    long N, i, If;
@@ -1139,9 +1154,10 @@ GLuint PpmToCubeTag(const char path[40], const char file[40], int BytesPerPixel)
       N   = Nw * Nh * BytesPerPixel;
       Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
       if (Tex == NULL) {
-         printf(
+         fprintf(
+             stderr,
              "calloc returned null pointer in PpmToCubeTag.  Bailing out!\n");
-         exit(1);
+         exit(EXIT_FAILURE);
       }
       for (i = 0; i < N; i++) {
          Tex[i] = (GLubyte)fgetc(infile);
@@ -1164,7 +1180,7 @@ GLuint PpmToCubeTag(const char path[40], const char file[40], int BytesPerPixel)
 }
 #endif
 /*********************************************************************/
-GLuint PpmToRingTexTag(const char path[80], const char filename[80])
+GLuint PpmToRingTexTag(const char *path, const char *filename)
 {
    FILE *infile;
    long N;
@@ -1182,8 +1198,9 @@ GLuint PpmToRingTexTag(const char path[80], const char filename[80])
    N   = Nw * 4;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
    if (Tex == NULL) {
-      printf("calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in PpmToTexTag.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (k = 0; k < Nw; k++) {
       fscanf(infile, "%c%c%c%c", &InByte[0], &InByte[1], &InByte[2],
@@ -1211,8 +1228,8 @@ GLuint PpmToRingTexTag(const char path[80], const char filename[80])
    return (TexTag);
 }
 /**********************************************************************/
-void CubeToPpm(GLubyte *Cube, long N, const char pathname[40],
-               const char filename[40])
+void CubeToPpm(GLubyte *Cube, long N, const char *pathname,
+               const char *filename)
 {
    FILE *outfile;
    char outfilename[40];
@@ -1297,7 +1314,7 @@ void LoadBucky(double BuckyPf[32][3], long BuckyNeighbor[32][6])
    }
 }
 /**********************************************************************/
-void LoadStars(const char StarFileName[40], double BuckyPf[32][3],
+void LoadStars(const char *StarFileName, double BuckyPf[32][3],
                long BuckyNeighbor[32][6], GLuint StarList[32],
                double SkyDistance)
 {
@@ -1330,21 +1347,25 @@ void LoadStars(const char StarFileName[40], double BuckyPf[32][3],
    fscanf(StarFile, "%ld", &Nstar);
    ID = (long **)calloc(32, sizeof(long *));
    if (ID == NULL) {
-      printf("ID calloc returned null pointer in LoadStars.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "ID calloc returned null pointer in LoadStars.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    for (k = 0; k < 32; k++) {
       ID[k] = (long *)calloc(Nstar, sizeof(long));
       if (ID[k] == NULL) {
-         printf("ID[k] calloc returned null pointer in LoadStars.  Bailing "
-                "out!\n");
-         exit(1);
+         fprintf(stderr,
+                 "ID[k] calloc returned null pointer in LoadStars.  Bailing "
+                 "out!\n");
+         exit(EXIT_FAILURE);
       }
    }
    Star = (struct StarType *)calloc(Nstar, sizeof(struct StarType));
    if (Star == NULL) {
-      printf("Star calloc returned null pointer in LoadStars.  Bailing out!\n");
-      exit(1);
+      fprintf(
+          stderr,
+          "Star calloc returned null pointer in LoadStars.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
 
    for (i = 0; i < Nstar; i++) {
@@ -2456,7 +2477,7 @@ void DrawBullseye(GLfloat Color[4], double p[4])
    glMaterialfv(GL_FRONT, GL_EMISSION, Black);
 }
 /*********************************************************************/
-void DrawVector(double v[3], const char Label[8], const char Units[8],
+void DrawVector(double v[3], const char *Label, const char *Units,
                 GLfloat Color[4], double VisScale, double MagScale,
                 long UnitVec)
 {
