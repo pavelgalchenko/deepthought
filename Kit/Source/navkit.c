@@ -60,6 +60,8 @@ void appendMeas(struct DSMMeasListType *list, struct DSMMeasType *newMeas)
 
 void appendList(struct DSMMeasListType *list1, struct DSMMeasListType *list2)
 {
+   if (list2 == NULL)
+      return;
    struct DSMMeasType *last = list1->head;
    if (list2->head == NULL) {
       return;

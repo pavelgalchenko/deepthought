@@ -673,7 +673,8 @@ struct fy_document *InitFilter(int argc, char **argv)
 // don't output as measlist, also has actuator data to output
 struct DSMMeasListType *read_db(const char *db_name, struct DateType *db_time)
 {
-   static sqlite3 *db = NULL;
+   static sqlite3 *db            = NULL;
+   struct DSMMeasList *meas_list = NULL;
    int rc;
 
    if (db == NULL) {
@@ -685,10 +686,24 @@ struct DSMMeasListType *read_db(const char *db_name, struct DateType *db_time)
       }
 
       // TODO: get db state up to db_time
-      return NULL;
+      InitMeasList(meas_list);
+   }
+   else {
+      InitMeasList(meas_list);
+      // TODO: output db data from last db state up to db_time
+
+      // TODO: get date from current index in db
+      struct DateType cur_db_time;
+
+      ccsdsCoarse seconds;
+      ccsdsFine subseconds;
+
+      DateToCCSDS(cur_db_time, &seconds, &subseconds);
+
+      // TODO: conversions from data in db to meas_list data
    }
 
-   // TODO: output db data from last db state up to db_time
+   return meas_list;
 }
 
 int main(int argc, char **argv)
@@ -706,7 +721,6 @@ int main(int argc, char **argv)
 
    /* load sensor map yaml                                                    */
    struct fy_document *config_fyd = InitFilter(argc, argv);
-   struct DateType db_time        = UTC;
    SOCKET socket                  = InitSocketClient(hostname, port, 1);
 
    /* LOOP */
@@ -721,11 +735,26 @@ int main(int argc, char **argv)
 
    struct SCType *const S  = &SC[0];
    struct AcType *const AC = &S->AC;
-   DsmFSW(S); // Init DSM
+   DsmFSW(S);                // Init DSM
+   const char *db_name = ""; // the name
+   read_db(db_name, &UTC);
 
    while (TRUE) {
+      // gets time and other data from socket
       ReadFromSocket(socket, AC);
+
+      // updated db to time
+      struct DSMMeasList *meas_list = read_db(db_name, &UTC);
+
+      // Add db data to nav measurement buffer
+      appendList(&S->DSM.DsmNav.measList, meas_list);
+      free(meas_list);
+
+      // run dsm fsw and therefore nav
       DsmFSW(S);
+
+      // write new data to socket
+      // TODO: need to set S state from AC here, and that goes out the socket
       WriteToSocket(socket, AC);
    }
 
