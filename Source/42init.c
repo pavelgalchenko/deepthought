@@ -6221,25 +6221,25 @@ void InitSim(int argc, char **argv)
       if (CLI_ARGS.modeldir == NULL)
          strcpy(SCModelPath, ModelPath);
    }
-      OutDir = opendir(OutPath);
-      if (OutDir) {
-         closedir(OutDir);
-      }
-      else if (ENOENT == errno) {
+   OutDir = opendir(OutPath);
+   if (OutDir) {
+      closedir(OutDir);
+   }
+   else if (ENOENT == errno) {
 #if defined __MINGW32__
-         mkdir(OutPath);
+      mkdir(OutPath);
 #elif defined _WIN32
-         mkdir(OutPath);
+      mkdir(OutPath);
 #elif defined _WIN64
-         mkdir(OutPath);
+      mkdir(OutPath);
 #elif defined __APPLE__
-         mkdir(OutPath, 0777);
+      mkdir(OutPath, 0777);
 #elif defined __linux__
-         mkdir(OutPath, 0777);
+      mkdir(OutPath, 0777);
 #else
 #error "Computing platform not detected!"
 #endif
-      }
+   }
 
    printf("\nExeDir: %s \n", ExeDir);
    printf("\nInput Path: %s \n", InOutPath);
