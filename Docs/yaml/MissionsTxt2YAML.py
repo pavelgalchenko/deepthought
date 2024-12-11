@@ -1787,11 +1787,13 @@ startswith_type = {
 
 # %%
 if __name__ == "__main__":
-    yaml_file = sys.argv[1] # configuration file used mainly to indicate sizes of blocks in sc txt files
+    yaml_file = sys.argv[
+        1
+    ]  # configuration file used mainly to indicate sizes of blocks in sc txt files
     missionDir = sys.argv[2]
     doComment = sys.argv[3] == "True"
 
-    comment_dir = "yaml/yamlComments/"
+    comment_dir = "Docs/yaml/yamlComments/"
     yaml = YAML()
     yaml.version = (1, 2)
     yaml.indent(
@@ -1818,7 +1820,7 @@ if __name__ == "__main__":
                     else:
                         yaml_comments = None
                     data = convert_func_dict[f_type](
-                        missionDir, yaml, file, commentDict=yaml_comments
+                        missionDir, file, commentDict=yaml_comments
                     )
                 elif f_type == name:
                     comment_file_name = comment_file_dict[f_type]
@@ -1828,7 +1830,7 @@ if __name__ == "__main__":
                     else:
                         yaml_comments = None
                     data = convert_func_dict[f_type](
-                        missionDir, yaml, commentDict=yaml_comments
+                        missionDir, commentDict=yaml_comments
                     )
 
             if name != "Inp_Cmd" and not len(data) == 0:
