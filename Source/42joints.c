@@ -121,9 +121,10 @@ void JointFrcTrq(struct JointType *G, struct SCType *S)
          AdHocJoint(G, S);
          break;
       default:
-         printf("Unknown joint type %ld in JointFrcTrq.  Bailing out.\n",
-                G->Type);
-         exit(1);
+         fprintf(stderr,
+                 "Unknown joint type %ld in JointFrcTrq.  Bailing out.\n",
+                 G->Type);
+         exit(EXIT_FAILURE);
    }
 }
 

@@ -288,8 +288,9 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
 
    a = (double *)calloc(n, sizeof(double));
    if (a == NULL) {
-      printf("calloc returned null pointer in FilterQuest.  Bailing out!\n");
-      exit(1);
+      fprintf(stderr,
+              "calloc returned null pointer in FilterQuest.  Bailing out!\n");
+      exit(EXIT_FAILURE);
    }
    W = CreateMatrix(n, 3);
    V = CreateMatrix(n, 3);
@@ -806,8 +807,8 @@ void TableauGaussElim(double **T, long m, long n)
          }
       }
       if (pivot == 0.0) {
-         printf("Singular Matrix in TableauGaussElim\n");
-         exit(1);
+         fprintf(stderr, "Singular Matrix in TableauGaussElim\n");
+         exit(EXIT_FAILURE);
       }
       for (j = 0; j < n + 1; j++) {
          temp          = T[ip + 1][j];
@@ -1162,10 +1163,11 @@ void AllocKalmanFilterMeasurement(struct KFMeasType *M, long Nx, long Ny)
    long i;
 
    if (Ny < 1 || Ny > 3) {
-      printf("Hmm.  This Kalman Filter implementation assumes measurements are "
-             "of \n");
-      printf("dimension 1, 2, or 3.  Bailing out.\n");
-      exit(1);
+      fprintf(
+          stderr,
+          "Hmm.  This Kalman Filter implementation assumes measurements are "
+          "of dimension 1, 2, or 3.  Bailing out.\n");
+      exit(EXIT_FAILURE);
    }
    M->Ny = Ny;
    M->y  = (double *)calloc(Ny, sizeof(double));
@@ -1309,8 +1311,9 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M)
    /* Invert (HPHt+Rv) */
    if (M->Ny == 1) {
       if (M->HPHtRv[0][0] == 0.0) {
-         printf("Attempted divide by zero in KalmanFilterMeasUpdate.\n");
-         exit(1);
+         fprintf(stderr,
+                 "Attempted divide by zero in KalmanFilterMeasUpdate.\n");
+         exit(EXIT_FAILURE);
       }
       M->HPHtRvInv[0][0] = 1.0 / M->HPHtRv[0][0];
    }
@@ -1318,8 +1321,8 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M)
       Det =
           M->HPHtRv[0][0] * M->HPHtRv[1][1] - M->HPHtRv[1][0] * M->HPHtRv[0][1];
       if (Det == 0.0) {
-         printf("Singular matrix HPHtRv in KalmanFilterMeasUpdate.\n");
-         exit(1);
+         fprintf(stderr, "Singular matrix HPHtRv in KalmanFilterMeasUpdate.\n");
+         exit(EXIT_FAILURE);
       }
       M->HPHtRvInv[0][0] = M->HPHtRv[1][1] / Det;
       M->HPHtRvInv[0][1] = -M->HPHtRv[0][1] / Det;
@@ -1336,8 +1339,8 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M)
                                M->HPHtRv[2][0] * M->HPHtRv[1][1]);
 
       if (Det == 0.0) {
-         printf("Singular matrix HPHtRv in KalmanFilterMeasUpdate.\n");
-         exit(1);
+         fprintf(stderr, "Singular matrix HPHtRv in KalmanFilterMeasUpdate.\n");
+         exit(EXIT_FAILURE);
       }
 
       M->HPHtRvInv[0][0] = (M->HPHtRv[1][1] * M->HPHtRv[2][2] -
@@ -1364,9 +1367,10 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M)
       M->HPHtRvInv[2][1] = M->HPHtRvInv[1][2];
    }
    else {
-      printf("Oops.  This Kalman Filter implementation assumes that \n");
-      printf("measurements are of dimension 1, 2, or 3.  Bailing out.\n");
-      exit(1);
+      fprintf(stderr,
+              "Oops.  This Kalman Filter implementation assumes that "
+              "measurements are of dimension 1, 2, or 3.  Bailing out.\n");
+      exit(EXIT_FAILURE);
    }
 
    /* L = (HP)^T*inv(HPHt+Rv) */

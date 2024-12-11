@@ -101,12 +101,13 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
                   const double PriMerAng, double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
-   const long nYears                = 25;
+#define nYears 26
+
    static double **Cdat[nYears + 1] = {NULL}, **Sdat[nYears + 1] = {NULL};
    double t[nYears] = {1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0,
                        1935.0, 1940.0, 1945.0, 1950.0, 1955.0, 1960.0, 1965.0,
                        1970.0, 1975.0, 1980.0, 1985.0, 1990.0, 1995.0, 2000.0,
-                       2005.0, 2010.0, 2015.0, 2020.0};
+                       2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
    const double AXIS[3] = {0.0, 0.0, 1.0};
@@ -125,7 +126,6 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       double dum[nYears + 1];
       long k;
       long n, m;
-      char junk[120], newline;
       char gh;
 
       C    = CreateMatrix(14, 14);
@@ -138,26 +138,38 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       }
 
       /* Get data from IGRF20.txt */
-      FILE *IGRFfile = FileOpen(ModelPath, "igrf13coeffs.txt", "r");
+      const char *file_name = "igrf14coeffs.txt";
+      FILE *IGRFfile        = FileOpen(ModelPath, file_name, "r");
       // skip first 4 lines
+
+      char buffer[BUFSIZ] = {0};
       for (int i = 0; i < 4; i++)
-         fscanf(IGRFfile, "%[^\n] %[\n]", junk, &newline);
-      while (
-          fscanf(IGRFfile,
-                 "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
-                 "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                 &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4],
-                 &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10],
-                 &dum[11], &dum[12], &dum[13], &dum[14], &dum[15], &dum[16],
-                 &dum[17], &dum[18], &dum[19], &dum[20], &dum[21], &dum[22],
-                 &dum[23], &dum[24], &dum[25]) != EOF) {
-         if (gh == 'g') {
-            for (k = 0; k < nYears + 1; k++)
-               Cdat[k][n][m] = dum[k];
-         }
-         else {
-            for (k = 0; k < nYears + 1; k++)
-               Sdat[k][n][m] = dum[k];
+         fgets(buffer, sizeof(buffer), IGRFfile);
+      while (fgets(buffer, sizeof(buffer), IGRFfile) != NULL) {
+         sscanf(buffer,
+                "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
+                "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4],
+                &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11],
+                &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17],
+                &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23],
+                &dum[24], &dum[25], &dum[26]);
+         switch (gh) {
+            case 'g':
+               for (k = 0; k < nYears + 1; k++)
+                  Cdat[k][n][m] = dum[k];
+               break;
+            case 'h':
+               for (k = 0; k < nYears + 1; k++)
+                  Sdat[k][n][m] = dum[k];
+               break;
+            default:
+               fprintf(
+                   stderr,
+                   "Invalid leading character in IGRF file %s. Exiting...\n",
+                   file_name);
+               exit(EXIT_FAILURE);
+               break;
          }
       }
       fclose(IGRFfile);
@@ -262,6 +274,7 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
    **printf("Br,Bth,Bph: %lf %lf %lf\n",Br,Bth,Bph);
    **printf("BVE: %lf %lf %lf\n\n",BVE[0],BVE[1],BVE[2]);
    */
+#undef nYears
 }
 
 /**********************************************************************/
@@ -337,8 +350,8 @@ double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap)
    /*    Find Geometric Altitude, z, in km */
    z = 1.0E-3 * (p - ERAD);
    if (z < 120.0) {
-      printf("Altitude %f km too low for Jacchia-Roberts\n", z);
-      exit(1);
+      fprintf(stderr, "Altitude %f km too low for Jacchia-Roberts\n", z);
+      exit(EXIT_FAILURE);
    }
    else if (z > 1000.0)
       density = 0.0; /* Beyond range of model */
@@ -446,8 +459,9 @@ double SimpleMSIS(double pbn[3], long Col)
    double density;
 
    if (Col < 0 || Col > 2) {
-      printf("Column %ld out of range in SimpleMSIS.  Bailing out.\n", Col);
-      exit(1);
+      fprintf(stderr, "Column %ld out of range in SimpleMSIS.  Bailing out.\n",
+              Col);
+      exit(EXIT_FAILURE);
    }
 
    Alt = 1.0E-3 * (MAGV(pbn) - EarthRad);

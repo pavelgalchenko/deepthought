@@ -53,15 +53,15 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
 {
 
 #if defined(_WIN32)
-   printf("NOS3Time:  NOS3 time mode is not supported on _WIN32\n");
+   fprintf(stderr, "NOS3Time:  NOS3 time mode is not supported on _WIN32\n");
    /* Well, maybe it could be supported... but we would need to get all the NOS
     * Engine stuff hooked up there... and we do not need to at this time. */
-   exit(1);
+   exit(EXIT_FAILURE);
 #elif defined(__APPLE__)
-   printf("NOS3Time:  NOS3 time mode is not supported on __APPLE__\n");
+   fprintf(stderr, "NOS3Time:  NOS3 time mode is not supported on __APPLE__\n");
    /* Well, maybe it could be supported... but we would need to get all the NOS
     * Engine stuff hooked up there... and we do not need to at this time. */
-   exit(1);
+   exit(EXIT_FAILURE);
 #elif defined(__linux__)
    static long First = 1;
    int64_t ticks;
@@ -83,8 +83,8 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
    *day_of_year = MD2DOY(*year, *month, *day);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
-   printf("Unknown operating system in NOS3Time.  Bailing out.\n");
-   exit(1);
+   fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");
+   exit(EXIT_FAILURE);
 #endif
 }
 
@@ -101,7 +101,7 @@ static void ReadNos3InpFile(void)
                         "/Configuration/Bus %119[^\n]s "
                         "/Configuration/Connection String %119[^\n]s",
                         BusName, ConnectionString) != 2) {
-         printf("Could not find NOS3 configuration. Exiting...\n");
+         fprintf(stderr, "Could not find NOS3 configuration. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       fy_document_destroy(fyd);
@@ -115,9 +115,10 @@ static void InitializeTimeNode(void)
 
    NOSHandle = dlopen("libnos_engine_client_cxx11.so", RTLD_LAZY | RTLD_LOCAL);
    if (NOSHandle == NULL) {
-      printf("NOS3Time:  NOS3 shared object libraries required for NOS3 time "
-             "mode were not loaded.  Bailing out.\n");
-      exit(1);
+      fprintf(stderr,
+              "NOS3Time:  NOS3 shared object libraries required for NOS3 time "
+              "mode were not loaded.  Bailing out.\n");
+      exit(EXIT_FAILURE);
    }
    atexit(ReleaseHandle); /* Release the handle to the shared object library at
                              exit */
@@ -127,25 +128,28 @@ static void InitializeTimeNode(void)
    NE_create_bus2 = (NE_Bus * (*)(const char *, const char *))
        dlsym(NOSHandle, "NE_create_bus2");
    if ((error = dlerror()) != NULL) {
-      printf("NOS3Time error finding symbol NE_create_bus2:  %s\n", error);
-      exit(1);
+      fprintf(stderr, "NOS3Time error finding symbol NE_create_bus2:  %s\n",
+              error);
+      exit(EXIT_FAILURE);
    }
 
    NE_bus_get_time =
        (NE_SimTime(*)(NE_Bus *))dlsym(NOSHandle, "NE_bus_get_time");
    if ((error = dlerror()) != NULL) {
-      printf("NOS3Time error finding symbol NE_bus_get_time:  %s\n", error);
-      exit(1);
+      fprintf(stderr, "NOS3Time error finding symbol NE_bus_get_time:  %s\n",
+              error);
+      exit(EXIT_FAILURE);
    }
 
    NE_bus_add_time_tick_callback =
        (NE_TimeTickCallbackId(*)(NE_Bus *, NE_TimeTickCallbackFunction))dlsym(
            NOSHandle, "NE_bus_add_time_tick_callback");
    if ((error = dlerror()) != NULL) {
-      printf(
+      fprintf(
+          stderr,
           "NOS3Time error finding symbol NE_bus_add_time_tick_callback:  %s\n",
           error);
-      exit(1);
+      exit(EXIT_FAILURE);
    }
 #pragma GCC diagnostic pop
 

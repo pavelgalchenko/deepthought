@@ -72,7 +72,8 @@ void PerpBasis(double A[3], double B[3], double C[3]);
 double fact(long const n);
 double oddfact(long const n);
 double factDfact(long const n, long const m);
-void Legendre(long N, long M, double x, double P[19][19], double sdP[19][19]);
+void Legendre(long N, long M, double x, double P[N + 1][M + 1],
+              double sdP[N + 1][M + 1]);
 void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
                         double **C, double **S, double **Norm, double gradV[3]);

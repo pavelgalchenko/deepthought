@@ -982,8 +982,8 @@ void InitCamWindow(void)
    CamWindow = glutCreateWindow(CamTitle);
 #if (defined(GLEW_BUILD) || defined(GLEW_STATIC))
    if (GLEW_OK != glewInit()) {
-      printf("glew failed to initialize in InitCamWindow\n");
-      exit(1);
+      fprintf(stderr, "glew failed to initialize in InitCamWindow\n");
+      exit(EXIT_FAILURE);
    }
 #endif
 

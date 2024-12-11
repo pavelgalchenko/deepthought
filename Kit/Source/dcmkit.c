@@ -349,8 +349,8 @@ void A2C(long SEQ, double TH1, double TH2, double TH3, double C[3][3])
       C[2][2] = C2;
    }
    else {
-      printf("Bogus Euler Sequence %ld in A2C\n", SEQ);
-      exit(1);
+      fprintf(stderr, "Bogus Euler Sequence %ld in A2C\n", SEQ);
+      exit(EXIT_FAILURE);
    }
 }
 /**********************************************************************/
@@ -420,8 +420,8 @@ void C2A(long SEQ, double C[3][3], double *TH1, double *TH2, double *TH3)
       *TH3 = atan2(C[1][2], -C[0][2]);
    }
    else {
-      printf("Bogus Euler Sequence %ld in C2A\n", SEQ);
-      exit(1);
+      fprintf(stderr, "Bogus Euler Sequence %ld in C2A\n", SEQ);
+      exit(EXIT_FAILURE);
    }
 }
 /**********************************************************************/
@@ -760,8 +760,8 @@ void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
          Gds[i3] = -sig[0] * sig[1] * c2;
       }
       else {
-         printf("Bogus RotSeq %ld in JointPartials\n", RotSeq);
-         exit(1);
+         fprintf(stderr, "Bogus RotSeq %ld in JointPartials\n", RotSeq);
+         exit(EXIT_FAILURE);
       }
       for (i = 0; i < 3; i++)
          Gs[i] =
@@ -827,8 +827,8 @@ void ADOT2W(long IsSpherical, long Seq, double ang[3], double u[3], double w[3])
          w[i3] = -s2 * c3 * u[0] + s3 * u[1];
       }
       else {
-         printf("Bogus Seq %ld in ADOT2W\n", Seq);
-         exit(1);
+         fprintf(stderr, "Bogus Seq %ld in ADOT2W\n", Seq);
+         exit(EXIT_FAILURE);
       }
    }
 }
@@ -883,8 +883,8 @@ void W2ADOT(long Seq, double ang[3], double w[3], double adot[3])
       adot[2] = w[i1] + (w[i3] * c3 - w[i2] * s3) * c2 / s2;
    }
    else {
-      printf("Bogus Seq %ld in W2ADOT\n", Seq);
-      exit(1);
+      fprintf(stderr, "Bogus Seq %ld in W2ADOT\n", Seq);
+      exit(EXIT_FAILURE);
    }
 }
 /**********************************************************************/

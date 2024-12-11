@@ -846,8 +846,9 @@ void SpinnerCommand(struct SCType *S)
    PV  = &Cmd->PriVec;
 
    if (PV->Frame != FRAME_N) {
-      printf("SpinnerCommand requires that Primary Vector be fixed in N\n");
-      exit(1);
+      fprintf(stderr,
+              "SpinnerCommand requires that Primary Vector be fixed in N\n");
+      exit(EXIT_FAILURE);
    }
 
    FindCmdVecN(S, PV);
