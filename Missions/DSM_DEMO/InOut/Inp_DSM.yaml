@@ -512,6 +512,7 @@ Two Vector Configurations:
         Axis: [0.0, 1.0, 0.0]
       Controller: *Controller_2
       Actuator: *Actuator_2
+Spin Vector Configurations: []
 DSM Commands:
   - SC: 0
     Command Sequence:

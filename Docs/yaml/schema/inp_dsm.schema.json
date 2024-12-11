@@ -431,6 +431,43 @@
                 "Actuator"
             ]
         },
+        "Spin Vector": {
+            "type": "object",
+            "properties": {
+                "Description": {
+                    "type": "string"
+                },
+                "Controller": {
+                    "$ref": "#/definitions/Controller"
+                },
+                "Actuator": {
+                    "$ref": "#/definitions/Actuator"
+                },
+                "Target": {
+                    "$ref": "#/definitions/Target"
+                },
+                "Axis": {
+                    "type": "array",
+                    "minItems": 3,
+                    "maxItems": 3,
+                    "items": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                },
+                "Rate": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "Target",
+                "Axis",
+                "Rate",
+                "Controller",
+                "Actuator"
+            ]
+        },
         "Quaternion": {
             "type": "object",
             "properties": {
@@ -711,6 +748,17 @@
                 "properties": {
                     "Two Vector": {
                         "$ref": "#/definitions/Two Vector"
+                    }
+                }
+            }
+        },
+        "Spin Vector Configurations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "Spin Vector": {
+                        "$ref": "#/definitions/Spin Vector"
                     }
                 }
             }
@@ -1060,6 +1108,37 @@
                                                         {
                                                             "properties": {
                                                                 "Subtype": {
+                                                                    "const": "Spin Vector"
+                                                                }
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                "then": {
+                                                    "required": [
+                                                        "Command Data"
+                                                    ],
+                                                    "properties": {
+                                                        "Command Data": {
+                                                            "$id": "#/DSM Commands/Command Sequence/Command Data",
+                                                            "$ref": "#/definitions/Spin Vector"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            {
+                                                "if": {
+                                                    "allOf": [
+                                                        {
+                                                            "properties": {
+                                                                "Type": {
+                                                                    "const": "Attitude"
+                                                                }
+                                                            }
+                                                        },
+                                                        {
+                                                            "properties": {
+                                                                "Subtype": {
                                                                     "const": "Quaternion"
                                                                 }
                                                             }
@@ -1197,6 +1276,7 @@
         "Translation Configurations",
         "One Vector Configurations",
         "Two Vector Configurations",
+        "Spin Vector Configurations",
         "Quaternion Configurations",
         "Mirror Configurations",
         "Detumble Configurations",
