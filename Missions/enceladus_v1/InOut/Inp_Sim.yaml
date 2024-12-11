@@ -98,7 +98,7 @@ Perturbation Models:
       - World: ENCELADUS
         Model File: sol1_enceladus1.grv
         Degree: 3
-        Order: 3
+        Order: 2
         Gravitational Parameter: 7.209544428892310e+09
         Reference Radius: 256300
   SRP:
@@ -109,7 +109,7 @@ Perturbation Models:
   CFD Slosh: false
   Albedo on CSS: false
   Output Env Torques to File: false
-Ephem Type: MEAN
+Ephem Type: SPICE
 Celestial Bodies:
   Mercury: false
   Venus: false

@@ -1,12 +1,12 @@
 #include "docoptkit.h"
 
 const char help_message[] =
-    "42 SmallSat Simulator\n"
+    "DeepThought SmallSat Simulator\n"
     "\n"
     "Usage:\n"
-    "  42 --version\n"
-    "  42 -h | --help\n"
-    "  42 [options]\n"
+    "  deepthought --version\n"
+    "  deepthought -h | --help\n"
+    "  deepthought [options]\n"
     "\n"
     "Options:\n"
     "  -h, --help                    Show this screen.\n"
@@ -24,8 +24,8 @@ const char help_message[] =
     "";
 
 const char usage_pattern[] = "Usage:\n"
-                             "  42 -h | --help\n"
-                             "  42 [options]";
+                             "  deepthought -h | --help\n"
+                             "  deepthought [options]";
 
 Tokens tokens_new(int argc, char **argv)
 {

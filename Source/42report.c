@@ -214,13 +214,13 @@ void DSM_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         MxV(SC[0].CLN,SC[Isc].PosN,PosL);
+         MxV(SC[0].CLN, SC[Isc].PosN, PosL);
          fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
          fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
                  SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
-         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
-                 PosL[0], PosL[1], PosL[2]);
+         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ", PosL[0],
+                 PosL[1], PosL[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
@@ -940,8 +940,8 @@ void DSM_SVBReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(SVBFile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].svb[0], SC[Isc].svb[1], SC[Isc].svb[2]);
+         fprintf(SVBFile[Isc], "%18.36le %18.36le %18.36le ", SC[Isc].svb[0],
+                 SC[Isc].svb[1], SC[Isc].svb[2]);
          fprintf(SVBFile[Isc], "\n");
       }
       fflush(SVBFile[Isc]);
@@ -1117,11 +1117,11 @@ void Report(void)
       qbnfile  = FileOpen(OutPath, "qbn.42", "w");
       wbnfile  = FileOpen(OutPath, "wbn.42", "w");
       Hvnfile  = FileOpen(OutPath, "Hvn.42", "w");
-      Hvbfile  = FileOpen(InOutPath, "Hvb.42", "w");
+      Hvbfile  = FileOpen(OutPath, "Hvb.42", "w");
       svnfile  = FileOpen(OutPath, "svn.42", "w");
       svbfile  = FileOpen(OutPath, "svb.42", "w");
       KEfile   = FileOpen(OutPath, "KE.42", "w");
-      // ProjAreaFile = FileOpen(InOutPath,"ProjArea.42","w");
+      // ProjAreaFile = FileOpen(OutPath,"ProjArea.42","w");
       RPYfile  = FileOpen(OutPath, "RPY.42", "w");
       Hwhlfile = FileOpen(OutPath, "Hwhl.42", "w");
 
@@ -1142,7 +1142,7 @@ void Report(void)
          IllumFile  = FileOpen(OutPath, "Illum.42", "w");
       }
       if (SC[0].Ngps > 0) {
-         GpsFile = FileOpen(InOutPath, "Gps.42", "w");
+         GpsFile = FileOpen(OutPath, "Gps.42", "w");
       }
    }
 
@@ -1288,7 +1288,7 @@ void Report(void)
    }
 
    /* An example how to call specialized reporting based on sim case */
-   /* if (!strcmp(InOutPath,"./Potato/")) PotatoReport(); */
+   /* if (!strcmp(OutPath,"./Potato/")) PotatoReport(); */
 
    if (CleanUpFlag) {
       fclose(timefile);

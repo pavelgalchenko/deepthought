@@ -143,7 +143,7 @@ ifeq ($(42PLATFORM),__APPLE__)
    endif
 
    XWARN =
-   EXENAME = 42
+   EXENAME = deepthought
    CC = gcc
 endif
 
@@ -312,7 +312,7 @@ LFLAGS+= `pkg-config --libs libfyaml`
 
 ##########################  Rules to link 42  #############################
 
-42 : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
+deepthought : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
 	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) $(SPICELIBFLAGS)
 
 Test : $(TESTOBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
@@ -530,11 +530,11 @@ endif
 
 profile: CFLAGS+=-pg
 profile: LFLAGS+=-pg
-profile: 42
-
-deploy: CFLAGS+=-O3
-deploy: LFLAGS+=-O3
-deploy: 42
+profile: deepthought
 
 DataFilter: STANDALONEFLAG = -D _AC_STANDALONE_
 DataFilter: GUIFLAG =
+
+deploy: CFLAGS+=-O2
+deploy: LFLAGS+=-O2
+deploy: deepthought

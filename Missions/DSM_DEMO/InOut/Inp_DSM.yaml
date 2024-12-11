@@ -516,6 +516,7 @@ Sensor Configurations: []
 Sensor Set Configurations: []
 Navigation Data Configurations: []
 Navigation Configurations: []
+Spin Vector Configurations: []
 DSM Commands:
   - SC: 0
     Command Sequence:

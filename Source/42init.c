@@ -4371,8 +4371,8 @@ void LoadMoonsOfMars(void)
                fprintf(stderr,
                        "World %s was requested to use a spherical harmonic "
                        "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
+                       "neither in 'Inp_Sim' nor in source. Add the file to "
+                       "the main 'Model' directory and add the file name as a "
                        "'Model File' field to the Gravitation Model for this "
                        "world in 'Inp_Sim'. Exiting...\n",
                        M->Name);
@@ -6194,25 +6194,6 @@ void InitSim(int argc, char **argv)
       strcpy(OutPath, CLI_ARGS.outdir);
       printf("%s", OutPath);
       strcat(OutPath, "/");
-      OutDir = opendir(OutPath);
-      if (OutDir) {
-         closedir(OutDir);
-      }
-      else if (ENOENT == errno) {
-#if defined __MINGW32__
-         mkdir(OutPath);
-#elif defined _WIN32
-         mkdir(OutPath);
-#elif defined _WIN64
-         mkdir(OutPath);
-#elif defined __APPLE__
-         mkdir(OutPath, 0777);
-#elif defined __linux__
-         mkdir(OutPath, 0777);
-#else
-#error "Computing platform not detected!"
-#endif
-      }
    }
 
    if (CLI_ARGS.defaultdir != NULL) {
@@ -6223,7 +6204,7 @@ void InitSim(int argc, char **argv)
       }
       if (CLI_ARGS.outdir == NULL) {
          strcpy(OutPath, CLI_ARGS.defaultdir);
-         strcat(OutPath, "/InOut/");
+         strcat(OutPath, "/output/");
       }
       if (CLI_ARGS.modeldir == NULL) {
          strcpy(SCModelPath, CLI_ARGS.defaultdir);
@@ -6238,14 +6219,38 @@ void InitSim(int argc, char **argv)
       }
    }
    else { /* Default Directories */
+      const char *def_mission = "/Demo";
       if (CLI_ARGS.indir == NULL) {
          strcpy(InOutPath, ExeDir);
+         strcat(InOutPath, def_mission);
          strcat(InOutPath, "/InOut/");
       }
-      if (CLI_ARGS.outdir == NULL)
-         strcpy(OutPath, InOutPath);
+      if (CLI_ARGS.outdir == NULL) {
+         strcpy(OutPath, ExeDir);
+         strcat(OutPath, def_mission);
+         strcat(OutPath, "/output/");
+      }
       if (CLI_ARGS.modeldir == NULL)
          strcpy(SCModelPath, ModelPath);
+   }
+   OutDir = opendir(OutPath);
+   if (OutDir) {
+      closedir(OutDir);
+   }
+   else if (ENOENT == errno) {
+#if defined __MINGW32__
+      mkdir(OutPath);
+#elif defined _WIN32
+      mkdir(OutPath);
+#elif defined _WIN64
+      mkdir(OutPath);
+#elif defined __APPLE__
+      mkdir(OutPath, 0777);
+#elif defined __linux__
+      mkdir(OutPath, 0777);
+#else
+#error "Computing platform not detected!"
+#endif
    }
 
    printf("\nExeDir: %s \n", ExeDir);
