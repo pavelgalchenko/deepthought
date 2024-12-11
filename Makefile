@@ -486,6 +486,6 @@ profile: CFLAGS+=-pg
 profile: LFLAGS+=-pg
 profile: deepthought
 
-deploy: CFLAGS+=-O3
-deploy: LFLAGS+=-O3
+deploy: CFLAGS+=-O2
+deploy: LFLAGS+=-O2
 deploy: deepthought
