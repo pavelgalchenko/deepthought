@@ -1,0 +1,43 @@
+%YAML 1.2
+---
+TDRSs:
+  - TDRS:
+      Number: 1
+      Exists: false
+      Label: TDRS-1
+  - TDRS:
+      Number: 2
+      Exists: false
+      Label: In Memorium
+  - TDRS:
+      Number: 3
+      Exists: true
+      Label: TDZ
+  - TDRS:
+      Number: 4
+      Exists: false
+      Label: TDS
+  - TDRS:
+      Number: 5
+      Exists: false
+      Label: TD171
+  - TDRS:
+      Number: 6
+      Exists: true
+      Label: TDW
+  - TDRS:
+      Number: 7
+      Exists: false
+      Label: TDRS-7
+  - TDRS:
+      Number: 8
+      Exists: false
+      Label: TD271
+  - TDRS:
+      Number: 9
+      Exists: false
+      Label: TDRS-9
+  - TDRS:
+      Number: 10
+      Exists: true
+      Label: TDE
