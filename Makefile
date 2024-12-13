@@ -293,7 +293,7 @@ DFOBJ = $(OBJ)dataFilter.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
 $(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
 $(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
 $(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
-$(OBJ)42nos3.o $(OBJ)42dsm.o
+$(OBJ)42nos3.o $(OBJ)42dsm.o $(OBJ)42optics.o
 
 TESTOBJ = $(OBJ)tests.o $(OBJ)mathkit_tests.o $(OBJ)navkit_tests.o\
 $(OBJ)test_lib.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \

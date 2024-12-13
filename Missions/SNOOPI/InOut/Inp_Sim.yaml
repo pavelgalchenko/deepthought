@@ -8,7 +8,7 @@ Simulation Control:
   RNG Seed: 0
   Enable Graphics: false
   Command File: Inp_Cmd.txt
-  Sensor Config File: snoopi_datafilter_configuration.yaml
+  Sensor Config File: snoopi_datafilter_config.yaml
 Time:
   Date:
     Month: 04

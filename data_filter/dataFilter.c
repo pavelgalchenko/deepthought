@@ -164,8 +164,8 @@ struct fy_document *InitFilter(int argc, char **argv)
    struct fy_node *root = fy_document_root(fyd);
    struct fy_node *node = fy_node_by_path_def(root, "/Simulation Control");
 
-   const char *config_file =
-       fy_node_get_scalar0(fy_node_by_path_def(node, "/Sensor Config File"));
+   char config_file[50] = {0};
+   fy_node_scanf(node, "/Sensor Config File %49[^\n]", config_file);
 
    /* .. Time Mode */
    /* .. Duration, Step size */
@@ -667,23 +667,160 @@ struct fy_document *InitFilter(int argc, char **argv)
 
    LoadTdrs();
    LoadSchatten();
-   return fy_document_build_and_check(NULL, InOutPath, config_file);
+   struct fy_document *doc =
+       fy_document_build_and_check(NULL, InOutPath, config_file);
+   return doc;
 }
 
-// don't output as measlist, also has actuator data to output
-struct DSMMeasListType *read_db(const char *db_name, struct DateType *db_time)
+void SelectStatementFromMapping(struct fy_node *map_node,
+                                char *select_statement, size_t *select_size)
 {
-   static sqlite3 *db            = NULL;
-   struct DSMMeasList *meas_list = NULL;
-   int rc;
+   struct fy_node *iter_node = NULL;
+   WHILE_FY_ITER(map_node, iter_node)
+   {
+      struct fy_node_pair *iter_pair = NULL;
+      while (fy_node_mapping_iterate(iter_node, (void *)&iter_pair) != NULL) {
+         struct fy_node *value_node = fy_node_pair_value(iter_pair);
+         struct fy_node *data_node  = fy_node_by_path_def(value_node, "/data");
+         if (fy_node_is_sequence(data_node)) {
+            struct fy_node *data_iter_node = NULL;
+            WHILE_FY_ITER(data_node, data_iter_node)
+            {
+               size_t data_str_len = 0;
+               const char *data_str =
+                   fy_node_get_scalar(data_iter_node, &data_str_len);
+               *select_size +=
+                   sprintf(select_statement + *select_size, "%s", ", ");
+               strncat(select_statement, data_str, data_str_len);
+               *select_size += data_str_len;
+            }
+         }
+         else if (fy_node_is_scalar(data_node)) {
+            size_t data_str_len  = 0;
+            const char *data_str = fy_node_get_scalar(data_node, &data_str_len);
+            *select_size +=
+                sprintf(select_statement + *select_size, "%s", ", ");
+            strncat(select_statement, data_str, data_str_len);
+            *select_size += data_str_len;
+         }
+      }
+   }
+}
+
+char *ConstructSQLStatement(struct fy_node *config_root,
+                            const enum db_read_config_flags flags,
+                            const ccsdsCoarse ccsds_min,
+                            const ccsdsCoarse ccsds_max)
+{
+   const size_t buf_size = 4096; // idk on size for the moment
+   size_t select_size = 0, where_size = 0;
+   char *select_out = calloc(buf_size, sizeof(char));
+   char *where_out  = calloc(buf_size, sizeof(char));
+
+   select_size += sprintf(select_out + select_size, "%s",
+                          "SELECT CCSDS_SECONDS, CCSDS_SUBSECS");
+   if (flags & DRCF_OUT_FILE)
+      select_size += sprintf(select_out + select_size, "%s", ", file");
+   else if (flags & DRCF_OUT_DIR_TIME)
+      select_size +=
+          sprintf(select_out + select_size, "%s", ", directory_time");
+   else if (flags & DRCF_OUT_LIVE_PASS)
+      select_size += sprintf(select_out + select_size, "%s", ", live_pass");
+   else if (flags & DRCF_OUT_TIME_AMBIGUOUS)
+      select_size +=
+          sprintf(select_out + select_size, "%s", ", time_ambiguous");
+
+   if (ccsds_min > 0)
+      where_size +=
+          sprintf(where_out + where_size, " AND CCSDS_SECONDS>%u", ccsds_min);
+   if (ccsds_max > 0)
+      where_size +=
+          sprintf(where_out + where_size, " AND CCSDS_SECONDS<%u", ccsds_max);
+   if (flags & DRCF_COND_TIME_UNAMBIGUOUS)
+      where_size +=
+          sprintf(where_out + where_size, "%s", " AND time_ambiguous IS 0");
+   else if (flags & DRCF_COND_TIME_AMBIGUOUS)
+      where_size +=
+          sprintf(where_out + where_size, "%s", " AND time_ambiguous IS 1");
+
+   struct fy_node *config_node =
+       fy_node_by_path_def(config_root, "/Data Mapping Configurations");
+
+   const char *key_names[10] = {"/Gyro", "/MAG",   "/CSS", "/FSS", "/ST",
+                                "/GPS",  "/Accel", "/Whl", "/MTB", "/THR"};
+   const enum db_read_config_flags data_flags[10] = {
+       DRCF_DATA_GYRO, DRCF_DATA_MAG, DRCF_DATA_CSS,   DRCF_DATA_FSS,
+       DRCF_DATA_ST,   DRCF_DATA_GPS, DRCF_DATA_ACCEL, DRCF_DATA_WHL,
+       DRCF_DATA_MTB,  DRCF_DATA_THR};
+
+   for (int i = 0; i < 10; i++) {
+      struct fy_node *node = fy_node_by_path_def(config_node, key_names[i]);
+      if (node != NULL && (flags & data_flags[i])) {
+         if (i >= 1 && i <= 3) {
+            const char *name = &key_names[i][1];
+            if (flags & DRCF_OUT_VALID)
+               select_size +=
+                   sprintf(select_out + select_size, ", %s_VALID", name);
+            if (flags & DRCF_COND_VALID) {
+               where_size +=
+                   sprintf(where_out + where_size, " AND %s_VALID IS 1", name);
+            }
+            else if (flags & DRCF_COND_INVALID) {
+               where_size +=
+                   sprintf(where_out + where_size, " AND %s_VALID IS 0", name);
+            }
+         }
+         SelectStatementFromMapping(node, select_out, &select_size);
+      }
+   }
+
+   memmove(where_out + 2, where_out, where_size);
+   strncpy(where_out, " WHERE", 6);
+   strcat(select_out, where_out);
+   free(where_out);
+   strcat(select_out, " ORDER BY CCSDS_SECONDS DESC, CCSDS_SUBSECS DESC");
+   return select_out;
+}
+
+void read_db(const char *db_name, struct SCType *const S,
+             struct DateType *db_time)
+{
+   static sqlite3 *db        = NULL;
+   static sqlite3_stmt *stmt = NULL;
+
+   const enum db_read_config_flags db_read_flags =
+       DRCF_COND_TIME_UNAMBIGUOUS | DRCF_DATA_SENSORS | DRCF_DATA_ACT;
+
+   const char *yaml_file_name = "snoopi_sensor_map.yaml";
+   const char *data_dir       = "/Users/dnewber2/Desktop/Smallsat Analysis/";
+   struct fy_document *yaml_config =
+       fy_document_build_and_check(NULL, data_dir, yaml_file_name);
+   struct fy_node *yaml_config_root = fy_document_root(yaml_config);
+
+   struct DSMMeasListType *meas_list = NULL;
 
    if (db == NULL) {
-      rc = sqlite3_open(db_name, &db);
+      char *const db_file_name = malloc(strlen(data_dir) + strlen(db_name));
+      strcat(db_file_name, data_dir);
+      strcat(db_file_name, db_name);
+      int rc = sqlite3_open(db_file_name, &db);
+      free(db_file_name);
+
       if (rc) {
          fprintf(stderr, "Can't open database %s: %s\n", db_name,
                  sqlite3_errmsg(db));
          exit(EXIT_FAILURE);
       }
+      const char *zsql =
+          ConstructSQLStatement(yaml_config_root, db_read_flags, 0, 0);
+      char *tail;
+      rc = sqlite3_prepare_v3(db, zsql, -1, 0, &stmt, NULL);
+      if (rc) {
+         fprintf(stderr, "Can't compile statement %s: %s\n", zsql,
+                 sqlite3_errmsg(db));
+         exit(EXIT_FAILURE);
+      }
+      sqlite3_step(stmt);
 
       // TODO: get db state up to db_time
       InitMeasList(meas_list);
@@ -703,7 +840,9 @@ struct DSMMeasListType *read_db(const char *db_name, struct DateType *db_time)
       // TODO: conversions from data in db to meas_list data
    }
 
-   return meas_list;
+   // Add db data to nav measurement buffer
+   appendList(&S->DSM.DsmNav.measList, meas_list);
+   free(meas_list);
 }
 
 int main(int argc, char **argv)
@@ -721,7 +860,7 @@ int main(int argc, char **argv)
 
    /* load sensor map yaml                                                    */
    struct fy_document *config_fyd = InitFilter(argc, argv);
-   SOCKET socket                  = InitSocketClient(hostname, port, 1);
+   // SOCKET socket                  = InitSocketClient(hostname, port, 1);
 
    /* LOOP */
    /* Every loop: */
@@ -735,27 +874,23 @@ int main(int argc, char **argv)
 
    struct SCType *const S  = &SC[0];
    struct AcType *const AC = &S->AC;
-   DsmFSW(S);                // Init DSM
-   const char *db_name = ""; // the name
-   read_db(db_name, &UTC);
+   DsmFSW(S);                          // Init DSM
+   const char *db_name = "SC_DATA.db"; // the name
+   read_db(db_name, S, &UTC);
 
    while (TRUE) {
       // gets time and other data from socket
-      ReadFromSocket(socket, AC);
+      // ReadFromSocket(socket, AC);
 
       // updated db to time
-      struct DSMMeasList *meas_list = read_db(db_name, &UTC);
-
-      // Add db data to nav measurement buffer
-      appendList(&S->DSM.DsmNav.measList, meas_list);
-      free(meas_list);
+      read_db(db_name, S, &UTC);
 
       // run dsm fsw and therefore nav
       DsmFSW(S);
 
       // write new data to socket
       // TODO: need to set S state from AC here, and that goes out the socket
-      WriteToSocket(socket, AC);
+      // WriteToSocket(socket, AC);
    }
 
    fy_document_destroy(config_fyd);

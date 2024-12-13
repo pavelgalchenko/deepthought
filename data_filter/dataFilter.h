@@ -57,6 +57,45 @@
 
 #define BUFSIZE 1000 // Default buffer size for chars.
 
+#ifndef BIT_SHIFT
+#define BIT_SHIFT(x, y) ((1U) << (((x) * 8U) + (y)))
+#endif
+
+#define BYTE_MASK(x) ((0xfU) << ((x) * 8U))
+
+enum db_read_config_flags {
+   // output condition flags
+   DRCF_COND_VALID            = BIT_SHIFT(0, 0),
+   DRCF_COND_INVALID          = BIT_SHIFT(0, 1),
+   DRCF_COND_TIME_UNAMBIGUOUS = BIT_SHIFT(0, 2),
+   DRCF_COND_TIME_AMBIGUOUS   = BIT_SHIFT(0, 3),
+   DRCF_COND_ALL              = BYTE_MASK(0),
+
+   // auxillary data output flags
+   DRCF_OUT_VALID          = BIT_SHIFT(1, 0),
+   DRCF_OUT_FILE           = BIT_SHIFT(1, 1),
+   DRCF_OUT_DIR_TIME       = BIT_SHIFT(1, 2),
+   DRCF_OUT_LIVE_PASS      = BIT_SHIFT(1, 3),
+   DRCF_OUT_TIME_AMBIGUOUS = BIT_SHIFT(1, 4),
+   DRCF_OUT_ALL            = BYTE_MASK(1),
+
+   // sensor output flags
+   DRCF_DATA_GYRO    = BIT_SHIFT(2, 0),
+   DRCF_DATA_MAG     = BIT_SHIFT(2, 1),
+   DRCF_DATA_CSS     = BIT_SHIFT(2, 2),
+   DRCF_DATA_FSS     = BIT_SHIFT(2, 3),
+   DRCF_DATA_ST      = BIT_SHIFT(2, 4),
+   DRCF_DATA_GPS     = BIT_SHIFT(2, 5),
+   DRCF_DATA_ACCEL   = BIT_SHIFT(2, 6),
+   DRCF_DATA_SENSORS = BYTE_MASK(2),
+
+   // actuator output flags
+   DRCF_DATA_WHL = BIT_SHIFT(3, 0),
+   DRCF_DATA_MTB = BIT_SHIFT(3, 1),
+   DRCF_DATA_THR = BIT_SHIFT(3, 2),
+   DRCF_DATA_ACT = BYTE_MASK(3),
+};
+
 /* Number of Reference Orbits */
 long Norb;
 /* Number of spacecraft */

@@ -25,6 +25,14 @@
             ]
         },
         {
+            "label": "make datafilter",
+            "type": "shell",
+            "group": "build",
+            "args": [
+                "make clean && make DataFilter -j"
+            ]
+        },
+        {
             "label": "make project opt",
             "type": "shell",
             "group": "build",

@@ -37,6 +37,38 @@
          ]
       },
       {
+         "name": "(lldb) Launch Datafilter",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}/datafilter",
+         "args": [
+            "-d",
+            "Missions/SNOOPI",
+            "-o",
+            "Missions/SNOOPI/blah",
+            "-g",
+            "0",
+         ],
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "externalConsole": false,
+         "MIMode": "lldb",
+         "preLaunchTask": "make datafilter",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for lldb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-lldb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            }
+         ]
+      },
+      {
          "name": "(lldb) Deploy",
          "type": "cppdbg",
          "request": "launch",

@@ -309,7 +309,7 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
-      printf("Order %ld can't be greater than Degree %ld\n", M, N);
+      fprintf(stderr, "Order %ld can't be greater than Degree %ld\n", M, N);
       exit(EXIT_FAILURE);
    }
 
@@ -790,7 +790,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -845,7 +845,7 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          subMatAdd(jacobian, B, 0, Nav->navInd[QUAT_STATE], 1, 3);
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -898,7 +898,7 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          subMatAdd(jacobian, B, 0, Nav->navInd[QUAT_STATE], 1, 3);
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -963,8 +963,8 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       } break;
       default:
-         printf("Invalid FSS Type. How did it get this far? "
-                "Exiting...\n");
+         fprintf(stderr,
+                 "Invalid FSS Type. How did it get this far? Exiting...\n");
          exit(EXIT_FAILURE);
    }
 
@@ -995,7 +995,7 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[QUAT_STATE], 2, 3);
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -1042,7 +1042,7 @@ double **startrackJacobianFun(struct AcType *const AC,
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[ROTMAT_STATE], 3, 3);
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -1153,7 +1153,7 @@ double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[VEL_STATE], 3, 3);
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -1177,7 +1177,7 @@ double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
       case MEKF_NAV:
          break;
       default:
-         printf("Undefined Navigation filter type. Exiting...\n");
+         fprintf(stderr, "Undefined Navigation filter type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -1269,8 +1269,8 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
                    svs[BoreAxis]);
       } break;
       default:
-         printf("Invalid FSS Type. How did it get this far? "
-                "Exiting...\n");
+         fprintf(stderr,
+                 "Invalid FSS Type. How did it get this far? Exiting...\n");
          exit(EXIT_FAILURE);
    }
 
@@ -1751,15 +1751,15 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else {
-         printf("Orbit types other than CENTRAL are still in development for "
-                "filtering. Exiting...\n");
+         fprintf(stderr, "Orbit types other than CENTRAL are still in "
+                         "development for filtering. Exiting...\n");
          exit(EXIT_FAILURE);
       }
    }
    else {
-      printf("For the moment, can only filter rotation matrix, position, "
-             "velocity, & angular velocity *simultaneously* with the RIEKF. "
-             "Exiting...\n");
+      fprintf(stderr, "For the moment, can only filter rotation matrix, "
+                      "position, velocity, & angular velocity *simultaneously* "
+                      "with the RIEKF. Exiting...\n");
       exit(EXIT_FAILURE);
    }
 }
@@ -2132,15 +2132,15 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else {
-         printf("Orbit types other than CENTRAL are still in development for "
-                "filtering. Exiting...\n");
+         fprintf(stderr, "Orbit types other than CENTRAL are still in "
+                         "development for filtering. Exiting...\n");
          exit(EXIT_FAILURE);
       }
    }
    else {
-      printf("For the moment, can only filter rotation matrix, position, "
-             "velocity, & angular velocity *simultaneously* with the LIEKF. "
-             "Exiting...\n");
+      fprintf(stderr, "For the moment, can only filter rotation matrix, "
+                      "position, velocity, & angular velocity *simultaneously* "
+                      "with the LIEKF. Exiting...\n");
       exit(EXIT_FAILURE);
    }
 }
@@ -2437,15 +2437,16 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else {
-         printf("Orbit types other than CENTRAL are still in development for "
-                "filtering. Exiting...\n");
+         fprintf(stderr, "Orbit types other than CENTRAL are still in "
+                         "development for filtering. Exiting...\n");
          exit(EXIT_FAILURE);
       }
    }
    else {
-      printf(
-          "For the moment, can only filter quaternion, position, velocity, "
-          "& angular velocity *simulataneously* with the MEKF. Exiting...\n");
+      fprintf(
+          stderr,
+          "For the moment, can only filter quaternion, position, velocity, & "
+          "angular velocity *simulataneously* with the MEKF. Exiting...\n");
       exit(EXIT_FAILURE);
    }
 }
@@ -2561,8 +2562,8 @@ double **GetStateLinTForm(struct DSMNavType *const Nav)
                    Nav->navInd[QUAT_STATE], 3, 3);
          break;
       default:
-         printf("Navigation active with undefined or ideal navigation type. "
-                "Exiting...\n");
+         fprintf(stderr, "Navigation active with undefined or ideal navigation "
+                         "type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -2619,10 +2620,10 @@ void configureRefFrame(struct DSMNavType *const Nav,
          struct WorldType const *W = Nav->refOriPtr;
          if (&World[refOrb->World] != Nav->refOriPtr) {
             // TODO: No reason can't do this, just WIP
-            printf(
-                "Navigation reference world %19s is not equal to the central "
-                "body of the SC's orbit, %19s. Exiting...\n",
-                W->Name, World[refOrb->World].Name);
+            fprintf(stderr,
+                    "Navigation reference world %19s is not equal to the "
+                    "central body of the SC's orbit, %19s. Exiting...\n",
+                    W->Name, World[refOrb->World].Name);
             exit(EXIT_FAILURE);
          }
       } break;
@@ -2671,7 +2672,7 @@ void configureRefFrame(struct DSMNavType *const Nav,
       // case FRAME_L:
       //    break;
       default:
-         printf("Unknown Navigation Reference Frame. Exiting...\n");
+         fprintf(stderr, "Unknown Navigation Reference Frame. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -2779,8 +2780,8 @@ void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
                      [Nav->navInd[OMEGA_STATE] + j] = -MOIInv[i][j];
       } break;
       default:
-         printf("Navigation active with undefined or ideal navigation type. "
-                "Exiting...\n");
+         fprintf(stderr, "Navigation active with undefined or ideal navigation "
+                         "type. Exiting...\n");
          exit(EXIT_FAILURE);
          break;
    }
@@ -2901,9 +2902,8 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                for (i = 0; i < 3; i++)
                   VelRdot[i] /= DSM->mass;
                if (Nav->refFrame != FRAME_N) {
-                  printf("Frame types other than Inertial are still in "
-                         "development for filtering. "
-                         "Exiting...\n");
+                  fprintf(stderr, "Frame types other than Inertial are still "
+                                  "in development for filtering. Exiting...\n");
                   exit(EXIT_FAILURE);
                }
 
@@ -2934,8 +2934,9 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                      break;
                   }
                   default:
-                     printf("Orbit types other than CENTRAL are still in "
-                            "development for filtering. Exiting...\n");
+                     fprintf(stderr,
+                             "Orbit types other than CENTRAL are still in "
+                             "development for filtering. Exiting...\n");
                      exit(EXIT_FAILURE);
                      break;
                }
@@ -3296,7 +3297,8 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                }
             } break;
             default:
-               printf(
+               fprintf(
+                   stderr,
                    "Invalid Batching method. If you are reading this, the "
                    "developer probably has a messed up pointer. Exiting...\n");
                exit(EXIT_FAILURE);
@@ -3337,8 +3339,8 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 #endif
          }
          else {
-            printf("Attempted to propagate Navigation state backwards in time. "
-                   "How did that happen? Exiting...\n");
+            fprintf(stderr, "Attempted to propagate Navigation state backwards "
+                            "in time. How did that happen? Exiting...\n");
             exit(EXIT_FAILURE);
          }
 
@@ -3467,7 +3469,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                u[j] = Uk[j][i];
             if (cholDowndate(Nav->NxN, u, Nav->navDim) == FALSE) {
                // downdateFail = TRUE;
-               printf("Cholesky Downdate failed! Exiting...\n");
+               fprintf(stderr, "Cholesky Downdate failed! Exiting...\n");
                exit(EXIT_FAILURE);
                // TODO: data dump to help diagnose downdate failure??
                // TODO: Defer downdate if failure?
@@ -3630,15 +3632,17 @@ double chi2InvLookup(double const pGate, long const dim)
                                0.9975, 0.999, 0.9995, 0.9999};
 
    if (dim < 1 || dim > nDeg) {
-      printf("Dimension for chi2InvLookup() must be between 1 and %li, "
-             "inclusive. Exiting...\n",
-             nDeg);
+      fprintf(stderr,
+              "Dimension for chi2InvLookup() must be between 1 and %li, "
+              "inclusive. Exiting...\n",
+              nDeg);
       exit(EXIT_FAILURE);
    }
    if (pGate < probGate[0] || pGate > probGate[nPGate - 1]) {
-      printf("Probability Gate for chi2InvLookup() must be between %lf and "
-             "%lf, inclusive. Exiting...\n",
-             probGate[0], probGate[nPGate - 1]);
+      fprintf(stderr,
+              "Probability Gate for chi2InvLookup() must be between %lf and "
+              "%lf, inclusive. Exiting...\n",
+              probGate[0], probGate[nPGate - 1]);
       exit(EXIT_FAILURE);
    }
    double out = LinInterp(probGate, tbl[dim - 1], pGate, nPGate);
