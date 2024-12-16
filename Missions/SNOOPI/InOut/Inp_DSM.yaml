@@ -1,0 +1,196 @@
+Sensor Configurations:
+  - Sensor: &Gyro_x
+      Description: Sensor_[0]
+      Type: GYRO
+      Sensor Index: 0
+      Sensor Noise: [0.026870057685088808]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Gyro_y
+      Description: Sensor_[1]
+      Type: GYRO
+      Sensor Index: 1
+      Sensor Noise: [0.026870057685088808]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Gyro_z
+      Description: Sensor_[2]
+      Type: GYRO
+      Sensor Index: 2
+      Sensor Noise: [0.026870057685088808]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Mag_x
+      Description: Sensor_[3]
+      Type: MAG
+      Sensor Index: 0
+      Sensor Noise: [0.16]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Mag_y
+      Description: Sensor_[4]
+      Type: MAG
+      Sensor Index: 1
+      Sensor Noise: [0.16]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &Mag_z
+      Description: Sensor_[5]
+      Type: MAG
+      Sensor Index: 2
+      Sensor Noise: [0.16]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &CSS_0
+      Description: Sensor_[6]
+      Type: CSS
+      Sensor Index: 0
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &CSS_1
+      Description: Sensor_[7]
+      Type: CSS
+      Sensor Index: 1
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &CSS_2
+      Description: Sensor_[8]
+      Type: CSS
+      Sensor Index: 2
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &CSS_3
+      Description: Sensor_[9]
+      Type: CSS
+      Sensor Index: 3
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &CSS_4
+      Description: Sensor_[10]
+      Type: CSS
+      Sensor Index: 4
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &CSS_5
+      Description: Sensor_[11]
+      Type: CSS
+      Sensor Index: 5
+      Sensor Noise: [0.5]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &FSS_0
+      Description: Sensor_[14]
+      Type: FSS
+      Sensor Index: 0
+      Sensor Noise: [0.2]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &ST_0
+      Description: Sensor_[16]
+      Type: STARTRACK
+      Sensor Index: 0
+      Sensor Noise: [40.0, 6.0, 6.0]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+  - Sensor: &GPS_0
+      Description: Sensor_[17]
+      Type: GPS
+      Sensor Index: 0
+      Sensor Noise: [0.63282032, 0.0173]
+      Underweighting Factor: 0.833333333
+      Residual Editing Gate: 0.9999
+Sensor Set Configurations:
+  - Sensor Set: &Sensor_Set_0
+      Description: SensorSet_[0]
+      Sensors:
+        - *Gyro_x
+        - *Gyro_y
+        - *Gyro_z
+        - *Mag_x
+        - *Mag_y
+        - *Mag_z
+        - *CSS_0
+        - *CSS_1
+        - *CSS_2
+        - *CSS_3
+        - *CSS_4
+        - *CSS_5
+        - *FSS_0
+        - *ST_0
+        - *GPS_0
+Navigation Data Configurations:
+  # ---------------------------------Navigation Data--------------------------------
+  # ((Sequence; one element for unique Navigation Data Definition))
+  # - Navigation Data:    &{Anchor}
+  #       Description:        {Optional}
+  #       ((Each of Position/Velocity/Omega/Attitude are optional fields))
+  #       Position:           [[pos_X, pos_Y, pos_Z]]         [[m]]
+  #       Velocity:           [[vel_X, vel_Y, vel_Z]]         [[m/s]]
+  #       Omega:              [[omega_X, omega_Y, omega_Z]]   [[rad/s]]
+  #       ((If this data is used for Q/P, then is sequence of 3 floats))
+  #       Attitude:           [[att_X, att_Y, att_Z]]
+  #       ((If this data is used for x0, then is Euler Angle mapping))
+  #       Attitude:
+  #         Angles:             [[angle_1, angle_2, angle_3]]
+  #         Sequence:           [[Sequence]]
+  - Navigation Data: &Navigation_Data_Q
+      Description: Dat_[0]
+      Velocity: [5e-04, 5e-04, 5e-04]
+      Omega: [3e-06, 3e-06, 3e-06]
+  - Navigation Data: &Navigation_Data_P
+      Description: Dat_[1]
+      Attitude: [1.1, 1.1, 1.1]
+      Position: [50.0, 50.0, 50.0]
+      Velocity: [1.0, 1.0, 1.0]
+      Omega: [0.4, 0.4, 0.4]
+  - Navigation Data: &Navigation_Data_x0
+      Description: Dat_[2]
+      Attitude:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 213
+      Position: [0.0, 0.0, 0.0]
+      Velocity: [0.0, 0.0, 0.0]
+      Omega: [0.0, 0.0, 0.0]
+Navigation Configurations:
+  - Navigation: &Navigation_0
+      Index: 0
+      Description: NavigationCmd_[0]
+      Type: RIEKF
+      Batching: Time
+      Frame: N
+      Reference Origin: OP
+      Data:
+        Q: *Navigation_Data_Q
+        P: *Navigation_Data_P
+        x0: *Navigation_Data_x0
+      Sensor Set: *Sensor_Set_0
+      States: [RotMat, Pos, Vel, Omega]
+  - Navigation: &Navigation_1
+      Index: 1
+      Description: NavigationCmd_[1]
+      Type: RIEKF
+      Batching: Time
+      Frame: N
+      Reference Origin: SC[4].B[0]
+      Data:
+        Q: *Navigation_Data_Q
+        P: *Navigation_Data_P
+        x0: *Navigation_Data_x0
+      Sensor Set: *Sensor_Set_0
+      States: [RotMat, Pos, Vel, Omega]
+DSM Commands:
+  - SC: 0
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Passive
+          - Type: Translation
+            Subtype: Passive
+          - Type: Navigation
+            Command Data: *Navigation_0

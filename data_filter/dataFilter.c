@@ -690,18 +690,21 @@ void SelectStatementFromMapping(struct fy_node *map_node,
                const char *data_str =
                    fy_node_get_scalar(data_iter_node, &data_str_len);
                *select_size +=
-                   sprintf(select_statement + *select_size, "%s", ", ");
+                   sprintf(select_statement + *select_size, "%s", ", '");
                strncat(select_statement, data_str, data_str_len);
                *select_size += data_str_len;
+               *select_size +=
+                   sprintf(select_statement + *select_size, "%s", "'");
             }
          }
          else if (fy_node_is_scalar(data_node)) {
             size_t data_str_len  = 0;
             const char *data_str = fy_node_get_scalar(data_node, &data_str_len);
             *select_size +=
-                sprintf(select_statement + *select_size, "%s", ", ");
+                sprintf(select_statement + *select_size, "%s", ", '");
             strncat(select_statement, data_str, data_str_len);
             *select_size += data_str_len;
+            *select_size += sprintf(select_statement + *select_size, "%s", "'");
          }
       }
    }
@@ -776,9 +779,10 @@ char *ConstructSQLStatement(struct fy_node *config_root,
 
    memmove(where_out + 2, where_out, where_size);
    strncpy(where_out, " WHERE", 6);
+   strcat(select_out, " FROM SNOOPI");
    strcat(select_out, where_out);
    free(where_out);
-   strcat(select_out, " ORDER BY CCSDS_SECONDS DESC, CCSDS_SUBSECS DESC");
+   strcat(select_out, " ORDER BY time DESC");
    return select_out;
 }
 
@@ -797,7 +801,7 @@ void read_db(const char *db_name, struct SCType *const S,
        fy_document_build_and_check(NULL, data_dir, yaml_file_name);
    struct fy_node *yaml_config_root = fy_document_root(yaml_config);
 
-   struct DSMMeasListType *meas_list = NULL;
+   struct DSMMeasListType meas_list;
 
    if (db == NULL) {
       char *const db_file_name = malloc(strlen(data_dir) + strlen(db_name));
@@ -823,10 +827,10 @@ void read_db(const char *db_name, struct SCType *const S,
       sqlite3_step(stmt);
 
       // TODO: get db state up to db_time
-      InitMeasList(meas_list);
+      InitMeasList(&meas_list);
    }
    else {
-      InitMeasList(meas_list);
+      InitMeasList(&meas_list);
       // TODO: output db data from last db state up to db_time
 
       // TODO: get date from current index in db
@@ -841,8 +845,7 @@ void read_db(const char *db_name, struct SCType *const S,
    }
 
    // Add db data to nav measurement buffer
-   appendList(&S->DSM.DsmNav.measList, meas_list);
-   free(meas_list);
+   appendList(&S->DSM.DsmNav.measList, &meas_list);
 }
 
 int main(int argc, char **argv)
