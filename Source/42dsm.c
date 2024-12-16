@@ -3061,7 +3061,7 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          }
 
          if (fabs(VoV(cmdVecB[0], cmdVecB[1]) - 1.0) < EPS_DSM) {
-            char *tgts[2] = {0};
+            char tgts[2][50] = {{0}};
             for (i = 0; i < 2; i++) {
                switch (vecs[i]->TrgType) {
                   case TARGET_SC: {

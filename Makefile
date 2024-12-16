@@ -182,7 +182,7 @@ ifeq ($(42PLATFORM),__linux__)
    endif
 
    XWARN = -Wno-unused-variable -Wno-unused-but-set-variable -Wno-stringop-overread
-   EXENAME = 42
+   EXENAME = deepthought
    CC = gcc
 endif
 
@@ -211,7 +211,7 @@ ifeq ($(42PLATFORM),__MSYS__)
       ARCHFLAG =
    endif
    XWARN =
-   EXENAME = 42.exe
+   EXENAME = deepthought.exe
    CC = gcc
 endif
 
