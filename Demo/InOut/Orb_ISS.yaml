@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: ISS
+  Description: ISS Orbit
+Orbit:
+  Type: CENTRAL
+  World: EARTH
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 347.0
+    Apoapsis: 358.0
+    Inclination: 51.6
+    RAAN: 30.0
+    Arg of Periapsis: 0.0
+    True Anomaly: 0.0
+Formation:
+  Fixed Frame: L
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

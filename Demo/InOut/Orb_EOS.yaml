@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: EOS
+  Description: Typical Earth Observing orbit
+Orbit:
+  Type: CENTRAL
+  World: EARTH
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 705.0
+    Apoapsis: 705.0
+    Inclination: 98.0
+    RAAN: 210.0
+    Arg of Periapsis: 0.0
+    True Anomaly: 0.0
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]

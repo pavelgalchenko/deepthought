@@ -1,0 +1,115 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Inp_Graphics.txt
+  Output Interval: 0.5
+  Star Catalog File: Skymap09.txt
+  Map Exists: true
+  Orrery Exists: true
+  Unit Sphere Exists: true
+  Pause on Startup: false
+POV:
+  Mode: TRACK_HOST
+  Host:
+    Type: SC
+    SC: 0
+    Body: 0
+    Frame: L
+  Target:
+    Type: SC
+    SC: 0
+    Body: 0
+    Frame: L
+  Boresight Axis: POS_Z
+  Up Axis: NEG_Y
+  POV Range: 40.0
+  POV Vertical Angle: 30.0
+  POV Host Position: [0.0, 0.0, 0.0]
+  POV View: FRONT
+Cam:
+  Title: 42 Cam
+  Dimensions:
+    Width: 800
+    Height: 800
+  Mouse Scale Factor: 5e-05
+  Gamma Exponent: 4.0
+  Cam Show:
+    N Axes:
+      Show: false
+      Label: N Axes
+    L Axes:
+      Show: false
+      Label: L Axes
+    F Axes:
+      Show: false
+      Label: F Axes
+    B Axes:
+      Show: false
+      Label: B Axes
+    N Grid:
+      Show: false
+      Label: N Grid
+    L Grid:
+      Show: false
+      Label: L Grid
+    F Grid:
+      Show: false
+      Label: F Grid
+    B Grid:
+      Show: false
+      Label: B Grid
+    G Grid:
+      Show: false
+      Label: Gal Grid
+    Fields of View:
+      Show: false
+      Label: FOVs
+    Prox Ops:
+      Show: false
+      Label: Prox Ops
+    TDRS Satellites:
+      Show: false
+      Label: TDRS
+    Shadows:
+      Show: true
+      Label: Shadows
+    Astro Labels:
+      Show: false
+      Label: Astro Labels
+    Truth Vectors:
+      Show: false
+      Label: Truth Vectors
+    FSW Vectors:
+      Show: false
+      Label: FSW Vectors
+    Milky Way:
+      Show: true
+      Label: Milky Way
+    Fermi Sky:
+      Show: false
+      Label: Fermi Sky
+Map:
+  Title: 42 Map
+  Dimensions:
+    Width: 512
+    Height: 256
+  Map Show:
+    Clock:
+      Show: true
+      Label: Clock
+    Tlm Clock:
+      Show: true
+      Label: Tlm Clock
+    Credits:
+      Show: false
+      Label: Credits
+    Night:
+      Show: true
+      Label: Night
+Constellations Show:
+  Major:
+    Show: true
+  Zodiac:
+    Show: true
+  Minor:
+    Show: false

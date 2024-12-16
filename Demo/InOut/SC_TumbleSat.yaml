@@ -1,0 +1,196 @@
+%YAML 1.2
+---
+Name: TumbleSat
+Configuration:
+  Description: Demonstration of Flat Spin a la Explorer 1
+  Label: S/C
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: PASSIVE_FSW
+  FSW Sample Time: 0.2
+Orbit:
+  Prop Type: FIXED
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 0.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: N
+  Ang Vel: [0.0, 0.001, 5.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [90.0, 45.0, 20.0]
+    Sequence: 231
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+Bodies:
+  - Body:
+      Index: 0
+      Mass: 1963.5
+      MOI: [5174.0, 3593.0, 245.4]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 2.5]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: TumbleSat0.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 1
+      Mass: 94.25
+      MOI: [0.47, 8.09, 8.09]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.5, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: TumbleSat1.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 2
+      Mass: 94.25
+      MOI: [0.47, 8.09, 8.09]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.5, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: TumbleSat1.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 3
+      Mass: 94.25
+      MOI: [0.47, 8.09, 8.09]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.5, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: TumbleSat1.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 4
+      Mass: 94.25
+      MOI: [0.47, 8.09, 8.09]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.5, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: TumbleSat1.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+Joints:
+  - Joint:
+      Index: 0
+      Body Indicies: [0, 1]
+      Joint Type: PASSIVE
+      Rot DOF: 2
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.5, 0.0, 2.5]
+      Pos wrt Outer Body: [0.0, 0.0, 0.0]
+      Parm File Name: Jnt_Tumble02.txt
+  - Joint:
+      Index: 1
+      Body Indicies: [0, 2]
+      Joint Type: PASSIVE
+      Rot DOF: 2
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [90.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.0, 0.5, 2.5]
+      Pos wrt Outer Body: [0.0, 0.0, 0.0]
+      Parm File Name: Jnt_Tumble13.txt
+  - Joint:
+      Index: 2
+      Body Indicies: [0, 3]
+      Joint Type: PASSIVE
+      Rot DOF: 2
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [180.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [-0.5, 0.0, 2.5]
+      Pos wrt Outer Body: [0.0, 0.0, 0.0]
+      Parm File Name: Jnt_Tumble02.txt
+  - Joint:
+      Index: 3
+      Body Indicies: [0, 4]
+      Joint Type: PASSIVE
+      Rot DOF: 2
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [270.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.0, -0.5, 2.5]
+      Pos wrt Outer Body: [0.0, 0.0, 0.0]
+      Parm File Name: Jnt_Tumble13.txt
+Wheel Params: { Drag: false, Jitter: false }
+Wheels: []
+MTBs: []
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+Accelerometers: []
+FGSs: []

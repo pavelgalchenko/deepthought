@@ -1,0 +1,23 @@
+%YAML 1.2
+---
+Configuration:
+  Name: L2Halo
+  Description: Halo Orbit near SunEarth L2
+Orbit:
+  Type: THREE_BODY
+  Lagrange System: SUNEARTH
+  Propagation Method: LAGDOF_MODES
+  Init:
+    Method: MODES
+    Lagrange Point: L2
+    XY SMA: 800000.0
+    XY Phase: -45.0
+    Sense: CW
+    Z SMA: 400000.0
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]

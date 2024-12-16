@@ -7,3 +7,6 @@ a.out
 *.42
 42
 deepthought
+vgcore*
+cspice
+Model/spice_kernels/*/

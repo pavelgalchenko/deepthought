@@ -1,0 +1,331 @@
+%YAML 1.2
+---
+Name: LRO
+Configuration:
+  Description: Lunar Reconnaissance Orbiter
+  Label: LRO
+  Sprite File: LroSpriteAlpha.ppm
+  FSW Identifier: PASSIVE_FSW
+  FSW Sample Time: 0.2
+Orbit:
+  Prop Type: FIXED
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 0.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: L
+  Att Representation: A
+  Att Frame: L
+  Ang Vel: [0.0, 0.0, 0.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+Bodies:
+  - Body: &Body_0
+      Index: 0
+      Mass: 919.32
+      MOI: [591.31, 836.84, 909.36]
+      POI: [21.38, -20.96, 27.93]
+      Pos of CM: [1.172, -0.055, -0.041]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_Main_Body.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 1
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_SAS_Gimbal.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 2
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_SAS_Center_Panel.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 3
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_SAS_Left_Panel.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 4
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_SAS_Right_Panel.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 5
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, -0.05]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_HGA_Boom.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 6
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, -0.05]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_HGA_Gimbal.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+  - Body:
+      Index: 7
+      Mass: 100.0
+      MOI: [30.0, 80.0, 100.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, -0.05]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: LRO_HGA_Dish.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+Joints:
+  - Joint:
+      Index: 0
+      Body Indicies: [0, 1]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 213
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.375, -1.164, 0.002]
+      Pos wrt Outer Body: [0.0, 0.148, 0.0]
+      Parm File Name: NONE
+  - Joint:
+      Index: 1
+      Body Indicies: [1, 2]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 123
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 231
+      Bo-Go Angles:
+        Angles: [45.0, 0.0, 0.0]
+        Sequence: 123
+      Pos wrt Inner Body: [0.03, 0.0, 0.0]
+      Pos wrt Outer Body: [0.055, 0.139, 0.001]
+      Parm File Name: NONE
+  - Joint:
+      Index: 2
+      Body Indicies: [2, 3]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 231
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 123
+      Pos wrt Inner Body: [0.777, -0.642, -0.03]
+      Pos wrt Outer Body: [0.0, -0.643, -0.033]
+      Parm File Name: NONE
+  - Joint:
+      Index: 3
+      Body Indicies: [2, 4]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 231
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 123
+      Pos wrt Inner Body: [-0.727, -0.642, -0.06]
+      Pos wrt Outer Body: [0.0, -0.642, -0.054]
+      Parm File Name: NONE
+  - Joint:
+      Index: 4
+      Body Indicies: [0, 5]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.372, -0.295, -0.833]
+      Pos wrt Outer Body: [0.0, 0.0, 0.0]
+      Parm File Name: NONE
+  - Joint:
+      Index: 5
+      Body Indicies: [5, 6]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 231
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.0, -0.065, -1.795]
+      Pos wrt Outer Body: [0.0, -0.06, 0.0]
+      Parm File Name: NONE
+  - Joint:
+      Index: 6
+      Body Indicies: [6, 7]
+      Joint Type: PASSIVE
+      Rot DOF: 1
+      Rot Sequence: 123
+      Rot Type: GIMBAL
+      Trn DOF: 0
+      Trn Sequence: 123
+      Rot DOF Locked: [false, false, false]
+      Trn DOF Locked: [false, false, false]
+      Init Angles: [0.0, 0.0, 0.0]
+      Init Angle Rates: [0.0, 0.0, 0.0]
+      Init Displacement: [0.0, 0.0, 0.0]
+      Init Displacement Rates: [0.0, 0.0, 0.0]
+      Bi-Gi Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Bo-Go Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 312
+      Pos wrt Inner Body: [0.009, -0.012, -0.219]
+      Pos wrt Outer Body: [0.014, 0.0, 0.0]
+      Parm File Name: NONE
+Wheel Params: { Drag: false, Jitter: false }
+Wheels:
+  - Wheel:
+      Index: 0
+      Initial Momentum: 0.0
+      Axis: [1.0, 0.0, 0.0]
+      Max Torque: 0.14
+      Max Momentum: 50.0
+      Rotor Inertia: 0.012
+      Body: *Body_0
+      Node: 0
+      Drag-Jitter File Name: NONE
+  - Wheel:
+      Index: 1
+      Initial Momentum: 0.0
+      Axis: [0.0, 1.0, 0.0]
+      Max Torque: 0.14
+      Max Momentum: 50.0
+      Rotor Inertia: 0.012
+      Body: *Body_0
+      Node: 0
+      Drag-Jitter File Name: NONE
+  - Wheel:
+      Index: 2
+      Initial Momentum: 0.0
+      Axis: [0.0, 0.0, 1.0]
+      Max Torque: 0.14
+      Max Momentum: 50.0
+      Rotor Inertia: 0.012
+      Body: *Body_0
+      Node: 0
+      Drag-Jitter File Name: NONE
+MTBs: []
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+FGSs: []
+Accelerometers: []

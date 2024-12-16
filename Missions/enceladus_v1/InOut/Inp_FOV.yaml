@@ -1,0 +1,163 @@
+%YAML 1.2
+---
+FOVs:
+  - FOV:
+      Label: SC1 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 1
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC2 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 2
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC3 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 3
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC4 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 4
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC5 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 5
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC6 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 6
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC7 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 7
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SC8 Cam
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 8
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS

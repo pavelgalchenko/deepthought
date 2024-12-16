@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Cube
+  Description: Cubesat Orbit
+Orbit:
+  Type: CENTRAL
+  World: EARTH
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 400.0
+    Apoapsis: 400.0
+    Inclination: 28.5
+    RAAN: 0.0
+    Arg of Periapsis: 0.0
+    True Anomaly: 45.0
+Formation:
+  Fixed Frame: L
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Saturn
+  Description: Saturn-centered Orbit
+Orbit:
+  Type: CENTRAL
+  World: SATURN
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 500000.0
+    Apoapsis: 500000.0
+    Inclination: 90.0
+    RAAN: 317.0
+    Arg of Periapsis: 0.0
+    True Anomaly: 45.0
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]

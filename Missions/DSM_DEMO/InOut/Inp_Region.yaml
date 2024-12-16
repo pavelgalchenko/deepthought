@@ -1,0 +1,27 @@
+%YAML 1.2
+---
+Regions:
+  - Region:
+      Exists: true
+      Name: LZ
+      World: EARTH
+      Location:
+        Type: LLA
+        Position: [-80.53, 28.46, 1000.0]
+      Coefficients:
+        Elasticity: 1000000.0
+        Damping: 10000.0
+        Friction: 0.1
+      Geometry File Name: Rgn_Terrain.obj
+  - Region:
+      Exists: true
+      Name: TAG
+      World: MINORBODY_2
+      Location:
+        Type: POSW
+        Position: [2400.9966, -1074.41895, 439.1271]
+      Coefficients:
+        Elasticity: 1000000.0
+        Damping: 10000.0
+        Friction: 0.1
+      Geometry File Name: Rgn_TAG.obj

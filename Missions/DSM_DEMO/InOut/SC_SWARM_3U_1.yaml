@@ -1,0 +1,268 @@
+%YAML 1.2
+---
+Name: SWARM_3U_1
+Configuration:
+  Description: Simple generic S/C
+  Label: S/C
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: DSM_FSW
+  FSW Sample Time: 0.1
+Orbit:
+  Prop Type: ENCKE
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 1.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: L
+  Ang Vel: [5.0, -5.0, 5.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [90.0, 90.0, 0.0]
+    Sequence: 213
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+Bodies:
+  - Body: &Body_0
+      Index: 0
+      Mass: 6.0
+      MOI: [0.05, 0.05, 0.01]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.005, 0.005, 0.01]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: Cubesat_3U.obj
+      Node File Name: Nodes_Simple.txt
+      Flex File Name: NONE
+Joints: []
+Wheel Params: {Drag: false, Jitter: false}
+Wheels:
+  - Wheel:
+      Index: 0
+      Initial Momentum: 0.0
+      Axis: [1.0, 0.0, 0.0]
+      Max Torque: 0.004
+      Max Momentum: 0.02
+      Rotor Inertia: 0.012
+      Body: *Body_0
+      Node: 0
+      Drag-Jitter File Name: NONE
+  - Wheel:
+      Index: 1
+      Initial Momentum: 0.0
+      Axis: [0.0, 1.0, 0.0]
+      Max Torque: 0.004
+      Max Momentum: 0.02
+      Rotor Inertia: 0.012
+      Body: *Body_0
+      Node: 0
+      Drag-Jitter File Name: NONE
+  - Wheel:
+      Index: 2
+      Initial Momentum: 0.0
+      Axis: [0.0, 0.0, 1.0]
+      Max Torque: 0.004
+      Max Momentum: 0.02
+      Rotor Inertia: 0.012
+      Body: *Body_0
+      Node: 0
+      Drag-Jitter File Name: NONE
+MTBs:
+  - MTB:
+      Index: 0
+      Saturation: 0.4
+      Axis: [1.0, 0.0, 0.0]
+      Node: 0
+  - MTB:
+      Index: 1
+      Saturation: 0.4
+      Axis: [0.0, 1.0, 0.0]
+      Node: 0
+  - MTB:
+      Index: 2
+      Saturation: 0.4
+      Axis: [0.0, 0.0, 1.0]
+      Node: 0
+Thrusters:
+  - Thruster:
+      Index: 0
+      Mode: PULSED
+      Force: 0.01
+      Axis: [1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 1
+  - Thruster:
+      Index: 1
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, 1.0]
+      Body: *Body_0
+      Node: 2
+  - Thruster:
+      Index: 2
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, -1.0, 0.0]
+      Body: *Body_0
+      Node: 3
+  - Thruster:
+      Index: 3
+      Mode: PULSED
+      Force: 0.01
+      Axis: [1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 4
+  - Thruster:
+      Index: 4
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, 1.0]
+      Body: *Body_0
+      Node: 5
+  - Thruster:
+      Index: 5
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 1.0, 0.0]
+      Body: *Body_0
+      Node: 6
+  - Thruster:
+      Index: 6
+      Mode: PULSED
+      Force: 0.01
+      Axis: [-1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 7
+  - Thruster:
+      Index: 7
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, 1.0]
+      Body: *Body_0
+      Node: 8
+  - Thruster:
+      Index: 8
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 1.0, 0.0]
+      Body: *Body_0
+      Node: 9
+  - Thruster:
+      Index: 9
+      Mode: PULSED
+      Force: 0.01
+      Axis: [-1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 10
+  - Thruster:
+      Index: 10
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, 1.0]
+      Body: *Body_0
+      Node: 11
+  - Thruster:
+      Index: 11
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, -1.0, 0.0]
+      Body: *Body_0
+      Node: 12
+  - Thruster:
+      Index: 12
+      Mode: PULSED
+      Force: 0.01
+      Axis: [1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 13
+  - Thruster:
+      Index: 13
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, -1.0]
+      Body: *Body_0
+      Node: 14
+  - Thruster:
+      Index: 14
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, -1.0, 0.0]
+      Body: *Body_0
+      Node: 15
+  - Thruster:
+      Index: 15
+      Mode: PULSED
+      Force: 0.01
+      Axis: [1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 16
+  - Thruster:
+      Index: 16
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, -1.0]
+      Body: *Body_0
+      Node: 17
+  - Thruster:
+      Index: 17
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 1.0, 0.0]
+      Body: *Body_0
+      Node: 18
+  - Thruster:
+      Index: 18
+      Mode: PULSED
+      Force: 0.01
+      Axis: [-1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 19
+  - Thruster:
+      Index: 19
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, -1.0]
+      Body: *Body_0
+      Node: 20
+  - Thruster:
+      Index: 20
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 1.0, 0.0]
+      Body: *Body_0
+      Node: 21
+  - Thruster:
+      Index: 21
+      Mode: PULSED
+      Force: 0.01
+      Axis: [-1.0, 0.0, 0.0]
+      Body: *Body_0
+      Node: 22
+  - Thruster:
+      Index: 22
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, 0.0, -1.0]
+      Body: *Body_0
+      Node: 23
+  - Thruster:
+      Index: 23
+      Mode: PULSED
+      Force: 0.01
+      Axis: [0.0, -1.0, 0.0]
+      Body: *Body_0
+      Node: 24
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+Accelerometers: []

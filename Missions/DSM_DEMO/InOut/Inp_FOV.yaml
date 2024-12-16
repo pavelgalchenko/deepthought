@@ -1,0 +1,83 @@
+%YAML 1.2
+---
+FOVs:
+  - FOV:
+      Label: PLANE
+      Sides:
+        Number: 24
+        Length: 8.0
+      Width: 0.0
+      Height: 0.0
+      Color:
+        RGB: [1.0, 1.0, 1.0]
+        Alpha: 0.298
+      Type: PLANE
+      Near Field: true
+      Far Field: true
+      SC: 0
+      Body: 0
+      Position: [0.0, 0.0, 0.0]
+      Euler Angles:
+        Angles: [-45.0, 0.0, 0.0]
+        Sequence: 213
+      Boresight: Z_AXIS
+  - FOV:
+      Label: SOLID
+      Sides:
+        Number: 4
+        Length: 4.0
+      Width: 8.0
+      Height: 4.0
+      Color:
+        RGB: [0.0, 1.0, 0.0]
+        Alpha: 0.498
+      Type: SOLID
+      Near Field: true
+      Far Field: true
+      SC: 0
+      Body: 0
+      Position: [0.0, 0.0, 1.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight: Z_AXIS
+  - FOV:
+      Label: VECTOR
+      Sides:
+        Number: 0
+        Length: 4.0
+      Width: 0.0
+      Height: 0.0
+      Color:
+        RGB: [0.0, 1.0, 1.0]
+        Alpha: 1.0
+      Type: VECTOR
+      Near Field: true
+      Far Field: true
+      SC: 0
+      Body: 0
+      Position: [1.0, 0.0, 0.0]
+      Euler Angles:
+        Angles: [135.0, 0.0, 0.0]
+        Sequence: 213
+      Boresight: Z_AXIS
+  - FOV:
+      Label: WIRE
+      Sides:
+        Number: 24
+        Length: 4.0
+      Width: 10.0
+      Height: 5.0
+      Color:
+        RGB: [0.698, 0.698, 0.0]
+        Alpha: 1.0
+      Type: WIREFRAME
+      Near Field: true
+      Far Field: true
+      SC: 0
+      Body: 0
+      Position: [1.0, 0.0, 0.0]
+      Euler Angles:
+        Angles: [0.0, 0.0, 0.0]
+        Sequence: 213
+      Boresight: X_AXIS

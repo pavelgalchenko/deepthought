@@ -1,0 +1,71 @@
+%YAML 1.2
+---
+Name: Spinner
+Configuration:
+  Description: Sunpointing Spinner
+  Label: Spinner
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: SPINNER_FSW
+  FSW Sample Time: 0.2
+Orbit:
+  Prop Type: FIXED
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 0.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: N
+  Ang Vel: [0.0, 0.0, 5.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+Bodies:
+  - Body:
+      Index: 0
+      Mass: 100.0
+      MOI: [100.0, 100.0, 300.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: Sunflower.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+Joints: []
+Wheel Params: { Drag: false, Jitter: false }
+Wheels: []
+MTBs:
+  - MTB:
+      Index: 0
+      Saturation: 180.0
+      Axis: [1.0, 0.0, 0.0]
+      Node: 0
+  - MTB:
+      Index: 1
+      Saturation: 180.0
+      Axis: [0.0, 1.0, 0.0]
+      Node: 0
+  - MTB:
+      Index: 2
+      Saturation: 180.0
+      Axis: [0.0, 0.0, 1.0]
+      Node: 0
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+FGSs: []
+Accelerometers: []

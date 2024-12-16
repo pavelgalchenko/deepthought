@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Eros
+  Description: Orbit around Eros
+Orbit:
+  Type: CENTRAL
+  World: MINORBODY_1
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 25.0
+    Apoapsis: 50.0
+    Inclination: 90.0
+    RAAN: 210.0
+    Arg of Periapsis: 20.0
+    True Anomaly: -30.0
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]

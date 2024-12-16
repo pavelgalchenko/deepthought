@@ -1,0 +1,717 @@
+%YAML 1.2
+---
+Gains Configurations:
+  - Gains: &Gains_0
+      Description: Gains_[0]
+      Type: PID_WN
+      Gains:
+        Omega: 0.24
+        Zeta: 0.7
+        Alpha: 0.0
+        Ki_Limit: 0.0
+  - Gains: &Gains_1
+      Description: Gains_[1]
+      Type: PID
+      Gains:
+        Kp: [0.0, 0.0, 0.0]
+        Kr: [0.1, 0.1, 0.1]
+        Ki: [0.0, 0.0, 0.0]
+        Ki_Limit: [0.0, 0.0, 0.0]
+  - Gains: &Gains_2
+      Description: Gains_[2]
+      Type: MomentumDump
+      Gains:
+        Kp: [1.3, 1.3, 1.3]
+  - Gains: &Gains_3
+      Description: Gains_[3]
+      Type: PID_WN
+      Gains:
+        Omega: 2.4
+        Zeta: 0.4
+        Alpha: 0.0
+        Ki_Limit: 0.0
+  - Gains: &Gains_4
+      Description: Gains_[4]
+      Type: PID
+      Gains:
+        Kp: [20.0, 20.0, 20.0]
+        Kr: [200.0, 200.0, 200.0]
+        Ki: [0.0, 0.0, 0.0]
+        Ki_Limit: [0.0, 0.0, 0.0]
+  - Gains: &Gains_5
+      Description: Gains_[5]
+      Type: PID_WN
+      Gains:
+        Omega: 0.2
+        Zeta: 1.0
+        Alpha: 0.0
+        Ki_Limit: 0.0
+  - Gains: &Gains_6
+      Description: Gains_[6]
+      Type: FC_LYA
+      Gains:
+        K_lya: [0.01, 3.0]
+  - Gains: &Gains_7
+      Description: Gains_[7]
+      Type: FC_LYA
+      Gains:
+        K_lya: [0.2, 1.0]
+  - Gains: &Gains_8
+      Description: Gains_[8]
+      Type: MomentumDump
+      Gains:
+        Kp: [0.1, 0.1, 0.1]
+Limits Configurations:
+  - Limits: &Limits_0
+      Description: Limits_[0]
+      Force Max: [0.0, 0.0, 0.0]
+      Velocity Max: [0.0, 0.0, 0.0]
+  - Limits: &Limits_1
+      Description: Limits_[1]
+      Force Max: [0.001, 0.001, 0.001]
+      Velocity Max: [0.0, 0.0, 0.0]
+  - Limits: &Limits_2
+      Description: Limits_[2]
+      Force Max: [0.001, 0.001, 0.001]
+      Velocity Max: [0.5, 0.5, 0.5]
+  - Limits: &Limits_3
+      Description: Limits_[3]
+      Force Max: [0.004, 0.004, 0.004]
+      Velocity Max: [0.0, 0.0, 0.0]
+Actuator Configurations:
+  - Actuator: &Actuator_0
+      Description: Actuators_[0]
+      Type: Ideal
+  - Actuator: &Actuator_1
+      Description: Actuators_[1]
+      Type: Ideal
+  - Actuator: &Actuator_2
+      Description: Actuators_[2]
+      Type: WHL
+  - Actuator: &Actuator_3
+      Description: Actuators_[3]
+      Type: THR_3DOF
+  - Actuator: &Actuator_4
+      Description: Actuators_[4]
+      Type: MTB
+  - Actuator: &Actuator_5
+      Description: Actuators_[5]
+      Type: THR_6DOF
+Controller Configurations:
+  - Controller: &Controller_0
+      Description: Controller_[0]
+      Type: PID_CNTRL
+      Gains: *Gains_5
+      Limits: *Limits_0
+  - Controller: &Controller_1
+      Description: Controller_[1]
+      Type: PID_CNTRL
+      Gains: *Gains_0
+      Limits: *Limits_1
+  - Controller: &Controller_2
+      Description: Controller_[2]
+      Type: PID_CNTRL
+      Gains: *Gains_5
+      Limits: *Limits_2
+  - Controller: &Controller_3
+      Description: Controller_[3]
+      Type: PID_CNTRL
+      Gains: *Gains_1
+      Limits: *Limits_0
+  - Controller: &Controller_4
+      Description: Controller_[4]
+      Type: LYA_ATT_CNTRL
+      Gains: *Gains_6
+      Limits: *Limits_1
+  - Controller: &Controller_5
+      Description: Controller_[5]
+      Type: LYA_2BODY_CNTRL
+      Gains: *Gains_7
+      Limits: *Limits_0
+  - Controller: &Controller_6
+      Description: Controller_[6]
+      Type: PID_CNTRL
+      Gains: *Gains_0
+      Limits: *Limits_0
+  - Controller: &Controller_7
+      Description: Controller_[7]
+      Type: H_DUMP_CNTRL
+      Gains: *Gains_2
+      Limits: *Limits_3
+  - Controller: &Controller_8
+      Description: Controller_[8]
+      Type: H_DUMP_CNTRL
+      Gains: *Gains_8
+      Limits: *Limits_3
+Position Configurations:
+  - Position: &Position_0
+      Description: TranslationCmd_[0]
+      Position: [2.0, 0.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Position: &Position_1
+      Description: TranslationCmd_[1]
+      Position: [2.0, 0.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_5
+  - Position: &Position_2
+      Description: TranslationCmd_[2]
+      Position: [0.0, 2.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Position: &Position_3
+      Description: TranslationCmd_[3]
+      Position: [-2.0, 0.0, 0.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_5
+  - Position: &Position_4
+      Description: TranslationCmd_[4]
+      Position: [0.0, 0.0, -2.0]
+      Origin: OP
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Position: &Position_5
+      Description: TranslationCmd_[5]
+      Position: [1.0, 0.0, 0.0]
+      Origin: SC[4].B[0]
+      Frame: SC[4].B[0]
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Position: &Position_6
+      Description: TranslationCmd_[6]
+      Distance: 3
+      Phase: 0
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+Translation Configurations:
+  - Translation: &Translation_0
+      Description: TranslationCmd_[0]
+      Translation Type: Circumnavigation
+      Distance: 3
+      Phase: 0
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Translation: &Translation_1
+      Description: TranslationCmd_[1]
+      Translation Type: Docking
+      Time to Dock: 800
+      Origin: SC[4].B[0]
+      Frame: E
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+One Vector Configurations:
+  - One Vector: &One-Vector_0
+      Description: AttitudeCmd_PV[0]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [1.0, 0.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_1
+      Description: AttitudeCmd_PV[1]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [0.0, -1.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_2
+      Description: AttitudeCmd_PV[2]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [-1.0, 0.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_3
+      Description: AttitudeCmd_PV[3]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [0.0, 1.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_4
+      Description: AttitudeCmd_PV[4]
+      Primary Vector:
+        Target:
+          Type: SC
+          Target: SC[4].B[0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_5
+      Description: AttitudeCmd_PV[5]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, 0.0, -1.0]
+        Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_6
+      Description: AttitudeCmd_PV[6]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [-1.0, 0.0, 0.0]
+        Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_2
+      Actuator: *Actuator_2
+  - One Vector: &One-Vector_7
+      Description: AttitudeCmd_PV[7]
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, -1.0, 0.0]
+        Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_2
+      Actuator: *Actuator_2
+Quaternion Configurations:
+  - Quaternion: &Quaternion_0
+      Description: QuaternionCmd_[0]
+      Quaternion: [0.0, 0.0, 0.0, 1.0]
+      Frame: L
+      Controller: *Controller_6
+      Actuator: *Actuator_0
+Mirror Configurations:
+  - Mirror: &Mirror_0
+      Description: MirrorCmd_[0]
+      Target: SC[0]
+      Controller: *Controller_6
+      Actuator: *Actuator_0
+Detumble Configurations:
+  - Detumble: &Detumble_0
+      Description: DetumbleCmd_[0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Detumble: &Detumble_1
+      Description: DetumbleCmd_[1]
+      Controller: *Controller_3
+      Actuator: *Actuator_4
+Whl H Manage Configurations:
+  - Whl H Manage: &Whl-H-Manage_0
+      Description: WhlHManageCmd_[0]
+      Dumping: true
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_7
+      Actuator: *Actuator_4
+  - Whl H Manage: &Whl-H-Manage_1
+      Description: WhlHManageCmd_[1]
+      Dumping: true
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_8
+      Actuator: *Actuator_5
+  - Whl H Manage: &Whl-H-Manage_2
+      Description: WhlHManageCmd_[2]
+      Dumping: false
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_7
+      Actuator: *Actuator_4
+  - Whl H Manage: &Whl-H-Manage_3
+      Description: WhlHManageCmd_[3]
+      Dumping: false
+      Minimum H_norm: 0.002
+      Maximum H_norm: 0.005
+      Controller: *Controller_8
+      Actuator: *Actuator_5
+Actuator Cmd Configurations:
+  - Actuator Cmd: &Actuator-Cmd_0
+      Description: ActuatorCmd_[0]
+      Actuators:
+        - Type: THR
+          Index: 13
+          Duty Cycle: 100.0
+        - Type: THR
+          Index: 16
+          Duty Cycle: 100.0
+  - Actuator Cmd: &Actuator-Cmd_1
+      Description: ActuatorCmd_[1]
+      Actuators: []
+Maneuver Configurations:
+  - Maneuver: &Maneuver_0
+      Description: ManeuverCmd_[0]
+      Delta V: [0.0, 0.0, 0.1]
+      Frame: B
+      Type: CONSTANT
+      Duration: 30.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+  - Maneuver: &Maneuver_1
+      Description: ManeuverCmd_[1]
+      Delta V: [0.0, 0.0, 0.1]
+      Frame: B
+      Type: CONSTANT
+      Duration: 15.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+  - Maneuver: &Maneuver_2
+      Description: ManeuverCmd_[2]
+      Delta V: [0.0, 0.0, 0.1]
+      Frame: B
+      Type: CONSTANT
+      Duration: 15.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+  - Maneuver: &Maneuver_3
+      Description: ManeuverCmd_[3]
+      Delta V: [0.0, 0.0, -0.2]
+      Frame: B
+      Type: CONSTANT
+      Duration: 90.0
+      Limits: *Limits_0
+      Actuator: *Actuator_3
+Two Vector Configurations:
+  - Two Vector: &Two-Vector_0
+      Description: Two Vector Command 0-0
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [1.0, 0.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Secondary Vector:
+        Target:
+          Type: BODY
+          Target: EARTH
+        Axis: [-1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_1
+      Description: Two Vector Command 4-4
+      Primary Vector:
+        Target:
+          Type: SC
+          Target: SC[4].B[0]
+        Axis: [0.0, 0.0, 1.0]
+      Secondary Vector:
+        Target:
+          Type: BODY
+          Target: SUN
+        Axis: [1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_2
+      Description: Two Vector Command 1-1
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [0.0, -1.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Secondary Vector:
+        Target:
+          Type: BODY
+          Target: EARTH
+        Axis: [-1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_3
+      Description: Two Vector Command 2-2
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [-1.0, 0.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Secondary Vector:
+        Target:
+          Type: BODY
+          Target: EARTH
+        Axis: [-1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_4
+      Description: Two Vector Command 3-3
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: L
+          Axis: [0.0, 1.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Secondary Vector:
+        Target:
+          Type: BODY
+          Target: EARTH
+        Axis: [-1.0, 0.0, 0.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_5
+      Description: Two Vector Command 5-5
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, 0.0, -1.0]
+        Axis: [1.0, 0.0, 0.0]
+      Secondary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, 1.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_1
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_6
+      Description: Two Vector Command 6-5
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [-1.0, 0.0, 0.0]
+        Axis: [1.0, 0.0, 0.0]
+      Secondary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, 1.0, 0.0]
+        Axis: [0.0, 0.0, 1.0]
+      Controller: *Controller_2
+      Actuator: *Actuator_2
+  - Two Vector: &Two-Vector_7
+      Description: Two Vector Command 7-6
+      Primary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, -1.0, 0.0]
+        Axis: [1.0, 0.0, 0.0]
+      Secondary Vector:
+        Target:
+          Type: VEC
+          Frame: N
+          Axis: [0.0, 0.0, 1.0]
+        Axis: [0.0, 1.0, 0.0]
+      Controller: *Controller_2
+      Actuator: *Actuator_2
+Spin Vector Configurations: []
+DSM Commands:
+  - SC: 0
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Passive
+          - Type: Translation
+            Subtype: Passive
+      - Time: 30.0
+        Commands:
+          - Type: Attitude
+            Subtype: Detumble
+            Command Data: *Detumble_0
+      - Time: 60.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_0
+      - Time: 120.0
+        Commands:
+          - Type: Translation
+            Subtype: Maneuver
+            Command Data: *Maneuver_0
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_0
+      - Time: 180.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_0
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_0
+      - Time: 550.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_1
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_1
+      - Time: 600.0
+        Commands:
+          - Type: Attitude
+            Subtype: Whl H Manage
+            Command Data: *Whl-H-Manage_0
+      - Time: 700.0
+        Commands:
+          - Type: Attitude
+            Subtype: Whl H Manage
+            Command Data: *Whl-H-Manage_2
+  - SC: 1
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Passive
+          - Type: Translation
+            Subtype: Passive
+      - Time: 30.0
+        Commands:
+          - Type: Attitude
+            Subtype: Detumble
+            Command Data: *Detumble_0
+      - Time: 60.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_2
+      - Time: 420.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_2
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_2
+      - Time: 550.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_1
+      - Time: 840.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_5
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_1
+  - SC: 2
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Passive
+          - Type: Translation
+            Subtype: Passive
+      - Time: 30.0
+        Commands:
+          - Type: Attitude
+            Subtype: Detumble
+            Command Data: *Detumble_0
+      - Time: 60.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_3
+      - Time: 420.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_3
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_3
+      - Time: 550.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_1
+      - Time: 600.0
+        Commands:
+          - Type: Attitude
+            Subtype: Whl H Manage
+            Command Data: *Whl-H-Manage_1
+      - Time: 700.0
+        Commands:
+          - Type: Attitude
+            Subtype: Whl H Manage
+            Command Data: *Whl-H-Manage_3
+      - Time: 900.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_6
+      - Time: 1000.0
+        Commands:
+          - Type: Translation
+            Subtype: Translation
+            Command Data: *Translation_0
+  - SC: 3
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Passive
+          - Type: Translation
+            Subtype: Passive
+      - Time: 30.0
+        Commands:
+          - Type: Attitude
+            Subtype: Detumble
+            Command Data: *Detumble_0
+      - Time: 60.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_4
+      - Time: 320.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_4
+          - Type: Actuator
+            Command Data: *Actuator-Cmd_0
+      - Time: 400.0
+        Commands:
+          - Type: Actuator
+            Command Data: *Actuator-Cmd_1
+  - SC: 4
+    Command Sequence:
+      - Time: 0.0
+        Commands:
+          - Type: Attitude
+            Subtype: Quaternion
+            Command Data: *Quaternion_0
+      - Time: 640.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_4
+          - Type: Attitude
+            Subtype: Quaternion
+            Command Data: *Quaternion_0
+      - Time: 720.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_5
+      - Time: 1000.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_6
+      - Time: 1800.0
+        Commands:
+          - Type: Attitude
+            Subtype: Two Vector
+            Command Data: *Two-Vector_7

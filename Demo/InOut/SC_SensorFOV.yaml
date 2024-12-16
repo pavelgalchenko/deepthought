@@ -1,0 +1,153 @@
+%YAML 1.2
+---
+Name: SensorFOV
+Configuration:
+  Description: Simple generic S/C
+  Label: S/C
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: PASSIVE_FSW
+  FSW Sample Time: 0.2
+Orbit:
+  Prop Type: FIXED
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 0.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: N
+  Ang Vel: [0.6, 0.5, 1.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [60.0, 50.0, 40.0]
+    Sequence: 213
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+Bodies:
+  - Body: &Body_0
+      Index: 0
+      Mass: 100.0
+      MOI: [100.0, 200.0, 300.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: IonCruiser.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+Joints: []
+Wheel Params: { Drag: false, Jitter: false }
+Wheels: []
+MTBs: []
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs:
+  - CSS:
+      Index: 0
+      Sample Time: 0.1
+      Axis: [1.0, 1.0, 1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 1
+      Sample Time: 0.1
+      Axis: [-1.0, 1.0, 1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 2
+      Sample Time: 0.1
+      Axis: [1.0, -1.0, 1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 3
+      Sample Time: 0.1
+      Axis: [-1.0, -1.0, 1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 4
+      Sample Time: 0.1
+      Axis: [1.0, 1.0, -1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 5
+      Sample Time: 0.1
+      Axis: [-1.0, 1.0, -1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 6
+      Sample Time: 0.1
+      Axis: [1.0, -1.0, -1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+  - CSS:
+      Index: 7
+      Sample Time: 0.1
+      Axis: [-1.0, -1.0, -1.0]
+      Half Cone Angle: 90.0
+      Scale Factor: 1.0
+      Quantization: 0.001
+      Body: *Body_0
+      Node: 0
+FSSs:
+  - FSS:
+      Index: 0
+      Sample Time: 0.2
+      Mounting Angles:
+        Angles: [120.0, 0.0, 0.0]
+        Sequence: 132
+      Boresight Axis: Z_AXIS
+      FOV Size: [32.0, 32.0]
+      Noise Equivalent Angle: 0.1
+      Quantization: 0.5
+      Node: 0
+STs:
+  - ST:
+      Index: 0
+      Sample Time: 0.25
+      Mounting Angles:
+        Angles: [45.0, 0.0, 0.0]
+        Sequence: 321
+      Boresight Axis: X_AXIS
+      FOV Size: [8.0, 8.0]
+      Exclusion Angles:
+        Sun: 30.0
+        Earth: 10.0
+        Luna: 10.0
+      Noise Equivalent Angle: [2.0, 2.0, 20.0]
+      Node: 0
+GPSs: []
+FGSs: []
+Accelerometers: []

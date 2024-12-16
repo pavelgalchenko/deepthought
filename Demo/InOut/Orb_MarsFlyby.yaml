@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: MarsFlyby
+  Description: Hyperbolic Flyby
+Orbit:
+  Type: CENTRAL
+  World: MARS
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: AE
+    Minimum Altitude: 200.0
+    Eccentricity: 1.5
+    Inclination: 28.5
+    RAAN: 0.0
+    Arg of Periapsis: 60.0
+    True Anomaly: -90.0
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]

@@ -1,0 +1,21 @@
+%YAML 1.2
+---
+Configuration:
+  Name: ORX_Helio
+  Description: OSIRIS-REx Heliocentric
+Orbit:
+  Type: CENTRAL
+  World: SUN
+  J2 Secular Drift: false
+  Init:
+    Method: FILE
+    File Type: TRV
+    File Name: TRV.txt
+    Label in File: OREX
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]

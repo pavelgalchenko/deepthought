@@ -11,13 +11,12 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #ifndef __42GLUT_H__
 #define __42GLUT_H__
 
-#include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /*
 ** #ifdef __cplusplus

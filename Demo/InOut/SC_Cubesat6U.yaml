@@ -1,0 +1,56 @@
+%YAML 1.2
+---
+Name: Cubesat6U
+Configuration:
+  Description: 6-U Cubesat
+  Label: Cube 6
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: PASSIVE_FSW
+  FSW Sample Time: 0.2
+Orbit:
+  Prop Type: ENCKE
+  Pos Specifier: CM
+  Pos wrt F: [4.3301, 6.1232e-16, -1.25]
+  Vel wrt F: [-0.0028284, 0.0028284, -0.0024495]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: N
+  Ang Vel: [0.0, 0.1, 0.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+Bodies:
+  - Body:
+      Index: 0
+      Mass: 1.0
+      MOI: [2.0, 3.0, 1.2]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: Cubesat_6U.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+Joints: []
+Wheel Params: { Drag: false, Jitter: false }
+Wheels: []
+MTBs: []
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+Accelerometers: []
+FGSs: []

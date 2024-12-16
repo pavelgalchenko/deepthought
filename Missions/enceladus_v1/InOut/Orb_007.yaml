@@ -1,0 +1,21 @@
+%YAML 1.2
+---
+Configuration:
+  Name: '007'
+  Description: Low Earth Orbit
+Orbit:
+  Type: CENTRAL
+  World: ENCELADUS
+  J2 Secular Drift: false
+  Init:
+    Method: FILE
+    File Type: SPLINE
+    File Name: ephem_007.txt
+    Label in File: EXAMPLE 1
+Formation:
+  Fixed Frame: L
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

@@ -11,7 +11,6 @@
 
 /*    All Other Rights Reserved.                                      */
 
-
 #ifndef __SIGKIT_H__
 #define __SIGKIT_H__
 
@@ -38,7 +37,7 @@ struct RandomProcessType {
 
 struct FilterType {
    long Ns;
-   double *A,*B,*x,*y;
+   double *A, *B, *x, *y;
    double dxmax;
    double ymin;
 };
@@ -55,20 +54,20 @@ double UniformRandom(struct RandomProcessType *RP);
 double GaussianRandom(struct RandomProcessType *RP);
 double PRN2D(long x, long y);
 double PRN3D(long x, long y, long z);
-double Step(double a,double x);
-double Clamp(double a,double b,double x);
-double RampStep(double a,double b,double x);
+double Step(double a, double x);
+double Clamp(double a, double b, double x);
+double RampStep(double a, double b, double x);
 double CubicStep(double a, double b, double x);
 struct FilterType *CreateGeneralFilter(long Ns, double *A, double *B,
-   double dxmax, double ymin);
+                                       double dxmax, double ymin);
 struct FilterType *CreateFirstOrderLowpassFilter(double w, double T,
-   double dxmax, double ymin);
+                                                 double dxmax, double ymin);
 struct FilterType *CreateFirstOrderHighpassFilter(double w, double T,
-   double dxmax, double ymin);
-struct FilterType *CreateSecondOrderLowpassFilter(double w, double z,
-   double T, double dxmax, double ymin);
-struct FilterType *CreateSecondOrderHighpassFilter(double w, double z,
-   double T, double dxmax, double ymin);
+                                                  double dxmax, double ymin);
+struct FilterType *CreateSecondOrderLowpassFilter(double w, double z, double T,
+                                                  double dxmax, double ymin);
+struct FilterType *CreateSecondOrderHighpassFilter(double w, double z, double T,
+                                                   double dxmax, double ymin);
 void DestroyFilter(struct FilterType *F);
 double GeneralFilter(struct FilterType *F, double x);
 double FirstOrderLowpassFilter(struct FilterType *F, double x);
@@ -76,7 +75,8 @@ double FirstOrderHighpassFilter(struct FilterType *F, double x);
 double SecondOrderLowpassFilter(struct FilterType *F, double x);
 double SecondOrderHighpassFilter(struct FilterType *F, double x);
 struct DelayType *CreateDelay(double DelayTime, double DT);
-struct DelayType *ResizeDelay(struct DelayType *OldD, double DelayTime, double DT);
+struct DelayType *ResizeDelay(struct DelayType *OldD, double DelayTime,
+                              double DT);
 double Delay(struct DelayType *D, double x);
 
 /*
@@ -85,4 +85,3 @@ double Delay(struct DelayType *D, double x);
 ** #endif
 */
 #endif /* __SIGKIT_H__ */
-

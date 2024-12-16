@@ -1,0 +1,25 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Jupiter
+  Description: Jupiter-centered Orbit
+Orbit:
+  Type: CENTRAL
+  World: JUPITER
+  J2 Secular Drift: false
+  Init:
+    Method: KEP
+    SMA Parameterization: PA
+    Periapsis: 100000.0
+    Apoapsis: 100000.0
+    Inclination: 30.0
+    RAAN: 0.0
+    Arg of Periapsis: 0.0
+    True Anomaly: 30.0
+Formation:
+  Fixed Frame: L
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

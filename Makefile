@@ -48,6 +48,12 @@ GMSECFLAG =
 RBTFLAG =
 #RBTFLAG = -D _ENABLE_RBT_
 
+DEBUGFLAG =
+# DEBUGFLAG = -D _DEBUG_GRAV_ -D _DEBUG_MAG_
+
+SPICEFLAG = -D _ENABLE_SPICE_
+# SPICEFLAG =
+
 ifeq ($(strip $(GMSECFLAG)),)
    GMSECDIR =
    GMSECINC =
@@ -61,6 +67,8 @@ else
 endif
 
 # Basic directories
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 HOMEDIR = ./
 PROJDIR = ./
 KITDIR = $(PROJDIR)Kit/
@@ -73,6 +81,27 @@ INOUT = $(PROJDIR)InOut/
 GSFCSRC = $(PROJDIR)/GSFC/Source/
 IPCSRC = $(SRC)IPC/
 
+# Use conda if we got it
+ifeq (,$(shell which conda))
+   LDFLAGS =
+else
+   CONDA_DIR=$(shell echo $(CONDA_PREFIX))
+   CONDA_LIB_DIR = $(CONDA_DIR)/lib
+   LDFLAGS="-Wl,-rpath,$(CONDA_LIB_DIR)"
+endif
+# CSPICE library
+CSPICEDIR = $(current_dir)/cspice/
+CSPICEINC = $(CSPICEDIR)include/
+CSPICESRC = $(CSPICEDIR)src/
+CSPICELIB = $(CSPICEDIR)lib/
+
+ifeq ($(strip $(SPICEFLAG)),)
+   SPICEFLAGS =
+   SPICELIBFLAGS =
+else
+   SPICEFLAGS =  -I $(CSPICEINC)
+   SPICELIBFLAGS = -L $(CSPICELIB)
+endif
 
 ifeq ($(42PLATFORM),__APPLE__)
    # Mac Macros
@@ -87,7 +116,7 @@ ifeq ($(42PLATFORM),__APPLE__)
    #GLUT_OR_GLFW = _USE_GLFW_
    GLUT_OR_GLFW = _USE_GLUT_
 
-   LFLAGS = 
+   LFLAGS =
    ifneq ($(strip $(GUIFLAG)),)
       GLINC = -I /System/Library/Frameworks/OpenGL.framework/Headers/ -I /System/Library/Frameworks/GLUT.framework/Headers/
       ifeq ($(strip $(GLUT_OR_GLFW)),_USE_GLUT_)
@@ -104,8 +133,15 @@ ifeq ($(42PLATFORM),__APPLE__)
       LIBS =
       GUIOBJ =
    endif
+
+   ifneq ($(strip $(SPICEFLAG)),)
+      # g++ requires the lib prefix, so make a symbolic link to do this
+      $(shell ln -s $(CSPICELIB)cspice.a $(CSPICELIB)libcspice.a)
+      SPICELIBFLAGS += -lcspice
+   endif
+
    XWARN =
-   EXENAME = 42
+   EXENAME = deepthought
    CC = gcc
 endif
 
@@ -138,6 +174,11 @@ ifeq ($(42PLATFORM),__linux__)
       LIBS = -ldl -lm -lpthread
       LFLAGS =
    endif
+
+   ifneq ($(strip $(SPICEFLAG)),)
+      SPICELIBFLAGS += -l:cspice.a
+   endif
+
    XWARN = -Wno-unused-variable -Wno-unused-but-set-variable -Wno-stringop-overread
    EXENAME = 42
    CC = gcc
@@ -202,8 +243,8 @@ ifneq ($(strip $(RBTFLAG)),)
    RBTSRC = $(RBTDIR)Source/
    RBTOBJ = $(OBJ)RbtFsw.o
 else
-   RBTDIR = 
-   RBTSRC = 
+   RBTDIR =
+   RBTSRC =
    RBTOBJ =
 endif
 
@@ -225,11 +266,11 @@ endif
 42OBJ = $(OBJ)42main.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
 $(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
 $(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
-$(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
+$(OBJ)42optics.o $(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
 $(OBJ)42nos3.o $(OBJ)42dsm.o
 
 KITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
-$(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o $(OBJ)msis86kit.o \
+$(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o \
 $(OBJ)orbkit.o $(OBJ)radbeltkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o \
 $(OBJ)docoptkit.o $(OBJ)dsmkit.o
 
@@ -244,19 +285,21 @@ $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
 #ANSIFLAGS = -Wstrict-prototypes -pedantic -ansi -Werror
 ANSIFLAGS =
 
-CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG)
+CFLAGS = -fpic -Wall -Wshadow -Wno-deprecated $(XWARN) -g  $(ANSIFLAGS) $(GLINC) $(CINC) -I $(INC) -I $(KITINC) -I $(KITSRC) -I $(RBTSRC) $(GMSECINC) -O0 $(ARCHFLAG) $(GUIFLAG) $(GUI_LIB) $(SHADERFLAG) $(CFDFLAG) $(FFTBFLAG) $(GSFCFLAG) $(GMSECFLAG) $(STANDALONEFLAG) $(RBTFLAG) $(SPICEFLAG) $(DEBUGFLAG)
 
+CFLAGS+= `pkg-config --cflags libfyaml`
+LFLAGS+= `pkg-config --libs libfyaml`
 
 ##########################  Rules to link 42  #############################
 
-42 : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
-	$(CC) $(LFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB)
+deepthought : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
+	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) $(SPICELIBFLAGS)
 
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
-	$(CC) $(LFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
+	$(CC) $(LFLAGS) $(LDFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
 
 42kit : $(LIBKITOBJ)
-	$(CC) $(LFLAGS) -shared -o $(KITDIR)42kit.so $(LIBKITOBJ)
+	$(CC) $(LFLAGS) $(LDFLAGS) -shared -o $(KITDIR)42kit.so $(LIBKITOBJ)
 
 
 ####################  Rules to compile objects  ###########################
@@ -280,7 +323,7 @@ $(OBJ)42environs.o  : $(SRC)42environs.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42environs.c -o $(OBJ)42environs.o
 
 $(OBJ)42ephem.o     : $(SRC)42ephem.c $(INC)42.h
-	$(CC) $(CFLAGS) -c $(SRC)42ephem.c -o $(OBJ)42ephem.o
+	$(CC) $(CFLAGS) $(SPICEFLAGS) -c $(SRC)42ephem.c -o $(OBJ)42ephem.o
 
 $(OBJ)42fsw.o       : $(SRC)42fsw.c $(INC)Ac.h $(INC)AcTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42fsw.c -o $(OBJ)42fsw.o
@@ -298,7 +341,7 @@ $(OBJ)42gpgpu.o      : $(SRC)42gpgpu.c $(INC)42.h $(INC)42gl.h $(INC)42glut.h
 	$(CC) $(CFLAGS) -c $(SRC)42gpgpu.c -o $(OBJ)42gpgpu.o
 
 $(OBJ)42init.o      : $(SRC)42init.c $(INC)42.h
-	$(CC) $(CFLAGS) -c $(SRC)42init.c -o $(OBJ)42init.o
+	$(CC) $(CFLAGS) $(SPICEFLAGS) -c $(SRC)42init.c -o $(OBJ)42init.o
 
 $(OBJ)42ipc.o       : $(SRC)42ipc.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42ipc.c -o $(OBJ)42ipc.o
@@ -309,11 +352,14 @@ $(OBJ)42jitter.o    : $(SRC)42jitter.c $(INC)42.h
 $(OBJ)42joints.o    : $(SRC)42joints.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42joints.c -o $(OBJ)42joints.o
 
+$(OBJ)42optics.o   : $(SRC)42optics.c $(INC)42.h
+	$(CC) $(CFLAGS) -c $(SRC)42optics.c -o $(OBJ)42optics.o
+
 $(OBJ)42perturb.o   : $(SRC)42perturb.c $(INC)42.h
 	$(CC) $(CFLAGS) -c $(SRC)42perturb.c -o $(OBJ)42perturb.o
 
 $(OBJ)42report.o    : $(SRC)42report.c $(INC)42.h
-	$(CC) $(CFLAGS) -c $(SRC)42report.c -o $(OBJ)42report.o
+	$(CC) $(CFLAGS) $(SPICEFLAGS) -c $(SRC)42report.c -o $(OBJ)42report.o
 
 $(OBJ)42sensors.o   : $(SRC)42sensors.c $(INC)42.h $(INC)Ac.h $(INC)AcTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42sensors.c -o $(OBJ)42sensors.o
@@ -347,9 +393,6 @@ $(OBJ)mathkit.o     : $(KITSRC)mathkit.c
 
 $(OBJ)nrlmsise00kit.o   : $(KITSRC)nrlmsise00kit.c
 	$(CC) $(CFLAGS) -c $(KITSRC)nrlmsise00kit.c -o $(OBJ)nrlmsise00kit.o
-
-$(OBJ)msis86kit.o   : $(KITSRC)msis86kit.c $(KITINC)msis86kit.h
-	$(CC) $(CFLAGS) -c $(KITSRC)msis86kit.c -o $(OBJ)msis86kit.o
 
 $(OBJ)orbkit.o      : $(KITSRC)orbkit.c
 	$(CC) $(CFLAGS) -c $(KITSRC)orbkit.c -o $(OBJ)orbkit.o
@@ -426,12 +469,23 @@ $(OBJ)docoptkit.o     : $(KITSRC)docoptkit.c
 $(OBJ)42dsm.o       : $(SRC)42dsm.c $(INC)Ac.h $(INC)AcTypes.h $(INC)DSMTypes.h
 	$(CC) $(CFLAGS) -c $(SRC)42dsm.c -o $(OBJ)42dsm.o
 
+$(OBJ)42fssalbedo.o         : $(SRC)42fssalbedo.c
+	$(CC) $(CFLAGS) -c $(SRC)42fssalbedo.c -o $(OBJ)42fssalbedo.o
+
 ########################  Miscellaneous Rules  ############################
 clean :
 ifeq ($(42PLATFORM),_WIN32)
-	del .\Object\*.o .\$(EXENAME) .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
 else ifeq ($(42PLATFORM),_WIN64)
-	del .\Object\*.o .\$(EXENAME) .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
 else
 	rm -f $(OBJ)*.o ./$(EXENAME) ./AcApp $(KITDIR)42kit.so $(INOUT)*.42 ./Standalone/*.42 ./Demo/*.42 ./Rx/*.42 ./Tx/*.42
 endif
+
+profile: CFLAGS+=-pg
+profile: LFLAGS+=-pg
+profile: deepthought
+
+deploy: CFLAGS+=-O2
+deploy: LFLAGS+=-O2
+deploy: deepthought
