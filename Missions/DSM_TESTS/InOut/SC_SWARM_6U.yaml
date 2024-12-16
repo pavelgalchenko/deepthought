@@ -1,4 +1,5 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
 ---
 # <<<<<<<<<<<<<<<<<  42: Spacecraft Description File   >>>>>>>>>>>>>>>>>>>
 Name: SWARM_6U
@@ -111,12 +112,12 @@ Joints:
   #       Pos wrt Inner Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Pos wrt Outer Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Parm File Name:             [[NONE/filename]]
-    []
+  []
 Wheel Params:
   # -------------------------------Wheel Parameters--------------------------------
   #   Drag:     [[true/false]]
   #   Jitter:   [[true/false]]
-    {Drag: false, Jitter: false}
+  { Drag: false, Jitter: false }
 Wheels:
   # ------------------------------------Wheels-------------------------------------
   # ((Sequence, one element for each wheel))
@@ -377,7 +378,7 @@ Gyros:
   #       Angle Noise:                [[]]    [[arcsec RMS]]
   #       Initial Bias:               [[]]    [[deg/hr]]
   #       Node:                       [[Node Index]]
-    []
+  []
 Magnetometers:
   # ----------------------------------Magnetometer---------------------------------
   # ((Sequence, one element for each magnetometer))
@@ -390,7 +391,7 @@ Magnetometers:
   #       Quantization:   [[]]    [[Tesla]]
   #       Noise:          [[]]    [[Tesla RMS]]
   #       Node:           [[Node Index]]
-    []
+  []
 CSSs:
   # --------------------------------------CSS--------------------------------------
   # ((Sequence, one element for each coarse sun sensor))
@@ -403,7 +404,7 @@ CSSs:
   #       Quantization:       [[]]
   #       Body:               [[Configuration or *{Alias}]]
   #       Node:               [[Node Index]]
-    []
+  []
 FSSs:
   # --------------------------------------FSS--------------------------------------
   # ((Sequence, one element for each fine sun sensor))
@@ -418,7 +419,7 @@ FSSs:
   #       Noise Equivalent Angle: [[]]    [[deg RMS]]
   #       Quantization:           [[]]    [[deg]]
   #       Node:                   [[Node Index]]
-    []
+  []
 STs:
   # --------------------------------------ST---------------------------------------
   # ((Sequence, one element for each startracker))
@@ -436,7 +437,7 @@ STs:
   #         Luna:                     [[]]    [[deg]]
   #       Noise Equivalent Angle: [[Boresight Noise, H Noise, V Noise]]   [[deg]]
   #       Node:                   [[Node Index]]
-    []
+  []
 GPSs:
   # --------------------------------------GPS--------------------------------------
   # ((Sequence, one element for each GPS))
@@ -447,7 +448,7 @@ GPSs:
   #       Velocity Noise: [[]]    [[m/s RMS]]
   #       Time Noise:     [[]]    [sec RMS]
   #       Node:           [[Node Index]]
-    []
+  []
 Accelerometers:
   # ---------------------------------Accelerometer---------------------------------
   # ((Sequence, one element for each accelerometer))
@@ -464,4 +465,4 @@ Accelerometers:
   #       DV Noise:                   [[]]    [[m/s]]
   #       Initial Bias:               [[]]    [[m/s^2]]
   #       Node:                       [[Node Index]]""",
-    []
+  []

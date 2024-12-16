@@ -1,6 +1,7 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
 ---
-Name: '003'
+Name: "003"
 Configuration:
   Description: Simple generic S/C
   Label: S/C
@@ -42,7 +43,7 @@ Bodies:
       Node File Name: NONE
       Flex File Name: NONE
 Joints: []
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels: []
 MTBs: []
 Thrusters: []

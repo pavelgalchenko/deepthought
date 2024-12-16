@@ -1,4 +1,5 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/inp_dsm.schema.json
 ---
 Gains Configurations:
   - Gains: &Gains_0
@@ -34,6 +35,7 @@ Controller Configurations:
       Gains: *Gains_0
       Limits: *Limits_1
 Position Configurations: []
+Translation Configurations: []
 One Vector Configurations:
   - One Vector: &One-Vector_0
       Description: AttitudeCmd_PV[0]
@@ -68,6 +70,7 @@ Two Vector Configurations:
         Axis: [0.0, -1.0, 0.0]
       Controller: *Controller_0
       Actuator: *Actuator_0
+Spin Vector Configurations: []
 DSM Commands:
   - SC: 0
     Command Sequence:
