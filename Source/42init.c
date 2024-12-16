@@ -4227,8 +4227,8 @@ void LoadMoonsOfMars(void)
    double mu[Nm]                   = {7.158E5, 9.8E4};
    double rad[Nm]                  = {11.1E3, 6.2E3};
    double w[Nm]                    = {0.0, 0.0};
-   double PoleRA[Nm];
-   double PoleDec[Nm];
+   double PoleRA[Nm]               = {0.0};
+   double PoleDec[Nm]              = {0.0};
    double CNJ[3][3];
    const double SMA[Nm]      = {9380.0E3, 23460.0E3};
    const double ecc[Nm]      = {0.0151, 0.0002};
@@ -4328,7 +4328,6 @@ void LoadMoonsOfMars(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-#ifdef _ENABLE_SPICE_
       if (EphemOption != EPH_SPICE) {
          /* CNH assumed to be same as parent planet */
          for (i = 0; i < 3; i++) {
@@ -4336,9 +4335,7 @@ void LoadMoonsOfMars(void)
                M->CNH[i][j] = P->CNH[i][j];
          }
       }
-      else
-#endif
-      {
+      else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
@@ -4406,8 +4403,8 @@ void LoadMoonsOfJupiter(void)
    double w[Nm]   = {
        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
    };
-   double PoleRA[Nm];
-   double PoleDec[Nm];
+   double PoleRA[Nm]  = {0.0};
+   double PoleDec[Nm] = {0.0};
    double CNJ[3][3];
    const double SMA[Nm]  = {4.2180E8,  6.7110E8,  1.07040E9, 1.8827E9,
                             1.814E8,   1.1461E10, 1.1741E10, 2.3624E10,
@@ -4525,7 +4522,6 @@ void LoadMoonsOfJupiter(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-#ifdef _ENABLE_SPICE_
       if (EphemOption != EPH_SPICE) {
          /* CNH assumed to be same as parent planet */
          for (i = 0; i < 3; i++) {
@@ -4533,9 +4529,7 @@ void LoadMoonsOfJupiter(void)
                M->CNH[i][j] = P->CNH[i][j];
          }
       }
-      else
-#endif
-      {
+      else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
@@ -4590,17 +4584,17 @@ void LoadMoonsOfSaturn(void)
    const char GravFileName[Nm][20] = {"", "", "", "", "", "", "", "", "",
                                       "", "", "", "", "", "", "", "", ""};
 
-   double mu[Nm]  = {2.53E9,     7.21E9, 4.121E10, 7.3113E10, 1.5407E11,
-                     8.97819E12, 3.7E8,  1.205E11, 5.531E8,   1.266E8,
-                     3.51E7,     1.7E6,  4.8E5,    2.4E5,     1.4E5,
-                     1.246E7,    9.95E6, 3.3E5};
-   double rad[Nm] = {198.8E3, 252.3E3, 536.3E3, 562.5E3, 764.5E3, 2575.5E3,
-                     133.0E3, 734.5E3, 106.6E3, 90.4E3,  58.3E3,  16.0E3,
-                     12.0E3,  9.5E3,   10.E3,   46.8e3,  40.6E3,  12.8E3};
-   double w[Nm]   = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-   double PoleRA[Nm];
-   double PoleDec[Nm];
+   double mu[Nm]      = {2.53E9,     7.21E9, 4.121E10, 7.3113E10, 1.5407E11,
+                         8.97819E12, 3.7E8,  1.205E11, 5.531E8,   1.266E8,
+                         3.51E7,     1.7E6,  4.8E5,    2.4E5,     1.4E5,
+                         1.246E7,    9.95E6, 3.3E5};
+   double rad[Nm]     = {198.8E3, 252.3E3, 536.3E3, 562.5E3, 764.5E3, 2575.5E3,
+                         133.0E3, 734.5E3, 106.6E3, 90.4E3,  58.3E3,  16.0E3,
+                         12.0E3,  9.5E3,   10.E3,   46.8e3,  40.6E3,  12.8E3};
+   double w[Nm]       = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+   double PoleRA[Nm]  = {0.0};
+   double PoleDec[Nm] = {0.0};
    double CNJ[3][3];
    const double SMA[Nm] = {
        1.8554E8,  2.3804E8,  2.9467E8,    3.7742E8, 5.2707E8, 1.22187E9,
@@ -4722,7 +4716,6 @@ void LoadMoonsOfSaturn(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-#ifdef _ENABLE_SPICE_
       if (EphemOption != EPH_SPICE) {
          /* CNH assumed to be same as parent planet */
          for (i = 0; i < 3; i++) {
@@ -4730,9 +4723,7 @@ void LoadMoonsOfSaturn(void)
                M->CNH[i][j] = P->CNH[i][j];
          }
       }
-      else
-#endif
-      {
+      else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
@@ -4781,10 +4772,10 @@ void LoadMoonsOfUranus(void)
    const char MapFileName[Nm][40]  = {"NONE", "NONE", "NONE", "NONE", "NONE"};
    const char GravFileName[Nm][20] = {"", "", "", "", ""};
    double mu[Nm]                   = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
-   double rad[Nm] = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
-   double w[Nm]   = {0.0, 0.0, 0.0, 0.0, 0.0};
-   double PoleRA[Nm];
-   double PoleDec[Nm];
+   double rad[Nm]     = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
+   double w[Nm]       = {0.0, 0.0, 0.0, 0.0, 0.0};
+   double PoleRA[Nm]  = {0.0};
+   double PoleDec[Nm] = {0.0};
    double CNJ[3][3];
    const double SMA[Nm]      = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
    const double ecc[Nm]      = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
@@ -4885,7 +4876,6 @@ void LoadMoonsOfUranus(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-#ifdef _ENABLE_SPICE_
       if (EphemOption != EPH_SPICE) {
          /* CNH assumed to be same as parent planet */
          for (i = 0; i < 3; i++) {
@@ -4893,9 +4883,7 @@ void LoadMoonsOfUranus(void)
                M->CNH[i][j] = P->CNH[i][j];
          }
       }
-      else
-#endif
-      {
+      else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
@@ -4945,8 +4933,8 @@ void LoadMoonsOfNeptune(void)
    double mu[Nm]                   = {1427.9E9, 2.06E9};
    double rad[Nm]                  = {1353.4E3, 170.0E3};
    double w[Nm]                    = {0.0, 0.0};
-   double PoleRA[Nm];
-   double PoleDec[Nm];
+   double PoleRA[Nm]               = {0.0};
+   double PoleDec[Nm]              = {0.0};
    double CNJ[3][3];
    const double SMA[Nm]      = {3.548E8, 5.5134E9};
    const double ecc[Nm]      = {0.0, 0.7512};
@@ -5045,7 +5033,6 @@ void LoadMoonsOfNeptune(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-#ifdef _ENABLE_SPICE_
       if (EphemOption != EPH_SPICE) {
          /* CNH assumed to be same as parent planet */
          for (i = 0; i < 3; i++) {
@@ -5053,9 +5040,7 @@ void LoadMoonsOfNeptune(void)
                M->CNH[i][j] = P->CNH[i][j];
          }
       }
-      else
-#endif
-      {
+      else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
@@ -5190,7 +5175,6 @@ void LoadMoonsOfPluto(void)
       E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-#ifdef _ENABLE_SPICE_
       if (EphemOption != EPH_SPICE) {
          /* CNH assumed to be same as parent planet */
          for (i = 0; i < 3; i++) {
@@ -5198,9 +5182,7 @@ void LoadMoonsOfPluto(void)
                M->CNH[i][j] = P->CNH[i][j];
          }
       }
-      else
-#endif
-      {
+      else {
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
          MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
@@ -6578,7 +6560,14 @@ void InitSim(int argc, char **argv)
       exit(EXIT_FAILURE);
    }
    EphemOption = DecodeString(response);
-   node        = fy_node_by_path_def(root, "/Celestial Bodies");
+#ifndef _ENABLE_SPICE_
+   if (EphemOption == EPH_SPICE) {
+      fprintf(stderr, "You must compile DeepThought with SPICE in order to use "
+                      "SPICE ephemerides. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+#endif
+   node = fy_node_by_path_def(root, "/Celestial Bodies");
    // I wish this was more programmatic, but it doesn't really need to be
    // I guess
    World[MERCURY].Exists = getYAMLBool(fy_node_by_path_def(node, "/Mercury"));
@@ -6691,6 +6680,7 @@ void InitSim(int argc, char **argv)
    /* JPL planetary ephems */
    if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440)
       LoadJplEphems(ModelPath, TT.JulDay);
+
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE)
       LoadSpiceEphems(DynTime);
