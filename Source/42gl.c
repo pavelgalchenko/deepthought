@@ -3740,7 +3740,7 @@ void FindSphereWindowAxes(double C[3][3])
 
    W = &CenterWidget;
 
-   long top, center, index;
+   long top = 0, center = 0, index;
    long i;
 
    long SEQ[24]    = {21, 21, 21, 2,  21, 21, 2, 21, 1, 12, 12, 12,
@@ -5368,6 +5368,8 @@ char *CamShowNodeLabel(const enum CAM_MENU menu_it)
          return "/Milky Way";
       case FERMI_SKY:
          return "/Fermi Sky";
+      default:
+         return "";
    }
 }
 /*********************************************************************/
@@ -5382,6 +5384,8 @@ char *MapShowNodeLabel(const enum MAP_MENU menu_it)
          return "/Credits";
       case MAP_NIGHT:
          return "/Night";
+      default:
+         return "";
    }
 }
 /*********************************************************************/
@@ -5474,7 +5478,7 @@ void ReadGraphicsInpFile(void)
          POV.Frame = FRAME_B;
          break;
       default:
-         fprintf(stderr,"Nonsense frame in Inp_Graphics.txt\n");
+         fprintf(stderr, "Nonsense frame in Inp_Graphics.txt\n");
          exit(EXIT_FAILURE);
          break;
    }

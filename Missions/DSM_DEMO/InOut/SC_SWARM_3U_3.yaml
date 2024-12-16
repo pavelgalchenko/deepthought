@@ -1,4 +1,5 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
 ---
 Name: SWARM_3U_3
 Configuration:
@@ -42,7 +43,7 @@ Bodies:
       Node File Name: Nodes_Simple.txt
       Flex File Name: NONE
 Joints: []
-Wheel Params: {Drag: false, Jitter: false}
+Wheel Params: { Drag: false, Jitter: false }
 Wheels:
   - Wheel:
       Index: 0

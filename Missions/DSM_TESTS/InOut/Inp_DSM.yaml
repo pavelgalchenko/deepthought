@@ -1,4 +1,5 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/inp_dsm.schema.json
 ---
 Gains Configurations:
   - Gains: &Gains_0
@@ -179,8 +180,9 @@ Position Configurations:
       Frame: SC[4].B[0]
       Controller: *Controller_0
       Actuator: *Actuator_3
+Translation Configurations: []
 One Vector Configurations:
-  - One Vector: &One-Vector_0
+  - Primary Vector: &One-Vector_0
       Description: AttitudeCmd_PV[0]
       Target:
         Type: VEC
@@ -189,7 +191,7 @@ One Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - One Vector: &One-Vector_1
+  - Primary Vector: &One-Vector_1
       Description: AttitudeCmd_PV[1]
       Target:
         Type: VEC
@@ -198,7 +200,7 @@ One Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - One Vector: &One-Vector_2
+  - Primary Vector: &One-Vector_2
       Description: AttitudeCmd_PV[2]
       Target:
         Type: VEC
@@ -207,7 +209,7 @@ One Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - One Vector: &One-Vector_3
+  - Primary Vector: &One-Vector_3
       Description: AttitudeCmd_PV[3]
       Target:
         Type: SC
@@ -215,7 +217,7 @@ One Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - One Vector: &One-Vector_4
+  - Primary Vector: &One-Vector_4
       Description: AttitudeCmd_PV[4]
       Target:
         Type: BODY
@@ -223,7 +225,7 @@ One Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - One Vector: &One-Vector_5
+  - Primary Vector: &One-Vector_5
       Description: AttitudeCmd_PV[5]
       Target:
         Type: BODY
@@ -231,7 +233,7 @@ One Vector Configurations:
       Axis: [0.0, 0.0, 1.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
-  - One Vector: &One-Vector_6
+  - Primary Vector: &One-Vector_6
       Description: AttitudeCmd_PV[3]
       Target:
         Type: VEC
@@ -434,6 +436,7 @@ Two Vector Configurations:
         Axis: [-1.0, 0.0, 0.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
+Spin Vector Configurations: []
 DSM Commands:
   - SC: 0
     Command Sequence:
