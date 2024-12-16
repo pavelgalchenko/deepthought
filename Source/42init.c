@@ -4371,7 +4371,7 @@ void LoadMoonsOfMars(void)
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[i];
+               gravModel->r_ref = rad[Im];
             M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
@@ -5087,8 +5087,8 @@ void LoadMoonsOfPluto(void)
    double mu[Nm]                   = {108.0E9};
    double rad[Nm]                  = {593.0E3};
    double w[Nm]                    = {0.0};
-   double PoleRA[Nm];
-   double PoleDec[Nm];
+   double PoleRA[Nm]               = {0.0};
+   double PoleDec[Nm]              = {0.0};
    double CNJ[3][3];
    const double SMA[Nm]      = {1.7536E7};
    const double ecc[Nm]      = {0.0022};
@@ -6499,7 +6499,7 @@ void InitSim(int argc, char **argv)
    }
 
    /* .. Earth, Mars, Luna Gravity Models */
-   for (Iw = 0; Iw <= NWORLD; Iw++) {
+   for (Iw = 0; Iw < NWORLD; Iw++) {
       struct SphereHarmType *gravModel = &World[Iw].GravModel;
       strcpy(gravModel->modelFile, "");
       gravModel->N     = 0;
