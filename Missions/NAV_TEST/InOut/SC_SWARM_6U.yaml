@@ -1,4 +1,5 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
 ---
 # <<<<<<<<<<<<<<<<<  42: Spacecraft Description File   >>>>>>>>>>>>>>>>>>>
 Name: SWARM_6U
@@ -111,12 +112,12 @@ Joints:
   #       Pos wrt Inner Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Pos wrt Outer Body:         [[pos_x, pos_y, pos_z]]                 [[m]]
   #       Parm File Name:             [[NONE/filename]]
-    []
+  []
 Wheel Params:
   # -------------------------------Wheel Parameters--------------------------------
   #   Drag:     [[true/false]]
   #   Jitter:   [[true/false]]
-    {Drag: false, Jitter: false}
+  { Drag: false, Jitter: false }
 Wheels:
   # ------------------------------------Wheels-------------------------------------
   # ((Sequence, one element for each wheel))
@@ -639,4 +640,4 @@ Accelerometers:
   #       DV Noise:                   [[]]    [[m/s]]
   #       Initial Bias:               [[]]    [[m/s^2]]
   #       Node:                       [[Node Index]]""",
-    []
+  []

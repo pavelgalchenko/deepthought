@@ -1,3 +1,6 @@
+%YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/inp_dsm.schema.json
+---
 Sensor Configurations:
   - Sensor: &Gyro_x
       Description: Sensor_[0]

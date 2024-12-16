@@ -1,4 +1,5 @@
 %YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
 ---
 # <<<<<<<<<<<<<<<<<  42: Spacecraft Description File   >>>>>>>>>>>>>>>>>>>
 Name: SWARM_6U
