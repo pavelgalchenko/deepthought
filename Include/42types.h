@@ -25,6 +25,21 @@
 ** namespace _42 {
 ** #endif
 */
+/* FSW Tags */
+enum fswType {
+   PASSIVE_FSW = 0,
+   PROTOTYPE_FSW,
+   AD_HOC_FSW,
+   SPINNER_FSW,
+   MOMBIAS_FSW,
+   THREE_AXIS_FSW,
+   ISS_FSW,
+   CMG_FSW,
+   THR_FSW,
+   CFS_FSW,
+   RBT_FSW,
+   DSM_FSW,
+};
 
 struct SphereHarmType {
    /*~ Internal Variables ~*/
@@ -441,6 +456,7 @@ struct FssType {
    /*~ Internal Variables ~*/
    long SampleCounter;
    long Valid;
+   enum fssTypes type;
    double SunAng[2];
    double SunVecS[3];
    double SunVecB[3];
@@ -674,7 +690,7 @@ struct SCType {
    long DynMethod; /* GAUSS_ELIM, ORDER_N */
    long OrbDOF;    /* FIXED, EULER_HILL, ENCKE, COWELL */
    long RefOrb;
-   long FswTag; /* Tag for FSW function, eg. PROTOTYPE_FSW */
+   enum fswType FswTag; /* Tag for FSW function, eg. PROTOTYPE_FSW */
    double FswSampleTime;
    long FswMaxCounter;
    long FswSampleCounter;

@@ -17,9 +17,6 @@
 #include "dcmkit.h"
 #include "fswkit.h"
 #include "mathkit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifndef __DSMKIT_H__
 #define __DSMKIT_H__
@@ -30,18 +27,33 @@
 ** #endif
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3]);
 void DSM_WheelProcessing(struct AcType *AC);
 void DSM_MtbProcessing(struct AcType *AC);
-void DSM_GyroProcessing(struct AcType *AC);
-void DSM_MagnetometerProcessing(struct AcType *AC);
-void DSM_CssProcessing(struct AcType *AC);
-void DSM_FssProcessing(struct AcType *AC);
-void DSM_StarTrackerProcessing(struct AcType *AC);
-void DSM_GpsProcessing(struct AcType *AC);
-void DSM_AccelProcessing(struct AcType *AC);
+struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
+                                           struct DSMType *const DSM);
+struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
+                                                   struct DSMType *const DSM);
+struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
+                                          struct DSMType *const DSM);
+struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
+                                          struct DSMType *const DSM);
+struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
+                                                  struct DSMType *const DSM);
+struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
+                                          struct DSMType *const DSM);
+struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
+                                            struct DSMType *const DSM);
 void DSM_CommStateProcessing(struct DSMStateType *state,
                              struct DSMStateType *commState);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

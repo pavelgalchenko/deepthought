@@ -50,7 +50,8 @@
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)
 
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
-                                                char *path, char *fileName);
+                                                const char *path,
+                                                const char *fileName);
 struct fy_node *fy_node_by_path_def(struct fy_node *node, const char *path);
 long getYAMLBool(struct fy_node *node);
 long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,

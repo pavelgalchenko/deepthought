@@ -13,6 +13,9 @@
 
 #ifndef __DSMTYPES_H__
 #define __DSMTYPES_H__
+#include "timekit.h"
+
+#define REPORT_RESIDUALS FALSE
 
 // Controller Type Definitions
 enum CtrlType {
@@ -44,11 +47,35 @@ enum ActuatorType {
    MTB_TYPE,
 };
 
-// TODO: see about merging ROTMAT_STATE and QUAT_STATE
-//  states to filter
+// Sensor Type Definitions
+// need to arrange this in order of filtering preference
+enum SensorType {
+   NULL_SENSOR = -1,
+   GPS_SENSOR,
+   STARTRACK_SENSOR,
+   FSS_SENSOR, // FSS before CSS so it can supersede css measurements
+   CSS_SENSOR,
+   GYRO_SENSOR,
+   MAG_SENSOR,
+   ACCEL_SENSOR,
+};
+// Update these to be the zeroth and last items in SensorType
+#define INIT_SENSOR GPS_SENSOR
+#define FIN_SENSOR  ACCEL_SENSOR
+
+// Nav Filter Type Definitions
+enum NavType {
+   IDEAL_NAV = 0, // get data direct from AC
+   MEKF_NAV, // TODO: maybe make it EKF and have it go MEKF if Quaternion is
+             // defined to be filtered??
+   RIEKF_NAV,
+   LIEKF_NAV,
+};
+
+// Nav states to filter
 enum States {
    NULL_STATE = -2,
-   ATTITUDE_STATE,
+   ATTITUDE_STATE, // allows for nav dat to be either rotmat or quaternion data
    TIME_STATE,
    ROTMAT_STATE,
    QUAT_STATE,
@@ -59,10 +86,23 @@ enum States {
    // MOI filtering???
    // actuation filtering???
 };
-// Update these to be the zeroth and last items in navState
+// Update these to be the zeroth and last items in States
 #define INIT_STATE TIME_STATE
 #define FIN_STATE  VEL_STATE
 
+enum batchType {
+   NONE_BATCH = 0,
+   SENSOR_BATCH,
+   TIME_BATCH,
+};
+
+enum originType {  // Start at -2 so Nav->refOriType >= 0 is the SC[#]
+   ORI_WORLD = -2, // reference origin is celestial body
+   ORI_OP,         // reference origin is orbit point
+   ORI_SC,         // reference origin is SC, SC[#] = Nav->refOriType
+};
+
+#define ORDRK 4
 /*
 ** #ifdef __cplusplus
 ** namespace _42 {
@@ -212,6 +252,36 @@ struct DSMCtrlType {
    double CmdVelN[3]; // Commanded Velocity in the Inertial frame (N)
    double CmdVelR[3]; // Commanded Velocity in the Inertial frame (R)
 };
+struct DSMType;
+struct AcType;
+struct DSMMeasType {
+   /*~ Parameters ~*/
+   double time;
+   ccsdsCoarse ccsdsSeconds;
+   ccsdsFine ccsdsSubseconds;
+   double *data;
+
+   /*~ Internal Variables ~*/
+   long sensorNum;
+   double *(*measFun)(struct AcType *const, struct DSMType *const, const long);
+   double **(*measJacobianFun)(struct AcType *const, struct DSMType *const,
+                               const long);
+   enum SensorType type;
+   int dim;
+   int errDim;
+   double *R;  // diagonal elements of measurement noise covariance
+   double **N; // measurement noise mapping matrix
+   double underWeighting;
+   double probGate;
+
+   struct DSMMeasType *nextMeas; // oh boy, a linked list
+};
+struct DSMMeasListType {
+   // TODO: add a tail maybe??
+   struct DSMMeasType *head;
+   long length;
+   long measDim;
+};
 
 struct DSMStateType {
    // TODO: A HASH TABLE WILL DO WHAT I WANT!!!!! to make this more configurable
@@ -241,6 +311,110 @@ struct DSMStateType {
    double svb[3]; // Sun vector in B frame
    double bvn[3]; // Magnetic field vector in N frame
    double bvb[3]; // Magnetic field vector in B frame
+};
+
+struct DSMNavType {
+   // This is set up for KF nav filter types, what about observers?
+   // Would be nice if could set up for QUEST
+
+   /*~ Parameters ~*/
+   long NavigationActive;
+
+   enum NavType type;
+   enum batchType batching;
+
+   // These need to be figured out still
+   long refFrame;   // nav reference frame
+   long refOriType; // nav reference origin type
+   long refOriBody; // nav reference origin type
+   void *refOriPtr; // pointer to object of nav reference origin, can be NULL,
+   // ACType, WorldType, or OrbitType
+   struct BodyType *refBodyPtr; // pointer to reference body, NULL if not used
+   double refPos[3];            // PosN of nav origin
+   double refVel[3];            // VelN of nav origin
+   double refCRN[3][3];         // rotation from body to nav reference frame
+   double refOmega[3];          // angular velocity of nav reference frame
+   double refOmegaDot[3];
+
+   double oldRefPos[3]; // PosN of nav origin
+   double oldRefVel[3]; // VelN of nav origin
+   double oldRefCRN[3][3];
+   double oldRefOmega[3]; // angular velocity of nav reference frame
+   double oldRefOmegaDot[3];
+   double refLerpAlpha;
+   double refAccel[3]; // VelN of nav origin
+
+   /*~ Internal Variables ~*/
+   long Init;
+   unsigned long steps;
+   double subStepSize;
+   long subStepSteps; // number of ccsdsSubseconds counts per subStepSize
+   ccsdsCoarse ccsdsSeconds;
+   ccsdsFine ccsdsSubseconds;
+   long stateDim; // total dimension of navigation state space
+   long navDim;   // total dimension of estimation error space
+   long stateSize[FIN_STATE + 1];
+   long navSize[FIN_STATE + 1];
+   long stateInd[FIN_STATE + 1];
+   long navInd[FIN_STATE + 1];
+   struct DateType Date0;
+   struct DateType Date;
+   double DT;
+   double **P; // Estimation Error Covariance
+   double **S; // Lower-triangular Cholesky factorization of P
+   double *delta;
+
+   // maybe will make this an array with the size being the number of bodys for
+   // the sc
+   double ballisticCoef; // ballistic coefficient / mass []
+
+   /*~ state information ~*/
+   double CRB[3][3]; // Rotation from body to nav reference frame
+   double qbr[4];    // Quaternion for CRB^T
+   double PosR[3];   // Position of body relative to nav origin in terms of nav
+                     // reference frame
+   double VelR[3];   // Velocity of body relative to nav origin in terms of nav
+                     // reference frame with respect to nav reference frame
+   double
+       wbr[3]; // Angular velocity of body frame relative to nav reference frame
+               // in terms of body frame with respect to nav reference frame
+   double *whlH;
+
+   double torqueB[3];
+   double forceB[3];
+
+   double **NxN; // Pre-allocated navDim x navDim matrix for use in intermediary
+                 // steps
+   double **NxN2;     // Pre-allocated navDim x navDim matrix for use in
+                      // intermediary steps
+   double **jacobian; // EOM jacobian
+   double **STM;      // state transition matrix for subStepSize
+   double **STMStep;  // STM for +1 CCSDS counts
+   double **M;        // dynamics noise mapping matrix
+   double *sqrQ;      // Diagonal elements of noise covariance
+   void (*EOMJacobianFun)(struct AcType *const, struct DSMType *const,
+                          const struct DateType *, double const[3][3],
+                          double const[4], double const[3], double const[3],
+                          double const[3], double const[], const double);
+   void (*updateLaw)(struct DSMNavType *const);
+   // linked list of measurement buffer. Ordered by time. Head is measurement
+   // with the smallest time in the queue.
+   struct DSMMeasListType measList;
+
+   // Use final element of relevant enums+1 to ensure these arrays are just as
+   // big as needed
+   struct DSMMeasType
+       *measTypes[FIN_SENSOR + 1];   // index corresponding to enum SensorType
+                                     // holds default sensor data
+   int sensorActive[FIN_SENSOR + 1]; // TRUE/FALSE; index corresponding to enum
+                                     // SensorType indicates sensor is used
+   int nSensor[FIN_SENSOR +
+               1]; // each index incates the number of the corresponding sensor
+   int stateActive[FIN_STATE + 1]; // TRUE/FALSE; index corresponding to enum
+                                   // States indicates state is filtered
+
+   double **residuals[FIN_SENSOR + 1];
+   long reportConfigured;
 };
 
 struct DSMType {
@@ -286,6 +460,11 @@ struct DSMType {
    long CmdCnt;
    double CmdNextTime;
 
+   double svn[3];
+   double svb[3];
+   double bvn[3];
+   double bvb[3];
+
    /*~ Internal Variables ~*/
    struct OrbitType *refOrb; // spacecraft's reference orbit
    long Init;
@@ -293,6 +472,7 @@ struct DSMType {
    /*~ Structures ~*/
    struct DSMCtrlType DsmCtrl;
    struct DSMCmdType Cmd;
+   struct DSMNavType DsmNav;
 };
 
 /*

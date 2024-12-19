@@ -20,13 +20,13 @@
 ** #endif
 */
 
-void C2Q(double C[3][3], double Q[4]);
-void Q2C(double Q[4], double C[3][3]);
+void C2Q(const double C[3][3], double Q[4]);
+void Q2C(const double Q[4], double C[3][3]);
 void A2C(long SEQ, double TH1, double TH2, double TH3, double C[3][3]);
 void C2A(long SEQ, double C[3][3], double *TH1, double *TH2, double *TH3);
 void SimpRot(const double AXIS[3], const double THETA, double C[3][3]);
 void Q2AngleVec(double Q[4], double AngleVec[3]);
-void QW2QDOT(double Q[4], double W[3], double QDOT[4]);
+void QW2QDOT(const double Q[4], const double W[3], double QDOT[4]);
 void PARAXIS(double IB[3][3], double CBA[3][3], double m, double pba[3],
              double IBA[3][3]);
 void PrincipalMOI(double Ib[3][3], double Ip[3], double CPB[3][3]);
