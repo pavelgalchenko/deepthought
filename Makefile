@@ -75,7 +75,6 @@ KITDIR = $(PROJDIR)Kit/
 OBJ = $(PROJDIR)Object/
 INC = $(PROJDIR)Include/
 TESTS = $(PROJDIR)Tests/
-DATAFILTER = $(PROJDIR)data_filter/
 SRC = $(PROJDIR)Source/
 KITINC = $(KITDIR)Include/
 KITSRC = $(KITDIR)Source/

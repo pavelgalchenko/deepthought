@@ -289,8 +289,8 @@ void FssModel(struct SCType *S)
                   fov_condition = SunAng[0] < FSS->FovHalfAng[0];
                } break;
                default:
-                  printf("Invalid FSS Type. How did it get this far? "
-                         "Exiting...\n");
+                  fprintf(stderr, "Invalid FSS Type. How did it get this far? "
+                                  "Exiting...\n");
                   exit(EXIT_FAILURE);
             }
             if (fov_condition && svs[FSS->BoreAxis] > 0.0) {

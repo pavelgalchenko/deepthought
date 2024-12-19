@@ -377,7 +377,6 @@ struct AcType {
    long Nmag;
    long Ncss;
    long Nfss;
-   long Ngsfss;
    long Nst;
    long Ngps;
    long Nacc;
