@@ -230,6 +230,11 @@ EXTERN GLfloat CNE[9];                /* DCM between N and Eye frame */
 EXTERN char Banner[120];
 EXTERN GLfloat BannerColor[4];
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void GeomToDisplayLists(struct GeomType *G);
 void UpdatePOV(void);
 void CamRenderExec(void);
@@ -249,6 +254,11 @@ void LoadMapShaders(void);
 void ReadGraphicsInpFile(void);
 void LoadFOVs(void);
 void InitColors(void);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

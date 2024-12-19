@@ -11,12 +11,12 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#include "dataFilter.h"
+#include "dataFilter.hpp"
 
 extern void WriteToSocket(SOCKET Socket, struct AcType *AC);
 extern void ReadFromSocket(SOCKET Socket, struct AcType *AC);
 
-struct fy_document *InitFilter(int argc, char **argv)
+DataFilter::DataFilter(int argc, char **argv)
 {
    struct OrbitType *Eph;
    char response[120], response1[120], response2[120];
@@ -667,19 +667,22 @@ struct fy_document *InitFilter(int argc, char **argv)
 
    LoadTdrs();
    LoadSchatten();
-   struct fy_document *doc =
-       fy_document_build_and_check(NULL, InOutPath, config_file);
-   return doc;
+   config_doc = fy_document_build_and_check(NULL, InOutPath, config_file);
 }
 
-void SelectStatementFromMapping(struct fy_node *map_node,
-                                char *select_statement, size_t *select_size)
+DataFilter::~DataFilter()
+{
+   fy_document_destroy(config_doc);
+}
+
+void DataFilter::SelectStatementFromMapping(struct fy_node *map_node,
+                                            std::string &select_statement)
 {
    struct fy_node *iter_node = NULL;
    WHILE_FY_ITER(map_node, iter_node)
    {
       struct fy_node_pair *iter_pair = NULL;
-      while (fy_node_mapping_iterate(iter_node, (void *)&iter_pair) != NULL) {
+      while (fy_node_mapping_iterate(iter_node, (void **)&iter_pair) != NULL) {
          struct fy_node *value_node = fy_node_pair_value(iter_pair);
          struct fy_node *data_node  = fy_node_by_path_def(value_node, "/data");
          if (fy_node_is_sequence(data_node)) {
@@ -689,157 +692,192 @@ void SelectStatementFromMapping(struct fy_node *map_node,
                size_t data_str_len = 0;
                const char *data_str =
                    fy_node_get_scalar(data_iter_node, &data_str_len);
-               *select_size +=
-                   sprintf(select_statement + *select_size, "%s", ", '");
-               strncat(select_statement, data_str, data_str_len);
-               *select_size += data_str_len;
-               *select_size +=
-                   sprintf(select_statement + *select_size, "%s", "'");
+               select_statement += ", '";
+               select_statement.append(data_str, 0, data_str_len);
+               select_statement += "'";
             }
          }
          else if (fy_node_is_scalar(data_node)) {
             size_t data_str_len  = 0;
             const char *data_str = fy_node_get_scalar(data_node, &data_str_len);
-            *select_size +=
-                sprintf(select_statement + *select_size, "%s", ", '");
-            strncat(select_statement, data_str, data_str_len);
-            *select_size += data_str_len;
-            *select_size += sprintf(select_statement + *select_size, "%s", "'");
+            select_statement += ", '";
+            select_statement.append(data_str, 0, data_str_len);
+            select_statement += "'";
          }
       }
    }
 }
 
-char *ConstructSQLStatement(struct fy_node *config_root,
-                            const enum db_read_config_flags flags,
-                            const ccsdsCoarse ccsds_min,
-                            const ccsdsCoarse ccsds_max)
+void DataFilter::readData(struct SCType *S, sqlite3 *db,
+                          struct fy_node *data_node, const long flags,
+                          const struct DateType &min_date,
+                          const struct DateType &max_date)
 {
-   const size_t buf_size = 4096; // idk on size for the moment
-   size_t select_size = 0, where_size = 0;
-   char *select_out = calloc(buf_size, sizeof(char));
-   char *where_out  = calloc(buf_size, sizeof(char));
+}
 
-   select_size += sprintf(select_out + select_size, "%s",
-                          "SELECT CCSDS_SECONDS, CCSDS_SUBSECS");
+std::string DataFilter::ConstructSQLStatement(
+    struct fy_node *config_root, const long flags,
+    const ccsdsCoarse ccsds_coarse_min, const ccsdsFine ccsds_fine_min,
+    const ccsdsCoarse ccsds_coarse_max, const ccsdsFine ccsds_fine_max)
+{
+   std::string where_out  = std::string("");
+   std::string select_out = std::string("");
+
+   select_out += "SELECT CCSDS_SECONDS, CCSDS_SUBSECS";
+
    if (flags & DRCF_OUT_FILE)
-      select_size += sprintf(select_out + select_size, "%s", ", file");
+      select_out += ", file";
    else if (flags & DRCF_OUT_DIR_TIME)
-      select_size +=
-          sprintf(select_out + select_size, "%s", ", directory_time");
+      select_out += ", directory_time";
    else if (flags & DRCF_OUT_LIVE_PASS)
-      select_size += sprintf(select_out + select_size, "%s", ", live_pass");
+      select_out += ", live_pass";
    else if (flags & DRCF_OUT_TIME_AMBIGUOUS)
-      select_size +=
-          sprintf(select_out + select_size, "%s", ", time_ambiguous");
+      select_out += ", time_ambiguous";
 
-   if (ccsds_min > 0)
-      where_size +=
-          sprintf(where_out + where_size, " AND CCSDS_SECONDS>%u", ccsds_min);
-   if (ccsds_max > 0)
-      where_size +=
-          sprintf(where_out + where_size, " AND CCSDS_SECONDS<%u", ccsds_max);
+   double ccsds_min = ccsds_coarse_min + ccsds_fine_min / CCSDS_FINE_MAX;
+   double ccsds_max = ccsds_coarse_max + ccsds_fine_max / CCSDS_FINE_MAX;
+
+   if (ccsds_min > 0) {
+      where_out += " AND time>";
+      where_out += std::to_string(ccsds_min);
+   }
+   if (ccsds_max > 0) {
+      where_out += " AND time<=";
+      where_out += std::to_string(ccsds_max);
+   }
    if (flags & DRCF_COND_TIME_UNAMBIGUOUS)
-      where_size +=
-          sprintf(where_out + where_size, "%s", " AND time_ambiguous IS 0");
+      where_out += " AND time_ambiguous IS 0";
    else if (flags & DRCF_COND_TIME_AMBIGUOUS)
-      where_size +=
-          sprintf(where_out + where_size, "%s", " AND time_ambiguous IS 1");
+      where_out += " AND time_ambiguous IS 1";
 
    struct fy_node *config_node =
        fy_node_by_path_def(config_root, "/Data Mapping Configurations");
 
-   const char *key_names[10] = {"/Gyro", "/MAG",   "/CSS", "/FSS", "/ST",
-                                "/GPS",  "/Accel", "/Whl", "/MTB", "/THR"};
    const enum db_read_config_flags data_flags[10] = {
        DRCF_DATA_GYRO, DRCF_DATA_MAG, DRCF_DATA_CSS,   DRCF_DATA_FSS,
        DRCF_DATA_ST,   DRCF_DATA_GPS, DRCF_DATA_ACCEL, DRCF_DATA_WHL,
        DRCF_DATA_MTB,  DRCF_DATA_THR};
+   const long valid_flags = DRCF_DATA_MAG | DRCF_DATA_CSS | DRCF_DATA_FSS;
 
-   for (int i = 0; i < 10; i++) {
-      struct fy_node *node = fy_node_by_path_def(config_node, key_names[i]);
-      if (node != NULL && (flags & data_flags[i])) {
-         if (i >= 1 && i <= 3) {
-            const char *name = &key_names[i][1];
-            if (flags & DRCF_OUT_VALID)
-               select_size +=
-                   sprintf(select_out + select_size, ", %s_VALID", name);
+   for (db_read_config_flags flag : data_flags) {
+      std::string name     = DRCF2String(flag);
+      std::string key_name = "/" + name;
+      struct fy_node *node = fy_node_by_path_def(config_node, key_name.c_str());
+
+      if (node != NULL && (flags & flag)) {
+         if (valid_flags & flag) {
+            if (flags & DRCF_OUT_VALID) {
+               select_out += ", ";
+               select_out += name;
+               select_out += "_VALID";
+            }
             if (flags & DRCF_COND_VALID) {
-               where_size +=
-                   sprintf(where_out + where_size, " AND %s_VALID IS 1", name);
+               where_out += " AND ";
+               where_out += name;
+               where_out += "_VALID IS 1";
             }
             else if (flags & DRCF_COND_INVALID) {
-               where_size +=
-                   sprintf(where_out + where_size, " AND %s_VALID IS 0", name);
+               where_out += " AND ";
+               where_out += name;
+               where_out += "_VALID IS 0";
             }
          }
-         SelectStatementFromMapping(node, select_out, &select_size);
+         SelectStatementFromMapping(node, select_out);
       }
    }
 
-   memmove(where_out + 2, where_out, where_size);
-   strncpy(where_out, " WHERE", 6);
-   strcat(select_out, " FROM SNOOPI");
-   strcat(select_out, where_out);
-   free(where_out);
-   strcat(select_out, " ORDER BY time DESC");
+   where_out.erase(0, 4); // remove leading " AND"
+   where_out.insert(0, " WHERE");
+
+   select_out += " FROM SNOOPI";
+   select_out += where_out;
+   select_out += " ORDER BY time DESC";
+
    return select_out;
 }
 
-void read_db(const char *db_name, struct SCType *const S,
-             struct DateType *db_time)
+struct DSMMeasListType *DB_GyroProcessing(struct fy_node *node,
+                                          struct sqlite3_stmt *stmt)
+{
+   if (stmt == NULL || node == NULL)
+      return NULL;
+}
+
+void DataFilter::read_db(struct SCType *S, struct DateType &date)
 {
    static sqlite3 *db        = NULL;
    static sqlite3_stmt *stmt = NULL;
 
-   const enum db_read_config_flags db_read_flags =
-       DRCF_COND_TIME_UNAMBIGUOUS | DRCF_DATA_SENSORS | DRCF_DATA_ACT;
-
-   const char *yaml_file_name = "snoopi_sensor_map.yaml";
-   const char *data_dir       = "/Users/dnewber2/Desktop/Smallsat Analysis/";
-   struct fy_document *yaml_config =
-       fy_document_build_and_check(NULL, data_dir, yaml_file_name);
-   struct fy_node *yaml_config_root = fy_document_root(yaml_config);
+   const std::string data_dir = "/Users/dnewber2/Desktop/Smallsat Analysis/";
+   struct fy_node *yaml_config_root = fy_document_root(config_doc);
 
    struct DSMMeasListType meas_list;
 
    if (db == NULL) {
-      char *const db_file_name = malloc(strlen(data_dir) + strlen(db_name));
-      strcat(db_file_name, data_dir);
-      strcat(db_file_name, db_name);
-      int rc = sqlite3_open(db_file_name, &db);
-      free(db_file_name);
+      std::string const db_file_name = data_dir + db_name;
+      int rc                         = sqlite3_open(db_file_name.c_str(), &db);
 
       if (rc) {
-         fprintf(stderr, "Can't open database %s: %s\n", db_name,
-                 sqlite3_errmsg(db));
+         std::cerr << "Can't open database " << db_name << ": "
+                   << sqlite3_errmsg(db) << "\n";
          exit(EXIT_FAILURE);
       }
-      const char *zsql =
-          ConstructSQLStatement(yaml_config_root, db_read_flags, 0, 0);
-      char *tail;
-      rc = sqlite3_prepare_v3(db, zsql, -1, 0, &stmt, NULL);
-      if (rc) {
-         fprintf(stderr, "Can't compile statement %s: %s\n", zsql,
-                 sqlite3_errmsg(db));
-         exit(EXIT_FAILURE);
-      }
-      sqlite3_step(stmt);
 
-      // TODO: get db state up to db_time
       InitMeasList(&meas_list);
    }
    else {
       InitMeasList(&meas_list);
-      // TODO: output db data from last db state up to db_time
 
-      // TODO: get date from current index in db
-      struct DateType cur_db_time;
+      const enum db_read_config_flags data_flags[10] = {
+          DRCF_DATA_GYRO, DRCF_DATA_MAG, DRCF_DATA_CSS,   DRCF_DATA_FSS,
+          DRCF_DATA_ST,   DRCF_DATA_GPS, DRCF_DATA_ACCEL, DRCF_DATA_WHL,
+          DRCF_DATA_MTB,  DRCF_DATA_THR};
 
-      ccsdsCoarse seconds;
-      ccsdsFine subseconds;
+      struct fy_node *config_node =
+          fy_node_by_path_def(yaml_config_root, "/Data Mapping Configurations");
+      for (db_read_config_flags flag : data_flags) {
+         std::string name     = DRCF2String(flag);
+         std::string key_name = "/" + name;
+         struct fy_node *node =
+             fy_node_by_path_def(config_node, key_name.c_str());
+         if (node != NULL) {
+            long flags = flag | DRCF_COND_TIME_UNAMBIGUOUS;
+            readData(S, db, node, 0, db_time, date);
+         }
+      }
 
-      DateToCCSDS(cur_db_time, &seconds, &subseconds);
+      ccsdsCoarse seconds = 0, db_seconds = 0;
+      ccsdsFine subseconds = 0, db_subseconds = 0;
+      DateToCCSDS(db_time, &db_seconds, &db_subseconds);
+      DateToCCSDS(date, &seconds, &subseconds);
+      const long db_read_flags =
+          DRCF_COND_TIME_UNAMBIGUOUS | DRCF_DATA_SENSORS | DRCF_DATA_ACT;
+
+      const std::string zsql =
+          ConstructSQLStatement(yaml_config_root, db_read_flags, db_seconds,
+                                db_subseconds, seconds, subseconds);
+
+      struct sqlite3_stmt *stmt = NULL;
+      int rc = sqlite3_prepare_v3(db, zsql.c_str(), -1, 0, &stmt, NULL);
+
+      if (rc) {
+         std::cerr << "Can't prepare statement " << zsql << ": "
+                   << sqlite3_errmsg(db) << "\n";
+         exit(EXIT_FAILURE);
+      }
+      rc = SQLITE_DONE - 1;
+      while (rc != SQLITE_DONE) {
+         rc = sqlite3_step(stmt);
+         if (rc == SQLITE_ERROR) {
+            std::cerr << "Can't step prepared statement " << zsql << ": "
+                      << sqlite3_errmsg(db) << "\n";
+            exit(EXIT_FAILURE);
+         }
+
+         // TODO: read step statement into data destinations
+      }
+
+      db_time = date;
 
       // TODO: conversions from data in db to meas_list data
    }
@@ -862,7 +900,7 @@ int main(int argc, char **argv)
    /* Init db                                                                 */
 
    /* load sensor map yaml                                                    */
-   struct fy_document *config_fyd = InitFilter(argc, argv);
+   DataFilter filter(argc, argv);
    // SOCKET socket                  = InitSocketClient(hostname, port, 1);
 
    /* LOOP */
@@ -879,14 +917,14 @@ int main(int argc, char **argv)
    struct AcType *const AC = &S->AC;
    DsmFSW(S);                          // Init DSM
    const char *db_name = "SC_DATA.db"; // the name
-   read_db(db_name, S, &UTC);
+   filter.read_db(S, UTC);
 
    while (TRUE) {
       // gets time and other data from socket
       // ReadFromSocket(socket, AC);
 
       // updated db to time
-      read_db(db_name, S, &UTC);
+      filter.read_db(S, UTC);
 
       // run dsm fsw and therefore nav
       DsmFSW(S);
@@ -896,6 +934,5 @@ int main(int argc, char **argv)
       // WriteToSocket(socket, AC);
    }
 
-   fy_document_destroy(config_fyd);
    return (EXIT_SUCCESS);
 }

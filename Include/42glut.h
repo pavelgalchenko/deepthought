@@ -25,10 +25,19 @@
 ** #endif
 */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 EXTERN GLuint CamWindow;
 EXTERN GLuint MapWindow;
 EXTERN GLuint OrreryWindow;
 EXTERN GLuint SphereWindow;
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

@@ -41,6 +41,10 @@
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 double signum(const double x);
 double sinc(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
@@ -162,6 +166,12 @@ void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
 double **matPow(const long n, double **A, const unsigned long p);
 void QuickMatPow(const long n, double **A, double **As, const long s,
                  double **Ap, const long p);
+
+
+#ifdef __cplusplus
+}
+#endif
+
 /*
 ** #ifdef __cplusplus
 ** }

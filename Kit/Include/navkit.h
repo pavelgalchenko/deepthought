@@ -31,6 +31,11 @@ enum matType {
 ** #endif
 */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void InitMeasList(struct DSMMeasListType *list);
 void appendMeas(struct DSMMeasListType *list, struct DSMMeasType *newRef);
 void appendList(struct DSMMeasListType *list1, struct DSMMeasListType *list2);
@@ -139,6 +144,11 @@ void subMatAdd(double **A, double **B, long const iN, long const iM,
                long const n, long const M);
 double mahalonobis2(double **A, double *x, double *y, long const n);
 double chi2InvLookup(double const pGate, long const dim);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

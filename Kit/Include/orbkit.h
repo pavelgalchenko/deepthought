@@ -207,6 +207,11 @@ struct OrbitType {
    struct Cheb3DType *Cheb;
 };
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*~ Prototypes ~*/
 struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb);
 double MeanAnomToTrueAnom(double MeanAnom, double ecc);
@@ -287,6 +292,11 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
 void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
                      double W2_vel[3], double R_N[3], double V_N[3],
                      double R_R_nd[3], double V_R_nd[3]);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

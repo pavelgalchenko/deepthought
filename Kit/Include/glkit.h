@@ -113,6 +113,11 @@ EXTERN GLuint MoonMapFragShader, MoonMapShaderProgram;
 EXTERN GLuint AlbedoVtxShader, AlbedoFragShader, AlbedoShaderProgram;
 EXTERN GLuint TexReduceVtxShader, TexReduceFragShader, TexReduceShaderProgram;
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void DrawBitmapString(void *font, const char *string);
 void DrawStrokeString(void *font, const char *string);
 GLuint LoadFont8x11(void);
@@ -209,6 +214,11 @@ GLuint TextToShader(GLchar *Text, GLuint Type, const char *Name);
 GLuint BuildShaderProgram(GLuint VtxShader, GLuint FragShader,
                           const char *Name);
 void ValidateShaderProgram(GLuint ShaderProgram, const char *Name);
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif
 
 /*

@@ -168,6 +168,10 @@ struct MatlType {
    double DiffFrac;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
                            struct MatlType *OldMatl, long *Nmatl);
 void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl);
@@ -187,6 +191,11 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
 void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
                         const char *Path, const char *FileName);
 double PolyhedronVolume(struct GeomType *G);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 /*
 ** #ifdef __cplusplus

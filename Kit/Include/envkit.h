@@ -31,6 +31,11 @@
 ** #endif
 */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void SphericalHarmGravForce(const long N, const long M,
                             const struct WorldType *W, const double PriMerAng,
                             const double mass, const double pbn[3],
@@ -58,6 +63,11 @@ long PolyhedronGravAcc(struct GeomType *G, double Density, double PosN[3],
 long PolyhedronGravGrad(struct GeomType *G, double Density, double PosN[3],
                         double CWN[3][3], double GravGradN[3][3]);
 void GravGradTimesInertia(double g[3][3], double I[3][3], double GGxI[3]);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

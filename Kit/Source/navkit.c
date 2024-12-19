@@ -341,8 +341,8 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
       Rern1[n] = Rern1[n - 1] * Rern1[0];
    for (n = N; n >= 2; n--) {
       for (m = MIN(n, M); m >= 0; m--) {
-         const double Pbar   = P[n][m] / Norm[n][m];
-         const double sdPbar = sdP[n][m] / Norm[n][m];
+         const double Pbar   = P[n][m] * Norm[n][m];
+         const double sdPbar = sdP[n][m] * Norm[n][m];
          const double CcSsbar =
              (C[n][m] * cphi[m] + S[n][m] * sphi[m]) * Rern1[n];
          const double ScCsbar =

@@ -48,6 +48,10 @@ struct DelayType {
    long Idx;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct RandomProcessType *CreateRandomProcess(long Seed);
 void DestroyRandomProcess(struct RandomProcessType *RP);
 double UniformRandom(struct RandomProcessType *RP);
@@ -78,6 +82,11 @@ struct DelayType *CreateDelay(double DelayTime, double DT);
 struct DelayType *ResizeDelay(struct DelayType *OldD, double DelayTime,
                               double DT);
 double Delay(struct DelayType *D, double x);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

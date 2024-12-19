@@ -148,35 +148,35 @@ Position Configurations:
   - Position: &Position_0
       Description: TranslationCmd_[0]
       Position: [2.0, 0.0, 0.0]
-      Origin: OP
+      Origin: SC[4].B[0]
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
   - Position: &Position_1
       Description: TranslationCmd_[1]
       Position: [2.0, 0.0, 0.0]
-      Origin: OP
+      Origin: SC[4].B[0]
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_5
   - Position: &Position_2
       Description: TranslationCmd_[2]
       Position: [0.0, 2.0, 0.0]
-      Origin: OP
+      Origin: SC[4].B[0]
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
   - Position: &Position_3
       Description: TranslationCmd_[3]
       Position: [-2.0, 0.0, 0.0]
-      Origin: OP
+      Origin: SC[4].B[0]
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_5
   - Position: &Position_4
       Description: TranslationCmd_[4]
-      Position: [0.0, 0.0, -2.0]
-      Origin: OP
+      Position: [2.0, 0.0, 2.0]
+      Origin: SC[4].B[0]
       Frame: F
       Controller: *Controller_0
       Actuator: *Actuator_3
@@ -195,6 +195,20 @@ Position Configurations:
       Frame: E
       Controller: *Controller_0
       Actuator: *Actuator_3
+  - Position: &Position_7
+      Description: TranslationCmd_[7]
+      Position: [0.0, 2.0, 2.0]
+      Origin: SC[4].B[0]
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_3
+  - Position: &Position_8
+      Description: TranslationCmd_[8]
+      Position: [-2.0, 0.0, 2.0]
+      Origin: SC[4].B[0]
+      Frame: F
+      Controller: *Controller_0
+      Actuator: *Actuator_5
 Translation Configurations:
   - Translation: &Translation_0
       Description: TranslationCmd_[0]
@@ -681,7 +695,7 @@ Navigation Configurations:
       Type: RIEKF
       Batching: Time
       Frame: N
-      Reference Origin: OP
+      Reference Origin: EARTH
       Data:
         Q: *Navigation_Data_Q
         P: *Navigation_Data_P
@@ -759,6 +773,11 @@ DSM Commands:
           - Type: Attitude
             Subtype: Whl H Manage
             Command Data: *Whl-H-Manage_0
+      - Time: 640.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_4
       - Time: 700.0
         Commands:
           - Type: Attitude
@@ -796,6 +815,11 @@ DSM Commands:
           - Type: Attitude
             Subtype: Two Vector
             Command Data: *Two-Vector_1
+      - Time: 640.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_7
       - Time: 840.0
         Commands:
           - Type: Translation
@@ -838,6 +862,11 @@ DSM Commands:
           - Type: Attitude
             Subtype: Whl H Manage
             Command Data: *Whl-H-Manage_1
+      - Time: 640.0
+        Commands:
+          - Type: Translation
+            Subtype: Position
+            Command Data: *Position_8
       - Time: 700.0
         Commands:
           - Type: Attitude
@@ -892,11 +921,6 @@ DSM Commands:
             Command Data: *Quaternion_0
           - Type: Navigation
             Command Data: *Navigation_0
-      - Time: 640.0
-        Commands:
-          - Type: Translation
-            Subtype: Position
-            Command Data: *Position_4
       - Time: 720.0
         Commands:
           - Type: Attitude

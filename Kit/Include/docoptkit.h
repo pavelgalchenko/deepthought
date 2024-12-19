@@ -61,6 +61,10 @@ typedef struct Tokens {
    char *current;
 } Tokens;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Tokens tokens_new(int argc, char **argv);
 
 Tokens *tokens_move(Tokens *ts);
@@ -78,5 +82,9 @@ int parse_args(Tokens *ts, Elements *elements);
 int elems_to_args(Elements *elements, DocoptArgs *args, bool help);
 
 DocoptArgs docopt(int argc, char *argv[], bool help);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __DOCOPTKIT_H__ */

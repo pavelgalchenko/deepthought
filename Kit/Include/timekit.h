@@ -70,6 +70,10 @@ struct DateType {
    double Second;
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 double TimeToJD(double Time);
 double JDToTime(double JD);
 double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
@@ -101,6 +105,10 @@ void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
                     long *Minute, double *Second, double LSB);
 double RealRunTime(double *RealTimeDT, double LSB);
 void updateTime(struct DateType *Time, const double dSeconds);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

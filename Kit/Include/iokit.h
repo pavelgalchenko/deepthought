@@ -50,6 +50,11 @@
 #define WHILE_FY_ITER(node, iterNode)                                          \
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
                                                 const char *path,
                                                 const char *fileName);
@@ -74,6 +79,10 @@ double *PpmToPsf(const char *path, const char *filename, long *width,
 
 SOCKET InitSocketServer(int Port, int AllowBlocking);
 SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

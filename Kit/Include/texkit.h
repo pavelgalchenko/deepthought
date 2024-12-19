@@ -15,6 +15,11 @@
 /*  Ebert, Musgrave, Peachey, Perlin, Worley.                         */
 /*  "Texturing & Modeling: A Procedural Approach", 3rd edition        */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void Worley(double at[3], long max_order, double *F, double (*delta)[3],
             unsigned long *ID, long DistanceType);
 
@@ -38,3 +43,7 @@ double ProcTex3D(double x, double y, double z, double Xunit, double Yunit,
                  double Zunit, long Noct, double Persist);
 double SphereTex(double lng, double lat, double Xunit, double Yunit,
                  double Zunit, long Noct, double Persist);
+
+#ifdef __cplusplus
+}
+#endif

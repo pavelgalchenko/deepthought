@@ -20,6 +20,11 @@
 ** #endif
 */
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void C2Q(const double C[3][3], double Q[4]);
 void Q2C(const double Q[4], double C[3][3]);
 void A2C(long SEQ, double TH1, double TH2, double TH3, double C[3][3]);
@@ -40,6 +45,11 @@ void ADOT2W(long IsSpherical, long Seq, double ang[3], double u[3],
 void W2ADOT(long Seq, double ang[3], double w[3], double adot[3]);
 void W2CDOT(double w[3], double C[3][3], double Cdot[3][3]);
 void CDOT2W(double C[3][3], double Cdot[3][3], double w[3]);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 /*
 ** #ifdef __cplusplus

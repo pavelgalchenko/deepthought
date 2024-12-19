@@ -284,12 +284,12 @@ ACKITOBJ = $(OBJ)dcmkit.o $(OBJ)mathkit.o $(OBJ)fswkit.o $(OBJ)iokit.o $(OBJ)tim
 ACIPCOBJ = $(OBJ)AppReadFromFile.o \
 $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
 
-DFKITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
+DFKITOBJ = #$(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
 $(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o \
 $(OBJ)orbkit.o $(OBJ)radbeltkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o \
 $(OBJ)docoptkit.o $(OBJ)dsmkit.o $(OBJ)navkit.o
 
-DFOBJ = $(OBJ)dataFilter.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
+DFOBJ = $(OBJ)dataFilter.o #$(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
 $(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
 $(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
 $(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
@@ -321,19 +321,29 @@ Test : $(TESTOBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOB
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
 
+# DataFilter : lib42lib
 DataFilter : $(DFOBJ) $(DFKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
-	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) -o DataFilter $(DFOBJ) $(DFKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS) $(SPICELIBFLAGS)
+	$(CXX) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) -o DataFilter $(DFOBJ) $(DFKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS) $(SPICELIBFLAGS)
+DataFilter : CXX = g++
+DataFilter : CXXFLAGS = -std=c++11
 DataFilter : CFLAGS+= `pkg-config --cflags sqlite3`
 DataFilter : LFLAGS+= `pkg-config --libs sqlite3`
+# DataFilter : LD_LIBRARY_PATH=$(OBJ):$(LD_LIBRARY_PATH)
+DataFilter : LFLAGS+= -L$(OBJ)
+DataFilter : LIBS+= -l42lib
 
 42kit : $(LIBKITOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS) -shared -o $(KITDIR)42kit.so $(LIBKITOBJ)
 
 
+lib42lib : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
+	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) $(GMSECBIN) -shared -o $(OBJ)lib42lib.so $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) $(SPICELIBFLAGS)
+
+
 ####################  Rules to compile objects  ###########################
 
-$(OBJ)dataFilter.o  : $(DATAFILTER)dataFilter.c
-	$(CC) $(CFLAGS) -c $(DATAFILTER)dataFilter.c -o $(OBJ)dataFilter.o
+$(OBJ)dataFilter.o  : $(DATAFILTER)dataFilter.cpp
+	$(CXX) $(CFLAGS) -c $(DATAFILTER)dataFilter.cpp -o $(OBJ)dataFilter.o
 
 $(OBJ)tests.o       : $(TESTS)tests.c $(TESTS)mathkit_tests.h
 	$(CC) $(CFLAGS) -c $(TESTS)tests.c -o $(OBJ)tests.o

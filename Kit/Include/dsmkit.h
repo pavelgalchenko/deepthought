@@ -27,6 +27,10 @@
 ** #endif
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3]);
 void DSM_WheelProcessing(struct AcType *AC);
 void DSM_MtbProcessing(struct AcType *AC);
@@ -46,6 +50,10 @@ struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
                                             struct DSMType *const DSM);
 void DSM_CommStateProcessing(struct DSMStateType *state,
                              struct DSMStateType *commState);
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus

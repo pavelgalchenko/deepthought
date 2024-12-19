@@ -26,7 +26,16 @@
 #include <math.h>
 #include <stdlib.h>
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void DsmFSW(struct SCType *S);
 void DsmSensorModule(struct AcType *const AC, struct DSMType *const DSM);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __42DSM_H__ */

@@ -40,13 +40,6 @@
 
 #define BUFSIZE 1000 // Default buffer size for chars.
 
-/*
-** #ifdef __cplusplus
-** namespace _42 {
-** using namespace Kit;
-** #endif
-*/
-
 /* Number of Reference Orbits */
 EXTERN long Norb;
 /* Number of spacecraft */
@@ -173,6 +166,12 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
+#ifdef __cplusplus
+extern "C" {
+//** namespace _42 {
+//** using namespace Kit;
+#endif
+
 long SimStep(void);
 void Ephemerides(void);
 void OrbitMotion(double Time);
@@ -252,6 +251,9 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
 void InterProcessComm(void);
 void InitInterProcessComm(void);
 
+#ifdef __cplusplus
+}
+#endif
 #undef EXTERN
 
 /*

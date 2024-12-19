@@ -69,6 +69,11 @@ struct KalmanFilterType {
    double **GRwGt; /* Gamw*Rw*GamwT, Nx by Nx */
 };
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void FindPDGains(double I, double w, double z, double *Kr, double *Kp);
 double Limit(double x, double min, double max);
 double SpinGainCostFunction(double p[2], double CostParm[2]);
@@ -107,6 +112,11 @@ void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M);
 void KalmanFilterTimeUpdate(struct KalmanFilterType *KF);
 double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
                     double h[4], double AngRateCmd[4]);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus
