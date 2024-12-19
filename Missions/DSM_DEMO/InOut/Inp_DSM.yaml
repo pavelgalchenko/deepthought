@@ -513,6 +513,10 @@ Two Vector Configurations:
         Axis: [0.0, 1.0, 0.0]
       Controller: *Controller_2
       Actuator: *Actuator_2
+Sensor Configurations: []
+Sensor Set Configurations: []
+Navigation Data Configurations: []
+Navigation Configurations: []
 Spin Vector Configurations: []
 DSM Commands:
   - SC: 0

@@ -22,9 +22,7 @@
 
 #define AU2m 149597870000.0
 
-#define ABS(X)    ((X) > 0 ? (X) : (-X))
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define ABS(X) ((X) > 0 ? (X) : (-X))
 
 #define IDX2(x, y, Ny)        ((x) * (Ny) + (y))
 #define IDX3(x, y, z, Ny, Nz) (((x) * (Ny) + (y)) * (Nz) + (z))
@@ -219,20 +217,6 @@
 #define MOON     2
 #define ASTEROID 3
 #define COMET    4
-
-/* FSW Tags */
-#define PASSIVE_FSW    0
-#define PROTOTYPE_FSW  1
-#define AD_HOC_FSW     2
-#define SPINNER_FSW    3
-#define MOMBIAS_FSW    4
-#define THREE_AXIS_FSW 5
-#define ISS_FSW        6
-#define CMG_FSW        7
-#define THR_FSW        8
-#define CFS_FSW        9
-#define RBT_FSW        10
-#define DSM_FSW        11
 
 /* Command Types */
 #define CMD_DIRECTION 0

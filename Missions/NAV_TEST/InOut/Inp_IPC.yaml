@@ -1,0 +1,66 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<< 42: InterProcess Comm Configuration File >>>>>>>>>>>>>>>
+IPCs:
+  # -------------------------------IPC Configuration-------------------------------
+  # ((Sequence; one element for unique IPC Definition))
+  #   - IPC:
+  #       Mode: [[IPC Mode]]    [[OFF/TX/RX/TXRX/ACS/WRITEFILE/READFILE]]
+  #       AC ID: [[AC.ID for ACS mode]]
+  #       File Name: [[File name for WRITE or READ]]
+  #       Socket: [[Socket Configuration]]
+  #         Role: [[Socket Role]]  [[SERVER/CLIENT/GMSEC_CLIENT]]
+  #         Host:
+  #           Name: [[Server Hostname]]
+  #           Port: [[Server Port]]
+  #         Blocking: [[Allow Blocking (i.e. wait on RX)]]  [[true/false]]
+  #       Echo to stdout: [[true/false]]
+  #       Prefixes: [[list of TX prefixes]]
+  - IPC:
+      Mode: OFF
+      AC ID: 0
+      File Name: State00.42
+      Socket:
+        Role: CLIENT
+        Host:
+          Name: localhost
+          Port: 10001
+        Blocking: true
+      Echo to stdout: true
+      Prefixes: [SC, Orb, World]
+  - IPC:
+      Mode: OFF
+      AC ID: 0
+      File Name: State01.42
+      Socket:
+        Role: CLIENT
+        Host:
+          Name: localhost
+          Port: 10002
+        Blocking: true
+      Echo to stdout: false
+      Prefixes: ['SC[0].AC']
+  - IPC:
+      Mode: OFF
+      AC ID: 1
+      File Name: State02.42
+      Socket:
+        Role: CLIENT
+        Host:
+          Name: localhost
+          Port: 10003
+        Blocking: true
+      Echo to stdout: false
+      Prefixes: ['SC[1].AC']
+  - IPC:
+      Mode: OFF
+      AC ID: 0
+      File Name: State03.42
+      Socket:
+        Role: CLIENT
+        Host:
+          Name: localhost
+          Port: 10004
+        Blocking: true
+      Echo to stdout: false
+      Prefixes: ['SC[0].Tach[0]']

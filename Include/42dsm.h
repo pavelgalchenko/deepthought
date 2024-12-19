@@ -14,6 +14,19 @@
 #ifndef __42DSM_H__
 #define __42DSM_H__
 
+#include "42.h"
+#include "42dsm.h"
+#include "42types.h"
+#include "dcmkit.h"
+#include "dsmkit.h"
+#include "fswkit.h"
+#include "iokit.h"
+#include "mathkit.h"
+#include "navkit.h"
+#include <math.h>
+#include <stdlib.h>
+
 void DsmFSW(struct SCType *S);
+void DsmSensorModule(struct AcType *const AC, struct DSMType *const DSM);
 
 #endif /* __42DSM_H__ */

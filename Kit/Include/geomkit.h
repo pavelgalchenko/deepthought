@@ -131,6 +131,7 @@ struct GeomType {
    long *Matl;
    int DepthListTag;
    int OpaqueListTag;
+   int OpaqueAlphaListTag;
    int SeeThruListTag;
    struct OctreeType *Octree;
    struct KDNodeType *KDTree;

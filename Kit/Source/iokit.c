@@ -19,7 +19,8 @@
 */
 /**********************************************************************/
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
-                                                char *path, char *fileName)
+                                                const char *path,
+                                                const char *fileName)
 {
    FILE *f                 = FileOpen(path, fileName, "r");
    struct fy_document *fyd = fy_document_build_from_fp(NULL, f);

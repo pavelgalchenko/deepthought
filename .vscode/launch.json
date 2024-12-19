@@ -101,29 +101,29 @@
       //    ],
       //    "postDebugTask": "analyze project",
       // },
-      // {
-      //    "name": "(lldb) Test",
-      //    "type": "cppdbg",
-      //    "request": "launch",
-      //    "program": "${workspaceFolder}/Test",
-      //    "stopAtEntry": false,
-      //    "cwd": "${workspaceFolder}",
-      //    "environment": [],
-      //    "externalConsole": false,
-      //    "MIMode": "lldb",
-      //    "preLaunchTask": "test project",
-      //    "setupCommands": [
-      //       {
-      //          "description": "Enable pretty-printing for lldb",
-      //          "text": "-enable-pretty-printing",
-      //          "ignoreFailures": true
-      //       },
-      //       {
-      //          "description": "Set Disassembly Flavor to Intel",
-      //          "text": "-lldb-set disassembly-flavor intel",
-      //          "ignoreFailures": true
-      //       }
-      //    ]
-      // },
+      {
+         "name": "(lldb) Test",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}/Test",
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "externalConsole": false,
+         "MIMode": "lldb",
+         "preLaunchTask": "test project",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for lldb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-lldb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            }
+         ]
+      },
    ]
 }

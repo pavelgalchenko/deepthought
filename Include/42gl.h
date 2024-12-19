@@ -44,6 +44,7 @@ enum CAM_MENU {
    ASTRO,
    TRUTH_VECTORS,
    FSW_VECTORS,
+   NAV_STATE,
    MILKY_WAY,
    FERMI_SKY,
 };

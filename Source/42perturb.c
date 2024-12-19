@@ -451,7 +451,6 @@ void GravPertForce(struct SCType *S)
       SecCenter = O->Body2;
    }
    struct WorldType *WCenter = &World[OrbCenter];
-
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {

@@ -12,6 +12,8 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "dsmkit.h"
+#include "DSMTypes.h"
+#include "navkit.h"
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -44,116 +46,181 @@ void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3])
 /*  corresponding to the Sensor Models in 42sensors.c                 */
 /*  Note!  These are simple, sometimes naive.  Use with care.         */
 /**********************************************************************/
-void DSM_GyroProcessing(struct AcType *AC)
+struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
+                                           struct DSMType *const DSM)
 {
    struct AcGyroType *G;
-   double A0xA1[3];
-   double A[3][3], b[3], Ai[3][3];
-   double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Atb[3]    = {0.0, 0.0, 0.0};
-   double AtAi[3][3];
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
    long Ig, i, j;
 
-   if (AC->Ngyro == 0) {
-      /* AC->wbn populated by true S->B[0].wn in 42sensors.c */
-   }
-   else if (AC->Ngyro == 1) {
-      G = &AC->Gyro[0];
-      for (i = 0; i < 3; i++)
-         AC->wbn[i] = G->Rate * G->Axis[i];
-   }
-   else if (AC->Ngyro == 2) {
-      VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
-      for (i = 0; i < 3; i++) {
-         A[0][i] = AC->Gyro[0].Axis[i];
-         A[1][i] = AC->Gyro[1].Axis[i];
-         A[2][i] = A0xA1[i];
-      }
-      b[0] = AC->Gyro[0].Rate;
-      b[1] = AC->Gyro[1].Rate;
-      b[2] = 0.0;
-      MINV3(A, Ai);
-      MxV(Ai, b, AC->wbn);
-   }
-   else if (AC->Ngyro > 2) {
-      /* Normal Equations */
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE &&
+       Nav->sensorActive[GYRO_SENSOR] == TRUE) {
       for (Ig = 0; Ig < AC->Ngyro; Ig++) {
          G = &AC->Gyro[Ig];
-         for (i = 0; i < 3; i++) {
-            Atb[i] += G->Rate * G->Axis[i];
-            for (j = 0; j < 3; j++) {
-               AtA[i][j] += G->Axis[i] * G->Axis[j];
+         if (G->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
             }
+            meas                  = CreateMeas(Nav, GYRO_SENSOR, Ig);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = G->Rate * R2D;
+            appendMeas(measList, meas);
          }
       }
-      MINV3(AtA, AtAi);
-      MxV(AtAi, Atb, AC->wbn);
    }
+   else if (Nav->NavigationActive == FALSE && AC->Ngyro != 0) {
+      double A0xA1[3];
+      double A[3][3], b[3], Ai[3][3];
+      double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+      double Atb[3]    = {0.0, 0.0, 0.0};
+      double AtAi[3][3];
+      if (AC->Ngyro == 1) {
+         G = &AC->Gyro[0];
+         for (i = 0; i < 3; i++)
+            AC->wbn[i] = G->Rate * G->Axis[i];
+      }
+      else if (AC->Ngyro == 2) {
+         VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
+         for (i = 0; i < 3; i++) {
+            A[0][i] = AC->Gyro[0].Axis[i];
+            A[1][i] = AC->Gyro[1].Axis[i];
+            A[2][i] = A0xA1[i];
+         }
+         b[0] = AC->Gyro[0].Rate;
+         b[1] = AC->Gyro[1].Rate;
+         b[2] = 0.0;
+         MINV3(A, Ai);
+         MxV(Ai, b, AC->wbn);
+      }
+      else if (AC->Ngyro > 2) {
+         /* Normal Equations */
+         for (Ig = 0; Ig < AC->Ngyro; Ig++) {
+            G = &AC->Gyro[Ig];
+            for (i = 0; i < 3; i++) {
+               Atb[i] += G->Rate * G->Axis[i];
+               for (j = 0; j < 3; j++) {
+                  AtA[i][j] += G->Axis[i] * G->Axis[j];
+               }
+            }
+         }
+         MINV3(AtA, AtAi);
+         MxV(AtAi, Atb, AC->wbn);
+      }
+   }
+   return (measList);
 }
 /**********************************************************************/
-void DSM_MagnetometerProcessing(struct AcType *AC)
+struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
+                                                   struct DSMType *const DSM)
 {
    struct AcMagnetometerType *M;
-   double A0xA1[3];
-   double A[3][3], b[3], Ai[3][3];
-   double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Atb[3]    = {0.0, 0.0, 0.0};
-   double AtAi[3][3];
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
+   const double T2mG                = 1.0e7; // tesla to milligauss
    long Im, i, j;
 
-   if (AC->Nmag == 0) {
-      /* AC->bvb populated by true S->bvb in 42sensors.c */
-   }
-   else if (AC->Nmag == 1) {
-      M = &AC->MAG[0];
-      for (i = 0; i < 3; i++)
-         AC->bvb[i] = M->Field * M->Axis[i];
-   }
-   else if (AC->Nmag == 2) {
-      VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
-      for (i = 0; i < 3; i++) {
-         A[0][i] = AC->MAG[0].Axis[i];
-         A[1][i] = AC->MAG[1].Axis[i];
-         A[2][i] = A0xA1[i];
-      }
-      b[0] = AC->MAG[0].Field;
-      b[1] = AC->MAG[1].Field;
-      b[2] = 0.0;
-      MINV3(A, Ai);
-      MxV(Ai, b, AC->bvb);
-   }
-   else if (AC->Nmag > 2) {
-      /* Normal Equations */
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE && Nav->sensorActive[MAG_SENSOR] == TRUE) {
       for (Im = 0; Im < AC->Nmag; Im++) {
          M = &AC->MAG[Im];
-         for (i = 0; i < 3; i++) {
-            Atb[i] += M->Field * M->Axis[i];
-            for (j = 0; j < 3; j++) {
-               AtA[i][j] += M->Axis[i] * M->Axis[j];
+         if (M->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
             }
+            meas                  = CreateMeas(Nav, MAG_SENSOR, Im);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = M->Field * T2mG;
+            appendMeas(measList, meas);
          }
       }
-      MINV3(AtA, AtAi);
-      MxV(AtAi, Atb, AC->bvb);
    }
+   else if (Nav->NavigationActive == FALSE && AC->Nmag != 0) {
+      double A0xA1[3];
+      double A[3][3], b[3], Ai[3][3];
+      double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+      double Atb[3]    = {0.0, 0.0, 0.0};
+      double AtAi[3][3];
+      if (AC->Nmag == 1) {
+         M = &AC->MAG[0];
+         for (i = 0; i < 3; i++)
+            AC->bvb[i] = M->Field * M->Axis[i];
+      }
+      else if (AC->Nmag == 2) {
+         VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
+         for (i = 0; i < 3; i++) {
+            A[0][i] = AC->MAG[0].Axis[i];
+            A[1][i] = AC->MAG[1].Axis[i];
+            A[2][i] = A0xA1[i];
+         }
+         b[0] = AC->MAG[0].Field;
+         b[1] = AC->MAG[1].Field;
+         b[2] = 0.0;
+         MINV3(A, Ai);
+         MxV(Ai, b, AC->bvb);
+      }
+      else if (AC->Nmag > 2) {
+         /* Normal Equations */
+         for (Im = 0; Im < AC->Nmag; Im++) {
+            M = &AC->MAG[Im];
+            for (i = 0; i < 3; i++) {
+               Atb[i] += M->Field * M->Axis[i];
+               for (j = 0; j < 3; j++) {
+                  AtA[i][j] += M->Axis[i] * M->Axis[j];
+               }
+            }
+         }
+         MINV3(AtA, AtAi);
+         MxV(AtAi, Atb, AC->bvb);
+      }
+   }
+   return (measList);
 }
 /**********************************************************************/
-void DSM_CssProcessing(struct AcType *AC)
+struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
+                                          struct DSMType *const DSM)
 {
    struct AcCssType *Css;
-   double AtA[3][3]  = {{0.0}};
-   double Atb[3]     = {0.0};
-   double AtAi[3][3] = {{0.0}};
-   double A[2][3] = {{0.0}}, b[2] = {0.0};
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
    long Ic, i, j;
-   long Nvalid          = 0;
-   double InvalidSVB[3] = {1.0, 0.0,
-                           0.0}; /* Safe vector if SunValid == FALSE */
 
-   if (AC->Ncss == 0) {
-      /* AC->svb populated by true S->svb in 42sensors.c */
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE && Nav->sensorActive[CSS_SENSOR] == TRUE) {
+      for (Ic = 0; Ic < AC->Ncss; Ic++) {
+         Css = &AC->CSS[Ic];
+         if (Css->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
+            }
+            meas                  = CreateMeas(Nav, CSS_SENSOR, Ic);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = Css->Illum;
+            appendMeas(measList, meas);
+         }
+      }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Ncss != 0) {
+      double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+      double Atb[3]    = {0.0, 0.0, 0.0};
+      double AtAi[3][3];
+      double A[2][3], b[2] = {0.0};
+      long Nvalid          = 0;
+      double InvalidSVB[3] = {1.0, 0.0,
+                              0.0}; /* Safe vector if SunValid == FALSE */
       for (Ic = 0; Ic < AC->Ncss; Ic++) {
          Css = &AC->CSS[Ic];
          if (Css->Valid) {
@@ -199,45 +266,104 @@ void DSM_CssProcessing(struct AcType *AC)
             AC->svb[i] = InvalidSVB[i];
       }
    }
+   return (measList);
 }
 /******************************************************************************/
 /* This function assumes FSS FOVs don't overlap, and FSS overwrites CSS */
-void DSM_FssProcessing(struct AcType *AC)
+struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
+                                          struct DSMType *const DSM)
 {
    struct AcFssType *FSS;
-   double tanx, tany, z;
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
    long Ifss, i;
 
-   for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
-      FSS = &AC->FSS[Ifss];
-      if (FSS->Valid) {
-         AC->SunValid    = 1;
-         tanx            = tan(FSS->SunAng[0]);
-         tany            = tan(FSS->SunAng[1]);
-         z               = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
-         FSS->SunVecS[0] = z * tanx;
-         FSS->SunVecS[1] = z * tany;
-         FSS->SunVecS[2] = z;
-         MTxV(FSS->CB, FSS->SunVecS, FSS->SunVecB);
-         for (i = 0; i < 3; i++)
-            AC->svb[i] = FSS->SunVecB[i];
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE && Nav->sensorActive[FSS_SENSOR] == TRUE) {
+      for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
+         FSS = &AC->FSS[Ifss];
+         if (FSS->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
+            }
+            AC->SunValid          = 1;
+            meas                  = CreateMeas(Nav, FSS_SENSOR, Ifss);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = FSS->SunAng[0];
+            meas->data[1]         = FSS->SunAng[1];
+            appendMeas(measList, meas);
+         }
       }
    }
+   else if (Nav->NavigationActive == FALSE && AC->Nfss != 0) {
+
+      for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
+         FSS = &AC->FSS[Ifss];
+         if (FSS->Valid) {
+            AC->SunValid = 1;
+            if (FSS->type == CONVENTIONAL_FSS) {
+               double tanx     = tan(FSS->SunAng[0]);
+               double tany     = tan(FSS->SunAng[1]);
+               double z        = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
+               FSS->SunVecS[0] = z * tanx;
+               FSS->SunVecS[1] = z * tany;
+               FSS->SunVecS[2] = z;
+            }
+            else {
+               double ct       = cos(FSS->SunAng[0]);
+               double st       = sin(FSS->SunAng[0]);
+               double cp       = cos(FSS->SunAng[1]);
+               double sp       = sin(FSS->SunAng[1]);
+               FSS->SunVecS[0] = ct;
+               FSS->SunVecS[1] = st * cp;
+               FSS->SunVecS[2] = st * sp;
+            }
+            MTxV(FSS->CB, FSS->SunVecS, FSS->SunVecB);
+            for (i = 0; i < 3; i++)
+               AC->svb[i] = FSS->SunVecB[i];
+         }
+      }
+   }
+   return (measList);
 }
 /**********************************************************************/
 /* TODO: Weight measurements to reduce impact of "weak" axis */
-void DSM_StarTrackerProcessing(struct AcType *AC)
+struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
+                                                  struct DSMType *const DSM)
 {
-   long Ist, i;
    struct AcStarTrackerType *ST;
-   long Nvalid = 0;
-   double qbn[4];
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
+   long Ist, i;
 
-   if (AC->Nst == 0) {
-      /* AC->qbn populated by true S->B[0].qn in 42sensors.c */
-      AC->StValid = TRUE;
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE &&
+       Nav->sensorActive[STARTRACK_SENSOR] == TRUE) {
+      for (Ist = 0; Ist < AC->Nst; Ist++) {
+         ST = &AC->ST[Ist];
+         if (ST->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
+            }
+            meas                  = CreateMeas(Nav, STARTRACK_SENSOR, Ist);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            for (i = 0; i < 4; i++)
+               meas->data[i] = ST->qn[i];
+            appendMeas(measList, meas);
+         }
+      }
    }
-   else {
+   else if (Nav->NavigationActive == FALSE && AC->Nst != 0) {
+      long Nvalid = 0;
+      double qbn[4];
       /* Naive averaging */
       for (i = 0; i < 4; i++)
          AC->qbn[i] = 0.0;
@@ -260,28 +386,48 @@ void DSM_StarTrackerProcessing(struct AcType *AC)
          AC->qbn[3]  = 1.0;
       }
    }
+   return (measList);
 }
 /**********************************************************************/
-void DSM_GpsProcessing(struct AcType *AC)
+struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
+                                          struct DSMType *const DSM)
 {
    struct AcGpsType *G;
-   double DaysSinceWeek, DaysSinceRollover, DaysSinceEpoch, JD;
-   long i;
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
+   long Igps, i;
 
-   if (AC->Ngps == 0) {
-      /* AC->Time, AC->PosN, AC->VelN */
-      /* populated in 42sensors.c */
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE && Nav->sensorActive[GPS_SENSOR] == TRUE) {
+      for (Igps = 0; Igps < AC->Ngps; Igps++) {
+         // TODO: handle time better
+         G = &AC->GPS[Igps];
+         // AC->Time = gpsTime2J2000Sec(G->Sec, G->Week, G->Rollover);
+         if (G->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
+            }
+            meas                  = CreateMeas(Nav, GPS_SENSOR, Igps);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            for (i = 0; i < 3; i++) {
+               meas->data[i]     = G->PosN[i];
+               meas->data[3 + i] = G->VelN[i];
+            }
+            appendMeas(measList, meas);
+         }
+      }
    }
-   else {
+   // Do this to populate AC->Time, AC->PosN, & AC->VelN
+   else if (Nav->NavigationActive == FALSE && AC->Ngps != 0) {
+      // double DaysSinceWeek,DaysSinceRollover,DaysSinceEpoch,JD;
       G = &AC->GPS[0];
       /* GPS Time is seconds since 6 Jan 1980 00:00:00.0, which is JD =
        * 2444244.5 */
-      DaysSinceWeek     = G->Sec / 86400.0;
-      DaysSinceRollover = DaysSinceWeek + 7.0 * G->Week;
-      DaysSinceEpoch    = DaysSinceRollover + 7168.0 * G->Rollover;
-      JD                = DaysSinceEpoch + 2444244.5;
-      /* AC->Time is seconds since J2000, which is JD = 2451545.0 */
-      AC->Time = (JD - 2451545.0) * 86400.0;
+      AC->Time = gpsTime2J2000Sec(G->Rollover, G->Week, G->Sec);
 
       /* Position, Velocity */
       for (i = 0; i < 3; i++) {
@@ -289,9 +435,39 @@ void DSM_GpsProcessing(struct AcType *AC)
          AC->VelN[i] = AC->GPS[0].VelN[i];
       }
    }
+   return (measList);
 }
 /**********************************************************************/
-void DSM_AccelProcessing(struct AcType *AC) {}
+struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
+                                            struct DSMType *const DSM)
+{
+   struct AcAccelType *Acc;
+   struct DSMNavType *Nav;
+   struct DSMMeasType *meas         = NULL;
+   struct DSMMeasListType *measList = NULL;
+   long Iacc;
+
+   Nav = &DSM->DsmNav;
+
+   if (Nav->NavigationActive == TRUE &&
+       Nav->sensorActive[ACCEL_SENSOR] == TRUE) {
+      for (Iacc = 0; Iacc < AC->Nst; Iacc++) {
+         Acc = &AC->Accel[Iacc];
+         if (Acc->Valid == TRUE) {
+            if (measList == NULL) {
+               measList = malloc(sizeof(struct DSMMeasListType));
+               InitMeasList(measList);
+            }
+            meas                  = CreateMeas(Nav, ACCEL_SENSOR, Iacc);
+            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
+            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas->data[0]         = Acc->Acc;
+            appendMeas(measList, meas);
+         }
+      }
+   }
+   return (measList);
+}
 /**********************************************************************/
 /*  End Sensor Processing Functions                                   */
 /**********************************************************************/

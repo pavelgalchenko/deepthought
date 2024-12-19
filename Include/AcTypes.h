@@ -28,6 +28,11 @@
 /* Example: [~!=~] means this variable can be read from command, and is sent
  * both ways */
 
+enum fssTypes {
+   CONVENTIONAL_FSS = 0,
+   GS_FSS,
+};
+
 struct CmdVecType {
    /*~ Internal Variables ~*/
    long Mode;
@@ -107,6 +112,7 @@ struct AcGyroType {
    double Axis[3];
 
    /*~ Internal Variables ~*/
+   long Valid;
    double Rate; /* [[rad/sec]] [~>~] */
 };
 
@@ -115,6 +121,7 @@ struct AcMagnetometerType {
    double Axis[3];
 
    /*~ Internal Variables ~*/
+   long Valid;
    double Field; /* [[Tesla]] [~>~] */
 };
 
@@ -133,8 +140,12 @@ struct AcFssType {
    /*~ Parameters ~*/
    double qb[4];
    double CB[3][3];
+   long H_Axis;
+   long V_Axis;
+   long BoreAxis;
 
    /*~ Internal Variables ~*/
+   enum fssTypes type;
    long Valid;       /* [~>~] */
    double SunAng[2]; /* [[rad]] [~>~] */
    double SunVecS[3];
@@ -150,6 +161,7 @@ struct AcStarTrackerType {
    long Valid;   /* [~>~] */
    double qn[4]; /* [~>~] */
    double qbn[4];
+   long BoreAxis; /* X_AXIS, Y_AXIS, Z_AXIS */
 };
 
 struct AcGpsType {
@@ -176,6 +188,7 @@ struct AcAccelType {
    double Axis[3];
 
    /*~ Internal Variables ~*/
+   long Valid;
    double Acc; /* [[m/s^2]] [~>~] */
 };
 
@@ -364,6 +377,7 @@ struct AcType {
    long Nmag;
    long Ncss;
    long Nfss;
+   long Ngsfss;
    long Nst;
    long Ngps;
    long Nacc;

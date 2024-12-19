@@ -973,6 +973,10 @@ void InitAC(struct SCType *S)
          }
          for (i = 0; i < 4; i++)
             AC->FSS[k].qb[i] = S->FSS[k].qb[i];
+         AC->FSS[k].H_Axis   = S->FSS[k].H_Axis;
+         AC->FSS[k].V_Axis   = S->FSS[k].V_Axis;
+         AC->FSS[k].BoreAxis = S->FSS[k].BoreAxis;
+         AC->FSS[k].type     = S->FSS[k].type;
       }
    }
 
@@ -988,6 +992,7 @@ void InitAC(struct SCType *S)
          }
          for (i = 0; i < 4; i++)
             AC->ST[k].qb[i] = S->ST[k].qb[i];
+         AC->ST[k].BoreAxis = S->ST[k].BoreAxis;
       }
    }
 
@@ -1941,11 +1946,42 @@ void FlightSoftWare(struct SCType *S)
    struct IpcType *I;
    long Iipc;
 #endif
+   if (S->FswTag == DSM_FSW) {
+      if (S->DSM.DsmNav.NavigationActive == TRUE) {
+         struct DSMNavType *Nav = &S->DSM.DsmNav;
+         updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
+                        Nav->subStepSize);
+      }
+      DsmSensorModule(&S->AC, &S->DSM);
+   }
 
    S->FswSampleCounter++;
    if (S->FswSampleCounter >= S->FswMaxCounter) {
       S->FswSampleCounter = 0;
 
+#ifdef _AC_STANDALONE_
+      for (Iipc = 0; Iipc < Nipc; Iipc++) {
+         I = &IPC[Iipc];
+         if (I->Mode == IPC_ACS && I->AcsID == S->AC.ID) {
+            if (I->Init) {
+               I->Init               = 0;
+               S->AC.ParmLoadEnabled = 1;
+               S->AC.ParmDumpEnabled = 1;
+               S->AC.EchoEnabled     = 1;
+
+               WriteToSocket(I->Socket, I->Prefix, I->Nprefix, I->EchoEnabled);
+               ReadFromSocket(I->Socket, I->EchoEnabled);
+
+               S->AC.ParmLoadEnabled = 0;
+               S->AC.ParmDumpEnabled = 0;
+            }
+            else {
+               WriteToSocket(I->Socket, I->Prefix, I->Nprefix, I->EchoEnabled);
+               ReadFromSocket(I->Socket, I->EchoEnabled);
+            }
+         }
+      }
+#else
       switch (S->FswTag) {
          case PASSIVE_FSW:
             break;
@@ -1977,40 +2013,15 @@ void FlightSoftWare(struct SCType *S)
             DsmFSW(S);
             break;
          case CFS_FSW:
-#ifdef _AC_STANDALONE_
-            for (Iipc = 0; Iipc < Nipc; Iipc++) {
-               I = &IPC[Iipc];
-               if (I->Mode == IPC_ACS && I->AcsID == S->AC.ID) {
-                  if (I->Init) {
-                     I->Init               = 0;
-                     S->AC.ParmLoadEnabled = 1;
-                     S->AC.ParmDumpEnabled = 1;
-                     S->AC.EchoEnabled     = 1;
-
-                     WriteToSocket(I->Socket, I->Prefix, I->Nprefix,
-                                   I->EchoEnabled);
-                     ReadFromSocket(I->Socket, I->EchoEnabled);
-
-                     S->AC.ParmLoadEnabled = 0;
-                     S->AC.ParmDumpEnabled = 0;
-                  }
-                  else {
-                     WriteToSocket(I->Socket, I->Prefix, I->Nprefix,
-                                   I->EchoEnabled);
-                     ReadFromSocket(I->Socket, I->EchoEnabled);
-                  }
-               }
-            }
-#else
             AcFsw(&S->AC);
-#endif
             break;
-#ifdef _ENABLE_RBT_
          case RBT_FSW:
+#ifdef _ENABLE_RBT_
             RbtFSW(S);
-            break;
 #endif
+            break;
       }
+#endif
    }
 
    MapCmdsToActuators(S);

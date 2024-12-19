@@ -1123,6 +1123,10 @@ def convertDSM(missionDir, dsmFileName="Inp_DSM.txt", commentDict=None):
         "Whl H Manage",
         "Actuator Cmd",
         "Maneuver",
+        "Sensor",
+        "Sensor Set",
+        "Navigation Data",
+        "Navigation",
         "DSM Commands",
     ]
 
@@ -1198,12 +1202,18 @@ def convertDSM(missionDir, dsmFileName="Inp_DSM.txt", commentDict=None):
                         cmdDict["Type"] = "Translation"
                         cmdDict["Subtype"] = "Maneuver"
                         cmdDict["Index"] = index
+                    elif command.startswith("NavigationCmd_"):
+                        cmdDict["Type"] = "Navigation"
+                        cmdDict["Index"] = index
                     elif "passive" in command.lower():
                         if "trn" in command.lower():
                             cmdDict["Type"] = "Attitude"
                             cmdDict["Subtype"] = "Passive"
                         elif "att" in command.lower():
                             cmdDict["Type"] = "Translation"
+                            cmdDict["Subtype"] = "Passive"
+                        elif "nav" in command.lower():
+                            cmdDict["Type"] = "Navigation"
                             cmdDict["Subtype"] = "Passive"
                     newDict["Commands"].append(cmdDict)
 
@@ -1241,6 +1251,14 @@ def convertDSM(missionDir, dsmFileName="Inp_DSM.txt", commentDict=None):
                     typeName = "Gains"
                 elif line.startswith("Limits_"):
                     typeName = "Limits"
+                elif line.startswith("NavigationCmd_"):
+                    typeName = "Navigation"
+                elif line.startswith("Dat_"):
+                    typeName = "Navigation Data"
+                elif line.startswith("SensorSet_"):
+                    typeName = "Sensor Set"
+                elif line.startswith("Sensor_"):
+                    typeName = "Sensor"
 
                 newItem = dict()
                 newDict = newItem[typeName] = dict()
@@ -1376,6 +1394,52 @@ def convertDSM(missionDir, dsmFileName="Inp_DSM.txt", commentDict=None):
                 elif line.startswith("Limits_"):
                     newDict["Force Max"] = [float(string) for string in strData[1:4]]
                     newDict["Velocity Max"] = [float(string) for string in strData[4:7]]
+                elif line.startswith("NavigationCmd_"):
+                    newDict["Type"] = strData[1]
+                    newDict["Batching"] = strData[2]
+                    newDict["Frame"] = strData[3]
+                    newDict["Reference Origin"] = strData[4]
+                    dataDict = newDict["Data"] = dict()
+                    dataDict["Q"] = int(re.search(r"\d+", strData[5]).group())
+                    dataDict["P"] = int(re.search(r"\d+", strData[6]).group())
+                    dataDict["x0"] = int(re.search(r"\d+", strData[7]).group())
+                    newDict["Sensor Set"] = int(re.search(r"\d+", strData[8]).group())
+                    newDict["States"] = strData[9:]
+                elif line.startswith("Dat_"):
+                    for i, str in enumerate(strData[1:]):
+                        if str.lower() == "pos":
+                            newDict["Position"] = [
+                                float(item) for item in strData[i + 2 : i + 5]
+                            ]
+                        elif str.lower() == "vel":
+                            newDict["Velocity"] = [
+                                float(item) for item in strData[i + 2 : i + 5]
+                            ]
+                        elif str.lower() == "omega":
+                            newDict["Omega"] = [
+                                float(item) for item in strData[i + 2 : i + 5]
+                            ]
+                        elif str.lower() == "attitude":
+                            if strData[i + 5] and strData[i + 5].isnumeric():
+                                newDict["Attitude"] = dict()
+                                newDict["Attitude"]["Angles"] = [
+                                    float(item) for item in strData[i + 2 : i + 5]
+                                ]
+                                newDict["Attitude"]["Sequence"] = int(strData[i + 5])
+                            else:
+                                newDict["Attitude"] = [
+                                    float(item) for item in strData[i + 2 : i + 5]
+                                ]
+                elif line.startswith("SensorSet_"):
+                    newDict["Sensors"] = [
+                        int(re.search(r"\d+", item).group()) for item in strData[1:]
+                    ]
+                elif line.startswith("Sensor_"):
+                    newDict["Type"] = strData[1]
+                    newDict["Sensor Index"] = int(strData[2])
+                    newDict["Sensor Noise"] = [float(item) for item in strData[3:-2]]
+                    newDict["Underweighting Factor"] = float(strData[-2])
+                    newDict["Residual Editing Gate"] = float(strData[-1])
 
                 dsm[typeName + " Configurations"].append(newItem)
 
@@ -1475,8 +1539,48 @@ def convertDSM(missionDir, dsmFileName="Inp_DSM.txt", commentDict=None):
                         for i, lim in enumerate(dsm["Limits Configurations"]):
                             if lim["Limits"]["Index"] == test:
                                 cmdData[cmdKey] = lim["Limits"]
+                    elif cmdKey == "Sensors":
+                        for i, test in enumerate(cmdData[cmdKey]):
+                            for sen in dsm["Sensor Configurations"]:
+                                sen["Sensor"].yaml_set_anchor(
+                                    "Sensor_%0d" % sen["Sensor"]["Index"]
+                                )
+                                sen["Sensor"].anchor.always_dump = True
+                                if sen["Sensor"]["Index"] == test:
+                                    cmdData[cmdKey][i] = sen["Sensor"]
+                    elif cmdKey == "Sensor Set":
+                        test = cmdData[cmdKey]
+                        for senSet in dsm["Sensor Set Configurations"]:
+                            senSet["Sensor Set"].yaml_set_anchor(
+                                "Sensor_Set_%0d" % senSet["Sensor Set"]["Index"]
+                            )
+                            senSet["Sensor Set"].anchor.always_dump = True
+                            if senSet["Sensor Set"]["Index"] == test:
+                                cmdData[cmdKey] = senSet["Sensor Set"]
+                    elif cmdKey == "Data":
+                        for test in cmdData[cmdKey].keys():
+                            for navData in dsm["Navigation Data Configurations"]:
+                                navData["Navigation Data"].yaml_set_anchor(
+                                    "Navigation_Data_%0d"
+                                    % navData["Navigation Data"]["Index"]
+                                )
+                                navData["Navigation Data"].anchor.always_dump = True
+                                if (
+                                    navData["Navigation Data"]["Index"]
+                                    == cmdData[cmdKey][test]
+                                ):
+                                    cmdData[cmdKey][test] = navData["Navigation Data"]
 
     nukeIndex(dsm)
+
+    for lim in dsm["Sensor Configurations"]:
+        del lim["Sensor"]["Index"]
+
+    for lim in dsm["Sensor Set Configurations"]:
+        del lim["Sensor Set"]["Index"]
+
+    for lim in dsm["Navigation Data Configurations"]:
+        del lim["Navigation Data"]["Index"]
 
     return dsm
 

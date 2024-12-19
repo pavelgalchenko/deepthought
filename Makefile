@@ -74,6 +74,8 @@ PROJDIR = ./
 KITDIR = $(PROJDIR)Kit/
 OBJ = $(PROJDIR)Object/
 INC = $(PROJDIR)Include/
+TESTS = $(PROJDIR)Tests/
+DATAFILTER = $(PROJDIR)data_filter/
 SRC = $(PROJDIR)Source/
 KITINC = $(KITDIR)Include/
 KITSRC = $(KITDIR)Source/
@@ -272,7 +274,7 @@ $(OBJ)42nos3.o $(OBJ)42dsm.o
 KITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
 $(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)nrlmsise00kit.o \
 $(OBJ)orbkit.o $(OBJ)radbeltkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o \
-$(OBJ)docoptkit.o $(OBJ)dsmkit.o
+$(OBJ)docoptkit.o $(OBJ)dsmkit.o $(OBJ)navkit.o
 
 LIBKITOBJ = $(OBJ)dcmkit.o $(OBJ)envkit.o $(OBJ)fswkit.o $(OBJ)geomkit.o \
 $(OBJ)iokit.o $(OBJ)mathkit.o $(OBJ)orbkit.o $(OBJ)sigkit.o $(OBJ)sphkit.o $(OBJ)timekit.o
@@ -281,6 +283,13 @@ ACKITOBJ = $(OBJ)dcmkit.o $(OBJ)mathkit.o $(OBJ)fswkit.o $(OBJ)iokit.o $(OBJ)tim
 
 ACIPCOBJ = $(OBJ)AppReadFromFile.o \
 $(OBJ)AppWriteToSocket.o $(OBJ)AppReadFromSocket.o $(OBJ)AppWriteToFile.o
+
+TESTOBJ = $(OBJ)tests.o $(OBJ)mathkit_tests.o $(OBJ)navkit_tests.o\
+$(OBJ)test_lib.o $(OBJ)42exec.o $(OBJ)42actuators.o $(OBJ)42cmd.o \
+$(OBJ)42dynamics.o $(OBJ)42environs.o $(OBJ)42ephem.o $(OBJ)42fsw.o \
+$(OBJ)42init.o $(OBJ)42ipc.o $(OBJ)42jitter.o $(OBJ)42joints.o \
+$(OBJ)42perturb.o $(OBJ)42report.o $(OBJ)42sensors.o \
+$(OBJ)42nos3.o $(OBJ)42dsm.o
 
 #ANSIFLAGS = -Wstrict-prototypes -pedantic -ansi -Werror
 ANSIFLAGS =
@@ -295,6 +304,9 @@ LFLAGS+= `pkg-config --libs libfyaml`
 deepthought : $(42OBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
 	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) $(GMSECBIN) -o $(EXENAME) $(42OBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) $(SPICELIBFLAGS)
 
+Test : $(TESTOBJ) $(GUIOBJ) $(SIMIPCOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(RBTOBJ)
+	$(CC) $(LFLAGS) $(SPICEFLAGS) $(LDFLAGS) -o Test $(TESTOBJ) $(GUIOBJ) $(FFTBOBJ) $(SLOSHOBJ) $(KITOBJ) $(ACOBJ) $(GMSECOBJ) $(SIMIPCOBJ) $(RBTOBJ) $(LIBS) $(GMSECLIB) $(SPICELIBFLAGS)
+
 AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 	$(CC) $(LFLAGS) $(LDFLAGS) -o AcApp $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ) $(LIBS)
 
@@ -303,6 +315,18 @@ AcApp : $(OBJ)AcApp.o $(ACKITOBJ) $(ACIPCOBJ) $(GMSECOBJ)
 
 
 ####################  Rules to compile objects  ###########################
+
+$(OBJ)tests.o       : $(TESTS)tests.c $(TESTS)mathkit_tests.h
+	$(CC) $(CFLAGS) -c $(TESTS)tests.c -o $(OBJ)tests.o
+
+$(OBJ)mathkit_tests.o: $(TESTS)mathkit_tests.c $(KITINC)mathkit.h
+	$(CC) $(CFLAGS) -c $(TESTS)mathkit_tests.c -o $(OBJ)mathkit_tests.o
+
+$(OBJ)navkit_tests.o: $(TESTS)navkit_tests.c $(INC)DSMTypes.h $(KITINC)navkit.h
+	$(CC) $(CFLAGS) -c $(TESTS)navkit_tests.c -o $(OBJ)navkit_tests.o
+
+$(OBJ)test_lib.o: $(TESTS)test_lib.c
+	$(CC) $(CFLAGS) -c $(TESTS)test_lib.c -o $(OBJ)test_lib.o
 
 $(OBJ)42main.o      : $(SRC)42main.c
 	$(CC) $(CFLAGS) -c $(SRC)42main.c -o $(OBJ)42main.o
@@ -375,6 +399,9 @@ $(OBJ)fswkit.o      : $(KITSRC)fswkit.c
 
 $(OBJ)dsmkit.o      : $(KITSRC)dsmkit.c
 	$(CC) $(CFLAGS) -c $(KITSRC)dsmkit.c -o $(OBJ)dsmkit.o
+
+$(OBJ)navkit.o      : $(KITSRC)navkit.c
+	$(CC) $(CFLAGS) -c $(KITSRC)navkit.c -o $(OBJ)navkit.o
 
 $(OBJ)glkit.o      : $(KITSRC)glkit.c $(KITINC)glkit.h
 	$(CC) $(CFLAGS) -c $(KITSRC)glkit.c -o $(OBJ)glkit.o
@@ -475,11 +502,11 @@ $(OBJ)42fssalbedo.o         : $(SRC)42fssalbedo.c
 ########################  Miscellaneous Rules  ############################
 clean :
 ifeq ($(42PLATFORM),_WIN32)
-	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp ./DataFilter .\InOut\*.42
 else ifeq ($(42PLATFORM),_WIN64)
-	del .\Object\*.o .\$(EXENAME) .\AcApp .\InOut\*.42
+	del .\Object\*.o .\$(EXENAME) .\AcApp ./DataFilter .\InOut\*.42
 else
-	rm -f $(OBJ)*.o ./$(EXENAME) ./AcApp $(KITDIR)42kit.so $(INOUT)*.42 ./Standalone/*.42 ./Demo/*.42 ./Rx/*.42 ./Tx/*.42
+	rm -f $(OBJ)*.o ./$(EXENAME) ./AcApp ./DataFilter $(KITDIR)42kit.so $(INOUT)*.42 ./Standalone/*.42 ./Demo/*.42 ./Rx/*.42 ./Tx/*.42
 endif
 
 profile: CFLAGS+=-pg
