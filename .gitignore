@@ -10,3 +10,4 @@ deepthought
 vgcore*
 cspice
 Model/spice_kernels/*/
+CMakeFiles
