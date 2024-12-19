@@ -72,7 +72,6 @@ enum NavType {
    LIEKF_NAV,
 };
 
-// TODO: see about merging ROTMAT_STATE and QUAT_STATE
 // Nav states to filter
 enum States {
    NULL_STATE = -2,
@@ -398,11 +397,9 @@ struct DSMNavType {
                           double const[4], double const[3], double const[3],
                           double const[3], double const[], const double);
    void (*updateLaw)(struct DSMNavType *const);
-   // TODO: calculate the number of measurements per step and allocate an array
-   // for measurements
-   struct DSMMeasListType
-       measList; // linked list of measurement buffer. Ordered by time. Head is
-                 // measurement with the smallest time in the queue.
+   // linked list of measurement buffer. Ordered by time. Head is measurement
+   // with the smallest time in the queue.
+   struct DSMMeasListType measList;
 
    // Use final element of relevant enums+1 to ensure these arrays are just as
    // big as needed

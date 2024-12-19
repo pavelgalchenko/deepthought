@@ -1,5 +1,5 @@
-/*    the (mostly harmless) spacecraft dynamics simulation            */
 /*    This file is distributed with 42,                               */
+/*    the (mostly harmless) spacecraft dynamics simulation            */
 /*    created by Eric Stoneking of NASA Goddard Space Flight Center   */
 
 /*    Copyright 2010 United States Government                         */
@@ -18,7 +18,6 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 /*
 ** #ifdef __cplusplus

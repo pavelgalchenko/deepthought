@@ -416,13 +416,8 @@ Two Vector Configurations:
       Secondary Vector: &ST-Point
         Target:
           Type: BODY
-          Target: EARTH
-        Axis: [1.0, 0.0, 0.0]
-      # Secondary Vector: &ST-Point
-      #   Target:
-      #     Type: BODY
-      #     Target: SUN
-      #   Axis: [0.0, -1.0, 0.0]
+          Target: SUN
+        Axis: [-1.0, 0.0, 0.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_1
@@ -672,7 +667,8 @@ Navigation Data Configurations:
   #         Sequence:           [[Sequence]]
   - Navigation Data: &Navigation_Data_Q
       Description: Dat_[0]
-      Velocity: [5e-04, 5e-04, 5e-04]
+      Attitude: [4e-04, 1e-04, 1e-04]
+      Velocity: [4e-04, 4e-04, 4e-04]
       Omega: [3e-06, 3e-06, 3e-06]
   - Navigation Data: &Navigation_Data_P
       Description: Dat_[1]
