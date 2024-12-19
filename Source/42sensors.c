@@ -350,7 +350,6 @@ void StarTrackerModel(struct SCType *S)
          N                 = &S->B[0].Node[ST->Node];
 
          ST->Valid = TRUE;
-         // TODO: renable occultation eventually
          /* Sun Occultation? */
          BoS = VoV(ST->CB[ST->BoreAxis], S->svb);
          if (BoS > ST->CosSunExclAng)
