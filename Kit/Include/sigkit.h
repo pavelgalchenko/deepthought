@@ -83,14 +83,7 @@ struct DelayType *ResizeDelay(struct DelayType *OldD, double DelayTime,
                               double DT);
 double Delay(struct DelayType *D, double x);
 
-
 #ifdef __cplusplus
 }
 #endif
-
-/*
-** #ifdef __cplusplus
-** }
-** #endif
-*/
 #endif /* __SIGKIT_H__ */

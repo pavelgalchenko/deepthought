@@ -26,7 +26,6 @@
 
 #include "gmsec4_c.h"
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,10 +39,5 @@ void GmsecSend(const char *Header, const char *Text,
 #ifdef __cplusplus
 }
 #endif
-
-/* #ifdef __cplusplus
-** }
-** #endif
-*/
 
 #endif /* __GMSECKIT_H__ */

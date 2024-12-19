@@ -18,14 +18,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/*
-** #ifdef __cplusplus
-** namespace _42 {
-** using namespace Kit;
-** #endif
-*/
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,11 +30,5 @@ EXTERN GLuint SphereWindow;
 #ifdef __cplusplus
 }
 #endif
-
-/*
-** #ifdef __cplusplus
-** }
-** #endif
-*/
 
 #endif /* __42GLUT_H__ */

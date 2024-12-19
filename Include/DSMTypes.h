@@ -13,7 +13,6 @@
 
 #ifndef __DSMTYPES_H__
 #define __DSMTYPES_H__
-extern struct SCType SCType;
 #include "timekit.h"
 
 #define REPORT_RESIDUALS FALSE

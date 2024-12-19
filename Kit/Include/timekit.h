@@ -110,10 +110,4 @@ void updateTime(struct DateType *Time, const double dSeconds);
 }
 #endif
 
-/*
-** #ifdef __cplusplus
-** }
-** #endif
-*/
-
 #endif /* __TIMEKIT_H__ */

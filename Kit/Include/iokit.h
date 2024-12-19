@@ -50,7 +50,6 @@
 #define WHILE_FY_ITER(node, iterNode)                                          \
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif

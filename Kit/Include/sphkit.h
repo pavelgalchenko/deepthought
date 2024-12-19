@@ -28,7 +28,6 @@
 extern "C" {
 #endif
 
-
 /* GLuint KernelToTexTag(void); */
 double CubicKernel(double r, double h, long Ndim);
 double CubicGradKernel(double r, double h, long Ndim);

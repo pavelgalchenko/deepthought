@@ -11,9 +11,9 @@
          "program": "${workspaceFolder}/deepthought",
          "args": [
             "-d",
-            "Missions/SNOOPI",
+            "Missions/DSM_DEMO",
             "-o",
-            "Missions/SNOOPI/blah",
+            "Missions/DSM_DEMO/blah",
             "-g",
             "0",
          ],
@@ -75,9 +75,9 @@
          "program": "${workspaceFolder}/deepthought",
          "args": [
             "-d",
-            "Missions/SNOOPI",
+            "Missions/DSM_DEMO",
             "-o",
-            "Missions/SNOOPI/blah",
+            "Missions/DSM_DEMO/blah",
             "-g",
             "0",
          ],

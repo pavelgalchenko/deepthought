@@ -1858,7 +1858,7 @@ comment_file_dict = {
     "Inp_TDRS": "InpTDRS_comments.yaml",
 }
 convert_func_dict = {
-    # "SC_": convertSC,
+    "SC_": convertSC,
     "Orb_": convertOrb,
     "Nodes_": convertNodes,
     "Inp_DSM": convertDSM,
@@ -1867,11 +1867,11 @@ convert_func_dict = {
     "Inp_IPC": convertIPC,
     "Inp_NOS3": convertNOS3,
     "Inp_Region": convertRegion,
-    # "Inp_Sim": convertSim,
+    "Inp_Sim": convertSim,
     "Inp_TDRS": convertTDRS,
 }
 f_type_list = [
-    # "SC_",
+    "SC_",
     "Orb_",
     "Nodes_",
     "Inp_DSM",
@@ -1880,7 +1880,7 @@ f_type_list = [
     "Inp_IPC",
     "Inp_NOS3",
     "Inp_Region",
-    # "Inp_Sim",
+    "Inp_Sim",
     "Inp_TDRS",
 ]
 startswith_type = {

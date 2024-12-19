@@ -15,7 +15,6 @@
 /*  Ebert, Musgrave, Peachey, Perlin, Worley.                         */
 /*  "Texturing & Modeling: A Procedural Approach", 3rd edition        */
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif

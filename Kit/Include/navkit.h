@@ -25,13 +25,6 @@ enum matType {
    IC_DAT,
 };
 
-/*
-** #ifdef __cplusplus
-** namespace Kit {
-** #endif
-*/
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -144,7 +137,6 @@ void subMatAdd(double **A, double **B, long const iN, long const iM,
                long const n, long const M);
 double mahalonobis2(double **A, double *x, double *y, long const n);
 double chi2InvLookup(double const pGate, long const dim);
-
 
 #ifdef __cplusplus
 }
