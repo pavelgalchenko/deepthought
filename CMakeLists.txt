@@ -15,23 +15,53 @@ elseif(APPLE)
     set(CMAKE_MACOSX_RPATH 1)
 endif()
 
+################################################################################
+######################### Configure cmake build options ########################
+################################################################################
+
+# Compile with Graphics -DGUI=OFF
+option(GUI "Compile with graphics" ON)
+
+# Compile with Shaders -DSHADERS=OFF
+option(SHADERS "Compile with shaders" ON)
+
+# Compile with SPICE -DSPICE=OFF
+option(SPICE "Compile with SPICE" ON)
+
+# Compile with Slosh -DCFDSLOSH=ON
+option(CFDSLOSH "Enable CFD slosh" OFF)
+
+# Compile with FFTB -DFFTB=ON
+option(FFTB "Enable FFTB" OFF)
+
+# Compile with GSFC Watermark -DGSFC=ON
+option(GSFC "Enable GSFC Watermark" OFF)
+
+# Compile with Ac Standalone -DSTANDALONE=ON
+option(STANDALONE "Compile AcApp as standalone" OFF)
+
+# Compile to output debug information -DDEBUG_DATA=ON
+option(DEBUG_DATA "Enable outputing model debug data" OFF)
+
+################################################################################
+
+# by default, we will build a Release version. However, feel free to
+# include the debug flags by running:
+#   $ cmake -DCMAKE_BUILD_TYPE=Debug ..
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 add_executable(deepthought)
 add_executable(Test EXCLUDE_FROM_ALL)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
 
-# Compile with Graphics -DGUI=OFF
-option(GUI "Compile with graphics" ON)
-
-# Compile with Shaders -DSHADERS=OFF
-option (SHADERS "Compile with shaders" ON )
 if(SHADERS)
     add_compile_definitions(_USE_SHADERS_)
 endif()
 
-# Compile with SPICE -DSPICE=OFF
-option(SPICE "Compile with SPICE" ON)
 if(SPICE)
     add_compile_definitions(_ENABLE_SPICE_)
     set(CSPICE_DIR ${CMAKE_SOURCE_DIR}/cspice)
@@ -49,18 +79,10 @@ endif()
 
 set(CMAKE_C_FLAGS "-fpic -Wall -Wshadow -Wno-deprecated " CACHE STRING "Set C Compiler Flags" FORCE)
 
-# by default, we will build a Release version. However, feel free to
-# include the debug flags by running:
-#   $ cmake -DCMAKE_BUILD_TYPE=Debug ..
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
 
 # explicitly set compile flags for all, debug, and release
 set(CMAKE_C_FLAGS_DEBUG "-pg")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
-
 
 if(C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs")
@@ -151,28 +173,19 @@ set_target_properties(42kit PROPERTIES LIBRARY_OUTPUT_DIRECTORY Kit)
 target_include_directories(deepthought PRIVATE kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
 
-# Compile with Slosh -DCFDSLOSH=ON
-option(CFDSLOSH "Enable CFD slosh" OFF)
 if(CFDSLOSH)
     target_sources(deepthought PRIVATE ${SOURCE}/42CfdSlosh.c)
     add_compile_definitions(_ENABLE_CFD_SLOSH_)
 endif()
 
-# Compile with FFTB -DFFTB=ON
-option(FFTB "Enable FFTB" OFF)
 if(FFTB)
     target_sources(deepthought PRIVATE ${SOURCE}/42fftb.c)
     add_compile_definitions(_ENABLE_FFTB_CODE_)
 endif()
-
-# Compile with GSFC Watermark -DGSFC=ON
-option(GSFC "Enable GSFC Watermark" OFF)
 if(GSFC)
     add_compile_definitions(_USE_GSFC_WATERMARK_)
 endif()
 
-# Compile to output debug information -DDEBUG_DATA=ON
-option(DEBUG_DATA "Enable outputing model debug data" OFF)
 if(DEBUG_DATA)
     add_compile_definitions(_DEBUG_GRAV_)
     add_compile_definitions(_DEBUG_MAG_)
@@ -201,8 +214,6 @@ target_sources(Test
     )
 target_link_libraries(Test PRIVATE 42kit)
 
-# Compile with Ac Standalone -DSTANDALONE=ON
-option(STANDALONE "Compile AcApp and DeepThought as standalone" OFF)
 if(STANDALONE)
     add_executable(AcApp EXCLUDE_FROM_ALL)
     target_compile_definitions(AcApp PRIVATE _AC_STANDALONE_)
