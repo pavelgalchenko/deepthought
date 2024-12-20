@@ -16,22 +16,7 @@ elseif(APPLE)
 endif()
 
 add_executable(deepthought)
-
-
-# # Cross compiling: cmake -DCROSS=ON ..
-# option(CROSS "Cross Compile for Target System" OFF)
-# if(CROSS)
-#     #TODO for CD tasks
-# else()
-#     # Taken shamelessly from CODEX
-#     # cmake installs libraries to /usr/local/lib by default. Let's set the
-#     # RPATH to that to make sure the program actually runs!!
-#     # Note: Default install rpath is set to "". Was able to make this work
-#     # as long as we run "sudo ldconfig" after installing the libraries.
-#     set(CMAKE_INSTALL_RPATH "$ORIGIN")
-#     set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-# endif()
-
+add_executable(Test EXCLUDE_FROM_ALL)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
@@ -53,7 +38,12 @@ if(SPICE)
     find_library(CSPICE_LIB cspice NAMES cspice PATHS ${CSPICE_DIR}/lib)
     target_include_directories(deepthought PUBLIC ${CSPICE_DIR}/include)
     target_link_libraries(deepthought PUBLIC ${CSPICE_LIB})
-    # target_link_directories(deepthought PRIVATE ${CSPICE_DIR}/lib)
+    target_link_directories(deepthought PUBLIC ${CSPICE_DIR}/lib)
+
+    #Link spice to Test
+    target_include_directories(Test PUBLIC ${CSPICE_DIR}/include)
+    target_link_libraries(Test PUBLIC ${CSPICE_LIB})
+    target_link_directories(Test PUBLIC ${CSPICE_DIR}/lib)
 endif()
 
 
@@ -66,8 +56,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# turning on the BUILD_SHARED_LIBS flag causes the add_library() to create .so files
-# option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
 # explicitly set compile flags for all, debug, and release
 set(CMAKE_C_FLAGS_DEBUG "-pg")
@@ -84,12 +72,7 @@ include_directories(
     Kit/Include
 )
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBFYAML REQUIRED libfyaml>=0.9)
-include_directories(${LIBFYAML_INCLUDE_DIRS})
-link_directories(${LIBFYAML_LIBRARY_DIRS})
-
-
+# Configure Sources
 set(KIT Kit/Source)
 set(SOURCE Source)
 
@@ -119,7 +102,6 @@ set(KIT_SOURCES
 
     set(42_SOURCES
     PRIVATE
-    ${SOURCE}/42main.c
     ${SOURCE}/42exec.c
     ${SOURCE}/42actuators.c
     ${SOURCE}/42cmd.c
@@ -143,42 +125,98 @@ set(KIT_SOURCES
 
 set(AC_KIT_SOURCES
     PRIVATE
-    ${KIT}/dcmkit
-    ${KIT}/mathkit
-    ${KIT}/fswkit
-    ${KIT}/iokit
-    ${KIT}/timekit
+    ${KIT}/dcmkit.c
+    ${KIT}/mathkit.c
+    ${KIT}/fswkit.c
+    ${KIT}/iokit.c
+    ${KIT}/timekit.c
     )
 
 set(AC_IPC_SOURCES
     PRIVATE
-    ${SOURCE}/IPC/AppReadFromFile
-    ${SOURCE}/IPC/AppWriteToSocket
-    ${SOURCE}/IPC/AppReadFromSocket
-    ${SOURCE}/IPC/AppWriteToFile
+    ${SOURCE}/IPC/AppReadFromFile.c
+    ${SOURCE}/IPC/AppWriteToSocket.c
+    ${SOURCE}/IPC/AppReadFromSocket.c
+    ${SOURCE}/IPC/AppWriteToFile.c
     )
 
 set(AC_SOURCES
+    PRIVATE
     ${SOURCE}/AcApp.c
     )
 
 add_library(42kit SHARED ${KIT_SOURCES})
+set_target_properties(42kit PROPERTIES LIBRARY_OUTPUT_DIRECTORY Kit)
 
-target_sources(deepthought ${42_SOURCES} ${SIM_IPC_SOURCES} ${AC_SOURCES})
-target_include_directories(deepthought PUBLIC kit/Include PRIVATE Include)
+target_include_directories(deepthought PRIVATE kit/Include Include)
+target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
+
+# Compile with Slosh -DCFDSLOSH=ON
+option(CFDSLOSH "Enable CFD slosh" OFF)
+if(CFDSLOSH)
+    target_sources(deepthought PRIVATE ${SOURCE}/42CfdSlosh.c)
+    add_compile_definitions(_ENABLE_CFD_SLOSH_)
+endif()
+
+# Compile with FFTB -DFFTB=ON
+option(FFTB "Enable FFTB" OFF)
+if(FFTB)
+    target_sources(deepthought PRIVATE ${SOURCE}/42fftb.c)
+    add_compile_definitions(_ENABLE_FFTB_CODE_)
+endif()
+
+# Compile with GSFC Watermark -DGSFC=ON
+option(GSFC "Enable GSFC Watermark" OFF)
+if(GSFC)
+    add_compile_definitions(_USE_GSFC_WATERMARK_)
+endif()
+
+# Compile to output debug information -DDEBUG_DATA=ON
+option(DEBUG_DATA "Enable outputing model debug data" OFF)
+if(DEBUG_DATA)
+    add_compile_definitions(_DEBUG_GRAV_)
+    add_compile_definitions(_DEBUG_MAG_)
+endif()
+
+# Configure 42kit with libfyaml publicly to share with targets
+# if something in deepthought is using yaml, it is also using iokit
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBFYAML REQUIRED libfyaml>=0.9)
+target_include_directories(42kit PUBLIC kit/Include)
+target_include_directories(42kit PUBLIC ${LIBFYAML_INCLUDE_DIRS})
+target_link_directories(42kit PUBLIC ${LIBFYAML_LIBRARY_DIRS})
+target_link_libraries(42kit PUBLIC ${LIBFYAML_LIBRARIES} ${CMAKE_DL_LIBS})
 target_link_libraries(deepthought PRIVATE 42kit)
 
-# TODO: split this up more
-# configure code into libraries
-target_include_directories(deepthought PUBLIC ${LIBFYAML_INCLUDE_DIRS})
-target_link_libraries(deepthought PUBLIC  ${LIBFYAML_LIBRARIES})
-target_compile_options(deepthought PUBLIC ${LIBFYAML_CFLAGS})
-target_link_options(deepthought PUBLIC ${LIBFYAML_LDFLAGS})
-target_link_libraries(deepthought PUBLIC ${CMAKE_DL_LIBS})
+# Configure Test Target
+target_include_directories(Test PRIVATE kit/Include Include)
+target_sources(Test
+    PRIVATE
+    Tests/tests.c
+    Tests/mathkit_tests.c
+    # Tests/navkit_tests.c
+    Tests/test_lib.c
+    ${42_SOURCES}
+    ${SIM_IPC_SOURCES}
+    )
+target_link_libraries(Test PRIVATE 42kit)
 
-target_include_directories(42kit PUBLIC ${LIBFYAML_INCLUDE_DIRS})
-target_compile_options(42kit PUBLIC ${LIBFYAML_CFLAGS})
-target_link_options(42kit PUBLIC ${LIBFYAML_LDFLAGS})
+# Compile with Ac Standalone -DSTANDALONE=ON
+option(STANDALONE "Compile AcApp and DeepThought as standalone" OFF)
+if(STANDALONE)
+    add_executable(AcApp EXCLUDE_FROM_ALL)
+    target_compile_definitions(AcApp PRIVATE _AC_STANDALONE_)
+    target_sources(AcApp ${AC_SOURCES} ${AC_KIT_SOURCES} ${AC_IPC_SOURCES})
+    target_include_directories(AcApp PRIVATE kit/Include)
+    target_include_directories(AcApp PRIVATE ${LIBFYAML_INCLUDE_DIRS})
+    target_link_directories(AcApp PRIVATE ${LIBFYAML_LIBRARY_DIRS})
+    target_link_libraries(AcApp PRIVATE ${LIBFYAML_LIBRARIES} ${CMAKE_DL_LIBS})
+
+    target_compile_definitions(deepthought PRIVATE _AC_STANDALONE_)
+else()
+    target_sources(deepthought ${AC_SOURCES})
+    target_sources(Test ${AC_SOURCES})
+endif()
 
 if (GUI)
     # For graphics interface, choose GLUT or GLFW GUI libraries
@@ -187,44 +225,39 @@ if (GUI)
     set(GLUT_OR_GLFW GLUT CACHE STRING "Use GLUT or GLFW for graphics")
     set_property(CACHE GLUT_OR_GLFW PROPERTY STRINGS GLUT GLFW)
     find_package(OpenGL REQUIRED)
+    find_package(GLUT REQUIRED)
     add_compile_definitions(_ENABLE_GUI_)
     add_compile_definitions(GL_SILENCE_DEPRECATION)
+    target_link_libraries(deepthought PRIVATE ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
+    target_link_libraries(Test PRIVATE ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
+
+    set(GL_SOURCES
+        PRIVATE
+        ${KIT}/glkit.c
+        Source/42gl.c
+        Source/42gpgpu.c
+        )
+    target_sources(deepthought ${GL_SOURCES})
+    target_sources(Test ${GL_SOURCES})
 
     if (GLUT_OR_GLFW STREQUAL "GLUT")
         add_compile_definitions(_USE_GLUT_)
-        set(GUI_SOURCES
-            PUBLIC
-            Include/42constants.h
-            Include/42.h
-            Kit/Source/iokit.c
-            Kit/Source/glkit.c
-            Kit/Source/mathkit.c
-
+        set(GLUT_SOURCES
             PRIVATE
-            Include/42gl.h
-            Include/42glut.h
-            Source/42gl.c
             Source/42glut.c
-            Source/42gpgpu.c
             )
-        target_sources(deepthought ${GUI_SOURCES})
-        # link_libraries(gui PUBLIC  kit)
-        find_package(GLUT REQUIRED)
-        target_include_directories(deepthought PRIVATE ${OPENGL_INCLUDE_DIRS} ${GLUT_INCLUDE_DIRS})
-        target_link_libraries(deepthought PUBLIC ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${CMAKE_DL_LIBS})
-        target_link_options(deepthought PRIVATE ${OPENGL_LDFLAGS} ${GLUT_LDFLAGS})
-        target_compile_options(deepthought PRIVATE ${OPENGL_CFLAGS} ${GLUT_CFLAGS})
+        target_sources(deepthought ${GLUT_SOURCES})
+        target_sources(Test ${GLUT_SOURCES})
     else()
-        # add_compile_definitions(_USE_GLFW_)
-        # add_library(gui
-        #     Source/42gl.c
-        #     Kit/Source/glkit.c
-        #     Source/42gpgpu.c
-        #     Source/42glfw.c
-        # )
-        # find_package(GLFW REQUIRED)
-        # include_directories(${GLFW_INCLUDE_DIRS})
-        # target_link_libraries(gui ${OPENGL_LIBRARIES} ${GLFW_LIBRARIES})
+        # TODO: doesn't work
+        add_compile_definitions(_USE_GLFW_)
+        set(GLFW_SOURCES
+            PRIVATE
+            Source/42glfw.c
+            )
+        target_sources(deepthought ${GLFW_SOURCES})
+        find_package(glfw3 REQUIRED)
+        target_link_libraries(deepthought PRIVATE ${GLFW_LIBRARIES})
+        target_link_libraries(Test PRIVATE ${GLFW_LIBRARIES})
     endif()
-    # target_link_libraries(deepthought PUBLIC gui)
 endif()

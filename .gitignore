@@ -5,7 +5,6 @@ a.out
 *~
 *.webarchive
 *.42
-42
 deepthought
 vgcore*
 Test
@@ -14,3 +13,9 @@ Missions/*_sim_*
 cspice
 Model/spice_kernels/*/
 CMakeFiles
+Makefile
+CMakeCache.txt
+cmake_install.cmake
+*.tar*
+**/*42kit*
+AcApp
