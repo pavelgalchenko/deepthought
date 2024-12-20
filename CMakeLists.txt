@@ -37,6 +37,12 @@ option(STANDALONE "Compile AcApp as standalone" OFF)
 # Compile to output debug information -DDEBUG_DATA=ON
 option(DEBUG_DATA "Enable outputing model debug data" OFF)
 
+# For graphics interface, choose GLUT or GLFW GUI libraries
+# GLUT is well known, but GLFW is better for newer Mac's hires displays
+# -DGLUT_OR_GLFW=GLFW
+set(GLUT_OR_GLFW GLUT CACHE STRING "Use GLUT or GLFW for graphics")
+set_property(CACHE GLUT_OR_GLFW PROPERTY STRINGS GLUT GLFW)
+
 ################################################################################
 
 # by default, we will build a Release version. However, feel free to
@@ -215,11 +221,7 @@ else()
 endif()
 
 if (GUI)
-    # For graphics interface, choose GLUT or GLFW GUI libraries
-    # GLUT is well known, but GLFW is better for newer Mac's hires displays
-    # -DGLUT_OR_GLFW=GLFW
-    set(GLUT_OR_GLFW GLUT CACHE STRING "Use GLUT or GLFW for graphics")
-    set_property(CACHE GLUT_OR_GLFW PROPERTY STRINGS GLUT GLFW)
+    # configure GUI
     find_package(OpenGL REQUIRED)
     find_package(GLUT REQUIRED)
     add_compile_definitions(_ENABLE_GUI_)
@@ -245,15 +247,15 @@ if (GUI)
         target_sources(deepthought ${GLUT_SOURCES})
         target_sources(Test ${GLUT_SOURCES})
     else()
-        # TODO: doesn't work
         add_compile_definitions(_USE_GLFW_)
+        find_package(glfw3 REQUIRED)
+        target_link_libraries(deepthought PRIVATE glfw)
+        target_link_libraries(Test PRIVATE glfw)
         set(GLFW_SOURCES
             PRIVATE
             Source/42glfw.c
             )
         target_sources(deepthought ${GLFW_SOURCES})
-        find_package(glfw3 REQUIRED)
-        target_link_libraries(deepthought PRIVATE ${GLFW_LIBRARIES})
-        target_link_libraries(Test PRIVATE ${GLFW_LIBRARIES})
+        target_sources(Test ${GLFW_SOURCES})
     endif()
 endif()
