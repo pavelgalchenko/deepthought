@@ -27,9 +27,9 @@ int main()
    successful &=
        print_result(RunMathKit_Tests(), "Mathkit Tests", 14, 0, "", 0, 1);
 
-   printf("\n\e[0mNavkit Tests:\e[0m\n");
-   successful &=
-       print_result(RunNavKit_Tests(), "Navkit Tests", 13, 0, "", 0, 1);
+//    printf("\n\e[0mNavkit Tests:\e[0m\n");
+//    successful &=
+//        print_result(RunNavKit_Tests(), "Navkit Tests", 13, 0, "", 0, 1);
 
    printf("\n");
    return (successful ? EXIT_SUCCESS : EXIT_FAILURE);

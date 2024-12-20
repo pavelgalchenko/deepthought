@@ -33,11 +33,15 @@ Features:
 
 ## Installation
 
-If you're installing on Windows, see the file "Install-msys.txt" in the Docs folder.
+DeepThought uses Cmake for compilation, so run `cmake .` and then `make`. There are various build flags noted in the `CMakeLists.txt`. If you are attempting to build for Windows, good luck; there is some information in `Docs/Install-msys.txt`. A more recommended approach would be to use WSL on Windows 10/11.
+To buid DeepThought, you require:
+  - libfyaml >= 0.9
+  - glut
+  - make
+  - cmake
+  - gcc
 
-The compiler will attempt to detect what platform you're on (Linux, OSX, or Msys), but its success rate isn't great. If you have errors on the first compile or run, try editing your Makefile to manually set your `42PLATFORM`.
-
-For OpenGL graphics, newer Macs with Retina displays will need the GLFW graphics libraries, available from MacPorts, Homebrew, and probably elsewhere.  Otherwise, you'll need the GLUT libraries, which are also readily available if not already installed on your system.  Graphics are optional, settable in the Makefile by GUIFLAG.
+If you have issues with Cmake, you can attempt to build using the legacy `Makefile.legacy`.
 
 ## Getting Started
 
@@ -60,8 +64,8 @@ The input/output folder may be changed for a sim run by running 42 with an argum
 1) Deepthought expects the input files to be YAML with a particular format. If you are being given runtime errors about their format, view the input files for the supplied demonstration missions and the YAML file format comment descriptions in `yaml/yamlComments`.
 
 ## Planetary Ephemeris Settings (SPICE)
-Deepthought is compatible with [SPICE](https://naif.jpl.nasa.gov/naif/), a toolkit used to read and process planetary ephemeris. We recommend a specific set of SPICE kernels to take advantage of all of 42's capabilities; ```Model/spice_kernels/kernels.txt``` is 42's SPICE metakernel which lists all of the kernels you need for 42's basic functionality. We have provided a shell script (```Model/spice_kernels/get_kernels.sh```) that automates the download process.
+Deepthought is compatible with [SPICE](https://naif.jpl.nasa.gov/naif/), a toolkit used to read and process planetary ephemeris. We recommend a specific set of SPICE kernels to take advantage of all of 42's capabilities; ```Model/spice_kernels/kernels.txt``` is 42's SPICE metakernel which lists all of the kernels you need for 42's basic functionality. We have provided a shell script (```Model/spice_kernels/get_kernels.sh```, requires `wget`) that automates the download process.
 
 There are some use cases in which you need specialized or specific kernels that replace or add to the default SPICE kernels. In this case, you may replace or add the relevant line in the metakernel that points to the desired SPICE kernel. For more information on how metakernels are formatted and read, please see the [corresponding documentation](https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/kernel.html#Text%20Kernel%20Specifications) through JPL NAIF.
 
-To build with JPL's SPICE toolkit, either run the `download_spice.sh` script or manually download the correct version for your system and architecture from [HERE](https://naif.jpl.nasa.gov/naif/toolkit_C.html), and unzip it to the `deepthought` directory. If you wish to disable building with SPICE, set `SPICEFLAG` to empty either in the `Makefile` or with a command line override.
+To build with JPL's SPICE toolkit, either run the `download_spice.sh` (you will require `wget`) script or manually download the correct version for your system and architecture from [HERE](https://naif.jpl.nasa.gov/naif/toolkit_C.html), and unzip it to the `deepthought` directory. If you wish to disable building with SPICE, set `SPICEFLAG` to empty either in the `Makefile` or with a command line override.

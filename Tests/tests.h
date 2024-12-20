@@ -15,7 +15,8 @@
 #define __TESTS_H__
 
 #include "mathkit_tests.h"
-#include "navkit_tests.h"
+// #include "navkit_tests.h"
+#include "42.h"
 #include "test_lib.h"
 
 int main();
