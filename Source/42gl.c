@@ -1080,13 +1080,13 @@ void DrawWatermarks(void)
    glBindTexture(GL_TEXTURE_2D, FortyTwoWatermarkTexTag);
    glBegin(GL_QUADS);
    glTexCoord2f(0.0, 1.0);
-   glVertex2f(CamWidth - 50, CamHeight - 10);
+   glVertex2f(CamWidth - 90, CamHeight - 10);
    glTexCoord2f(1.0, 1.0);
    glVertex2f(CamWidth - 10, CamHeight - 10);
    glTexCoord2f(1.0, 0.0);
-   glVertex2f(CamWidth - 10, CamHeight - 50);
+   glVertex2f(CamWidth - 10, CamHeight - 90);
    glTexCoord2f(0.0, 0.0);
-   glVertex2f(CamWidth - 50, CamHeight - 50);
+   glVertex2f(CamWidth - 90, CamHeight - 90);
    glEnd();
 
    glDisable(GL_TEXTURE_2D);
