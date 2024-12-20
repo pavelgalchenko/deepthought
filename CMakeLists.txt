@@ -31,12 +31,6 @@ option(SPICE "Compile with SPICE" ON)
 # Compile with Slosh -DCFDSLOSH=ON
 option(CFDSLOSH "Enable CFD slosh" OFF)
 
-# Compile with FFTB -DFFTB=ON
-option(FFTB "Enable FFTB" OFF)
-
-# Compile with GSFC Watermark -DGSFC=ON
-option(GSFC "Enable GSFC Watermark" OFF)
-
 # Compile with Ac Standalone -DSTANDALONE=ON
 option(STANDALONE "Compile AcApp as standalone" OFF)
 
@@ -173,15 +167,6 @@ set_target_properties(42kit PROPERTIES LIBRARY_OUTPUT_DIRECTORY Kit)
 target_include_directories(deepthought PRIVATE kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
 
-if(CFDSLOSH)
-    target_sources(deepthought PRIVATE ${SOURCE}/42CfdSlosh.c)
-    add_compile_definitions(_ENABLE_CFD_SLOSH_)
-endif()
-
-if(FFTB)
-    target_sources(deepthought PRIVATE ${SOURCE}/42fftb.c)
-    add_compile_definitions(_ENABLE_FFTB_CODE_)
-endif()
 if(GSFC)
     add_compile_definitions(_USE_GSFC_WATERMARK_)
 endif()
