@@ -8,6 +8,9 @@ a.out
 42
 deepthought
 vgcore*
+Test
+Missions/*/MCRUN*
+Missions/*_sim_*
 cspice
 Model/spice_kernels/*/
 CMakeFiles

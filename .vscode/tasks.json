@@ -47,13 +47,13 @@
         //         "gprof ./42 gmon.out > analysis.txt"
         //     ]
         // },
-        // {
-        //     "label": "test project",
-        //     "type": "shell",
-        //     "group": "build",
-        //     "args": [
-        //         "make clean && make -j Test GUIFLAG="
-        //     ]
-        // },
+        {
+            "label": "test project",
+            "type": "shell",
+            "group": "build",
+            "args": [
+                "make clean && make -j Test GUIFLAG="
+            ]
+        },
     ]
 }

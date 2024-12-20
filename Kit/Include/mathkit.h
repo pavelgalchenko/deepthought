@@ -33,6 +33,13 @@
 #endif
 #endif
 
+#ifndef MIN
+#define MIN(x, y) ((x) > (y) ? (y) : (x))
+#endif
+#ifndef MAX
+#define MAX(x, y) ((x) < (y) ? (y) : (x))
+#endif
+
 double signum(const double x);
 double sinc(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
@@ -48,55 +55,61 @@ void SxM(const double S, const double A[3][3], double B[3][3]);
 void MINV4(const double A[4][4], double B[4][4]);
 void MINV3(const double A[3][3], double B[3][3]);
 void MINV2(const double A[2][2], double B[2][2]);
-void PINV4x3(double A[4][3], double Aplus[3][4]);
-void MT(double A[3][3], double B[3][3]);
-double VoV(double A[3], double B[3]);
-void VxV(double A[3], double B[3], double C[3]);
-void vxMov(double w[3], double M[3][3], double wxMow[3]);
+void PINV4x3(const double A[4][3], double Aplus[3][4]);
+void MT(const double A[3][3], double B[3][3]);
+double VoV(const double A[3], const double B[3]);
+void VxV(const double A[3], const double B[3], double C[3]);
+void vxMov(const double w[3], const double M[3][3], double wxMow[3]);
 double MAGV(const double V[3]);
 double UNITV(double V[3]);
 double CopyUnitV(const double V[3], double W[3]);
-void V2CrossM(double V[3], double M[3][3]);
-void V2DoubleCrossM(double V[3], double M[3][3]);
-void VcrossM(double V[3], double M[3][3], double A[3][3]);
-void VcrossMT(double V[3], double M[3][3], double A[3][3]);
-void QxQ(double A[4], double B[4], double C[4]);
-void QTxQ(double A[4], double B[4], double C[4]);
-void QxQT(double A[4], double B[4], double C[4]);
-void VxQ(double Va[3], double QAB[4], double Vb[3]);
-void QxV(double QAB[4], double Vb[3], double Va[3]);
-void QTxV(double QAB[4], double Va[3], double Vb[3]);
+void V2CrossM(const double V[3], double M[3][3]);
+void V2DoubleCrossM(const double V[3], double M[3][3]);
+void VcrossM(const double V[3], const double M[3][3], double A[3][3]);
+void VcrossMT(const double V[3], const double M[3][3], double A[3][3]);
+void QxQ(const double A[4], const double B[4], double C[4]);
+void QTxQ(const double A[4], const double B[4], double C[4]);
+void QxQT(const double A[4], const double B[4], double C[4]);
+void VxQ(const double Va[3], const double QAB[4], double Vb[3]);
+void QxV(const double QAB[4], const double Vb[3], double Va[3]);
+void QTxV(const double QAB[4], const double Va[3], double Vb[3]);
 void UNITQ(double Q[4]);
 void RECTIFYQ(double Q[4]);
-void PerpBasis(double A[3], double B[3], double C[3]);
+void PerpBasis(const double A[3], double B[3], double C[3]);
 double fact(long const n);
 double oddfact(long const n);
 double factDfact(long const n, long const m);
-void Legendre(long N, long M, double x, double P[N + 1][M + 1],
-              double sdP[N + 1][M + 1]);
+void Legendre(const long N, const long M, const double x,
+              double P[N + 1][M + 1], double sdP[N + 1][M + 1]);
 void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
                         double **C, double **S, double **Norm, double gradV[3]);
-void MxMG(double **A, double **B, double **C, long N, long K, long M);
-void MxMTG(double **A, double **B, double **C, long N, long K, long M);
-void MTxMG(double **A, double **B, double **C, long N, long K, long M);
-void MxVG(double **M, double *v, double *w, long n, long m);
-void SxMG(double s, double **A, double **B, long N, long M);
-void MINVG(double **A, double **AI, long N);
-void FastMINV6(double A[6][6], double AI[6][6], long N);
-void PINVG(double **A, double **Ai, long n, long m);
-double **CreateMatrix(long n, long m);
+void MxMG(double **A, double **B, double **C, const long N, const long K,
+          const long M);
+void MxMTG(double **A, double **B, double **C, const long N, const long K,
+           const long M);
+void MTxMG(double **A, double **B, double **C, const long N, const long K,
+           const long M);
+void MxVG(double **M, double *v, double *w, const long n, const long m);
+void SxMG(double s, double **A, double **B, const long N, const long M);
+void MINVG(double **A, double **AI, const long N);
+void FastMINV6(const double A[6][6], double AI[6][6], const long N);
+void PINVG(double **A, double **Ai, const long n, const long m);
+double **CreateMatrix(const long n, const long m);
 void DestroyMatrix(double **A);
-void LINSOLVE(double **A, double *x, double *b, long n);
-void CholeskySolve(double **A, double *x, double *b, long n);
-void ConjGradSolve(double **A, double *x, double *b, long n, double errtol,
-                   long maxiter);
-void Bairstow(long n, double *a, double Tol, double *Real, double *Imag);
-double Amoeba(long N, double *P, double CostFunction(double *p, double *Parm),
-              double *CostParm, double scale, double Tol);
-void FindNormal(double V1[3], double V2[3], double V3[3], double N[3]);
-double LinInterp(double *X, double *Y, double x, long n);
-void SphereInterp(double q1[4], double q2[4], double u, double q[4]);
+void LINSOLVE(double **A, double *x, double *b, const long n);
+void CholeskySolve(double **A, double *x, double *b, const long n);
+void ConjGradSolve(double **A, double *x, double *b, const long n,
+                   const double errtol, const long maxiter);
+void Bairstow(long n, double *a, const double Tol, double *Real, double *Imag);
+double Amoeba(const long N, double *P,
+              double CostFunction(double *p, double *Parm), double *CostParm,
+              const double scale, const double Tol);
+void FindNormal(const double V1[3], const double V2[3], const double V3[3],
+                double N[3]);
+double LinInterp(const double *X, const double *Y, const double x,
+                 const long n);
+void SphereInterp(double q1[4], double q2[4], const double u, double q[4]);
 double CubicInterp1D(double f0, double f1, double x);
 double CubicInterp2D(double f00, double f10, double f01, double f11, double x,
                      double y);
@@ -123,7 +136,31 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      double *params);
 void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
                             double *cph, double *sph, double *r);
+void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]);
+void AdjointT(const double C[3][3], const double A[3][3], double CACT[3][3]);
+void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m]);
+void MINVxMG(double **A, double **B, double **C, long N, long m);
+void MxMINVG(double **A, double **B, double **C, long N, long m);
+void expmso3(double theta[3], double R[3][3]);
 void logso3(double const R[3][3], double theta[3]);
+void expmTFG(double theta[3], long const n, long const m, double x[n][3],
+             double xbar[m][3], double R[3][3]);
+double M1NormG(double **A, long const n, long const m);
+double M2Norm2G(double **A, long const n, long const m);
+int cholDowndate(double **S, double u[], long const n);
+void chol(double **A, double **S, long const n);
+void hqrd(double **A, double **U, double **R, long const n, long const m);
+void bhqrd(double **A, double **U, double **R, long const n, long const m,
+           long const bSize);
+
+void expm(double **A, double **e, long const n);
+long isSignificant(int const m, int const n, double **A, double **B);
+void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);
+void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
+                         double d[n]);
+double **matPow(const long n, double **A, const unsigned long p);
+void QuickMatPow(const long n, double **A, double **As, const long s,
+                 double **Ap, const long p);
 
 /*
 ** #ifdef __cplusplus

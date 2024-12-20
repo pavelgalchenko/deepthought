@@ -455,6 +455,11 @@ long DecodeString(char *s)
    else if (!strcmp(s, "PROPORTIONAL"))
       return THR_PROPORTIONAL;
 
+   else if (!strcmp(s, "CONVENTIONAL"))
+      return CONVENTIONAL_FSS;
+   else if (!strcmp(s, "GSFSS"))
+      return GS_FSS;
+
    else if (!strcmp(s, "APERTURE"))
       return OPT_APERTURE;
    else if (!strcmp(s, "CONIC"))
@@ -3095,7 +3100,7 @@ void InitSpacecraft(struct SCType *S)
                             ang, &seq);
          A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FSS->CB);
          C2Q(FSS->CB, FSS->qb);
-         assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/FOV Size"),
+         assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  FSS->FovHalfAng);
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
@@ -3110,7 +3115,8 @@ void InitSpacecraft(struct SCType *S)
                     If);
             exit(EXIT_FAILURE);
          }
-         FSS->BoreAxis   = DecodeString(dummy);
+         FSS->BoreAxis = DecodeString(dummy);
+
          FSS->MaxCounter = (long)(FSS->SampleTime / DTSIM + 0.5);
          if (FSS->SampleTime < DTSIM) {
             fprintf(stderr, "Error:  FSS[%ld].SampleTime smaller than DTSIM.\n",
@@ -3124,6 +3130,11 @@ void InitSpacecraft(struct SCType *S)
             fprintf(stderr, "SC[%ld].FSS[%ld] Node out of range\n", S->ID, If);
             exit(EXIT_FAILURE);
          }
+         if (!fy_node_scanf(seqNode, "/Type %49s", dummy))
+            FSS->type = CONVENTIONAL_FSS;
+         else
+            FSS->type = DecodeString(dummy);
+
          for (i = 0; i < 2; i++)
             FSS->FovHalfAng[i] *= 0.5 * D2R;
          FSS->NEA   *= D2R;
@@ -3156,9 +3167,10 @@ void InitSpacecraft(struct SCType *S)
          C2Q(ST->CB, ST->qb);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  ST->FovHalfAng);
+
+         double tmp[3] = {0.0};
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Noise Equivalent Angle"),
-             ST->NEA);
+             3, fy_node_by_path_def(seqNode, "/Noise Equivalent Angle"), tmp);
          struct fy_node *excAng =
              fy_node_by_path_def(seqNode, "/Exclusion Angles");
          if (fy_node_scanf(excAng,
@@ -3210,7 +3222,7 @@ void InitSpacecraft(struct SCType *S)
          ST->CosEarthExclAng  = cos(ST->EarthExclAng);
          ST->CosMoonExclAng   = cos(ST->MoonExclAng);
          for (i = 0; i < 3; i++)
-            ST->NEA[i] *= D2R / 3600.0;
+            ST->NEA[(ST->BoreAxis + i) % 3] = tmp[i] * D2R / 3600.0;
       }
    }
 
@@ -6229,7 +6241,6 @@ void InitSim(int argc, char **argv)
    printf("SC Model Path: %s \n \n", SCModelPath);
 
    /* .. Read from file Inp_Sim.txt */
-
    struct fy_document *fyd =
        fy_document_build_and_check(NULL, InOutPath, "Inp_Sim.yaml");
 

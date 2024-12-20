@@ -105,8 +105,11 @@ void AccelerometerModel(struct SCType *S)
 
          A->MeasAcc = ((double)A->Counts) * A->Quant;
 
-         S->AC.Accel[Ia].Acc = A->MeasAcc;
+         S->AC.Accel[Ia].Acc   = A->MeasAcc;
+         S->AC.Accel[Ia].Valid = TRUE;
       }
+      else
+         S->AC.Accel[Ia].Valid = FALSE;
    }
 }
 /**********************************************************************/
@@ -149,8 +152,11 @@ void GyroModel(struct SCType *S)
          G->MeasRate =
              ((double)(Counts - PrevCounts)) * G->Quant / G->SampleTime;
 
-         S->AC.Gyro[Ig].Rate = G->MeasRate;
+         S->AC.Gyro[Ig].Rate  = G->MeasRate;
+         S->AC.Gyro[Ig].Valid = TRUE;
       }
+      else
+         S->AC.Gyro[Ig].Valid = FALSE;
    }
 }
 /**********************************************************************/
@@ -174,7 +180,10 @@ void MagnetometerModel(struct SCType *S)
          MAG->Field = ((double)Counts) * MAG->Quant;
 
          S->AC.MAG[Imag].Field = MAG->Field;
+         S->AC.MAG[Imag].Valid = TRUE;
       }
+      else
+         S->AC.MAG[Imag].Valid = FALSE;
    }
 }
 /**********************************************************************/
@@ -227,9 +236,12 @@ void CssModel(struct SCType *S)
 #endif
 
          /* Copy into AC structure */
-         S->AC.CSS[Icss].Valid = CSS->Valid;
          S->AC.CSS[Icss].Illum = CSS->Illum;
       }
+      else
+         CSS->Valid = FALSE;
+
+      S->AC.CSS[Icss].Valid = CSS->Valid;
    }
 }
 /**********************************************************************/
@@ -259,11 +271,29 @@ void FssModel(struct SCType *S)
          }
          else {
             MxV(FSS->CB, S->svb, svs);
-            SunAng[0] = atan2(svs[FSS->H_Axis], svs[FSS->BoreAxis]);
-            SunAng[1] = atan2(svs[FSS->V_Axis], svs[FSS->BoreAxis]);
-            if (fabs(SunAng[0]) < FSS->FovHalfAng[0] &&
-                fabs(SunAng[1]) < FSS->FovHalfAng[1] &&
-                svs[FSS->BoreAxis] > 0.0) {
+            long fov_condition = TRUE;
+            const double svsh  = svs[FSS->H_Axis];
+            const double svsv  = svs[FSS->V_Axis];
+            const double svsb  = svs[FSS->BoreAxis];
+
+            switch (FSS->type) {
+               case CONVENTIONAL_FSS: {
+                  SunAng[0]     = atan2(svsh, svsb);
+                  SunAng[1]     = atan2(svsv, svsb);
+                  fov_condition = fabs(SunAng[0]) < FSS->FovHalfAng[0] &&
+                                  fabs(SunAng[1]) < FSS->FovHalfAng[1];
+               } break;
+               case GS_FSS: {
+                  SunAng[0]     = atan2(svsv, svsh);
+                  SunAng[1]     = atan2(sqrt(svsv * svsv + svsh * svsh), svsb);
+                  fov_condition = SunAng[0] < FSS->FovHalfAng[0];
+               } break;
+               default:
+                  fprintf(stderr, "Invalid FSS Type. How did it get this far? "
+                                  "Exiting...\n");
+                  exit(EXIT_FAILURE);
+            }
+            if (fov_condition && svs[FSS->BoreAxis] > 0.0) {
                FSS->Valid = TRUE;
             }
             else {
@@ -283,10 +313,13 @@ void FssModel(struct SCType *S)
             FSS->SunAng[1] = 0.0;
          }
 
-         S->AC.FSS[Ifss].Valid = FSS->Valid;
          for (i = 0; i < 2; i++)
             S->AC.FSS[Ifss].SunAng[i] = FSS->SunAng[i];
       }
+      else
+         FSS->Valid = FALSE;
+
+      S->AC.FSS[Ifss].Valid = FSS->Valid;
    }
 }
 /**********************************************************************/
@@ -331,7 +364,7 @@ void StarTrackerModel(struct SCType *S)
             ST->Valid = FALSE;
          /* Moon Occultation? (Only worked out if orbiting Earth.  Customize as
           * needed)*/
-         if (Orb[S->RefOrb].World == EARTH) {
+         if ((ST->Valid == TRUE) && (Orb[S->RefOrb].World == EARTH)) {
             for (i = 0; i < 3; i++)
                mvn[i] = World[LUNA].eph.PosN[i] - S->PosN[i];
             MoonDist = UNITV(mvn);
@@ -352,11 +385,14 @@ void StarTrackerModel(struct SCType *S)
             QxQ(Qnoise, qsn, ST->qn);
          }
 
-         S->AC.ST[Ist].Valid = ST->Valid;
          for (i = 0; i < 4; i++) {
             S->AC.ST[Ist].qn[i] = ST->qn[i];
          }
       }
+      else
+         ST->Valid = FALSE;
+
+      S->AC.ST[Ist].Valid = ST->Valid;
    }
 }
 /**********************************************************************/
@@ -369,8 +405,11 @@ void GpsModel(struct SCType *S)
    static long First = 1;
 
    if (First) {
-      First    = 0;
-      GpsNoise = CreateRandomProcess(2);
+      // TODO: AC->Time needs to be initialized before DsmSensorModule() is
+      // called, but not here if possible
+      S->AC.Time = DynTime;
+      First      = 0;
+      GpsNoise   = CreateRandomProcess(2);
    }
 
    if (Orb[S->RefOrb].World == EARTH) {
@@ -406,7 +445,6 @@ void GpsModel(struct SCType *S)
             GPS->Alt = MagPosW - World[EARTH].rad;
             ECEFToWGS84(GPS->PosW, &GPS->WgsLat, &GPS->WgsLng, &GPS->WgsAlt);
 
-            S->AC.GPS[Ig].Valid    = GPS->Valid;
             S->AC.GPS[Ig].Rollover = GPS->Rollover;
             S->AC.GPS[Ig].Week     = GPS->Week;
             S->AC.GPS[Ig].Sec      = GPS->Sec;
@@ -424,11 +462,17 @@ void GpsModel(struct SCType *S)
             S->AC.GPS[Ig].WgsLat = GPS->WgsLat;
             S->AC.GPS[Ig].WgsAlt = GPS->WgsAlt;
          }
+         else
+            GPS->Valid = FALSE;
+
+         S->AC.GPS[Ig].Valid = GPS->Valid;
       }
    }
    else {
-      for (Ig = 0; Ig < S->Ngps; Ig++)
-         S->GPS[Ig].Valid = FALSE;
+      for (Ig = 0; Ig < S->Ngps; Ig++) {
+         S->GPS[Ig].Valid    = FALSE;
+         S->AC.GPS[Ig].Valid = S->GPS[Ig].Valid;
+      }
    }
 }
 /**********************************************************************/
