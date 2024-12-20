@@ -28,8 +28,8 @@ option(SHADERS "Compile with shaders" ON)
 # Compile with SPICE -DSPICE=OFF
 option(SPICE "Compile with SPICE" ON)
 
-# Compile with Slosh -DCFDSLOSH=ON
-option(CFDSLOSH "Enable CFD slosh" OFF)
+# Compile with GSFC Watermark -DGSFC=ON
+option(GSFC "Enable GSFC Watermark" OFF)
 
 # Compile with Ac Standalone -DSTANDALONE=ON
 option(STANDALONE "Compile AcApp as standalone" OFF)
