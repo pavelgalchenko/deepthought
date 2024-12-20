@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.16)
 project(deepthought VERSION 1.0 LANGUAGES C)
 
 # specify c++ standard
-set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
@@ -54,6 +54,7 @@ endif()
 
 add_executable(deepthought)
 add_executable(Test EXCLUDE_FROM_ALL)
+link_libraries(m)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
