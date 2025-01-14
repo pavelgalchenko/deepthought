@@ -192,7 +192,7 @@ endif()
 # Configure 42kit with libfyaml publicly to share with targets
 # if something in deepthought is using yaml, it is also using iokit
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBFYAML REQUIRED libfyaml>=0.9)
+pkg_check_modules(LIBFYAML REQUIRED libfyaml>=0.8)
 target_include_directories(42kit PUBLIC kit/Include)
 target_include_directories(42kit PUBLIC ${LIBFYAML_INCLUDE_DIRS})
 target_link_directories(42kit PUBLIC ${LIBFYAML_LIBRARY_DIRS})
