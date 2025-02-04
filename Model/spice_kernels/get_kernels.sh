@@ -4,7 +4,7 @@
 GENERIC_KERNELS="pub/naif/generic_kernels"
 SPICE_URL="http://naif.jpl.nasa.gov/"
 wget_kernels(){
-    wget -m -nH --cut-dirs=5 -e robots=off --trust-server-names -R 'index.html*' -I "${GENERIC_KERNELS}/${1}/${2}" -nv "${SPICE_URL}${GENERIC_KERNELS}/${1}/${2}"
+    wget -m -nH --cut-dirs=5 -e robots=off --trust-server-names -R 'index.html*' -I "${GENERIC_KERNELS}/${1}/" -nv "${SPICE_URL}${GENERIC_KERNELS}/${1}/${2}"
 }
 
 leapsecond_kernels="naif0012.tls"

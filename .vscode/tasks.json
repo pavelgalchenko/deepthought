@@ -10,7 +10,8 @@
         "clear": false
     },
     "options": {
-        "cwd": "${workspaceRoot}"
+        "cwd": "${workspaceRoot}",
+        "environment": [],
     },
     "args": [
         "-c"
@@ -21,7 +22,9 @@
             "type": "shell",
             "group": "build",
             "args": [
-                "make clean && make -j"
+                "make",
+                "clean",
+                "--build"
             ]
         },
         {
@@ -29,30 +32,62 @@
             "type": "shell",
             "group": "build",
             "args": [
-                "make clean && make -j deploy"
+                "make",
+                "clean",
+                "--build"
             ]
         },
-        // {
-        //     "label": "profile build project",
-        //     "type": "shell",
-        //     "group": "build",
-        //     "args": [
-        //         "make clean && make -j profile"
-        //     ]
-        // },
-        // {
-        //     "label": "analyze project",
-        //     "type": "shell",
-        //     "args": [
-        //         "gprof ./42 gmon.out > analysis.txt"
-        //     ]
-        // },
+        {
+            "label": "profile build project",
+            "type": "shell",
+            "group": "build",
+            "args": [
+                "cmake",
+                "-DCMAKE_BUILD_TYPE=DEBUG",
+                // "-DCMAKE_CXX_FLAGS=-pg",
+                // "-DCMAKE_EXE_LINKER_FLAGS=-pg",
+                // "-DCMAKE_SHARED_LINKER_FLAGS=-pg",
+                // "-S",
+                // "-B",
+                "${workspaceFolder}",
+                "&&",
+                "make",
+                "-j"
+                // "--build"
+            ]
+        },
+        {
+            "label": "analyze project",
+            "type": "shell",
+            "args": [
+                "echo",
+                "${env:LD_PROFILE}",
+                "&&",
+                "gprof",
+                "./deepthought",
+                "gmon.out",
+                ">",
+                "dt_analysis.txt",
+                "&&",
+                "sprof",
+                "./Kit/${config:LD_PROFILE}",
+                "${config:LD_PROFILE}.profile",
+                ">",
+                "kit_analysis.txt"
+            ]
+        },
         {
             "label": "test project",
             "type": "shell",
             "group": "build",
             "args": [
-                "make clean && make -j Test GUIFLAG="
+                "make",
+                "clean",
+                "&&",
+                "make",
+                "-j",
+                "Test",
+                "GUIFLAG="
             ]
         },
     ]

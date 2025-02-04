@@ -5,7 +5,7 @@
    "version": "0.2.0",
    "configurations": [
       {
-         "name": "(lldb) Launch",
+         "name": "(gdb) Launch",
          "type": "cppdbg",
          "request": "launch",
          "program": "${workspaceFolder}/deepthought",
@@ -21,23 +21,23 @@
          "cwd": "${workspaceFolder}",
          "environment": [],
          "externalConsole": false,
-         "MIMode": "lldb",
+         "MIMode": "gdb",
          "preLaunchTask": "make project",
          "setupCommands": [
             {
-               "description": "Enable pretty-printing for lldb",
+               "description": "Enable pretty-printing for gdb",
                "text": "-enable-pretty-printing",
                "ignoreFailures": true
             },
             {
                "description": "Set Disassembly Flavor to Intel",
-               "text": "-lldb-set disassembly-flavor intel",
+               "text": "-gdb-set disassembly-flavor intel",
                "ignoreFailures": true
             }
          ]
       },
       {
-         "name": "(lldb) Deploy",
+         "name": "(gdb) Deploy",
          "type": "cppdbg",
          "request": "launch",
          "program": "${workspaceFolder}/deepthought",
@@ -53,56 +53,66 @@
          "cwd": "${workspaceFolder}",
          "environment": [],
          "externalConsole": false,
-         "MIMode": "lldb",
+         "MIMode": "gdb",
          "preLaunchTask": "make project opt",
          "setupCommands": [
             {
-               "description": "Enable pretty-printing for lldb",
+               "description": "Enable pretty-printing for gdb",
                "text": "-enable-pretty-printing",
                "ignoreFailures": true
             },
             {
                "description": "Set Disassembly Flavor to Intel",
-               "text": "-lldb-set disassembly-flavor intel",
+               "text": "-gdb-set disassembly-flavor intel",
                "ignoreFailures": true
             }
          ]
       },
-      // {
-      //    "name": "(lldb) Profile",
-      //    "type": "cppdbg",
-      //    "request": "launch",
-      //    "program": "${workspaceFolder}/42",
-      //    "args": [
-      //       "-d",
-      //       "Missions/DSM_DEMO",
-      //       "-o",
-      //       "Missions/DSM_DEMO/blah",
-      //       "-g",
-      //       "0",
-      //    ],
-      //    "stopAtEntry": false,
-      //    "cwd": "${workspaceFolder}",
-      //    "environment": [],
-      //    "externalConsole": false,
-      //    "MIMode": "lldb",
-      //    "preLaunchTask": "profile build project",
-      //    "setupCommands": [
-      //       {
-      //          "description": "Enable pretty-printing for lldb",
-      //          "text": "-enable-pretty-printing",
-      //          "ignoreFailures": true
-      //       },
-      //       {
-      //          "description": "Set Disassembly Flavor to Intel",
-      //          "text": "-lldb-set disassembly-flavor intel",
-      //          "ignoreFailures": true
-      //       },
-      //    ],
-      //    "postDebugTask": "analyze project",
-      // },
       {
-         "name": "(lldb) Test",
+         "name": "(gdb) Profile",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "/usr/bin/valgrind",
+         "args": [
+            "--tool=callgrind",
+            "${workspaceFolder}/deepthought",
+            "-d",
+            "${workspaceFolder}/Missions/simple_mission/",
+            "-o",
+            "${workspaceFolder}/Missions/simple_mission/blah",
+            "-g",
+            "0"
+         ],
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [
+            {
+               "name": "LD_PROFILE_OUTPUT",
+               "value": "${config:LD_PROFILE_OUTPUT}"
+            },
+            {
+               "name": "LD_PROFILE",
+               "value": "${config:LD_PROFILE}"
+            }
+         ],
+         "externalConsole": false,
+         "MIMode": "gdb",
+         "preLaunchTask": "profile build project",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for gdb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-gdb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            },
+         ]
+      },
+      {
+         "name": "(gdb) Test",
          "type": "cppdbg",
          "request": "launch",
          "program": "${workspaceFolder}/Test",
@@ -110,17 +120,17 @@
          "cwd": "${workspaceFolder}",
          "environment": [],
          "externalConsole": false,
-         "MIMode": "lldb",
+         "MIMode": "gdb",
          "preLaunchTask": "test project",
          "setupCommands": [
             {
-               "description": "Enable pretty-printing for lldb",
+               "description": "Enable pretty-printing for gdb",
                "text": "-enable-pretty-printing",
                "ignoreFailures": true
             },
             {
                "description": "Set Disassembly Flavor to Intel",
-               "text": "-lldb-set disassembly-flavor intel",
+               "text": "-gdb-set disassembly-flavor intel",
                "ignoreFailures": true
             }
          ]

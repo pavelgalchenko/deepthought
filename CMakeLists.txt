@@ -88,7 +88,7 @@ set(CMAKE_C_FLAGS "-fpic -Wall -Wshadow -Wno-deprecated " CACHE STRING "Set C Co
 
 
 # explicitly set compile flags for all, debug, and release
-set(CMAKE_C_FLAGS_DEBUG "-pg")
+set_target_properties(deepthought PROPERTIES CMAKE_C_FLAGS_DEBUG "-pg")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 
 if(C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
@@ -175,6 +175,7 @@ set(AC_SOURCES
     )
 
 add_library(42kit SHARED ${KIT_SOURCES})
+set_target_properties(42kit PROPERTIES CMAKE_C_FLAGS_DEBUG "-g")
 set_target_properties(42kit PROPERTIES LIBRARY_OUTPUT_DIRECTORY Kit)
 
 target_include_directories(deepthought PRIVATE kit/Include Include)
