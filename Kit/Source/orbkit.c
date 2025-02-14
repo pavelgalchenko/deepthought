@@ -2174,7 +2174,7 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
    double bary_p[3], bary_v[3];
    double r2_from_r1[3], v2_from_v1[3], xvec[3], yvec[3], zvec[3];
    double LU, VU;
-   //double TU;
+   // double TU;
    double magr, angmom, theta_dot;
    double CRN[3][3], StateCRN[6][6];
    double full_N_state[6], full_R_state[6];
@@ -2190,7 +2190,7 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
       v2_from_v1[i] = W2_vel[i];
 
    LU = LS->LU;
-   //TU = LS->TU;
+   // TU = LS->TU;
    VU = LS->VU;
 
    for (int i = 0; i < 3; i++)
@@ -2265,7 +2265,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
    double bary_p[3], bary_v[3];
    double r2_from_r1[3], v2_from_v1[3], xvec[3], yvec[3], zvec[3];
    double LU, VU;
-   //double TU;
+   // double TU;
    double magr, angmom, theta_dot;
    double CRN[3][3], StateCRN[6][6], StateCNR[6][6];
    double full_N_state[6], full_R_state[6];
@@ -2281,7 +2281,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
       v2_from_v1[i] = W2_vel[i];
 
    LU = LS->LU;
-   //TU = LS->TU;
+   // TU = LS->TU;
    VU = LS->VU;
 
    for (int i = 0; i < 3; i++)

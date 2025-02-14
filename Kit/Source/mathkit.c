@@ -619,13 +619,39 @@ double fact(long const n)
 /**********************************************************************/
 double oddfact(long const n)
 {
-   double F = 1.0;
-   long i;
+   static double *memo   = NULL;
+   static long memo_size = 0;
+   if (n < 0) {
+      fprintf(stderr, "oddfact: argument out of range. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   if (memo == NULL && n > 0) {
+      memo_size = 2;
+      memo      = calloc(memo_size, sizeof(double));
+      if (memo == NULL) {
+         fprintf(stderr, "oddfact: memory allocation failed. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      memo[0] = 1.0;
+      memo[1] = 1.0;
+   }
 
-   for (i = 1; i <= n; i += 2)
-      F *= i;
-
-   return F;
+   if (n >= memo_size) {
+      double *tmp = realloc(memo, (n + 1) * sizeof(double));
+      if (tmp == NULL) {
+         fprintf(stderr, "oddfact: memory allocation failed. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      memo = tmp;
+      for (long i = memo_size; i <= n; i++) {
+         if (i % 2 == 0)
+            memo[i] = 1.0;
+         else
+            memo[i] = i * memo[i - 2];
+      }
+      memo_size = n + 1;
+   }
+   return memo[n];
 }
 /**********************************************************************/
 /*  Compute fact(n)/fact(m), where n > m                              */
@@ -781,19 +807,25 @@ void SphericalHarmonics(const long N, const long M, const double r,
 }
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
-void MxMG(double **A, double **B, double **C, const long N, const long K,
-          const long M)
+void MxMG(double **A, double **B, double **C, const int N, const int K,
+          const int M)
 {
-   long i, j, k;
 
-   for (i = 0; i < N; i++) {
-      for (j = 0; j < M; j++) {
+   // transpose B for better cache locality
+   double **BT = CreateMatrix(M, K);
+   for (int i = 0; i < M; i++)
+      for (int j = 0; j < K; j++)
+         BT[i][j] = B[j][i];
+
+   for (int i = 0; i < N; i++) {
+      for (int j = 0; j < M; j++) {
          C[i][j] = 0.0;
-         for (k = 0; k < K; k++) {
-            C[i][j] += A[i][k] * B[k][j];
+         for (int k = 0; k < K; k++) {
+            C[i][j] += A[i][k] * BT[j][k];
          }
       }
    }
+   DestroyMatrix(BT);
 }
 /**********************************************************************/
 /*  A is NxK, B is MxK, C is NxM                                      */
@@ -1024,12 +1056,12 @@ double **CreateMatrix(const long n, const long m)
    // Guarantee the allocation for A is a contiguous block
    A = (double **)malloc(sizeof(double *) * n);
    if (A == NULL) {
-      fprintf(stderr,"malloc failed in CreateMatrix.  Bailing out.\n");
+      fprintf(stderr, "malloc failed in CreateMatrix.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    A[0] = (double *)calloc(n * m, sizeof(double));
    if (A[0] == NULL) {
-      fprintf(stderr,"calloc failed in CreateMatrix.  Bailing out.\n");
+      fprintf(stderr, "calloc failed in CreateMatrix.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    for (i = 1; i < n; i++)
@@ -1782,11 +1814,11 @@ double CubicSpline(double x, double X[4], double Y[4])
    u = (x - X[1]) / (X[2] - X[1]);
 
    if (isnan(u)) {
-      fprintf(stderr,"Bad spline interval in CubicSpline.\n");
+      fprintf(stderr, "Bad spline interval in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
    if (u < 0.0 || u > 1.0) {
-      fprintf(stderr,"Interpolant out of range in CubicSpline.\n");
+      fprintf(stderr, "Interpolant out of range in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1804,7 +1836,7 @@ double CubicSpline(double x, double X[4], double Y[4])
 
    Det = (u3 - 1.0) * (u0 - 1.0) * (u3 - u0) * u0 * u3;
    if (fabs(Det) < 1.0E-9) {
-      fprintf(stderr,"Matrix is close to singular in CubicSpline.\n");
+      fprintf(stderr, "Matrix is close to singular in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
    a = Y[1];
@@ -1823,11 +1855,11 @@ void ChebyPolys(double u, long n, double T[20], double U[20])
    long k;
 
    if (u < -1.0 || u > 1.0) {
-      fprintf(stderr,"u out of range in ChebPolys.  Bailing out.\n");
+      fprintf(stderr, "u out of range in ChebPolys.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    if (n > 20) {
-      fprintf(stderr,"n out of range in ChebPolys.  Bailing out.\n");
+      fprintf(stderr, "n out of range in ChebPolys.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1848,7 +1880,7 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
    long k;
 
    if (n > 20) {
-      fprintf(stderr,"n out of range in ChebyInterp.  Bailing out.\n");
+      fprintf(stderr, "n out of range in ChebyInterp.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1867,7 +1899,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
    double **AtA, *x, *Atb;
 
    if (Nc > 20) {
-    fprintf(stderr,"Nc out of range in FindChebyCoefs.  Bailing out.\n");
+      fprintf(stderr, "Nc out of range in FindChebyCoefs.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 

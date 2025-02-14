@@ -4333,7 +4333,7 @@ void Dynamics(struct SCType *S)
          OrderNMultiBodyRK4(S);
          break;
       default:
-         fprintf(stderr,"Unknown Dynamics Solution option.  Bailing out.\n");
+         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
    //}
@@ -4379,7 +4379,7 @@ void Dynamics(struct SCType *S)
          }
          break;
       default:
-         fprintf(stderr,"Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
 }

@@ -7,6 +7,7 @@ project(deepthought VERSION 1.0 LANGUAGES C)
 # specify c++ standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
 if (CMAKE_SYSTEM_NAME EQUAL "Windows")

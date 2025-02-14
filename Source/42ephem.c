@@ -26,7 +26,7 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    long i;
 
    if (Iorb < 0 || Iorb >= Norb) {
-      fprintf(stderr,"Desired orbit is out of bounds.\n");
+      fprintf(stderr, "Desired orbit is out of bounds.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -35,8 +35,9 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    NewOrb->Exists = TRUE;
 
    if (NewOrb->World != OldOrb->World) {
-      fprintf(stderr,"New Orbit and Old Orbit must (for the present) be in same "
-             "gravitational system.\n");
+      fprintf(stderr,
+              "New Orbit and Old Orbit must (for the present) be in same "
+              "gravitational system.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -424,7 +425,7 @@ void SplineToPosVel(struct OrbitType *O)
          O->NodeVel[3][j] *= 1000.0;
       }
       if (feof(O->SplineFile)) {
-         fprintf(stderr,"Oops.  Reached end of Spline file.\n");
+         fprintf(stderr, "Oops.  Reached end of Spline file.\n");
          exit(EXIT_FAILURE);
       }
    }
@@ -460,7 +461,7 @@ void SplineToPosVel(struct OrbitType *O)
       }
    }
    else {
-      fprintf(stderr,"Invalid Orbit Regime in SplineToPosVel.\n");
+      fprintf(stderr, "Invalid Orbit Regime in SplineToPosVel.\n");
       exit(EXIT_FAILURE);
    }
 }
@@ -542,7 +543,8 @@ void OrbitMotion(double Time)
                FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
                break;
             default:
-               fprintf(stderr,"Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
+               fprintf(stderr,
+                       "Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
                exit(EXIT_FAILURE);
          }
 
@@ -693,7 +695,7 @@ void Ephemerides(void)
    }
 #endif
    else {
-      fprintf(stderr,"Bogus Ephem Option in Ephemerides.  Bailing out.\n");
+      fprintf(stderr, "Bogus Ephem Option in Ephemerides.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 

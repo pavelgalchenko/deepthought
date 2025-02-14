@@ -207,7 +207,7 @@ double SpikyKernel(double r, double h, long Ndim)
          K = 15.0 / (64.0 * PI * h * h * h);
          break;
       default:
-         fprintf(stderr,"Bad Ndim = %ld in SpikyKernel\n", Ndim);
+         fprintf(stderr, "Bad Ndim = %ld in SpikyKernel\n", Ndim);
          exit(EXIT_FAILURE);
    }
 
@@ -234,7 +234,7 @@ double SpikyGradKernel(double r, double h, long Ndim)
          K = -45.0 / (64.0 * PI * h * h * h);
          break;
       default:
-         fprintf(stderr,"Bad Ndim = %ld in SpikyGradKernel\n", Ndim);
+         fprintf(stderr, "Bad Ndim = %ld in SpikyGradKernel\n", Ndim);
          exit(EXIT_FAILURE);
    }
 

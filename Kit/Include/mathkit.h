@@ -84,8 +84,8 @@ void Legendre(const long N, const long M, const double x,
 void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
                         double **C, double **S, double **Norm, double gradV[3]);
-void MxMG(double **A, double **B, double **C, const long N, const long K,
-          const long M);
+void MxMG(double **A, double **B, double **C, const int N, const int K,
+          const int M);
 void MxMTG(double **A, double **B, double **C, const long N, const long K,
            const long M);
 void MTxMG(double **A, double **B, double **C, const long N, const long K,
