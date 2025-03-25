@@ -9,7 +9,7 @@ wget_kernels(){
 
 leapsecond_kernels="naif0012.tls"
 planet_kernels="de440.bsp de430.bsp"
-satellite_kernels="mar097.bsp jup344.bsp jup365.bsp sat415.bsp sat441.bsp ura111l.bsp nep097.bsp a_old_versions/nep101.bsp plu060.bsp"
+satellite_kernels="mar097.bsp jup344.bsp jup365.bsp sat415.bsp sat441.bsp a_old_versions/ura111l.bsp nep097.bsp a_old_versions/nep101.bsp plu060.bsp"
 planetary_constants_kernels="pck00010.tpc Gravity.tpc"
 
 BASEDIR=$(dirname $0)

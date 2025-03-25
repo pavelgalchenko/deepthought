@@ -5892,26 +5892,41 @@ long LoadSpiceEphems(double JS)
    int i;
    double CNJ[3][3];
 
-   char MajorBodiesNamesState[55][15] = {
-       "SUN",        "MERCURY",  "VENUS",     "EARTH",
-       "MARS",       "JUPITER",  "SATURN",    "URANUS",
-       "NEPTUNE",    "PLUTO",    "MOON",      "PHOBOS",
-       "DEIMOS",     "IO",       "EUROPA",    "GANYMEDE",
-       "CALLISTO",   "AMALTHEA", "HIMALIA",   "ELARA",
-       "PASIPHAE",   "SINOPE",   "LYSITHEA",  "CARME",
-       "ANANKE",     "LEDA",     "THEBE",     "ADRASTEA",
-       "METIS",      "MIMAS",    "ENCELADUS", "TETHYS",
-       "DIONE",      "RHEA",     "TITAN",     "HYPERION",
-       "IAPETUS",    "PHOEBE",   "JANUS",     "EPIMETHEUS",
-       "HELENE",     "TELESTO",  "CALYPSO",   "ATLAS",
-       "PROMETHEUS", "PANDORA",  "PAN",       "ARIEL",
-       "UMBRIEL",    "TITANIA",  "OBERON",    "MIRANDA",
-       "TRITON",     "NEREID",   "CHARON"}; // names of "major" bodies
+   static SpiceInt major_bodies_naif_state[55] = {0};
+   static int first                            = FALSE;
+
+   if (!first) {
+      const char MajorBodiesNamesState[55][15] = {
+          "SUN",        "MERCURY",  "VENUS",     "EARTH",
+          "MARS",       "JUPITER",  "SATURN",    "URANUS",
+          "NEPTUNE",    "PLUTO",    "MOON",      "PHOBOS",
+          "DEIMOS",     "IO",       "EUROPA",    "GANYMEDE",
+          "CALLISTO",   "AMALTHEA", "HIMALIA",   "ELARA",
+          "PASIPHAE",   "SINOPE",   "LYSITHEA",  "CARME",
+          "ANANKE",     "LEDA",     "THEBE",     "ADRASTEA",
+          "METIS",      "MIMAS",    "ENCELADUS", "TETHYS",
+          "DIONE",      "RHEA",     "TITAN",     "HYPERION",
+          "IAPETUS",    "PHOEBE",   "JANUS",     "EPIMETHEUS",
+          "HELENE",     "TELESTO",  "CALYPSO",   "ATLAS",
+          "PROMETHEUS", "PANDORA",  "PAN",       "ARIEL",
+          "UMBRIEL",    "TITANIA",  "OBERON",    "MIRANDA",
+          "TRITON",     "NEREID",   "CHARON"}; // names of "major" bodies
+      for (i = 0; i < 55; i++) {
+         SpiceBoolean found = FALSE;
+         bodn2c_c(MajorBodiesNamesState[i], &major_bodies_naif_state[i],
+                  &found);
+         if (!found) {
+            fprintf(stderr, "Could not find NAIF ID for body %s. Exiting...\n",
+                    MajorBodiesNamesState[i]);
+            exit(EXIT_FAILURE);
+         }
+      }
+   }
 
    // Some smaller moons do not have valid orientation data.
    // We replace these with the orientation of their planet
 
-   char MajorBodiesNamesOrientation[55][15] = {
+   const char MajorBodiesNamesOrientation[55][15] = {
        "SUN",       "MERCURY",  "VENUS",    "EARTH",   "MARS",
        "JUPITER",   "SATURN",   "URANUS",   "NEPTUNE", "PLUTO",
        "MOON",      "PHOBOS",   "DEIMOS",   "IO",      "EUROPA",
@@ -5941,9 +5956,9 @@ long LoadSpiceEphems(double JS)
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
       W   = &World[Iw];
       Eph = &W->eph;
-      spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-               Nstate,
-               &light_time); // State of major bodies in J2000 wrt Sun center
+      spkez_c(major_bodies_naif_state[Iw], JS, "ECLIPJ2000", "NONE",
+              major_bodies_naif_state[0], Nstate,
+              &light_time); // State of major bodies in J2000 wrt Sun center
 
       for (i = 0; i < 3; i++) {
          Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
@@ -5980,15 +5995,15 @@ long LoadSpiceEphems(double JS)
             W   = &World[Iw];
             Eph = &W->eph;
 
-            spkezr_c(
-                MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-                Hstate,
+            spkez_c(
+                major_bodies_naif_state[Iw], JS, "ECLIPJ2000", "NONE",
+                major_bodies_naif_state[0], Hstate,
                 &light_time); // State of major bodies in J2000 wrt Sun center
 
-            spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE",
-                     MajorBodiesNamesState[Ip], Nstate,
-                     &light_time); // State of major bodies in J2000 wrt Planet
-                                   // center
+            spkez_c(major_bodies_naif_state[Iw], JS, "ECLIPJ2000", "NONE",
+                    major_bodies_naif_state[Ip], Nstate,
+                    &light_time); // State of major bodies in J2000 wrt Planet
+                                  // center
 
             for (i = 0; i < 3; i++) {
                Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)

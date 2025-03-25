@@ -16,7 +16,7 @@ KERNELS_TO_LOAD = ( '$LSK/naif0012.tls'
 					'$SPK_SATS/jup365.bsp',
 					'$SPK_SATS/sat415.bsp',
 					'$SPK_SATS/sat441.bsp',
-					'$SPK_SATS/ura111l.bsp',
+					'$SPK_SATS/a_old_versions/ura111l.bsp',
 					'$SPK_SATS/nep097.bsp',
 					'$SPK_SATS/a_old_versions/nep101.bsp',
 					'$SPK_SATS/plu060.bsp',
