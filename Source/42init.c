@@ -6147,8 +6147,10 @@ void InitSim(int argc, char **argv)
    DIR *ModelDir;
 
 #ifdef __linux__
-   strcpy(ExeDir, realpath("/proc/self/exe", NULL));
+   char *real_path = realpath("/proc/self/exe", NULL);
+   strcpy(ExeDir, real_path);
    ret = strrchr(ExeDir, '/');
+   free(real_path);
 #elif defined __MINGW32__
    GetModuleFileName(NULL, tempargs, sizeof(tempargs));
    _fullpath(ExeDir, tempargs, sizeof(tempargs));
