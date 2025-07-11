@@ -501,7 +501,7 @@ void OrbitMotion(double Time)
                SplineToPosVel(O);
             }
          }
-         else if (O->Regime == ORB_CENTRAL) {
+         else if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
             if (O->SplineActive)
                SplineToPosVel(O);
             else if (O->J2DriftEnabled)
@@ -533,6 +533,7 @@ void OrbitMotion(double Time)
                }
                FindENU(O->PosN, World[O->World].w, O->CLN, O->wln);
                break;
+            case ORB_N_BODY:
             case ORB_CENTRAL:
                /* L is LVLH */
                FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
@@ -559,137 +560,31 @@ void OrbitMotion(double Time)
 /**********************************************************************/
 void Ephemerides(void)
 {
-
-   struct OrbitType *Eph;
    struct OrbitType *O;
    struct WorldType *W;
    struct RegionType *R;
    struct SCType *S;
    double svh[3], p, pvn[3], SoP, Rp;
-   double r1[3], rh[3], vh[3];
    double ptn[10][3], vtn[10][3], ptw[3];
-   double ZAxis[3] = {0.0, 0.0, 1.0};
-   double EarthMoonBaryPosH[3], EarthMoonBaryVelH[3];
    struct LagrangeSystemType *LS;
-   long i, j, Ip, Iw, Imb, Ir, Isc;
-   long Ic;
-   struct Cheb3DType *C;
-   double u, dudJD, T[20], U[20], P, dPdu;
-   double EMRAT = 81.30056907419062; /* Earth-Moon mass ratio */
-   double PosJ[3], VelJ[3];
+   long i, j, Ir, Isc;
    double MagR1, MeanMotion;
 
    /* .. Locate Planets and Luna */
    if (EphemOption == EPH_MEAN) {
-      for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
-         if (World[Ip].Exists) {
-            W = &World[Ip];
-            /* Call PlanetEphemerides again only for
-               ridiculously high accuracy or rather long sims (years) */
-            /*PlanetEphemerides(i,JulDay,... */
-            Eph = &W->eph;
-            Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                   DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-            for (j = 0; j < 3; j++) {
-               W->PosH[j] = Eph->PosN[j];
-               W->VelH[j] = Eph->VelN[j];
-            }
-            W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * DynTime, TwoPi);
-            SimpRot(ZAxis, W->PriMerAng, W->CWN);
-         }
-      }
-      if (World[LUNA].Exists) {
-         Eph = &World[LUNA].eph;
-         /* Meeus computes Luna Position in geocentric ecliptic */
-         LunaPosition(TT.JulDay, rh);
-         LunaPosition(TT.JulDay + 0.01, r1);
-         for (j = 0; j < 3; j++)
-            vh[j] = (r1[j] - rh[j]) / (864.0);
-         /* Convert to Earth's N frame */
-         MxV(World[EARTH].CNH, rh, Eph->PosN);
-         MxV(World[EARTH].CNH, vh, Eph->VelN);
-         /* Find Luna's osculating elements */
-         RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-                &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp,
-                &Eph->SLR, &Eph->alpha, &Eph->rmin, &Eph->MeanMotion,
-                &Eph->Period);
-         World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
-         SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
-         for (j = 0; j < 3; j++) {
-            World[LUNA].PosH[j] = rh[j] + World[EARTH].PosH[j];
-            World[LUNA].VelH[j] = vh[j] + World[EARTH].VelH[j];
-         }
-      }
+      /* Moved Mean Ephem calculations to function in 42int.c, cleaner build */
+      UpdateMeanEphems();
    }
-   else if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440) {
-      /* Update DE430 block if needed */
-      if (TT.JulDay > World[SOL].eph.Cheb[1].JD2)
-         LoadJplEphems(ModelPath, TT.JulDay);
-      for (Iw = SOL; Iw <= LUNA; Iw++) {
-         W   = &World[Iw];
-         Eph = &W->eph;
-         /* Determine segment */
-         Ic = 0;
-         while (TT.JulDay > Eph->Cheb[Ic].JD2)
-            Ic++;
-         /* Apply Chebyshev polynomials */
-         C     = &Eph->Cheb[Ic];
-         dudJD = 2.0 / (C->JD2 - C->JD1);
-         u     = (TT.JulDay - C->JD1) * dudJD - 1.0;
-         ChebyPolys(u, C->N, T, U);
-         for (i = 0; i < 3; i++) {
-            ChebyInterp(T, U, C->Coef[i], C->N, &P, &dPdu);
-            PosJ[i] = 1000.0 * P;
-            VelJ[i] = 1000.0 * dPdu * dudJD / 86400.0;
-         }
-         QTxV(qjh, PosJ, Eph->PosN);
-         QTxV(qjh, VelJ, Eph->VelN);
-      }
-      /* Adjust for barycenters */
-      /* Move planets from barycentric to Sun-centered */
-      for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-         W = &World[Iw];
-         for (i = 0; i < 3; i++) {
-            W->eph.PosN[i] -= World[SOL].eph.PosN[i];
-            W->eph.VelN[i] -= World[SOL].eph.VelN[i];
-            W->PosH[i]      = W->eph.PosN[i];
-            W->VelH[i]      = W->eph.VelN[i];
-         }
-         W->PriMerAng = fmod(W->w * DynTime, TwoPi);
-         SimpRot(ZAxis, W->PriMerAng, W->CWN);
-      }
-      /* Move Sun to origin */
-      for (i = 0; i < 3; i++) {
-         World[SOL].PosH[i]     = 0.0;
-         World[SOL].VelH[i]     = 0.0;
-         World[SOL].eph.PosN[i] = 0.0;
-         World[SOL].eph.VelN[i] = 0.0;
-      }
-      /* Adjust Earth from Earth-Moon barycenter */
-      /* (Moon PosVel is geocentric, not from barycenter) */
-      for (i = 0; i < 3; i++) {
-         EarthMoonBaryPosH[i]      = World[EARTH].eph.PosN[i];
-         EarthMoonBaryVelH[i]      = World[EARTH].eph.VelN[i];
-         World[EARTH].eph.PosN[i] -= World[LUNA].eph.PosN[i] / (1.0 + EMRAT);
-         World[EARTH].eph.VelN[i] -= World[LUNA].eph.VelN[i] / (1.0 + EMRAT);
-         World[EARTH].PosH[i]      = World[EARTH].eph.PosN[i];
-         World[EARTH].VelH[i]      = World[EARTH].eph.VelN[i];
-      }
-      for (i = 0; i < 3; i++) {
-         rh[i]               = World[LUNA].eph.PosN[i];
-         vh[i]               = World[LUNA].eph.VelN[i];
-         World[LUNA].PosH[i] = World[EARTH].PosH[i] + World[LUNA].eph.PosN[i];
-         World[LUNA].VelH[i] = World[EARTH].VelH[i] + World[LUNA].eph.VelN[i];
-      }
-      /* Rotate Moon into ECI */
-      QxV(qjh, rh, World[LUNA].eph.PosN);
-      QxV(qjh, vh, World[LUNA].eph.VelN);
-      World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
-      SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
+   /* Moved JPL Ephem calculations to functions in 42int.c, cleaner build */
+   else if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 || 
+            EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
+      /* Update DE block if needed */
+      if (TT.JulDay > World[SOL].eph.Cheb[1].JD2) LoadJplEphems(ModelPath, TT.JulDay);
+      UpdateJplEphems();
    }
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE) {
-      LoadSpiceEphems(DynTime);
+      UpdateSpiceEphems(DynTime);
    }
 #endif
    else {
@@ -697,56 +592,16 @@ void Ephemerides(void)
       exit(EXIT_FAILURE);
    }
 
-   /* .. Locate Asteroids and Comets */
-   for (Imb = 0; Imb < Nmb; Imb++) {
-      if (World[55 + Imb].Exists) {
-         W   = &World[55 + Imb];
-         Eph = &W->eph;
-         Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-         for (j = 0; j < 3; j++) {
-            W->PosH[j] = Eph->PosN[j];
-            W->VelH[j] = Eph->VelN[j];
-         }
-         W->PriMerAng = fmod(W->w * DynTime, TwoPi);
-         SimpRot(ZAxis, W->PriMerAng, W->CWN);
-      }
-   }
-
-   if (EphemOption != EPH_SPICE) {
-      // If we use SPICE, all rotations are handled via SPICE
-      /* .. Earth rotation is a special case */
-      double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
-             C_TETE_J2000[3][3] = {{0.0}};
-      double GMST               = JD2GMST(UTC.JulDay);
-      World[EARTH].PriMerAng    = TwoPi * GMST;
-      HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-      SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
-      MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
-
-      /* .. Other planets' moons */
-      for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
-         if (Ip != EARTH && World[Ip].Exists) {
-            for (long Im = 0; Im < World[Ip].Nsat; Im++) {
-               Iw  = World[Ip].Sat[Im];
-               Eph = &World[Iw].eph;
-               Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN,
-                      Eph->ArgP, DynTime - Eph->tp, Eph->PosN, Eph->VelN,
-                      &Eph->anom);
-               World[Iw].PriMerAng = fmod(World[Iw].w * DynTime, TwoPi);
-               SimpRot(ZAxis, World[Iw].PriMerAng, World[Iw].CWN);
-               MTxV(World[Ip].CNH, Eph->PosN, rh);
-               MTxV(World[Ip].CNH, Eph->VelN, vh);
-               for (i = 0; i < 3; i++) {
-                  World[Iw].PosH[i] = rh[i] + World[Ip].PosH[i];
-                  World[Iw].VelH[i] = vh[i] + World[Ip].VelH[i];
-               }
-            }
-         }
-      }
-   }
+   /* Moved non ephem calculations to functions in 42int.c, cleaner build */
+   UpdateMinorBodies();
+   if (EphemOption != EPH_SPICE) UpdateNonEphemMoons();
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
+   /* Updates some Lagrange point parameters, can help get a more accurate CLN
+      but can sometimes cause UnitV errors that make plotting more difficult*/
+
+   // // Updating Lagrange Points may help with plotting, needs further testing
+   // UpdateLagrangePoints();
    for (i = 0; i < 3; i++) {
       LS = &LagSys[i];
       if (LS->Exists) {
@@ -806,7 +661,7 @@ void Ephemerides(void)
             }
             FindENU(S->PosN, W->w, S->CLN, S->wln);
          }
-         else if (O->Regime == ORB_CENTRAL) {
+         else if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
             if (S->OrbDOF == ORBDOF_COWELL) {
                for (j = 0; j < 3; j++) {
                   S->PosR[j] = S->PosN[j] - O->PosN[j];

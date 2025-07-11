@@ -405,6 +405,110 @@ void DSM_StateRot3BodyReport(void)
    }
 }
 /*********************************************************************/
+void DSM_PosHReport(void)
+{
+   static FILE **poshfile;
+   static long First = 1;
+   long Isc;
+   char s[50];
+
+   if (First) {
+      poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+               sprintf(s, "DSM_PosH_%02li.42", Isc);
+               poshfile[Isc] = FileOpen(OutPath, s, "wt");
+               fprintf(poshfile[Isc], "Earth_EC_X Earth_EC_Y Earth_EC_Z ");
+               fprintf(poshfile[Isc], "LUNA_EC_X LUNA_EC_Y LUNA_EC_Z ");
+               fprintf(poshfile[Isc], "SC_EC_X SC_EC_Y SC_EC_Z ");
+               fprintf(poshfile[Isc], "LUNA_EQ_X LUNA_EQ_Y LUNA_EQ_Z ");
+               fprintf(poshfile[Isc], "SC_EQ_X SC_EQ_Y SC_EQ_Z ");
+               fprintf(poshfile[Isc], "\n");
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[EARTH].PosH[0],
+                    World[EARTH].PosH[1], World[EARTH].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[LUNA].PosH[0],
+                    World[LUNA].PosH[1], World[LUNA].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[Isc].PosH[0],
+                    SC[Isc].PosH[1], SC[Isc].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[LUNA].eph.PosN[0],
+                    World[LUNA].eph.PosN[1], World[LUNA].eph.PosN[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[Isc].PosN[0],
+                    SC[Isc].PosN[1], SC[Isc].PosN[2]);
+            fprintf(poshfile[Isc], "\n");
+      }
+      fflush(poshfile[Isc]);
+   }
+}
+// TODO: REWORK TO BE CORRECT FOR ALL LS
+/*********************************************************************/
+void DSM_Rot3BodyReport(void)
+{
+   static FILE **rotfile;
+   static long First = 1;
+   long Isc;
+   char s[50];
+   double posRel[3], posRot[3], velRel[3], velRot[3], DCM[3][3];
+   struct LagrangeSystemType *LS;
+   double z_axis[3] = {0,0,1}, ang_rot = M_PI;
+
+   if (First) {
+      rotfile = (FILE **)calloc(Nsc, sizeof(FILE *));
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         if (SC[Isc].Exists) {
+            LS = &LagSys[EARTHMOON];
+            if (LS->Exists) {
+               sprintf(s, "DSM_Rot3Body_%02li.42", Isc);
+               rotfile[Isc] = FileOpen(OutPath, s, "wt");
+               fprintf(rotfile[Isc], "PosR_X PosR_Y PosR_Z ");
+               fprintf(rotfile[Isc], "VelR_X VelR_Y VelR_Z ");
+               fprintf(rotfile[Isc], "\n");
+            }
+         }
+      }
+      First = 0;
+   }
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      if (SC[Isc].Exists) {
+         LS = &LagSys[EARTHMOON];
+         if (LS->Exists) {
+            if (Orb[SC[Isc].RefOrb].World == LUNA) {
+               for (int i = 0; i < 3; ++i)
+               {
+                  posRel[i] = SC[Isc].PosN[i];
+                  velRel[i] = SC[Isc].VelN[i];
+               }
+            }
+            else {
+               for (int i = 0; i < 3; ++i)
+               {
+                  posRel[i] = SC[Isc].PosN[i]-World[LUNA].eph.PosN[i];
+                  velRel[i] = SC[Isc].VelN[i]-World[LUNA].eph.VelN[i];
+               }
+            }
+            MxV(LS->CLN,posRel,posRot);
+            MxV(LS->CLN,velRel,velRot);
+            SimpRot(z_axis,ang_rot,DCM);
+            MxV(DCM,posRot,posRot);
+            MxV(DCM,velRot,velRot);
+            fprintf(rotfile[Isc], "%18.36le %18.36le %18.36le ", posRot[0],
+                    posRot[1], posRot[2]);
+            fprintf(rotfile[Isc], "%18.36le %18.36le %18.36le ", velRot[0],
+                    velRot[1], velRot[2]);
+            fprintf(rotfile[Isc], "\n");
+         }
+      }
+      fflush(rotfile[Isc]);
+   }
+}
+/*********************************************************************/
 void DSM_NAV_StateReport(void)
 {
    static FILE **stateFile, **covFile, **timeFile;
@@ -1052,6 +1156,7 @@ void Report(void)
    static FILE *PosNfile, *VelNfile, *qbnfile, *wbnfile;
    static FILE *PosWfile, *VelWfile;
    static FILE *PosRfile, *VelRfile;
+   static FILE *bvnfile, *bvbfile;
    static FILE *Hvnfile, *KEfile;
    static FILE *Hvbfile;
    static FILE *svnfile, *svbfile;
@@ -1116,6 +1221,8 @@ void Report(void)
       VelRfile = FileOpen(OutPath, "VelR.42", "w");
       qbnfile  = FileOpen(OutPath, "qbn.42", "w");
       wbnfile  = FileOpen(OutPath, "wbn.42", "w");
+      bvnfile  = FileOpen(OutPath, "bvn.42", "w");
+      bvbfile  = FileOpen(OutPath, "bvb.42", "w");
       Hvnfile  = FileOpen(OutPath, "Hvn.42", "w");
       Hvbfile  = FileOpen(OutPath, "Hvb.42", "w");
       svnfile  = FileOpen(OutPath, "svn.42", "w");
@@ -1210,6 +1317,8 @@ void Report(void)
                  SC[0].B[0].qn[1], SC[0].B[0].qn[2], SC[0].B[0].qn[3]);
          fprintf(wbnfile, "%le %le %le\n", SC[0].B[0].wn[0], SC[0].B[0].wn[1],
                  SC[0].B[0].wn[2]);
+         fprintf(bvnfile, "%le %le %le\n", SC[0].bvn[0], SC[0].bvn[1], SC[0].bvn[2]);
+         fprintf(bvbfile, "%le %le %le\n", SC[0].bvb[0], SC[0].bvb[1], SC[0].bvb[2]);
          fprintf(Hvnfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvn[0],
                  SC[0].Hvn[1], SC[0].Hvn[2]);
          fprintf(Hvbfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvb[0],
@@ -1283,6 +1392,8 @@ void Report(void)
             DSM_SVBReport();
             // DSM_GroundTrackReport();
             DSM_StateRot3BodyReport();
+            DSM_PosHReport();
+            DSM_Rot3BodyReport();
          }
       }
    }

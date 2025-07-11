@@ -3955,6 +3955,71 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass,
    udot[5] = Frc[2] / mass - muR3 * u[2];
 }
 /**********************************************************************/
+void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
+               double Frc[3], struct SCType *S, double RKFdt)
+{
+   double r, muR3;
+   double gravpertFrcN[3] = {0};
+
+   r    = MAGV(u);
+   muR3 = mu / (r * r * r);
+
+   /* .. Gravity Perturbation Forces */
+   if (GravPertActive) GravPertForceRK4(S,u,gravpertFrcN,RKFdt);
+
+   udot[0] = u[3];
+   udot[1] = u[4];
+   udot[2] = u[5];
+   udot[3] = (Frc[0] + gravpertFrcN[0]) / mass - muR3 * u[0];
+   udot[4] = (Frc[1] + gravpertFrcN[1]) / mass - muR3 * u[1];
+   udot[5] = (Frc[2] + gravpertFrcN[2]) / mass - muR3 * u[2];
+}
+/**********************************************************************/
+/* Integration of orbital equations of motion using Cowell's method   */
+/* by 4th order Runge-Kutta                                           */
+void CowellRK4Mrk2(struct SCType *S)
+{
+   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
+   double dt0, dt1, dt2, dt3;
+   long j;
+   struct OrbitType *O;
+
+   O = &Orb[S->RefOrb];
+
+   u[0] = S->PosN[0];
+   u[1] = S->PosN[1];
+   u[2] = S->PosN[2];
+   u[3] = S->VelN[0];
+   u[4] = S->VelN[1];
+   u[5] = S->VelN[2];
+
+   dt0 = 0.0;
+   dt1 = 0.5 * DTSIM;
+   dt2 = 0.5 * DTSIM;
+   dt3 = DTSIM;
+
+   /* .. 4th Order Runga-Kutta Integration */
+   CowellEOMMrk2(u, m1, O->mu, S->mass, S->FrcN, S, dt0);
+   for (j = 0; j < 6; j++)
+      uu[j] = u[j] + dt1 * m1[j];
+   CowellEOMMrk2(uu, m2, O->mu, S->mass, S->FrcN, S, dt1);
+   for (j = 0; j < 6; j++)
+      uu[j] = u[j] + dt2 * m2[j];
+   CowellEOMMrk2(uu, m3, O->mu, S->mass, S->FrcN, S, dt2);
+   for (j = 0; j < 6; j++)
+      uu[j] = u[j] + dt3 * m3[j];
+   CowellEOMMrk2(uu, m4, O->mu, S->mass, S->FrcN, S, dt3);
+   for (j = 0; j < 6; j++)
+      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
+
+   S->PosN[0] = u[0];
+   S->PosN[1] = u[1];
+   S->PosN[2] = u[2];
+   S->VelN[0] = u[3];
+   S->VelN[1] = u[4];
+   S->VelN[2] = u[5];
+}
+/**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
 void CowellRK4(struct SCType *S)
@@ -4363,6 +4428,16 @@ void Dynamics(struct SCType *S)
                EnckeRK4(S);
          }
          break;
+      case ORB_N_BODY:
+            switch(S->OrbDOF) {
+               case ORBDOF_COWELL :
+                  CowellRK4Mrk2(S);
+                  break;
+               default :
+                  printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+                  exit(1);
+            }
+            break;
       case ORB_THREE_BODY:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:

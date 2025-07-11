@@ -506,6 +506,79 @@ void GravPertForce(struct SCType *S)
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
+void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3], double RKFdt)
+{
+   struct OrbitType *O;
+   double ph[3], p[3], s[3], FrcNtemp[3] = {0};
+   double SCPosN[3];
+   double RK4TIME;
+   long Iw, Im, j;
+   long OrbCenter, SecCenter;
+   double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3];
+   double cntrPosN[3], cntrPosH[3], cntrPriMerAng = 0, cntrCNH[3][3];
+   long revertCHEB;
+
+   for (j = 0; j < 3; j++) SCPosN[j] = u[j];
+
+   RK4TIME = TT.JulDay + RKFdt/86400.0;
+   if (RK4TIME > World[SOL].eph.Cheb[1].JD2) {
+      revertCHEB = 1;
+      LoadJplEphems(ModelPath, RK4TIME);
+   }
+   else revertCHEB = 0;
+
+   O = &Orb[S->RefOrb];
+   OrbCenter = O->World;
+   SecCenter = -1; /* Nonsense value */
+
+   struct WorldType *WCenter = &World[OrbCenter];
+   Rk4JplEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, cntrPriMerAng, cntrCNH);
+
+   /* Sun and all existing planets */
+   for (Iw = SOL; Iw <= PLUTO; Iw++) {
+      if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+         Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, trgtPriMerAng, trgtCNH);
+         for (j = 0; j < 3; j++)
+            ph[j] = trgtPosH[j] - cntrPosH[j];
+         MxV(cntrCNH, ph, p);
+         for (j = 0; j < 3; j++)
+            s[j] = p[j] - SCPosN[j];
+         ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
+         for (j = 0; j < 3; j++)
+            FrcN[j] += FrcNtemp[j];
+      }
+   }
+
+   /* Moons of OrbCenter (but not SecCenter) */
+   if (OrbCenter != SOL) {
+      for (Im = 0; Im < WCenter->Nsat; Im++) {
+         Iw = WCenter->Sat[Im];
+         if (Iw != SecCenter) {
+            Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, trgtPriMerAng, trgtCNH);
+            for (j = 0; j < 3; j++) {
+               p[j] = trgtPosN[j];
+               s[j] = p[j] - SCPosN[j];
+            }
+            ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
+            for (j = 0; j < 3; j++)
+               FrcN[j] += FrcNtemp[j];
+         }
+      }
+   }
+
+   struct SphereHarmType *gravModel = &WCenter->GravModel;
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                          cntrPriMerAng, S->mass, SCPosN, FrcNtemp);
+   for (j = 0; j < 3; j++)
+      FrcN[j] += FrcNtemp[j];
+
+   if (revertCHEB) {
+      LoadJplEphems(ModelPath, TT.JulDay);
+   }
+
+   /* else if O->CenterType == MINORBODY, use provided gravity model */
+}
+/**********************************************************************/
 void AeroFrcTrq(struct SCType *S)
 {
 
@@ -1091,7 +1164,7 @@ void Perturbations(struct SCType *S)
       GravGradFrcTrq(S);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive)
+   if (GravPertActive && Orb[S->RefOrb].Regime != ORB_N_BODY)
       GravPertForce(S);
 
    /* .. Aerodynamic Forces and Torques */
