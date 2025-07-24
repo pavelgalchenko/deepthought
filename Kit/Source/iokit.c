@@ -18,6 +18,17 @@
 ** #endif
 */
 /**********************************************************************/
+void toupper_str(const char *const in, char *const out)
+{
+   const char *s = in;
+   char *t       = out;
+   while (*s) {
+      *t = toupper((unsigned char)*s);
+      s++;
+      t++;
+   }
+}
+/**********************************************************************/
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
                                                 const char *path,
                                                 const char *fileName)

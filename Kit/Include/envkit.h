@@ -31,6 +31,9 @@
 ** #endif
 */
 
+extern double DynTime;
+extern long EphemOption;
+
 void SphericalHarmGravForce(const long N, const long M,
                             const struct WorldType *W, const double PriMerAng,
                             const double mass, const double pbn[3],
