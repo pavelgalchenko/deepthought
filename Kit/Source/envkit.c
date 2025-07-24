@@ -14,10 +14,6 @@
 
 #include "envkit.h"
 
-#ifdef _ENABLE_SPICE_
-#include "SpiceUsr.h"
-#endif
-
 /* #ifdef __cplusplus
 ** namespace Kit {
 ** #endif
@@ -25,30 +21,16 @@
 
 /**********************************************************************/
 void SphericalHarmGravForce(const long N, const long M,
-                            const struct WorldType *W, const double PriMerAng,
-                            const double mass, const double pbn[3],
-                            double FgeoN[3])
+                            const struct WorldType *W, const double mass,
+                            const double pbn[3], double FgeoN[3])
 {
-   double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
+   double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Fr, Fth, Fph, Fe[3];
    const struct SphereHarmType *GravModel = &W->GravModel;
    const double AXIS[3]                   = {0.0, 0.0, 1.0};
 
-#ifdef _ENABLE_SPICE_
-   if (EphemOption == 3) {
-      char frame_name[25] = "IAU_";
-      char world_name[25] = {"\0"};
-      toupper_str(W->Name, world_name);
-      strcat(frame_name, world_name);
-
-      pxform_c("J2000", frame_name, DynTime, CEN);
-   }
-   else
-#endif
-      SimpRot(AXIS, PriMerAng, CEN);
-
    /*    Transform p to spherical coords in Earth frame */
-   MxV(CEN, pbn, pbe);
+   MxV(W->CWN, pbn, pbe);
    getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
    const double trigs[4] = {cth, sth, cph, sph};
 
@@ -74,9 +56,9 @@ void SphericalHarmGravForce(const long N, const long M,
             rvec_e[0] = r * sth * cph;
             rvec_e[1] = r * sth * sph;
             rvec_e[2] = r * cth;
-            MTxV(CEN, rvec_e, rvec_n);
+            MTxV(W->CWN, rvec_e, rvec_n);
             double out[3] = {0.0};
-            SphericalHarmGravForce(N, M, W, 0, mass, rvec_n, out);
+            SphericalHarmGravForce(N, M, W, mass, rvec_n, out);
          }
       }
       reporting = 0;
@@ -107,14 +89,14 @@ void SphericalHarmGravForce(const long N, const long M,
       Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
       Fe[2] = Fr * cth - Fth * sth;
 
-      MTxV(CEN, Fe, FgeoN);
+      MTxV(W->CWN, Fe, FgeoN);
    }
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
 void IGRFMagField(const char *ModelPath, const struct DateType UTC,
-                  const long N, const long M, const double pbn[3],
-                  const double PriMerAng, double MagVecN[3])
+                  const long N, const long M, const struct WorldType *W,
+                  const double pbn[3], double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
 #define nYears 27
@@ -127,20 +109,12 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
    const double AXIS[3] = {0.0, 0.0, 1.0};
-   double CEN[3][3];
-   const double Re    = 6371200.0;
-   static long First  = 1;
-   static long warned = 0;
-
-#ifdef _ENABLE_SPICE_
-   if (EphemOption == 3)
-      pxform_c("J2000", "IAU_EARTH", DynTime, CEN);
-   else
-#endif
-      SimpRot(AXIS, PriMerAng, CEN);
+   const double Re      = 6371200.0;
+   static long First    = 1;
+   static long warned   = 0;
 
    /*    Transform p to spherical coords in Earth frame */
-   MxV(CEN, pbn, pbe);
+   MxV(W->CWN, pbn, pbe);
    getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
 
    const double trigs[4] = {cth, sth, cph, sph};
@@ -236,9 +210,9 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
             rvec_e[0] = r * sth * cph;
             rvec_e[1] = r * sth * sph;
             rvec_e[2] = r * cth;
-            MTxV(CEN, rvec_e, rvec_n);
+            MTxV(W->CWN, rvec_e, rvec_n);
             double out[3] = {0.0};
-            IGRFMagField(ModelPath, UTC, N, M, rvec_n, 0, out);
+            IGRFMagField(ModelPath, UTC, N, M, W, rvec_n, out);
          }
       }
       reporting = 0;
@@ -296,7 +270,7 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
    BVE[1]           = 1.0E-9 * (tmp * sph + Bph * cph);
    BVE[2]           = 1.0E-9 * (Br * cth - Bth * sth);
 
-   MTxV(CEN, BVE, MagVecN);
+   MTxV(W->CWN, BVE, MagVecN);
 
 #ifdef _DEBUG_MAG_
    if (reporting) {
@@ -314,27 +288,20 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
 
 /**********************************************************************/
 /*  Computes planetary dipole magnetic field vector at S/C position.  */
-void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
-                    double DipoleOffset[3], double p[3], double PriMerAng,
-                    double MagVecN[3])
+void DipoleMagField(const double DipoleMoment, const double DipoleAxis[3],
+                    const double DipoleOffset[3], const struct WorldType *W,
+                    double p[3], double MagVecN[3])
 {
-   double R[3], PCN[3], R3, MN[3], MoR, CEN[3][3];
+   double R[3], PCN[3], R3, MN[3], MoR;
    double AXIS[3] = {0.0, 0.0, 1.0};
    long i;
 
-#ifdef _ENABLE_SPICE_
-   if (EphemOption == 3)
-      pxform_c("J2000", "IAU_EARTH", DynTime, CEN);
-   else
-#endif
-      SimpRot(AXIS, PriMerAng, CEN);
-
-   MTxV(CEN, DipoleOffset, PCN);
+   MTxV(W->CWN, DipoleOffset, PCN);
    for (i = 0; i < 3; i++)
       R[i] = p[i] - PCN[i];
    R3 = UNITV(R);
    R3 = R3 * R3 * R3;
-   MTxV(CEN, DipoleAxis, MN);
+   MTxV(W->CWN, DipoleAxis, MN);
    MoR = VoV(MN, R);
    for (i = 0; i < 3; i++)
       MagVecN[i] = DipoleMoment / R3 * (3.0 * MoR * R[i] - MN[i]);

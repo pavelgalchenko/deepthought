@@ -556,8 +556,8 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
       double PriMerAng = GetPriMerAng(OrbCenter, date);
       double fGeoN[3], fGeoR[3], PosN[3];
       MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, PriMerAng,
-                             mass, PosN, fGeoN);
+      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, mass, PosN,
+                             fGeoN);
       MxV(Nav->refCRN, fGeoN, fGeoR);
       for (j = 0; j < 3; j++)
          VelRdot[j] += fGeoR[j] / mass;
