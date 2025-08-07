@@ -3955,31 +3955,34 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass,
    udot[5] = Frc[2] / mass - muR3 * u[2];
 }
 /**********************************************************************/
-void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
+void CowellEOMMrk2(long double u[6], long double udot[6], double mu, double mass,
                double Frc[3], struct SCType *S, double RKFdt)
 {
-   double r, muR3;
-   double gravpertFrcN[3] = {0};
+   long double r_vec[3]={0};
+   double gravpertFrc[3] = {0};
+   long double rmag, muR3;
+   int j;
 
-   r    = MAGV(u);
-   muR3 = mu / (r * r * r);
+   for (j = 0; j < 3; j++) r_vec[j] = u[j];
+   rmag = MAGV_ld(r_vec);
+   muR3 = ((long double) mu) / (rmag * rmag * rmag);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive) GravPertForceRK4(S,u,gravpertFrcN,RKFdt);
+   // if (GravPertActive) GravPertForceRK4(S,u,gravpertFrc,RKFdt);
 
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
-   udot[3] = (Frc[0] + gravpertFrcN[0]) / mass - muR3 * u[0];
-   udot[4] = (Frc[1] + gravpertFrcN[1]) / mass - muR3 * u[1];
-   udot[5] = (Frc[2] + gravpertFrcN[2]) / mass - muR3 * u[2];
+   udot[3] = (Frc[0] + gravpertFrc[0]) / mass - muR3 * u[0];
+   udot[4] = (Frc[1] + gravpertFrc[1]) / mass - muR3 * u[1];
+   udot[5] = (Frc[2] + gravpertFrc[2]) / mass - muR3 * u[2];
 }
 /**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
 void CowellRK4Mrk2(struct SCType *S)
 {
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
+   long double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    double dt0, dt1, dt2, dt3;
    long j;
    struct OrbitType *O;

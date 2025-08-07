@@ -21,17 +21,38 @@
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-double TimeToJD(double SecSinceJ2000)
+long double TimeToJD(long double SecSinceJ2000)
 {
-   return (SecSinceJ2000 / 86400.0 + 2451545.0);
+   return (SecSinceJ2000 / 86400.0L + 2451545.0L);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-double JDToTime(double JD)
+long double JDToTime(long double JD)
 {
-   return ((JD - 2451545.0) * 86400.0);
+   return ((JD - 2451545.0L) * 86400.0L);
+}
+/**********************************************************************/
+/*  Difference between TT and TDB                                     */
+/*  Input must be expressed in TT.                                    */
+long double TimeToJDTDB(long double SecSinceJ2000)
+{
+   long double T_TT, m_E, deltaTDB;
+   long double TDB_COEFF1 = 0.001658L;
+   long double TDB_COEFF2 = 0.00001385L;
+   long double M_E_OFFSET = 357.5277233L;
+   long double M_E_COEFF1 = 35999.05034L;
+   //long double D2R = atan(1.0)/45.0;
+   long double D2R = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
+   long double SEC_PER_JULIAN_CENTURY = 3155760000.00L;
+
+   T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
+
+   m_E  = fmod( (M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0L) * D2R ;
+   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0L * m_E));
+
+   return( (SecSinceJ2000 + deltaTDB) / 86400.0L + 2451545.0L);
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to              */

@@ -579,7 +579,7 @@ void Ephemerides(void)
    else if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 || 
             EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
       /* Update DE block if needed */
-      if (TT.JulDay > World[SOL].eph.Cheb[1].JD2) LoadJplEphems(ModelPath, TT.JulDay);
+      if (TDB.JulDay > World[SOL].eph.Cheb[1].JD2) LoadJplEphems(ModelPath, TDB.JulDay);
       UpdateJplEphems();
    }
 #ifdef _ENABLE_SPICE_

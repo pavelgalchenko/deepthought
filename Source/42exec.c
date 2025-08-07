@@ -115,7 +115,7 @@ long AdvanceTime(void)
          SimTime += DTSIM;
          itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
          SimTime  = ((double)itime) * DTSIM;
-         DynTime  = DynTime0 + SimTime;
+         DynTime  = DynTime0 + (long double) SimTime;
          // Maintain variable dt option if needed in future
          // SimTime += DTSIM;
          // // Update simtime with variable DTSIM time, making sure to
@@ -132,6 +132,11 @@ long AdvanceTime(void)
                     &TT.Second, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
+         TDB.JulDay = TimeToJDTDB(DynTime);
+         TimeToDate(JDToTime(TDB.JulDay),&TDB.Year,&TDB.Month,&TDB.Day,
+            &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
+         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+
          UTC.JulDay = TimeToJD(CivilTime);
          TimeToDate(CivilTime, &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour,
                     &UTC.Minute, &UTC.Second, DTSIM);
@@ -145,7 +150,7 @@ long AdvanceTime(void)
          SimTime += DTSIM;
          itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
          SimTime  = ((double)itime) * DTSIM;
-         DynTime  = DynTime0 + SimTime;
+         DynTime  = DynTime0 + (long double) SimTime;
 
          AtomicTime = DynTime - 32.184;     /* TAI */
          CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
@@ -155,6 +160,11 @@ long AdvanceTime(void)
          TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
                     &TT.Second, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
+
+         TDB.JulDay = TimeToJDTDB(DynTime);
+         TimeToDate(JDToTime(TDB.JulDay),&TDB.Year,&TDB.Month,&TDB.Day,
+            &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
+         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
 
          UTC.JulDay = TimeToJD(CivilTime);
          TimeToDate(CivilTime, &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour,
@@ -178,7 +188,7 @@ long AdvanceTime(void)
          CivilTime  = DateToTime(UTC.Year, UTC.Month, UTC.Day, UTC.Hour,
                                  UTC.Minute, UTC.Second);
          AtomicTime = CivilTime + LeapSec;
-         DynTime    = AtomicTime + 32.184;
+         DynTime    = (long double) AtomicTime + 32.184L;
          GpsTime    = AtomicTime - 19.0;
 
          TT.JulDay = TimeToJD(DynTime);
@@ -186,11 +196,16 @@ long AdvanceTime(void)
                     &TT.Second, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
+         TDB.JulDay = TimeToJDTDB(DynTime);
+         TimeToDate(JDToTime(TDB.JulDay),&TDB.Year,&TDB.Month,&TDB.Day,
+            &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
+         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+
          UTC.JulDay = TimeToJD(CivilTime);
          UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 
          GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-         DynTime0 = DynTime - SimTime;
+         DynTime0 = DynTime - (long double) SimTime;
 
          break;
       case NOS3_TIME:
@@ -199,13 +214,18 @@ long AdvanceTime(void)
          CivilTime  = DateToTime(UTC.Year, UTC.Month, UTC.Day, UTC.Hour,
                                  UTC.Minute, UTC.Second);
          AtomicTime = CivilTime + LeapSec;
-         DynTime    = AtomicTime + 32.184;
+         DynTime    = (long double) AtomicTime + 32.184L;
          GpsTime    = AtomicTime - 19.0;
 
          TT.JulDay = TimeToJD(DynTime);
          TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
                     &TT.Second, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
+
+         TDB.JulDay = TimeToJDTDB(DynTime);
+         TimeToDate(JDToTime(TDB.JulDay),&TDB.Year,&TDB.Month,&TDB.Day,
+            &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
+         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
 
          UTC.JulDay = TimeToJD(CivilTime);
          UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);

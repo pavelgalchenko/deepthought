@@ -1144,15 +1144,16 @@ void LunaPosition(double JD, double r[3])
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(double JulDay, double CNJ[3][3])
+void LunaInertialFrame(long double JulDay, double CNJ[3][3])
 {
-   double D, T;
-   double E1, E2, E3, E4, E6, E7, E10, E13;
+   long double D, T;
+   long double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
-   double SinE1, SinE2, SinE3, SinE4, SinE6;
-   double SinE10, SinE13;
-   double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
-   double PoleRA, PoleDec, PoleVec[3], NodeVec[3], YVec[3];
+   long double SinE1, SinE2, SinE3, SinE4, SinE6;
+   long double SinE10, SinE13;
+   long double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
+   long double PoleRA, PoleDec;
+   double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
    D = JulDay - 2451545.0;
@@ -1217,16 +1218,90 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
       CNJ[2][i] = PoleVec[i];
    }
 }
+void LunaInertialFrame_ld(long double JulDay, long double CNJ[3][3])
+{
+   long double D, T;
+   long double E1, E2, E3, E4, E6, E7, E10, E13;
+   /* double E12; */
+   long double SinE1, SinE2, SinE3, SinE4, SinE6;
+   long double SinE10, SinE13;
+   long double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
+   long double PoleRA, PoleDec;
+   long double PoleVec[3], NodeVec[3], YVec[3];
+   long i;
+
+   D = JulDay - 2451545.0L;
+   T = D / 36525.0L;
+
+   E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
+   E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;
+   E3  = fmod(260.008 + 13.0120009 * D, 360.0) * D2R;
+   E4  = fmod(176.625 + 13.3407154 * D, 360.0) * D2R;
+   E6  = fmod(311.589 + 26.4057084 * D, 360.0) * D2R;
+   E7  = fmod(134.963 + 13.0649930 * D, 360.0) * D2R;
+   E10 = fmod(15.134 - 0.1589763 * D, 360.0) * D2R;
+   /* E12 = fmod(239.961 + 0.1643573*D,360.0)*D2R; */
+   E13 = fmod(25.053 + 12.9590088 * D, 360.0) * D2R;
+
+   SinE1  = sin(E1);
+   SinE2  = sin(E2);
+   SinE3  = sin(E3);
+   SinE4  = sin(E4);
+   SinE6  = sin(E6);
+   SinE10 = sin(E10);
+   SinE13 = sin(E13);
+
+   CosE1  = cos(E1);
+   CosE2  = cos(E2);
+   CosE3  = cos(E3);
+   CosE4  = cos(E4);
+   CosE6  = cos(E6);
+   CosE7  = cos(E7);
+   CosE10 = cos(E10);
+   CosE13 = cos(E13);
+
+   PoleRA = 269.9949 + 0.0031 * T - 3.8787 * SinE1 - 0.1204 * SinE2 +
+            0.0700 * SinE3 - 0.0172 * SinE4 + 0.0072 * SinE6 - 0.0052 * SinE10 +
+            0.0043 * SinE13;
+
+   PoleDec = 66.5392 + 0.0130 * T + 1.5419 * CosE1 + 0.0239 * CosE2 -
+             0.0278 * CosE3 + 0.0068 * CosE4 - 0.0029 * CosE6 + 0.0009 * CosE7 +
+             0.0008 * CosE10 - 0.0009 * CosE13;
+
+   PoleRA  *= D2R;
+   PoleDec *= D2R;
+
+   /* Derive Pole Vector in J2000 */
+   PoleVec[0] = cos(PoleRA) * cos(PoleDec);
+   PoleVec[1] = sin(PoleRA) * cos(PoleDec);
+   PoleVec[2] = sin(PoleDec);
+
+   /* IAU convention puts the X axis at Z(J2000) x PoleVec */
+   NodeVec[0] = -PoleVec[1];
+   NodeVec[1] = PoleVec[0];
+   NodeVec[2] = 0.0;
+   UNITV_ld(NodeVec);
+
+   VxV_ld(PoleVec, NodeVec, YVec);
+   UNITV_ld(YVec);
+
+   /* Luna's N frame wrt J2000 */
+   for (i = 0; i < 3; i++) {
+      CNJ[0][i] = NodeVec[i];
+      CNJ[1][i] = YVec[i];
+      CNJ[2][i] = PoleVec[i];
+   }
+}
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-double LunaPriMerAng(double JulDay)
+double LunaPriMerAng(long double JulDay)
 {
-   double D;
-   double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
-   double SinE1, SinE2, SinE3, SinE4, SinE5, SinE6, SinE7;
-   double SinE8, SinE9, SinE10, SinE11, SinE12, SinE13;
-   double PriMerAng;
+   long double D;
+   long double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
+   long double SinE1, SinE2, SinE3, SinE4, SinE5, SinE6, SinE7;
+   long double SinE8, SinE9, SinE10, SinE11, SinE12, SinE13;
+   long double PriMerAng;
 
    D = JulDay - 2451545.0;
 

@@ -411,6 +411,10 @@ void DSM_PosHReport(void)
    static long First = 1;
    long Isc;
    char s[50];
+   double CNJ[3][3], SC_LCI[3];
+
+   LunaInertialFrame(TDB.JulDay, CNJ);
+   MTxV(CNJ,SC[0].PosN,SC_LCI);
 
    if (First) {
       poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -418,11 +422,17 @@ void DSM_PosHReport(void)
          if (SC[Isc].Exists) {
                sprintf(s, "DSM_PosH_%02li.42", Isc);
                poshfile[Isc] = FileOpen(OutPath, s, "wt");
+               fprintf(poshfile[Isc], "TT_JD TT_TDB deltaTT_TDB");
+               fprintf(poshfile[Isc], "Venus_EC_X Venus_EC_Y Venus_EC_Z ");
                fprintf(poshfile[Isc], "Earth_EC_X Earth_EC_Y Earth_EC_Z ");
                fprintf(poshfile[Isc], "LUNA_EC_X LUNA_EC_Y LUNA_EC_Z ");
-               fprintf(poshfile[Isc], "SC_EC_X SC_EC_Y SC_EC_Z ");
                fprintf(poshfile[Isc], "LUNA_EQ_X LUNA_EQ_Y LUNA_EQ_Z ");
+               fprintf(poshfile[Isc], "Mars_EC_X Mars_EC_Y Mars_EC_Z ");
+               fprintf(poshfile[Isc], "Jupiter_EC_X Jupiter_EC_Y Jupiter_EC_Z ");
+               fprintf(poshfile[Isc], "Satern_EC_X Satern_EC_Y Satern_EC_Z ");
+               fprintf(poshfile[Isc], "SC_EC_X SC_EC_Y SC_EC_Z ");
                fprintf(poshfile[Isc], "SC_EQ_X SC_EQ_Y SC_EQ_Z ");
+               fprintf(poshfile[Isc], "SC_LCI_X SC_LCI_Y SC_LCI_Z ");
                fprintf(poshfile[Isc], "\n");
          }
       }
@@ -431,16 +441,27 @@ void DSM_PosHReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
+            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", TT.JulDay, TDB.JulDay, TDB.JulDay - TT.JulDay);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[VENUS].PosH[0],
+                    World[VENUS].PosH[1], World[VENUS].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[EARTH].PosH[0],
                     World[EARTH].PosH[1], World[EARTH].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[LUNA].PosH[0],
                     World[LUNA].PosH[1], World[LUNA].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[Isc].PosH[0],
-                    SC[Isc].PosH[1], SC[Isc].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[LUNA].eph.PosN[0],
                     World[LUNA].eph.PosN[1], World[LUNA].eph.PosN[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[Isc].PosN[0],
-                    SC[Isc].PosN[1], SC[Isc].PosN[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[MARS].PosH[0],
+                    World[MARS].PosH[1], World[MARS].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[JUPITER].PosH[0],
+                    World[JUPITER].PosH[1], World[JUPITER].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[SATURN].PosH[0],
+                    World[SATURN].PosH[1], World[SATURN].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
+                    SC[0].PosH[1], SC[0].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosN[0],
+                    SC[0].PosN[1], SC[0].PosN[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LCI[0],
+                    SC_LCI[1], SC_LCI[2]);
             fprintf(poshfile[Isc], "\n");
       }
       fflush(poshfile[Isc]);
@@ -647,7 +668,7 @@ void DSM_NAV_StateReport(void)
          fflush(stateFile[Isc]);
 
          if (writeTime) {
-            fprintf(timeFile[Isc], "%18.36le\n", DynTime);
+            fprintf(timeFile[Isc], "%18.36Le\n", DynTime);
             fflush(timeFile[Isc]);
          }
 
@@ -1255,7 +1276,7 @@ void Report(void)
 
    if (OutFlag) {
       fprintf(timefile, "%lf\n", SimTime);
-      fprintf(DynTimeFile, "%lf\n", DynTime);
+      fprintf(DynTimeFile, "%Lf\n", DynTime);
       fprintf(UtcDateFile, " %ld:%02ld:%02ld:%02ld:%02ld:%09.6lf\n", UTC.Year,
               UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
       for (Isc = 0; Isc < Nsc; Isc++) {
