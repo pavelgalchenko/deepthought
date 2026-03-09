@@ -9,8 +9,7 @@ PATH_VALUES = ( './Model/spice_kernels/lsk',
 PATH_SYMBOLS = ( 'LSK', 'SPK_PLANETS', 'SPK_SATS', 'PCK' )
 
 KERNELS_TO_LOAD = ( '$LSK/naif0012.tls',
-                    '$SPK_PLANETS/de440.bsp',
-                    '$SPK_PLANETS/de430.bsp',
+                    '$SPK_PLANETS/de421.bsp',
                     '$SPK_SATS/mar097.bsp',
                     '$SPK_SATS/jup344.bsp',
                     '$SPK_SATS/jup365.bsp',

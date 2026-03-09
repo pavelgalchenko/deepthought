@@ -584,7 +584,7 @@ void Ephemerides(void)
    }
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE) {
-      UpdateSpiceEphems(DynTime);
+      UpdateSpiceEphems(DynTime_ld);
    }
 #endif
    else {

@@ -163,6 +163,12 @@ void MTxV(const double M[3][3], const double V[3], double W[3])
    W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
    W[2] = M[0][2] * V[0] + M[1][2] * V[1] + M[2][2] * V[2];
 }
+void MTxV_ld(const long double M[3][3], const long double V[3], long double W[3])
+{
+   W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
+   W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
+   W[2] = M[0][2] * V[0] + M[1][2] * V[1] + M[2][2] * V[2];
+}
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
 void SxV(const double S, const double V[3], double W[3])
@@ -408,8 +414,8 @@ long double UNITV_ld(long double V[3])
 {
    long double A;
 
-   A = sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
-   if (A > 0.0) {
+   A = sqrtl(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
+   if (A > 0.0L) {
       V[0] /= A;
       V[1] /= A;
       V[2] /= A;
@@ -417,9 +423,9 @@ long double UNITV_ld(long double V[3])
    else {
       printf("Attempted divide by zero in UNITV (Line %d of mathkit.c)\n",
              __LINE__);
-      V[0] = 0.0;
-      V[1] = 0.0;
-      V[2] = 0.0;
+      V[0] = 0.0L;
+      V[1] = 0.0L;
+      V[2] = 0.0L;
    }
    return (A);
 }

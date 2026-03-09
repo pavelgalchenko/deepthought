@@ -18,41 +18,142 @@
 ** #endif
 */
 
+long double TTtoTDB_JD(long double SecSinceJ2000)
+{
+      long double T_TT, m_E, deltaTDB, JD_TDB;
+      long double TDB_COEFF1 = 0.001658L;
+      long double TDB_COEFF2 = 0.00001385L;
+      long double M_E_OFFSET = 357.5277233L;
+      long double M_E_COEFF1 = 35999.05034L;
+      long double D2R = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
+      long double SEC_PER_JULIAN_CENTURY = 3155760000.00L;
+
+      T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
+
+      m_E      = fmodl( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0L ) * D2R;
+      deltaTDB = (TDB_COEFF1 * sinl(m_E) + TDB_COEFF2 * sinl(2.0L * m_E));
+      JD_TDB   = (SecSinceJ2000 + deltaTDB)/ 86400.0L + 2451545.0L;
+
+      return(JD_TDB);
+}
+long double TTtoTDB_Time(long double SecSinceJ2000)
+{
+      long double T_TT, m_E, deltaTDB, time_TDB;
+      long double TDB_COEFF1 = 0.001658L;
+      long double TDB_COEFF2 = 0.00001385L;
+      long double M_E_OFFSET = 357.5277233L;
+      long double M_E_COEFF1 = 35999.05034L;
+      long double D2R = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
+      long double SEC_PER_JULIAN_CENTURY = 3155760000.00L;
+
+      T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
+
+      m_E      = fmodl( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0L ) * D2R;
+      deltaTDB = (TDB_COEFF1 * sinl(m_E) + TDB_COEFF2 * sinl(2.0L * m_E));
+      time_TDB = SecSinceJ2000 + deltaTDB;
+
+      return(time_TDB);
+}
+long double TimeToJD_ld(long double SecSinceJ2000)
+{
+      return(SecSinceJ2000/86400.0L + 2451545.0L);
+}
+long double JDToTime_ld(long double JD)
+{
+      return((JD - 2451545.0L)*86400.0L);
+}
+long double DateToJD_ld(long Year, long Month, long Day,
+                     long Hour, long Minute, long double Second)
+{
+      long double A, B, C, JD;
+
+      A = floorl(7.0L*((long double)Year + floorl(((long double)Month + 9.0L)/12.0L))/4.0L);
+      B = floorl(275.0L*(long double)Month/9.0L);
+      C = ((Second/60.0L + (long double)Minute)/60.0L + (long double)Hour)/24.0L;
+
+      JD = 367.0L*(long double)Year - A + B + (long double)Day + 1721013.5L + C;
+
+      return(JD);
+}
+long double DateToTime_ld(long Year, long Month, long Day,
+                     long Hour, long Minute, long double Second)
+{
+      long double A, B, C, JD, secJD;
+
+      A = floorl(7.0L*((long double)Year + floorl(((long double)Month + 9.0L)/12.0L))/4.0L);
+      B = floorl(275.0L*(long double)Month/9.0L);
+      C = ((Second/60.0L + (long double)Minute)/60.0L + (long double)Hour)/24.0L;
+
+      JD = 367.0L*(long double)Year - A + B + (long double)Day + 1721013.5L + C;
+      secJD = (JD - 2451545.0L)*86400.0L;
+
+      return(secJD);
+}
+void TimeToDate_ld(long double Time, long *Year, long *Month, long *Day,
+                  long *Hour, long *Minute, long double *Second, double LSB)
+{
+      long double Z,F,A,B,C,D,E,alpha;
+      long double FD,JD;
+
+      JD = Time/86400.0 + 2451545.0;
+
+      Z= floor(JD+0.5);
+      F=(JD+0.5)-Z;
+
+      if (Z < 2299161.0) {
+         A = Z;
+      }
+      else {
+         alpha = floor((Z-1867216.25)/36524.25);
+         A = Z+1.0+alpha - floor(alpha/4.0);
+      }
+
+      B = A + 1524.0;
+      C = floor((B-122.1)/365.25);
+      D = floor(365.25*C);
+      E = floor((B-D)/30.6001);
+
+      FD = B - D - floor(30.6001*E) + F;
+      *Day = (long) FD;
+
+      if (E < 14.0) {
+         *Month = (long) (E - 1.0);
+         *Year = (long) (C - 4716.0);
+      }
+      else {
+         *Month = (long) (E - 13.0);
+         *Year = (long) (C - 4715.0);
+      }
+
+      FD = Time-43200.0+0.5*LSB;
+      FD = FD - ((long) (FD/86400.0))*86400.0;
+      if (FD < 0.0) FD += 86400.0;
+
+      *Hour = (long) (FD/3600.0);
+
+      FD -= 3600.0*(*Hour);
+
+      *Minute = (long) (FD/60.0);
+
+      *Second = FD - 60.0*(*Minute);
+
+      /* Clean up roundoff */
+      *Second = ((long double) (*Second/LSB))*LSB;
+}
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-long double TimeToJD(long double SecSinceJ2000)
+double TimeToJD(double SecSinceJ2000)
 {
-   return (SecSinceJ2000 / 86400.0L + 2451545.0L);
+      return(SecSinceJ2000/86400.0 + 2451545.0);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-long double JDToTime(long double JD)
+double JDToTime(double JD)
 {
-   return ((JD - 2451545.0L) * 86400.0L);
-}
-/**********************************************************************/
-/*  Difference between TT and TDB                                     */
-/*  Input must be expressed in TT.                                    */
-long double TimeToJDTDB(long double SecSinceJ2000)
-{
-   long double T_TT, m_E, deltaTDB;
-   long double TDB_COEFF1 = 0.001658L;
-   long double TDB_COEFF2 = 0.00001385L;
-   long double M_E_OFFSET = 357.5277233L;
-   long double M_E_COEFF1 = 35999.05034L;
-   //long double D2R = atan(1.0)/45.0;
-   long double D2R = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
-   long double SEC_PER_JULIAN_CENTURY = 3155760000.00L;
-
-   T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
-
-   m_E  = fmod( (M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0L) * D2R ;
-   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0L * m_E));
-
-   return( (SecSinceJ2000 + deltaTDB) / 86400.0L + 2451545.0L);
+      return((JD-2451545.0)*86400.0);
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to              */

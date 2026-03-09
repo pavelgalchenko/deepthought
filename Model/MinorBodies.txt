@@ -1,7 +1,7 @@
 <<<<<<<<<<<<<<<<<<<<<<  Minor Body Inputs for 42  >>>>>>>>>>>>>>>>>>>>>>>>>>
-8                                  ! Number of Minor Bodies in this File
+9                                  ! Number of Minor Bodies in this File
 *****************************  Minor Body 0 *********************************
-TRUE                               ! Exists
+FALSE                               ! Exists
 "Bennu"                            ! Name
 ASTEROID                           ! ASTEROID or COMET
 Rockball                           ! Map File Name
@@ -21,7 +21,7 @@ NONE                               ! Gravity Model File Name
 2010  10  14  0                    ! Epoch Year, Month, Day, Hour
 0.9382                             ! True Anomaly at Epoch, rad
 *****************************  Minor Body 1 *********************************
-TRUE                               ! Exists
+FALSE                               ! Exists
 "Eros"                             ! Name
 ASTEROID                           ! ASTEROID or COMET
 Rockball                           ! Map File Name
@@ -41,7 +41,7 @@ NONE                               ! Gravity Model File Name
 2010  10  14  0                    ! Epoch Year, Month, Day, Hour
 2.1829                             ! True Anomaly at Epoch, rad
 *****************************  Minor Body 2 *********************************
-TRUE                               ! Exists
+FALSE                               ! Exists
 "67P/C-G"                          ! Name
 COMET                              ! ASTEROID or COMET
 Rockball                           ! Map File Name
@@ -160,3 +160,23 @@ NONE                               ! Gravity Model File Name
 0.0025304                          ! Arg of Periapsis, rad
 2013  4  3  21                     ! Epoch Year, Month, Day, Hour
 0.0                                ! True Anomaly at Epoch, rad
+*****************************  Minor Body 8 *********************************
+TRUE                               ! Exists
+"Apophis"                          ! Name 
+ASTEROID                           ! ASTEROID or COMET
+Rockball                           ! Map File Name
+apophis.obj                        ! Geometry Object File Name 
+NONE                      ! Color Texture File Name
+NONE                       ! Bump Texture File Name
+4.0711                             ! mu, m^2/sec^3
+187.5                              ! Radius, m
+NONE                               ! Gravity Model File Name
+5.74E-5                            ! Rotation rate, rad/sec
+0   0                              ! RA, Dec of pole, deg
+138005110092.11489868              ! SMA, m
+0.1915216893501022                 ! Eccentricity
+0.05823729685                      ! Inclination, rad
+3.561151082                        ! RAAN, rad
+2.21049530896                      ! Arg of Periapsis, rad
+2021  1  1  0                      ! Epoch Year, Month, Day, Hour
+2.487                          ! True Anomaly at Epoch, rad

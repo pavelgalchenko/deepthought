@@ -6206,7 +6206,7 @@ void UpdateJplEphems(void)
 }
 /**********************************************************************/
 void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
-                  long double trgtPriMerAng, long double trgtCNH[3][3])
+                  long double *trgtPriMerAng, long double trgtCNH[3][3])
 {
    long i, j, Ic, Iw;
    struct Cheb3DType *Cheb;
@@ -6324,7 +6324,7 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
       }
       /* Calculate PriMerAng for Sun */
       timeTT = JDToTime(JD);
-      trgtPriMerAng = fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * timeTT, TwoPi);
+      *trgtPriMerAng = fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * timeTT, TwoPi);
    }
    else if (trgtWORLD == EARTH) {
       for (i = 0; i < 3; i++) {
@@ -6334,15 +6334,15 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
       /* Calculate PriMerAng for Earth */
       utcJD = JD - (32.184 + LeapSec)/86400.0;
       GMST = JD2GMST(utcJD);
-      trgtPriMerAng = TwoPi * GMST;
+      *trgtPriMerAng = TwoPi * GMST;
    }
    else if (trgtWORLD == LUNA) {
       for (i = 0; i < 3; i++) {
          trgtPosN[i] = lunaPosN[i];
          trgtPosH[i] = lunaPosH[i];
       }
-      /* Calculate PriMerAng for Earth */
-      trgtPriMerAng = LunaPriMerAng(JD);
+      /* Calculate PriMerAng for LUNA */
+      *trgtPriMerAng = LunaPriMerAng(JD);
    }
    else if (otherJPL) {
       /* Move target from barycentric to Sun-centered */
@@ -6352,7 +6352,7 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
       }
       /* Calculate PriMerAng for Sun */
       timeTT = JDToTime(JD);
-      trgtPriMerAng = fmod(World[trgtWORLD].PriMerAngJ2000 + World[trgtWORLD].w * timeTT, TwoPi);
+      *trgtPriMerAng = fmod(World[trgtWORLD].PriMerAngJ2000 + World[trgtWORLD].w * timeTT, TwoPi);
    }
    else {
       /* Use original position for non JPL epemerides bodies */
@@ -6361,7 +6361,7 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
          trgtPosN[i]  = W->eph.PosN[i];
          trgtPosH[i]  = W->PosH[i];
       }
-      trgtPriMerAng = W->PriMerAng;
+      *trgtPriMerAng = W->PriMerAng;
    }
 
    if (trgtWORLD == LUNA) {
@@ -6556,37 +6556,38 @@ long UpdateSpiceEphems(long double JS)
 
    // Read all planets
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      W   = &World[Iw];
-      Eph = &W->eph;
-      spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
-               Nstate,
-               &light_time); // State of major bodies in J2000 wrt Sun center
+      if (World[Iw].Exists) {
+         W   = &World[Iw];
+         Eph = &W->eph;
+         spkezr_c(MajorBodiesNamesState[Iw], JS, "ECLIPJ2000", "NONE", "SUN",
+                  Nstate,
+                  &light_time); // State of major bodies in J2000 wrt Sun center
 
-      for (i = 0; i < 3; i++) {
-         Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
-         W->PosH[i] =
-             Nstate[i] *
-             1e3; // Assign suncentric positions = inertial position (m)
+         for (i = 0; i < 3; i++) {
+            Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
+            W->PosH[i] =
+                Nstate[i] *
+                1e3; // Assign suncentric positions = inertial position (m)
 
-         Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
-         W->VelH[i] =
-             Nstate[i + 3] *
-             1e3; // Assign suncentric velocity = inertial velocity (m/s)
+            Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+            W->VelH[i] =
+                Nstate[i + 3] *
+                1e3; // Assign suncentric velocity = inertial velocity (m/s)
+         }
+         char frame_name[25] = "IAU_";
+         strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
+
+         // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
+         MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
+
+         pxform_c("J2000", frame_name, JS, CWJ);
+
+         // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
+         MxMT(CWJ, CNJ, World[Iw].CWN);
+         C2Q(World[Iw].CWN, World[Iw].qwn);
+         logso3(World[Iw].CWN, ang);
+         World[Iw].PriMerAng = ang[2];
       }
-      char frame_name[25] = "IAU_";
-      strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
-
-      // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-      MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
-
-      pxform_c("J2000", frame_name, JS,
-               CWJ); // matrix from J2000 (ICRF) -> body fixed
-
-      // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-      MxMT(CWJ, CNJ, World[Iw].CWN);
-      C2Q(World[Iw].CWN, World[Iw].qwn);
-      logso3(World[Iw].CWN, ang);
-      World[Iw].PriMerAng = ang[2];
    }
 
    // Read all moons
@@ -6656,6 +6657,81 @@ long UpdateSpiceEphems(long double JS)
 
    return (0);
 }
+void Rk4SpiceEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
+                  long double *trgtPriMerAng, long double trgtCNH[3][3])
+{
+   double CNH[3][3];
+   double Nstate[6], Hstate[6];
+   double light_time;
+   char trgtCNH_STRING[25] = "IAU_";
+   char trgtWORLD_STRING[10];
+   int i,j;
+
+   switch (trgtWORLD) {
+      case SOL:
+         strcpy(trgtWORLD_STRING, "SUN");
+         break;
+      case MERCURY:
+         strcpy(trgtWORLD_STRING, "MERCURY");
+         break;
+      case VENUS:
+         strcpy(trgtWORLD_STRING, "VENUS");
+         break;
+      case EARTH:
+         strcpy(trgtWORLD_STRING, "EARTH");
+         break;
+      case MARS:
+         strcpy(trgtWORLD_STRING, "MARS");
+         break;
+      case JUPITER:
+         strcpy(trgtWORLD_STRING, "JUPITER");
+         break;
+      case SATURN:
+         strcpy(trgtWORLD_STRING, "SATURN");
+         break;
+      case URANUS:
+         strcpy(trgtWORLD_STRING, "URANUS");
+         break;
+      case NEPTUNE:
+         strcpy(trgtWORLD_STRING, "NEPTUNE");
+         break;
+      case PLUTO:
+         strcpy(trgtWORLD_STRING, "PLUTO");
+         break;
+      case LUNA:
+         strcpy(trgtWORLD_STRING, "MOON");
+         break;
+      default:
+         strcpy(trgtWORLD_STRING, "EARTH");
+         break;
+   }
+   if (trgtWORLD == LUNA)
+   {
+      spkezr_c(trgtWORLD_STRING, JD, "ECLIPJ2000", "NONE", "SUN", Hstate, &light_time);
+      spkezr_c(trgtWORLD_STRING, JD, "J2000", "NONE", "EARTH", Nstate, &light_time);
+      for (i = 0; i < 3; i++)
+      {
+         trgtPosH[i] = Hstate[i] * 1e3;
+         trgtPosN[i] = Nstate[i] * 1e3;
+      }
+   }
+   else
+   {
+      spkezr_c(trgtWORLD_STRING, JD, "ECLIPJ2000", "NONE", "SUN", Nstate, &light_time);
+      for (i = 0; i < 3; i++)
+      {
+         trgtPosH[i] = Nstate[i] * 1e3;
+         trgtPosN[i] = Nstate[i] * 1e3;
+      }
+   }
+   strcat(trgtCNH_STRING, trgtWORLD_STRING);
+   pxform_c("J2000", trgtCNH_STRING, JD, CNH);
+   for (i = 0; i < 3; i++) {
+      for (j = 0; j < 3; j++) {
+         trgtCNH[i][j] = CNH[i][j];
+      }
+   }
+}
 #endif
 /**********************************************************************/
 void LoadConstellations(void)
@@ -6704,11 +6780,11 @@ void LoadSchatten(void)
    char junk[120], newline;
    long i, fileyear, filemonth;
 
-   infile = FileOpen(ModelPath, "SolFlx0908_Schatten.txt", "rt");
+   infile = FileOpen(ModelPath, "SW_predict_MSAFE_95_50_Pred_Ap.txt", "rt");
 
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-   for (i = 0; i < 410; i++) {
+   for (i = 0; i < 1009; i++) {
       fscanf(infile, "%ld %ld %lf %lf %lf %lf,%[^\n] %[\n]", &fileyear,
              &filemonth, &SchattenTable[1][i], &SchattenTable[2][i],
              &SchattenTable[3][i], &SchattenTable[4][i], junk, &newline);
@@ -7309,6 +7385,10 @@ void InitSim(int argc, char **argv)
    CivilTime  = DateToTime(UTC.Year, UTC.Month, UTC.Day, UTC.Hour, UTC.Minute,
                            UTC.Second);
    AtomicTime = CivilTime + LeapSec;
+   DynTime0   = AtomicTime + 32.184;
+   GpsTime    = AtomicTime - 19.0;
+   DynTime    = DynTime0;
+
    DynTime0   = ((long double) AtomicTime) + 32.184L;
    GpsTime    = AtomicTime - 19.0;
    DynTime    = DynTime0;
@@ -7318,15 +7398,22 @@ void InitSim(int argc, char **argv)
               &TT.Second, DTSIM);
    TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
-   TDB.JulDay = TimeToJDTDB(DynTime);
-   TimeToDate(JDToTime(TDB.JulDay),&TDB.Year,&TDB.Month,&TDB.Day,
-              &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
-   TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
-
    UTC.JulDay = TimeToJD(CivilTime);
    UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
+
+   long double utc_TT_offset, timeUTC;
+   timeUTC = DateToTime_ld(UTC.Year,UTC.Month,UTC.Day,
+                           UTC.Hour,UTC.Minute,UTC.Second);
+   utc_TT_offset = (long double)LeapSec + 32.184L;
+   DynTime0_ld = timeUTC + utc_TT_offset;
+   DynTime_ld  = DynTime0_ld;
+   TDB.JulDay  = TTtoTDB_JD(DynTime_ld);
+   TDB.tdbTime = TTtoTDB_Time(DynTime_ld);
+   TimeToDate_ld(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
+                 &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
+   TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
 
    /* Preload Ephemeris Kernels/Definitions */
    if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 ||
@@ -7366,7 +7453,7 @@ void InitSim(int argc, char **argv)
    }
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE)
-      UpdateSpiceEphems(DynTime);
+      UpdateSpiceEphems(DynTime_ld);
 #endif
 
    /* .. Asteroids and Comets */

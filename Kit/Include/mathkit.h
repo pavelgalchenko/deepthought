@@ -52,6 +52,7 @@ void MxV(const double M[3][3], const double V[3], double W[3]);
 void MxV_ld(const long double M[3][3], const long double V[3], long double W[3]);
 void VxMT(const double V[3], const double M[3][3], double W[3]);
 void MTxV(const double M[3][3], const double V[3], double W[3]);
+void MTxV_ld(const long double M[3][3], long const double V[3], long double W[3]);
 void SxV(const double S, const double V[3], double W[3]);
 void SxM(const double S, const double A[3][3], double B[3][3]);
 void MINV4(const double A[4][4], double B[4][4]);

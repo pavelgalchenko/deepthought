@@ -59,8 +59,32 @@ typedef uint16_t ccsdsFine;
 ** #endif
 */
 
-struct DateType {
+/* BEGIN NEW TIME SYSTEM CODE */
+struct DateType_ld {
+   long double tdbTime;
    long double JulDay;
+   long Year;
+   long Month;
+   long Day;
+   long doy;
+   long Hour;
+   long Minute;
+   long double Second;
+};
+long double TimeToJD_ld(long double Time);
+long double JDToTime_ld(long double JD);
+long double DateToJD_ld(long Year, long Month, long Day,
+                        long Hour, long Minute, long double Second);
+long double DateToTime_ld(long Year, long Month, long Day, 
+                          long Hour, long Minute, long double Second);
+long double TTtoTDB_JD(long double SecSinceJ2000);
+long double TTtoTDB_Time(long double SecSinceJ2000);
+void TimeToDate_ld(long double Time, long *Year, long *Month, long *Day,
+                long *Hour, long *Minute, long double *Second, double LSB);
+/* END NEW TIME SYSTEM CODE */
+
+struct DateType {
+   double JulDay;
    long Year;
    long Month;
    long Day;
@@ -70,9 +94,8 @@ struct DateType {
    double Second;
 };
 
-long double TimeToJD(long double Time);
-long double JDToTime(long double JD);
-long double TimeToJDTDB(long double Time);
+double TimeToJD(double Time);
+double JDToTime(double JD);
 double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
                   double Second);
 double DateToJD(long Year, long Month, long Day, long Hour, long Minute,

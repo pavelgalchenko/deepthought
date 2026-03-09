@@ -3968,7 +3968,7 @@ void CowellEOMMrk2(long double u[6], long double udot[6], double mu, double mass
    muR3 = ((long double) mu) / (rmag * rmag * rmag);
 
    /* .. Gravity Perturbation Forces */
-   // if (GravPertActive) GravPertForceRK4(S,u,gravpertFrc,RKFdt);
+   if (GravPertActive) GravPertForceRK4(S,u,gravpertFrc,RKFdt);
 
    udot[0] = u[3];
    udot[1] = u[4];

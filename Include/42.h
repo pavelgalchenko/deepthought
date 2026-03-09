@@ -111,23 +111,26 @@ EXTERN long EphemOption; /* MEAN, DE421, DE424, DE430, DE440, GMAT421, GMAT424, 
 
 /* Calendar Time is all based in Terrestrial Dynamical Time (TT or TDT) unless
  * otherwise noted */
-EXTERN long double DynTime0;    /* Time in sec since J2000 Epoch at Sim Start (TT) */
-EXTERN long double DynTime;     /* Absolute Time (TT), sec since J2000 Epoch */
+EXTERN double DynTime0;    /* Time in sec since J2000 Epoch at Sim Start (TT) */
+EXTERN double DynTime;     /* Absolute Time (TT), sec since J2000 Epoch */
 EXTERN double AtomicTime;  /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;     /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;   /* UTC = TAI - LeapSec */
 EXTERN double GpsTime;     /* GPS Time = TAI - 19.0 sec */
-EXTERN struct DateType TDB; /* Barycentric Dynamical Time */
 EXTERN struct DateType TT; /* Terrestrial Dynamical Time */
 EXTERN struct DateType UTC; /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
 
+EXTERN long double DynTime0_ld; /* Time in sec since J2000 Epoch at Sim Start (TT) */
+EXTERN long double DynTime_ld; /* Absolute Time (TT), sec since J2000 Epoch */
+EXTERN struct DateType_ld TDB; /* Barycentric Dynamical Time */
+
 /* Parameters for environmental models  */
 EXTERN long AtmoOption; /* TWOSIGMA_ATMO, NOMINAL_ATMO, USER_ATMO */
 EXTERN double Flux10p7, GeomagIndex;
 EXTERN double
-    SchattenTable[5][410]; /* JD, +2sig F10.7, Nom F10.7, +2sig Kp, Nom Kp */
+    SchattenTable[5][1009]; /* JD, +2sig F10.7, Nom F10.7, +2sig Kp, Nom Kp */
 
 EXTERN struct WorldType World[NWORLD];
 EXTERN struct LagrangeSystemType LagSys[3];
@@ -189,11 +192,13 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
-void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3], double RKFdt);
+void GravPertForceRK4(struct SCType *S, long double u[6], double FrcN[3], double RKFdt);
 void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
                         double Frc[3]);
 void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
-                  long double trgtPriMerAng, long double trgtCNH[3][3]);
+                  long double *trgtPriMerAng, long double trgtCNH[3][3]);
+void Rk4SpiceEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
+                    long double *trgtPriMerAng, long double trgtCNH[3][3]);
 
 long SimStep(void);
 void Ephemerides(void);

@@ -409,30 +409,31 @@ void DSM_PosHReport(void)
 {
    static FILE **poshfile;
    static long First = 1;
-   long Isc;
+   long Isc, i;
    char s[50];
-   double CNJ[3][3], SC_LCI[3];
-
-   LunaInertialFrame(TDB.JulDay, CNJ);
-   MTxV(CNJ,SC[0].PosN,SC_LCI);
+   long double CNJ[3][3];
+   long double SC_ECI[3], SC_LEI[3], SC_LCI[3];
 
    if (First) {
       poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
-               sprintf(s, "DSM_PosH_%02li.42", Isc);
+               sprintf(s, "PosH_%02li.42", Isc);
                poshfile[Isc] = FileOpen(OutPath, s, "wt");
-               fprintf(poshfile[Isc], "TT_JD TT_TDB deltaTT_TDB");
-               fprintf(poshfile[Isc], "Venus_EC_X Venus_EC_Y Venus_EC_Z ");
-               fprintf(poshfile[Isc], "Earth_EC_X Earth_EC_Y Earth_EC_Z ");
+               fprintf(poshfile[Isc], "TDB_TIME TT_TIME ");
+               fprintf(poshfile[Isc], "TDB_JD TT_JD ");
+               fprintf(poshfile[Isc], "Venus_HC_X Venus_HC_Y Venus_HC_Z ");
+               fprintf(poshfile[Isc], "Earth_HC_X Earth_HC_Y Earth_HC_Z ");
+               fprintf(poshfile[Isc], "LUNA_HC_X LUNA_HC_Y LUNA_HC_Z ");
                fprintf(poshfile[Isc], "LUNA_EC_X LUNA_EC_Y LUNA_EC_Z ");
-               fprintf(poshfile[Isc], "LUNA_EQ_X LUNA_EQ_Y LUNA_EQ_Z ");
-               fprintf(poshfile[Isc], "Mars_EC_X Mars_EC_Y Mars_EC_Z ");
-               fprintf(poshfile[Isc], "Jupiter_EC_X Jupiter_EC_Y Jupiter_EC_Z ");
-               fprintf(poshfile[Isc], "Satern_EC_X Satern_EC_Y Satern_EC_Z ");
-               fprintf(poshfile[Isc], "SC_EC_X SC_EC_Y SC_EC_Z ");
-               fprintf(poshfile[Isc], "SC_EQ_X SC_EQ_Y SC_EQ_Z ");
+               fprintf(poshfile[Isc], "Mars_HC_X Mars_HC_Y Mars_HC_Z ");
+               fprintf(poshfile[Isc], "Jupiter_HC_X Jupiter_HC_Y Jupiter_HC_Z ");
+               fprintf(poshfile[Isc], "Saturn_HC_X Saturn_HC_Y Saturn_HC_Z ");
+               fprintf(poshfile[Isc], "SC_PosN_X SC_PosN_Y SC_PosN_Z ");
+               fprintf(poshfile[Isc], "SC_HC_X SC_HC_Y SC_HC_Z ");
+               fprintf(poshfile[Isc], "SC_ECI_X SC_ECI_Y SC_ECI_Z ");
                fprintf(poshfile[Isc], "SC_LCI_X SC_LCI_Y SC_LCI_Z ");
+               fprintf(poshfile[Isc], "SC_LEI_X SC_LEI_Y SC_LEI_Z ");
                fprintf(poshfile[Isc], "\n");
          }
       }
@@ -441,7 +442,26 @@ void DSM_PosHReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", TT.JulDay, TDB.JulDay, TDB.JulDay - TT.JulDay);
+            if(Orb[SC[Isc].RefOrb].World == LUNA) {
+               for (i = 0; i < 3; ++i){
+                  SC_LEI[i] = (long double)SC[Isc].PosN[i];
+               }
+               LunaInertialFrame_ld(TDB.JulDay, CNJ);
+               MTxV_ld(CNJ,SC_LEI,SC_LCI);
+               for (i = 0; i < 3; ++i){
+                  SC_ECI[i] = SC_LCI[i] + (long double)World[LUNA].eph.PosN[i];
+               }
+            }
+            else if (Orb[SC[Isc].RefOrb].World == EARTH) {
+               LunaInertialFrame_ld(TDB.JulDay, CNJ);
+               for (i = 0; i < 3; ++i) {
+                  SC_ECI[i] = (long double)SC[Isc].PosN[i];
+                  SC_LCI[i] = SC_ECI[i] - (long double)World[LUNA].eph.PosN[i];
+               }
+               MxV_ld(CNJ,SC_LCI,SC_LEI);
+            }
+            fprintf(poshfile[Isc], "%18.48Le %18.48le ", TDB.JulDay, TT.JulDay);
+            fprintf(poshfile[Isc], "%18.48Le %18.48Le ", TDB.tdbTime, DynTime_ld);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[VENUS].PosH[0],
                     World[VENUS].PosH[1], World[VENUS].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[EARTH].PosH[0],
@@ -456,12 +476,13 @@ void DSM_PosHReport(void)
                     World[JUPITER].PosH[1], World[JUPITER].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[SATURN].PosH[0],
                     World[SATURN].PosH[1], World[SATURN].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
-                    SC[0].PosH[1], SC[0].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosN[0],
                     SC[0].PosN[1], SC[0].PosN[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LCI[0],
-                    SC_LCI[1], SC_LCI[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
+                    SC[0].PosH[1], SC[0].PosH[2]);
+            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", SC_ECI[0], SC_ECI[1], SC_ECI[2]);
+            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", SC_LCI[0], SC_LCI[1], SC_LCI[2]);
+            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", SC_LEI[0], SC_LEI[1], SC_LEI[2]);
             fprintf(poshfile[Isc], "\n");
       }
       fflush(poshfile[Isc]);
@@ -668,7 +689,7 @@ void DSM_NAV_StateReport(void)
          fflush(stateFile[Isc]);
 
          if (writeTime) {
-            fprintf(timeFile[Isc], "%18.36Le\n", DynTime);
+            fprintf(timeFile[Isc], "%18.36le\n", DynTime);
             fflush(timeFile[Isc]);
          }
 
@@ -1169,6 +1190,43 @@ void GmatReport(void)
    }
 }
 /*********************************************************************/
+void PerturbReport(void)
+{
+   static FILE *perturbfile;
+   static long First = 1;
+
+   if (First) {
+      perturbfile = FileOpen(OutPath,"perturb.42","wt");
+      fprintf(perturbfile, "gravTrqB_X gravTrqB_Y gravTrqB_Z ");
+      fprintf(perturbfile, "gravTrqN_X gravTrqN_Y gravTrqN_Z ");
+      fprintf(perturbfile, "srpTrqB_X srpTrqB_Y srpTrqB_Z ");
+      fprintf(perturbfile, "srpTrqN_X srpTrqN_Y srpTrqN_Z ");
+      fprintf(perturbfile, "aeroTrqB_X aeroTrqB_Y aeroTrqB_Z ");
+      fprintf(perturbfile, "aeroTrqN_X aeroTrqN_Y aeroTrqN_Z ");
+      fprintf(perturbfile, "srpFrcB_X srpFrcB_Y srpFrcB_Z ");
+      fprintf(perturbfile, "srpFrcN_X srpFrcN_Y srpFrcN_Z ");
+      fprintf(perturbfile, "aeroFrcB_X aeroFrcB_Y aeroFrcB_Z ");
+      fprintf(perturbfile, "aeroFrcN_X aeroFrcN_Y aeroFrcN_Z ");
+      fprintf(perturbfile, "\n");
+      First = 0;
+   }
+
+   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqB[0], SC[0].gravTrqB[1], SC[0].gravTrqB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqN[0], SC[0].gravTrqN[1], SC[0].gravTrqN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqB[0], SC[0].srpTrqB[1], SC[0].srpTrqB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqN[0], SC[0].srpTrqN[1], SC[0].srpTrqN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqB[0], SC[0].aeroTrqB[1], SC[0].aeroTrqB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqN[0], SC[0].aeroTrqN[1], SC[0].aeroTrqN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcB[0], SC[0].srpFrcB[1], SC[0].srpFrcB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcN[0], SC[0].srpFrcN[1], SC[0].srpFrcN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcB[0], SC[0].aeroFrcB[1], SC[0].aeroFrcB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcN[0], SC[0].aeroFrcN[1], SC[0].aeroFrcN[2]);
+   fprintf(perturbfile, "\n");
+
+   fflush(perturbfile);
+
+}
+/*********************************************************************/
 void Report(void)
 {
    static FILE *timefile, *DynTimeFile, *UtcDateFile;
@@ -1276,7 +1334,7 @@ void Report(void)
 
    if (OutFlag) {
       fprintf(timefile, "%lf\n", SimTime);
-      fprintf(DynTimeFile, "%Lf\n", DynTime);
+      fprintf(DynTimeFile, "%lf\n", DynTime);
       fprintf(UtcDateFile, " %ld:%02ld:%02ld:%02ld:%02ld:%09.6lf\n", UTC.Year,
               UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
       for (Isc = 0; Isc < Nsc; Isc++) {
@@ -1395,6 +1453,7 @@ void Report(void)
          // GyroReport();
          // OrbPropReport();
          // GmatReport();
+         PerturbReport();
 
          if (SC[0].DSM.Init == 1) {
             // DSM_AC_AttitudeReport();

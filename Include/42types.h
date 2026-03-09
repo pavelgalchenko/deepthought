@@ -697,6 +697,19 @@ struct SCType {
    long InitAC;
    long InitDSM;
 
+   double aeroProjectedArea;
+   double srpProjectedArea;
+   double gravTrqB[3];
+   double gravTrqN[3];
+   double srpTrqB[3];
+   double srpTrqN[3];
+   double aeroTrqB[3];
+   double aeroTrqN[3];
+   double srpFrcB[3];
+   double srpFrcN[3];
+   double aeroFrcB[3];
+   double aeroFrcN[3];
+
    long Nb; /* Number of bodies */
    long Ng; /* Number of joints, = Nb-1 */
 
