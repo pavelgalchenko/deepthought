@@ -5735,7 +5735,7 @@ void UpdateLagrangePoints(void)
    }
 }
 /******************************************************************************/
-long LoadJplEphems(char EphemPath[80], long double JD)
+long LoadJplEphems(char EphemPath[80], double JD)
 {
    FILE *infile;
    double Block[1020];
@@ -6801,8 +6801,8 @@ void InitSim(int argc, char **argv)
    long JunkTag;
    double CGJ[3][3] = {
        {-0.054873956175539, -0.873437182224835, -0.483835031431981},
-       {0.494110775064704, -0.444828614979805, 0.746981957785302},
-       {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
+       { 0.494110775064704, -0.444828614979805,  0.746981957785302},
+       {-0.867665382947348, -0.198076649977489,  0.455985113757595}};
    double CJH[3][3];
 
    Pi          = PI;
@@ -6985,8 +6985,8 @@ void InitSim(int argc, char **argv)
                       "Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   // // Maintain variable dt option if needed in future
-   // oldDTSIM = DTSIM;
+   /* Save DTSIM as long double */
+   DTSIM_ld = (long double) DTSIM;
    TimeMode = DecodeString(response);
    GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
@@ -7403,22 +7403,22 @@ void InitSim(int argc, char **argv)
 
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
-   long double utc_TT_offset, timeUTC;
+   long double utc_TT_offset = 0, timeUTC = 0;
    timeUTC = DateToTime_ld(UTC.Year,UTC.Month,UTC.Day,
                            UTC.Hour,UTC.Minute,UTC.Second);
    utc_TT_offset = (long double)LeapSec + 32.184L;
-   DynTime0_ld = timeUTC + utc_TT_offset;
-   DynTime_ld  = DynTime0_ld;
-   TDB.JulDay  = TTtoTDB_JD(DynTime_ld);
-   TDB.tdbTime = TTtoTDB_Time(DynTime_ld);
+   DynTime0_ld   = timeUTC + utc_TT_offset;
+   DynTime_ld    = DynTime0_ld;
+   TDB.JulDay    = TTtoTDB_JD(DynTime_ld);
+   TDB.tdbTime   = TTtoTDB_Time(DynTime_ld);
    TimeToDate_ld(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-                 &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
+                 &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM_ld);
    TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
 
    /* Preload Ephemeris Kernels/Definitions */
    if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 ||
        EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      LoadJplEphems(ModelPath, TDB.JulDay);
+      LoadJplEphems(ModelPath, (double)TDB.JulDay);
    }
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE)

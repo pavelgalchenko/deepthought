@@ -90,52 +90,52 @@ long double DateToTime_ld(long Year, long Month, long Day,
       return(secJD);
 }
 void TimeToDate_ld(long double Time, long *Year, long *Month, long *Day,
-                  long *Hour, long *Minute, long double *Second, double LSB)
+                  long *Hour, long *Minute, long double *Second, long double LSB)
 {
       long double Z,F,A,B,C,D,E,alpha;
       long double FD,JD;
 
-      JD = Time/86400.0 + 2451545.0;
+      JD = Time/86400.0L + 2451545.0L;
 
-      Z= floor(JD+0.5);
-      F=(JD+0.5)-Z;
+      Z= floorl(JD+0.5L);
+      F=(JD+0.5L)-Z;
 
-      if (Z < 2299161.0) {
+      if (Z < 2299161.0L) {
          A = Z;
       }
       else {
-         alpha = floor((Z-1867216.25)/36524.25);
-         A = Z+1.0+alpha - floor(alpha/4.0);
+         alpha = floorl((Z-1867216.25L)/36524.25L);
+         A = Z+1.0L+alpha - floorl(alpha/4.0L);
       }
 
-      B = A + 1524.0;
-      C = floor((B-122.1)/365.25);
-      D = floor(365.25*C);
-      E = floor((B-D)/30.6001);
+      B = A + 1524.0L;
+      C = floorl((B-122.1L)/365.25L);
+      D = floorl(365.25L*C);
+      E = floorl((B-D)/30.6001L);
 
-      FD = B - D - floor(30.6001*E) + F;
+      FD = B - D - floorl(30.6001L*E) + F;
       *Day = (long) FD;
 
-      if (E < 14.0) {
-         *Month = (long) (E - 1.0);
-         *Year = (long) (C - 4716.0);
+      if (E < 14.0L) {
+         *Month = (long) (E - 1.0L);
+         *Year = (long) (C - 4716.0L);
       }
       else {
-         *Month = (long) (E - 13.0);
-         *Year = (long) (C - 4715.0);
+         *Month = (long) (E - 13.0L);
+         *Year = (long) (C - 4715.0L);
       }
 
-      FD = Time-43200.0+0.5*LSB;
-      FD = FD - ((long) (FD/86400.0))*86400.0;
-      if (FD < 0.0) FD += 86400.0;
+      FD = Time-43200.0L+0.5L*LSB;
+      FD = FD - ((long) (FD/86400.0L))*86400.0L;
+      if (FD < 0.0) FD += 86400.0L;
 
-      *Hour = (long) (FD/3600.0);
+      *Hour = (long) (FD/3600.0L);
 
-      FD -= 3600.0*(*Hour);
+      FD -= 3600.0L*(*Hour);
 
-      *Minute = (long) (FD/60.0);
+      *Minute = (long) (FD/60.0L);
 
-      *Second = FD - 60.0*(*Minute);
+      *Second = FD - 60.0L*(*Minute);
 
       /* Clean up roundoff */
       *Second = ((long double) (*Second/LSB))*LSB;

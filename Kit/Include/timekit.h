@@ -80,7 +80,7 @@ long double DateToTime_ld(long Year, long Month, long Day,
 long double TTtoTDB_JD(long double SecSinceJ2000);
 long double TTtoTDB_Time(long double SecSinceJ2000);
 void TimeToDate_ld(long double Time, long *Year, long *Month, long *Day,
-                long *Hour, long *Minute, long double *Second, double LSB);
+                long *Hour, long *Minute, long double *Second, long double LSB);
 /* END NEW TIME SYSTEM CODE */
 
 struct DateType {

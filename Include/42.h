@@ -77,13 +77,6 @@ EXTERN long TimeMode; /* FAST_TIME, REAL_TIME, EXTERNAL_SYNCH, NOS3_TIME */
 EXTERN double SimTime, STOPTIME, DTSIM, DTOUT, DTOUTGL;
 EXTERN long OutFlag, GLOutFlag, GLEnable, CleanUpFlag;
 
-// /* Adding parameters to help with variable DTSIM  */
-// // TODO: Introduce a real variable-time integration method!!!
-// EXTERN double t_cnt_RPT;  /* This is a time counter for report function */
-// EXTERN double t_cnt_GUI;  /* This is a time counter for GUI function */
-// EXTERN double DTSIM_min;  /* This is the minimum variable timestep */
-// EXTERN double oldDTSIM;   /* Copy of original DTSIM set in InpSim */
-
 /* Making global parameters for updated JPL EPHEM methods */
 EXTERN double EMRAT;   /* Earth/Moon Mass Ratio */
 EXTERN double AU;      /* Number of kilometers in 1 AU */
@@ -122,6 +115,8 @@ EXTERN struct DateType UTC; /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
 
+/* Create long double time keeping, including modified MJD using GMAT definitions */
+EXTERN long double SimTime_ld, DTSIM_ld;
 EXTERN long double DynTime0_ld; /* Time in sec since J2000 Epoch at Sim Start (TT) */
 EXTERN long double DynTime_ld; /* Absolute Time (TT), sec since J2000 Epoch */
 EXTERN struct DateType_ld TDB; /* Barycentric Dynamical Time */
@@ -260,8 +255,8 @@ long LoadSpiceKernels(char SpicePath[80]);
 /* Update celestial body locations at TT.JulDay using SPICE*/
 long UpdateSpiceEphems(long double JS);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
-to get Chebyshev coefficients for current JD range (TT) */
-long LoadJplEphems(char EphemPath[80], long double JD);
+to get Chebyshev coefficients for current JD range (TDB) */
+long LoadJplEphems(char EphemPath[80], double JD);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
 void UpdateJplEphems(void);
 /* Update celestial body locations using MEAN method */

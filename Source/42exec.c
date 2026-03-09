@@ -71,35 +71,6 @@ void ManageFlags(void)
    }
    else
       GLOutFlag = FALSE;
-
-   // Maintain variable dt option if needed in future
-   // // Upate time conters
-   // t_cnt_RPT += DTSIM;
-   // t_cnt_GUI += DTSIM;
-
-   // // Truncates time counters to prevent trailing arithmatic errors
-   // t_cnt_RPT  = round(t_cnt_RPT*(1.0/DTSIM_min))/(1.0/DTSIM_min);
-   // t_cnt_GUI  = round(t_cnt_GUI*(1.0/DTSIM_min))/(1.0/DTSIM_min);
-
-   // // Reset counter once report time (DTOUT) achieved
-   // if (t_cnt_RPT >= DTOUT) {
-   //    t_cnt_RPT = 0;
-   //    OutFlag = TRUE;
-   // }
-   // else OutFlag = FALSE;
-
-   // // Reset counter once GUI time (DTOUTGL) achieved
-   // if (t_cnt_GUI >= DTOUTGL) {
-      
-   //    t_cnt_GUI = 0;
-   //    GLOutFlag = TRUE;
-   // }
-   // else GLOutFlag = FALSE;
-
-      // Maintain variable dt option if needed in future
-   // // Upate time conters
-   // t_cnt_RPT += DTSIM;
-   // t_cnt_GUI += DTSIM;
 }
 /**********************************************************************/
 long AdvanceTime(void)
@@ -116,12 +87,6 @@ long AdvanceTime(void)
          itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
          SimTime  = ((double)itime) * DTSIM;
          DynTime  = DynTime0 + SimTime;
-         // Maintain variable dt option if needed in future
-         // SimTime += DTSIM;
-         // // Update simtime with variable DTSIM time, making sure to
-         // // truncate trailing arithmatic errors
-         // SimTime  = round(SimTime*(1.0/DTSIM_min))/(1.0/DTSIM_min);
-         // DynTime = DynTime0 + SimTime;
 
          AtomicTime = DynTime - 32.184;     /* TAI */
          CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
@@ -132,7 +97,10 @@ long AdvanceTime(void)
                     &TT.Second, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
-         DynTime_ld  = DynTime0_ld + (long double)SimTime;
+         SimTime_ld += DTSIM_ld;
+         itime       = (long)((SimTime_ld + 0.5L * DTSIM_ld) / (DTSIM_ld));
+         SimTime_ld  = ((long double)itime) * DTSIM_ld;
+         DynTime_ld  = DynTime0_ld + SimTime_ld;
          TDB.JulDay  = TTtoTDB_JD(DynTime_ld);
          TDB.tdbTime = TTtoTDB_Time(DynTime_ld);
          TimeToDate_ld(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
@@ -163,7 +131,10 @@ long AdvanceTime(void)
                     &TT.Second, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
-         DynTime_ld  = DynTime0_ld + (long double)SimTime;
+         SimTime_ld += DTSIM_ld;
+         itime       = (long)((SimTime_ld + 0.5L * DTSIM_ld) / (DTSIM_ld));
+         SimTime_ld  = ((long double)itime) * DTSIM_ld;
+         DynTime_ld  = DynTime0_ld + SimTime_ld;
          TDB.JulDay  = TTtoTDB_JD(DynTime_ld);
          TDB.tdbTime = TTtoTDB_Time(DynTime_ld);
          TimeToDate_ld(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
@@ -377,39 +348,10 @@ long SimStep(void)
    long SimComplete;
    double TotalRunTime;
 
-   // // BEGIN Temporary method for variable time integration
-   // if (1) {
-   //    double ratio, pos_rel[3];
-   //    double power = 21;
-   //    double dividend = 8.5e33;
-   //    if (First) {
-   //       t_cnt_RPT = 1e9;  // Initialized large to ensure report run at start of sim
-   //       DTSIM_min = 1e-4; // Minimum varialbe step size
-   //       // Allows InpSim DTSIM to set DTSIM_min if smaller than hardcoded value
-   //       if (DTSIM_min > oldDTSIM) DTSIM_min = oldDTSIM;
-   //    }
-   //    for (int i = 0; i < 3; ++i)
-   //    {
-   //       pos_rel[i] = SC[0].PosN[i]-World[LUNA].eph.PosN[i];
-   //    }
-   //    ratio = round(MAGV(pos_rel)/World[LUNA].rad);
-   //    DTSIM = (pow(ratio,power)/dividend) * 1.0e0 + DTSIM_min;
-   //    // Ensure that variable step doesn't exceed the time that report must generate
-   //    if (!First) {
-   //       if (t_cnt_RPT+DTSIM > DTOUT) {
-   //          DTSIM = DTOUT - t_cnt_RPT;
-   //       }
-   //    }
-   //    // Truncate trailing arithmatic
-   //    DTSIM = round(DTSIM*(1.0/DTSIM_min))/(1.0/DTSIM_min);
-   //    // Don't allow variable DTSIM to exceed value in InpSim (acts like a bound)
-   //    if (DTSIM > oldDTSIM) DTSIM = oldDTSIM;
-   // }
-   // // END temporary method for variable time integration
-
    if (First) {
       First   = 0;
       SimTime = 0.0;
+      SimTime_ld = 0.0;
       /* First call just initializes timer */
       RealRunTime(&TotalRunTime, DTSIM);
       ManageFlags();
