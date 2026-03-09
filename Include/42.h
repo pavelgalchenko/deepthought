@@ -187,7 +187,7 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
-void GravPertForceRK4(struct SCType *S, long double u[6], double FrcN[3], double RKFdt);
+void GravPertForceRK4(struct SCType *S, long double u[6], long double FrcN[3], double RKFdt);
 void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
                         double Frc[3]);
 void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],

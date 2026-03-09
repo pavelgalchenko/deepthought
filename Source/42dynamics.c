@@ -3959,7 +3959,7 @@ void CowellEOMMrk2(long double u[6], long double udot[6], double mu, double mass
                double Frc[3], struct SCType *S, double RKFdt)
 {
    long double r_vec[3]={0};
-   double gravpertFrc[3] = {0};
+   long double gravpertFrc[3] = {0};
    long double rmag, muR3;
    int j;
 
