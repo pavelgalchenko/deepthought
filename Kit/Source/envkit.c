@@ -99,13 +99,13 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
                   const double pbn[3], double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
-#define nYears 27
+#define nYears 26
 
    static double **Cdat[nYears + 1] = {NULL}, **Sdat[nYears + 1] = {NULL};
    const double t[nYears] = {
        1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0, 1935.0, 1940.0,
        1945.0, 1950.0, 1955.0, 1960.0, 1965.0, 1970.0, 1975.0, 1980.0, 1985.0,
-       1990.0, 1995.0, 2000.0, 2005.0, 2010.0, 2015.0, 2020.0, 2025.0, 2030.0};
+       1990.0, 1995.0, 2000.0, 2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
    const double AXIS[3] = {0.0, 0.0, 1.0};
