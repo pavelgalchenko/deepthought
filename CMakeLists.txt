@@ -7,6 +7,7 @@ project(deepthought VERSION 1.0 LANGUAGES C)
 # specify c++ standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
 if (CMAKE_SYSTEM_NAME EQUAL "Windows")
@@ -63,32 +64,11 @@ if(SHADERS)
     add_compile_definitions(_USE_SHADERS_)
 endif()
 
-if(SPICE)
-    add_compile_definitions(_ENABLE_SPICE_)
-    set(CSPICE_DIR ${CMAKE_SOURCE_DIR}/cspice)
-    find_library(CSPICE_LIB cspice  PATHS ${CSPICE_DIR}/lib)
-    if (NOT CSPICE_LIB)
-        add_library(cspice STATIC IMPORTED)
-        set_target_properties(cspice PROPERTIES IMPORTED_LOCATION ${CSPICE_DIR}/lib/cspice.a)
-        set_target_properties(cspice PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CSPICE_DIR}/include)
-        target_link_libraries(deepthought PUBLIC cspice)
-        target_link_libraries(Test PUBLIC cspice)
-    else()
-        target_include_directories(deepthought PUBLIC ${CSPICE_DIR}/include)
-        target_link_libraries(deepthought PUBLIC ${CSPICE_LIB})
-
-        # #Link spice to Test
-        target_include_directories(Test PUBLIC ${CSPICE_DIR}/include)
-        target_link_libraries(Test PUBLIC ${CSPICE_LIB})
-    endif()
-endif()
-
-
 set(CMAKE_C_FLAGS "-fpic -Wall -Wshadow -Wno-deprecated " CACHE STRING "Set C Compiler Flags" FORCE)
 
 
 # explicitly set compile flags for all, debug, and release
-set(CMAKE_C_FLAGS_DEBUG "-pg")
+set_target_properties(deepthought PROPERTIES CMAKE_C_FLAGS_DEBUG "-pg")
 set(CMAKE_C_FLAGS_RELEASE "-O2")
 
 if(C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
@@ -175,10 +155,35 @@ set(AC_SOURCES
     )
 
 add_library(42kit SHARED ${KIT_SOURCES})
+set_target_properties(42kit PROPERTIES CMAKE_C_FLAGS_DEBUG "-g")
 set_target_properties(42kit PROPERTIES LIBRARY_OUTPUT_DIRECTORY Kit)
 
 target_include_directories(deepthought PRIVATE kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
+
+if(SPICE)
+    add_compile_definitions(_ENABLE_SPICE_)
+    set(CSPICE_DIR ${CMAKE_SOURCE_DIR}/cspice)
+    find_library(CSPICE_LIB cspice  PATHS ${CSPICE_DIR}/lib)
+    if (NOT CSPICE_LIB)
+        add_library(cspice STATIC IMPORTED)
+        set_target_properties(cspice PROPERTIES IMPORTED_LOCATION ${CSPICE_DIR}/lib/cspice.a)
+        set_target_properties(cspice PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CSPICE_DIR}/include)
+        target_link_libraries(deepthought PUBLIC cspice)
+        target_link_libraries(42kit PUBLIC cspice)
+        target_link_libraries(Test PUBLIC cspice)
+    else()
+        target_include_directories(deepthought PUBLIC ${CSPICE_DIR}/include)
+        target_link_libraries(deepthought PUBLIC ${CSPICE_LIB})
+
+        target_include_directories(42kit PUBLIC ${CSPICE_DIR}/include)
+        target_link_libraries(42kit PUBLIC ${CSPICE_LIB})
+
+        # #Link spice to Test
+        target_include_directories(Test PUBLIC ${CSPICE_DIR}/include)
+        target_link_libraries(Test PUBLIC ${CSPICE_LIB})
+    endif()
+endif()
 
 if(GSFC)
     add_compile_definitions(_USE_GSFC_WATERMARK_)

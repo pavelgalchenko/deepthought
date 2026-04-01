@@ -23,6 +23,10 @@
 ** #endif
 */
 
+#ifdef _ENABLE_SPICE_
+#include "SpiceUsr.h"
+#endif
+
 extern double EnckeFQ(double const r[3], double const delta[3]);
 extern void Legendre(long N, long M, double x, double P[N + 1][M + 1],
                      double sdP[N + 1][M + 1]);
@@ -381,11 +385,11 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
    HV[2][1] = HV[1][2];
 }
 
-void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
-                               double PriMerAng, double pbn[3],
+void SphericalHarmonicsHessian(const long N, const long M, struct WorldType *W,
+                               const double CEN[3][3], const double pbn[3],
                                double HgeoN[3][3])
 {
-   double CEN[3][3] = {{0.0}}, cth, sth, cph, sph, pbe[3], HV[3][3] = {{0.0}};
+   double cth, sth, cph, sph, pbe[3], HV[3][3] = {{0.0}};
    double r;
    long i, j, k;
    const struct SphereHarmType *GravModel = &W->GravModel;
@@ -393,11 +397,6 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    double gradV[3] = {0.0};
 
    /*    Transform p to ECEF */
-   CEN[0][0] = cos(PriMerAng);
-   CEN[1][1] = CEN[0][0];
-   CEN[2][2] = 1.0;
-   CEN[0][1] = sin(PriMerAng);
-   CEN[1][0] = -CEN[0][1];
    MxV(CEN, pbn, pbe);
 
    const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
@@ -557,8 +556,8 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
       double PriMerAng = GetPriMerAng(OrbCenter, date);
       double fGeoN[3], fGeoR[3], PosN[3];
       MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, PriMerAng,
-                             mass, PosN, fGeoN);
+      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, mass, PosN,
+                             fGeoN);
       MxV(Nav->refCRN, fGeoN, fGeoR);
       for (j = 0; j < 3; j++)
          VelRdot[j] += fGeoR[j] / mass;
@@ -642,11 +641,28 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      const double PriMerAng = GetPriMerAng(OrbCenter, date);
+      double CEN[3][3] = {{0.0}};
+#ifdef _ENABLE_SPICE_
+      if (EphemOption == 3) {
+         char frame_name[25] = "IAU_";
+         char world_name[25] = {"\0"};
+         toupper_str(WCenter->Name, world_name);
+         strcat(frame_name, world_name);
+
+         pxform_c("J2000", frame_name, DynTime, CEN);
+      }
+      else {
+#endif
+         const double PriMerAng = GetPriMerAng(OrbCenter, date);
+         const double AXIS[3]   = {0.0, 0.0, 1.0};
+         SimpRot(AXIS, PriMerAng, CEN);
+#ifdef _ENABLE_SPICE_
+      }
+#endif
       double HgeoN[3][3] = {{0.0}}, HgeoR[3][3] = {{0.0}}, PosN[3] = {0.0};
       MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter, PriMerAng,
-                                PosN, HgeoN);
+      SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter, CEN, PosN,
+                                HgeoN);
       if (Nav->refFrame != FRAME_N) {
          Adjoint(Nav->refCRN, HgeoN, HgeoR);
          for (i = 0; i < 3; i++)

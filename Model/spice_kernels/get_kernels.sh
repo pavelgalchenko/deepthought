@@ -4,13 +4,13 @@
 GENERIC_KERNELS="pub/naif/generic_kernels"
 SPICE_URL="http://naif.jpl.nasa.gov/"
 wget_kernels(){
-    wget -m -nH --cut-dirs=5 -e robots=off --trust-server-names -R 'index.html*' -I "${GENERIC_KERNELS}/${1}/${2}" -nv "${SPICE_URL}${GENERIC_KERNELS}/${1}/${2}"
+    wget -m -nH --cut-dirs=5 -e robots=off --trust-server-names -R 'index.html*' -I "${GENERIC_KERNELS}/${1}/" -nv "${SPICE_URL}${GENERIC_KERNELS}/${1}/${2}"
 }
 
 leapsecond_kernels="naif0012.tls"
 planet_kernels="de440.bsp de430.bsp"
-satellite_kernels="mar097.bsp jup344.bsp jup365.bsp sat415.bsp sat441.bsp ura111l.bsp nep097.bsp a_old_versions/nep101.bsp plu060.bsp"
-planetary_constants_kernels="pck00010.tpc Gravity.tpc"
+satellite_kernels="mar099s.bsp jup347.bsp jup365.bsp sat415.bsp sat441.bsp a_old_versions/ura111l.bsp nep097.bsp a_old_versions/nep101.bsp plu060.bsp"
+planetary_constants_kernels="pck00011.tpc gm_de440.tpc Gravity.tpc"
 
 BASEDIR=$(dirname $0)
 cd "$BASEDIR"

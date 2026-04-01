@@ -49,12 +49,11 @@ void Environment(struct SCType *S)
 
    /* .. Magnetic Field */
    if (MagModel.Type == DIPOLE) {
-      DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset, S->PosN,
-                     P->PriMerAng, S->bvn);
+      DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset, P,
+                     S->PosN, S->bvn);
    }
    else if (MagModel.Type == IGRF && O->World == EARTH) {
-      IGRFMagField(ModelPath, UTC, MagModel.N, MagModel.M, S->PosN,
-                   P->PriMerAng, S->bvn);
+      IGRFMagField(ModelPath, UTC, MagModel.N, MagModel.M, P, S->PosN, S->bvn);
    }
    else {
       S->bvn[0] = 0.0;

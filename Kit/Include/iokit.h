@@ -49,6 +49,7 @@
 #define WHILE_FY_ITER(node, iterNode)                                          \
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)
 
+void toupper_str(const char *const in, char *const out);
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
                                                 const char *path,
                                                 const char *fileName);

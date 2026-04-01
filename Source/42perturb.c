@@ -498,8 +498,8 @@ void GravPertForce(struct SCType *S)
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                          WCenter->PriMerAng, S->mass, S->PosN, FrcN);
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, S->mass, S->PosN,
+                          FrcN);
    for (j = 0; j < 3; j++)
       S->FrcN[j] += FrcN[j];
 

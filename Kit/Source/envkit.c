@@ -21,14 +21,18 @@
 
 /**********************************************************************/
 void SphericalHarmGravForce(const long N, const long M,
-                            const struct WorldType *W, const double PriMerAng,
-                            const double mass, const double pbn[3],
-                            double FgeoN[3])
+                            const struct WorldType *W, const double mass,
+                            const double pbn[3], double FgeoN[3])
 {
-   double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
+   double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Fr, Fth, Fph, Fe[3];
    const struct SphereHarmType *GravModel = &W->GravModel;
    const double AXIS[3]                   = {0.0, 0.0, 1.0};
+
+   /*    Transform p to spherical coords in Earth frame */
+   MxV(W->CWN, pbn, pbe);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   const double trigs[4] = {cth, sth, cph, sph};
 
 #ifdef _DEBUG_GRAV_
    // print out gravitational acceleration vector field to a file for debugging
@@ -44,16 +48,17 @@ void SphericalHarmGravForce(const long N, const long M,
       reporting = 1;
       for (theta = 0.5; theta <= 179.5; theta += 0.5) {
          for (phi = -180.0; phi < 180.0; phi += 0.5) {
-            cth            = cos(theta * D2R);
-            sth            = sin(theta * D2R);
-            cph            = cos(phi * D2R);
-            sph            = sin(phi * D2R);
-            double rvec[3] = {0.0};
-            rvec[0]        = r * sth * cph;
-            rvec[1]        = r * sth * sph;
-            rvec[2]        = r * cth;
-            double out[3]  = {0.0};
-            SphericalHarmGravForce(N, M, W, 0, mass, rvec, out);
+            cth              = cos(theta * D2R);
+            sth              = sin(theta * D2R);
+            cph              = cos(phi * D2R);
+            sph              = sin(phi * D2R);
+            double rvec_e[3] = {0.0}, rvec_n[3] = {0.0};
+            rvec_e[0] = r * sth * cph;
+            rvec_e[1] = r * sth * sph;
+            rvec_e[2] = r * cth;
+            MTxV(W->CWN, rvec_e, rvec_n);
+            double out[3] = {0.0};
+            SphericalHarmGravForce(N, M, W, mass, rvec_n, out);
          }
       }
       reporting = 0;
@@ -64,13 +69,6 @@ void SphericalHarmGravForce(const long N, const long M,
    for (int i = 0; i < 3; i++)
       FgeoN[i] = 0.0;
    if (GravModel->C != NULL && GravModel->N >= 2) {
-      SimpRot(AXIS, PriMerAng, CEN);
-
-      /*    Transform p to spherical coords in World frame */
-      MxV(CEN, pbn, pbe);
-      getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-      const double trigs[4] = {cth, sth, cph, sph};
-
       SphericalHarmonics(N, M, r, trigs, GravModel->r_ref,
                          W->mu / GravModel->r_ref, GravModel->C, GravModel->S,
                          GravModel->Norm, gradV);
@@ -82,7 +80,7 @@ void SphericalHarmGravForce(const long N, const long M,
       if (reporting) {
          fprintf(gravFile,
                  "%lf, %lf, %18.36le, %18.36le, %18.36le, %18.36le \n", theta,
-                 phi - PriMerAng, r, gradV[0], gradV[1], gradV[2]);
+                 phi, r, gradV[0], gradV[1], gradV[2]);
       }
 #endif
 
@@ -91,34 +89,41 @@ void SphericalHarmGravForce(const long N, const long M,
       Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
       Fe[2] = Fr * cth - Fth * sth;
 
-      MTxV(CEN, Fe, FgeoN);
+      MTxV(W->CWN, Fe, FgeoN);
    }
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
 void IGRFMagField(const char *ModelPath, const struct DateType UTC,
-                  const long N, const long M, const double pbn[3],
-                  const double PriMerAng, double MagVecN[3])
+                  const long N, const long M, const struct WorldType *W,
+                  const double pbn[3], double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
 #define nYears 26
 
    static double **Cdat[nYears + 1] = {NULL}, **Sdat[nYears + 1] = {NULL};
-   double t[nYears] = {1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0,
-                       1935.0, 1940.0, 1945.0, 1950.0, 1955.0, 1960.0, 1965.0,
-                       1970.0, 1975.0, 1980.0, 1985.0, 1990.0, 1995.0, 2000.0,
-                       2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
+   const double t[nYears] = {
+       1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0, 1935.0, 1940.0,
+       1945.0, 1950.0, 1955.0, 1960.0, 1965.0, 1970.0, 1975.0, 1980.0, 1985.0,
+       1990.0, 1995.0, 2000.0, 2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
    double cth, sth, cph, sph, pbe[3], gradV[3];
    double r, Br, Bth, Bph, BVE[3];
    const double AXIS[3] = {0.0, 0.0, 1.0};
-   double CEN[3][3];
-   const double Re    = 6371200.0;
-   static long First  = 1;
-   static long warned = 0;
+   const double Re      = 6371200.0;
+   static long First    = 1;
+   static long warned   = 0;
+
+   /*    Transform p to spherical coords in Earth frame */
+   MxV(W->CWN, pbn, pbe);
+   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+
+   const double trigs[4] = {cth, sth, cph, sph};
 
 #ifdef _DEBUG_MAG_
-   static FILE *magFile = NULL;
-   static int reporting = 0;
+   static FILE *magFile_ENU = NULL;
+   static FILE *magFile_ECF = NULL;
+   static FILE *magFile_ECI = NULL;
+   static int reporting     = 0;
    static double theta, phi;
 #endif
    if (First) {
@@ -146,14 +151,15 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       for (int i = 0; i < 4; i++)
          fgets(buffer, sizeof(buffer), IGRFfile);
       while (fgets(buffer, sizeof(buffer), IGRFfile) != NULL) {
-         sscanf(buffer,
-                "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
-                "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4],
-                &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11],
-                &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17],
-                &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23],
-                &dum[24], &dum[25], &dum[26]);
+         sscanf(
+             buffer,
+             "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
+             "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+             &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5],
+             &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12],
+             &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18],
+             &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24],
+             &dum[25], &dum[26], &dum[27]);
          switch (gh) {
             case 'g':
                for (k = 0; k < nYears + 1; k++)
@@ -183,27 +189,36 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       }
 #ifdef _DEBUG_MAG_
       extern char OutPath[1000];
-      magFile   = FileOpen(OutPath, "/IGRFModelTest.42", "wt");
-      r         = MAGV(pbn);
-      reporting = 1;
-      fprintf(magFile, "%ld/%02ld/%02ld %02ld:%02ld:%.6lf\n", UTC.Year,
+      magFile_ENU = FileOpen(OutPath, "/IGRFModelTest_ENU.42", "wt");
+      magFile_ECF = FileOpen(OutPath, "/IGRFModelTest_ECF.42", "wt");
+      magFile_ECI = FileOpen(OutPath, "/IGRFModelTest_ECI.42", "wt");
+      r           = MAGV(pbn);
+      reporting   = 1;
+      fprintf(magFile_ENU, "%ld/%02ld/%02ld %02ld:%02ld:%.6lf\n", UTC.Year,
+              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
+      fprintf(magFile_ECF, "%ld/%02ld/%02ld %02ld:%02ld:%.6lf\n", UTC.Year,
+              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
+      fprintf(magFile_ECI, "%ld/%02ld/%02ld %02ld:%02ld:%.6lf\n", UTC.Year,
               UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
       for (theta = 0.5; theta <= 179.5; theta += 0.5) {
          for (phi = -180.0; phi < 180.0; phi += 0.5) {
-            cth            = cos(theta * D2R);
-            sth            = sin(theta * D2R);
-            cph            = cos(phi * D2R);
-            sph            = sin(phi * D2R);
-            double rvec[3] = {0.0};
-            rvec[0]        = r * sth * cph;
-            rvec[1]        = r * sth * sph;
-            rvec[2]        = r * cth;
-            double out[3]  = {0.0};
-            IGRFMagField(ModelPath, UTC, N, M, rvec, 0, out);
+            cth              = cos(theta * D2R);
+            sth              = sin(theta * D2R);
+            cph              = cos(phi * D2R);
+            sph              = sin(phi * D2R);
+            double rvec_e[3] = {0.0}, rvec_n[3] = {0.0};
+            rvec_e[0] = r * sth * cph;
+            rvec_e[1] = r * sth * sph;
+            rvec_e[2] = r * cth;
+            MTxV(W->CWN, rvec_e, rvec_n);
+            double out[3] = {0.0};
+            IGRFMagField(ModelPath, UTC, N, M, W, rvec_n, out);
          }
       }
       reporting = 0;
-      fclose(magFile);
+      fclose(magFile_ENU);
+      fclose(magFile_ECF);
+      fclose(magFile_ECI);
 
 #endif
    }
@@ -211,7 +226,7 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
    const double doy = (UTC.doy - 1) + (UTC.Hour - 1) / 24.0 +
                       UTC.Minute / 1440.0 + UTC.Second / 86400.0;
    const double year = UTC.Year + doy / (UTC.Year % 4 ? 365.0 : 366.0);
-   if (year > 2020) {
+   if (year > t[nYears - 1]) {
       if (!warned && year > t[nYears - 1] + 5) {
          warned = 1;
          printf("***** WARNING: IGRF model only well defined up to %ld; "
@@ -242,59 +257,51 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
       }
    }
 
-   SimpRot(AXIS, PriMerAng, CEN);
-
-   /*    Transform p to spherical coords in Earth frame */
-   MxV(CEN, pbn, pbe);
-   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-   const double trigs[4] = {cth, sth, cph, sph};
-
    /*    Find Br, Bth, Bph */
    SphericalHarmonics(N, M, r, trigs, Re, Re, C, S, Norm, gradV);
    Br  = -gradV[0];
    Bth = -gradV[1];
    Bph = -gradV[2];
 
-#ifdef _DEBUG_MAG_
-   if (reporting) {
-      fprintf(magFile, "%lf, %lf, %18.36le, %18.36le, %18.36le, %18.36le\n",
-              theta, phi - PriMerAng, r, Bph, -Bth, Br);
-   }
-#endif
-
    /*    Transform back to cartesian coords in Newtonian frame */
    /*    and convert from nanoTesla to Tesla */
-   BVE[0] = 1.0E-9 * ((Br * sth + Bth * cth) * cph - Bph * sph);
-   BVE[1] = 1.0E-9 * ((Br * sth + Bth * cth) * sph + Bph * cph);
-   BVE[2] = 1.0E-9 * (Br * cth - Bth * sth);
+   const double tmp = Br * sth + Bth * cth;
+   BVE[0]           = 1.0E-9 * (tmp * cph - Bph * sph);
+   BVE[1]           = 1.0E-9 * (tmp * sph + Bph * cph);
+   BVE[2]           = 1.0E-9 * (Br * cth - Bth * sth);
 
-   MTxV(CEN, BVE, MagVecN);
+   MTxV(W->CWN, BVE, MagVecN);
 
-   /*printf("r,phi,theta: %lf %lf %lf\n",r,phi,theta);
-   **printf("Br,Bth,Bph: %lf %lf %lf\n",Br,Bth,Bph);
-   **printf("BVE: %lf %lf %lf\n\n",BVE[0],BVE[1],BVE[2]);
-   */
+#ifdef _DEBUG_MAG_
+   if (reporting) {
+      fprintf(magFile_ENU, "%lf, %lf, %18.36le, %18.36le, %18.36le, %18.36le\n",
+              theta, phi, r, Bph, -Bth, Br);
+      fprintf(magFile_ECF, "%lf, %lf, %18.36le, %18.36le, %18.36le, %18.36le\n",
+              theta, phi, r, BVE[0] * 1.0e9, BVE[1] * 1.0e9, BVE[2] * 1.0e9);
+      fprintf(magFile_ECI, "%lf, %lf, %18.36le, %18.36le, %18.36le, %18.36le\n",
+              theta, phi, r, MagVecN[0] * 1.0e9, MagVecN[1] * 1.0e9,
+              MagVecN[2] * 1.0e9);
+   }
+#endif
 #undef nYears
 }
 
 /**********************************************************************/
 /*  Computes planetary dipole magnetic field vector at S/C position.  */
-void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
-                    double DipoleOffset[3], double p[3], double PriMerAng,
-                    double MagVecN[3])
+void DipoleMagField(const double DipoleMoment, const double DipoleAxis[3],
+                    const double DipoleOffset[3], const struct WorldType *W,
+                    double p[3], double MagVecN[3])
 {
-   double R[3], PCN[3], R3, MN[3], MoR, CEN[3][3];
+   double R[3], PCN[3], R3, MN[3], MoR;
    double AXIS[3] = {0.0, 0.0, 1.0};
    long i;
 
-   SimpRot(AXIS, PriMerAng, CEN);
-
-   MTxV(CEN, DipoleOffset, PCN);
+   MTxV(W->CWN, DipoleOffset, PCN);
    for (i = 0; i < 3; i++)
       R[i] = p[i] - PCN[i];
    R3 = UNITV(R);
    R3 = R3 * R3 * R3;
-   MTxV(CEN, DipoleAxis, MN);
+   MTxV(W->CWN, DipoleAxis, MN);
    MoR = VoV(MN, R);
    for (i = 0; i < 3; i++)
       MagVecN[i] = DipoleMoment / R3 * (3.0 * MoR * R[i] - MN[i]);
