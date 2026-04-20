@@ -110,16 +110,11 @@ EXTERN double AtomicTime;  /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;     /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;   /* UTC = TAI - LeapSec */
 EXTERN double GpsTime;     /* GPS Time = TAI - 19.0 sec */
+EXTERN struct DateType TDB; /* Barycentric Dynamical Time */
 EXTERN struct DateType TT; /* Terrestrial Dynamical Time */
 EXTERN struct DateType UTC; /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
-
-/* Create long double time keeping, including modified MJD using GMAT definitions */
-EXTERN long double SimTime_ld, DTSIM_ld;
-EXTERN long double DynTime0_ld; /* Time in sec since J2000 Epoch at Sim Start (TT) */
-EXTERN long double DynTime_ld; /* Absolute Time (TT), sec since J2000 Epoch */
-EXTERN struct DateType_ld TDB; /* Barycentric Dynamical Time */
 
 /* Parameters for environmental models  */
 EXTERN long AtmoOption; /* TWOSIGMA_ATMO, NOMINAL_ATMO, USER_ATMO */
@@ -187,13 +182,13 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
-void GravPertForceRK4(struct SCType *S, long double u[6], long double FrcN[3], double RKFdt);
+void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3], double RKFdt);
 void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
                         double Frc[3]);
-void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
-                  long double *trgtPriMerAng, long double trgtCNH[3][3]);
-void Rk4SpiceEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
-                    long double *trgtPriMerAng, long double trgtCNH[3][3]);
+void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH[3],
+                  double *trgtPriMerAng, double trgtCNH[3][3]);
+void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH[3],
+                    double *trgtPriMerAng, double trgtCNH[3][3]);
 
 long SimStep(void);
 void Ephemerides(void);
@@ -253,7 +248,7 @@ void LoadPlanets(void);
 /* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
 long LoadSpiceKernels(char SpicePath[80]);
 /* Update celestial body locations at TT.JulDay using SPICE*/
-long UpdateSpiceEphems(long double JS);
+long UpdateSpiceEphems(double JS);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
 long LoadJplEphems(char EphemPath[80], double JD);

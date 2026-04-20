@@ -651,7 +651,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    double EpochJD, R[3], V[3];
    long EpochYear, EpochMonth, EpochDay, EpochHour, EpochMinute;
    double EpochSecond;
-   long double CNJ[3][3] = {0}, R_ld[3], V_ld[3], R_temp[3], V_temp[3];
+   double CNJ[3][3] = {0}, R_temp[3], V_temp[3];
 
    infile = FileOpen(Path, TrvFileName, "r");
 
@@ -683,16 +683,12 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
          O->World = DecodeString(response2);
          O->mu    = World[O->World].mu;
          if (O->World == LUNA && O->Regime == ORB_N_BODY) {
-            LunaInertialFrame_ld(TDB.JulDay, CNJ);
+            LunaInertialFrame(TDB.JulDay, CNJ);
+            MxV(CNJ,R,R_temp);
+            MxV(CNJ,V,V_temp);
             for(i=0;i<3;i++) {
-               R_ld[i] = (long double) R[i];
-               V_ld[i] = (long double) V[i];
-            }
-            MxV_ld(CNJ,R_ld,R_temp);
-            MxV_ld(CNJ,V_ld,V_temp);
-            for(i=0;i<3;i++) {
-               R[i] = (double) R_temp[i];
-               V[i] = (double) V_temp[i];
+               R[i] = R_temp[i];
+               V[i] = V_temp[i];
             }
          }
          // printf("R = %18.18le %18.18le %18.18le \n", R[0], R[1], R[2]);
@@ -6205,23 +6201,21 @@ void UpdateJplEphems(void)
    }
 }
 /**********************************************************************/
-void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
-                  long double *trgtPriMerAng, long double trgtCNH[3][3])
+void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH[3],
+                  double *trgtPriMerAng, double trgtCNH[3][3])
 {
    long i, j, Ic, Iw;
    struct Cheb3DType *Cheb;
    struct OrbitType *Eph;
    struct WorldType *W;
    double u, dudJD, T[20], U[20], P, dPdu;
-   long double rh[3], PosJ[3], PosN[3], systemBC[3];
-   long double earthPosN[3], lunaPosN[3], otherPosN[3];
-   long double earthPosH[3], lunaPosH[3], otherPosH[3];
-   long double CNJ[3][3] = {0};
+   double rh[3], PosJ[3], PosN[3], systemBC[3];
+   double earthPosN[3], lunaPosN[3], otherPosN[3];
+   double earthPosH[3], lunaPosH[3], otherPosH[3];
+   double CNJ[3][3] = {0};
    long WRLD[2] = {EARTH, LUNA}, otherJPL;
-   long double GMST, timeTT, utcJD;
-   long double qjh_ld[4], CNH_ld[3][3]={0};
-
-   for (j = 0; j < 4; ++j) qjh_ld[j] = (long double) qjh[j];
+   double GMST, timeTT, utcJD;
+   double CNH[3][3] = {0};
 
    /* .. Initialize position of system barycenter */
    W   = &World[SOL];
@@ -6237,9 +6231,9 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
    ChebyPolys(u, Cheb->N, T, U);
    for (i = 0; i < 3; i++) {
       ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-      PosJ[i] = 1000.0L * ((long double) P);
+      PosJ[i] = 1000.0 * P;
    }
-   QTxV_ld( qjh_ld, PosJ, systemBC);
+   QTxV( qjh, PosJ, systemBC);
 
    /* Determine which ephemerides math needed */
    otherJPL = (trgtWORLD != SOL && trgtWORLD != EARTH && trgtWORLD != LUNA && trgtWORLD <= PLUTO);
@@ -6263,9 +6257,9 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
          ChebyPolys(u, Cheb->N, T, U);
          for (i = 0; i < 3; i++) {
             ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-            PosJ[i] = 1000.0L * ((long double) P);
+            PosJ[i] = 1000.0 * P;
          }
-         QTxV_ld( qjh_ld, PosJ, PosN);
+         QTxV( qjh, PosJ, PosN);
          if (Iw == EARTH) {
             for (i = 0; i < 3; i++) earthPosN[i] = PosN[i];
          }
@@ -6288,7 +6282,7 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
          lunaPosH[i] = earthPosH[i] + lunaPosN[i];
       }
       /* Rotate Moon into ECI */
-      QxV_ld( qjh_ld, rh, lunaPosN);
+      QxV( qjh, rh, lunaPosN);
    }
    else if (otherJPL) {
       /* .. Initialize Pos for other planet in JPL ephemerides */
@@ -6305,9 +6299,9 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
       ChebyPolys(u, Cheb->N, T, U);
       for (i = 0; i < 3; i++) {
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-         PosJ[i] = 1000.0L * ((long double) P);
+         PosJ[i] = 1000.0 * P;
       }
-      QTxV_ld( qjh_ld, PosJ, PosN);
+      QTxV( qjh, PosJ, PosN);
       /* Move planet from barycentric to Sun-centered */
       for (i = 0; i < 3; i++) {
          otherPosN[i]  = PosN[i];
@@ -6365,13 +6359,13 @@ void Rk4JplEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long 
    }
 
    if (trgtWORLD == LUNA) {
-      LunaInertialFrame_ld(JD, CNJ);
+      LunaInertialFrame(JD, CNJ);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
-            CNH_ld[i][j] = World[EARTH].CNH[i][j];
+            CNH[i][j] = World[EARTH].CNH[i][j];
          }
       }
-      MxM_ld(CNJ, CNH_ld, trgtCNH);
+      MxM(CNJ, CNH, trgtCNH);
    }
    else {
       for (i = 0; i < 3; i++) {
@@ -6503,7 +6497,7 @@ long LoadSpiceKernels(char SpicePath[80])
    furnsh_c(MetaKernelPath);
    return (0);
 }
-long UpdateSpiceEphems(long double JS)
+long UpdateSpiceEphems(double JS)
 {
    long Iw, Ip, Im;
    int i;
@@ -6657,8 +6651,8 @@ long UpdateSpiceEphems(long double JS)
 
    return (0);
 }
-void Rk4SpiceEphems(long double JD, long trgtWORLD, long double trgtPosN[3], long double trgtPosH[3],
-                  long double *trgtPriMerAng, long double trgtCNH[3][3])
+void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH[3],
+                  double *trgtPriMerAng, double trgtCNH[3][3])
 {
    double CNH[3][3];
    double Nstate[6], Hstate[6];
@@ -6985,8 +6979,6 @@ void InitSim(int argc, char **argv)
                       "Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   /* Save DTSIM as long double */
-   DTSIM_ld = (long double) DTSIM;
    TimeMode = DecodeString(response);
    GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
@@ -7389,10 +7381,6 @@ void InitSim(int argc, char **argv)
    GpsTime    = AtomicTime - 19.0;
    DynTime    = DynTime0;
 
-   DynTime0   = ((long double) AtomicTime) + 32.184L;
-   GpsTime    = AtomicTime - 19.0;
-   DynTime    = DynTime0;
-
    TT.JulDay = TimeToJD(DynTime);
    TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
               &TT.Second, DTSIM);
@@ -7403,22 +7391,16 @@ void InitSim(int argc, char **argv)
 
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
-   long double utc_TT_offset = 0, timeUTC = 0;
-   timeUTC = DateToTime_ld(UTC.Year,UTC.Month,UTC.Day,
-                           UTC.Hour,UTC.Minute,UTC.Second);
-   utc_TT_offset = (long double)LeapSec + 32.184L;
-   DynTime0_ld   = timeUTC + utc_TT_offset;
-   DynTime_ld    = DynTime0_ld;
-   TDB.JulDay    = TTtoTDB_JD(DynTime_ld);
-   TDB.tdbTime   = TTtoTDB_Time(DynTime_ld);
-   TimeToDate_ld(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-                 &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM_ld);
+   TDB.JulDay  = TTtoTDB_JD(DynTime);
+   TDB.tdbTime = TTtoTDB_Time(DynTime);
+   TimeToDate(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
+              &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
    TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
 
    /* Preload Ephemeris Kernels/Definitions */
    if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 ||
        EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      LoadJplEphems(ModelPath, (double)TDB.JulDay);
+      LoadJplEphems(ModelPath, TDB.JulDay);
    }
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE)
@@ -7453,7 +7435,7 @@ void InitSim(int argc, char **argv)
    }
 #ifdef _ENABLE_SPICE_
    else if (EphemOption == EPH_SPICE)
-      UpdateSpiceEphems(DynTime_ld);
+      UpdateSpiceEphems(DynTime);
 #endif
 
    /* .. Asteroids and Comets */

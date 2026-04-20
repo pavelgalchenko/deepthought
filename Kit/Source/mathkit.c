@@ -70,19 +70,6 @@ void MxM(const double A[3][3], const double B[3][3], double C[3][3])
    C[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1];
    C[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2];
 }
-void MxM_ld(const long double A[3][3], const long double B[3][3], long double C[3][3])
-{
-
-   C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
-   C[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1];
-   C[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2];
-   C[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0];
-   C[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1];
-   C[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2];
-   C[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0];
-   C[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1];
-   C[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2];
-}
 /**********************************************************************/
 /* 3x3 Matrix times Transpose of Matrix                               */
 void MxMT(const double A[3][3], const double B[3][3], double C[3][3])
@@ -141,12 +128,6 @@ void MxV(const double M[3][3], const double V[3], double W[3])
    W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
    W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
 }
-void MxV_ld(const long double M[3][3], const long double V[3], long double W[3])
-{
-   W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
-   W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
-   W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
-}
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
 void VxMT(const double V[3], const double M[3][3], double W[3])
@@ -158,12 +139,6 @@ void VxMT(const double V[3], const double M[3][3], double W[3])
 /**********************************************************************/
 /*  Transpose of 3x3 Matrix times 3x1 Vector                          */
 void MTxV(const double M[3][3], const double V[3], double W[3])
-{
-   W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
-   W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
-   W[2] = M[0][2] * V[0] + M[1][2] * V[1] + M[2][2] * V[2];
-}
-void MTxV_ld(const long double M[3][3], const long double V[3], long double W[3])
 {
    W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
    W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
@@ -359,12 +334,6 @@ void VxV(const double A[3], const double B[3], double C[3])
    C[1] = A[2] * B[0] - A[0] * B[2];
    C[2] = A[0] * B[1] - A[1] * B[0];
 }
-void VxV_ld(const long double A[3], const long double B[3], long double C[3])
-{
-   C[0] = A[1] * B[2] - A[2] * B[1];
-   C[1] = A[2] * B[0] - A[0] * B[2];
-   C[2] = A[0] * B[1] - A[1] * B[0];
-}
 /**********************************************************************/
 /*  Vector cross Matrix dot Vector                                    */
 void vxMov(const double w[3], const double M[3][3], double wxMow[3])
@@ -382,10 +351,6 @@ void vxMov(const double w[3], const double M[3][3], double wxMow[3])
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */
 double MAGV(const double V[3])
-{
-   return (sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]));
-}
-long double MAGV_ld(const long double V[3])
 {
    return (sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]));
 }
@@ -407,25 +372,6 @@ double UNITV(double V[3])
       V[0] = 0.0;
       V[1] = 0.0;
       V[2] = 0.0;
-   }
-   return (A);
-}
-long double UNITV_ld(long double V[3])
-{
-   long double A;
-
-   A = sqrtl(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
-   if (A > 0.0L) {
-      V[0] /= A;
-      V[1] /= A;
-      V[2] /= A;
-   }
-   else {
-      printf("Attempted divide by zero in UNITV (Line %d of mathkit.c)\n",
-             __LINE__);
-      V[0] = 0.0L;
-      V[1] = 0.0L;
-      V[2] = 0.0L;
    }
    return (A);
 }
@@ -581,51 +527,11 @@ void QxV(const double QAB[4], const double Vb[3], double Va[3])
        (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Vb[2] +
        2.0 * ((qq[0][2] + qq[1][3]) * Vb[0] + (qq[1][2] - qq[0][3]) * Vb[1]);
 }
-void QxV_ld(const long double QAB[4], const long double Vb[3], long double Va[3])
-{
-   long double qq[4][4];
-   long i, j;
-
-   for (i = 0; i < 4; i++) {
-      for (j = i; j < 4; j++)
-         qq[i][j] = QAB[i] * QAB[j];
-   }
-
-   Va[0] =
-       (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Vb[0] +
-       2.0 * ((qq[0][1] + qq[2][3]) * Vb[1] + (qq[0][2] - qq[1][3]) * Vb[2]);
-   Va[1] =
-       (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Vb[1] +
-       2.0 * ((qq[1][2] + qq[0][3]) * Vb[2] + (qq[0][1] - qq[2][3]) * Vb[0]);
-   Va[2] =
-       (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Vb[2] +
-       2.0 * ((qq[0][2] + qq[1][3]) * Vb[0] + (qq[1][2] - qq[0][3]) * Vb[1]);
-}
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
 void QTxV(const double QAB[4], const double Va[3], double Vb[3])
 {
    double qq[4][4];
-   long i, j;
-
-   for (i = 0; i < 4; i++) {
-      for (j = i; j < 4; j++)
-         qq[i][j] = QAB[i] * QAB[j];
-   }
-
-   Vb[0] =
-       (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Va[0] +
-       2.0 * ((qq[0][1] - qq[2][3]) * Va[1] + (qq[0][2] + qq[1][3]) * Va[2]);
-   Vb[1] =
-       (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Va[1] +
-       2.0 * ((qq[1][2] - qq[0][3]) * Va[2] + (qq[0][1] + qq[2][3]) * Va[0]);
-   Vb[2] =
-       (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Va[2] +
-       2.0 * ((qq[0][2] - qq[1][3]) * Va[0] + (qq[1][2] + qq[0][3]) * Va[1]);
-}
-void QTxV_ld(const long double QAB[4], const long double Va[3], long double Vb[3])
-{
-   long double qq[4][4];
    long i, j;
 
    for (i = 0; i < 4; i++) {

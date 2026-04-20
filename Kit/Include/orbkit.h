@@ -245,9 +245,7 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                        double *MeanMotion, double *Period);
 void LunaPosition(double JD, double r[3]);
 void LunaInertialFrame(long double JulDay, double CNJ[3][3]);
-void LunaInertialFrame_ld(long double JulDay, long double CNJ[3][3]);
 double LunaPriMerAng(double JulDay);
-long double LunaPriMerAng_ld(long double JulDay);
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
 void FindCEN(double r[3], double CEN[3][3]);
 void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]);

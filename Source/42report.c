@@ -411,8 +411,8 @@ void DSM_PosHReport(void)
    static long First = 1;
    long Isc, i;
    char s[50];
-   long double CNJ[3][3];
-   long double SC_ECI[3], SC_LEI[3], SC_LCI[3];
+   double CNJ[3][3];
+   double SC_ECI[3], SC_LEI[3], SC_LCI[3];
 
    if (First) {
       poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -444,24 +444,24 @@ void DSM_PosHReport(void)
       if (SC[Isc].Exists) {
             if(Orb[SC[Isc].RefOrb].World == LUNA) {
                for (i = 0; i < 3; ++i){
-                  SC_LEI[i] = (long double)SC[Isc].PosN[i];
+                  SC_LEI[i] = SC[Isc].PosN[i];
                }
-               LunaInertialFrame_ld(TDB.JulDay, CNJ);
-               MTxV_ld(CNJ,SC_LEI,SC_LCI);
+               LunaInertialFrame(TDB.JulDay, CNJ);
+               MTxV(CNJ,SC_LEI,SC_LCI);
                for (i = 0; i < 3; ++i){
-                  SC_ECI[i] = SC_LCI[i] + (long double)World[LUNA].eph.PosN[i];
+                  SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
                }
             }
             else if (Orb[SC[Isc].RefOrb].World == EARTH) {
-               LunaInertialFrame_ld(TDB.JulDay, CNJ);
+               LunaInertialFrame(TDB.JulDay, CNJ);
                for (i = 0; i < 3; ++i) {
-                  SC_ECI[i] = (long double)SC[Isc].PosN[i];
-                  SC_LCI[i] = SC_ECI[i] - (long double)World[LUNA].eph.PosN[i];
+                  SC_ECI[i] = SC[Isc].PosN[i];
+                  SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
                }
-               MxV_ld(CNJ,SC_LCI,SC_LEI);
+               MxV(CNJ,SC_LCI,SC_LEI);
             }
-            fprintf(poshfile[Isc], "%18.48Le %18.48le ", TDB.JulDay, TT.JulDay);
-            fprintf(poshfile[Isc], "%18.48Le %18.48Le ", TDB.tdbTime, DynTime_ld);
+            fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.JulDay, TT.JulDay);
+            fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.tdbTime, DynTime);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[VENUS].PosH[0],
                     World[VENUS].PosH[1], World[VENUS].PosH[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[EARTH].PosH[0],
@@ -480,9 +480,9 @@ void DSM_PosHReport(void)
                     SC[0].PosN[1], SC[0].PosN[2]);
             fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
                     SC[0].PosH[1], SC[0].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", SC_ECI[0], SC_ECI[1], SC_ECI[2]);
-            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", SC_LCI[0], SC_LCI[1], SC_LCI[2]);
-            fprintf(poshfile[Isc], "%18.36Le %18.36Le %18.36Le ", SC_LEI[0], SC_LEI[1], SC_LEI[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_ECI[0], SC_ECI[1], SC_ECI[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LCI[0], SC_LCI[1], SC_LCI[2]);
+            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LEI[0], SC_LEI[1], SC_LEI[2]);
             fprintf(poshfile[Isc], "\n");
       }
       fflush(poshfile[Isc]);
