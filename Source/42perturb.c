@@ -444,19 +444,6 @@ void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
    for (j = 0; j < 3; j++)
       Frc[j] = mu * mass * (s[j] / s3 - p[j] / p3);
 }
-void ThirdBodyGravForce_ld( long double p[3], long double s[3], double mu, double mass,
-                            long double Frc[3])
-{
-   long double magp, mags, p3, s3;
-   long j;
-
-   magp = MAGV_ld(p);
-   mags = MAGV_ld(s);
-   p3   = magp * magp * magp;
-   s3   = mags * mags * mags;
-   for (j = 0; j < 3; j++)
-      Frc[j] = mu * mass * (s[j] / s3 - p[j] / p3);
-}
 /**********************************************************************/
 void GravPertForce(struct SCType *S)
 {
@@ -530,20 +517,20 @@ void GravPertForce(struct SCType *S)
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
-void GravPertForceRK4(struct SCType *S, long double u[6], long double FrcN[3], double RKFdt)
+void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3], double RKFdt)
 {
    struct OrbitType *O;
-   long double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
+   double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
    double FrcN_harm[3] = {0}, SCPosN_harm[3] = {0};
-   long double RK4TIME;
+   double RK4TIME;
    long Iw, Im, j;
    long OrbCenter, SecCenter;
-   long double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3] = {0};
-   long double cntrPosN[3], cntrPosH[3], cntrPriMerAng = 0, cntrCNH[3][3] = {0};
+   double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3] = {0};
+   double cntrPosN[3], cntrPosH[3], cntrPriMerAng = 0, cntrCNH[3][3] = {0};
    long revertCHEB = 0;
 
    for (j = 0; j < 3; j++) {
-      SCPosN[j]      = (long double) u[j];
+      SCPosN[j]      = u[j];
       SCPosN_harm[j] = u[j];
    }
 
@@ -578,10 +565,10 @@ void GravPertForceRK4(struct SCType *S, long double u[6], long double FrcN[3], d
          }
          for (j = 0; j < 3; j++)
             ph[j] = trgtPosH[j] - cntrPosH[j];
-         MxV_ld(cntrCNH,ph,p);
+         MxV(cntrCNH,ph,p);
          for (j = 0; j < 3; j++)
             s[j] = p[j] - SCPosN[j];
-         ThirdBodyGravForce_ld(p, s, World[Iw].mu, S->mass, FrcNtemp);
+         ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
          for (j = 0; j < 3; j++)
             FrcN[j] += FrcNtemp[j];
       }
@@ -602,7 +589,7 @@ void GravPertForceRK4(struct SCType *S, long double u[6], long double FrcN[3], d
                p[j] = trgtPosN[j];
                s[j] = p[j] - SCPosN[j];
             }
-            ThirdBodyGravForce_ld(p, s, World[Iw].mu, S->mass, FrcNtemp);
+            ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
             for (j = 0; j < 3; j++)
                FrcN[j] += FrcNtemp[j];
          }
@@ -613,7 +600,7 @@ void GravPertForceRK4(struct SCType *S, long double u[6], long double FrcN[3], d
    SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
                           cntrPriMerAng, S->mass, SCPosN_harm, FrcN_harm);
    for (j = 0; j < 3; j++)
-      FrcN[j] += (long double)FrcN_harm[j];
+      FrcN[j] += FrcN_harm[j];
 
    if (EphemOption != EPH_SPICE) {
       if (revertCHEB) {

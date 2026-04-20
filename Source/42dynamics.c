@@ -3955,17 +3955,17 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass,
    udot[5] = Frc[2] / mass - muR3 * u[2];
 }
 /**********************************************************************/
-void CowellEOMMrk2(long double u[6], long double udot[6], double mu, double mass,
+void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
                double Frc[3], struct SCType *S, double RKFdt)
 {
-   long double r_vec[3]={0};
-   long double gravpertFrc[3] = {0};
-   long double rmag, muR3;
+   double r_vec[3]={0};
+   double gravpertFrc[3] = {0};
+   double rmag, muR3;
    int j;
 
    for (j = 0; j < 3; j++) r_vec[j] = u[j];
-   rmag = MAGV_ld(r_vec);
-   muR3 = ((long double) mu) / (rmag * rmag * rmag);
+   rmag = MAGV(r_vec);
+   muR3 = mu / (rmag * rmag * rmag);
 
    /* .. Gravity Perturbation Forces */
    if (GravPertActive) GravPertForceRK4(S,u,gravpertFrc,RKFdt);
@@ -3982,7 +3982,7 @@ void CowellEOMMrk2(long double u[6], long double udot[6], double mu, double mass
 /* by 4th order Runge-Kutta                                           */
 void CowellRK4Mrk2(struct SCType *S)
 {
-   long double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
+   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    double dt0, dt1, dt2, dt3;
    long j;
    struct OrbitType *O;

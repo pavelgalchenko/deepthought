@@ -1218,79 +1218,6 @@ void LunaInertialFrame(long double JulDay, double CNJ[3][3])
       CNJ[2][i] = PoleVec[i];
    }
 }
-void LunaInertialFrame_ld(long double JulDay, long double CNJ[3][3])
-{
-   long double D, T;
-   long double E1, E2, E3, E4, E6, E7, E10, E13;
-   long double SinE1, SinE2, SinE3, SinE4, SinE6;
-   long double SinE10, SinE13;
-   long double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
-   long double PoleRA, PoleDec;
-   long double PoleVec[3], NodeVec[3], YVec[3];
-   long double d2r = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
-   long i;
-
-   D = JulDay - 2451545.0L;
-   T = D / 36525.0L;
-
-   E1  = fmodl(125.045L -  0.0529921L*D,360.0L)*d2r;
-   E2  = fmodl(250.089L -  0.1059842L*D,360.0L)*d2r;
-   E3  = fmodl(260.008L + 13.0120009L*D,360.0L)*d2r;
-   E4  = fmodl(176.625L + 13.3407154L*D,360.0L)*d2r;
-   E6  = fmodl(311.589L + 26.4057084L*D,360.0L)*d2r;
-   E7  = fmodl(134.963L + 13.0649930L*D,360.0L)*d2r;
-   E10 = fmodl( 15.134L -  0.1589763L*D,360.0L)*d2r;
-   E13 = fmodl( 25.053L + 12.9590088L*D,360.0L)*d2r;
-
-   SinE1  = sinl(E1);
-   SinE2  = sinl(E2);
-   SinE3  = sinl(E3);
-   SinE4  = sinl(E4);
-   SinE6  = sinl(E6);
-   SinE10 = sinl(E10);
-   SinE13 = sinl(E13);
-
-   CosE1  = cosl(E1);
-   CosE2  = cosl(E2);
-   CosE3  = cosl(E3);
-   CosE4  = cosl(E4);
-   CosE6  = cosl(E6);
-   CosE7  = cosl(E7);
-   CosE10 = cosl(E10);
-   CosE13 = cosl(E13);
-
-   PoleRA = 269.9949L       + 0.0031L*T      - 3.8787L*SinE1
-            - 0.1204L*SinE2 + 0.0700L*SinE3  - 0.0172L*SinE4
-            + 0.0072L*SinE6 - 0.0052L*SinE10 + 0.0043L*SinE13;
-
-   PoleDec = 66.5392L       + 0.0130L*T      + 1.5419L*CosE1  + 0.0239L*CosE2
-            - 0.0278L*CosE3 + 0.0068L*CosE4  - 0.0029L*CosE6
-            + 0.0009L*CosE7 + 0.0008L*CosE10 - 0.0009L*CosE13;
-
-   PoleRA  *= d2r;
-   PoleDec *= d2r;
-
-   /* Derive Pole Vector in J2000 */
-   PoleVec[0] = cosl(PoleRA) * cosl(PoleDec);
-   PoleVec[1] = sinl(PoleRA) * cosl(PoleDec);
-   PoleVec[2] = sinl(PoleDec);
-
-   /* IAU convention puts the X axis at Z(J2000) x PoleVec */
-   NodeVec[0] = -PoleVec[1];
-   NodeVec[1] =  PoleVec[0];
-   NodeVec[2] =  0.0L;
-   UNITV_ld(NodeVec);
-
-   VxV_ld(PoleVec, NodeVec, YVec);
-   UNITV_ld(YVec);
-
-   /* Luna's N frame wrt J2000 */
-   for (i = 0; i < 3; i++) {
-      CNJ[0][i] = NodeVec[i];
-      CNJ[1][i] = YVec[i];
-      CNJ[2][i] = PoleVec[i];
-   }
-}
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
@@ -1339,54 +1266,6 @@ double LunaPriMerAng(double JulDay)
                0.0040 * SinE11 + 0.0019 * SinE12 - 0.0044 * SinE13;
 
    return (PriMerAng * D2R);
-}
-long double LunaPriMerAng_ld(long double JulDay)
-{
-      long double D;
-      long double E1,E2,E3,E4,E5,E6,E7,E8,E9,E10,E11,E12,E13;
-      long double SinE1,SinE2,SinE3,SinE4,SinE5,SinE6,SinE7;
-      long double SinE8,SinE9,SinE10,SinE11,SinE12,SinE13;
-      long double PriMerAng;
-      long double d2r = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
-
-      D = JulDay - 2451545.0L;
-
-      E1  = fmodl(125.045L -  0.0529921L*D,360.0L)*d2r;
-      E2  = fmodl(250.089L -  0.1059842L*D,360.0L)*d2r;
-      E3  = fmodl(260.008L + 13.0120009L*D,360.0L)*d2r;
-      E4  = fmodl(176.625L + 13.3407154L*D,360.0L)*d2r;
-      E5  = fmodl(357.529L +  0.9856003L*D,360.0L)*d2r;
-      E6  = fmodl(311.589L + 26.4057084L*D,360.0L)*d2r;
-      E7  = fmodl(134.963L + 13.0649930L*D,360.0L)*d2r;
-      E8  = fmodl(276.617L +  0.3287146L*D,360.0L)*d2r;
-      E9  = fmodl( 34.226L +  1.7484877L*D,360.0L)*d2r;
-      E10 = fmodl( 15.134L -  0.1589763L*D,360.0L)*d2r;
-      E11 = fmodl(119.743L +  0.0036096L*D,360.0L)*d2r;
-      E12 = fmodl(239.961L +  0.1643573L*D,360.0L)*d2r;
-      E13 = fmodl( 25.053L + 12.9590088L*D,360.0L)*d2r;
-
-      SinE1  = sinl(E1);
-      SinE2  = sinl(E2);
-      SinE3  = sinl(E3);
-      SinE4  = sinl(E4);
-      SinE5  = sinl(E5);
-      SinE6  = sinl(E6);
-      SinE7  = sinl(E7);
-      SinE8  = sinl(E8);
-      SinE9  = sinl(E9);
-      SinE10 = sinl(E10);
-      SinE11 = sinl(E11);
-      SinE12 = sinl(E12);
-      SinE13 = sinl(E13);
-
-      PriMerAng = 38.3213L        + 13.17635815L*D  - 1.4E-12L*D*D
-                 + 3.5610L*SinE1  +  0.1208L*SinE2  - 0.0642L*SinE3
-                 + 0.0158L*SinE4  +  0.0252L*SinE5  - 0.0066L*SinE6
-                 - 0.0047L*SinE7  -  0.0046L*SinE8  + 0.0028L*SinE9
-                 + 0.0052L*SinE10 +  0.0040L*SinE11 + 0.0019L*SinE12
-                 - 0.0044L*SinE13;
-
-      return(PriMerAng*d2r);
 }
 /**********************************************************************/
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3])

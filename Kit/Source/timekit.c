@@ -18,127 +18,39 @@
 ** #endif
 */
 
-long double TTtoTDB_JD(long double SecSinceJ2000)
+double TTtoTDB_JD(double SecSinceJ2000)
 {
-      long double T_TT, m_E, deltaTDB, JD_TDB;
-      long double TDB_COEFF1 = 0.001658L;
-      long double TDB_COEFF2 = 0.00001385L;
-      long double M_E_OFFSET = 357.5277233L;
-      long double M_E_COEFF1 = 35999.05034L;
-      long double D2R = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
-      long double SEC_PER_JULIAN_CENTURY = 3155760000.00L;
+      double T_TT, m_E, deltaTDB, JD_TDB;
+      double TDB_COEFF1 = 0.00165;
+      double TDB_COEFF2 = 0.00001385;
+      double M_E_OFFSET = 357.5277233;
+      double M_E_COEFF1 = 35999.05034;
+      double SEC_PER_JULIAN_CENTURY = 3155760000.00;
 
       T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
 
-      m_E      = fmodl( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0L ) * D2R;
-      deltaTDB = (TDB_COEFF1 * sinl(m_E) + TDB_COEFF2 * sinl(2.0L * m_E));
-      JD_TDB   = (SecSinceJ2000 + deltaTDB)/ 86400.0L + 2451545.0L;
+      m_E      = fmod( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0 ) * D2R;
+      deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
+      JD_TDB   = (SecSinceJ2000 + deltaTDB)/ 86400.0 + 2451545.0;
 
       return(JD_TDB);
 }
-long double TTtoTDB_Time(long double SecSinceJ2000)
+double TTtoTDB_Time(double SecSinceJ2000)
 {
       long double T_TT, m_E, deltaTDB, time_TDB;
-      long double TDB_COEFF1 = 0.001658L;
-      long double TDB_COEFF2 = 0.00001385L;
-      long double M_E_OFFSET = 357.5277233L;
-      long double M_E_COEFF1 = 35999.05034L;
-      long double D2R = 3.14159265358979323846264338327950288419716939937511L / 180.0L;
-      long double SEC_PER_JULIAN_CENTURY = 3155760000.00L;
+      long double TDB_COEFF1 = 0.001658;
+      long double TDB_COEFF2 = 0.00001385;
+      long double M_E_OFFSET = 357.5277233;
+      long double M_E_COEFF1 = 35999.05034;
+      long double SEC_PER_JULIAN_CENTURY = 3155760000.00;
 
       T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
 
-      m_E      = fmodl( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0L ) * D2R;
-      deltaTDB = (TDB_COEFF1 * sinl(m_E) + TDB_COEFF2 * sinl(2.0L * m_E));
+      m_E      = fmod( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0 ) * D2R;
+      deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
       time_TDB = SecSinceJ2000 + deltaTDB;
 
       return(time_TDB);
-}
-long double TimeToJD_ld(long double SecSinceJ2000)
-{
-      return(SecSinceJ2000/86400.0L + 2451545.0L);
-}
-long double JDToTime_ld(long double JD)
-{
-      return((JD - 2451545.0L)*86400.0L);
-}
-long double DateToJD_ld(long Year, long Month, long Day,
-                     long Hour, long Minute, long double Second)
-{
-      long double A, B, C, JD;
-
-      A = floorl(7.0L*((long double)Year + floorl(((long double)Month + 9.0L)/12.0L))/4.0L);
-      B = floorl(275.0L*(long double)Month/9.0L);
-      C = ((Second/60.0L + (long double)Minute)/60.0L + (long double)Hour)/24.0L;
-
-      JD = 367.0L*(long double)Year - A + B + (long double)Day + 1721013.5L + C;
-
-      return(JD);
-}
-long double DateToTime_ld(long Year, long Month, long Day,
-                     long Hour, long Minute, long double Second)
-{
-      long double A, B, C, JD, secJD;
-
-      A = floorl(7.0L*((long double)Year + floorl(((long double)Month + 9.0L)/12.0L))/4.0L);
-      B = floorl(275.0L*(long double)Month/9.0L);
-      C = ((Second/60.0L + (long double)Minute)/60.0L + (long double)Hour)/24.0L;
-
-      JD = 367.0L*(long double)Year - A + B + (long double)Day + 1721013.5L + C;
-      secJD = (JD - 2451545.0L)*86400.0L;
-
-      return(secJD);
-}
-void TimeToDate_ld(long double Time, long *Year, long *Month, long *Day,
-                  long *Hour, long *Minute, long double *Second, long double LSB)
-{
-      long double Z,F,A,B,C,D,E,alpha;
-      long double FD,JD;
-
-      JD = Time/86400.0L + 2451545.0L;
-
-      Z= floorl(JD+0.5L);
-      F=(JD+0.5L)-Z;
-
-      if (Z < 2299161.0L) {
-         A = Z;
-      }
-      else {
-         alpha = floorl((Z-1867216.25L)/36524.25L);
-         A = Z+1.0L+alpha - floorl(alpha/4.0L);
-      }
-
-      B = A + 1524.0L;
-      C = floorl((B-122.1L)/365.25L);
-      D = floorl(365.25L*C);
-      E = floorl((B-D)/30.6001L);
-
-      FD = B - D - floorl(30.6001L*E) + F;
-      *Day = (long) FD;
-
-      if (E < 14.0L) {
-         *Month = (long) (E - 1.0L);
-         *Year = (long) (C - 4716.0L);
-      }
-      else {
-         *Month = (long) (E - 13.0L);
-         *Year = (long) (C - 4715.0L);
-      }
-
-      FD = Time-43200.0L+0.5L*LSB;
-      FD = FD - ((long) (FD/86400.0L))*86400.0L;
-      if (FD < 0.0) FD += 86400.0L;
-
-      *Hour = (long) (FD/3600.0L);
-
-      FD -= 3600.0L*(*Hour);
-
-      *Minute = (long) (FD/60.0L);
-
-      *Second = FD - 60.0L*(*Minute);
-
-      /* Clean up roundoff */
-      *Second = ((long double) (*Second/LSB))*LSB;
 }
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
