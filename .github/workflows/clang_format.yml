@@ -12,13 +12,9 @@ jobs:
          - name: Add Brew's clang-format to the Path
            run: >
               echo 'export
-              PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'
+              PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'/
                 >> /home/runner/.bash_profile
-         - name: Clang Format Github Action
-           id: clang-format
-           uses: RafikFarhad/clang-format-github-action@v6.0.1
-           with:
-              style: "file"
-              sources: "Source/*.c,Include/*.h,Kit/Source/*/.c,Kit/Include/*.h"
-         - run: echo "Formatted with clang-format version ${{
-              steps.clang-format.outputs.clang-format-version }}"
+         - name: Check formatting with clang-format-checking
+           run: clang-format Source/*.c Include/*.h Kit/Source/*/.c Kit/Include/*.h
+              --style=file --dry-run -Werror
+         - run: echo "Formatted with clang-format version" && clang-format --version
