@@ -5,11 +5,12 @@ jobs:
       runs-on: ubuntu-latest
       steps:
          - uses: actions/checkout@v5
-         - name: Set up Homebrew
-           uses: Homebrew/actions/setup-homebrew@main
+         - name: Add Homebrew to Path
+           run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
          - name: Install/Update clang-format
-           run: HOMEBREW_NO_AUTO_UPDATE=1 brew install clang-format
-         - name: Clang Format Github Action
-           run: clang-format -i Source/*.c Include/*.h Kit/Source/*.c Kit/Include/*.h
-         - run: echo "Formatted with clang-format version ${{
-              steps.clang-format.outputs.clang-format-version }}"
+           run: brew install clang-format
+         - name: Check with Brew's clang-format
+           run: /home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format Source/*.c
+              Include/*.h Kit/Source/*/.c Kit/Include/*.h
+         - run: echo "Formatted with clang-format version"
+         - run: /home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format --version
