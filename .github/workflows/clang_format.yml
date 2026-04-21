@@ -14,10 +14,7 @@ jobs:
          - name: Update PATH
            run: echo 'export PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'
               >> /home/runner/.bash_profile
-         - name: Clang Format Github Action
-           uses: RafikFarhad/clang-format-github-action@v6.0.1
-           with:
-              style: "file"
-              sources: "Source/*.c,Include/*.h,Kit/Source/*/.c,Kit/Include/*.h"
-         - run: echo "Formatted with clang-format version ${{
-              steps.clang-format.outputs.clang-format-version }}"
+         - name: Check with Brew's clang-format
+           run: clang-format --dry-run --Werror Source/*.c Include/*.h Kit/Source/*/.c
+              Kit/Include/*.h
+         - run: echo "Formatted with clang-format version $(clang-format --version)"
