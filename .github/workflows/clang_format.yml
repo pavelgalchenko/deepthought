@@ -5,11 +5,13 @@ jobs:
       runs-on: ubuntu-latest
       steps:
          - uses: actions/checkout@v5
+         - name: Install/Update clang-format
+           run: brew install clang-format
          - name: Clang Format Github Action
            id: clang-format
            uses: RafikFarhad/clang-format-github-action@v6.0.1
            with:
               style: "file"
-              sources: "Source/*.c,Include/*.h,Kit/Source/*/.c,Kit/Include/*.h"
+              sources: "Source/*.c,Include/*.h,Kit/Source/*.c,Kit/Include/*.h"
          - run: echo "Formatted with clang-format version ${{
               steps.clang-format.outputs.clang-format-version }}"
