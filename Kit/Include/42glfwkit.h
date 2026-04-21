@@ -1,0 +1,47 @@
+/*    This file is distributed with 42,                               */
+/*    the (mostly harmless) spacecraft dynamics simulation            */
+/*    created by Eric Stoneking of NASA Goddard Space Flight Center   */
+
+/*    Copyright 2010 United States Government                         */
+/*    as represented by the Administrator                             */
+/*    of the National Aeronautics and Space Administration.           */
+
+/*    No copyright is claimed in the United States                    */
+/*    under Title 17, U.S. Code.                                      */
+
+/*    All Other Rights Reserved.                                      */
+
+#ifndef __42GLFWKIT_H__
+#define __42GLFWKIT_H__
+
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+/*
+** #ifdef __cplusplus
+** namespace _42 {
+** using namespace Kit;
+** #endif
+*/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+EXTERN GLFWwindow *CamWindow;
+EXTERN GLFWwindow *MapWindow;
+EXTERN GLFWwindow *OrreryWindow;
+EXTERN GLFWwindow *SphereWindow;
+
+#ifdef __cplusplus
+}
+#endif
+
+/*
+** #ifdef __cplusplus
+** }
+** #endif
+*/
+
+#endif /* __42GLFWKIT_H__ */

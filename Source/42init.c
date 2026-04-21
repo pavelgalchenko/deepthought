@@ -1307,7 +1307,7 @@ void InitRigidDyn(struct SCType *S)
    /* Body Path Table */
    /* Body in path -> 1, else 0 */
    D->BodyPathTable = (struct BodyPathTableType **)calloc(
-       S->Nb, sizeof(struct BodyPathTableType *));
+       (int)S->Nb, sizeof(struct BodyPathTableType *));
    for (i = 0; i < S->Nb; i++)
       D->BodyPathTable[i] = (struct BodyPathTableType *)calloc(
           S->Nb, sizeof(struct BodyPathTableType));

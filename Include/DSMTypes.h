@@ -15,8 +15,6 @@
 #define __DSMTYPES_H__
 #include "timekit.h"
 
-#define REPORT_RESIDUALS FALSE
-
 // Controller Type Definitions
 enum CtrlType {
    PID_CNTRL = 0,   // Translational and Rotational

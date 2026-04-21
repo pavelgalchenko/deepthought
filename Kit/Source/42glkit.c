@@ -13,7 +13,7 @@
 
 #include "42.h"
 #define EXTERN
-#include "42gl.h"
+#include "42glkit.h"
 #undef EXTERN
 
 void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
@@ -778,10 +778,10 @@ void DrawCamHUD(void)
    char Mode[3][20] = {"TRACK HOST", "TRACK TARGET", "FIXED IN HOST"};
    char WorldName[80];
    double RA, Dec;
-   GLfloat BoxColor[4]         = {0.133, 0.545, 0.133, 1.0};
-   GLfloat ClockColor[4]       = {0.604, 0.804, 0.196, 1.0};
-   GLfloat ProxOpsGridColor[4] = {1.0, 1.0, 1.0, 0.5};
-   GLfloat Black[4]            = {0.0, 0.0, 0.0, 1.0};
+   const GLfloat BoxColor[4]         = {0.133, 0.545, 0.133, 1.0};
+   const GLfloat ClockColor[4]       = {0.604, 0.804, 0.196, 1.0};
+   const GLfloat ProxOpsGridColor[4] = {1.0, 1.0, 1.0, 0.5};
+   const GLfloat Black[4]            = {0.0, 0.0, 0.0, 1.0};
    int i;
    struct WidgetType *W;
    struct OrbitType *O;
@@ -1099,13 +1099,10 @@ void DrawWatermarks(void)
    glMatrixMode(GL_MODELVIEW);
 }
 /**********************************************************************/
-long ScIsVisible(long RefOrb, long Isc, double PosR[3])
+long ScIsVisible(long RefOrb, struct SCType *S, double PosR[3])
 {
-   struct SCType *S;
    long ScVisible = 0;
    long i;
-
-   S = &SC[Isc];
 
    if (S->RefOrb == RefOrb) {
       ScVisible = 1;
@@ -1374,7 +1371,7 @@ void DrawFarScene(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       // if (S->RefOrb != POV.Host.RefOrb) {
-      if (!ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+      if (!ScIsVisible(POV.Host.RefOrb, S, PosR)) {
          glColor4fv(ScColor);
          for (i = 0; i < 3; i++)
             PosH[i] = S->PosH[i] - POV.PosH[i];
@@ -1599,7 +1596,7 @@ void DrawNearAuxObjects(void)
       if (S->Exists) {
          glPushMatrix();
 
-         if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+         if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
             glTranslated(PosR[0], PosR[1], PosR[2]);
             if (CamShow[B_AXES]) {
                for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -1705,7 +1702,7 @@ void DrawNearAuxObjects(void)
          //            if (S->RefOrb == POV.Host.RefOrb) { /* TODO: Improve this
          //            */
          //               glTranslated(S->PosR[0],S->PosR[1],S->PosR[2]);
-         if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+         if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
             glTranslated(PosR[0], PosR[1], PosR[2]);
             for (Ithr = 0; Ithr < S->Nthr; Ithr++) {
                B = &S->B[S->Thr[Ithr].Body];
@@ -1852,7 +1849,7 @@ void DepthPass(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       // if (S->RefOrb == POV.Host.RefOrb) { /* TODO:  Improve this */
-      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+      if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B  = &S->B[Ib];
             G  = &Geom[B->GeomTag];
@@ -1914,7 +1911,7 @@ void DepthPass(void)
       S = &SC[Isc];
       //               if (S->RefOrb == POV.Host.RefOrb) { /* TODO: Improve this
       //               */
-      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+      if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
             G = &Geom[B->GeomTag];
@@ -1942,20 +1939,137 @@ void DepthPass(void)
    glViewport(0, 0, CamWidth, CamHeight);
 }
 /**********************************************************************/
+void DrawEllipsoid(const double E_mat[3][3], const double pbn[3],
+                   const GLfloat color[4])
+{
+   const GLfloat shininess = 34.0f;
+
+   static GLUquadric *Sphere = NULL;
+   static double **E_mat_ptr = NULL, **V = NULL;
+   if (Sphere == NULL) {
+      Sphere    = gluNewQuadric();
+      E_mat_ptr = CreateMatrix(3, 3);
+      V         = CreateMatrix(3, 3);
+   }
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         E_mat_ptr[i][j] = E_mat[i][j];
+
+   double d[3] = {0.0};
+   jacobiEValueEVector(E_mat_ptr, 3, 150, V, d);
+
+   double rot[3][3] = {{0.0}};
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         rot[i][j] = V[j][i];
+   const double det = det3x3(rot);
+   if (det < 0) {
+      double tmp;
+      for (int i = 0; i < 3; i++) {
+         tmp       = rot[0][i];
+         rot[0][i] = rot[1][i];
+         rot[1][i] = tmp;
+      }
+      tmp  = d[0];
+      d[0] = d[1];
+      d[1] = tmp;
+   }
+
+   GLfloat modMat[16] = {0.0f};
+   BuildModelMatrix(rot, pbn, modMat);
+
+   glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess); // range 0 ~ 128
+   glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, color);
+   glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color);
+   glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, color);
+
+   glPushMatrix();
+   glMultMatrixf(modMat);
+   glScaled(sqrt(d[0]), sqrt(d[1]), sqrt(d[2]));
+   glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+   gluSphere(Sphere, 3.0, 8, 8);
+   glPopMatrix();
+   glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+}
+/**********************************************************************/
+void DrawRegion(struct RegionType *R)
+{
+   glPushMatrix();
+   glMultMatrixf(R->ModelMatrix);
+   if (ShadowsEnabled) {
+      MxM4f(ShadowFromNMatrix, R->ModelMatrix, ShadowMatrix);
+      glUniformMatrix4fv(ShadowMatrixLoc, 1, 0, ShadowMatrix);
+   }
+   glCallList(Geom[R->GeomTag].OpaqueListTag);
+   glPopMatrix();
+}
+/**********************************************************************/
+void DrawSC(struct SCType *S)
+{
+   long Ib;
+   struct BodyType *B;
+   struct GeomType *G;
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
+      G = &Geom[B->GeomTag];
+      glPushMatrix();
+      glMultMatrixf(B->ModelMatrix);
+      if (ShadowsEnabled) {
+         MxM4f(ShadowFromNMatrix, B->ModelMatrix, ShadowMatrix);
+         glUniformMatrix4fv(ShadowMatrixLoc, 1, 0, ShadowMatrix);
+      }
+      glCallList(G->OpaqueListTag);
+      glPopMatrix();
+   }
+}
+/**********************************************************************/
+void DrawNavEllipsoids(struct SCType *S, struct DSMType *DSM)
+{
+   struct BodyType *B             = &S->B[0];
+   struct DSMStateType *dsm_state = &DSM->state;
+   struct DSMNavType *Nav         = &DSM->DsmNav;
+   const long navDim              = Nav->navDim;
+
+   double BCN[3][3] = {{0.0}};
+   for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+         BCN[i][j] = dsm_state->CBN[i][j];
+      }
+   }
+   double pbn[3] = {0.0};
+   for (int i = 0; i < 3; i++)
+      pbn[i] = dsm_state->PosR[i] + B->pn[i];
+   if (S->RefPt == REFPT_CM) {
+      double pcmn[3] = {0.0};
+      MTxV(BCN, B->cm, pcmn);
+      for (int i = 0; i < 3; i++)
+         pbn[i] -= pcmn[i];
+   }
+
+   double m[navDim];
+   UnscentedStateTForm(Nav, m, Nav->P);
+
+   if (Nav->stateActive[POS_STATE]) {
+      const GLfloat nav_ell_color[4] = {0.133, 0.545, 0.133, 1.0};
+
+      double P_pos[3][3] = {{0.0}};
+      for (int i = 0; i < 3; i++)
+         for (int j = 0; j < 3; j++)
+            P_pos[i][j] =
+                Nav->P[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + j];
+
+      DrawEllipsoid(P_pos, pbn, nav_ell_color);
+   }
+}
+/**********************************************************************/
 void OpaquePass(void)
 {
-   long Isc, Ib;
+   long Isc;
    struct SCType *S;
-   struct BodyType *B;
    struct RegionType *R;
-   struct GeomType *G;
    struct ShadowFBOType *SM;
    long Ir;
    double PosR[3];
-   static GLUquadric *Sphere = NULL;
-   if (Sphere == NULL) {
-      Sphere = gluNewQuadric();
-   }
 
    SM = &ShadowMap;
 
@@ -1973,110 +2087,29 @@ void OpaquePass(void)
 
    for (Ir = 0; Ir < Nrgn; Ir++) {
       R = &Rgn[Ir];
-      if (R->Exists && R->World == POV.Host.World) {
-         glPushMatrix();
-         glMultMatrixf(R->ModelMatrix);
-         if (ShadowsEnabled) {
-            MxM4f(ShadowFromNMatrix, R->ModelMatrix, ShadowMatrix);
-            glUniformMatrix4fv(ShadowMatrixLoc, 1, 0, ShadowMatrix);
-         }
-         glCallList(Geom[R->GeomTag].OpaqueListTag);
-         glPopMatrix();
-      }
+      if (R->Exists && R->World == POV.Host.World)
+         DrawRegion(R);
    }
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
-      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
-         for (Ib = 0; Ib < S->Nb; Ib++) {
-            B = &S->B[Ib];
-            G = &Geom[B->GeomTag];
-            glPushMatrix();
-            glMultMatrixf(B->ModelMatrix);
-            if (ShadowsEnabled) {
-               MxM4f(ShadowFromNMatrix, B->ModelMatrix, ShadowMatrix);
-               glUniformMatrix4fv(ShadowMatrixLoc, 1, 0, ShadowMatrix);
-            }
-            glCallList(G->OpaqueListTag);
-            glPopMatrix();
+      if (ScIsVisible(POV.Host.RefOrb, S, PosR))
+         DrawSC(S);
+   }
+   if (CamShow[NAV_STATE]) {
+      glDisable(GL_LIGHTING);
+      glDisable(GL_CULL_FACE);
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
+            struct DSMType *DSM = &S->DSM;
+            if (DSM->DsmNav.NavigationActive)
+               DrawNavEllipsoids(S, DSM);
          }
       }
+      glEnable(GL_CULL_FACE);
+      glEnable(GL_LIGHTING);
    }
-   glDisable(GL_LIGHTING);
-   glDisable(GL_CULL_FACE);
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
-         struct DSMType *dsm = &S->DSM;
-         if (CamShow[NAV_STATE] && dsm->DsmNav.NavigationActive) {
-            struct DSMStateType *dsm_state = &dsm->state;
-            for (Ib = 0; Ib < S->Nb; Ib++) {
-               B                            = &S->B[Ib];
-               G                            = &Geom[B->GeomTag];
-               float navBodyModelMatrix[16] = {0.0};
-               double BCN[3][3]             = {{0.0}};
-               if (Ib == 0) {
-                  for (int i = 0; i < 3; i++) {
-                     for (int j = 0; j < 3; j++) {
-                        BCN[i][j] = dsm_state->CBN[i][j];
-                     }
-                  }
-               }
-               else {
-                  double CbB[3][3] = {{0.0}};
-                  MxMT(B->CN, S->B[0].CN, CbB);
-                  MxM(CbB, dsm_state->CBN, BCN);
-               }
-               double pcmn[3] = {0.0}, pbn[3] = {0.0};
-               if (S->RefPt == REFPT_CM) {
-                  MTxV(BCN, B->cm, pcmn);
-               }
-               else {
-                  for (int i = 0; i < 3; i++)
-                     pcmn[i] = 0.0;
-               }
-               for (int i = 0; i < 3; i++)
-                  pbn[i] = dsm_state->PosR[i] + B->pn[i] - pcmn[i];
-               BuildModelMatrix(BCN, pbn, navBodyModelMatrix);
-               if (Ib == 0 && dsm->DsmNav.stateActive[POS_STATE]) {
-                  struct DSMNavType *Nav = &dsm->DsmNav;
-
-                  const long navDim = Nav->navDim;
-                  double m[navDim];
-                  UnscentedStateTForm(Nav, m, Nav->P);
-
-                  double **P_pos = CreateMatrix(3, 3), **V = CreateMatrix(3, 3);
-                  double d[3] = {0.0};
-                  for (int i = 0; i < 3; i++)
-                     for (int j = 0; j < 3; j++)
-                        P_pos[i][j] = Nav->P[Nav->navInd[POS_STATE] + i]
-                                            [Nav->navInd[POS_STATE] + j];
-                  jacobiEValueEVector(P_pos, 3, 150, V, d);
-
-                  double rot[3][3] = {{0.0}};
-                  for (int i = 0; i < 3; i++)
-                     for (int j = 0; j < 3; j++)
-                        rot[i][j] = V[j][i];
-                  float modMat[16] = {0.0f};
-                  BuildModelMatrix(rot, pbn, modMat);
-
-                  DestroyMatrix(P_pos);
-                  DestroyMatrix(V);
-
-                  glPushMatrix();
-                  glMultMatrixf(modMat);
-                  glScaled(sqrt(d[0]), sqrt(d[1]), sqrt(d[2]));
-                  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                  gluSphere(Sphere, 3.0, 8, 8);
-                  glPopMatrix();
-                  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-               }
-            }
-         }
-      }
-   }
-   glEnable(GL_CULL_FACE);
-   glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
 void SeeThruPass(void)
@@ -2120,7 +2153,7 @@ void SeeThruPass(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       // if (S->RefOrb == POV.Host.RefOrb) {
-      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+      if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
             G = &Geom[B->GeomTag];
@@ -2748,7 +2781,7 @@ void FindModelMatrices(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
-      if (ScIsVisible(POV.Host.RefOrb, Isc, PosR)) {
+      if (ScIsVisible(POV.Host.RefOrb, S, PosR)) {
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
             if (S->RefPt == REFPT_CM) {
@@ -4614,6 +4647,15 @@ void InitCamWidgets(void)
 /**********************************************************************/
 void InitOrreryWidget(void)
 {
+   struct WidgetType *W = &OrreryWidget;
+
+   W->Nspot = 6;
+   W->Spot  = (struct SpotType *)calloc(W->Nspot, sizeof(struct SpotType));
+   ReinitOrreryWidget();
+}
+/**********************************************************************/
+void ReinitOrreryWidget(void)
+{
    struct WidgetType *W;
    GLfloat BorderColor[4]     = {0.118, 0.565, 1.0, 1.0};
    GLfloat TextColor[4]       = {0.118, 0.565, 1.0, 1.0};
@@ -4636,8 +4678,6 @@ void InitOrreryWidget(void)
    memcpy(W->UnselectedColor, UnselectedColor, 4 * sizeof(GLfloat));
 
    /* Zoom bar = 2 spots. Pan = 4 */
-   W->Nspot = 6;
-   W->Spot  = (struct SpotType *)calloc(W->Nspot, sizeof(struct SpotType));
    for (i = 0; i < W->Nspot; i++) {
       W->Spot[i].Visible  = 1;
       W->Spot[i].Selected = 0;
@@ -4682,6 +4722,30 @@ void InitOrreryWidget(void)
 /**********************************************************************/
 void InitSphereWidgets(void)
 {
+   CenterWidget.Nspot     = 10;
+   SphereShowWidget.Nspot = 6;
+   VectorsWidget.Nspot    = 6;
+   GridsWidget.Nspot      = 3;
+   FOVsWidget.Nspot       = 3; /* Max of NLines - 3 */
+   AxesWidget.Nspot       = 3;
+
+   CenterWidget.Spot =
+       (struct SpotType *)calloc(CenterWidget.Nspot, sizeof(struct SpotType));
+   SphereShowWidget.Spot = (struct SpotType *)calloc(SphereShowWidget.Nspot,
+                                                     sizeof(struct SpotType));
+   VectorsWidget.Spot =
+       (struct SpotType *)calloc(VectorsWidget.Nspot, sizeof(struct SpotType));
+   GridsWidget.Spot =
+       (struct SpotType *)calloc(GridsWidget.Nspot, sizeof(struct SpotType));
+   FOVsWidget.Spot =
+       (struct SpotType *)calloc(FOVsWidget.Nspot, sizeof(struct SpotType));
+   AxesWidget.Spot =
+       (struct SpotType *)calloc(AxesWidget.Nspot, sizeof(struct SpotType));
+   ReinitSphereWidgets();
+}
+/**********************************************************************/
+void ReinitSphereWidgets(void)
+{
    GLfloat BorderColor[4]     = {0.64, 0.32, 0.075, 1.0};
    GLfloat TextColor[4]       = {0.8, 0.44, 0.0, 1.0};
    GLfloat SelectedColor[4]   = {1.0, 1.0, 1.0, 0.3};
@@ -4698,10 +4762,6 @@ void InitSphereWidgets(void)
 
    long NLines = NumSphereWindowMenuLines;
 
-   SphereShowWidget.Nspot = 6;
-   VectorsWidget.Nspot    = 6;
-   FOVsWidget.Nspot       = 3; /* Max of NLines - 3 */
-
    /* .. Top/Center Widget */
    x0                = 8;
    y0                = 4;
@@ -4713,9 +4773,6 @@ void InitSphereWidgets(void)
    memcpy(CenterWidget.TextColor, TextColor, 4 * sizeof(GLfloat));
    memcpy(CenterWidget.SelectedColor, SelectedColor, 4 * sizeof(GLfloat));
    memcpy(CenterWidget.UnselectedColor, UnselectedColor, 4 * sizeof(GLfloat));
-   CenterWidget.Nspot = 10;
-   CenterWidget.Spot =
-       (struct SpotType *)calloc(CenterWidget.Nspot, sizeof(struct SpotType));
    for (i = 0; i < CenterWidget.Nspot; i++) {
       CenterWidget.Spot[i].Visible  = 1;
       CenterWidget.Spot[i].Selected = 0;
@@ -4748,8 +4805,6 @@ void InitSphereWidgets(void)
    memcpy(SphereShowWidget.UnselectedColor, UnselectedColor,
           4 * sizeof(GLfloat));
 
-   SphereShowWidget.Spot = (struct SpotType *)calloc(SphereShowWidget.Nspot,
-                                                     sizeof(struct SpotType));
    for (i = 0; i < SphereShowWidget.Nspot; i++) {
       SphereShowWidget.Spot[i].Visible  = 1;
       SphereShowWidget.Spot[i].Selected = 0;
@@ -4781,8 +4836,6 @@ void InitSphereWidgets(void)
    memcpy(VectorsWidget.SelectedColor, SelectedColor, 4 * sizeof(GLfloat));
    memcpy(VectorsWidget.UnselectedColor, UnselectedColor, 4 * sizeof(GLfloat));
 
-   VectorsWidget.Spot =
-       (struct SpotType *)calloc(VectorsWidget.Nspot, sizeof(struct SpotType));
    for (i = 0; i < VectorsWidget.Nspot; i++) {
       VectorsWidget.Spot[i].Visible  = 1;
       VectorsWidget.Spot[i].Selected = 0;
@@ -4813,8 +4866,6 @@ void InitSphereWidgets(void)
    memcpy(FOVsWidget.SelectedColor, SelectedColor, 4 * sizeof(GLfloat));
    memcpy(FOVsWidget.UnselectedColor, UnselectedColor, 4 * sizeof(GLfloat));
 
-   FOVsWidget.Spot =
-       (struct SpotType *)calloc(FOVsWidget.Nspot, sizeof(struct SpotType));
    for (i = 0; i < FOVsWidget.Nspot; i++) {
       FOVsWidget.Spot[i].Visible  = 1;
       FOVsWidget.Spot[i].Selected = 0;
@@ -4846,9 +4897,6 @@ void InitSphereWidgets(void)
    memcpy(GridsWidget.SelectedColor, SelectedColor, 4 * sizeof(GLfloat));
    memcpy(GridsWidget.UnselectedColor, UnselectedColor, 4 * sizeof(GLfloat));
 
-   GridsWidget.Nspot = 3;
-   GridsWidget.Spot =
-       (struct SpotType *)calloc(GridsWidget.Nspot, sizeof(struct SpotType));
    for (i = 0; i < GridsWidget.Nspot; i++) {
       GridsWidget.Spot[i].Visible  = 1;
       GridsWidget.Spot[i].Selected = 0;
@@ -4876,9 +4924,6 @@ void InitSphereWidgets(void)
    memcpy(AxesWidget.SelectedColor, SelectedColor, 4 * sizeof(GLfloat));
    memcpy(AxesWidget.UnselectedColor, UnselectedColor, 4 * sizeof(GLfloat));
 
-   AxesWidget.Nspot = 3;
-   AxesWidget.Spot =
-       (struct SpotType *)calloc(AxesWidget.Nspot, sizeof(struct SpotType));
    for (i = 0; i < AxesWidget.Nspot; i++) {
       AxesWidget.Spot[i].Visible  = 1;
       AxesWidget.Spot[i].Selected = 0;

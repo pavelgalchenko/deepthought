@@ -712,7 +712,7 @@ void DSM_NAV_StateReport(void)
 }
 /*********************************************************************/
 // Last time I tried to analyze all the data from this, I ran out of memory...
-#if REPORT_RESIDUALS == TRUE
+#ifdef REPORT_RESIDUALS
 void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1])
 {
    static FILE **residualFile;
