@@ -82,9 +82,6 @@ EXTERN double EMRAT;   /* Earth/Moon Mass Ratio */
 EXTERN double AU;      /* Number of kilometers in 1 AU */
 EXTERN double AUd2ms;  /* Conversion from [au**3/day**2] to [m**3/s**2] */
 
-// If TRV method is used, SC Pos/Vel is directly intialized from TRV values
-EXTERN long DirectTRVmethod;
-
 /* Environment */
 EXTERN struct SphereHarmType MagModel; /* -3,...,10 */
 EXTERN long SurfaceModel;              /* 0=Brick, 1=CylPlate */

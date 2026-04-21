@@ -651,7 +651,6 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    double EpochJD, R[3], V[3];
    long EpochYear, EpochMonth, EpochDay, EpochHour, EpochMinute;
    double EpochSecond;
-   double CNJ[3][3] = {0}, R_temp[3], V_temp[3];
 
    infile = FileOpen(Path, TrvFileName, "r");
 
@@ -682,28 +681,30 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
          O->World = DecodeString(response2);
          O->mu    = World[O->World].mu;
-         if (O->World == LUNA && O->Regime == ORB_N_BODY) {
-            LunaInertialFrame(TDB.JulDay, CNJ);
-            MxV(CNJ,R,R_temp);
-            MxV(CNJ,V,V_temp);
-            for(i=0;i<3;i++) {
-               R[i] = R_temp[i];
-               V[i] = V_temp[i];
-            }
-         }
-         // printf("R = %18.18le %18.18le %18.18le \n", R[0], R[1], R[2]);
-         // printf("V = %18.18le %18.18le %18.18le \n", V[0], V[1], V[2]);
+         // TODO: Following assumes a Lunar N_Body orbit is given in ECI,
+         //       consider other options for initialization.
+         // double CNJ[3][3] = {0}, R_temp[3], V_temp[3];
+         // if (O->World == LUNA && O->Regime == ORB_N_BODY) {
+         //    LunaInertialFrame(TDB.JulDay, CNJ);
+         //    MxV(CNJ,R,R_temp);
+         //    MxV(CNJ,V,V_temp);
+         //    for(i=0;i<3;i++) {
+         //       R[i] = R_temp[i];
+         //       V[i] = V_temp[i];
+         //    }
+         // }
          RV2Eph(O->Epoch, O->mu, R, V, &O->SMA, &O->ecc, &O->inc, &O->RAAN,
                 &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha, &O->rmin,
                 &O->MeanMotion, &O->Period);
          Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
                 Time - O->Epoch, O->PosN, O->VelN, &O->anom);
          // Save original SC Pos/Vel from TRV files
-         // TODO: NEED TO ADD DirectTRVmethod to TRV file as option instead of being hardcoded
-         DirectTRVmethod = TRUE;
-         for(i=0;i<3;i++) {
-            O->SCPosN[i] = R[i];
-            O->SCVelN[i] = V[i];
+         if (O->Regime == ORB_N_BODY) {
+            O->use_N_BODY_Vec = true;
+            for(i=0;i<3;i++) {
+               O->N_BODY_PosN[i] = R[i];
+               O->N_BODY_VelN[i] = V[i];
+            }
          }
       }
       else {
@@ -717,13 +718,6 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
          for (i = 0; i < 3; i++) {
             O->PosN[i] = R[i];
             O->VelN[i] = V[i];
-         }
-         // Save original SC Pos/Vel from TRV files
-         // TODO: NEED TO ADD DirectTRVmethod to TRV file as option instead of being hardcoded
-         DirectTRVmethod = TRUE;
-         for(i=0;i<3;i++) {
-            O->SCPosN[i] = R[i];
-            O->SCVelN[i] = V[i];
          }
          /* RV2LagModes(O->Epoch,&LagSys[O->Sys],O); */
          R2StableLagMode(O->Epoch, &LagSys[O->Sys], O);
@@ -752,7 +746,7 @@ void InitOrbit(struct OrbitType *O)
    node                 = fy_node_by_path_def(root, "/Orbit");
 
    /* .. Orbit Parameters */
-   DirectTRVmethod   = FALSE;    // Start with TRV method disabled
+   O->use_N_BODY_Vec = FALSE;    // Start with TRV method disabled
    O->Epoch          = DynTime;
    O->SplineActive   = FALSE;
    char response[50] = {0};
@@ -973,16 +967,6 @@ void InitOrbit(struct OrbitType *O)
                                 elementLabel, elementFileName);
                         exit(EXIT_FAILURE);
                      }
-                     // O->tp = O->Epoch -
-                     // TimeSincePeriapsis(O->mu,O->SLR,O->ecc,O->anom); if
-                     // (O->J2DriftEnabled) {
-                     //    OscEphToMeanEph(O->mu,World[O->World].J2,World[O->World].rad,DynTime,O);
-                     // }
-                     // O->MeanMotion = sqrt(O->mu/(O->SMA*O->SMA*O->SMA));
-                     // O->Period = TwoPi/O->MeanMotion;
-                     // Eph2RV(O->mu,O->SLR,O->ecc,O->inc,
-                     //        O->RAAN,O->ArgP,O->Epoch-O->tp,
-                     //        O->PosN,O->VelN,&O->anom);
                   } break;
                   case INP_SPLINE: {
                      O->SplineFile = FileOpen(InOutPath, elementFileName, "rt");
@@ -3560,10 +3544,10 @@ void InitSpacecraft(struct SCType *S)
          }
       }
    }
-   if (DirectTRVmethod) {
+   if (O->use_N_BODY_Vec) {
       for (j = 0; j < 3; j++) {
-         S->PosN[j] = O->SCPosN[j];
-         S->VelN[j] = O->SCVelN[j];
+         S->PosN[j] = O->N_BODY_PosN[j];
+         S->VelN[j] = O->N_BODY_VelN[j];
       }
    }
    else {

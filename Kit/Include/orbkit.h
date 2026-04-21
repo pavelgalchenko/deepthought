@@ -197,8 +197,9 @@ struct OrbitType {
    input in the the TRV file. Note that this assumes you are using
    COWELL method for orbit propagation in SC configuration and that
    you are using a JPL Ephemerides as the Ephem option. */
-   double SCPosN[3]; /* SC Position, [[m]], expressed in N of CENTRAL body */
-   double SCVelN[3]; /* SC Velocity, [[m/sec]], expressed in N of CENTRAL body */
+   int use_N_BODY_Vec;
+   double N_BODY_PosN[3]; /* SC Position from TRV file, [[m]], expressed in N of CENTRAL body */
+   double N_BODY_VelN[3]; /* SC Velocity from TRV file, [[m/sec]], expressed in N of CENTRAL body */
 
    /* For Central Orbit Description */
    double MeanAnom;
