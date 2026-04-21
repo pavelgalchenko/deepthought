@@ -15,6 +15,7 @@ jobs:
               PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'
                 >> /home/runner/.bash_profile
          - name: Clang Format Github Action
+           id: clang-format
            uses: RafikFarhad/clang-format-github-action@v6.0.1
            with:
               style: "file"
