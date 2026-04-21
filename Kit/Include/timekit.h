@@ -14,6 +14,7 @@
 #ifndef __TIMEKIT_H__
 #define __TIMEKIT_H__
 
+#include "42constants.h"
 #include <math.h>
 #include <stdint.h>
 #if defined(_WIN32)
@@ -60,7 +61,9 @@ typedef uint16_t ccsdsFine;
 */
 
 struct DateType {
+   double MJD;
    double JulDay;
+   double tdbTime;
    long Year;
    long Month;
    long Day;
@@ -70,6 +73,12 @@ struct DateType {
    double Second;
 };
 
+double TTtoTDB_JD(double SecSinceJ2000);
+double TTtoTDB_Time(double SecSinceJ2000);
+double JDToMJD(double JD);
+double MJDToJD(double MJD);
+double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
+                 double Second);
 double TimeToJD(double Time);
 double JDToTime(double JD);
 double DateToTime(long Year, long Month, long Day, long Hour, long Minute,

@@ -192,8 +192,8 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
          SilNv++;
       }
    }
-   SilVtx             = (struct SilVtxType *)realloc(SilVtx, (SilNv + 1) *
-                                                                 sizeof(struct SilVtxType));
+   SilVtx = (struct SilVtxType *)realloc(SilVtx, (SilNv + 1) *
+                                                     sizeof(struct SilVtxType));
    SilVtx[SilNv].Body = SilEdge[SilNe - 1].Body;
    for (i = 0; i < 3; i++) {
       SilVtx[SilNv].PosB[i] = SilEdge[SilNe - 1].PosV2B[i];
@@ -342,6 +342,12 @@ void GravGradFrcTrq(struct SCType *S)
    struct WorldType *W;
    double GravGradN[3][3], CGG[3][3], GravGradB[3][3], GGxI[3], GGxpn[3];
    double FrcN[3], FrcB[3];
+   double Tb[3] = {0}, Tn[3] = {0};
+
+   for (i = 0; i < 3; i++) {
+      S->gravTrqN[i] = 0;
+      S->gravTrqB[i] = 0;
+   }
 
    O = &Orb[S->RefOrb];
 
@@ -392,7 +398,13 @@ void GravGradFrcTrq(struct SCType *S)
          MxV(B->CN, rhat, rb);
          vxMov(rb, B->I, axIoa);
          for (i = 0; i < 3; i++)
-            B->Trq[i] += 3.0 * Coef * axIoa[i];
+            Tb[i] += 3.0 * Coef * axIoa[i];
+         MTxV(B->CN, Tb, Tn);
+         for (i = 0; i < 3; i++) {
+            B->Trq[i]      += 3.0 * Coef * axIoa[i];
+            S->gravTrqN[i] += Tn[i];
+            S->gravTrqB[i] += Tb[i];
+         }
       }
       else {
          CopyUnitV(S->PosN, rhat);
@@ -506,17 +518,125 @@ void GravPertForce(struct SCType *S)
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
+void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
+                      double RKFdt)
+{
+   struct OrbitType *O;
+   double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
+   double FrcN_harm[3] = {0}, SCPosN_harm[3] = {0};
+   double RK4TIME;
+   long Iw, Im, j;
+   long OrbCenter, SecCenter;
+   double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3] = {0};
+   double cntrPosN[3], cntrPosH[3], cntrPriMerAng = 0, cntrCNH[3][3] = {0};
+   long revertCHEB = 0;
+
+   for (j = 0; j < 3; j++) {
+      SCPosN[j]      = u[j];
+      SCPosN_harm[j] = u[j];
+   }
+
+   RK4TIME = TDB.JulDay + RKFdt / 86400.0L;
+   if (EphemOption != EPH_SPICE) {
+      if (RK4TIME > World[SOL].eph.Cheb[1].JD2) {
+         revertCHEB = 1;
+         LoadJplEphems(ModelPath, RK4TIME);
+      }
+   }
+
+   O         = &Orb[S->RefOrb];
+   OrbCenter = O->World;
+   SecCenter = -1; /* Nonsense value */
+
+   struct WorldType *WCenter = &World[OrbCenter];
+   if (EphemOption == EPH_SPICE) {
+      Rk4SpiceEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
+                     cntrCNH);
+   }
+   else {
+      Rk4JplEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
+                   cntrCNH);
+   }
+
+   /* Sun and all existing planets */
+   for (Iw = SOL; Iw <= PLUTO; Iw++) {
+      if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+         if (EphemOption == EPH_SPICE) {
+            Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
+                           trgtCNH);
+         }
+         else {
+            Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
+                         trgtCNH);
+         }
+         for (j = 0; j < 3; j++)
+            ph[j] = trgtPosH[j] - cntrPosH[j];
+         MxV(cntrCNH, ph, p);
+         for (j = 0; j < 3; j++)
+            s[j] = p[j] - SCPosN[j];
+         ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
+         for (j = 0; j < 3; j++)
+            FrcN[j] += FrcNtemp[j];
+      }
+   }
+
+   /* Moons of OrbCenter (but not SecCenter) */
+   if (OrbCenter != SOL) {
+      for (Im = 0; Im < WCenter->Nsat; Im++) {
+         Iw = WCenter->Sat[Im];
+         if (Iw != SecCenter) {
+            if (EphemOption == EPH_SPICE) {
+               Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
+                              trgtCNH);
+            }
+            else {
+               Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
+                            trgtCNH);
+            }
+            for (j = 0; j < 3; j++) {
+               p[j] = trgtPosN[j];
+               s[j] = p[j] - SCPosN[j];
+            }
+            ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
+            for (j = 0; j < 3; j++)
+               FrcN[j] += FrcNtemp[j];
+         }
+      }
+   }
+
+   struct SphereHarmType *gravModel = &WCenter->GravModel;
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, cntrPriMerAng,
+                          S->mass, SCPosN_harm, FrcN_harm);
+   for (j = 0; j < 3; j++)
+      FrcN[j] += FrcN_harm[j];
+
+   if (EphemOption != EPH_SPICE) {
+      if (revertCHEB) {
+         LoadJplEphems(ModelPath, TDB.JulDay);
+      }
+   }
+
+   /* else if O->CenterType == MINORBODY, use provided gravity model */
+}
+/**********************************************************************/
 void AeroFrcTrq(struct SCType *S)
 {
 
    double VrelN[3], WindSpeed, VrelB[3], Area, PolyArea, cp[3];
-   double WoN, Coef, Fb[3], Fn[3], Trq[3];
+   double WoN, Coef, Fb[3] = {0}, Fn[3] = {0}, Trq[3] = {0}, Tn[3] = {0};
    long Ib, i;
    long Ipoly;
    long OrbCenter;
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
+
+   for (i = 0; i < 3; i++) {
+      S->aeroFrcN[i] = 0;
+      S->aeroFrcB[i] = 0;
+      S->aeroTrqN[i] = 0;
+      S->aeroTrqB[i] = 0;
+   }
 
    OrbCenter = Orb[S->RefOrb].World;
 
@@ -560,18 +680,26 @@ void AeroFrcTrq(struct SCType *S)
             cp[i] /= Area;
       }
 
+      S->aeroProjectedArea = Area;
+
       /* Compute force and torque exerted on B */
       Coef = -0.5 * S->AtmoDensity * S->DragCoef * WindSpeed * WindSpeed * Area;
       for (i = 0; i < 3; i++)
          Fb[i] = Coef * VrelB[i];
       MTxV(B->CN, Fb, Fn);
       for (i = 0; i < 3; i++) {
-         B->FrcN[i] += Fn[i];
-         B->FrcB[i] += Fb[i];
+         B->FrcN[i]     += Fn[i];
+         B->FrcB[i]     += Fb[i];
+         S->aeroFrcN[i] += Fn[i];
+         S->aeroFrcB[i] += Fb[i];
       }
       VxV(cp, Fb, Trq);
-      for (i = 0; i < 3; i++)
-         B->Trq[i] += Trq[i];
+      MTxV(B->CN, Trq, Tn);
+      for (i = 0; i < 3; i++) {
+         B->Trq[i]      += Trq[i];
+         S->aeroTrqN[i] += Tn[i];
+         S->aeroTrqB[i] += Trq[i];
+      }
    }
 }
 /**********************************************************************/
@@ -579,11 +707,21 @@ void SolPressFrcTrq(struct SCType *S)
 {
    long Ib, i;
    long Ipoly;
-   double svb[3], SoN, Coef, r[3], Fb[3], Fn[3], Tb[3], SolarPressure;
+   double svb[3], SoN, Coef, r[3], Fb[3] = {0}, Fn[3] = {0}, Tb[3] = {0},
+                                   Tn[3] = {0}, SolarPressure;
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
    struct MatlType *M;
+   double srpAreaSum;
+
+   for (i = 0; i < 3; i++) {
+      S->srpFrcN[i] = 0;
+      S->srpFrcB[i] = 0;
+      S->srpTrqN[i] = 0;
+      S->srpTrqB[i] = 0;
+   }
+   srpAreaSum = 0;
 
    if (!S->Eclipse) {
       /* Solar pressure is 4.5E-6 N/m^2 at Earth orbit radius, */
@@ -607,8 +745,9 @@ void SolPressFrcTrq(struct SCType *S)
                MxV(B->CN, S->svn, svb);
                SoN = VoV(svb, P->Norm);
                if (SoN > 0.0) {
-                  M    = &Matl[P->Matl];
-                  Coef = -SolarPressure * P->UnshadedArea * SoN;
+                  M           = &Matl[P->Matl];
+                  Coef        = -SolarPressure * P->UnshadedArea * SoN;
+                  srpAreaSum += P->UnshadedArea * SoN;
                   for (i = 0; i < 3; i++) {
                      Fb[i] =
                          Coef * ((1.0 - M->SpecFrac) * svb[i] +
@@ -618,17 +757,24 @@ void SolPressFrcTrq(struct SCType *S)
                   for (i = 0; i < 3; i++)
                      r[i] = P->UnshadedCtr[i] - B->cm[i];
                   VxV(r, Fb, Tb);
+                  MTxV(B->CN, Tb, Tn);
                   MTxV(B->CN, Fb, Fn);
                   for (i = 0; i < 3; i++) {
-                     B->FrcN[i] += Fn[i];
-                     B->FrcB[i] += Fb[i];
-                     B->Trq[i]  += Tb[i];
+                     B->FrcN[i]    += Fn[i];
+                     B->FrcB[i]    += Fb[i];
+                     B->Trq[i]     += Tb[i];
+                     S->srpFrcN[i] += Fn[i];
+                     S->srpFrcB[i] += Fb[i];
+                     S->srpTrqN[i] += Tn[i];
+                     S->srpTrqB[i] += Tb[i];
                   }
                }
             }
          }
       }
    }
+
+   S->srpProjectedArea = srpAreaSum;
 }
 /**********************************************************************/
 void ResidualDipoleTrq(struct SCType *S)
@@ -1091,7 +1237,7 @@ void Perturbations(struct SCType *S)
       GravGradFrcTrq(S);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive)
+   if (GravPertActive && Orb[S->RefOrb].Regime != ORB_N_BODY)
       GravPertForce(S);
 
    /* .. Aerodynamic Forces and Torques */

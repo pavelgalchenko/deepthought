@@ -1,0 +1,22 @@
+name: Clang Format Checker
+on: [ push ]
+defaults:
+   run:
+      shell: bash
+      working-directory: ./
+jobs:
+   clang-format-checking:
+      runs-on: ubuntu-latest
+      steps:
+         - uses: actions/checkout@v5
+         - name: Set up Homebrew
+           uses: Homebrew/actions/setup-homebrew@main
+         - name: Install/Update clang-format
+           run: brew install clang-format
+         - name: Add Brew's clang-format to the Path
+           run: echo "/home/linuxbrew/.linuxbrew/opt/clang-format/bin" >> "$GITHUB_PATH"
+         - name: clang-format version information
+           run: echo "Formatting checked with $(clang-format --version)"
+         - name: Check formatting with clang-format
+           run: clang-format --style=file --dry-run -Werror Source/*.c Include/*.h
+              Kit/Source/*.c Kit/Include/*.h

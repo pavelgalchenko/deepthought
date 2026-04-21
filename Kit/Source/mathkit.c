@@ -699,8 +699,8 @@ void Legendre(const long N, const long M, const double x,
 
    /* .. m=0 terms are not too bad */
    for (n = 2; n <= N; n++) {
-      P[n][0] = ((2.0 * n - 1.0) / n) * x * P[n - 1][0] -
-                ((n - 1.0) / n) * P[n - 2][0];
+      P[n][0]   = ((2.0 * n - 1.0) / n) * x * P[n - 1][0] -
+                  ((n - 1.0) / n) * P[n - 2][0];
       sdP[n][0] = x * sdP[n - 1][0] + n * s * P[n - 1][0];
    }
 

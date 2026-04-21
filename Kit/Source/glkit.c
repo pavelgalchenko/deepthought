@@ -3254,7 +3254,7 @@ double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct)
       fy  = ky - iy;
       z  += CubicInterp2D(PRN2D(ix, iy), PRN2D(ix + 1, iy), PRN2D(ix, iy + 1),
                           PRN2D(ix + 1, iy + 1), fx, fy) /
-           ((double)k);
+            ((double)k);
    }
    z = 0.5 + 0.5 * z;
    if (z > 1.0)

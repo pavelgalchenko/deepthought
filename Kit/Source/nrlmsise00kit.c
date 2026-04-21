@@ -1368,11 +1368,11 @@ void spline(double *x, double *y, int n, double yp1, double ypn, double *y2)
       p     = sig * y2[i - 1] + 2.0;
       y2[i] = (sig - 1.0) / p;
       u[i]  = (6.0 *
-                  ((y[i + 1] - y[i]) / (x[i + 1] - x[i]) -
-                   (y[i] - y[i - 1]) / (x[i] - x[i - 1])) /
-                  (x[i + 1] - x[i - 1]) -
-              sig * u[i - 1]) /
-             p;
+                   ((y[i + 1] - y[i]) / (x[i + 1] - x[i]) -
+                    (y[i] - y[i - 1]) / (x[i] - x[i - 1])) /
+                   (x[i + 1] - x[i - 1]) -
+               sig * u[i - 1]) /
+              p;
    }
    if (ypn > 0.99E30) {
       qn = 0;
@@ -1745,8 +1745,8 @@ double globe7(double *p, struct nrlmsise_input *input,
    dfa  = input->f107A - 150.0;
    t[0] = p[19] * df * (1.0 + p[59] * dfa) + p[20] * df * df + p[21] * dfa +
           p[29] * pow(dfa, 2.0);
-   f1 = 1.0 + (p[47] * dfa + p[19] * df + p[20] * df * df) * flags->swc[1];
-   f2 = 1.0 + (p[49] * dfa + p[19] * df + p[20] * df * df) * flags->swc[1];
+   f1   = 1.0 + (p[47] * dfa + p[19] * df + p[20] * df * df) * flags->swc[1];
+   f2   = 1.0 + (p[49] * dfa + p[19] * df + p[20] * df * df) * flags->swc[1];
 
    /*  TIME INDEPENDENT */
    t[1] = (p[1] * plg[0][2] + p[2] * plg[0][4] + p[22] * plg[0][6]) +
@@ -1867,11 +1867,11 @@ double globe7(double *p, struct nrlmsise_input *input,
 
       /* ut and mixed ut, longitude */
       if (flags->sw[12]) {
-         t[11] = (1.0 + p[95] * plg[0][1]) *
-                 (1.0 + p[81] * dfa * flags->swc[1]) *
-                 (1.0 + p[119] * plg[0][1] * flags->swc[5] * cd14) *
-                 ((p[68] * plg[0][1] + p[69] * plg[0][3] + p[70] * plg[0][5]) *
-                  cos(sr * (input->sec - p[71])));
+         t[11]  = (1.0 + p[95] * plg[0][1]) *
+                  (1.0 + p[81] * dfa * flags->swc[1]) *
+                  (1.0 + p[119] * plg[0][1] * flags->swc[5] * cd14) *
+                  ((p[68] * plg[0][1] + p[69] * plg[0][3] + p[70] * plg[0][5]) *
+                   cos(sr * (input->sec - p[71])));
          t[11] += flags->swc[11] *
                   (p[76] * plg[2][3] + p[77] * plg[2][5] + p[78] * plg[2][7]) *
                   cos(sr * (input->sec - p[79]) + 2.0 * dgtr * input->g_long) *
@@ -2092,9 +2092,9 @@ void gtd7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
    meso_tgn2[0] = meso_tgn1[1];
    meso_tn2[0]  = meso_tn1[4];
    meso_tn2[1]  = pma[0][0] * pavgm[0] /
-                 (1.0 - flags->sw[20] * glob7s(pma[0], input, flags));
-   meso_tn2[2] = pma[1][0] * pavgm[1] /
-                 (1.0 - flags->sw[20] * glob7s(pma[1], input, flags));
+                  (1.0 - flags->sw[20] * glob7s(pma[0], input, flags));
+   meso_tn2[2]  = pma[1][0] * pavgm[1] /
+                  (1.0 - flags->sw[20] * glob7s(pma[1], input, flags));
    meso_tn2[3] =
        pma[2][0] * pavgm[2] /
        (1.0 - flags->sw[20] * flags->sw[22] * glob7s(pma[2], input, flags));
@@ -2111,13 +2111,13 @@ void gtd7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
        */
       meso_tgn3[0] = meso_tgn2[1];
       meso_tn3[1]  = pma[3][0] * pavgm[3] /
-                    (1.0 - flags->sw[22] * glob7s(pma[3], input, flags));
-      meso_tn3[2] = pma[4][0] * pavgm[4] /
-                    (1.0 - flags->sw[22] * glob7s(pma[4], input, flags));
-      meso_tn3[3] = pma[5][0] * pavgm[5] /
-                    (1.0 - flags->sw[22] * glob7s(pma[5], input, flags));
-      meso_tn3[4] = pma[6][0] * pavgm[6] /
-                    (1.0 - flags->sw[22] * glob7s(pma[6], input, flags));
+                     (1.0 - flags->sw[22] * glob7s(pma[3], input, flags));
+      meso_tn3[2]  = pma[4][0] * pavgm[4] /
+                     (1.0 - flags->sw[22] * glob7s(pma[4], input, flags));
+      meso_tn3[3]  = pma[5][0] * pavgm[5] /
+                     (1.0 - flags->sw[22] * glob7s(pma[5], input, flags));
+      meso_tn3[4]  = pma[6][0] * pavgm[6] /
+                     (1.0 - flags->sw[22] * glob7s(pma[6], input, flags));
       meso_tgn3[1] = pma[7][0] * pavgm[7] *
                      (1.0 + flags->sw[22] * glob7s(pma[7], input, flags)) *
                      meso_tn3[4] * meso_tn3[4] /
@@ -2248,7 +2248,7 @@ void ghp7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
       z  = input->alt;
       xn = output->d[0] + output->d[1] + output->d[2] + output->d[3] +
            output->d[4] + output->d[6] + output->d[7];
-      p = bm * xn * output->t[1];
+      p  = bm * xn * output->t[1];
       if (flags->sw[0])
          p = p * 1.0E-6;
       diff = pl - log10(p);
@@ -2371,9 +2371,9 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
    g28 = flags->sw[21] * globe7(pd[2], input, flags);
 
    /* VARIATION OF TURBOPAUSE HEIGHT */
-   zhf = pdl[1][24] *
-         (1.0 + flags->sw[5] * pdl[0][24] * sin(dgtr * input->g_lat) *
-                    cos(dr * (input->doy - pt[13])));
+   zhf          = pdl[1][24] *
+                  (1.0 + flags->sw[5] * pdl[0][24] * sin(dgtr * input->g_lat) *
+                             cos(dr * (input->doy - pt[13])));
    output->t[0] = tinf;
    xmm          = pdm[2][4];
    z            = input->alt;
@@ -2454,7 +2454,7 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
       /*  Net density at Alt */
       output->d[1] = dnet(output->d[1], dm16, zhm16, xmm, 16.);
       rl           = pdm[1][1] * pdl[1][16] *
-           (1.0 + flags->sw[1] * pdl[0][23] * (input->f107A - 150.0));
+                     (1.0 + flags->sw[1] * pdl[0][23] * (input->f107A - 150.0));
       hc16         = pdm[1][5] * pdl[1][3];
       zc16         = pdm[1][4] * pdl[1][2];
       hc216        = pdm[1][5] * pdl[1][4];
@@ -2502,7 +2502,7 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
       hcc232 = pdm[3][7] * pdl[0][22];
       zcc32  = pdm[3][6] * pdl[1][21];
       rc32   = pdm[3][3] * pdl[1][23] *
-             (1. + flags->sw[1] * pdl[0][23] * (input->f107A - 150.));
+               (1. + flags->sw[1] * pdl[0][23] * (input->f107A - 150.));
       /*  Net density corrected at Alt */
       output->d[3] = output->d[3] * ccor2(z, rc32, hcc32, zcc32, hcc232);
    }

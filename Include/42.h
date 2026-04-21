@@ -77,6 +77,11 @@ EXTERN long TimeMode; /* FAST_TIME, REAL_TIME, EXTERNAL_SYNCH, NOS3_TIME */
 EXTERN double SimTime, STOPTIME, DTSIM, DTOUT, DTOUTGL;
 EXTERN long OutFlag, GLOutFlag, GLEnable, CleanUpFlag;
 
+/* Making global parameters for updated JPL EPHEM methods */
+EXTERN double EMRAT;  /* Earth/Moon Mass Ratio */
+EXTERN double AU;     /* Number of kilometers in 1 AU */
+EXTERN double AUd2ms; /* Conversion from [au**3/day**2] to [m**3/s**2] */
+
 /* Environment */
 EXTERN struct SphereHarmType MagModel; /* -3,...,10 */
 EXTERN long SurfaceModel;              /* 0=Brick, 1=CylPlate */
@@ -92,17 +97,19 @@ EXTERN long ContactActive;
 EXTERN long SloshActive;
 EXTERN long AlbedoActive; /* Affects CSS measurements */
 EXTERN long ComputeEnvTrq;
-EXTERN long EphemOption; /* MEAN or DE430 */
+EXTERN long EphemOption; /* MEAN, DE421, DE424, DE430, DE440, GMAT421, GMAT424,
+                            or SPICE */
 
 /* Calendar Time is all based in Terrestrial Dynamical Time (TT or TDT) unless
  * otherwise noted */
-EXTERN double DynTime0;    /* Time in sec since J2000 Epoch at Sim Start (TT) */
-EXTERN double DynTime;     /* Absolute Time (TT), sec since J2000 Epoch */
-EXTERN double AtomicTime;  /* TAI = TT - 32.184 sec, sec since J2000 */
-EXTERN double LeapSec;     /* Add to civil time (UTC) to synch with TAI */
-EXTERN double CivilTime;   /* UTC = TAI - LeapSec */
-EXTERN double GpsTime;     /* GPS Time = TAI - 19.0 sec */
-EXTERN struct DateType TT; /* Terrestrial Dynamical Time */
+EXTERN double DynTime0;   /* Time in sec since J2000 Epoch at Sim Start (TT) */
+EXTERN double DynTime;    /* Absolute Time (TT), sec since J2000 Epoch */
+EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
+EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */
+EXTERN double CivilTime;  /* UTC = TAI - LeapSec */
+EXTERN double GpsTime;    /* GPS Time = TAI - 19.0 sec */
+EXTERN struct DateType TDB; /* Barycentric Dynamical Time */
+EXTERN struct DateType TT;  /* Terrestrial Dynamical Time */
 EXTERN struct DateType UTC; /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
@@ -111,7 +118,7 @@ EXTERN double GpsSecond;
 EXTERN long AtmoOption; /* TWOSIGMA_ATMO, NOMINAL_ATMO, USER_ATMO */
 EXTERN double Flux10p7, GeomagIndex;
 EXTERN double
-    SchattenTable[5][410]; /* JD, +2sig F10.7, Nom F10.7, +2sig Kp, Nom Kp */
+    SchattenTable[5][1009]; /* JD, +2sig F10.7, Nom F10.7, +2sig Kp, Nom Kp */
 
 EXTERN struct WorldType World[NWORLD];
 EXTERN struct LagrangeSystemType LagSys[3];
@@ -173,6 +180,17 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
+void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
+                      double RKFdt);
+void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
+                        double Frc[3]);
+void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3],
+                  double trgtPosH[3], double *trgtPriMerAng,
+                  double trgtCNH[3][3]);
+void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3],
+                    double trgtPosH[3], double *trgtPriMerAng,
+                    double trgtCNH[3][3]);
+
 long SimStep(void);
 void Ephemerides(void);
 void OrbitMotion(double Time);
@@ -228,14 +246,28 @@ void InitSim(int argc, char **argv);
 void InitOrbits(void);
 void InitSpacecraft(struct SCType *S);
 void LoadPlanets(void);
-long LoadJplEphems(char EphemPath[80], double JD);
+/* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
 long LoadSpiceKernels(char SpicePath[80]);
-long LoadSpiceEphems(double JS);
+/* Update celestial body locations at TT.JulDay using SPICE*/
+long UpdateSpiceEphems(double JS);
+/* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
+to get Chebyshev coefficients for current JD range (TDB) */
+long LoadJplEphems(char EphemPath[80], double JD);
+/* Update celestial body locations at TT.JulDay using JPL Ephem*/
+void UpdateJplEphems(void);
+/* Update celestial body locations using MEAN method */
+void UpdateMeanEphems(void);
+/* Updates minor body locations using two-body methods */
+void UpdateMinorBodies(void);
+/* Updates all (non Earth) planertary moon locations using two-body methods */
+void UpdateNonEphemMoons(void);
 long DecodeString(char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);
 void InitDSM(struct SCType *S);
 void InitLagrangePoints(void);
+/* Updates Lagrange System constants based on updated/variable orbit ephems */
+void UpdateLagrangePoints(void);
 
 long LoadTRVfromFile(const char *Path, const char *TrvFileName,
                      const char *ElemLabel, double DynTime,

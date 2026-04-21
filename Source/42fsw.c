@@ -1373,8 +1373,8 @@ void SpinnerFSW(struct SCType *S)
                    C->Kprec * (C->Itrans * w1 - C->Ispin * C->SpinRate * x);
       C->Tcmd[1] = -C->Knute * w2 -
                    C->Kprec * (C->Itrans * w2 - C->Ispin * C->SpinRate * y);
-      C->xold = x;
-      C->yold = y;
+      C->xold    = x;
+      C->yold    = y;
    }
    else {
       C->Tcmd[0] = 0.0;

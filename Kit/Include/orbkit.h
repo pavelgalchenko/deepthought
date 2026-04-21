@@ -34,6 +34,7 @@ enum orbitRegime {
    ORB_FLIGHT,
    ORB_CENTRAL,
    ORB_THREE_BODY,
+   ORB_N_BODY,
 };
 
 enum orbitInputType {
@@ -188,6 +189,19 @@ struct OrbitType {
    double xdot;
    double ydot;
    double zdot;
+
+   /* SC Pos/Vel direct import from TRVs */
+   /* This bypasses converting Pos/Vel into a viable two-body orbit and
+   then converting back to SC Pos/Vel from whatever the new two-body
+   orbit values are. This allows SC to have the EXACT Pos/Vel that is
+   input in the the TRV file. Note that this assumes you are using
+   COWELL method for orbit propagation in SC configuration and that
+   you are using a JPL Ephemerides as the Ephem option. */
+   int use_N_BODY_Vec;
+   double N_BODY_PosN[3]; /* SC Position from TRV file, [[m]], expressed in N of
+                             CENTRAL body */
+   double N_BODY_VelN[3]; /* SC Velocity from TRV file, [[m/sec]], expressed in
+                             N of CENTRAL body */
 
    /* For Central Orbit Description */
    double MeanAnom;

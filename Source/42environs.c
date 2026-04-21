@@ -68,15 +68,15 @@ void Environment(struct SCType *S)
    if (O->World == EARTH) {
       if (AtmoOption == TWOSIGMA_ATMO) {
          Flux10p7 =
-             LinInterp(SchattenTable[0], SchattenTable[1], TT.JulDay, 410);
+             LinInterp(SchattenTable[0], SchattenTable[1], TT.JulDay, 1009);
          GeomagIndex =
-             LinInterp(SchattenTable[0], SchattenTable[3], TT.JulDay, 410);
+             LinInterp(SchattenTable[0], SchattenTable[3], TT.JulDay, 1009);
       }
       else if (AtmoOption == NOMINAL_ATMO) {
          Flux10p7 =
-             LinInterp(SchattenTable[0], SchattenTable[2], TT.JulDay, 410);
+             LinInterp(SchattenTable[0], SchattenTable[2], TT.JulDay, 1009);
          GeomagIndex =
-             LinInterp(SchattenTable[0], SchattenTable[4], TT.JulDay, 410);
+             LinInterp(SchattenTable[0], SchattenTable[4], TT.JulDay, 1009);
       }
       /* else USER_ATMO: Flux10p7, GeomagIndex read from Inp_Sim.txt */
 
