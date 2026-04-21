@@ -7,10 +7,14 @@ jobs:
          - uses: actions/checkout@v5
          - name: Add Homebrew to Path
            run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+         - name: Set up Homebrew
+           uses: Homebrew/actions/setup-homebrew@main
          - name: Install/Update clang-format
-           run: brew install clang-format
+           run: HOMEBREW_NO_AUTO_UPDATE=1 brew install clang-format
+         - name: Update PATH
+           run: echo 'export PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'
+              >> /home/runner/.bash_profile
          - name: Check with Brew's clang-format
-           run: /home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format Source/*.c
-              Include/*.h Kit/Source/*/.c Kit/Include/*.h
+           run: clang-format Source/*.c Include/*.h Kit/Source/*/.c Kit/Include/*.h
          - run: echo "Formatted with clang-format version"
-         - run: /home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format --version
+         - run: clang-format --version
