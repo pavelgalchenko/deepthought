@@ -6,9 +6,9 @@ jobs:
       steps:
          - uses: actions/checkout@v5
          - name: Set up Homebrew
-           uses: HOMEBREW_NO_AUTO_UPDATE=1 Homebrew/actions/setup-homebrew@master
+           uses: Homebrew/actions/setup-homebrew@master
          - name: Install/Update clang-format
-           run: brew install clang-format
+           run: HOMEBREW_NO_AUTO_UPDATE=1 brew install clang-format
          - name: Clang Format Github Action
            id: clang-format
            uses: RafikFarhad/clang-format-github-action@v6.0.1
