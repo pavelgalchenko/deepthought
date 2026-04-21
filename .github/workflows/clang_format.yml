@@ -18,8 +18,7 @@ jobs:
               echo 'export
               PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'/
                 >> /home/runner/.bash_profile
-         - name: Check formatting with clang-format-checking
-           run: >
-              clang-format Source/*.c Include/*.h Kit/Source/*.c Kit/Include/*.h
-              --style=file --dry-run -Werror
-         - run: echo "Formatted with $(clang-format --version)"
+- run: echo "Formatting checked with $(clang-format --version)"
+         - name: Check formatting with clang-format
+           run: clang-format --style=file --dry-run -Werror Source/*.c Include/*.h Kit/Source/*.c Kit/Include/*.h
+         
