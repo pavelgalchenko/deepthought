@@ -5,8 +5,16 @@ jobs:
       runs-on: ubuntu-latest
       steps:
          - uses: actions/checkout@v5
+         - name: Set up Homebrew
+           uses: Homebrew/actions/setup-homebrew@main
+         - name: Install/Update clang-format
+           run: brew install clang-format
+         - name: Add Brew's clang-format to the Path
+           run: >
+              echo 'export
+              PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'
+                >> /home/runner/.bash_profile
          - name: Clang Format Github Action
-           id: clang-format
            uses: RafikFarhad/clang-format-github-action@v6.0.1
            with:
               style: "file"
