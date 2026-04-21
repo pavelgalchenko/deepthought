@@ -13,7 +13,10 @@ jobs:
            uses: Homebrew/actions/setup-homebrew@main
          - name: Install/Update clang-format
            run: brew install clang-format
-         - run: echo "Formatting checked with $(/home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format --version)"
+         - name: Add Brew's clang-format to the Path
+           run: echo "/home/linuxbrew/.linuxbrew/opt/clang-format/bin" >> "$GITHUB_PATH"
+         - name: clang-format version information
+           run: echo "Formatting checked with $(clang-format --version)"
          - name: Check formatting with clang-format
-           run: /home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format --style=file --dry-run -Werror Source/*.c Include/*.h Kit/Source/*.c Kit/Include/*.h
-         
+           run: clang-format --style=file --dry-run -Werror Source/*.c Include/*.h
+              Kit/Source/*.c Kit/Include/*.h
