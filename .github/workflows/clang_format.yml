@@ -13,12 +13,7 @@ jobs:
            uses: Homebrew/actions/setup-homebrew@main
          - name: Install/Update clang-format
            run: brew install clang-format
-         - name: Add Brew's clang-format to the Path
-           run: >
-              echo 'export
-              PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'/
-                >> /home/runner/.bash_profile
-         - run: echo "Formatting checked with $(clang-format --version)"
+         - run: echo "Formatting checked with $(/home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format --version)"
          - name: Check formatting with clang-format
-           run: clang-format --style=file --dry-run -Werror Source/*.c Include/*.h Kit/Source/*.c Kit/Include/*.h
+           run: /home/linuxbrew/.linuxbrew/opt/clang-format/bin/clang-format --style=file --dry-run -Werror Source/*.c Include/*.h Kit/Source/*.c Kit/Include/*.h
          
