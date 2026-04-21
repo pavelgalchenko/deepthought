@@ -5,8 +5,6 @@ jobs:
       runs-on: ubuntu-latest
       steps:
          - uses: actions/checkout@v5
-         - name: Add Homebrew to Path
-           run: eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
          - name: Set up Homebrew
            uses: Homebrew/actions/setup-homebrew@main
          - name: Install/Update clang-format
@@ -15,6 +13,7 @@ jobs:
            run: echo 'export PATH="/home/linuxbrew/.linuxbrew/opt/clang-format/bin:$PATH"'
               >> /home/runner/.bash_profile
          - name: Check with Brew's clang-format
-           run: clang-format --dry-run --Werror Source/*.c Include/*.h Kit/Source/*/.c
-              Kit/Include/*.h
-         - run: echo "Formatted with clang-format version $(clang-format --version)"
+           run: clang-format --dry-run --Werror --style=file Source/*.c Include/*.h
+              Kit/Source/*.c Kit/Include/*.h
+         - name: Give clang-format version
+           run: echo "Formatted with clang-format version $(clang-format --version)"
