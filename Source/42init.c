@@ -701,7 +701,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
          // Save original SC Pos/Vel from TRV files
          if (O->Regime == ORB_N_BODY) {
             O->use_N_BODY_Vec = true;
-            for(i=0;i<3;i++) {
+            for (i = 0; i < 3; i++) {
                O->N_BODY_PosN[i] = R[i];
                O->N_BODY_VelN[i] = V[i];
             }
@@ -746,7 +746,7 @@ void InitOrbit(struct OrbitType *O)
    node                 = fy_node_by_path_def(root, "/Orbit");
 
    /* .. Orbit Parameters */
-   O->use_N_BODY_Vec = FALSE;    // Start with TRV method disabled
+   O->use_N_BODY_Vec = FALSE; // Start with TRV method disabled
    O->Epoch          = DynTime;
    O->SplineActive   = FALSE;
    char response[50] = {0};
@@ -895,7 +895,7 @@ void InitOrbit(struct OrbitType *O)
                O->ArgP *= D2R;
                O->anom *= D2R;
                O->tp    = O->Epoch -
-                       TimeSincePeriapsis(O->mu, O->SLR, O->ecc, O->anom);
+                          TimeSincePeriapsis(O->mu, O->SLR, O->ecc, O->anom);
                /* Some anomalies are unreachable for hyperbolic trajectories */
                if (O->ecc > 1.0) {
                   double maxAnom = Pi - acos(1.0 / O->ecc);
@@ -3779,23 +3779,23 @@ void LoadSun(void)
       W->rad = 6.98E8;
    }
    else if (EphemOption == EPH_DE421) {
-      GM = 0.295912208285591100E-03;
-      W->mu  = GM*AUd2ms; //1.3271244004094400E20;
+      GM     = 0.295912208285591100E-03;
+      W->mu  = GM * AUd2ms; // 1.3271244004094400E20;
       W->rad = 6.96000E8;
    }
    else if (EphemOption == EPH_DE424) {
-      GM = 0.295912208285591100E-03;
-      W->mu  = GM*AUd2ms; //1.3271244004094460E20;
+      GM     = 0.295912208285591100E-03;
+      W->mu  = GM * AUd2ms; // 1.3271244004094460E20;
       W->rad = 6.96000E8;
    }
    else if (EphemOption == EPH_DE430) {
-      GM = 0.295912208285591100E-03;
-      W->mu  = GM*AUd2ms; //1.3271244004193938E20;
+      GM     = 0.295912208285591100E-03;
+      W->mu  = GM * AUd2ms; // 1.3271244004193938E20;
       W->rad = 6.96000E8;
    }
    else if (EphemOption == EPH_DE440) {
-      GM = 0.295912208284119561E-03;
-      W->mu  = GM*AUd2ms; //1.3271244004127942E20;
+      GM     = 0.295912208284119561E-03;
+      W->mu  = GM * AUd2ms; // 1.3271244004127942E20;
       W->rad = 6.95700E8;
    }
    else if (EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
@@ -3822,13 +3822,14 @@ void LoadSun(void)
       int dim               = 0;
 
       bodvrd_c("Sun", "GM", 1, &dim, &tmp_holder);
-      W->mu  = tmp_holder * 1E9;
+      W->mu = tmp_holder * 1E9;
       bodvrd_c("Sun", "RADII", 3, &dim, tmp_holder3);
       W->rad = tmp_holder3[0] * 1e3;
 
       bodvrd_c("SUN", "PM", 3, &dim, tmp_holder3);
       W->PriMerAngJ2000 = tmp_holder3[0] * D2R;
-      W->w  = tmp_holder3[1] * D2R / spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      W->w = tmp_holder3[1] * D2R /
+             spd_c(); // converts the prime meridian rate in deg/day to rad/s
    }
 #endif
 
@@ -3892,77 +3893,96 @@ void LoadPlanets(void)
        "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
    const char GravFileName[10][20] = {"", "", "", "EGM08.txt", "GMM2B.txt",
                                       "", "", "", "",          ""};
-   double Mu_mean[10]  = {1.32715E20,            2.18E13,               3.2485E14,
-                          3.986004E14,           4.293E13,              1.2761E17,
-                          3.792E16,              5.788E15,              6.8E15,
-                          3.2E14};
-   double Rad_mean[10] = {6.98E8,    2.42E6,    6.1E6,    6.378145E6,  3.41E6,
-                          7.14E7,    6.04E7,    2.35E7,   2.23E7,      7.0E6};
-   double GM_421[10]   = {0.295912208285591100E-03, 0.491254957186794000E-10, 0.724345233269844100E-09,
-                          0.899701140826804900E-09, 0.954954869562239000E-10, 0.282534584085505000E-06,
-                          0.845970607330847800E-07, 0.129202482579265000E-07, 0.152435910924974000E-07,
-                          0.217844105199052000E-11};
-   double Rad_421[10]  = {6.96000E8, 2.4397E6,  6.0518E6, 6.37814E6,   3.39619E6,
-                          7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.195E6};
-   double GM_424[10]   = {0.295912208285591100E-03, 0.491249717333700100E-10, 0.724345233269844100E-09,
-                          0.899701140826804900E-09, 0.954954869562239000E-10, 0.282534584085505000E-06,
-                          0.845970607330847800E-07, 0.129202482579265000E-07, 0.152435734789662000E-07,
-                          0.217844105199052000E-11};
-   double Rad_424[10]  = {6.96000E8, 2.4397E6,  6.0518E6, 6.37814E6,   3.39619E6,
-                          7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.195E6};
-   double GM_430[10]   = {0.295912208285591100E-03, 0.491248045036476000E-10, 0.724345233264412000E-09,
-                          0.899701139019987100E-09, 0.954954869555077000E-10, 0.282534584083387000E-06,
-                          0.845970607324503000E-07, 0.129202482578296000E-07, 0.152435734788511000E-07,
-                          0.217844105197418000E-11};
-   double Rad_430[10]  = {6.96000E8, 2.4397E6,  6.0518E6, 6.3781366E6, 3.39619E6,
-                          7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.195E6};
-   double GM_440[10]   = {0.295912208284119561E-03, 0.491250019488931818E-10, 0.724345233264411869E-09,
-                          0.899701139294734660E-09, 0.954954882972581189E-10, 0.282534582522579175E-06,
-                          0.845970599337629027E-07, 0.129202656496823994E-07, 0.152435734788519386E-07,
-                          0.217509646489335811E-11};
-   double Rad_440[10]  = {6.95700E8, 2.44053E6, 6.0518E6, 6.3781366E6, 3.39619E6,
-                          7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.1883E6};
-   double Mu_GMAT[10]  = {1.3271244001799E20, 2.2032080486418E13,    3.2485859882646E14,
-                          3.986004415E14,        4.2828314258067E13,    1.2671276785780E17,
-                          3.7940626061137E16,    5.7945490070719E15,    6.8365340638793E15,
-                          9.8160088770700E11};
-   double Rad_GMAT[10] = {6.95990E8, 2.4397E6,  6.0519E6, 6.3781363E6,   3.397E6,
-                          7.1492E7,  6.0268E7,  2.5559E7, 2.5269E7,    1.162E6};
+   double Mu_mean[10] = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
+                         1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
+   double Rad_mean[10] = {6.98E8, 2.42E6, 6.1E6,  6.378145E6, 3.41E6,
+                          7.14E7, 6.04E7, 2.35E7, 2.23E7,     7.0E6};
+   double GM_421[10]   = {0.295912208285591100E-03, 0.491254957186794000E-10,
+                          0.724345233269844100E-09, 0.899701140826804900E-09,
+                          0.954954869562239000E-10, 0.282534584085505000E-06,
+                          0.845970607330847800E-07, 0.129202482579265000E-07,
+                          0.152435910924974000E-07, 0.217844105199052000E-11};
+   double Rad_421[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.37814E6, 3.39619E6,
+                          7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,  1.195E6};
+   double GM_424[10]   = {0.295912208285591100E-03, 0.491249717333700100E-10,
+                          0.724345233269844100E-09, 0.899701140826804900E-09,
+                          0.954954869562239000E-10, 0.282534584085505000E-06,
+                          0.845970607330847800E-07, 0.129202482579265000E-07,
+                          0.152435734789662000E-07, 0.217844105199052000E-11};
+   double Rad_424[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.37814E6, 3.39619E6,
+                          7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,  1.195E6};
+   double GM_430[10]   = {0.295912208285591100E-03, 0.491248045036476000E-10,
+                          0.724345233264412000E-09, 0.899701139019987100E-09,
+                          0.954954869555077000E-10, 0.282534584083387000E-06,
+                          0.845970607324503000E-07, 0.129202482578296000E-07,
+                          0.152435734788511000E-07, 0.217844105197418000E-11};
+   double Rad_430[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.3781366E6, 3.39619E6,
+                          7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,    1.195E6};
+   double GM_440[10]   = {0.295912208284119561E-03, 0.491250019488931818E-10,
+                          0.724345233264411869E-09, 0.899701139294734660E-09,
+                          0.954954882972581189E-10, 0.282534582522579175E-06,
+                          0.845970599337629027E-07, 0.129202656496823994E-07,
+                          0.152435734788519386E-07, 0.217509646489335811E-11};
+   double Rad_440[10] = {6.95700E8, 2.44053E6, 6.0518E6, 6.3781366E6, 3.39619E6,
+                         7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.1883E6};
+   double Mu_GMAT[10] = {1.3271244001799E20, 2.2032080486418E13,
+                         3.2485859882646E14, 3.986004415E14,
+                         4.2828314258067E13, 1.2671276785780E17,
+                         3.7940626061137E16, 5.7945490070719E15,
+                         6.8365340638793E15, 9.8160088770700E11};
+   double Rad_GMAT[10] = {6.95990E8, 2.4397E6, 6.0519E6, 6.3781363E6, 3.397E6,
+                          7.1492E7,  6.0268E7, 2.5559E7, 2.5269E7,    1.162E6};
    double Mu[10], Rad[10];
    /* Physical Properties */
    if (EphemOption == EPH_MEAN) {
-      for (int i = 0; i < 10; ++i) Mu[i]  = Mu_mean[i];
-      for (int i = 0; i < 10; ++i) Rad[i] = Rad_mean[i];
+      for (int i = 0; i < 10; ++i)
+         Mu[i] = Mu_mean[i];
+      for (int i = 0; i < 10; ++i)
+         Rad[i] = Rad_mean[i];
    }
    else if (EphemOption == EPH_DE421) {
-      for (int i = 0; i < 10; ++i) Mu[i]  = GM_421[i]*AUd2ms;;
-      for (int i = 0; i < 10; ++i) Rad[i] = Rad_421[i];
-      Mu[EARTH] = (GM_421[EARTH]/(1.0 + 1.0/EMRAT))*AUd2ms;
+      for (int i = 0; i < 10; ++i)
+         Mu[i] = GM_421[i] * AUd2ms;
+      ;
+      for (int i = 0; i < 10; ++i)
+         Rad[i] = Rad_421[i];
+      Mu[EARTH] = (GM_421[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
    }
    else if (EphemOption == EPH_DE424) {
-      for (int i = 0; i < 10; ++i) Mu[i]  = GM_424[i]*AUd2ms;;
-      for (int i = 0; i < 10; ++i) Rad[i] = Rad_424[i];
-      Mu[EARTH] = (GM_424[EARTH]/(1.0 + 1.0/EMRAT))*AUd2ms;
+      for (int i = 0; i < 10; ++i)
+         Mu[i] = GM_424[i] * AUd2ms;
+      ;
+      for (int i = 0; i < 10; ++i)
+         Rad[i] = Rad_424[i];
+      Mu[EARTH] = (GM_424[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
    }
    else if (EphemOption == EPH_DE430) {
-      for (int i = 0; i < 10; ++i) Mu[i]  = GM_430[i]*AUd2ms;;
-      for (int i = 0; i < 10; ++i) Rad[i] = Rad_430[i];
-      Mu[EARTH] = (GM_430[EARTH]/(1.0 + 1.0/EMRAT))*AUd2ms;
+      for (int i = 0; i < 10; ++i)
+         Mu[i] = GM_430[i] * AUd2ms;
+      ;
+      for (int i = 0; i < 10; ++i)
+         Rad[i] = Rad_430[i];
+      Mu[EARTH] = (GM_430[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
    }
    else if (EphemOption == EPH_DE440) {
-      for (int i = 0; i < 10; ++i) Mu[i]  = GM_440[i]*AUd2ms;;
-      for (int i = 0; i < 10; ++i) Rad[i] = Rad_440[i];
-      Mu[EARTH] = (GM_440[EARTH]/(1.0 + 1.0/EMRAT))*AUd2ms;
+      for (int i = 0; i < 10; ++i)
+         Mu[i] = GM_440[i] * AUd2ms;
+      ;
+      for (int i = 0; i < 10; ++i)
+         Rad[i] = Rad_440[i];
+      Mu[EARTH] = (GM_440[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
    }
    else if (EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      for (int i = 0; i < 10; ++i) Mu[i]  = Mu_GMAT[i];
-      for (int i = 0; i < 10; ++i) Rad[i] = Rad_GMAT[i];
+      for (int i = 0; i < 10; ++i)
+         Mu[i] = Mu_GMAT[i];
+      for (int i = 0; i < 10; ++i)
+         Rad[i] = Rad_GMAT[i];
    }
    /* Default Pyhsical Parameters */
-   double J2[10]  = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
-                     0.0, 0.0, 0.0, 0.0,        0.0};
-   double W[10]   = {2.69E-6,   1.23E-6,   2.94E-7,  7.292115E-5, 7.0882E-5,
-                     1.7659E-4, 1.6728E-4, 1.631E-4, 1.105E-4,    0.0};
+   double J2[10] = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
+                    0.0, 0.0, 0.0, 0.0,        0.0};
+   double W[10]  = {2.69E-6,   1.23E-6,   2.94E-7,  7.292115E-5, 7.0882E-5,
+                    1.7659E-4, 1.6728E-4, 1.631E-4, 1.105E-4,    0.0};
 
    double PoleRA[10]         = {0.0,     281.008, 272.758, 0.0,     317.683,
                                 268.057, 40.587,  257.313, 299.333, 133.046};
@@ -4010,7 +4030,7 @@ void LoadPlanets(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         W[i]              = tmp_holder3[1] * D2R /
+         W[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -4234,23 +4254,23 @@ void LoadMoonOfEarth(void)
       rad[0] = 1.738E6;
    }
    else if (EphemOption == EPH_DE421) {
-      GM = 0.899701140826804900E-09;
-      mu[0]  = (GM/(1.0+EMRAT))*AUd2ms; //4.902800076E12;
+      GM     = 0.899701140826804900E-09;
+      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.902800076E12;
       rad[0] = 1.7374E6;
    }
    else if (EphemOption == EPH_DE424) {
-      GM = 0.899701140826804900E-09;
-      mu[0]  = (GM/(1.0+EMRAT))*AUd2ms; //4.902800013E12;
+      GM     = 0.899701140826804900E-09;
+      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.902800013E12;
       rad[0] = 1.7374E6;
    }
    else if (EphemOption == EPH_DE430) {
-      GM = 0.899701139019987100E-09;
-      mu[0]  = (GM/(1.0+EMRAT))*AUd2ms; //4.9028000661637961E12;
+      GM     = 0.899701139019987100E-09;
+      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.9028000661637961E12;
       rad[0] = 1.7374E6;
    }
    else if (EphemOption == EPH_DE440) {
-      GM = 0.899701139294734660E-09;
-      mu[0]  = (GM/(1.0+EMRAT))*AUd2ms; //4.9028001184575496E12;
+      GM     = 0.899701139294734660E-09;
+      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.9028001184575496E12;
       rad[0] = 1.7374E6;
    }
    else if (EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
@@ -4258,23 +4278,24 @@ void LoadMoonOfEarth(void)
       rad[0] = 1.7382E6;
    }
    /* Default Pyhsical Parameters */
-   double J2[Nm]                   = {2.027E-4};
-   double w[Nm]                    = {2.66E-6};
-   double PoleRA[Nm]               = {0.0};
-   double PoleDec[Nm]              = {0.0};
-   const double SMA[Nm]            = {384400000.0};
-   const double ecc[Nm]            = {0.0549};
-   const double inc[Nm]            = {0.0};
-   const double RAAN[Nm]           = {0.0};
-   const double omg[Nm]            = {0.0};
-   const long EpochYear[Nm]        = {2000};
-   const long EpochMon[Nm]         = {1};
-   const long EpochDay[Nm]         = {1};
-   const long EpochHour[Nm]        = {12};
-   const double MeanAnom[Nm]       = {0.0};
-   const unsigned char Glyph[14]   = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
-                                      0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
-   double PriMerAngJ2000[Nm]       = {0.0};;
+   double J2[Nm]                 = {2.027E-4};
+   double w[Nm]                  = {2.66E-6};
+   double PoleRA[Nm]             = {0.0};
+   double PoleDec[Nm]            = {0.0};
+   const double SMA[Nm]          = {384400000.0};
+   const double ecc[Nm]          = {0.0549};
+   const double inc[Nm]          = {0.0};
+   const double RAAN[Nm]         = {0.0};
+   const double omg[Nm]          = {0.0};
+   const long EpochYear[Nm]      = {2000};
+   const long EpochMon[Nm]       = {1};
+   const long EpochDay[Nm]       = {1};
+   const long EpochHour[Nm]      = {12};
+   const double MeanAnom[Nm]     = {0.0};
+   const unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
+                                    0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
+   double PriMerAngJ2000[Nm]     = {0.0};
+   ;
    double Epoch;
 
    long Ip = EARTH;
@@ -4337,20 +4358,20 @@ void LoadMoonOfEarth(void)
          M->Color[i] = Color[i];
       for (i = 0; i < 14; i++)
          M->Glyph[i] = Glyph[i];
-      M->mu        = mu[Im];
-      M->J2        = J2[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
+      M->mu             = mu[Im];
+      M->J2             = J2[Im];
+      M->rad            = rad[Im];
+      M->w              = w[Im];
       M->PriMerAngJ2000 = PriMerAngJ2000[Im] * D2R;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im];
-      E->RAAN      = RAAN[Im];
-      E->ArgP      = omg[Im];
+      E->Exists         = TRUE;
+      E->Regime         = ORB_CENTRAL;
+      E->World          = Ip;
+      E->mu             = P->mu;
+      E->SMA            = SMA[Im];
+      E->ecc            = ecc[Im];
+      E->inc            = inc[Im];
+      E->RAAN           = RAAN[Im];
+      E->ArgP           = omg[Im];
 
       Epoch         = DateToTime(EpochYear[Im], EpochMon[Im], EpochDay[Im],
                                  EpochHour[Im], 0, 0.0);
@@ -4468,7 +4489,7 @@ void LoadMoonsOfMars(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i]              = tmp_holder3[1] * D2R /
+         w[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -4662,7 +4683,7 @@ void LoadMoonsOfJupiter(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i]              = tmp_holder3[1] * D2R /
+         w[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -4856,7 +4877,7 @@ void LoadMoonsOfSaturn(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i]              = tmp_holder3[1] * D2R /
+         w[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -5016,7 +5037,7 @@ void LoadMoonsOfUranus(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i]              = tmp_holder3[1] * D2R /
+         w[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -5174,7 +5195,7 @@ void LoadMoonsOfNeptune(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i]              = tmp_holder3[1] * D2R /
+         w[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -5314,7 +5335,7 @@ void LoadMoonsOfPluto(void)
 
          bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
          PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i]              = tmp_holder3[1] * D2R /
+         w[i] = tmp_holder3[1] * D2R /
                 spd_c(); // converts the prime meridian rate in deg/day to rad/s
 
          bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
@@ -5710,7 +5731,7 @@ void UpdateLagrangePoints(void)
          LS->MeanRate = sqrt(LS->mu1 / LS->SMA) / LS->SMA;
          LS->Period   = TwoPi / LS->MeanRate;
 
-         //FindLagPtParms(LS);
+         // FindLagPtParms(LS);
       }
    }
 }
@@ -5730,8 +5751,9 @@ long LoadJplEphems(char EphemPath[80], double JD)
    /* .. Select input file */
    if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440) {
       if (JD < 2433264.5) {
-         fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
-                         "lower-precision planetary ephemerides.\n");
+         fprintf(stderr,
+                 "JD earlier than JPL ephem input files.  Falling back to "
+                 "lower-precision planetary ephemerides.\n");
          return (1);
       }
       else if (JD < 2469808.5) {
@@ -5760,8 +5782,9 @@ long LoadJplEphems(char EphemPath[80], double JD)
    }
    else if (EphemOption == EPH_DE421 || EphemOption == EPH_GMAT421) {
       if (JD < 2415020.5) {
-         fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
-                         "lower-precision planetary ephemerides.\n");
+         fprintf(stderr,
+                 "JD earlier than JPL ephem input files.  Falling back to "
+                 "lower-precision planetary ephemerides.\n");
          return (1);
       }
       else if (JD < 2469807.5) {
@@ -5778,8 +5801,9 @@ long LoadJplEphems(char EphemPath[80], double JD)
    }
    else if (EphemOption == EPH_DE424 || EphemOption == EPH_GMAT424) {
       if (JD < 2415020.5) {
-         fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
-                         "lower-precision planetary ephemerides.\n");
+         fprintf(stderr,
+                 "JD earlier than JPL ephem input files.  Falling back to "
+                 "lower-precision planetary ephemerides.\n");
          return (1);
       }
       else if (JD < 2451544.5) {
@@ -6058,30 +6082,29 @@ long LoadJplEphems(char EphemPath[80], double JD)
       header.DE421, header.DE424, etc files  */
    if (EphemOption == EPH_DE421 || EphemOption == EPH_GMAT421) {
       /* This data comes from header.421 */
-      EMRAT   = 0.813005690699153000E+02;  // Earth/Moon Mass Ratio
-      AU      = 0.149597870699626200E+09;  // Kilometers per 1 AU
+      EMRAT = 0.813005690699153000E+02; // Earth/Moon Mass Ratio
+      AU    = 0.149597870699626200E+09; // Kilometers per 1 AU
    }
    else if (EphemOption == EPH_DE424 || EphemOption == EPH_GMAT424) {
       /* This data comes from header.424 */
-      EMRAT = 0.813005701240172800E+02;  // Earth/Moon Mass Ratio
-      AU    = 0.149597870699626200E+09;  // Kilometers per 1 AU
+      EMRAT = 0.813005701240172800E+02; // Earth/Moon Mass Ratio
+      AU    = 0.149597870699626200E+09; // Kilometers per 1 AU
    }
    else if (EphemOption == EPH_DE430) {
       /* This data comes from header.430_229 */
-      EMRAT = 0.813005690741906200E+02;  // Earth/Moon Mass Ratio
-      AU    = 0.149597870700000000E+09;  // Kilometers per 1 AU
+      EMRAT = 0.813005690741906200E+02; // Earth/Moon Mass Ratio
+      AU    = 0.149597870700000000E+09; // Kilometers per 1 AU
    }
    else if (EphemOption == EPH_DE440) {
       /* This data comes from header.440 */
-      EMRAT = 0.813005682214972154E+02;  // Earth/Moon Mass Ratio
-      AU    = 0.149597870699999988E+09;  // Kilometers per 1 AU
+      EMRAT = 0.813005682214972154E+02; // Earth/Moon Mass Ratio
+      AU    = 0.149597870699999988E+09; // Kilometers per 1 AU
    }
 
    // Conversion of GM from AU^3/day^2 to m^3/s^2 using DE appropriate values
-   AUd2ms = (pow(AU,3)/pow(86400,2))*1.0e9;
+   AUd2ms = (pow(AU, 3) / pow(86400, 2)) * 1.0e9;
 
    return (0);
-
 }
 /**********************************************************************/
 void UpdateJplEphems(void)
@@ -6096,8 +6119,8 @@ void UpdateJplEphems(void)
    double ZAxis[3] = {0.0, 0.0, 1.0};
    double PosJ[3], VelJ[3], CNJ[3][3];
    double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
-             C_TETE_J2000[3][3] = {{0.0}};
-   double GMST = JD2GMST(UTC.JulDay);
+          C_TETE_J2000[3][3] = {{0.0}};
+   double GMST               = JD2GMST(UTC.JulDay);
 
    /* .. Initialize Planetary Pos/Vel */
    for (Iw = SOL; Iw <= LUNA; Iw++) {
@@ -6135,7 +6158,8 @@ void UpdateJplEphems(void)
       SimpRot(ZAxis, W->PriMerAng, W->CWN);
    }
    /* Calculate PriMerAng for Sun */
-   World[SOL].PriMerAng = fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * DynTime, TwoPi);
+   World[SOL].PriMerAng =
+       fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * DynTime, TwoPi);
    SimpRot(ZAxis, World[SOL].PriMerAng, World[SOL].CWN);
    C2Q(World[SOL].CWN, World[SOL].qwn);
    /* Move Sun to origin */
@@ -6172,7 +6196,7 @@ void UpdateJplEphems(void)
    QxQT(World[LUNA].qnh, qjh, World[LUNA].qnj);
 
    /* .. Earth rotation is a special case */
-   World[EARTH].PriMerAng    = TwoPi * GMST;
+   World[EARTH].PriMerAng = TwoPi * GMST;
    HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
    SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
    MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
@@ -6185,8 +6209,9 @@ void UpdateJplEphems(void)
    }
 }
 /**********************************************************************/
-void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH[3],
-                  double *trgtPriMerAng, double trgtCNH[3][3])
+void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3],
+                  double trgtPosH[3], double *trgtPriMerAng,
+                  double trgtCNH[3][3])
 {
    long i, j, Ic, Iw;
    struct Cheb3DType *Cheb;
@@ -6197,7 +6222,7 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
    double earthPosN[3], lunaPosN[3], otherPosN[3];
    double earthPosH[3], lunaPosH[3], otherPosH[3];
    double CNJ[3][3] = {0};
-   long WRLD[2] = {EARTH, LUNA}, otherJPL;
+   long WRLD[2]     = {EARTH, LUNA}, otherJPL;
    double GMST, timeTT, utcJD;
    double CNH[3][3] = {0};
 
@@ -6217,16 +6242,17 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
       ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
       PosJ[i] = 1000.0 * P;
    }
-   QTxV( qjh, PosJ, systemBC);
+   QTxV(qjh, PosJ, systemBC);
 
    /* Determine which ephemerides math needed */
-   otherJPL = (trgtWORLD != SOL && trgtWORLD != EARTH && trgtWORLD != LUNA && trgtWORLD <= PLUTO);
+   otherJPL = (trgtWORLD != SOL && trgtWORLD != EARTH && trgtWORLD != LUNA &&
+               trgtWORLD <= PLUTO);
 
-   /* Must compute both Earth/Luna if either selected (how JPL defines ephem measurements) */
+   /* Must compute both Earth/Luna if either selected (how JPL defines ephem
+    * measurements) */
    if (trgtWORLD == EARTH || trgtWORLD == LUNA) {
       /* .. Initialize Planetary Pos for EARTH/LUNA */
-      for (j = 0; j < 2; ++j)
-      {
+      for (j = 0; j < 2; ++j) {
          Iw  = WRLD[j];
          W   = &World[Iw];
          Eph = &W->eph;
@@ -6243,12 +6269,14 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
             ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
             PosJ[i] = 1000.0 * P;
          }
-         QTxV( qjh, PosJ, PosN);
+         QTxV(qjh, PosJ, PosN);
          if (Iw == EARTH) {
-            for (i = 0; i < 3; i++) earthPosN[i] = PosN[i];
+            for (i = 0; i < 3; i++)
+               earthPosN[i] = PosN[i];
          }
          else if (Iw == LUNA) {
-            for (i = 0; i < 3; i++) lunaPosN[i] = PosN[i];
+            for (i = 0; i < 3; i++)
+               lunaPosN[i] = PosN[i];
          }
       }
       /* Move Earth from barycentric to Sun-centered */
@@ -6266,7 +6294,7 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
          lunaPosH[i] = earthPosH[i] + lunaPosN[i];
       }
       /* Rotate Moon into ECI */
-      QxV( qjh, rh, lunaPosN);
+      QxV(qjh, rh, lunaPosN);
    }
    else if (otherJPL) {
       /* .. Initialize Pos for other planet in JPL ephemerides */
@@ -6285,7 +6313,7 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
          PosJ[i] = 1000.0 * P;
       }
-      QTxV( qjh, PosJ, PosN);
+      QTxV(qjh, PosJ, PosN);
       /* Move planet from barycentric to Sun-centered */
       for (i = 0; i < 3; i++) {
          otherPosN[i]  = PosN[i];
@@ -6302,7 +6330,8 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
       }
       /* Calculate PriMerAng for Sun */
       timeTT = JDToTime(JD);
-      *trgtPriMerAng = fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * timeTT, TwoPi);
+      *trgtPriMerAng =
+          fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * timeTT, TwoPi);
    }
    else if (trgtWORLD == EARTH) {
       for (i = 0; i < 3; i++) {
@@ -6310,8 +6339,8 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
          trgtPosH[i] = earthPosH[i];
       }
       /* Calculate PriMerAng for Earth */
-      utcJD = JD - (32.184 + LeapSec)/86400.0;
-      GMST = JD2GMST(utcJD);
+      utcJD          = JD - (32.184 + LeapSec) / 86400.0;
+      GMST           = JD2GMST(utcJD);
       *trgtPriMerAng = TwoPi * GMST;
    }
    else if (trgtWORLD == LUNA) {
@@ -6325,19 +6354,20 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH
    else if (otherJPL) {
       /* Move target from barycentric to Sun-centered */
       for (i = 0; i < 3; i++) {
-         trgtPosN[i]  = otherPosN[i];
-         trgtPosH[i]  = otherPosH[i];
+         trgtPosN[i] = otherPosN[i];
+         trgtPosH[i] = otherPosH[i];
       }
       /* Calculate PriMerAng for Sun */
-      timeTT = JDToTime(JD);
-      *trgtPriMerAng = fmod(World[trgtWORLD].PriMerAngJ2000 + World[trgtWORLD].w * timeTT, TwoPi);
+      timeTT         = JDToTime(JD);
+      *trgtPriMerAng = fmod(
+          World[trgtWORLD].PriMerAngJ2000 + World[trgtWORLD].w * timeTT, TwoPi);
    }
    else {
       /* Use original position for non JPL epemerides bodies */
-      W  = &World[trgtWORLD];
+      W = &World[trgtWORLD];
       for (i = 0; i < 3; i++) {
-         trgtPosN[i]  = W->eph.PosN[i];
-         trgtPosH[i]  = W->PosH[i];
+         trgtPosN[i] = W->eph.PosN[i];
+         trgtPosH[i] = W->PosH[i];
       }
       *trgtPriMerAng = W->PriMerAng;
    }
@@ -6365,10 +6395,10 @@ void UpdateMeanEphems(void)
    struct OrbitType *Eph;
    struct WorldType *W;
    double GMST = JD2GMST(UTC.JulDay);
-   double r1[3],rh[3],vh[3];
-   double ZAxis[3] = {0.0,0.0,1.0};
-   long j,Ip;
-   double C_W_TETE[3][3],C_TEME_TETE[3][3],C_TETE_J2000[3][3];
+   double r1[3], rh[3], vh[3];
+   double ZAxis[3] = {0.0, 0.0, 1.0};
+   long j, Ip;
+   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
 
    for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
       if (World[Ip].Exists) {
@@ -6399,9 +6429,8 @@ void UpdateMeanEphems(void)
       MxV(World[EARTH].CNH, vh, Eph->VelN);
       /* Find Luna's osculating elements */
       RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp,
-             &Eph->SLR, &Eph->alpha, &Eph->rmin, &Eph->MeanMotion,
-             &Eph->Period);
+             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
+             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
       World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
       SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
       for (j = 0; j < 3; j++) {
@@ -6410,7 +6439,7 @@ void UpdateMeanEphems(void)
       }
    }
    /* .. Earth rotation is a special case */
-   World[EARTH].PriMerAng    = TwoPi * GMST;
+   World[EARTH].PriMerAng = TwoPi * GMST;
    HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
    SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
    MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
@@ -6438,7 +6467,6 @@ void UpdateMinorBodies(void)
          SimpRot(ZAxis, W->PriMerAng, W->CWN);
       }
    }
-
 }
 /**********************************************************************/
 void UpdateNonEphemMoons(void)
@@ -6454,9 +6482,8 @@ void UpdateNonEphemMoons(void)
          for (long Im = 0; Im < World[Ip].Nsat; Im++) {
             Iw  = World[Ip].Sat[Im];
             Eph = &World[Iw].eph;
-            Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN,
-                   Eph->ArgP, DynTime - Eph->tp, Eph->PosN, Eph->VelN,
-                   &Eph->anom);
+            Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
+                   DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
             World[Iw].PriMerAng = fmod(World[Iw].w * DynTime, TwoPi);
             SimpRot(ZAxis, World[Iw].PriMerAng, World[Iw].CWN);
             C2Q(World[Iw].CWN, World[Iw].qwn);
@@ -6547,7 +6574,8 @@ long UpdateSpiceEphems(double JS)
                 Nstate[i] *
                 1e3; // Assign suncentric positions = inertial position (m)
 
-            Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+            Eph->VelN[i] =
+                Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
             W->VelH[i] =
                 Nstate[i + 3] *
                 1e3; // Assign suncentric velocity = inertial velocity (m/s)
@@ -6590,18 +6618,21 @@ long UpdateSpiceEphems(double JS)
                Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
                W->PosH[i]   = Hstate[i] * 1e3;
 
-               Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
-               W->VelH[i]   = Hstate[i + 3] * 1e3;
+               Eph->VelN[i] =
+                   Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+               W->VelH[i] = Hstate[i + 3] * 1e3;
             }
 
             if (Iw == LUNA) {
                spkezr_c(MajorBodiesNamesState[Iw], JS, "J2000", "NONE",
                         MajorBodiesNamesState[Ip], Nstate,
-                        &light_time); // State of major bodies in J2000 wrt Planet
-                                      // center
+                        &light_time); // State of major bodies in J2000 wrt
+                                      // Planet center
                for (i = 0; i < 3; i++) {
-                  Eph->PosN[i] = Nstate[i]     * 1e3; // Assign inertial positions (m)
-                  Eph->VelN[i] = Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
+                  Eph->PosN[i] =
+                      Nstate[i] * 1e3; // Assign inertial positions (m)
+                  Eph->VelN[i] =
+                      Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
                }
             }
 
@@ -6635,15 +6666,16 @@ long UpdateSpiceEphems(double JS)
 
    return (0);
 }
-void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPosH[3],
-                  double *trgtPriMerAng, double trgtCNH[3][3])
+void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3],
+                    double trgtPosH[3], double *trgtPriMerAng,
+                    double trgtCNH[3][3])
 {
    double CNH[3][3];
    double Nstate[6], Hstate[6];
    double light_time;
    char trgtCNH_STRING[25] = "IAU_";
    char trgtWORLD_STRING[10];
-   int i,j;
+   int i, j;
 
    switch (trgtWORLD) {
       case SOL:
@@ -6683,21 +6715,20 @@ void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3], double trgtPo
          strcpy(trgtWORLD_STRING, "EARTH");
          break;
    }
-   if (trgtWORLD == LUNA)
-   {
-      spkezr_c(trgtWORLD_STRING, JD, "ECLIPJ2000", "NONE", "SUN", Hstate, &light_time);
-      spkezr_c(trgtWORLD_STRING, JD, "J2000", "NONE", "EARTH", Nstate, &light_time);
-      for (i = 0; i < 3; i++)
-      {
+   if (trgtWORLD == LUNA) {
+      spkezr_c(trgtWORLD_STRING, JD, "ECLIPJ2000", "NONE", "SUN", Hstate,
+               &light_time);
+      spkezr_c(trgtWORLD_STRING, JD, "J2000", "NONE", "EARTH", Nstate,
+               &light_time);
+      for (i = 0; i < 3; i++) {
          trgtPosH[i] = Hstate[i] * 1e3;
          trgtPosN[i] = Nstate[i] * 1e3;
       }
    }
-   else
-   {
-      spkezr_c(trgtWORLD_STRING, JD, "ECLIPJ2000", "NONE", "SUN", Nstate, &light_time);
-      for (i = 0; i < 3; i++)
-      {
+   else {
+      spkezr_c(trgtWORLD_STRING, JD, "ECLIPJ2000", "NONE", "SUN", Nstate,
+               &light_time);
+      for (i = 0; i < 3; i++) {
          trgtPosH[i] = Nstate[i] * 1e3;
          trgtPosN[i] = Nstate[i] * 1e3;
       }
@@ -6779,8 +6810,8 @@ void InitSim(int argc, char **argv)
    long JunkTag;
    double CGJ[3][3] = {
        {-0.054873956175539, -0.873437182224835, -0.483835031431981},
-       { 0.494110775064704, -0.444828614979805,  0.746981957785302},
-       {-0.867665382947348, -0.198076649977489,  0.455985113757595}};
+       {0.494110775064704, -0.444828614979805, 0.746981957785302},
+       {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
    double CJH[3][3];
 
    Pi          = PI;
@@ -7377,13 +7408,14 @@ void InitSim(int argc, char **argv)
 
    TDB.JulDay  = TTtoTDB_JD(DynTime);
    TDB.tdbTime = TTtoTDB_Time(DynTime);
-   TimeToDate(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-              &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
-   TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+   TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
+              &TDB.Minute, &TDB.Second, DTSIM);
+   TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
    /* Preload Ephemeris Kernels/Definitions */
-   if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 ||
-       EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
+   if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 ||
+       EphemOption == EPH_DE430 || EphemOption == EPH_DE440 ||
+       EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
       LoadJplEphems(ModelPath, TDB.JulDay);
    }
 #ifdef _ENABLE_SPICE_
@@ -7413,8 +7445,9 @@ void InitSim(int argc, char **argv)
       LoadMoonsOfPluto();
 
    /* Load Planetary/Luna ephems */
-   if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 ||
-       EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
+   if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 ||
+       EphemOption == EPH_DE430 || EphemOption == EPH_DE440 ||
+       EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
       UpdateJplEphems();
    }
 #ifdef _ENABLE_SPICE_
@@ -7428,10 +7461,13 @@ void InitSim(int argc, char **argv)
    else
       Nmb = 0;
 
-   /* .. If EPH_MEAN, update planets/luna to get higher fidelity model for LUNA */
-   if (EphemOption == EPH_MEAN) UpdateMeanEphems();
+   /* .. If EPH_MEAN, update planets/luna to get higher fidelity model for LUNA
+    */
+   if (EphemOption == EPH_MEAN)
+      UpdateMeanEphems();
    /* .. Other planets' moons */
-   if (EphemOption != EPH_SPICE) UpdateNonEphemMoons();
+   if (EphemOption != EPH_SPICE)
+      UpdateNonEphemMoons();
 
    /* .. Regions */
    LoadRegions();

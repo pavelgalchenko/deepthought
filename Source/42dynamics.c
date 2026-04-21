@@ -3956,19 +3956,21 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass,
 }
 /**********************************************************************/
 void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
-               double Frc[3], struct SCType *S, double RKFdt)
+                   double Frc[3], struct SCType *S, double RKFdt)
 {
-   double r_vec[3]={0};
+   double r_vec[3]       = {0};
    double gravpertFrc[3] = {0};
    double rmag, muR3;
    int j;
 
-   for (j = 0; j < 3; j++) r_vec[j] = u[j];
+   for (j = 0; j < 3; j++)
+      r_vec[j] = u[j];
    rmag = MAGV(r_vec);
    muR3 = mu / (rmag * rmag * rmag);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive) GravPertForceRK4(S,u,gravpertFrc,RKFdt);
+   if (GravPertActive)
+      GravPertForceRK4(S, u, gravpertFrc, RKFdt);
 
    udot[0] = u[3];
    udot[1] = u[4];
@@ -4401,7 +4403,7 @@ void Dynamics(struct SCType *S)
          OrderNMultiBodyRK4(S);
          break;
       default:
-         fprintf(stderr,"Unknown Dynamics Solution option.  Bailing out.\n");
+         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
    //}
@@ -4432,15 +4434,15 @@ void Dynamics(struct SCType *S)
          }
          break;
       case ORB_N_BODY:
-            switch(S->OrbDOF) {
-               case ORBDOF_COWELL :
-                  CowellRK4Mrk2(S);
-                  break;
-               default :
-                  printf("ERROR: MUST USE COWELLS METHOD!!! \n");
-                  exit(1);
-            }
-            break;
+         switch (S->OrbDOF) {
+            case ORBDOF_COWELL:
+               CowellRK4Mrk2(S);
+               break;
+            default:
+               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+               exit(1);
+         }
+         break;
       case ORB_THREE_BODY:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
@@ -4457,7 +4459,7 @@ void Dynamics(struct SCType *S)
          }
          break;
       default:
-         fprintf(stderr,"Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
 }

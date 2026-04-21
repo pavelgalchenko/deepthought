@@ -418,23 +418,23 @@ void DSM_PosHReport(void)
       poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
-               sprintf(s, "PosH_%02li.42", Isc);
-               poshfile[Isc] = FileOpen(OutPath, s, "wt");
-               fprintf(poshfile[Isc], "TDB_TIME TT_TIME ");
-               fprintf(poshfile[Isc], "TDB_JD TT_JD ");
-               fprintf(poshfile[Isc], "Venus_HC_X Venus_HC_Y Venus_HC_Z ");
-               fprintf(poshfile[Isc], "Earth_HC_X Earth_HC_Y Earth_HC_Z ");
-               fprintf(poshfile[Isc], "LUNA_HC_X LUNA_HC_Y LUNA_HC_Z ");
-               fprintf(poshfile[Isc], "LUNA_EC_X LUNA_EC_Y LUNA_EC_Z ");
-               fprintf(poshfile[Isc], "Mars_HC_X Mars_HC_Y Mars_HC_Z ");
-               fprintf(poshfile[Isc], "Jupiter_HC_X Jupiter_HC_Y Jupiter_HC_Z ");
-               fprintf(poshfile[Isc], "Saturn_HC_X Saturn_HC_Y Saturn_HC_Z ");
-               fprintf(poshfile[Isc], "SC_PosN_X SC_PosN_Y SC_PosN_Z ");
-               fprintf(poshfile[Isc], "SC_HC_X SC_HC_Y SC_HC_Z ");
-               fprintf(poshfile[Isc], "SC_ECI_X SC_ECI_Y SC_ECI_Z ");
-               fprintf(poshfile[Isc], "SC_LCI_X SC_LCI_Y SC_LCI_Z ");
-               fprintf(poshfile[Isc], "SC_LEI_X SC_LEI_Y SC_LEI_Z ");
-               fprintf(poshfile[Isc], "\n");
+            sprintf(s, "PosH_%02li.42", Isc);
+            poshfile[Isc] = FileOpen(OutPath, s, "wt");
+            fprintf(poshfile[Isc], "TDB_TIME TT_TIME ");
+            fprintf(poshfile[Isc], "TDB_JD TT_JD ");
+            fprintf(poshfile[Isc], "Venus_HC_X Venus_HC_Y Venus_HC_Z ");
+            fprintf(poshfile[Isc], "Earth_HC_X Earth_HC_Y Earth_HC_Z ");
+            fprintf(poshfile[Isc], "LUNA_HC_X LUNA_HC_Y LUNA_HC_Z ");
+            fprintf(poshfile[Isc], "LUNA_EC_X LUNA_EC_Y LUNA_EC_Z ");
+            fprintf(poshfile[Isc], "Mars_HC_X Mars_HC_Y Mars_HC_Z ");
+            fprintf(poshfile[Isc], "Jupiter_HC_X Jupiter_HC_Y Jupiter_HC_Z ");
+            fprintf(poshfile[Isc], "Saturn_HC_X Saturn_HC_Y Saturn_HC_Z ");
+            fprintf(poshfile[Isc], "SC_PosN_X SC_PosN_Y SC_PosN_Z ");
+            fprintf(poshfile[Isc], "SC_HC_X SC_HC_Y SC_HC_Z ");
+            fprintf(poshfile[Isc], "SC_ECI_X SC_ECI_Y SC_ECI_Z ");
+            fprintf(poshfile[Isc], "SC_LCI_X SC_LCI_Y SC_LCI_Z ");
+            fprintf(poshfile[Isc], "SC_LEI_X SC_LEI_Y SC_LEI_Z ");
+            fprintf(poshfile[Isc], "\n");
          }
       }
       First = 0;
@@ -442,48 +442,56 @@ void DSM_PosHReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-            if(Orb[SC[Isc].RefOrb].World == LUNA) {
-               for (i = 0; i < 3; ++i){
-                  SC_LEI[i] = SC[Isc].PosN[i];
-               }
-               LunaInertialFrame(TDB.JulDay, CNJ);
-               MTxV(CNJ,SC_LEI,SC_LCI);
-               for (i = 0; i < 3; ++i){
-                  SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
-               }
+         if (Orb[SC[Isc].RefOrb].World == LUNA) {
+            for (i = 0; i < 3; ++i) {
+               SC_LEI[i] = SC[Isc].PosN[i];
             }
-            else if (Orb[SC[Isc].RefOrb].World == EARTH) {
-               LunaInertialFrame(TDB.JulDay, CNJ);
-               for (i = 0; i < 3; ++i) {
-                  SC_ECI[i] = SC[Isc].PosN[i];
-                  SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
-               }
-               MxV(CNJ,SC_LCI,SC_LEI);
+            LunaInertialFrame(TDB.JulDay, CNJ);
+            MTxV(CNJ, SC_LEI, SC_LCI);
+            for (i = 0; i < 3; ++i) {
+               SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
             }
-            fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.JulDay, TT.JulDay);
-            fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.tdbTime, DynTime);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[VENUS].PosH[0],
-                    World[VENUS].PosH[1], World[VENUS].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[EARTH].PosH[0],
-                    World[EARTH].PosH[1], World[EARTH].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[LUNA].PosH[0],
-                    World[LUNA].PosH[1], World[LUNA].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[LUNA].eph.PosN[0],
-                    World[LUNA].eph.PosN[1], World[LUNA].eph.PosN[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[MARS].PosH[0],
-                    World[MARS].PosH[1], World[MARS].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[JUPITER].PosH[0],
-                    World[JUPITER].PosH[1], World[JUPITER].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", World[SATURN].PosH[0],
-                    World[SATURN].PosH[1], World[SATURN].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosN[0],
-                    SC[0].PosN[1], SC[0].PosN[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
-                    SC[0].PosH[1], SC[0].PosH[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_ECI[0], SC_ECI[1], SC_ECI[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LCI[0], SC_LCI[1], SC_LCI[2]);
-            fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LEI[0], SC_LEI[1], SC_LEI[2]);
-            fprintf(poshfile[Isc], "\n");
+         }
+         else if (Orb[SC[Isc].RefOrb].World == EARTH) {
+            LunaInertialFrame(TDB.JulDay, CNJ);
+            for (i = 0; i < 3; ++i) {
+               SC_ECI[i] = SC[Isc].PosN[i];
+               SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
+            }
+            MxV(CNJ, SC_LCI, SC_LEI);
+         }
+         fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.JulDay, TT.JulDay);
+         fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.tdbTime, DynTime);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[VENUS].PosH[0], World[VENUS].PosH[1],
+                 World[VENUS].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[EARTH].PosH[0], World[EARTH].PosH[1],
+                 World[EARTH].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[LUNA].PosH[0], World[LUNA].PosH[1], World[LUNA].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[LUNA].eph.PosN[0], World[LUNA].eph.PosN[1],
+                 World[LUNA].eph.PosN[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[MARS].PosH[0], World[MARS].PosH[1], World[MARS].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[JUPITER].PosH[0], World[JUPITER].PosH[1],
+                 World[JUPITER].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
+                 World[SATURN].PosH[0], World[SATURN].PosH[1],
+                 World[SATURN].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosN[0],
+                 SC[0].PosN[1], SC[0].PosN[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
+                 SC[0].PosH[1], SC[0].PosH[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_ECI[0],
+                 SC_ECI[1], SC_ECI[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LCI[0],
+                 SC_LCI[1], SC_LCI[2]);
+         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LEI[0],
+                 SC_LEI[1], SC_LEI[2]);
+         fprintf(poshfile[Isc], "\n");
       }
       fflush(poshfile[Isc]);
    }
@@ -498,7 +506,7 @@ void DSM_Rot3BodyReport(void)
    char s[50];
    double posRel[3], posRot[3], velRel[3], velRot[3], DCM[3][3];
    struct LagrangeSystemType *LS;
-   double z_axis[3] = {0,0,1}, ang_rot = M_PI;
+   double z_axis[3] = {0, 0, 1}, ang_rot = M_PI;
 
    if (First) {
       rotfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -522,24 +530,22 @@ void DSM_Rot3BodyReport(void)
          LS = &LagSys[EARTHMOON];
          if (LS->Exists) {
             if (Orb[SC[Isc].RefOrb].World == LUNA) {
-               for (int i = 0; i < 3; ++i)
-               {
+               for (int i = 0; i < 3; ++i) {
                   posRel[i] = SC[Isc].PosN[i];
                   velRel[i] = SC[Isc].VelN[i];
                }
             }
             else {
-               for (int i = 0; i < 3; ++i)
-               {
-                  posRel[i] = SC[Isc].PosN[i]-World[LUNA].eph.PosN[i];
-                  velRel[i] = SC[Isc].VelN[i]-World[LUNA].eph.VelN[i];
+               for (int i = 0; i < 3; ++i) {
+                  posRel[i] = SC[Isc].PosN[i] - World[LUNA].eph.PosN[i];
+                  velRel[i] = SC[Isc].VelN[i] - World[LUNA].eph.VelN[i];
                }
             }
-            MxV(LS->CLN,posRel,posRot);
-            MxV(LS->CLN,velRel,velRot);
-            SimpRot(z_axis,ang_rot,DCM);
-            MxV(DCM,posRot,posRot);
-            MxV(DCM,velRot,velRot);
+            MxV(LS->CLN, posRel, posRot);
+            MxV(LS->CLN, velRel, velRot);
+            SimpRot(z_axis, ang_rot, DCM);
+            MxV(DCM, posRot, posRot);
+            MxV(DCM, velRot, velRot);
             fprintf(rotfile[Isc], "%18.36le %18.36le %18.36le ", posRot[0],
                     posRot[1], posRot[2]);
             fprintf(rotfile[Isc], "%18.36le %18.36le %18.36le ", velRot[0],
@@ -1196,7 +1202,7 @@ void PerturbReport(void)
    static long First = 1;
 
    if (First) {
-      perturbfile = FileOpen(OutPath,"perturb.42","wt");
+      perturbfile = FileOpen(OutPath, "perturb.42", "wt");
       fprintf(perturbfile, "gravTrqB_X gravTrqB_Y gravTrqB_Z ");
       fprintf(perturbfile, "gravTrqN_X gravTrqN_Y gravTrqN_Z ");
       fprintf(perturbfile, "srpTrqB_X srpTrqB_Y srpTrqB_Z ");
@@ -1211,20 +1217,29 @@ void PerturbReport(void)
       First = 0;
    }
 
-   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqB[0], SC[0].gravTrqB[1], SC[0].gravTrqB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqN[0], SC[0].gravTrqN[1], SC[0].gravTrqN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqB[0], SC[0].srpTrqB[1], SC[0].srpTrqB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqN[0], SC[0].srpTrqN[1], SC[0].srpTrqN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqB[0], SC[0].aeroTrqB[1], SC[0].aeroTrqB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqN[0], SC[0].aeroTrqN[1], SC[0].aeroTrqN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcB[0], SC[0].srpFrcB[1], SC[0].srpFrcB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcN[0], SC[0].srpFrcN[1], SC[0].srpFrcN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcB[0], SC[0].aeroFrcB[1], SC[0].aeroFrcB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcN[0], SC[0].aeroFrcN[1], SC[0].aeroFrcN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqB[0], SC[0].gravTrqB[1],
+           SC[0].gravTrqB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqN[0], SC[0].gravTrqN[1],
+           SC[0].gravTrqN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqB[0], SC[0].srpTrqB[1],
+           SC[0].srpTrqB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqN[0], SC[0].srpTrqN[1],
+           SC[0].srpTrqN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqB[0], SC[0].aeroTrqB[1],
+           SC[0].aeroTrqB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqN[0], SC[0].aeroTrqN[1],
+           SC[0].aeroTrqN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcB[0], SC[0].srpFrcB[1],
+           SC[0].srpFrcB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcN[0], SC[0].srpFrcN[1],
+           SC[0].srpFrcN[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcB[0], SC[0].aeroFrcB[1],
+           SC[0].aeroFrcB[2]);
+   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcN[0], SC[0].aeroFrcN[1],
+           SC[0].aeroFrcN[2]);
    fprintf(perturbfile, "\n");
 
    fflush(perturbfile);
-
 }
 /*********************************************************************/
 void Report(void)
@@ -1396,8 +1411,10 @@ void Report(void)
                  SC[0].B[0].qn[1], SC[0].B[0].qn[2], SC[0].B[0].qn[3]);
          fprintf(wbnfile, "%le %le %le\n", SC[0].B[0].wn[0], SC[0].B[0].wn[1],
                  SC[0].B[0].wn[2]);
-         fprintf(bvnfile, "%le %le %le\n", SC[0].bvn[0], SC[0].bvn[1], SC[0].bvn[2]);
-         fprintf(bvbfile, "%le %le %le\n", SC[0].bvb[0], SC[0].bvb[1], SC[0].bvb[2]);
+         fprintf(bvnfile, "%le %le %le\n", SC[0].bvn[0], SC[0].bvn[1],
+                 SC[0].bvn[2]);
+         fprintf(bvbfile, "%le %le %le\n", SC[0].bvb[0], SC[0].bvb[1],
+                 SC[0].bvb[2]);
          fprintf(Hvnfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvn[0],
                  SC[0].Hvn[1], SC[0].Hvn[2]);
          fprintf(Hvbfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvb[0],

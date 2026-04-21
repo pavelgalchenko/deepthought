@@ -99,9 +99,9 @@ long AdvanceTime(void)
 
          TDB.JulDay  = TTtoTDB_JD(DynTime);
          TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-                    &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
-         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
+                    &TDB.Minute, &TDB.Second, DTSIM);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC.JulDay = TimeToJD(CivilTime);
          TimeToDate(CivilTime, &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour,
@@ -129,9 +129,9 @@ long AdvanceTime(void)
 
          TDB.JulDay  = TTtoTDB_JD(DynTime);
          TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-                    &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
-         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
+                    &TDB.Minute, &TDB.Second, DTSIM);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC.JulDay = TimeToJD(CivilTime);
          TimeToDate(CivilTime, &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour,
@@ -165,9 +165,9 @@ long AdvanceTime(void)
 
          TDB.JulDay  = TTtoTDB_JD(DynTime);
          TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-                    &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
-         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
+                    &TDB.Minute, &TDB.Second, DTSIM);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC.JulDay = TimeToJD(CivilTime);
          UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
@@ -192,9 +192,9 @@ long AdvanceTime(void)
 
          TDB.JulDay  = TTtoTDB_JD(DynTime);
          TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime,&TDB.Year,&TDB.Month,&TDB.Day,
-                    &TDB.Hour,&TDB.Minute,&TDB.Second,DTSIM);
-         TDB.doy = MD2DOY(TDB.Year,TDB.Month,TDB.Day);
+         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
+                    &TDB.Minute, &TDB.Second, DTSIM);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC.JulDay = TimeToJD(CivilTime);
          UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);

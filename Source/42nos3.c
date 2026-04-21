@@ -134,7 +134,7 @@ static void InitializeTimeNode(void)
    }
 
    NE_bus_get_time =
-       (NE_SimTime(*)(NE_Bus *))dlsym(NOSHandle, "NE_bus_get_time");
+       (NE_SimTime (*)(NE_Bus *))dlsym(NOSHandle, "NE_bus_get_time");
    if ((error = dlerror()) != NULL) {
       fprintf(stderr, "NOS3Time error finding symbol NE_bus_get_time:  %s\n",
               error);
@@ -142,7 +142,7 @@ static void InitializeTimeNode(void)
    }
 
    NE_bus_add_time_tick_callback =
-       (NE_TimeTickCallbackId(*)(NE_Bus *, NE_TimeTickCallbackFunction))dlsym(
+       (NE_TimeTickCallbackId (*)(NE_Bus *, NE_TimeTickCallbackFunction))dlsym(
            NOSHandle, "NE_bus_add_time_tick_callback");
    if ((error = dlerror()) != NULL) {
       fprintf(

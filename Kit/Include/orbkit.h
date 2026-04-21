@@ -198,8 +198,10 @@ struct OrbitType {
    COWELL method for orbit propagation in SC configuration and that
    you are using a JPL Ephemerides as the Ephem option. */
    int use_N_BODY_Vec;
-   double N_BODY_PosN[3]; /* SC Position from TRV file, [[m]], expressed in N of CENTRAL body */
-   double N_BODY_VelN[3]; /* SC Velocity from TRV file, [[m/sec]], expressed in N of CENTRAL body */
+   double N_BODY_PosN[3]; /* SC Position from TRV file, [[m]], expressed in N of
+                             CENTRAL body */
+   double N_BODY_VelN[3]; /* SC Velocity from TRV file, [[m/sec]], expressed in
+                             N of CENTRAL body */
 
    /* For Central Orbit Description */
    double MeanAnom;

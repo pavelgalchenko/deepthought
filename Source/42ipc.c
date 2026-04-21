@@ -111,9 +111,10 @@ void InitInterProcessComm(void)
          }
 #endif
          else {
-          fprintf(stderr,"Oops.  Unknown SocketRole %ld for IPC[%ld] in "
-                   "InitInterProcessComm.  Bailing out.\n",
-                   I->SocketRole, Iipc);
+            fprintf(stderr,
+                    "Oops.  Unknown SocketRole %ld for IPC[%ld] in "
+                    "InitInterProcessComm.  Bailing out.\n",
+                    I->SocketRole, Iipc);
             exit(EXIT_FAILURE);
          }
       }
@@ -135,9 +136,10 @@ void InitInterProcessComm(void)
          }
 #endif
          else {
-            fprintf(stderr,"Oops.  Unknown SocketRole %ld for IPC[%ld] in "
-                   "InitInterProcessComm.  Bailing out.\n",
-                   I->SocketRole, Iipc);
+            fprintf(stderr,
+                    "Oops.  Unknown SocketRole %ld for IPC[%ld] in "
+                    "InitInterProcessComm.  Bailing out.\n",
+                    I->SocketRole, Iipc);
             exit(EXIT_FAILURE);
          }
       }
@@ -159,9 +161,10 @@ void InitInterProcessComm(void)
          }
 #endif
          else {
-            fprintf(stderr,"Oops.  Unknown SocketRole %ld for IPC[%ld] in "
-                   "InitInterProcessComm.  Bailing out.\n",
-                   I->SocketRole, Iipc);
+            fprintf(stderr,
+                    "Oops.  Unknown SocketRole %ld for IPC[%ld] in "
+                    "InitInterProcessComm.  Bailing out.\n",
+                    I->SocketRole, Iipc);
             exit(EXIT_FAILURE);
          }
       }

@@ -742,10 +742,10 @@ void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
          Gamma[i2][1] = c3;
          Gamma[i3][0] = s2;
          Gds[i1]      = -sig[0] * (sig[1] * s2 * c3 + sig[2] * c2 * s3) +
-                   sig[1] * sig[2] * c3;
-         Gds[i2] = sig[0] * (sig[1] * s2 * s3 - sig[2] * c2 * c3) -
-                   sig[1] * sig[2] * s3;
-         Gds[i3] = sig[0] * sig[1] * c2;
+                        sig[1] * sig[2] * c3;
+         Gds[i2]      = sig[0] * (sig[1] * s2 * s3 - sig[2] * c2 * c3) -
+                        sig[1] * sig[2] * s3;
+         Gds[i3]      = sig[0] * sig[1] * c2;
       }
       else if (Cyclic < 0) { /* 321, 132, 213 */
          Gamma[i1][0] = c2 * c3;
@@ -754,10 +754,10 @@ void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
          Gamma[i2][1] = c3;
          Gamma[i3][0] = -s2;
          Gds[i1]      = -sig[0] * (sig[1] * s2 * c3 + sig[2] * c2 * s3) -
-                   sig[1] * sig[2] * c3;
-         Gds[i2] = sig[0] * (-sig[1] * s2 * s3 + sig[2] * c2 * c3) -
-                   sig[1] * sig[2] * s3;
-         Gds[i3] = -sig[0] * sig[1] * c2;
+                        sig[1] * sig[2] * c3;
+         Gds[i2]      = sig[0] * (-sig[1] * s2 * s3 + sig[2] * c2 * c3) -
+                        sig[1] * sig[2] * s3;
+         Gds[i3]      = -sig[0] * sig[1] * c2;
       }
       else {
          fprintf(stderr, "Bogus RotSeq %ld in JointPartials\n", RotSeq);

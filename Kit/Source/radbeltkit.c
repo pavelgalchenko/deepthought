@@ -225,8 +225,8 @@ float trara4(int *SUBMAP, int start_psn)
       if (SL1 >= SL2 && !bypassto20) {
          FKBJ2 = ((FLOG2 / FISTEP) * FINCR2 + FKB2) /
                  ((FINCR2 / FISTEP) * SL1 + 1.);
-         FKB  = FKB1 + (FKBJ2 - FKB1) * DFL;
-         FLOG = FKB * SL1;
+         FKB   = FKB1 + (FKBJ2 - FKB1) * DFL;
+         FLOG  = FKB * SL1;
          if (FKB >= FNB)
             return (trara5());
          FKBM  = FKB;
@@ -277,7 +277,7 @@ float trara3(int *SUBMAP, int position)
          FKB1   = FKB1 + FINCR1;
          FLOG1  = FLOG1 - FISTEP;
          FKBJ1  = ((FLOG1 / FISTEP) * FINCR1 + FKB1) /
-                 ((FINCR1 / FISTEP) * SL2 + 1.);
+                  ((FINCR1 / FISTEP) * SL2 + 1.);
          /* IF(FKBJ1.LE.FKB1) GOTO 31 */
          if (FKBJ1 <= FKB1)
             return (trara4(SUBMAP, 0)); /*go to 31 with sure true;

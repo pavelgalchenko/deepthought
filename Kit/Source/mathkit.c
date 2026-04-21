@@ -673,8 +673,8 @@ void Legendre(const long N, const long M, const double x,
 
    /* .. m=0 terms are not too bad */
    for (n = 2; n <= N; n++) {
-      P[n][0] = ((2.0 * n - 1.0) / n) * x * P[n - 1][0] -
-                ((n - 1.0) / n) * P[n - 2][0];
+      P[n][0]   = ((2.0 * n - 1.0) / n) * x * P[n - 1][0] -
+                  ((n - 1.0) / n) * P[n - 2][0];
       sdP[n][0] = x * sdP[n - 1][0] + n * s * P[n - 1][0];
    }
 
@@ -1024,12 +1024,12 @@ double **CreateMatrix(const long n, const long m)
    // Guarantee the allocation for A is a contiguous block
    A = (double **)malloc(sizeof(double *) * n);
    if (A == NULL) {
-      fprintf(stderr,"malloc failed in CreateMatrix.  Bailing out.\n");
+      fprintf(stderr, "malloc failed in CreateMatrix.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    A[0] = (double *)calloc(n * m, sizeof(double));
    if (A[0] == NULL) {
-      fprintf(stderr,"calloc failed in CreateMatrix.  Bailing out.\n");
+      fprintf(stderr, "calloc failed in CreateMatrix.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    for (i = 1; i < n; i++)
@@ -1782,11 +1782,11 @@ double CubicSpline(double x, double X[4], double Y[4])
    u = (x - X[1]) / (X[2] - X[1]);
 
    if (isnan(u)) {
-      fprintf(stderr,"Bad spline interval in CubicSpline.\n");
+      fprintf(stderr, "Bad spline interval in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
    if (u < 0.0 || u > 1.0) {
-      fprintf(stderr,"Interpolant out of range in CubicSpline.\n");
+      fprintf(stderr, "Interpolant out of range in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1804,7 +1804,7 @@ double CubicSpline(double x, double X[4], double Y[4])
 
    Det = (u3 - 1.0) * (u0 - 1.0) * (u3 - u0) * u0 * u3;
    if (fabs(Det) < 1.0E-9) {
-      fprintf(stderr,"Matrix is close to singular in CubicSpline.\n");
+      fprintf(stderr, "Matrix is close to singular in CubicSpline.\n");
       exit(EXIT_FAILURE);
    }
    a = Y[1];
@@ -1823,11 +1823,11 @@ void ChebyPolys(double u, long n, double T[20], double U[20])
    long k;
 
    if (u < -1.0 || u > 1.0) {
-      fprintf(stderr,"u out of range in ChebPolys.  Bailing out.\n");
+      fprintf(stderr, "u out of range in ChebPolys.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
    if (n > 20) {
-      fprintf(stderr,"n out of range in ChebPolys.  Bailing out.\n");
+      fprintf(stderr, "n out of range in ChebPolys.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1848,7 +1848,7 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
    long k;
 
    if (n > 20) {
-      fprintf(stderr,"n out of range in ChebyInterp.  Bailing out.\n");
+      fprintf(stderr, "n out of range in ChebyInterp.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -1867,7 +1867,7 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
    double **AtA, *x, *Atb;
 
    if (Nc > 20) {
-    fprintf(stderr,"Nc out of range in FindChebyCoefs.  Bailing out.\n");
+      fprintf(stderr, "Nc out of range in FindChebyCoefs.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 

@@ -208,8 +208,8 @@ void IGRFMagField(const char *ModelPath, const struct DateType UTC,
 #endif
    }
 
-   const double doy = (UTC.doy - 1) + (UTC.Hour - 1) / 24.0 +
-                      UTC.Minute / 1440.0 + UTC.Second / 86400.0;
+   const double doy  = (UTC.doy - 1) + (UTC.Hour - 1) / 24.0 +
+                       UTC.Minute / 1440.0 + UTC.Second / 86400.0;
    const double year = UTC.Year + doy / (UTC.Year % 4 ? 365.0 : 366.0);
    if (year > 2020) {
       if (!warned && year > t[nYears - 1] + 5) {
@@ -376,10 +376,10 @@ double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap)
       th      = 0.5 * fabs(Lat + DS);
       sinth25 = pow(sin(th), 2.5);
       A       = 0.28 * (pow(cos(0.5 * (Lat - DS)), 2.5) - sinth25) /
-          (1.0 + 0.28 * sinth25);
-      c    = cos(0.5 * TAU);
-      T[3] = T[2] * (1.0 + 0.28 * sinth25) * (1.0 + A * c * c * sqrt(c));
-      T[4] = T[3] + Ap + 100.0 * (1.0 - exp(-0.08 * Ap));
+                (1.0 + 0.28 * sinth25);
+      c       = cos(0.5 * TAU);
+      T[3]    = T[2] * (1.0 + 0.28 * sinth25) * (1.0 + A * c * c * sqrt(c));
+      T[4]    = T[3] + Ap + 100.0 * (1.0 - exp(-0.08 * Ap));
 
       T4_800 = T[4] - 800.0;
       X      = (T4_800) / (750.0 + 1.722E-4 * T4_800 * T4_800);
@@ -391,14 +391,14 @@ double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap)
       P = (T[4] - 355.0) / T[4];
       B = (1.0 - P) / (1.0 - P * exp(-S * dH));
       /*       Hydrogen */
-      TD = ((((9.753963073E-16 * T[4] - 7.577509214E-12) * T[4] +
-              2.341193059E-8) *
+      TD   = ((((9.753963073E-16 * T[4] - 7.577509214E-12) * T[4] +
+                2.341193059E-8) *
+                   T[4] -
+               3.62095821E-5) *
+                  T[4] +
+              2.844291123E-2) *
                  T[4] -
-             3.62095821E-5) *
-                T[4] +
-            2.844291123E-2) *
-               T[4] -
-           10.48947029;
+             10.48947029;
       logT = log10(T[4]);
       N[0] = pow(10.0, 73.13 - 39.4 * logT + 5.5 * logT * logT);
       if (z > 500.0)
@@ -841,8 +841,8 @@ void ECEFToWGS84(double p[3], double *glat, double *glong, double *alt)
 
    Qpoly = 1.0 + Q;
    r0    = -P * e2 * r / Qpoly +
-        sqrt(0.5 * a * a * Qpoly / Q -
-             P * OneMinusE2 * p[2] * p[2] / (Q * Qpoly) - 0.5 * P * r * r);
+           sqrt(0.5 * a * a * Qpoly / Q -
+                P * OneMinusE2 * p[2] * p[2] / (Q * Qpoly) - 0.5 * P * r * r);
 
    Z1  = r - e2 * r0;
    Z1 *= Z1;
@@ -914,7 +914,7 @@ long PolyhedronGravAcc(struct GeomType *G, double Density, double PosN[3],
       Num = VoV(rf1, r2xr3);
       Den = r1 * r2 * r3 + r1 * VoV(rf2, rf3) + r2 * VoV(rf3, rf1) +
             r3 * VoV(rf1, rf2);
-      wf = 2.0 * atan2(Num, Den);
+      wf  = 2.0 * atan2(Num, Den);
       MxV(P->Dyad, rf1, Fr);
       for (i = 0; i < 3; i++) {
          GravAccW[i] += Fr[i] * wf;
@@ -991,7 +991,7 @@ long PolyhedronGravGrad(struct GeomType *G, double Density, double PosN[3],
       Num = VoV(rf1, r2xr3);
       Den = r1 * r2 * r3 + r1 * VoV(rf2, rf3) + r2 * VoV(rf3, rf1) +
             r3 * VoV(rf1, rf2);
-      wf = 2.0 * atan2(Num, Den);
+      wf  = 2.0 * atan2(Num, Den);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++)
             GravGradW[i][j] -= P->Dyad[i][j] * wf;
