@@ -126,6 +126,37 @@ double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
    return (JD);
 }
 /**********************************************************************/
+/*  Convert Y, M, D, H, m and s to Modified Julian Day (MJD)          */
+/*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1900) */
+/*  Ref. GMAT Math Spec.                                              */
+double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
+                 double Second)
+{
+   int A, B, C;
+   double JD, MJD;
+   double partofday;
+   
+   C = (int) ( (Month + 9)/12 );
+   B = (int) ( 275*Month/9 );
+   A = (int) ( 7*(Year + C)/4 );
+
+   partofday = (((Second/60) + Minute)/60 + Hour)/24;
+   
+   JD = 367*Year - A + B + Day + 1721013.5;
+   
+   MJD = (JD - 2430000.0) + partofday;
+   
+   return(MJD);
+}
+double JDToMJD(double JD)
+{
+      return(JD - 2430000.0);
+}
+double MJDToJD(double MJD)
+{
+      return(MJD + 2430000.0);
+}
+/**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
 /* midnight, Jan 1st, 1958                                            */
 void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,

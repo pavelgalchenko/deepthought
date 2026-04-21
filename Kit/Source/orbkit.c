@@ -1144,15 +1144,15 @@ void LunaPosition(double JD, double r[3])
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(long double JulDay, double CNJ[3][3])
+void LunaInertialFrame(double JulDay, double CNJ[3][3])
 {
-   long double D, T;
-   long double E1, E2, E3, E4, E6, E7, E10, E13;
+   double D, T;
+   double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
-   long double SinE1, SinE2, SinE3, SinE4, SinE6;
-   long double SinE10, SinE13;
-   long double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
-   long double PoleRA, PoleDec;
+   double SinE1, SinE2, SinE3, SinE4, SinE6;
+   double SinE10, SinE13;
+   double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
+   double PoleRA, PoleDec;
    double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
