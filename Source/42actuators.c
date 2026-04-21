@@ -197,8 +197,8 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
                         w2      = w * w;
                         Wpoly   = (w2 + 2.5) * w * exp(-w2);
                         Wpoly  += (0.75 + 3.0 * w2 + w2 * w2) * sqrt(Pi) *
-                                 (1.0 + erf(w));
-                        Wpoly *= exp(w2 - s * s);
+                                  (1.0 + erf(w));
+                        Wpoly  *= exp(w2 - s * s);
                         TotalCoef =
                             P->Area * Coef * cosphi * Wpoly / (MagPos * MagPos);
 

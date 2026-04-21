@@ -1,0 +1,14 @@
+name: Clang Format Checker
+on: [ push ]
+jobs:
+   clang-format-checking:
+      runs-on: ubuntu-latest
+      steps:
+         - uses: actions/checkout@v5
+         - name: Clang Format Github Action
+           uses: RafikFarhad/clang-format-github-action@v6.0.1
+           with:
+              style: "file"
+              sources: "Source/*.c,Include/*.h,Kit/Source/*/.c,Kit/Include/*.h"
+         - run: echo "Formatted with clang-format version ${{
+              steps.clang-format.outputs.clang-format-version }}"

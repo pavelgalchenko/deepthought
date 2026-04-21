@@ -144,7 +144,7 @@ void GyroModel(struct SCType *S)
 
          PrevAngle = G->Angle;
          G->Angle  = PrevAngle + G->MeasRate * G->SampleTime +
-                    G->AngNoiseCoef * GaussianRandom(RNG);
+                     G->AngNoiseCoef * GaussianRandom(RNG);
 
          PrevCounts = (long)(PrevAngle / G->Quant + 0.5);
          Counts     = (long)(G->Angle / G->Quant + 0.5);
@@ -173,8 +173,8 @@ void MagnetometerModel(struct SCType *S)
       if (MAG->SampleCounter >= MAG->MaxCounter) {
          MAG->SampleCounter = 0;
 
-         Signal = MAG->Scale * VoV(S->bvb, MAG->Axis) +
-                  MAG->Noise * GaussianRandom(RNG);
+         Signal     = MAG->Scale * VoV(S->bvb, MAG->Axis) +
+                      MAG->Noise * GaussianRandom(RNG);
          Signal     = Limit(Signal, -MAG->Saturation, MAG->Saturation);
          Counts     = (long)(Signal / MAG->Quant + 0.5);
          MAG->Field = ((double)Counts) * MAG->Quant;

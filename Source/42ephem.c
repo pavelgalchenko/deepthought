@@ -26,7 +26,7 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    long i;
 
    if (Iorb < 0 || Iorb >= Norb) {
-      fprintf(stderr,"Desired orbit is out of bounds.\n");
+      fprintf(stderr, "Desired orbit is out of bounds.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -35,8 +35,9 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    NewOrb->Exists = TRUE;
 
    if (NewOrb->World != OldOrb->World) {
-      fprintf(stderr,"New Orbit and Old Orbit must (for the present) be in same "
-             "gravitational system.\n");
+      fprintf(stderr,
+              "New Orbit and Old Orbit must (for the present) be in same "
+              "gravitational system.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -424,7 +425,7 @@ void SplineToPosVel(struct OrbitType *O)
          O->NodeVel[3][j] *= 1000.0;
       }
       if (feof(O->SplineFile)) {
-         fprintf(stderr,"Oops.  Reached end of Spline file.\n");
+         fprintf(stderr, "Oops.  Reached end of Spline file.\n");
          exit(EXIT_FAILURE);
       }
    }
@@ -460,7 +461,7 @@ void SplineToPosVel(struct OrbitType *O)
       }
    }
    else {
-      fprintf(stderr,"Invalid Orbit Regime in SplineToPosVel.\n");
+      fprintf(stderr, "Invalid Orbit Regime in SplineToPosVel.\n");
       exit(EXIT_FAILURE);
    }
 }
@@ -543,7 +544,8 @@ void OrbitMotion(double Time)
                FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
                break;
             default:
-               fprintf(stderr,"Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
+               fprintf(stderr,
+                       "Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
                exit(EXIT_FAILURE);
          }
 
@@ -576,10 +578,12 @@ void Ephemerides(void)
       UpdateMeanEphems();
    }
    /* Moved JPL Ephem calculations to functions in 42int.c, cleaner build */
-   else if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 || EphemOption == EPH_DE430 || 
-            EphemOption == EPH_DE440 || EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
+   else if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 ||
+            EphemOption == EPH_DE430 || EphemOption == EPH_DE440 ||
+            EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
       /* Update DE block if needed */
-      if (TDB.JulDay > World[SOL].eph.Cheb[1].JD2) LoadJplEphems(ModelPath, (double)TDB.JulDay);
+      if (TDB.JulDay > World[SOL].eph.Cheb[1].JD2)
+         LoadJplEphems(ModelPath, (double)TDB.JulDay);
       UpdateJplEphems();
    }
 #ifdef _ENABLE_SPICE_
@@ -588,13 +592,14 @@ void Ephemerides(void)
    }
 #endif
    else {
-      fprintf(stderr,"Bogus Ephem Option in Ephemerides.  Bailing out.\n");
+      fprintf(stderr, "Bogus Ephem Option in Ephemerides.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
 
    /* Moved non ephem calculations to functions in 42int.c, cleaner build */
    UpdateMinorBodies();
-   if (EphemOption != EPH_SPICE) UpdateNonEphemMoons();
+   if (EphemOption != EPH_SPICE)
+      UpdateNonEphemMoons();
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    /* Updates some Lagrange point parameters, can help get a more accurate CLN

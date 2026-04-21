@@ -20,44 +20,44 @@
 
 double TTtoTDB_JD(double SecSinceJ2000)
 {
-      double T_TT, m_E, deltaTDB, JD_TDB;
-      double TDB_COEFF1 = 0.00165;
-      double TDB_COEFF2 = 0.00001385;
-      double M_E_OFFSET = 357.5277233;
-      double M_E_COEFF1 = 35999.05034;
-      double SEC_PER_JULIAN_CENTURY = 3155760000.00;
+   double T_TT, m_E, deltaTDB, JD_TDB;
+   double TDB_COEFF1             = 0.00165;
+   double TDB_COEFF2             = 0.00001385;
+   double M_E_OFFSET             = 357.5277233;
+   double M_E_COEFF1             = 35999.05034;
+   double SEC_PER_JULIAN_CENTURY = 3155760000.00;
 
-      T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
+   T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
 
-      m_E      = fmod( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0 ) * D2R;
-      deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
-      JD_TDB   = (SecSinceJ2000 + deltaTDB)/ 86400.0 + 2451545.0;
+   m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
+   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
+   JD_TDB   = (SecSinceJ2000 + deltaTDB) / 86400.0 + 2451545.0;
 
-      return(JD_TDB);
+   return (JD_TDB);
 }
 double TTtoTDB_Time(double SecSinceJ2000)
 {
-      long double T_TT, m_E, deltaTDB, time_TDB;
-      long double TDB_COEFF1 = 0.001658;
-      long double TDB_COEFF2 = 0.00001385;
-      long double M_E_OFFSET = 357.5277233;
-      long double M_E_COEFF1 = 35999.05034;
-      long double SEC_PER_JULIAN_CENTURY = 3155760000.00;
+   long double T_TT, m_E, deltaTDB, time_TDB;
+   long double TDB_COEFF1             = 0.001658;
+   long double TDB_COEFF2             = 0.00001385;
+   long double M_E_OFFSET             = 357.5277233;
+   long double M_E_COEFF1             = 35999.05034;
+   long double SEC_PER_JULIAN_CENTURY = 3155760000.00;
 
-      T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
+   T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
 
-      m_E      = fmod( (M_E_OFFSET + (M_E_COEFF1 * T_TT)),360.0 ) * D2R;
-      deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
-      time_TDB = SecSinceJ2000 + deltaTDB;
+   m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
+   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
+   time_TDB = SecSinceJ2000 + deltaTDB;
 
-      return(time_TDB);
+   return (time_TDB);
 }
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
 double TimeToJD(double SecSinceJ2000)
 {
-      return(SecSinceJ2000/86400.0 + 2451545.0);
+   return (SecSinceJ2000 / 86400.0 + 2451545.0);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
@@ -65,7 +65,7 @@ double TimeToJD(double SecSinceJ2000)
 /*  what you put in.                                                  */
 double JDToTime(double JD)
 {
-      return((JD-2451545.0)*86400.0);
+   return ((JD - 2451545.0) * 86400.0);
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to              */
@@ -124,6 +124,37 @@ double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
    JD += ((double)Hour) / 24.0 + ((double)Minute) / 1440.0 + Second / 86400.0;
 
    return (JD);
+}
+/**********************************************************************/
+/*  Convert Y, M, D, H, m and s to Modified Julian Day (MJD)          */
+/*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1900) */
+/*  Ref. GMAT Math Spec.                                              */
+double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
+                 double Second)
+{
+   int A, B, C;
+   double JD, MJD;
+   double partofday;
+
+   C = (int)((Month + 9) / 12);
+   B = (int)(275 * Month / 9);
+   A = (int)(7 * (Year + C) / 4);
+
+   partofday = (((Second / 60) + Minute) / 60 + Hour) / 24;
+
+   JD = 367 * Year - A + B + Day + 1721013.5;
+
+   MJD = (JD - 2430000.0) + partofday;
+
+   return (MJD);
+}
+double JDToMJD(double JD)
+{
+   return (JD - 2430000.0);
+}
+double MJDToJD(double MJD)
+{
+   return (MJD + 2430000.0);
 }
 /**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
@@ -432,7 +463,7 @@ double usec(void)
    return (1.0E6 * now.tv_sec + now.tv_usec);
 #else
 #error "This OS not supported by usec function"
-   fprintf(stderr,"This OS not supported by usec function.  Bailing out.\n");
+   fprintf(stderr, "This OS not supported by usec function.  Bailing out.\n");
    exit(EXIT_FAILURE);
    return (0.0);
 #endif
@@ -479,7 +510,7 @@ double RealRunTime(double *RealTimeDT, double LSB)
    QueryPerformanceCounter(&SysCtr);
    *RealTimeDT = ((double)(SysCtr.QuadPart - OldSysCtr.QuadPart)) /
                  ((double)SysFreq.QuadPart);
-   OldSysCtr = SysCtr;
+   OldSysCtr   = SysCtr;
 
 #elif (defined(__APPLE__) || defined(__linux__))
 
@@ -500,7 +531,7 @@ double RealRunTime(double *RealTimeDT, double LSB)
    OldSysTime  = SysTime;
 #else
 #error "Unknown operating system in RealRunTime.  Fix that!"
-   fprintf(stderr,"Unknown operating system in RealRunTime.  Bailing out.\n");
+   fprintf(stderr, "Unknown operating system in RealRunTime.  Bailing out.\n");
    exit(EXIT_FAILURE);
 #endif
 

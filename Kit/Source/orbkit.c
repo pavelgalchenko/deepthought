@@ -97,7 +97,7 @@ void hyperradFDF(const double r, double params[7], double *f, double *fp)
    double rold = params[5];
    double fold = params[6];
    double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
-   *f          = r * sqX -
+   *f = r * sqX -
         params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
         params[4];
    params[5] = r;
@@ -820,20 +820,20 @@ void LunaPosition(double JD, double r[3])
          T * (481267.88123421 +
               T * (-1.5786E-3 + T * (1.855835024E-6 - T / 65194000.0)))) *
         D2R;
-   D = (297.8501921 +
-        T * (445267.1114034 +
-             T * (-1.8819E-3 + T * (1.831944719E-6 - T / 113065000.0)))) *
-       D2R;
-   M = (357.5291092 + T * (35999.0502909 + T * (-1.536E-4 + T / 24490000.0))) *
-       D2R;
+   D  = (297.8501921 +
+         T * (445267.1114034 +
+              T * (-1.8819E-3 + T * (1.831944719E-6 - T / 113065000.0)))) *
+        D2R;
+   M  = (357.5291092 + T * (35999.0502909 + T * (-1.536E-4 + T / 24490000.0))) *
+        D2R;
    Mp = (134.9633964 +
          T * (477198.8675055 +
               T * (8.7414E-3 + T * (1.434740814E-5 - T / 14712000.0)))) *
         D2R;
-   F = (93.272095 +
-        T * (483202.0175233 +
-             T * (-3.6539E-3 + T * (-2.836074872E-7 + T / 863310000.0)))) *
-       D2R;
+   F  = (93.272095 +
+         T * (483202.0175233 +
+              T * (-3.6539E-3 + T * (-2.836074872E-7 + T / 863310000.0)))) *
+        D2R;
    A1 = (119.75 + 131.849 * T) * D2R;
    A2 = (53.09 + 479264.29 * T) * D2R;
    A3 = (313.45 + 481266.484 * T) * D2R;
@@ -1144,15 +1144,15 @@ void LunaPosition(double JD, double r[3])
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(long double JulDay, double CNJ[3][3])
+void LunaInertialFrame(double JulDay, double CNJ[3][3])
 {
-   long double D, T;
-   long double E1, E2, E3, E4, E6, E7, E10, E13;
+   double D, T;
+   double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
-   long double SinE1, SinE2, SinE3, SinE4, SinE6;
-   long double SinE10, SinE13;
-   long double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
-   long double PoleRA, PoleDec;
+   double SinE1, SinE2, SinE3, SinE4, SinE6;
+   double SinE10, SinE13;
+   double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
+   double PoleRA, PoleDec;
    double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
@@ -1571,12 +1571,12 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
 
    alpha   = 0.5 * atan2(-2.0 * LP->Kxy * LP->Zw1,
                          -(LP->Zw1 * LP->Zw1 - LP->Kxy * LP->Kxy -
-                         4.0 * n * n * LP->w1 * LP->w1));
+                           4.0 * n * n * LP->w1 * LP->w1));
    LP->ca1 = cos(alpha);
    LP->sa1 = sin(alpha);
    alpha   = 0.5 * atan2(-2.0 * LP->Kxy * LP->Zw2,
                          -(LP->Zw2 * LP->Zw2 - LP->Kxy * LP->Kxy -
-                         4.0 * n * n * LP->w2 * LP->w2));
+                           4.0 * n * n * LP->w2 * LP->w2));
    LP->ca2 = cos(alpha);
    LP->sa2 = sin(alpha);
 
@@ -1622,12 +1622,12 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
 
    alpha   = 0.5 * atan2(-2.0 * LP->Kxy * LP->Zw1,
                          -(LP->Zw1 * LP->Zw1 - LP->Kxy * LP->Kxy -
-                         4.0 * n * n * LP->w1 * LP->w1));
+                           4.0 * n * n * LP->w1 * LP->w1));
    LP->ca1 = cos(alpha);
    LP->sa1 = sin(alpha);
    alpha   = 0.5 * atan2(-2.0 * LP->Kxy * LP->Zw2,
                          -(LP->Zw2 * LP->Zw2 - LP->Kxy * LP->Kxy -
-                         4.0 * n * n * LP->w2 * LP->w2));
+                           4.0 * n * n * LP->w2 * LP->w2));
    LP->ca2 = cos(alpha);
    LP->sa2 = sin(alpha);
 
@@ -2175,7 +2175,7 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
    double bary_p[3], bary_v[3];
    double r2_from_r1[3], v2_from_v1[3], xvec[3], yvec[3], zvec[3];
    double LU, VU;
-   //double TU;
+   // double TU;
    double magr, angmom, theta_dot;
    double CRN[3][3], StateCRN[6][6];
    double full_N_state[6], full_R_state[6];
@@ -2191,7 +2191,7 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
       v2_from_v1[i] = W2_vel[i];
 
    LU = LS->LU;
-   //TU = LS->TU;
+   // TU = LS->TU;
    VU = LS->VU;
 
    for (int i = 0; i < 3; i++)
@@ -2266,7 +2266,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
    double bary_p[3], bary_v[3];
    double r2_from_r1[3], v2_from_v1[3], xvec[3], yvec[3], zvec[3];
    double LU, VU;
-   //double TU;
+   // double TU;
    double magr, angmom, theta_dot;
    double CRN[3][3], StateCRN[6][6], StateCNR[6][6];
    double full_N_state[6], full_R_state[6];
@@ -2282,7 +2282,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
       v2_from_v1[i] = W2_vel[i];
 
    LU = LS->LU;
-   //TU = LS->TU;
+   // TU = LS->TU;
    VU = LS->VU;
 
    for (int i = 0; i < 3; i++)

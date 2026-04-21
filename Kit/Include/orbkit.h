@@ -197,8 +197,11 @@ struct OrbitType {
    input in the the TRV file. Note that this assumes you are using
    COWELL method for orbit propagation in SC configuration and that
    you are using a JPL Ephemerides as the Ephem option. */
-   double SCPosN[3]; /* SC Position, [[m]], expressed in N of CENTRAL body */
-   double SCVelN[3]; /* SC Velocity, [[m/sec]], expressed in N of CENTRAL body */
+   int use_N_BODY_Vec;
+   double N_BODY_PosN[3]; /* SC Position from TRV file, [[m]], expressed in N of
+                             CENTRAL body */
+   double N_BODY_VelN[3]; /* SC Velocity from TRV file, [[m/sec]], expressed in
+                             N of CENTRAL body */
 
    /* For Central Orbit Description */
    double MeanAnom;
@@ -244,7 +247,7 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                        double *anom, double *p, double *alpha, double *rmin,
                        double *MeanMotion, double *Period);
 void LunaPosition(double JD, double r[3]);
-void LunaInertialFrame(long double JulDay, double CNJ[3][3]);
+void LunaInertialFrame(double JulDay, double CNJ[3][3]);
 double LunaPriMerAng(double JulDay);
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
 void FindCEN(double r[3], double CEN[3][3]);

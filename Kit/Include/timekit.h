@@ -61,6 +61,7 @@ typedef uint16_t ccsdsFine;
 */
 
 struct DateType {
+   double MJD;
    double JulDay;
    double tdbTime;
    long Year;
@@ -74,6 +75,10 @@ struct DateType {
 
 double TTtoTDB_JD(double SecSinceJ2000);
 double TTtoTDB_Time(double SecSinceJ2000);
+double JDToMJD(double JD);
+double MJDToJD(double MJD);
+double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
+                 double Second);
 double TimeToJD(double Time);
 double JDToTime(double JD);
 double DateToTime(long Year, long Month, long Day, long Hour, long Minute,

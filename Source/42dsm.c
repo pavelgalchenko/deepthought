@@ -627,10 +627,10 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
    if (!strcmp(subType, "Position")) {
       Cmd->TranslationCtrlActive = TRUE;
-      long isGood                = fy_node_scanf(cmdNode,
-                                                 "/Origin %19s "
-                                                                "/Frame %19s",
-                                                 Cmd->RefOrigin, Cmd->RefFrame) == 2;
+      long isGood = fy_node_scanf(cmdNode,
+                                  "/Origin %19s "
+                                  "/Frame %19s",
+                                  Cmd->RefOrigin, Cmd->RefFrame) == 2;
       if (!strcmp(Cmd->RefFrame, "E")) {
          isGood &= fy_node_scanf(cmdNode,
                                  "/Distance %lf "
@@ -665,7 +665,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       long isGood  = fy_node_scanf(cmdNode,
                                    "/Origin %19s "
-                                    "/Frame %19s",
+                                   "/Frame %19s",
                                    Cmd->RefOrigin, Cmd->RefFrame) == 2;
       isGood      &= fy_node_scanf(cmdNode, "/Translation Type %19s ",
                                    Cmd->TranslationType) == 1;
@@ -1443,8 +1443,8 @@ long ConfigureNavigationSensors(struct AcType *const AC,
          case STARTRACK_SENSOR: {
             double tmp[3] = {0.0};
             isGood        = assignYAMLToDoubleArray(
-                         3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
-                         tmp) == 3;
+                                3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
+                                tmp) == 3;
             for (j = 0; j < meas->errDim; j++) {
                long const ind = (AC->ST[sensorNum].BoreAxis + j) % 3;
                meas->R[ind]   = tmp[j] * D2R / 3600.0;
@@ -1453,8 +1453,8 @@ long ConfigureNavigationSensors(struct AcType *const AC,
          case GPS_SENSOR: {
             double tmp[2] = {0.0};
             isGood        = assignYAMLToDoubleArray(
-                         2, fy_node_by_path_def(iterNode, "/Sensor Noise"),
-                         tmp) == 2;
+                                2, fy_node_by_path_def(iterNode, "/Sensor Noise"),
+                                tmp) == 2;
             for (j = 0; j < meas->errDim; j++) {
                if (j < 3)
                   meas->R[j] = tmp[0];
