@@ -1,5 +1,9 @@
 name: Clang Format Checker
 on: [ push ]
+defaults:
+   run:
+      shell: bash
+      working-directory: ./
 jobs:
    clang-format-checking:
       runs-on: ubuntu-latest
