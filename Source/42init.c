@@ -2568,10 +2568,14 @@ void InitSpacecraft(struct SCType *S)
       fprintf(stderr, "S->B calloc returned null pointer.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
-   S->G = (struct JointType *)calloc(S->Ng, sizeof(struct JointType));
-   if (S->G == NULL) {
-      fprintf(stderr, "S->G calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
+   if (S->Ng == 0)
+      S->G = NULL;
+   else {
+      S->G = (struct JointType *)calloc(S->Ng, sizeof(struct JointType));
+      if (S->G == NULL) {
+         fprintf(stderr, "S->G calloc returned null pointer.  Bailing out!\n");
+         exit(EXIT_FAILURE);
+      }
    }
 
    /* Load B[0] initial attitude */
@@ -2602,11 +2606,10 @@ void InitSpacecraft(struct SCType *S)
                         "/Flex File Name %39[^\n]",
                         &B->mass, B->GeomFileName, B->NodeFileName,
                         B->FlexFileName) != 4) {
-         fprintf(
-             stderr,
-             "Could not find spacecraft body %ld configuration information. "
-             "Exiting...\n",
-             Ib);
+         fprintf(stderr,
+                 "Could not find spacecraft body %ld configuration "
+                 "information. Exiting...\n",
+                 Ib);
          exit(EXIT_FAILURE);
       }
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/MOI"), moi);
@@ -2666,12 +2669,10 @@ void InitSpacecraft(struct SCType *S)
          G->Bin  = bodyInds[0];
          G->Bout = bodyInds[1];
          if (G->Bin > G->Bout) {
-            fprintf(
-                stderr,
-                "Yo!  SC[%ld].G[%ld] inner body index (%ld) is greater than "
-                "outer body index "
-                "(%ld)\n",
-                S->ID, Ig, G->Bin, G->Bout);
+            fprintf(stderr,
+                    "Yo!  SC[%ld].G[%ld] inner body index (%ld) is greater "
+                    "than outer body index (%ld)\n",
+                    S->ID, Ig, G->Bin, G->Bout);
             fprintf(stderr,
                     "You must define inner bodies before outer bodies!\n");
             exit(EXIT_FAILURE);
@@ -2788,11 +2789,10 @@ void InitSpacecraft(struct SCType *S)
          }
          if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]",
                             G->ParmFileName)) {
-            fprintf(
-                stderr,
-                "Could not find spacecraft Joint %ld's parameter file name. "
-                "Exiting...\n",
-                Ig);
+            fprintf(stderr,
+                    "Could not find spacecraft Joint %ld's parameter file "
+                    "name. Exiting...\n",
+                    Ig);
             exit(EXIT_FAILURE);
          }
 
@@ -2809,17 +2809,19 @@ void InitSpacecraft(struct SCType *S)
    S->WhlJitterActive =
        getYAMLBool(fy_node_by_path_def(root, "/Wheel Params/Jitter"));
 
-   node   = fy_node_by_path_def(root, "/Wheels");
-   S->Nw  = fy_node_sequence_item_count(node);
-   S->Whl = (struct WhlType *)calloc(S->Nw, sizeof(struct WhlType));
+   node  = fy_node_by_path_def(root, "/Wheels");
+   S->Nw = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nw > 0) {
+      S->Whl   = (struct WhlType *)calloc(S->Nw, sizeof(struct WhlType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
          long Iw                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Wheel");
          if (!fy_node_scanf(seqNode, "/Index %ld", &Iw)) {
-            printf("Could not find spacecraft Wheel index. Exiting...\n");
+            fprintf(stderr,
+                    "Could not find spacecraft Wheel index. Exiting...\n");
+            exit(EXIT_FAILURE);
          }
          struct WhlType *W = &S->Whl[Iw];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
@@ -2849,12 +2851,14 @@ void InitSpacecraft(struct SCType *S)
          InitWhlDragAndJitter(W);
       }
    }
+   else
+      S->Whl = NULL;
 
    /* .. MTB parameters */
    node    = fy_node_by_path_def(root, "/MTBs");
-   S->Nmtb = fy_node_sequence_item_count(node);
-   S->MTB  = (struct MTBType *)calloc(S->Nmtb, sizeof(struct MTBType));
+   S->Nmtb = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nmtb > 0) {
+      S->MTB   = (struct MTBType *)calloc(S->Nmtb, sizeof(struct MTBType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -2885,12 +2889,14 @@ void InitSpacecraft(struct SCType *S)
          }
       }
    }
+   else
+      S->MTB = NULL;
 
    /* .. Thruster parameters */
    node    = fy_node_by_path_def(root, "/Thrusters");
-   S->Nthr = fy_node_sequence_item_count(node);
-   S->Thr  = (struct ThrType *)calloc(S->Nthr, sizeof(struct ThrType));
+   S->Nthr = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nthr > 0) {
+      S->Thr   = (struct ThrType *)calloc(S->Nthr, sizeof(struct ThrType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -2924,12 +2930,14 @@ void InitSpacecraft(struct SCType *S)
          }
       }
    }
+   else
+      S->Thr = NULL;
 
    /* .. Gyro parameters */
    node     = fy_node_by_path_def(root, "/Gyros");
-   S->Ngyro = fy_node_sequence_item_count(node);
-   S->Gyro  = (struct GyroType *)calloc(S->Ngyro, sizeof(struct GyroType));
+   S->Ngyro = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Ngyro > 0) {
+      S->Gyro  = (struct GyroType *)calloc(S->Ngyro, sizeof(struct GyroType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -2993,13 +3001,15 @@ void InitSpacecraft(struct SCType *S)
          Gyro->Angle        = 0.0;
       }
    }
+   else
+      S->Gyro = NULL;
 
    /* .. Magnetometer parameters */
    node    = fy_node_by_path_def(root, "/Magnetometers");
-   S->Nmag = fy_node_sequence_item_count(node);
-   S->MAG  = (struct MagnetometerType *)calloc(S->Nmag,
-                                               sizeof(struct MagnetometerType));
+   S->Nmag = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nmag > 0) {
+      S->MAG = (struct MagnetometerType *)calloc(
+          S->Nmag, sizeof(struct MagnetometerType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3046,12 +3056,14 @@ void InitSpacecraft(struct SCType *S)
          MAG->Scale = 1.0 + 1.0E-6 * MAG->Scale;
       }
    }
+   else
+      S->MAG = NULL;
 
    /* .. Coarse Sun Sensor parameters */
    node    = fy_node_by_path_def(root, "/CSSs");
-   S->Ncss = fy_node_sequence_item_count(node);
-   S->CSS  = (struct CssType *)calloc(S->Ncss, sizeof(struct CssType));
+   S->Ncss = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Ncss > 0) {
+      S->CSS   = (struct CssType *)calloc(S->Ncss, sizeof(struct CssType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3100,12 +3112,14 @@ void InitSpacecraft(struct SCType *S)
          CSS->CosFov      = cos(CSS->FovHalfAng);
       }
    }
+   else
+      S->CSS = NULL;
 
    /* .. Fine Sun Sensor parameters */
    node    = fy_node_by_path_def(root, "/FSSs");
-   S->Nfss = fy_node_sequence_item_count(node);
-   S->FSS  = (struct FssType *)calloc(S->Nfss, sizeof(struct FssType));
+   S->Nfss = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nfss > 0) {
+      S->FSS   = (struct FssType *)calloc(S->Nfss, sizeof(struct FssType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3163,13 +3177,15 @@ void InitSpacecraft(struct SCType *S)
          FSS->Quant *= D2R;
       }
    }
+   else
+      S->FSS = NULL;
 
    /* .. Star Tracker parameters */
    node   = fy_node_by_path_def(root, "/STs");
-   S->Nst = fy_node_sequence_item_count(node);
-   S->ST =
-       (struct StarTrackerType *)calloc(S->Nst, sizeof(struct StarTrackerType));
+   S->Nst = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nst > 0) {
+      S->ST = (struct StarTrackerType *)calloc(S->Nst,
+                                               sizeof(struct StarTrackerType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3247,12 +3263,14 @@ void InitSpacecraft(struct SCType *S)
             ST->NEA[(ST->BoreAxis + i) % 3] = tmp[i] * D2R / 3600.0;
       }
    }
+   else
+      S->ST = NULL;
 
    /* .. GPS parameters */
    node    = fy_node_by_path_def(root, "/GPSs");
-   S->Ngps = fy_node_sequence_item_count(node);
-   S->GPS  = (struct GpsType *)calloc(S->Ngps, sizeof(struct GpsType));
+   S->Ngps = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Ngps > 0) {
+      S->GPS   = (struct GpsType *)calloc(S->Ngps, sizeof(struct GpsType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3291,12 +3309,14 @@ void InitSpacecraft(struct SCType *S)
          }
       }
    }
+   else
+      S->GPS = NULL;
 
    /* .. Accelerometer parameters */
-   node     = fy_node_by_path_def(root, "/Accelerometers");
-   S->Nacc  = fy_node_sequence_item_count(node);
-   S->Accel = (struct AccelType *)calloc(S->Nacc, sizeof(struct AccelType));
+   node    = fy_node_by_path_def(root, "/Accelerometers");
+   S->Nacc = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nacc > 0) {
+      S->Accel = (struct AccelType *)calloc(S->Nacc, sizeof(struct AccelType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3359,12 +3379,14 @@ void InitSpacecraft(struct SCType *S)
          Accel->DV          = 0.0;
       }
    }
+   else
+      S->Accel = NULL;
 
    /* .. Fine Guidance Sensors */
    node    = fy_node_by_path_def(root, "/FGSs");
-   S->Nfgs = fy_node_sequence_item_count(node);
-   S->Fgs  = (struct FgsType *)calloc(S->Nfgs, sizeof(struct FgsType));
+   S->Nfgs = (node == NULL) ? 0 : fy_node_sequence_item_count(node);
    if (S->Nfgs > 0) {
+      S->Fgs   = (struct FgsType *)calloc(S->Nfgs, sizeof(struct FgsType));
       iterNode = NULL;
       WHILE_FY_ITER(node, iterNode)
       {
@@ -3436,6 +3458,8 @@ void InitSpacecraft(struct SCType *S)
          }
       }
    }
+   else
+      S->Fgs = NULL;
 
    /* .. Initialize some Orbit and Formation variables */
    struct OrbitType *O      = &Orb[S->RefOrb];

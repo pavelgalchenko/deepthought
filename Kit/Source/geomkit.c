@@ -85,7 +85,7 @@ struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
             M->DiffFrac         = 0.0;
          }
       }
-      if (!AlreadyExists) {
+      if (!AlreadyExists && NewMatl != NULL) {
          M = &NewMatl[(*Nmatl) - 1];
          sscanf(line, " Ns %f", &M->Ns);
          if (sscanf(line, " d %f", &M->Ka[3]) == 1) {

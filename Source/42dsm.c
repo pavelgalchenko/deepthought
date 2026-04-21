@@ -461,7 +461,7 @@ long GetController(struct DSMType *const DSM, struct fy_node *ctrlNode,
 
    enum CtrlType controller;
    char ctrlType[40] = {0};
-   if (fy_node_scanf(ctrlNode, "/Type %41s", ctrlType) == 1) {
+   if (fy_node_scanf(ctrlNode, "/Type %39s", ctrlType) == 1) {
       gainNode = fy_node_by_path_def(ctrlNode, "/Gains");
       limNode  = fy_node_by_path_def(ctrlNode, "/Limits");
       if (!strcmp(ctrlType, "PID_CNTRL"))
@@ -481,18 +481,18 @@ long GetController(struct DSMType *const DSM, struct fy_node *ctrlNode,
       // hardcoding for things...
       if (controller == LYA_ATT_CNTRL && controllerState != ATT_STATE) {
          fprintf(
-             stderr, "%s\n",
+             stderr,
              "Can only use LYA_ATT_CNTRL for attitude control. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (controller == H_DUMP_CNTRL && controllerState != DMP_STATE) {
-         fprintf(stderr, "%s\n",
+         fprintf(stderr,
                  "Can only use H_DUMP_CNTRL for momentum dumping control. "
                  "Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (controller == LYA_2BODY_CNTRL && controllerState != TRN_STATE) {
-         fprintf(stderr, "%s\n",
+         fprintf(stderr,
                  "Can only use LYA_2BODY_CNTRL for translation control. "
                  "Exiting...\n");
          exit(EXIT_FAILURE);
@@ -1003,11 +1003,10 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       Cmd->H_DumpActive         = getYAMLBool(dumpNode);
       state                     = DMP_STATE;
       if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
-         fprintf(
-             stderr,
-             "Maximum momentum dump limit must be more than the minimum for "
-             "Whl H Manage Command %s Exiting...\n",
-             cmdName);
+         fprintf(stderr,
+                 "Maximum momentum dump limit must be more than the minimum "
+                 "for Whl H Manage Command %s Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
       if (AttitudeCmdProcessed == FALSE) {
@@ -1133,12 +1132,11 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
 
       if (GetActuators(AC, DSM, actNode, state) == FALSE) {
-         fprintf(
-             stderr,
-             "For %s command %s, could not find Actuator alias %s or invalid "
-             "format. Exiting...\n",
-             subType, cmdName,
-             fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
+         fprintf(stderr,
+                 "For %s command %s, could not find Actuator alias %s or "
+                 "invalid format. Exiting...\n",
+                 subType, cmdName,
+                 fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
