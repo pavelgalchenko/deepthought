@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: install dep
-      run: sudo apt-get -y install pkgconfig libfyaml libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
+      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: cmake
       run: cmake .
     - name: make
@@ -28,7 +28,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: install dep
-      run: sudo apt-get -y install pkgconfig libfyaml libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
+      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: get cspice
       run: ./download_spice.sh
     - name: cmake
@@ -42,7 +42,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: install dep
-      run: sudo apt-get -y install pkgconfig libfyaml libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
+      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: cmake
       run: cmake -DCMAKE_BUILD_TYPE=DEBUG -DSANITIZER=ON .
     - name: make
@@ -54,7 +54,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: install dep
-      run: sudo apt-get -y install pkgconfig libfyaml libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
+      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: cmake
       run: cmake -DGLUT_OR_GLFW=GLFW .
     - name: make
@@ -66,7 +66,7 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: install dep
-      run: sudo apt-get -y install pkgconfig libfyaml
+      run: sudo apt-get -y install pkg-config libfyaml-dev
     - name: cmake
       run: cmake -DGRAPHICS=OFF .
     - name: make
