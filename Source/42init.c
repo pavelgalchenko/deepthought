@@ -5814,7 +5814,6 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
          exit(EXIT_FAILURE);
    }
    strcat(hdr_data->hdr_name, hdr_data->eph_str);
-   printf("hdr_name = %s\n", hdr_data->hdr_name);
 
    FILE *const hdr_file =
        FileOpen(hdr_data->eph_path, hdr_data->hdr_name, "rt");
