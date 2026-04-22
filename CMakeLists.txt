@@ -193,7 +193,6 @@ if (GUI)
     add_compile_definitions(_ENABLE_GUI_)
 
     if (GLUT_OR_GLFW STREQUAL "GLUT")
-        add_compile_definitions(_USE_GLUT_)
         set(GLUT_SOURCES
             PRIVATE
             ${KIT}/42glutkit.c

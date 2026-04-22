@@ -164,10 +164,19 @@ endif()
 if (GUI)
     # configure GUI
     find_package(OpenGL REQUIRED)
-    find_package(GLUT REQUIRED)
     add_compile_definitions(_ENABLE_GUI_)
     add_compile_definitions(GL_SILENCE_DEPRECATION)
-    target_link_libraries(42kit PUBLIC ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
+    target_link_libraries(42kit PUBLIC ${OPENGL_LIBRARIES})
+
+    find_package(GLUT REQUIRED)
+    target_link_libraries(42kit PUBLIC ${GLUT_LIBRARIES})
+
+    if (GLUT_OR_GLFW STREQUAL "GLFW")
+        add_compile_definitions(_USE_GLFW_)
+        find_package(glfw3 REQUIRED)
+        target_link_libraries(42kit PRIVATE glfw)
+        target_link_libraries(42kit PUBLIC ${GLFW_LIBRARIES})
+    endif()
 
     set(GL_SOURCES
         PRIVATE
