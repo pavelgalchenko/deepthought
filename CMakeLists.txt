@@ -204,6 +204,7 @@ if (GUI)
         add_compile_definitions(_USE_GLFW_)
         find_package(glfw3 REQUIRED)
         target_link_libraries(Test PRIVATE glfw)
+        target_link_libraries(deepthought PRIVATE glfw)
         set(GLFW_SOURCES
             PRIVATE
             ${KIT}/42glfwkit.c

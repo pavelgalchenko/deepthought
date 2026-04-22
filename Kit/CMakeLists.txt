@@ -46,9 +46,6 @@ option(REPORT_RESIDUALS "Enable navigation measurement residual reporting" OFF)
 set(GLUT_OR_GLFW GLUT CACHE STRING "Use GLUT or GLFW for graphics")
 set_property(CACHE GLUT_OR_GLFW PROPERTY STRINGS GLUT GLFW)
 
-# Use Classic RK4 instead of 3/8-rule RK4
-option(CLASSIC_RK4 "Use Classic RK4 instead of 3/8-rule RK4" OFF)
-
 ################################################################################
 
 # by default, we will build a Release version. However, feel free to
