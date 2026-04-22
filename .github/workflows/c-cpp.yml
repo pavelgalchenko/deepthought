@@ -18,7 +18,7 @@ jobs:
     - name: install dep
       run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: cmake
-      run: cmake .
+      run: cmake -DSPICE=OFF .
     - name: make
       run: make -sj
 
@@ -44,7 +44,7 @@ jobs:
     - name: install dep
       run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: cmake
-      run: cmake -DCMAKE_BUILD_TYPE=DEBUG -DSANITIZER=ON .
+      run: cmake -DCMAKE_BUILD_TYPE=DEBUG -DSANITIZER=ON -DSPICE=OFF .
     - name: make
       run: make -sj
       
@@ -56,7 +56,7 @@ jobs:
     - name: install dep
       run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
     - name: cmake
-      run: cmake -DGLUT_OR_GLFW=GLFW .
+      run: cmake -DGLUT_OR_GLFW=GLFW -DSPICE=OFF .
     - name: make
       run: make -sj
       
