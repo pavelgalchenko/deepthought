@@ -68,6 +68,6 @@ jobs:
     - name: install dep
       run: sudo apt-get -y install pkg-config libfyaml-dev
     - name: cmake
-      run: cmake -DGRAPHICS=OFF .
+      run: cmake -DGUI=OFF .
     - name: make
       run: make -sj

@@ -549,26 +549,29 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
    SecCenter = -1; /* Nonsense value */
 
    struct WorldType *WCenter = &World[OrbCenter];
+#ifdef _ENABLE_SPICE_
    if (EphemOption == EPH_SPICE) {
       Rk4SpiceEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
                      cntrCNH);
    }
-   else {
+   else
+#endif
       Rk4JplEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
                    cntrCNH);
-   }
 
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+#ifdef _ENABLE_SPICE_
          if (EphemOption == EPH_SPICE) {
             Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
                            trgtCNH);
          }
-         else {
+         else
+#endif
             Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
                          trgtCNH);
-         }
+
          for (j = 0; j < 3; j++)
             ph[j] = trgtPosH[j] - cntrPosH[j];
          MxV(cntrCNH, ph, p);
@@ -585,14 +588,16 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
       for (Im = 0; Im < WCenter->Nsat; Im++) {
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
+#ifdef _ENABLE_SPICE_
             if (EphemOption == EPH_SPICE) {
                Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
                               trgtCNH);
             }
-            else {
+            else
+#endif
                Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
                             trgtCNH);
-            }
+
             for (j = 0; j < 3; j++) {
                p[j] = trgtPosN[j];
                s[j] = p[j] - SCPosN[j];
