@@ -460,6 +460,8 @@ void DSM_PosHReport(void)
             }
             MxV(CNJ, SC_LCI, SC_LEI);
          }
+         else
+            break;
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.JulDay, TT.JulDay);
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.tdbTime, DynTime);
          fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH[0],

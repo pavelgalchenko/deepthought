@@ -13,6 +13,7 @@
 
 #include "42.h"
 #include <ctype.h>
+#include <glob.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -5760,10 +5761,214 @@ void UpdateLagrangePoints(void)
    }
 }
 /******************************************************************************/
-long LoadJplEphems(char EphemPath[80], double JD)
+char *replace_char(char *str, const char find, const char replace)
 {
-   FILE *infile;
-   double Block[1020];
+   char *current_pos = strchr(str, find);
+   while (current_pos) {
+      *current_pos = replace;
+      current_pos  = strchr(current_pos, find);
+   }
+   return str;
+}
+/******************************************************************************/
+long is_line_empty(const char *s)
+{
+   while (*s) {
+      if (!isspace(*s))
+         return 0;
+      s++;
+   }
+   return 1;
+}
+/******************************************************************************/
+long InitJplHeader(const ephemType ephem, const char eph_path[128],
+                   JPLHeaderType *hdr_data)
+{
+   // read the header file
+#define buf_size 512
+   // holds flag if NCOEFF and each group of 1030, 1040, 1041, and 1050 are
+   // found
+   int grp_found[5] = {0};
+
+   hdr_data->eph = ephem;
+   strcpy(hdr_data->eph_path, eph_path);
+
+   strcpy(hdr_data->hdr_name, "header.");
+   switch (ephem) {
+      case EPH_DE421:
+      case EPH_GMAT421: {
+         strcpy(hdr_data->eph_str, "421");
+      } break;
+      case EPH_DE424:
+      case EPH_GMAT424: {
+         strcpy(hdr_data->eph_str, "424");
+      } break;
+      case EPH_DE430: {
+         strcpy(hdr_data->eph_str, "430");
+      } break;
+      case EPH_DE440: {
+         strcpy(hdr_data->eph_str, "440");
+      } break;
+      default:
+         fprintf(stderr, "Unknown ephem type in InitJplHeader(). Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
+   strcat(hdr_data->hdr_name, hdr_data->eph_str);
+   printf("hdr_name = %s\n", hdr_data->hdr_name);
+
+   FILE *const hdr_file =
+       FileOpen(hdr_data->eph_path, hdr_data->hdr_name, "rt");
+
+   long grp_num        = 0;
+   char line[buf_size] = {"\0"};
+   while (fgets(line, buf_size, hdr_file)) {
+      if (sscanf(line, "KSIZE=%ld NCOEFF=%ld", &grp_num, &hdr_data->n_coeff) ==
+          2) {
+         grp_found[0] = 1;
+         break;
+      }
+   }
+   hdr_data->blk_len   = hdr_data->n_coeff + 2;
+   hdr_data->blk_lines = hdr_data->blk_len / 3;
+
+   const char *tok_check = " \n\0";
+
+   while (!grp_found[4] && fgets(line, buf_size, hdr_file)) {
+      const int sscanf_check = sscanf(line, "GROUP %ld", &grp_num) == 1;
+      if (sscanf_check && grp_num == 1030) {
+         while (fgets(line, buf_size, hdr_file)) {
+            if (sscanf(line, "%lf %lf %lf", &hdr_data->jd_range[0],
+                       &hdr_data->jd_range[1], &hdr_data->n_days) == 3) {
+               grp_found[1] = 1;
+               break;
+            }
+         }
+      }
+      else if (sscanf_check && grp_num == 1040) {
+         grp_found[2] = 1;
+         while (fgets(line, buf_size, hdr_file)) {
+            if (sscanf(line, "%ld", &hdr_data->n_data) == 1) {
+               break;
+            }
+         }
+         hdr_data->group_1040 = malloc(hdr_data->n_data * sizeof(char[10]));
+         char (*const group_1040_start)[10] = hdr_data->group_1040;
+
+         // Assuming data names in group 1040 start immediately after n_data
+         while (fgets(line, buf_size, hdr_file)) {
+            const char *tok = strtok(line, tok_check);
+            if (!tok)
+               break;
+            while (tok != NULL) {
+               strcpy(*hdr_data->group_1040, tok);
+               hdr_data->group_1040++;
+               tok = strtok(NULL, tok_check);
+            }
+         }
+         hdr_data->group_1040 = group_1040_start;
+      }
+      else if (sscanf_check && grp_num == 1041) {
+         grp_found[3] = 1;
+         while (fgets(line, buf_size, hdr_file)) {
+            long n_group_1041 = 0;
+            if (sscanf(line, "%ld", &n_group_1041) == 1) {
+               // assuming group 1041 is AFTER group 1040
+               if (n_group_1041 != hdr_data->n_data) {
+                  fprintf(stderr,
+                          "The data length for groups 1040 and 1041 in DE "
+                          "header file '%s' do not match.  Exiting...\n\tGroup "
+                          "1040 dimension: %ld\n\tGroup 1040 dimension: %ld",
+                          hdr_data->hdr_name, hdr_data->n_data, n_group_1041);
+                  exit(EXIT_FAILURE);
+               }
+               break;
+            }
+         }
+         hdr_data->group_1041 = calloc(hdr_data->n_data, sizeof(double));
+         double *const group_1041_start = hdr_data->group_1041;
+
+         // assuming  group 1041 data is immediately after
+         while (fgets(line, buf_size, hdr_file)) {
+            replace_char(line, 'D', 'E');
+            const char *tok = strtok(line, tok_check);
+            if (!tok)
+               break;
+            while (tok != NULL) {
+               *hdr_data->group_1041 = atof(tok);
+               hdr_data->group_1041++;
+               tok = strtok(NULL, tok_check);
+            }
+         }
+         hdr_data->group_1041 = group_1041_start;
+      }
+      else if (sscanf_check && grp_num == 1050) {
+         grp_found[4] = 1;
+         while (fgets(line, buf_size, hdr_file)) {
+            if (is_line_empty(line))
+               continue;
+
+            for (int i = 0; i < 3; i++) {
+               const char *tok = strtok(line, tok_check);
+               for (int j = 0; j < 11; j++) {
+                  hdr_data->group_1050[j][i] = atoi(tok);
+                  tok                        = strtok(NULL, tok_check);
+               }
+               fgets(line, buf_size, hdr_file);
+            }
+            break;
+         }
+      }
+   }
+#undef buf_size
+   fclose(hdr_file);
+   return (all_int(5, grp_found));
+}
+/******************************************************************************/
+double getJPL1041Data(JPLHeaderType *hdr_data, const char *grp_1040_name)
+{
+   // Get data from group 1040/1041 in JPL DE header
+   for (int i = 0; i < hdr_data->n_data; i++) {
+      if (!strncmp(hdr_data->group_1040[i], grp_1040_name, 9))
+         return hdr_data->group_1041[i];
+   }
+   fprintf(stderr, "Could not find `%s` in group 1040 of file %s. Exiting...\n",
+           grp_1040_name, hdr_data->hdr_name);
+   exit(EXIT_FAILURE);
+}
+/******************************************************************************/
+void FilesMatchingFmt(const char path[128], const char fmt[10],
+                      char (*f_names)[256], long *const n_match)
+{
+   // search for files files in `path` matching glob format `fmt`.
+   //  returns the list of matching file names in `f_names`, and the number of
+   //  them in `n_files`
+   // run once with *n_match=0 to get the number of matches, then run again
+   //  after allocating f_names
+   // NOTE: f_names will be returned with 'path'
+   // TODO: REMOVE 'path' FROM 'f_names'
+   // BEWARE, THIS IS ONLY FOR POSIX SYSTEMS
+   *n_match             = 0;
+   char search_fmt[256] = {0};
+   strcpy(search_fmt, path);
+   strcat(search_fmt, "/");
+   strcat(search_fmt, fmt);
+
+   glob_t results;
+   if (glob(search_fmt, 0, NULL, &results) == 0) {
+      *n_match = results.gl_pathc;
+      if (f_names != NULL)
+         for (long i = 0; i < *n_match; i++) {
+            strcpy(f_names[i], results.gl_pathv[i]);
+         }
+   }
+   else
+      f_names = NULL;
+   globfree(&results);
+}
+/******************************************************************************/
+long LoadJplEphems(char EphemPath[128], double JD)
+{
+   static FILE *infile = NULL;
    long BlockNum, NumEntries;
    long FoundBlock;
    char line[512];
@@ -5772,93 +5977,86 @@ long LoadJplEphems(char EphemPath[80], double JD)
    long Nseg, Start, N;
    struct Cheb3DType *Cheb;
 
-   /* .. Select input file */
-   if (EphemOption == EPH_DE430 || EphemOption == EPH_DE440) {
-      if (JD < 2433264.5) {
+   // putting it here for now, will likely move it later
+   static JPLHeaderType jpl_hdr = {0};
+   if (jpl_hdr.n_data == 0)
+      InitJplHeader(EphemOption, EphemPath, &jpl_hdr);
+
+   // search for the list of file to use with this EphemOption
+   // only need to do this once and keep it around
+   static char (*f_names)[256]   = NULL;
+   static double (*jd_ranges)[2] = NULL;
+   static long n_match           = 0;
+   if (f_names == NULL) {
+      char search_fmt[20] = "ascp*.";
+      strcat(search_fmt, jpl_hdr.eph_str);
+      FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
+      if (!n_match) {
          fprintf(stderr,
-                 "JD earlier than JPL ephem input files.  Falling back to "
-                 "lower-precision planetary ephemerides.\n");
-         return (1);
+                 "Could not find any files in directory '%s' for DE type '%s' "
+                 "matching glob format '%s'. Exiting...\n",
+                 jpl_hdr.eph_path, jpl_hdr.eph_str, search_fmt);
+         exit(EXIT_FAILURE);
       }
-      else if (JD < 2469808.5) {
-         if (EphemOption == EPH_DE430)
-            infile = FileOpen(EphemPath, "ascp1950.430", "rt");
-         else if (EphemOption == EPH_DE440)
-            infile = FileOpen(EphemPath, "ascp01950.440", "rt");
-      }
-      else if (JD < 2506352.5) {
-         if (EphemOption == EPH_DE430)
-            infile = FileOpen(EphemPath, "ascp2050.430", "rt");
-         else if (EphemOption == EPH_DE440)
-            infile = FileOpen(EphemPath, "ascp02050.440", "rt");
-      }
-      else if (JD < 2542864.5) {
-         if (EphemOption == EPH_DE430)
-            infile = FileOpen(EphemPath, "ascp2150.430", "rt");
-         else if (EphemOption == EPH_DE440)
-            infile = FileOpen(EphemPath, "ascp02150.440", "rt");
-      }
-      else {
-         printf("JD later than JPL ephem input files.  Falling back to "
-                "lower-precision planetary ephemerides.\n");
-         return (1);
+      f_names = calloc(n_match, sizeof(char[256]));
+      FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
+      jd_ranges = calloc(n_match, sizeof(double[2]));
+
+      // time to figure out the ranges for each file
+      for (i = 0; i < n_match; i++) {
+         int first_block = 0;
+         double dummy[2] = {0.0};
+
+         infile = FileOpen("", f_names[i], "rt");
+         while (fgets(line, 512, infile)) {
+            if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
+               fgets(line, 512, infile);
+               if (sscanf(line, "%lf %lf %lf", &dummy[0], &jd_ranges[i][1],
+                          &dummy[1]) == 3)
+                  if (!first_block) {
+                     first_block     = 1;
+                     jd_ranges[i][0] = dummy[0];
+                  }
+            }
+         }
+         fclose(infile);
       }
    }
-   else if (EphemOption == EPH_DE421 || EphemOption == EPH_GMAT421) {
-      if (JD < 2415020.5) {
-         fprintf(stderr,
-                 "JD earlier than JPL ephem input files.  Falling back to "
-                 "lower-precision planetary ephemerides.\n");
-         return (1);
-      }
-      else if (JD < 2469807.5) {
-         infile = FileOpen(EphemPath, "ascp1900.421", "rt");
-      }
-      else if (JD < 2524593.5) {
-         infile = FileOpen(EphemPath, "ascp2050.421", "rt");
-      }
-      else {
-         printf("JD later than JPL ephem input files.  Falling back to "
-                "lower-precision planetary ephemerides.\n");
-         return (1);
+
+   // start chugging through the files in f_names to find a block where JD is in
+   // range
+
+   // first check for header data
+   if (JD < jpl_hdr.jd_range[0]) {
+      fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
+                      "lower-precision planetary ephemerides.\n");
+      return (1);
+   }
+
+   int cur_file = -1;
+   for (i = 0; i < n_match; i++) {
+      if (JD >= jd_ranges[i][0] && JD < jd_ranges[i][1]) {
+         cur_file = i;
+         break;
       }
    }
-   else if (EphemOption == EPH_DE424 || EphemOption == EPH_GMAT424) {
-      if (JD < 2415020.5) {
-         fprintf(stderr,
-                 "JD earlier than JPL ephem input files.  Falling back to "
-                 "lower-precision planetary ephemerides.\n");
-         return (1);
-      }
-      else if (JD < 2451544.5) {
-         infile = FileOpen(EphemPath, "ascp1900.424", "rt");
-      }
-      else if (JD < 2488069.5) {
-         infile = FileOpen(EphemPath, "ascp2000.424", "rt");
-      }
-      else if (JD < 2524593.5) {
-         infile = FileOpen(EphemPath, "ascp2100.424", "rt");
-      }
-      else if (JD < 2561117.5) {
-         infile = FileOpen(EphemPath, "ascp2200.424", "rt");
-      }
-      else {
-         printf("JD later than JPL ephem input files.  Falling back to "
-                "lower-precision planetary ephemerides.\n");
-         return (1);
-      }
-   }
-   else {
-      fprintf(stderr, "Unknown Ephem Option in LoadJplEphems.\n");
+   if (cur_file == -1) {
+      fprintf(stderr,
+              "Could not find any files in directory '%s' for DE type '%s' "
+              "that Julian Date %lf is contained within. Exiting...\n",
+              jpl_hdr.eph_path, jpl_hdr.eph_str, JD);
       exit(EXIT_FAILURE);
    }
 
-   /* .. Search for block */
+   const long blk_len = jpl_hdr.n_coeff + 2;
+   double Block[blk_len];
+
    FoundBlock = 0;
+   infile     = FileOpen("", f_names[cur_file], "rt");
    while (!FoundBlock) {
-      fgets(line, 511, infile);
+      fgets(line, 512, infile);
       if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
-         fgets(line, 511, infile);
+         fgets(line, 512, infile);
          if (sscanf(line, "%lf %lf %lf", &Block[0], &Block[1], &Block[2]) ==
              3) {
             if (JD >= Block[0] && JD < Block[1]) {
@@ -5871,8 +6069,8 @@ long LoadJplEphems(char EphemPath[80], double JD)
    }
 
    /* .. Load block */
-   for (i = 1; i < 340; i++) {
-      fgets(line, 511, infile);
+   for (i = 1; i < jpl_hdr.blk_lines; i++) {
+      fgets(line, 512, infile);
       sscanf(line, "%lf %lf %lf", &Block[3 * i], &Block[3 * i + 1],
              &Block[3 * i + 2]);
    }
@@ -5880,223 +6078,29 @@ long LoadJplEphems(char EphemPath[80], double JD)
 
    /* .. Distribute to Worlds [Starting Entry (1-based), Order, Number of
     * Segments] */
-   /* Mercury [3 14 4] */
-   Iw                  = MERCURY;
-   Nseg                = 4;
-   Start               = 3 - 1;
-   N                   = 14;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Venus [171 10 2] */
-   Iw                  = VENUS;
-   Nseg                = 2;
-   Start               = 171 - 1;
-   N                   = 10;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Earth-Moon barycenter [231 13 2] */
-   Iw                  = EARTH;
-   Nseg                = 2;
-   Start               = 231 - 1;
-   N                   = 13;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Mars [309 11 1] */
-   Iw                  = MARS;
-   Nseg                = 1;
-   Start               = 309 - 1;
-   N                   = 11;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Jupiter [342 8 1] */
-   Iw                  = JUPITER;
-   Nseg                = 1;
-   Start               = 342 - 1;
-   N                   = 8;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Saturn [366 7 1] */
-   Iw                  = SATURN;
-   Nseg                = 1;
-   Start               = 366 - 1;
-   N                   = 7;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Uranus [387 6 1] */
-   Iw                  = URANUS;
-   Nseg                = 1;
-   Start               = 387 - 1;
-   N                   = 6;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Neptune [405 6 1] */
-   Iw                  = NEPTUNE;
-   Nseg                = 1;
-   Start               = 405 - 1;
-   N                   = 6;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Pluto [423 6 1] */
-   Iw                  = PLUTO;
-   Nseg                = 1;
-   Start               = 423 - 1;
-   N                   = 6;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Moon (geocentric) [441 13 8] */
-   Iw                  = LUNA;
-   Nseg                = 8;
-   Start               = 441 - 1;
-   N                   = 13;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-         }
-      }
-   }
-   /* Sun [753 11 2] */
-   Iw                  = SOL;
-   Nseg                = 2;
-   Start               = 753 - 1;
-   N                   = 11;
-   World[Iw].eph.Ncheb = Nseg;
-   World[Iw].eph.Cheb =
-       (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-   for (Ic = 0; Ic < Nseg; Ic++) {
-      Cheb      = &World[Iw].eph.Cheb[Ic];
-      Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->JD2 =
-          JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-      Cheb->N = N;
-      for (n = 0; n < N; n++) {
-         for (i = 0; i < 3; i++) {
-            Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
+   // Note that the data for 'EARTH' is Earth-Moon barycenter and 'MOON' is the
+   // geocentric position of the Moon
+   const int bodies[11] = {MERCURY, VENUS,   EARTH, MARS, JUPITER, SATURN,
+                           URANUS,  NEPTUNE, PLUTO, LUNA, SOL};
+   for (int j = 0; j < 11; j++) {
+      Iw    = bodies[j];
+      Nseg  = jpl_hdr.group_1050[j][2];
+      Start = jpl_hdr.group_1050[j][0] - 1;
+      N     = jpl_hdr.group_1050[j][1];
+
+      World[Iw].eph.Ncheb = Nseg;
+      World[Iw].eph.Cheb =
+          (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
+      for (Ic = 0; Ic < Nseg; Ic++) {
+         Cheb      = &World[Iw].eph.Cheb[Ic];
+         Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
+         Cheb->JD2 =
+             JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
+         Cheb->N = N;
+         for (n = 0; n < N; n++) {
+            for (i = 0; i < 3; i++) {
+               Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
+            }
          }
       }
    }
@@ -6104,26 +6108,8 @@ long LoadJplEphems(char EphemPath[80], double JD)
    /* Specific Earth-Moon Mass Ratio and AU  Definitions */
    /* These values are the exact values from the associated
       header.DE421, header.DE424, etc files  */
-   if (EphemOption == EPH_DE421 || EphemOption == EPH_GMAT421) {
-      /* This data comes from header.421 */
-      EMRAT = 0.813005690699153000E+02; // Earth/Moon Mass Ratio
-      AU    = 0.149597870699626200E+09; // Kilometers per 1 AU
-   }
-   else if (EphemOption == EPH_DE424 || EphemOption == EPH_GMAT424) {
-      /* This data comes from header.424 */
-      EMRAT = 0.813005701240172800E+02; // Earth/Moon Mass Ratio
-      AU    = 0.149597870699626200E+09; // Kilometers per 1 AU
-   }
-   else if (EphemOption == EPH_DE430) {
-      /* This data comes from header.430_229 */
-      EMRAT = 0.813005690741906200E+02; // Earth/Moon Mass Ratio
-      AU    = 0.149597870700000000E+09; // Kilometers per 1 AU
-   }
-   else if (EphemOption == EPH_DE440) {
-      /* This data comes from header.440 */
-      EMRAT = 0.813005682214972154E+02; // Earth/Moon Mass Ratio
-      AU    = 0.149597870699999988E+09; // Kilometers per 1 AU
-   }
+   EMRAT = getJPL1041Data(&jpl_hdr, "EMRAT"); // Earth/Moon Mass Ratio
+   AU    = getJPL1041Data(&jpl_hdr, "AU");    // Kilometers per 1 AU
 
    // Conversion of GM from AU^3/day^2 to m^3/s^2 using DE appropriate values
    AUd2ms = (pow(AU, 3) / pow(86400, 2)) * 1.0e9;

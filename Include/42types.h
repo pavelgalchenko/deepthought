@@ -25,6 +25,20 @@
 ** namespace _42 {
 ** #endif
 */
+
+/* Ephem Tags */
+typedef enum {
+   EPH_NULL = -1, // dummy value for initialization/logging errors
+   EPH_MEAN = 0,
+   EPH_DE430,
+   EPH_DE440,
+   EPH_DE421,
+   EPH_DE424,
+   EPH_GMAT421,
+   EPH_GMAT424,
+   EPH_SPICE,
+} ephemType;
+
 /* FSW Tags */
 enum fswType {
    PASSIVE_FSW = 0,
@@ -60,6 +74,23 @@ struct FormationType {
    double CL[3][3];
    double PosR[3]; /* Position of F wrt R, expressed in N */
 };
+
+/* Store information about the JPL DE file by parsing the header file */
+typedef struct {
+   char eph_path[80];
+   char eph_str[5];
+   char hdr_name[16];
+   ephemType eph;
+   long n_coeff;
+   long blk_len;
+   long blk_lines;
+   double jd_range[2];
+   double n_days;
+   long n_data;
+   char (*group_1040)[10];
+   double *group_1041;
+   int group_1050[11][3];
+} JPLHeaderType;
 
 /* "Analysis" nodes, used both for Flex, ("Force" nodes and "Measurement" nodes)
  */

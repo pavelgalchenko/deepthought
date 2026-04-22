@@ -40,6 +40,7 @@
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
+int all_int(const long n, const int *vec);
 double signum(const double x);
 double sinc(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);

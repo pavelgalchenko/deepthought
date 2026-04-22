@@ -97,8 +97,8 @@ EXTERN long ContactActive;
 EXTERN long SloshActive;
 EXTERN long AlbedoActive; /* Affects CSS measurements */
 EXTERN long ComputeEnvTrq;
-EXTERN long EphemOption; /* MEAN, DE421, DE424, DE430, DE440, GMAT421, GMAT424,
-                            or SPICE */
+EXTERN ephemType EphemOption; /* MEAN, DE421, DE424, DE430, DE440, GMAT421,
+                                 GMAT424, or SPICE */
 
 /* Calendar Time is all based in Terrestrial Dynamical Time (TT or TDT) unless
  * otherwise noted */
@@ -252,7 +252,7 @@ long LoadSpiceKernels(char SpicePath[80]);
 long UpdateSpiceEphems(double JS);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
-long LoadJplEphems(char EphemPath[80], double JD);
+long LoadJplEphems(char EphemPath[128], double JD);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
 void UpdateJplEphems(void);
 /* Update celestial body locations using MEAN method */
