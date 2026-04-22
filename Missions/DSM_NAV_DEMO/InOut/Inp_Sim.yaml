@@ -135,7 +135,7 @@ Perturbation Models:
   CFD Slosh: false
   Albedo on CSS: false
   Output Env Torques to File: false
-Ephem Type: DE440
+Ephem Type: MEAN
 Celestial Bodies:
   # --------------------------Celestial Body Configuration-------------------------
   #   Mercury: [[true/false]]
@@ -180,6 +180,6 @@ Ground Stations:
       Index: 0
       Enabled: true
       World: EARTH
-      Longitude: -77.0
+      Longitude: -77
       Latitude: 37.0
       Label: ""
