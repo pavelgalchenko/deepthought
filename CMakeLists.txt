@@ -59,7 +59,7 @@ endif()
 set(CMAKE_C_FLAGS "-fpic -Wall -Wshadow -Wno-deprecated " CACHE STRING "Set C Compiler Flags" FORCE)
 
 # explicitly set compile flags for all, debug, and release
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 
 if(C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs")
@@ -125,11 +125,11 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
     target_compile_options(deepthought PUBLIC -O0 -pg -ggdb -fno-omit-frame-pointer)
-    if (SANITIZER)
-        target_compile_options(deepthought PUBLIC -fsanitize=address -fsanitize=undefined)
-        # addresssanitizer linking option if debug
-        target_link_options(deepthought BEFORE PUBLIC -fsanitize=undefined -fsanitize=address)
-    endif()
+endif()
+if (SANITIZER)
+    target_compile_options(deepthought PUBLIC -fsanitize=address -fsanitize=undefined)
+    # addresssanitizer linking option
+    target_link_options(deepthought BEFORE PUBLIC -fsanitize=undefined -fsanitize=address)
 endif()
 
 # Configure Test Target

@@ -4457,7 +4457,7 @@ void LoadMoonOfEarth(void)
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[i];
+               gravModel->r_ref = rad[Im];
             M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
@@ -4811,7 +4811,7 @@ void LoadMoonsOfJupiter(void)
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[i];
+               gravModel->r_ref = rad[Im];
             M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
@@ -5005,7 +5005,7 @@ void LoadMoonsOfSaturn(void)
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[i];
+               gravModel->r_ref = rad[Im];
             M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
@@ -5165,7 +5165,7 @@ void LoadMoonsOfUranus(void)
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[i];
+               gravModel->r_ref = rad[Im];
             M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
@@ -5464,7 +5464,7 @@ void LoadMoonsOfPluto(void)
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[i];
+               gravModel->r_ref = rad[Im];
             M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
