@@ -26,7 +26,7 @@
 extern double EnckeFQ(double const r[3], double const delta[3]);
 extern void Legendre(long N, long M, double x, double P[N + 1][M + 1],
                      double sdP[N + 1][M + 1]);
-#ifdef REPORT_RESIDUALS
+#ifdef _REPORT_RESIDUALS_
 extern void DSM_NAV_ResidualsReport(double time,
                                     double **residuals[FIN_SENSOR + 1]);
 #endif
@@ -3313,7 +3313,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
          const double ccsdsStepSize = CCSDS_STEP_SIZE;
          const double dt            = dSec + dSubsec * ccsdsStepSize;
          if (dt >= 0) {
-#ifdef REPORT_RESIDUALS
+#ifdef _REPORT_RESIDUALS_
             // TODO: set a report residuals "bool" in nav and use that instead
             // of
             // these compile-time directives
@@ -3327,7 +3327,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                init = FALSE;
             Nav->ccsdsSeconds    = measSec;
             Nav->ccsdsSubseconds = measSubsec;
-#ifdef REPORT_RESIDUALS
+#ifdef _REPORT_RESIDUALS_
             for (enum SensorType sensor = INIT_SENSOR; sensor < FIN_SENSOR;
                  sensor++) {
                if (Nav->sensorActive[sensor] == TRUE) {
@@ -3373,7 +3373,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                for (i = 0; i < dim; i++)
                   resid[i] = meas->data[i] - measEstData[i];
             }
-#ifdef REPORT_RESIDUALS
+#ifdef _REPORT_RESIDUALS_
             Nav->residuals[meas->type][meas->sensorNum] =
                 calloc(dim, sizeof(double));
             for (i = 0; i < dim; i++)

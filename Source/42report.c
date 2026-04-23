@@ -274,7 +274,7 @@ void DSM_PlanetEphemReport(void)
    static FILE **suntrackfile;
    static long First = 1;
    long Iw;
-   char s[40];
+   char s[50];
    double svh[3], svw[3], CWH[3][3];
    double Lat, Lng;
 
@@ -714,7 +714,7 @@ void DSM_NAV_StateReport(void)
 }
 /*********************************************************************/
 // Last time I tried to analyze all the data from this, I ran out of memory...
-#ifdef REPORT_RESIDUALS
+#ifdef _REPORT_RESIDUALS_
 void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1])
 {
    static FILE **residualFile;

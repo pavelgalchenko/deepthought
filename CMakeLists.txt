@@ -23,9 +23,6 @@ endif()
 # Compile with Graphics -DGUI=OFF
 option(GUI "Compile with graphics" ON)
 
-# Compile with Shaders -DSHADERS=OFF
-option(SHADERS "Compile with shaders" ON)
-
 # Compile with SPICE -DSPICE=OFF
 option(SPICE "Compile with SPICE" ON)
 
@@ -37,6 +34,8 @@ option(SANITIZER "Enable address sanitizer in debug build" OFF)
 
 # take note of the buid options in Kit/CMakeLists.txt as well
 ################################################################################
+################################################################################
+################################################################################
 
 # by default, we will build a Release version. However, feel free to
 # include the debug flags by running:
@@ -47,23 +46,19 @@ endif()
 
 add_executable(deepthought)
 add_executable(Test EXCLUDE_FROM_ALL)
-link_libraries(m)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
 
-if(SHADERS)
-    add_compile_definitions(_USE_SHADERS_)
-endif()
+target_compile_options(deepthought PRIVATE -fpic -Wall -Wshadow -Wno-deprecated)
+target_compile_options(deepthought PRIVATE $<$<CONFIG:Release>:-O2>)
+target_compile_options(deepthought PRIVATE $<$<CONFIG:Debug>:-O0 -pg -ggdb -fno-omit-frame-pointer>)
 
-set(CMAKE_C_FLAGS "-fpic -Wall -Wshadow -Wno-deprecated " CACHE STRING "Set C Compiler Flags" FORCE)
+# addresssanitizer
+target_compile_options(deepthought PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
+target_link_options(deepthought BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=undefined -fsanitize=address>)
 
-# explicitly set compile flags for all, debug, and release
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
-
-if(C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs")
-endif()
+target_compile_options(deepthought PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS}>:-Wno-unused-local-typedefs>)
 
 # set include directories
 include_directories(Include)
@@ -104,32 +99,40 @@ target_include_directories(deepthought PRIVATE kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
 
 if(SPICE)
-    add_compile_definitions(_ENABLE_SPICE_)
-    set(CSPICE_DIR ${CMAKE_SOURCE_DIR}/cspice)
-    find_library(CSPICE_LIB cspice PATHS ${CSPICE_DIR}/lib)
-    if (NOT CSPICE_LIB)
-        add_library(cspice STATIC IMPORTED)
-        set_target_properties(cspice PROPERTIES IMPORTED_LOCATION ${CSPICE_DIR}/lib/cspice.a)
-        set_target_properties(cspice PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CSPICE_DIR}/include)
-        target_link_libraries(deepthought PUBLIC cspice)
-        target_link_libraries(Test PUBLIC cspice)
+    # Based on similar section in GMAT cmake
+    set(CSPICE_TEMP_DIR ${CMAKE_SOURCE_DIR}/cspice)
+
+    find_path(CSPICE_DIR
+        NAMES include/SpiceUsr.h
+        PATHS 
+            ${CSPICE_TEMP_DIR}
+        DOC "Path to CSpice root directory (containing include/, lib/, etc.)"
+        NO_DEFAULT_PATH
+        )
+
+    # Make sure CSPICE exists
+    if(CSPICE_DIR)
+        MESSAGE(STATUS "Found CSPICE: " ${CSPICE_DIR})
+
+        # Set CSPICE library files
+        # if(WIN32)
+        #     SET(CSPICE_EXT "lib")
+        # else()
+        SET(CSPICE_EXT "a")
+        # endif()
+        SET(CSPICE_LIB "${CSPICE_DIR}/lib/cspice.${CSPICE_EXT}")
+        # SET(CSPICE_LIB_DEBUG "${CSPICE_DIR}/lib/cspiced.${CSPICE_EXT}")
+        SET(CSPICE_INCLUDE_DIR "${CSPICE_DIR}/include")
+        if(NOT EXISTS ${CSPICE_LIB_DEBUG})
+            SET(CSPICE_LIB_DEBUG ${CSPICE_LIB})
+        endif()
     else()
-        target_include_directories(deepthought PUBLIC ${CSPICE_DIR}/include)
-        target_link_libraries(deepthought PUBLIC ${CSPICE_LIB})
-
-        # #Link spice to Test
-        target_include_directories(Test PUBLIC ${CSPICE_DIR}/include)
-        target_link_libraries(Test PUBLIC ${CSPICE_LIB})
+        MESSAGE(ERROR "CSPICE NOT FOUND. Set CSPICE_DIR to path to include/SpiceUsr.h and re-configure.")
     endif()
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-    target_compile_options(deepthought PUBLIC -O0 -pg -ggdb -fno-omit-frame-pointer)
-endif()
-if (SANITIZER)
-    target_compile_options(deepthought PUBLIC -fsanitize=address -fsanitize=undefined)
-    # addresssanitizer linking option
-    target_link_options(deepthought BEFORE PUBLIC -fsanitize=undefined -fsanitize=address)
+    add_compile_definitions(_ENABLE_SPICE_)
+    
+    target_link_libraries(deepthought PUBLIC optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
+    target_include_directories(deepthought PUBLIC ${CSPICE_INCLUDE_DIR})
 endif()
 
 # Configure Test Target
@@ -188,27 +191,5 @@ else()
     target_sources(Test ${AC_SOURCES})
 endif()
 
-if (GUI)
-    # configure GUI
-    add_compile_definitions(_ENABLE_GUI_)
-
-    if (GLUT_OR_GLFW STREQUAL "GLUT")
-        set(GLUT_SOURCES
-            PRIVATE
-            ${KIT}/42glutkit.c
-            )
-        target_sources(deepthought ${GLUT_SOURCES})
-        target_sources(Test ${GLUT_SOURCES})
-    else()
-        add_compile_definitions(_USE_GLFW_)
-        find_package(glfw3 REQUIRED)
-        target_link_libraries(Test PRIVATE glfw)
-        target_link_libraries(deepthought PRIVATE glfw)
-        set(GLFW_SOURCES
-            PRIVATE
-            ${KIT}/42glfwkit.c
-            )
-        target_sources(deepthought ${GLFW_SOURCES})
-        target_sources(Test ${GLFW_SOURCES})
-    endif()
-endif()
+# configure GUI
+target_compile_definitions(deepthought PRIVATE $<$<BOOL:${GUI}>:_ENABLE_GUI_>)
