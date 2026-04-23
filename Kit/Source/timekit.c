@@ -18,14 +18,120 @@
 ** #endif
 */
 
+static double jd_tdb2tdt(const double tdb_jd)
+{
+   return 0;
+}
+
+static double jd_tdt2tdb(const double tdt_jd)
+{
+   return 0;
+}
+
+#define sec_per_day (86400.0)
+#define tdt2tai(x)  (x) -= (32.184) / sec_per_day
+#define tai2tdt(x)  (x) += (32.184) / sec_per_day
+JDType JDUTC(const JDType jd)
+{
+   JDType jd_out = jd;
+   jd_out.system = UTC_TIME;
+   // TODO: leap seconds :(
+   switch (jd.system) {
+      case TAI_TIME: {
+      } break;
+      case TBD_TIME: {
+      } break;
+      case TDT_TIME: {
+      } break;
+      default:
+         break;
+   }
+   return jd_out;
+}
+JDType JDTAI(const JDType jd)
+{
+   JDType jd_out = jd;
+   jd_out.system = TAI_TIME;
+   switch (jd.system) {
+      case UTC_TIME: {
+         // TODO: leap seconds :(
+      } break;
+      case TBD_TIME:
+         jd_out.data = jd_tdb2tdt(jd.data);
+      case TDT_TIME:
+         tdt2tai(jd_out.data);
+         break;
+      default:
+         break;
+   }
+   return jd_out;
+}
+JDType JDTBD(const JDType jd)
+{
+   JDType jd_out = jd;
+   jd_out.system = TBD_TIME;
+   switch (jd.system) {
+      case UTC_TIME: {
+         // TODO: leap seconds :(
+      } break;
+      case TAI_TIME:
+         tai2tdt(jd_out.data);
+      case TDT_TIME: {
+         jd_out.data = jd_tdb2tdt(jd.data);
+      } break;
+      default:
+         break;
+   }
+   return jd_out;
+}
+JDType JDTDT(const JDType jd)
+{
+   JDType jd_out = jd;
+   jd_out.system = TDT_TIME;
+   switch (jd.system) {
+      case UTC_TIME: {
+         // TODO: leap seconds :(
+      } break;
+      case TAI_TIME: {
+         tai2tdt(jd_out.data);
+      } break;
+      case TBD_TIME: {
+         jd_out.data = jd_tdb2tdt(jd.data);
+      } break;
+      default:
+         break;
+   }
+   return jd_out;
+}
+#undef tdt2tdb
+#undef tdb2tdt
+#undef sec_per_day
+
+// double TDB_JDtoTT(double TDB_JD)
+// {
+//    double T_TT, m_E, deltaTDB, JD_TDB;
+//    double TDB_COEFF1             = 0.00165;
+//    double TDB_COEFF2             = 0.00001385;
+//    double M_E_OFFSET             = 357.5277233;
+//    double M_E_COEFF1             = 35999.05034;
+//    double SEC_PER_JULIAN_CENTURY = 3155760000.00;
+
+//    T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
+
+//    m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
+//    deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
+//    JD_TDB   = (SecSinceJ2000 + deltaTDB) / 86400.0 + 2451545.0;
+
+//    return (JD_TDB);
+// }
 double TTtoTDB_JD(double SecSinceJ2000)
 {
    double T_TT, m_E, deltaTDB, JD_TDB;
-   double TDB_COEFF1             = 0.00165;
-   double TDB_COEFF2             = 0.00001385;
-   double M_E_OFFSET             = 357.5277233;
-   double M_E_COEFF1             = 35999.05034;
-   double SEC_PER_JULIAN_CENTURY = 3155760000.00;
+   static double TDB_COEFF1             = 0.00165;
+   static double TDB_COEFF2             = 0.00001385;
+   static double M_E_OFFSET             = 357.5277233;
+   static double M_E_COEFF1             = 35999.05034;
+   static double SEC_PER_JULIAN_CENTURY = 3155760000.00;
 
    T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
 
@@ -37,12 +143,12 @@ double TTtoTDB_JD(double SecSinceJ2000)
 }
 double TTtoTDB_Time(double SecSinceJ2000)
 {
-   long double T_TT, m_E, deltaTDB, time_TDB;
-   long double TDB_COEFF1             = 0.001658;
-   long double TDB_COEFF2             = 0.00001385;
-   long double M_E_OFFSET             = 357.5277233;
-   long double M_E_COEFF1             = 35999.05034;
-   long double SEC_PER_JULIAN_CENTURY = 3155760000.00;
+   double T_TT, m_E, deltaTDB, time_TDB;
+   static double TDB_COEFF1             = 0.001658;
+   static double TDB_COEFF2             = 0.00001385;
+   static double M_E_OFFSET             = 357.5277233;
+   static double M_E_COEFF1             = 35999.05034;
+   static double SEC_PER_JULIAN_CENTURY = 3155760000.00;
 
    T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
 

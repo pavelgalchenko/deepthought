@@ -155,6 +155,7 @@ void hqrd(double **A, double **U, double **R, long const n, long const m);
 void bhqrd(double **A, double **U, double **R, long const n, long const m,
            long const bSize);
 
+double ipow(double base, long exp);
 void expm(double **A, double **e, long const n);
 long isSignificant(int const m, int const n, double **A, double **B);
 void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);

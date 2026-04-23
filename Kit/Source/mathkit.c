@@ -2534,6 +2534,21 @@ void bhqrd(double **A, double **U, double **R, long const n, long const m,
    }
 }
 /******************************************************************************/
+// Algorithm for calculating integer powers of doubles
+double ipow(double base, long exp)
+{
+   double result = 1.0;
+   do {
+      if (exp & 1)
+         result *= base;
+      exp >>= 1;
+      if (!exp)
+         break;
+      base *= base;
+   } while (1);
+   return result;
+}
+/******************************************************************************/
 // Taylor series method for Matrix Exponential, adapted from John Burkardt
 // https://people.sc.fsu.edu/~jburkardt
 void expm(double **A, double **e, long const n)

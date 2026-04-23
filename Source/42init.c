@@ -415,23 +415,6 @@ long DecodeString(char *s)
    else if (!strcmp(s, "GMSEC_CLIENT"))
       return IPC_GMSEC_CLIENT;
 
-   else if (!strcmp(s, "MEAN"))
-      return EPH_MEAN;
-   else if (!strcmp(s, "DE421"))
-      return EPH_DE421;
-   else if (!strcmp(s, "DE424"))
-      return EPH_DE424;
-   else if (!strcmp(s, "DE430"))
-      return EPH_DE430;
-   else if (!strcmp(s, "DE440"))
-      return EPH_DE440;
-   else if (!strcmp(s, "GMAT421"))
-      return EPH_GMAT421;
-   else if (!strcmp(s, "GMAT424"))
-      return EPH_GMAT424;
-   else if (!strcmp(s, "SPICE"))
-      return EPH_SPICE;
-
    else if (!strcmp(s, "MAJOR"))
       return MAJOR_CONSTELL;
    else if (!strcmp(s, "ZODIAC"))
@@ -490,6 +473,29 @@ long DecodeString(char *s)
               __LINE__);
       exit(EXIT_FAILURE);
    }
+}
+/**********************************************************************/
+ephemType GetEphemType(const char *s)
+{
+   if (!strcmp(s, "MEAN"))
+      return EPH_MEAN;
+   else if (!strcmp(s, "DE421"))
+      return EPH_DE421;
+   else if (!strcmp(s, "DE424"))
+      return EPH_DE424;
+   else if (!strcmp(s, "DE430"))
+      return EPH_DE430;
+   else if (!strcmp(s, "DE440"))
+      return EPH_DE440;
+   else if (!strcmp(s, "GMAT421"))
+      return EPH_GMAT421;
+   else if (!strcmp(s, "GMAT424"))
+      return EPH_GMAT424;
+   else if (!strcmp(s, "SPICE"))
+      return EPH_SPICE;
+   fprintf(stderr, "Bogus input %s in GetEphemType (42init.c:%d)\n", s,
+           __LINE__);
+   exit(EXIT_FAILURE);
 }
 /**********************************************************************/
 void EchoDyn(struct SCType *S)
@@ -3799,34 +3805,43 @@ void LoadSun(void)
 
    /* Physical Properties */
    double GM;
-   if (EphemOption == EPH_MEAN) {
-      W->mu  = 1.32715E20;
-      W->rad = 6.98E8;
+   switch (EphemOption) {
+      case EPH_MEAN: {
+         W->mu  = 1.32715E20;
+         W->rad = 6.98E8;
+      } break;
+      case EPH_DE430: {
+         GM     = 0.295912208285591100E-03;
+         W->mu  = GM * AUd2ms; // 1.3271244004193938E20;
+         W->rad = 6.96000E8;
+      } break;
+      case EPH_DE440: {
+         GM     = 0.295912208284119561E-03;
+         W->mu  = GM * AUd2ms; // 1.3271244004127942E20;
+         W->rad = 6.95700E8;
+      } break;
+      case EPH_DE421: {
+         GM     = 0.295912208285591100E-03;
+         W->mu  = GM * AUd2ms; // 1.3271244004094400E20;
+         W->rad = 6.96000E8;
+      } break;
+      case EPH_DE424: {
+         GM     = 0.295912208285591100E-03;
+         W->mu  = GM * AUd2ms; // 1.3271244004094460E20;
+         W->rad = 6.96000E8;
+      } break;
+      case EPH_GMAT421:
+      case EPH_GMAT424: {
+         W->mu  = 1.3271244001799E20;
+         W->rad = 6.95990E8;
+      } break;
+      case EPH_SPICE: {
+      } break;
+      default:
+         fprintf(stderr, "Unknown Ephemeris Type. Exiting...\n");
+         exit(EXIT_FAILURE);
    }
-   else if (EphemOption == EPH_DE421) {
-      GM     = 0.295912208285591100E-03;
-      W->mu  = GM * AUd2ms; // 1.3271244004094400E20;
-      W->rad = 6.96000E8;
-   }
-   else if (EphemOption == EPH_DE424) {
-      GM     = 0.295912208285591100E-03;
-      W->mu  = GM * AUd2ms; // 1.3271244004094460E20;
-      W->rad = 6.96000E8;
-   }
-   else if (EphemOption == EPH_DE430) {
-      GM     = 0.295912208285591100E-03;
-      W->mu  = GM * AUd2ms; // 1.3271244004193938E20;
-      W->rad = 6.96000E8;
-   }
-   else if (EphemOption == EPH_DE440) {
-      GM     = 0.295912208284119561E-03;
-      W->mu  = GM * AUd2ms; // 1.3271244004127942E20;
-      W->rad = 6.95700E8;
-   }
-   else if (EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      W->mu  = 1.3271244001799E20;
-      W->rad = 6.95990E8;
-   }
+
    /* Default Pyhsical Parameters */
    W->w              = 2.69E-6;
    W->PriMerAngJ2000 = 84.176 * D2R;
@@ -5923,7 +5938,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
    return (all_int(5, grp_found));
 }
 /******************************************************************************/
-double getJPL1041Data(JPLHeaderType *hdr_data, const char *grp_1040_name)
+double getDEHeader1041Data(JPLHeaderType *hdr_data, const char *grp_1040_name)
 {
    // Get data from group 1040/1041 in JPL DE header
    for (int i = 0; i < hdr_data->n_data; i++) {
@@ -6001,7 +6016,7 @@ long LoadJplEphems(char EphemPath[128], double JD)
       FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
       jd_ranges = calloc(n_match, sizeof(double[2]));
 
-      // time to figure out the ranges for each file
+      // preload the jd ranges for each file for the chosen DE
       for (i = 0; i < n_match; i++) {
          int first_block = 0;
          double dummy[2] = {0.0};
@@ -6022,16 +6037,14 @@ long LoadJplEphems(char EphemPath[128], double JD)
       }
    }
 
-   // start chugging through the files in f_names to find a block where JD is in
-   // range
-
-   // first check for header data
+   // Make sure the chosen JD is covered by desired DE
    if (JD < jpl_hdr.jd_range[0]) {
       fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
                       "lower-precision planetary ephemerides.\n");
       return (1);
    }
 
+   // Figure out which jd range desired JD is in
    int cur_file = -1;
    for (i = 0; i < n_match; i++) {
       if (JD >= jd_ranges[i][0] && JD < jd_ranges[i][1]) {
@@ -6047,6 +6060,7 @@ long LoadJplEphems(char EphemPath[128], double JD)
       exit(EXIT_FAILURE);
    }
 
+   // Search found file for block containing chosen JD
    const long blk_len = jpl_hdr.n_coeff + 2;
    double Block[blk_len];
 
@@ -6079,8 +6093,9 @@ long LoadJplEphems(char EphemPath[128], double JD)
     * Segments] */
    // Note that the data for 'EARTH' is Earth-Moon barycenter and 'MOON' is the
    // geocentric position of the Moon
-   const int bodies[11] = {MERCURY, VENUS,   EARTH, MARS, JUPITER, SATURN,
-                           URANUS,  NEPTUNE, PLUTO, LUNA, SOL};
+   // the order of bodies is the order of columns in block 1050
+   static int bodies[11] = {MERCURY, VENUS,   EARTH, MARS, JUPITER, SATURN,
+                            URANUS,  NEPTUNE, PLUTO, LUNA, SOL};
    for (int j = 0; j < 11; j++) {
       Iw    = bodies[j];
       Nseg  = jpl_hdr.group_1050[j][2];
@@ -6105,13 +6120,11 @@ long LoadJplEphems(char EphemPath[128], double JD)
    }
 
    /* Specific Earth-Moon Mass Ratio and AU  Definitions */
-   /* These values are the exact values from the associated
-      header.DE421, header.DE424, etc files  */
-   EMRAT = getJPL1041Data(&jpl_hdr, "EMRAT"); // Earth/Moon Mass Ratio
-   AU    = getJPL1041Data(&jpl_hdr, "AU");    // Kilometers per 1 AU
+   EMRAT = getDEHeader1041Data(&jpl_hdr, "EMRAT"); // Earth/Moon Mass Ratio
+   AU    = getDEHeader1041Data(&jpl_hdr, "AU");    // Kilometers per 1 AU
 
    // Conversion of GM from AU^3/day^2 to m^3/s^2 using DE appropriate values
-   AUd2ms = (pow(AU, 3) / pow(86400, 2)) * 1.0e9;
+   AUd2ms = (ipow(AU, 3) / ipow(86400.0, 2)) * 1.0e9;
 
    return (0);
 }
@@ -6399,19 +6412,53 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3],
    }
 }
 /**********************************************************************/
-void UpdateMeanEphems(void)
+long UpdateEphems(const ephemType ephem, const double JD_TDB,
+                  const JPLHeaderType *jpl_hdr, struct WorldType *const worlds)
 {
+   switch (ephem) {
+      case EPH_MEAN: {
+         UpdateMeanEphems();
+      } break;
+      case EPH_DE430:
+      case EPH_DE440:
+      case EPH_DE421:
+      case EPH_DE424:
+      case EPH_GMAT421:
+      case EPH_GMAT424: {
+         UpdateJplEphems();
+      } break;
+      case EPH_SPICE: {
+#ifdef _ENABLE_SPICE_
+         const double j2000sec = jd2j2000sec(JD_TDB);
+         UpdateSpiceEphems(j2000sec);
+#endif
+      } break;
+      default:
+         fprintf(stderr, "Uknown Ephem Type. Exiting...\n");
+         exit(EXIT_FAILURE);
+         // return 0;  ?
+   }
+   /* .. Other planets' moons */
+   if (EphemOption != EPH_SPICE)
+      UpdateNonEphemMoons();
+   return 1;
+}
+/**********************************************************************/
+void UpdateMeanEphems(const double JD, struct WorldType *const worlds)
+{
+   // TODO: JD IS UTC HERE
    struct OrbitType *Eph;
    struct WorldType *W;
-   double GMST = JD2GMST(UTC.JulDay);
+   const double GMST     = JD2GMST(JD);
+   const double j2000sec = JDToTime(JD); // UTC!!
    double r1[3], rh[3], vh[3];
-   double ZAxis[3] = {0.0, 0.0, 1.0};
+   const double ZAxis[3] = {0.0, 0.0, 1.0};
    long j, Ip;
    double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
 
    for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
-      if (World[Ip].Exists) {
-         W = &World[Ip];
+      if (worlds[Ip].Exists) {
+         W = &worlds[Ip];
          /* Call PlanetEphemerides again only for
             ridiculously high accuracy or rather long sims (years) */
          /*PlanetEphemerides(i,JulDay,... */
@@ -6426,8 +6473,8 @@ void UpdateMeanEphems(void)
          SimpRot(ZAxis, W->PriMerAng, W->CWN);
       }
    }
-   if (World[LUNA].Exists) {
-      Eph = &World[LUNA].eph;
+   if (worlds[LUNA].Exists) {
+      Eph = &worlds[LUNA].eph;
       /* Meeus computes Luna Position in geocentric ecliptic */
       LunaPosition(TT.JulDay, rh);
       LunaPosition(TT.JulDay + 0.01, r1);
@@ -7324,7 +7371,7 @@ void InitSim(int argc, char **argv)
       fprintf(stderr, "Could not find Ephemeris Type in Inp_Sim. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   EphemOption = DecodeString(response);
+   EphemOption = GetEphemType(response);
 #ifndef _ENABLE_SPICE_
    if (EphemOption == EPH_SPICE) {
       fprintf(stderr, "You must compile DeepThought with SPICE in order to use "
@@ -7439,16 +7486,27 @@ void InitSim(int argc, char **argv)
    TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
    /* Preload Ephemeris Kernels/Definitions */
-   if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 ||
-       EphemOption == EPH_DE430 || EphemOption == EPH_DE440 ||
-       EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      LoadJplEphems(ModelPath, TDB.JulDay);
-   }
+   switch (EphemOption) {
+      case EPH_MEAN: // No Ephem to Load
+         break;
+      case EPH_DE430:
+      case EPH_DE440:
+      case EPH_DE421:
+      case EPH_DE424:
+      case EPH_GMAT421:
+      case EPH_GMAT424:
+         LoadJplEphems(ModelPath, TDB.JulDay);
+         break;
+      case EPH_SPICE:
 #ifdef _ENABLE_SPICE_
-   else if (EphemOption == EPH_SPICE)
-      LoadSpiceKernels(ModelPath); // Load SPICE to get SPICE-provided
-                                   // values for mu, J2, etc
+         // Load SPICE to get SPICE-provided values for mu, J2, etc
+         LoadSpiceKernels(ModelPath);
 #endif
+         break;
+      default:
+         fprintf(stderr, "Unknown Ephem Type. Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
 
    /* .. Load Sun and Planets */
    LoadSun();

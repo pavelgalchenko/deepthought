@@ -248,19 +248,23 @@ void InitSpacecraft(struct SCType *S);
 void LoadPlanets(void);
 /* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
 long LoadSpiceKernels(char SpicePath[80]);
+/* handler to determine which Update*Ephems() subfunction to call */
+long UpdateEphems(const ephemType ephem, const double JD_TDB,
+                  const JPLHeaderType *jpl_hdr, struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using SPICE*/
-long UpdateSpiceEphems(double JS);
+long UpdateSpiceEphems(double JS, struct WorldType *const worlds);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
-long LoadJplEphems(char EphemPath[128], double JD);
+long LoadJplEphems(char EphemPath[128], double JD,
+                   struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
-void UpdateJplEphems(void);
+long UpdateJplEphems(struct WorldType *const worlds);
 /* Update celestial body locations using MEAN method */
-void UpdateMeanEphems(void);
+long UpdateMeanEphems(struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
-void UpdateMinorBodies(void);
+long UpdateMinorBodies(const double JD, struct WorldType *const worlds);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
-void UpdateNonEphemMoons(void);
+long UpdateNonEphemMoons(struct WorldType *const worlds);
 long DecodeString(char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);

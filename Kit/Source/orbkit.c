@@ -810,6 +810,8 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 /*  "Astronomical Algorithms" QB51.3.E43 M42, 1998.                  */
 void LunaPosition(double JD, double r[3])
 {
+   // dug a bit through Astronomical Algorithmsm,
+   // JD is Terrestrial Dynamical Time here...
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;

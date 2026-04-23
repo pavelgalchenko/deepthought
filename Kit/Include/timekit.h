@@ -60,6 +60,28 @@ typedef uint16_t ccsdsFine;
 ** #endif
 */
 
+typedef enum {
+   UTC_TIME = 0, // Coordinated Universal Time
+   TAI_TIME,     // International Atomic Time
+   TBD_TIME,     // Barycentric Dynamical Time
+   TDT_TIME,     // Terrestrial Dynamical Time, aka Terrestrial Time (TT)
+   // TODO: add TT(BIPM)?
+} TimeSystem;
+
+// some strict typing to enforce correct timing interpretation
+typedef struct {
+   // Julian day
+   TimeSystem system;
+   double data;
+   double epoch;
+   // epoch is 0.0 for typical Julian day, will typically be 2430000.0 for
+   // GMAT-like modified Julian Day
+} JDType;
+typedef struct {
+   // Seconds since J2000 epoch, TT
+   double data;
+} J2000SecType;
+
 struct DateType {
    double MJD;
    double JulDay;
@@ -73,6 +95,12 @@ struct DateType {
    double Second;
 };
 
+JDType JDUTC(const JDType jd);
+JDType JDTAI(const JDType jd);
+JDType JDTBD(const JDType jd);
+JDType JDTDT(const JDType jd);
+
+double TDB_JDtoTT(double TDB_JD);
 double TTtoTDB_JD(double SecSinceJ2000);
 double TTtoTDB_Time(double SecSinceJ2000);
 double JDToMJD(double JD);

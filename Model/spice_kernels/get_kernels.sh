@@ -75,7 +75,7 @@ for i in $planetary_constants_kernels; do
         case "${unameOut}" in
             Darwin*)sed_cmd="sed -i '' ";;
             Linux*)sed_cmd="sed -i ";;
-            *) echo "Unknown output for uname -s: $unameSOut"
+            *) echo "Unknown output for uname -s: $unameOut"
         esac
         eval "${sed_cmd} '82s/[ \\]*begindata/      \\\begindata /' pck/${i}"
     fi
