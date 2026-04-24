@@ -32,6 +32,7 @@
 #include "fswkit.h"
 #include "geomkit.h"
 #include "iokit.h"
+#include "jdkit.h"
 #include "mathkit.h"
 #include "orbkit.h"
 #include "sigkit.h"
@@ -108,9 +109,9 @@ EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;  /* UTC = TAI - LeapSec */
 EXTERN double GpsTime;    /* GPS Time = TAI - 19.0 sec */
-EXTERN DateType TDB; /* Barycentric Dynamical Time */
-EXTERN DateType TT;  /* Terrestrial Dynamical Time */
-EXTERN DateType UTC; /* Universal Time Coordinated */
+EXTERN DateType TDB;      /* Barycentric Dynamical Time */
+EXTERN DateType TT;       /* Terrestrial Dynamical Time */
+EXTERN DateType UTC;      /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
 

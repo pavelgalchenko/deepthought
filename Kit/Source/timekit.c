@@ -18,164 +18,6 @@
 ** #endif
 */
 
-#define __J2000_EPOCH_TT        (2451545.0)
-#define __JD_EPOCH_TT           (0.0)
-#define __MJD_EPOCH_TT          (2430000.0)
-#define __DATE_JD_CONV_EPOCH_TT (1721013.5) // used in GD to JD TT conversion
-
-#define sec_per_day   86400.0;
-#define day_tt2tai(x) (x) - (32.184) / sec_per_day
-#define day_tai2tt(x) (x) + (32.184) / sec_per_day
-
-static double jd_tdb2tt(const JDType tdb_jd)
-{
-   return 0;
-}
-
-JDType jd2mjd(const JDType jd)
-{
-   JDType mjd = JDTT(jd); // change to TT first
-}
-
-static double _tt2tdb(const double tt, const double epoch)
-{
-   // TODO: use spice instead if available?
-   double T_TT, m_E, deltaTDB, JD_TDB;
-   static double TDB_COEFF1             = 0.00165;
-   static double TDB_COEFF2             = 0.00001385;
-   static double M_E_OFFSET             = 357.5277233;
-   static double M_E_COEFF1             = 35999.05034;
-   static double DAY_PER_JULIAN_CENTURY = 36525.0;
-
-   // TODO: How do epochs change as time systems change?
-   const double epoch_diff = epoch - __J2000_EPOCH_TT;
-
-   T_TT     = (tt + epoch_diff) / DAY_PER_JULIAN_CENTURY;
-   m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
-   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
-   return (tt + deltaTDB);
-}
-
-static JDType jd_tt2tdb(const JDType tt_jd)
-{
-   JDType jd_out = tt_jd;
-   jd_out.data   = _tt2tdb(jd_out.data, jd_out.epoch);
-
-   jd_out.system = TDB_TIME;
-   return (jd_out);
-}
-
-static double jd_utc2tai(const JDType utc_jd)
-{
-   // TODO: leap seconds :(
-   // maybe use GMAT's leap seconds file?
-   return 0;
-}
-static double jd_tai2utc(const JDType utc_jd)
-{
-   // TODO: leap seconds :(
-   // maybe use GMAT's leap seconds file?
-   return 0;
-}
-
-// Make sure that we covered everything EXPLICITLY
-#pragma GCC diagnostic push
-#pragma GCC diagnostic error "-Wswitch"
-#pragma GCC diagnostic error "-Wswitch-enum"
-JDType JDUTC(const JDType jd)
-{
-   double leapseconds = 0;
-   JDType jd_out      = jd;
-   switch (jd.system) {
-      case TDB_TIME:
-         jd_out.data = jd_tdb2tt(jd_out);
-      case TT_TIME:
-         jd_out.data = day_tt2tai(jd_out.data);
-      case TAI_TIME:
-         jd_out.data = jd_tai2utc(jd_out);
-         break;
-      case UTC_TIME:
-         break;
-   }
-   jd_out.system = UTC_TIME;
-   return jd_out;
-}
-JDType JDTAI(const JDType jd)
-{
-   JDType jd_out = jd;
-   switch (jd.system) {
-      case UTC_TIME: {
-         jd_out.data = jd_utc2tai(jd_out);
-      } break;
-      case TDB_TIME:
-         jd_out.data = jd_tdb2tt(jd_out);
-      case TT_TIME:
-         jd_out.data = day_tt2tai(jd_out.data);
-      case TAI_TIME:
-         break;
-   }
-   jd_out.system = TAI_TIME;
-   return jd_out;
-}
-JDType JDTCB(const JDType jd)
-{
-   JDType jd_out = jd;
-   switch (jd.system) {
-      case UTC_TIME:
-         jd_out.data = jd_utc2tai(jd_out);
-      case TAI_TIME:
-         jd_out.data = day_tai2tt(jd_out.data);
-      case TT_TIME:
-         jd_out.data = jd_tt2tdb(jd_out);
-         break;
-      case TDB_TIME:
-         break;
-   }
-   jd_out.system = TDB_TIME;
-   return jd_out;
-}
-JDType JDTDB(const JDType jd)
-{
-   JDType jd_out = jd;
-   switch (jd.system) {
-      case UTC_TIME:
-         jd_out.data = jd_utc2tai(jd_out);
-      case TAI_TIME:
-         jd_out.data = day_tai2tt(jd_out.data);
-      case TT_TIME:
-         jd_out = jd_tt2tdb(jd_out);
-         break;
-      case TDB_TIME:
-         break;
-   }
-   jd_out.system = TDB_TIME;
-   return jd_out;
-}
-JDType JDTT(const JDType jd)
-{
-   JDType jd_out = jd;
-   switch (jd.system) {
-      case UTC_TIME:
-         jd_out.data = jd_utc2tai(jd_out);
-      case TAI_TIME:
-         jd_out.data = day_tai2tt(jd_out.data);
-         break;
-      case TDB_TIME: {
-         jd_out.data = jd_tdb2tt(jd_out);
-      } break;
-      case TT_TIME:
-         break;
-   }
-   jd_out.system = TT_TIME;
-   return jd_out;
-}
-#pragma GCC diagnostic pop
-#undef tdt2tdb
-#undef tdb2tdt
-#undef sec_per_day
-// #undef __J2000_EPOCH_TT // maybe don't undef and move to the header?
-// #undef __MJD_EPOCH_TT   // maybe don't undef and move to the header?
-
 double TTtoTDB_JD(double SecSinceJ2000)
 {
    double T_TT, m_E, deltaTDB, JD_TDB;
@@ -227,31 +69,21 @@ static void _date2jd(const DateType date, JDType *const jd)
    const long b = 7.0 * (Y + floor((M + 9.0) / 12.0)) / 4.0;
    const long c = 275.0 * M / 9.0;
 
-   const double pod = ((s / 60.0 + m) / 60.0 + H) / 24.0;
-   const long jday  = a - b + c + D + (__DATE_JD_CONV_EPOCH_TT - jd->epoch);
-   jd->data         = jday + pod;
+   long epoch_diff_l   = 0;
+   double epoch_diff_d = 0.0;
+   _epoch_diff_tt(jd->epoch, GD_CONV_EPOCH, &epoch_diff_l, &epoch_diff_d);
+
+   const double pod = ((s / 60.0 + m) / 60.0 + H) / 24.0 + epoch_diff_d;
+   const long jday  = a - b + c + D + epoch_diff_l;
+   jd->day          = (double)jday + pod;
    jd->system       = TT_TIME;
 }
-JDType Date2MJD(const DateType date)
-{
-   JDType mjd = {0};
-   mjd.epoch  = __MJD_EPOCH_TT;
-   _date2jd(date, &mjd);
-   return mjd;
-}
-JDType Date2JD(const DateType date)
+JDType Date2JD(const DateType date, const Epoch epoch)
 {
    JDType jd = {0};
-   jd.epoch  = __JD_EPOCH_TT;
+   jd.epoch  = epoch;
    _date2jd(date, &jd);
    return jd;
-}
-JDType Date2J2000D(const DateType date)
-{
-   JDType j2000d = {0};
-   j2000d.epoch  = __J2000_EPOCH_TT;
-   _date2jd(date, &j2000d);
-   return j2000d;
 }
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */

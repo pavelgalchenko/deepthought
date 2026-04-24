@@ -41,6 +41,7 @@ set(KIT_SOURCES
     ${KIT}/radbeltkit.c
     ${KIT}/sigkit.c
     ${KIT}/sphkit.c
+    ${KIT}/jdkit.c
     ${KIT}/timekit.c
     ${KIT}/docoptkit.c
     ${KIT}/dsmkit.c

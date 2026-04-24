@@ -15,6 +15,7 @@
 #define __TIMEKIT_H__
 
 #include "42constants.h"
+#include "jdkit.h"
 #include <math.h>
 #include <stdint.h>
 #if defined(_WIN32)
@@ -31,7 +32,7 @@
 /***************************** CCSDS CONFIGURATION ****************************/
 // TODO: 24 bit words for Coarse and Fine time fields; 0 bit field for fine
 #define CCSDS_COARSE_TIME_BYTES 4 // 1, 2, or 4 bytes long
-#define CCSDS_FINE_TIME_BYTES   2 // 1, or 2 bytes long
+#define CCSDS_FINE_TIME_BYTES   2 // 1 or 2 bytes long
 
 #if CCSDS_COARSE_TIME_BYTES == 1
 typedef uint8_t ccsdsCoarse;
@@ -59,34 +60,6 @@ typedef uint16_t ccsdsFine;
 ** namespace Kit {
 ** #endif
 */
-/**********************************************************************/
-/**********************************************************************/
-// NOTE: IN THIS CODE,
-//    'MJD' USES EPOCH GD 05 Jan 1941 12:00:00.000 (JD 2,430,000.0 TT)
-/**********************************************************************/
-/**********************************************************************/
-
-typedef enum {
-   UTC_TIME = 0, // Coordinated Universal Time
-   TAI_TIME,     // International Atomic Time
-   TCB_TIME,     // Barycentric Coordinate Time
-   TDB_TIME,     // Barycentric Dynamical Time
-   TT_TIME,      // Terrestrial Time
-   // TODO: add TT(BIPM)? others?
-} TimeSystem;
-
-// some strict typing to enforce correct timing interpretation
-typedef struct {
-   // Julian day
-   TimeSystem system;
-   double data;
-   double epoch; // TODO: enforce epoch as TT?
-   // Typical values for epoch are:
-   //    - 0.0 TT for typical Julian Day
-   //    - 2,430,000.0 TT for GMAT-like modified Julian Day
-   //    - 2,451,545.0 TT for J2000 epoch
-   // Epoch epoch; ?
-} JDType;
 
 typedef struct {
    // TODO: treat all `DateType`s as being Gregorian Dates?
@@ -102,12 +75,6 @@ typedef struct {
    long Minute;
    double Second;
 } DateType;
-
-JDType JDUTC(const JDType jd);
-JDType JDTAI(const JDType jd);
-JDType JDTCB(const JDType jd);
-JDType JDTDB(const JDType jd);
-JDType JDTT(const JDType jd);
 
 // double TDB_JDtoTT(double TDB_JD);
 double TTtoTDB_JD(double SecSinceJ2000);
