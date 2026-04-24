@@ -96,9 +96,9 @@ void SphericalHarmGravForce(const long N, const long M,
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
-void IGRFMagField(const char *ModelPath, const struct DateType UTC,
-                  const long N, const long M, const double pbn[3],
-                  const double PriMerAng, double MagVecN[3])
+void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
+                  const long M, const double pbn[3], const double PriMerAng,
+                  double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
 #define nYears 26

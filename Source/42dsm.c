@@ -3369,7 +3369,7 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    KalmanFilt(AC, DSM);
-   const struct DateType *navDate = &Nav->Date;
+   const DateType *navDate = &Nav->Date;
    DSMState->Time = DateToTime(navDate->Year, navDate->Month, navDate->Day,
                                navDate->Hour, navDate->Minute, navDate->Second);
    AC->Time       = DSMState->Time;

@@ -108,9 +108,9 @@ EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;  /* UTC = TAI - LeapSec */
 EXTERN double GpsTime;    /* GPS Time = TAI - 19.0 sec */
-EXTERN struct DateType TDB; /* Barycentric Dynamical Time */
-EXTERN struct DateType TT;  /* Terrestrial Dynamical Time */
-EXTERN struct DateType UTC; /* Universal Time Coordinated */
+EXTERN DateType TDB; /* Barycentric Dynamical Time */
+EXTERN DateType TT;  /* Terrestrial Dynamical Time */
+EXTERN DateType UTC; /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
 

@@ -355,8 +355,8 @@ struct DSMNavType {
    long navSize[FIN_STATE + 1];
    long stateInd[FIN_STATE + 1];
    long navInd[FIN_STATE + 1];
-   struct DateType Date0;
-   struct DateType Date;
+   DateType Date0;
+   DateType Date;
    double DT;
    double **P; // Estimation Error Covariance
    double **S; // Lower-triangular Cholesky factorization of P
@@ -391,7 +391,7 @@ struct DSMNavType {
    double **M;        // dynamics noise mapping matrix
    double *sqrQ;      // Diagonal elements of noise covariance
    void (*EOMJacobianFun)(struct AcType *const, struct DSMType *const,
-                          const struct DateType *, double const[3][3],
+                          const DateType *, double const[3][3],
                           double const[4], double const[3], double const[3],
                           double const[3], double const[], const double);
    void (*updateLaw)(struct DSMNavType *const);

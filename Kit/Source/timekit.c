@@ -18,112 +18,164 @@
 ** #endif
 */
 
-static double jd_tdb2tdt(const double tdb_jd)
+#define __J2000_EPOCH_TT        (2451545.0)
+#define __JD_EPOCH_TT           (0.0)
+#define __MJD_EPOCH_TT          (2430000.0)
+#define __DATE_JD_CONV_EPOCH_TT (1721013.5) // used in GD to JD TT conversion
+
+#define sec_per_day   86400.0;
+#define day_tt2tai(x) (x) - (32.184) / sec_per_day
+#define day_tai2tt(x) (x) + (32.184) / sec_per_day
+
+static double jd_tdb2tt(const JDType tdb_jd)
 {
    return 0;
 }
 
-static double jd_tdt2tdb(const double tdt_jd)
+JDType jd2mjd(const JDType jd)
 {
+   JDType mjd = JDTT(jd); // change to TT first
+}
+
+static double _tt2tdb(const double tt, const double epoch)
+{
+   // TODO: use spice instead if available?
+   double T_TT, m_E, deltaTDB, JD_TDB;
+   static double TDB_COEFF1             = 0.00165;
+   static double TDB_COEFF2             = 0.00001385;
+   static double M_E_OFFSET             = 357.5277233;
+   static double M_E_COEFF1             = 35999.05034;
+   static double DAY_PER_JULIAN_CENTURY = 36525.0;
+
+   // TODO: How do epochs change as time systems change?
+   const double epoch_diff = epoch - __J2000_EPOCH_TT;
+
+   T_TT     = (tt + epoch_diff) / DAY_PER_JULIAN_CENTURY;
+   m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
+   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
+   return (tt + deltaTDB);
+}
+
+static JDType jd_tt2tdb(const JDType tt_jd)
+{
+   JDType jd_out = tt_jd;
+   jd_out.data   = _tt2tdb(jd_out.data, jd_out.epoch);
+
+   jd_out.system = TDB_TIME;
+   return (jd_out);
+}
+
+static double jd_utc2tai(const JDType utc_jd)
+{
+   // TODO: leap seconds :(
+   // maybe use GMAT's leap seconds file?
+   return 0;
+}
+static double jd_tai2utc(const JDType utc_jd)
+{
+   // TODO: leap seconds :(
+   // maybe use GMAT's leap seconds file?
    return 0;
 }
 
-#define sec_per_day (86400.0)
-#define tdt2tai(x)  (x) -= (32.184) / sec_per_day
-#define tai2tdt(x)  (x) += (32.184) / sec_per_day
+// Make sure that we covered everything EXPLICITLY
+#pragma GCC diagnostic push
+#pragma GCC diagnostic error "-Wswitch"
+#pragma GCC diagnostic error "-Wswitch-enum"
 JDType JDUTC(const JDType jd)
 {
-   JDType jd_out = jd;
-   jd_out.system = UTC_TIME;
-   // TODO: leap seconds :(
+   double leapseconds = 0;
+   JDType jd_out      = jd;
    switch (jd.system) {
-      case TAI_TIME: {
-      } break;
-      case TBD_TIME: {
-      } break;
-      case TDT_TIME: {
-      } break;
-      default:
+      case TDB_TIME:
+         jd_out.data = jd_tdb2tt(jd_out);
+      case TT_TIME:
+         jd_out.data = day_tt2tai(jd_out.data);
+      case TAI_TIME:
+         jd_out.data = jd_tai2utc(jd_out);
+         break;
+      case UTC_TIME:
          break;
    }
+   jd_out.system = UTC_TIME;
    return jd_out;
 }
 JDType JDTAI(const JDType jd)
 {
    JDType jd_out = jd;
-   jd_out.system = TAI_TIME;
    switch (jd.system) {
       case UTC_TIME: {
-         // TODO: leap seconds :(
+         jd_out.data = jd_utc2tai(jd_out);
       } break;
-      case TBD_TIME:
-         jd_out.data = jd_tdb2tdt(jd.data);
-      case TDT_TIME:
-         tdt2tai(jd_out.data);
-         break;
-      default:
-         break;
-   }
-   return jd_out;
-}
-JDType JDTBD(const JDType jd)
-{
-   JDType jd_out = jd;
-   jd_out.system = TBD_TIME;
-   switch (jd.system) {
-      case UTC_TIME: {
-         // TODO: leap seconds :(
-      } break;
+      case TDB_TIME:
+         jd_out.data = jd_tdb2tt(jd_out);
+      case TT_TIME:
+         jd_out.data = day_tt2tai(jd_out.data);
       case TAI_TIME:
-         tai2tdt(jd_out.data);
-      case TDT_TIME: {
-         jd_out.data = jd_tdb2tdt(jd.data);
-      } break;
-      default:
          break;
    }
+   jd_out.system = TAI_TIME;
    return jd_out;
 }
-JDType JDTDT(const JDType jd)
+JDType JDTCB(const JDType jd)
 {
    JDType jd_out = jd;
-   jd_out.system = TDT_TIME;
    switch (jd.system) {
-      case UTC_TIME: {
-         // TODO: leap seconds :(
-      } break;
-      case TAI_TIME: {
-         tai2tdt(jd_out.data);
-      } break;
-      case TBD_TIME: {
-         jd_out.data = jd_tdb2tdt(jd.data);
-      } break;
-      default:
+      case UTC_TIME:
+         jd_out.data = jd_utc2tai(jd_out);
+      case TAI_TIME:
+         jd_out.data = day_tai2tt(jd_out.data);
+      case TT_TIME:
+         jd_out.data = jd_tt2tdb(jd_out);
+         break;
+      case TDB_TIME:
          break;
    }
+   jd_out.system = TDB_TIME;
    return jd_out;
 }
+JDType JDTDB(const JDType jd)
+{
+   JDType jd_out = jd;
+   switch (jd.system) {
+      case UTC_TIME:
+         jd_out.data = jd_utc2tai(jd_out);
+      case TAI_TIME:
+         jd_out.data = day_tai2tt(jd_out.data);
+      case TT_TIME:
+         jd_out = jd_tt2tdb(jd_out);
+         break;
+      case TDB_TIME:
+         break;
+   }
+   jd_out.system = TDB_TIME;
+   return jd_out;
+}
+JDType JDTT(const JDType jd)
+{
+   JDType jd_out = jd;
+   switch (jd.system) {
+      case UTC_TIME:
+         jd_out.data = jd_utc2tai(jd_out);
+      case TAI_TIME:
+         jd_out.data = day_tai2tt(jd_out.data);
+         break;
+      case TDB_TIME: {
+         jd_out.data = jd_tdb2tt(jd_out);
+      } break;
+      case TT_TIME:
+         break;
+   }
+   jd_out.system = TT_TIME;
+   return jd_out;
+}
+#pragma GCC diagnostic pop
 #undef tdt2tdb
 #undef tdb2tdt
 #undef sec_per_day
+// #undef __J2000_EPOCH_TT // maybe don't undef and move to the header?
+// #undef __MJD_EPOCH_TT   // maybe don't undef and move to the header?
 
-// double TDB_JDtoTT(double TDB_JD)
-// {
-//    double T_TT, m_E, deltaTDB, JD_TDB;
-//    double TDB_COEFF1             = 0.00165;
-//    double TDB_COEFF2             = 0.00001385;
-//    double M_E_OFFSET             = 357.5277233;
-//    double M_E_COEFF1             = 35999.05034;
-//    double SEC_PER_JULIAN_CENTURY = 3155760000.00;
-
-//    T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
-
-//    m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
-//    deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
-//    JD_TDB   = (SecSinceJ2000 + deltaTDB) / 86400.0 + 2451545.0;
-
-//    return (JD_TDB);
-// }
 double TTtoTDB_JD(double SecSinceJ2000)
 {
    double T_TT, m_E, deltaTDB, JD_TDB;
@@ -157,6 +209,49 @@ double TTtoTDB_Time(double SecSinceJ2000)
    time_TDB = SecSinceJ2000 + deltaTDB;
 
    return (time_TDB);
+}
+/**********************************************************************/
+/*    ignores date.JD                                                 */
+/*    GMAT Math Spec 2026, page 12                                    */
+static void _date2jd(const DateType date, JDType *const jd)
+{
+   // helper function for other converters
+   const double Y = date.Year;
+   const double M = date.Month;
+   const double D = date.Day;
+   const double H = date.Hour;
+   const double m = date.Minute;
+   const double s = date.Second;
+
+   const long a = 367 * Y;
+   const long b = 7.0 * (Y + floor((M + 9.0) / 12.0)) / 4.0;
+   const long c = 275.0 * M / 9.0;
+
+   const double pod = ((s / 60.0 + m) / 60.0 + H) / 24.0;
+   const long jday  = a - b + c + D + (__DATE_JD_CONV_EPOCH_TT - jd->epoch);
+   jd->data         = jday + pod;
+   jd->system       = TT_TIME;
+}
+JDType Date2MJD(const DateType date)
+{
+   JDType mjd = {0};
+   mjd.epoch  = __MJD_EPOCH_TT;
+   _date2jd(date, &mjd);
+   return mjd;
+}
+JDType Date2JD(const DateType date)
+{
+   JDType jd = {0};
+   jd.epoch  = __JD_EPOCH_TT;
+   _date2jd(date, &jd);
+   return jd;
+}
+JDType Date2J2000D(const DateType date)
+{
+   JDType j2000d = {0};
+   j2000d.epoch  = __J2000_EPOCH_TT;
+   _date2jd(date, &j2000d);
+   return j2000d;
 }
 /**********************************************************************/
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
@@ -265,7 +360,7 @@ double MJDToJD(double MJD)
 /**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
 /* midnight, Jan 1st, 1958                                            */
-void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,
+void DateToCCSDS(DateType date, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds)
 {
    const long Year     = date.Year;
@@ -288,7 +383,7 @@ void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,
 void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds)
 {
-   struct DateType date;
+   DateType date;
    const double LSB = CCSDS_STEP_SIZE;
    TimeToDate(UTC, &date.Year, &date.Month, &date.Day, &date.Hour, &date.Minute,
               &date.Second, LSB);
@@ -298,7 +393,7 @@ void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
 /* Convert CCSDS Seconds and Subseconds to UTC Date with epoch        */
 /* midnight, Jan 1st, 1958                                            */
 void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
-                 struct DateType *date)
+                 DateType *date)
 {
    const double epoch     = DateToJD(1958, 1, 1, 0, 0, 0);
    const double ccsdsStep = CCSDS_STEP_SIZE;
@@ -649,7 +744,7 @@ double RealRunTime(double *RealTimeDT, double LSB)
    return (RunTime);
 }
 
-void updateTime(struct DateType *Time, const double dSeconds)
+void updateTime(DateType *Time, const double dSeconds)
 {
    if (fabs(dSeconds) > 0.0) {
       Time->Second  += dSeconds;

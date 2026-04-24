@@ -238,7 +238,7 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
 /**********************************************************************/
 /* Given a time in seconds since J2000 TT, find the Prime Meridian    */
 /* offset angle of a given world.                                     */
-double GetPriMerAng(const long orbCenter, const struct DateType *date)
+double GetPriMerAng(const long orbCenter, const DateType *date)
 {
    // TODO: change for spice
    struct WorldType *W = &World[orbCenter];
@@ -253,7 +253,7 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
             PriMerAng = W->PriMerAngJ2000 + W->w * time;
          }
          else {
-            struct DateType dateUTC = *date;
+            DateType dateUTC = *date;
             updateTime(&dateUTC, -(32.184 + LeapSec));
             PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
          }
@@ -480,7 +480,7 @@ void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3])
       accel[j] = mu * (s[j] / s3 - p[j] / p3);
 }
 
-void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
+void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
                       const double PosR[3], const double mass,
                       const struct OrbitType *O, double VelRdot[3])
 {
@@ -565,7 +565,7 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
    }
 }
 
-void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
+void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
                            double PosR[3], struct OrbitType const *O,
                            double dGravDPos[3][3])
 {
@@ -1426,7 +1426,7 @@ void getEarthAtmoParams(const double JD, double *NavFlux10p7,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, const double CRB[3][3],
+                         const DateType *date, const double CRB[3][3],
                          const double qbr[4], const double PosR[3],
                          const double VelR[3], const double wbr[3],
                          const double whlH[AC->Nwhl], const double AtmoDensity)
@@ -1841,7 +1841,7 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, const double CRB[3][3],
+                         const DateType *date, const double CRB[3][3],
                          const double qbr[4], const double PosR[3],
                          const double VelR[3], const double wbr[3],
                          const double whlH[AC->Nwhl], const double AtmoDensity)
@@ -2222,7 +2222,7 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const struct DateType *date, const double CRB[3][3],
+                        const DateType *date, const double CRB[3][3],
                         const double qbr[4], const double PosR[3],
                         const double VelR[3], const double wbr[3],
                         const double whlH[AC->Nwhl], const double AtmoDensity)
@@ -2826,11 +2826,11 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
 }
 
 void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
-             const struct DateType *date, const double CRB[3][3],
-             const double qbr[4], const double PosR[3], const double VelR[3],
-             const double wbr[3], const double *whlH, double CRBdot[3][3],
-             double qbrdot[4], double PosRdot[3], double VelRdot[3],
-             double wbrdot[3], double *whlHdot, const double AtmoDensity)
+             const DateType *date, const double CRB[3][3], const double qbr[4],
+             const double PosR[3], const double VelR[3], const double wbr[3],
+             const double *whlH, double CRBdot[3][3], double qbrdot[4],
+             double PosRdot[3], double VelRdot[3], double wbrdot[3],
+             double *whlHdot, const double AtmoDensity)
 {
    long i, j, iState;
 
@@ -3059,7 +3059,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    const double rkScale[ORDRK] = {DT};
 #endif
    for (k = 0; k < ORDRK; k++) {
-      struct DateType date = Nav->Date;
+      DateType date = Nav->Date;
       updateTime(&date, dateOffset + DTk[k]);
       Nav->refLerpAlpha = lerpAlphaState;
       dLerpAlpha        = DTk[k] / Nav->DT;

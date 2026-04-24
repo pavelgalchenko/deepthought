@@ -59,13 +59,20 @@ typedef uint16_t ccsdsFine;
 ** namespace Kit {
 ** #endif
 */
+/**********************************************************************/
+/**********************************************************************/
+// NOTE: IN THIS CODE,
+//    'MJD' USES EPOCH GD 05 Jan 1941 12:00:00.000 (JD 2,430,000.0 TT)
+/**********************************************************************/
+/**********************************************************************/
 
 typedef enum {
    UTC_TIME = 0, // Coordinated Universal Time
    TAI_TIME,     // International Atomic Time
-   TBD_TIME,     // Barycentric Dynamical Time
-   TDT_TIME,     // Terrestrial Dynamical Time, aka Terrestrial Time (TT)
-   // TODO: add TT(BIPM)?
+   TCB_TIME,     // Barycentric Coordinate Time
+   TDB_TIME,     // Barycentric Dynamical Time
+   TT_TIME,      // Terrestrial Time
+   // TODO: add TT(BIPM)? others?
 } TimeSystem;
 
 // some strict typing to enforce correct timing interpretation
@@ -73,18 +80,19 @@ typedef struct {
    // Julian day
    TimeSystem system;
    double data;
-   double epoch;
-   // epoch is 0.0 for typical Julian day, will typically be 2430000.0 for
-   // GMAT-like modified Julian Day
+   double epoch; // TODO: enforce epoch as TT?
+   // Typical values for epoch are:
+   //    - 0.0 TT for typical Julian Day
+   //    - 2,430,000.0 TT for GMAT-like modified Julian Day
+   //    - 2,451,545.0 TT for J2000 epoch
+   // Epoch epoch; ?
 } JDType;
-typedef struct {
-   // Seconds since J2000 epoch, TT
-   double data;
-} J2000SecType;
 
-struct DateType {
-   double MJD;
-   double JulDay;
+typedef struct {
+   // TODO: treat all `DateType`s as being Gregorian Dates?
+   JDType JD;
+   // double MJD;
+   // double JulDay;
    double tdbTime;
    long Year;
    long Month;
@@ -93,32 +101,33 @@ struct DateType {
    long Hour;
    long Minute;
    double Second;
-};
+} DateType;
 
 JDType JDUTC(const JDType jd);
 JDType JDTAI(const JDType jd);
-JDType JDTBD(const JDType jd);
-JDType JDTDT(const JDType jd);
+JDType JDTCB(const JDType jd);
+JDType JDTDB(const JDType jd);
+JDType JDTT(const JDType jd);
 
-double TDB_JDtoTT(double TDB_JD);
+// double TDB_JDtoTT(double TDB_JD);
 double TTtoTDB_JD(double SecSinceJ2000);
 double TTtoTDB_Time(double SecSinceJ2000);
-double JDToMJD(double JD);
-double MJDToJD(double MJD);
-double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
-                 double Second);
+// double JDToMJD(double JD);
+// double MJDToJD(double MJD);
+// double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
+//                  double Second);
 double TimeToJD(double Time);
 double JDToTime(double JD);
 double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
                   double Second);
 double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
                 double Second);
-void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,
+void DateToCCSDS(DateType date, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds);
 void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds);
 void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
-                 struct DateType *date);
+                 DateType *date);
 double CCSDSAdd(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
                 const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
 double CCSDSSub(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
@@ -137,7 +146,7 @@ double usec(void);
 void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
                     long *Minute, double *Second, double LSB);
 double RealRunTime(double *RealTimeDT, double LSB);
-void updateTime(struct DateType *Time, const double dSeconds);
+void updateTime(DateType *Time, const double dSeconds);
 
 /*
 ** #ifdef __cplusplus

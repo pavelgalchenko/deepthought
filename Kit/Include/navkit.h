@@ -104,7 +104,7 @@ double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, double const CRB[3][3],
+                         const DateType *date, double const CRB[3][3],
                          double const qbr[4], double const PosR[3],
                          double const VelR[3], double const wbr[3],
                          double const whlH[AC->Nwhl], const double AtmoDensity);
@@ -115,7 +115,7 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, double const CRB[3][3],
+                         const DateType *date, double const CRB[3][3],
                          double const qbr[4], double const PosR[3],
                          double const VelR[3], double const wbr[3],
                          double const whlH[AC->Nwhl], const double AtmoDensity);
@@ -126,7 +126,7 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const struct DateType *date, double const CRB[3][3],
+                        const DateType *date, double const CRB[3][3],
                         double const qbr[4], double const PosR[3],
                         double const VelR[3], double const wbr[3],
                         double const whlH[AC->Nwhl], const double AtmoDensity);
