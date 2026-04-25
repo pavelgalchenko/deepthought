@@ -29,6 +29,92 @@
 ** #endif
 */
 
+/* World Tags */
+typedef enum WorldID {
+   // TODO: maybe organize the moons to immediately follow the parent planet?
+   // for example, the moons of Jupiter would be from
+   // World[JUPITER+1] to World[SATURN-1]
+   // this would make iterating over just the planets more difficult...
+   SOL = 0,
+   MERCURY,
+   VENUS,
+   EARTH,
+   MARS,
+   JUPITER,
+   SATURN,
+   URANUS,
+   NEPTUNE,
+   PLUTO,
+   /* Moon of Earth */
+   LUNA,
+   /* Moons of Mars */
+   PHOBOS,
+   DEIMOS,
+   /* Major Moons of Jupiter */
+   IO,
+   EUROPA,
+   GANYMEDE,
+   CALLISTO,
+   AMALTHEA,
+   HIMALIA,
+   ELARA,
+   PASIPHAE,
+   SINOPE,
+   LYSITHEA,
+   CARME,
+   ANANKE,
+   LEDA,
+   THEBE,
+   ADRASTEA,
+   METIS,
+   /* Major Moons of Saturn */
+   MIMAS,
+   ENCELADUS,
+   TETHYS,
+   DIONE,
+   RHEA,
+   TITAN,
+   HYPERION,
+   IAPETUS,
+   PHOEBE,
+   JANUS,
+   EPIMETHEUS,
+   HELENE,
+   TELESTO,
+   CALYPSO,
+   ATLAS,
+   PROMETHEUS,
+   PANDORA,
+   PAN,
+   /* Major Moons of Uranus */
+   ARIEL,
+   UMBRIEL,
+   TITANIA,
+   OBERON,
+   MIRANDA,
+   /* Major Moons of Neptune */
+   TRITON,
+   NERIED,
+   /* Pluto's moon */
+   CHARON,
+   /* Minor Bodies */
+   MINORBODY_0,
+   MINORBODY_1,
+   MINORBODY_2,
+   MINORBODY_3,
+   MINORBODY_4,
+   MINORBODY_5,
+   MINORBODY_6,
+   MINORBODY_7,
+   MINORBODY_8,
+   MINORBODY_9,
+   // leave this at the end to get the count of worlds
+   NWORLD,
+} WorldID;
+// TODO: remove minor bodies from this list, make global World list dynamically
+// allocated by counting the number of minor bodies in the minorbody file. Maybe
+// make the minor body file a sim level configuration.
+
 enum orbitRegime {
    ORB_ZERO = 0,
    ORB_FLIGHT,
@@ -118,9 +204,9 @@ struct LagrangeSystemType {
 /* Chebyshev coefficients.  Used for DE430 planetary ephemerides. */
 struct Cheb3DType {
    /* Coefficients only valid for JD1 <= JulDay < JD2 */
-   double JD1;
-   double JD2;
-   long N; /* Order <= 20 */
+   double JD1; // GMAT_MJD, TDB
+   double JD2; // GMAT_MJD, TDB
+   long N;     /* Order <= 20 */
    double Coef[3][20];
 };
 
@@ -133,7 +219,7 @@ struct OrbitType {
        Epoch; /* Sec since J2000 epoch at which orbit elements are referenced */
    enum orbitRegime Regime; /* ZERO, FLIGHT, CENTRAL (Two-body) or THREE_BODY */
    long PolyhedronGravityEnabled;
-   long World;
+   WorldID World;
    long Region;
 
    /* For Three-Body Orbit Description */
@@ -246,8 +332,8 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *omg, double *tp,
                        double *anom, double *p, double *alpha, double *rmin,
                        double *MeanMotion, double *Period);
-void LunaPosition(double JD, double r[3]);
-void LunaInertialFrame(double JulDay, double CNJ[3][3]);
+void LunaPosition(const JDType jd, double r[3]);
+void LunaInertialFrame(const JDType jd, double CNJ[3][3]);
 double LunaPriMerAng(double JulDay);
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
 void FindCEN(double r[3], double CEN[3][3]);

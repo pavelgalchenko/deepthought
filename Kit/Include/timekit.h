@@ -61,8 +61,11 @@ typedef uint16_t ccsdsFine;
 ** #endif
 */
 
+#define SEC_PER_DAY (86400.0)
+
 typedef struct {
-   // TODO: treat all `DateType`s as being Gregorian Dates?
+   // TODO: I think remove JD, add a time system property
+
    JDType JD;
    // double MJD;
    // double JulDay;
@@ -84,12 +87,12 @@ double TTtoTDB_Time(double SecSinceJ2000);
 // double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
 //                  double Second);
 double TimeToJD(double Time);
-double JDToTime(double JD);
-double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
-                  double Second);
-double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
-                double Second);
-void DateToCCSDS(DateType date, ccsdsCoarse *ccsdsSeconds,
+double JDToTime(const JDType JD);
+double JDToDynTime(const JDType JD);
+double DateToTime(const DateType date);
+JDType DateToJD(const DateType date, const Epoch epoch,
+                const TimeSystem system);
+void DateToCCSDS(const DateType date, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds);
 void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds);
@@ -99,10 +102,8 @@ double CCSDSAdd(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
                 const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
 double CCSDSSub(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
                 const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
-void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
-              long *Minute, double *Second);
-void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
-                long *Minute, double *Second, double LSB);
+DateType JDToDate(const JDType jd);
+DateType TimeToDate(double Time, double LSB);
 long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
 double JD2GMST(double JD);
@@ -110,8 +111,7 @@ void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);
 double usec(void);
-void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
-                    long *Minute, double *Second, double LSB);
+void RealSystemTime(DateType *const date, double LSB);
 double RealRunTime(double *RealTimeDT, double LSB);
 void updateTime(DateType *Time, const double dSeconds);
 

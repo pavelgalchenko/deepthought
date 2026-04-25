@@ -36,11 +36,12 @@
 
 typedef enum Epoch {
    ZERO_EPOCH = 0,
-   J2000_EPOCH,
-   MJD_EPOCH,
-   GMAT_MJD_EPOCH,
    GD_CONV_EPOCH,
    TCB_TDB_CONV_EPOCH,
+   MJD_EPOCH,
+   GMAT_MJD_EPOCH,
+   CCSDS_EPOCH,
+   J2000_EPOCH,
    // TODO: other epochs?
 } Epoch; // TODO: type different name?
 
@@ -74,6 +75,8 @@ double GetLeapSec(const JDType jd);
 double EpochValueTT(Epoch epoch);
 void ChangeEpoch(const Epoch new_epoch, JDType *const jd);
 void ChangeSystem(const TimeSystem new_system, JDType *const jd);
+void ChangeSystemEpoch(const TimeSystem new_system, const Epoch new_epoch,
+                       JDType *const jd);
 
 /*
 ** #ifdef __cplusplus

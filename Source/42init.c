@@ -69,28 +69,6 @@ long DecodeString(char *s)
       return EXTERNAL_TIME;
    else if (!strcmp(s, "NOS3"))
       return NOS3_TIME;
-   else if (!strcmp(s, "SOL"))
-      return SOL;
-   else if (!strcmp(s, "MERCURY"))
-      return MERCURY;
-   else if (!strcmp(s, "VENUS"))
-      return VENUS;
-   else if (!strcmp(s, "EARTH"))
-      return EARTH;
-   else if (!strcmp(s, "MARS"))
-      return MARS;
-   else if (!strcmp(s, "JUPITER"))
-      return JUPITER;
-   else if (!strcmp(s, "SATURN"))
-      return SATURN;
-   else if (!strcmp(s, "URANUS"))
-      return URANUS;
-   else if (!strcmp(s, "NEPTUNE"))
-      return NEPTUNE;
-   else if (!strcmp(s, "PLUTO"))
-      return PLUTO;
-   else if (!strcmp(s, "LUNA"))
-      return LUNA;
    else if (!strcmp(s, "KEP"))
       return INP_KEPLER;
    else if (!strcmp(s, "RV"))
@@ -280,97 +258,6 @@ long DecodeString(char *s)
    else if (!strcmp(s, "DSM_FSW"))
       return DSM_FSW;
 
-   else if (!strcmp(s, "PHOBOS"))
-      return PHOBOS;
-   else if (!strcmp(s, "DEIMOS"))
-      return DEIMOS;
-   else if (!strcmp(s, "IO"))
-      return IO;
-   else if (!strcmp(s, "EUROPA"))
-      return EUROPA;
-   else if (!strcmp(s, "GANYMEDE"))
-      return GANYMEDE;
-   else if (!strcmp(s, "CALLISTO"))
-      return CALLISTO;
-   else if (!strcmp(s, "AMALTHEA"))
-      return AMALTHEA;
-   else if (!strcmp(s, "HIMALIA"))
-      return HIMALIA;
-   else if (!strcmp(s, "ELARA"))
-      return ELARA;
-   else if (!strcmp(s, "PASIPHAE"))
-      return PASIPHAE;
-   else if (!strcmp(s, "SINOPE"))
-      return SINOPE;
-   else if (!strcmp(s, "LYSITHEA"))
-      return LYSITHEA;
-   else if (!strcmp(s, "CARME"))
-      return CARME;
-   else if (!strcmp(s, "ANANKE"))
-      return ANANKE;
-   else if (!strcmp(s, "LEDA"))
-      return LEDA;
-   else if (!strcmp(s, "THEBE"))
-      return THEBE;
-   else if (!strcmp(s, "ADRASTEA"))
-      return ADRASTEA;
-   else if (!strcmp(s, "METIS"))
-      return METIS;
-   else if (!strcmp(s, "MIMAS"))
-      return MIMAS;
-   else if (!strcmp(s, "ENCELADUS"))
-      return ENCELADUS;
-   else if (!strcmp(s, "TETHYS"))
-      return TETHYS;
-   else if (!strcmp(s, "DIONE"))
-      return DIONE;
-   else if (!strcmp(s, "RHEA"))
-      return RHEA;
-   else if (!strcmp(s, "TITAN"))
-      return TITAN;
-   else if (!strcmp(s, "HYPERION"))
-      return HYPERION;
-   else if (!strcmp(s, "IAPETUS"))
-      return IAPETUS;
-   else if (!strcmp(s, "PHOEBE"))
-      return PHOEBE;
-   else if (!strcmp(s, "JANUS"))
-      return JANUS;
-   else if (!strcmp(s, "EPIMETHEUS"))
-      return EPIMETHEUS;
-   else if (!strcmp(s, "HELENE"))
-      return HELENE;
-   else if (!strcmp(s, "TELESTO"))
-      return TELESTO;
-   else if (!strcmp(s, "CALYPSO"))
-      return CALYPSO;
-   else if (!strcmp(s, "ATLAS"))
-      return ATLAS;
-   else if (!strcmp(s, "PROMETHEUS"))
-      return PROMETHEUS;
-   else if (!strcmp(s, "PANDORA"))
-      return PANDORA;
-   else if (!strcmp(s, "PAN"))
-      return PAN;
-   else if (!strcmp(s, "ARIEL"))
-      return ARIEL;
-   else if (!strcmp(s, "UMBRIEL"))
-      return UMBRIEL;
-   else if (!strcmp(s, "TITANIA"))
-      return TITANIA;
-   else if (!strcmp(s, "OBERON"))
-      return OBERON;
-   else if (!strcmp(s, "MIRANDA"))
-      return MIRANDA;
-   else if (!strcmp(s, "TRITON"))
-      return TRITON;
-   else if (!strcmp(s, "NERIED"))
-      return NERIED;
-   else if (!strcmp(s, "CHARON"))
-      return CHARON;
-   else if (sscanf(s, "MINORBODY_%ld", &i) == 1)
-      return (55 + i);
-
    else if (!strcmp(s, "SUN"))
       return SUN;
    else if (!strcmp(s, "PLANET"))
@@ -472,6 +359,306 @@ long DecodeString(char *s)
       fprintf(stderr, "Bogus input %s in DecodeString (42init.c:%d)\n", s,
               __LINE__);
       exit(EXIT_FAILURE);
+   }
+}
+/**********************************************************************/
+WorldID GetWorldID(const char *s)
+{
+   if (!strcmp(s, "SOL") || !strcmp(s, "SUN"))
+      return SOL;
+   else if (!strcmp(s, "MERCURY"))
+      return MERCURY;
+   else if (!strcmp(s, "VENUS"))
+      return VENUS;
+   else if (!strcmp(s, "EARTH"))
+      return EARTH;
+   else if (!strcmp(s, "MARS"))
+      return MARS;
+   else if (!strcmp(s, "JUPITER"))
+      return JUPITER;
+   else if (!strcmp(s, "SATURN"))
+      return SATURN;
+   else if (!strcmp(s, "URANUS"))
+      return URANUS;
+   else if (!strcmp(s, "NEPTUNE"))
+      return NEPTUNE;
+   else if (!strcmp(s, "PLUTO"))
+      return PLUTO;
+   else if (!strcmp(s, "LUNA"))
+      return LUNA;
+   else if (!strcmp(s, "PHOBOS"))
+      return PHOBOS;
+   else if (!strcmp(s, "DEIMOS"))
+      return DEIMOS;
+   else if (!strcmp(s, "IO"))
+      return IO;
+   else if (!strcmp(s, "EUROPA"))
+      return EUROPA;
+   else if (!strcmp(s, "GANYMEDE"))
+      return GANYMEDE;
+   else if (!strcmp(s, "CALLISTO"))
+      return CALLISTO;
+   else if (!strcmp(s, "AMALTHEA"))
+      return AMALTHEA;
+   else if (!strcmp(s, "HIMALIA"))
+      return HIMALIA;
+   else if (!strcmp(s, "ELARA"))
+      return ELARA;
+   else if (!strcmp(s, "PASIPHAE"))
+      return PASIPHAE;
+   else if (!strcmp(s, "SINOPE"))
+      return SINOPE;
+   else if (!strcmp(s, "LYSITHEA"))
+      return LYSITHEA;
+   else if (!strcmp(s, "CARME"))
+      return CARME;
+   else if (!strcmp(s, "ANANKE"))
+      return ANANKE;
+   else if (!strcmp(s, "LEDA"))
+      return LEDA;
+   else if (!strcmp(s, "THEBE"))
+      return THEBE;
+   else if (!strcmp(s, "ADRASTEA"))
+      return ADRASTEA;
+   else if (!strcmp(s, "METIS"))
+      return METIS;
+   else if (!strcmp(s, "MIMAS"))
+      return MIMAS;
+   else if (!strcmp(s, "ENCELADUS"))
+      return ENCELADUS;
+   else if (!strcmp(s, "TETHYS"))
+      return TETHYS;
+   else if (!strcmp(s, "DIONE"))
+      return DIONE;
+   else if (!strcmp(s, "RHEA"))
+      return RHEA;
+   else if (!strcmp(s, "TITAN"))
+      return TITAN;
+   else if (!strcmp(s, "HYPERION"))
+      return HYPERION;
+   else if (!strcmp(s, "IAPETUS"))
+      return IAPETUS;
+   else if (!strcmp(s, "PHOEBE"))
+      return PHOEBE;
+   else if (!strcmp(s, "JANUS"))
+      return JANUS;
+   else if (!strcmp(s, "EPIMETHEUS"))
+      return EPIMETHEUS;
+   else if (!strcmp(s, "HELENE"))
+      return HELENE;
+   else if (!strcmp(s, "TELESTO"))
+      return TELESTO;
+   else if (!strcmp(s, "CALYPSO"))
+      return CALYPSO;
+   else if (!strcmp(s, "ATLAS"))
+      return ATLAS;
+   else if (!strcmp(s, "PROMETHEUS"))
+      return PROMETHEUS;
+   else if (!strcmp(s, "PANDORA"))
+      return PANDORA;
+   else if (!strcmp(s, "PAN"))
+      return PAN;
+   else if (!strcmp(s, "ARIEL"))
+      return ARIEL;
+   else if (!strcmp(s, "UMBRIEL"))
+      return UMBRIEL;
+   else if (!strcmp(s, "TITANIA"))
+      return TITANIA;
+   else if (!strcmp(s, "OBERON"))
+      return OBERON;
+   else if (!strcmp(s, "MIRANDA"))
+      return MIRANDA;
+   else if (!strcmp(s, "TRITON"))
+      return TRITON;
+   else if (!strcmp(s, "NERIED"))
+      return NERIED;
+   else if (!strcmp(s, "CHARON"))
+      return CHARON;
+   else if (sscanf(s, "MINORBODY_%ld", &i) == 1)
+      return (MINORBODY_0 + i);
+   fprintf(stderr, "Bogus input %s in GetWorldID (42init.c:%d)\n", s, __LINE__);
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+void WorldIDString(WorldID w_id, char w_str[32])
+{
+   // Returns the NAIF names of the celestial bodies
+   switch (wid) {
+      case SOL:
+         strcpy(w_str, "SUN");
+         break;
+      case MERCURY:
+         strcpy(w_str, "MERCURY");
+         break;
+      case VENUS:
+         strcpy(w_str, "VENUS");
+         break;
+      case EARTH:
+         strcpy(w_str, "EARTH");
+         break;
+      case MARS:
+         strcpy(w_str, "MARS");
+         break;
+      case JUPITER:
+         strcpy(w_str, "JUPITER");
+         break;
+      case SATURN:
+         strcpy(w_str, "SATURN");
+         break;
+      case URANUS:
+         strcpy(w_str, "URANUS");
+         break;
+      case NEPTUNE:
+         strcpy(w_str, "NEPTUNE");
+         break;
+      case PLUTO:
+         strcpy(w_str, "PLUTO");
+         break;
+      case LUNA:
+         strcpy(w_str, "LUNA");
+         break;
+      case PHOBOS:
+         strcpy(w_str, "PHOBOS");
+         break;
+      case DEIMOS:
+         strcpy(w_str, "DEIMOS");
+         break;
+      case IO:
+         strcpy(w_str, "IO");
+         break;
+      case EUROPA:
+         strcpy(w_str, "EUROPA");
+         break;
+      case GANYMEDE:
+         strcpy(w_str, "GANYMEDE");
+         break;
+      case CALLISTO:
+         strcpy(w_str, "CALLISTO");
+         break;
+      case AMALTHEA:
+         strcpy(w_str, "AMALTHEA");
+         break;
+      case HIMALIA:
+         strcpy(w_str, "HIMALIA");
+         break;
+      case ELARA:
+         strcpy(w_str, "ELARA");
+         break;
+      case PASIPHAE:
+         strcpy(w_str, "PASIPHAE");
+         break;
+      case SINOPE:
+         strcpy(w_str, "SINOPE");
+         break;
+      case LYSITHEA:
+         strcpy(w_str, "LYSITHEA");
+         break;
+      case CARME:
+         strcpy(w_str, "CARME");
+         break;
+      case ANANKE:
+         strcpy(w_str, "ANANKE");
+         break;
+      case LEDA:
+         strcpy(w_str, "LEDA");
+         break;
+      case THEBE:
+         strcpy(w_str, "THEBE");
+         break;
+      case ADRASTEA:
+         strcpy(w_str, "ADRASTEA");
+         break;
+      case METIS:
+         strcpy(w_str, "METIS");
+         break;
+      case MIMAS:
+         strcpy(w_str, "MIMAS");
+         break;
+      case ENCELADUS:
+         strcpy(w_str, "ENCELADUS");
+         break;
+      case TETHYS:
+         strcpy(w_str, "TETHYS");
+         break;
+      case DIONE:
+         strcpy(w_str, "DIONE");
+         break;
+      case RHEA:
+         strcpy(w_str, "RHEA");
+         break;
+      case TITAN:
+         strcpy(w_str, "TITAN");
+         break;
+      case HYPERION:
+         strcpy(w_str, "HYPERION");
+         break;
+      case IAPETUS:
+         strcpy(w_str, "IAPETUS");
+         break;
+      case PHOEBE:
+         strcpy(w_str, "PHOEBE");
+         break;
+      case JANUS:
+         strcpy(w_str, "JANUS");
+         break;
+      case EPIMETHEUS:
+         strcpy(w_str, "EPIMETHEUS");
+         break;
+      case HELENE:
+         strcpy(w_str, "HELENE");
+         break;
+      case TELESTO:
+         strcpy(w_str, "TELESTO");
+         break;
+      case CALYPSO:
+         strcpy(w_str, "CALYPSO");
+         break;
+      case ATLAS:
+         strcpy(w_str, "ATLAS");
+         break;
+      case PROMETHEUS:
+         strcpy(w_str, "PROMETHEUS");
+         break;
+      case PANDORA:
+         strcpy(w_str, "PANDORA");
+         break;
+      case PAN:
+         strcpy(w_str, "PAN");
+         break;
+      case ARIEL:
+         strcpy(w_str, "ARIEL");
+         break;
+      case UMBRIEL:
+         strcpy(w_str, "UMBRIEL");
+         break;
+      case TITANIA:
+         strcpy(w_str, "TITANIA");
+         break;
+      case OBERON:
+         strcpy(w_str, "OBERON");
+         break;
+      case MIRANDA:
+         strcpy(w_str, "MIRANDA");
+         break;
+      case TRITON:
+         strcpy(w_str, "TRITON");
+         break;
+      case NERIED:
+         strcpy(w_str, "NERIED");
+         break;
+      case CHARON:
+         strcpy(w_str, "CHARON");
+         break;
+      default:
+         if (w_id >= MINORBODY_0) {
+            sprintf(w_str, "MINORBODY_%ld", w_id - MINORBODY_0);
+            break;
+         }
+         else {
+            fprintf(stderr,
+                    "Unknown WorldID %ld in WorldIDString. Exiting...\n", w_id);
+            exit(EXIT_FAILURE);
+         }
    }
 }
 /**********************************************************************/
@@ -686,7 +873,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
       O->Epoch  += DynTime - CivilTime;
       O->Regime  = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
-         O->World = DecodeString(response2);
+         O->World = GetWorldID(response2);
          O->mu    = World[O->World].mu;
          // TODO: Following assumes a Lunar N_Body orbit is given in ECI,
          //       consider other options for initialization.
@@ -769,7 +956,7 @@ void InitOrbit(struct OrbitType *O)
             fprintf(stderr, "Could not find World for orbit. Exiting...\n");
             exit(EXIT_FAILURE);
          }
-         O->World = DecodeString(response);
+         O->World = GetWorldID(response);
          if (!World[O->World].Exists) {
             fprintf(stderr,
                     "Oops.  Orbit %ld depends on a World that doesn't exist.\n",
@@ -824,7 +1011,7 @@ void InitOrbit(struct OrbitType *O)
             fprintf(stderr, "Could not find World for orbit. Exiting...\n");
             exit(EXIT_FAILURE);
          }
-         O->World = DecodeString(response);
+         O->World = GetWorldID(response);
          if (!World[O->World].Exists) {
             fprintf(stderr,
                     "Oops.  Orbit %ld depends on a World that doesn't exist.\n",
@@ -3775,7 +3962,8 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
 }
 
 /*********************************************************************/
-void LoadSun(void)
+void LoadSun(const ephemType ephem, const JDType jd,
+             const JPLHeaderType *const jpl_hdr, struct WorldType *const worlds)
 {
    const double Zaxis[3] = {0.0, 0.0, 1.0};
    /* Rumor is, Sun's magfield is highly variable, poorly modeled */
@@ -3787,7 +3975,7 @@ void LoadSun(void)
    long i, j;
    struct WorldType *W;
 
-   W = &World[SOL];
+   W = &worlds[SOL];
 
    /* Relationships */
    W->Exists = TRUE;
@@ -3805,41 +3993,29 @@ void LoadSun(void)
 
    /* Physical Properties */
    double GM;
-   switch (EphemOption) {
-      case EPH_MEAN: {
+   switch (ephem) {
+      case EPH_MEAN:
          W->mu  = 1.32715E20;
          W->rad = 6.98E8;
-      } break;
-      case EPH_DE430: {
-         GM     = 0.295912208285591100E-03;
-         W->mu  = GM * AUd2ms; // 1.3271244004193938E20;
-         W->rad = 6.96000E8;
-      } break;
-      case EPH_DE440: {
-         GM     = 0.295912208284119561E-03;
-         W->mu  = GM * AUd2ms; // 1.3271244004127942E20;
-         W->rad = 6.95700E8;
-      } break;
-      case EPH_DE421: {
-         GM     = 0.295912208285591100E-03;
-         W->mu  = GM * AUd2ms; // 1.3271244004094400E20;
-         W->rad = 6.96000E8;
-      } break;
-      case EPH_DE424: {
-         GM     = 0.295912208285591100E-03;
-         W->mu  = GM * AUd2ms; // 1.3271244004094460E20;
-         W->rad = 6.96000E8;
-      } break;
+         break;
       case EPH_GMAT421:
-      case EPH_GMAT424: {
+      case EPH_GMAT424:
          W->mu  = 1.3271244001799E20;
          W->rad = 6.95990E8;
-      } break;
-      case EPH_SPICE: {
-      } break;
+         break;
+      case EPH_SPICE:
+         break;
       default:
-         fprintf(stderr, "Unknown Ephemeris Type. Exiting...\n");
-         exit(EXIT_FAILURE);
+         // handle the DE lookup cases here
+         GM    = getDEHeader1041Data(jpl_hdr, "GMS");
+         W->mu = GM * AUd2ms; // 1.3271244004193938E20;
+         if (ephem == EPH_DE440) {
+            W->rad = 6.95700E8;
+         }
+         else {
+            W->rad = 6.96000E8;
+         }
+         break;
    }
 
    /* Default Pyhsical Parameters */
@@ -3913,12 +4089,16 @@ void LoadSun(void)
    }
    W->qnh[3] = 1.0;
    QxQT(W->qnh, qjh, W->qnj);
-   W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * DynTime, TwoPi);
+
+   const double j2000sec_tt = JDToDynTime(jd);
+   W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * j2000sec_tt, TwoPi);
    SimpRot(Zaxis, W->PriMerAng, W->CWN);
    C2Q(W->CWN, W->qwn);
 }
 /*********************************************************************/
-void LoadPlanets(void)
+void LoadPlanets(const ephemType ephem, const JDType jd,
+                 const JPLHeaderType *const jpl_hdr,
+                 struct WorldType *const worlds)
 {
    struct OrbitType *Eph;
    const double Zaxis[3] = {0.0, 0.0, 1.0};
@@ -3937,32 +4117,12 @@ void LoadPlanets(void)
                          1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
    double Rad_mean[10] = {6.98E8, 2.42E6, 6.1E6,  6.378145E6, 3.41E6,
                           7.14E7, 6.04E7, 2.35E7, 2.23E7,     7.0E6};
-   double GM_421[10]   = {0.295912208285591100E-03, 0.491254957186794000E-10,
-                          0.724345233269844100E-09, 0.899701140826804900E-09,
-                          0.954954869562239000E-10, 0.282534584085505000E-06,
-                          0.845970607330847800E-07, 0.129202482579265000E-07,
-                          0.152435910924974000E-07, 0.217844105199052000E-11};
    double Rad_421[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.37814E6, 3.39619E6,
                           7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,  1.195E6};
-   double GM_424[10]   = {0.295912208285591100E-03, 0.491249717333700100E-10,
-                          0.724345233269844100E-09, 0.899701140826804900E-09,
-                          0.954954869562239000E-10, 0.282534584085505000E-06,
-                          0.845970607330847800E-07, 0.129202482579265000E-07,
-                          0.152435734789662000E-07, 0.217844105199052000E-11};
    double Rad_424[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.37814E6, 3.39619E6,
                           7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,  1.195E6};
-   double GM_430[10]   = {0.295912208285591100E-03, 0.491248045036476000E-10,
-                          0.724345233264412000E-09, 0.899701139019987100E-09,
-                          0.954954869555077000E-10, 0.282534584083387000E-06,
-                          0.845970607324503000E-07, 0.129202482578296000E-07,
-                          0.152435734788511000E-07, 0.217844105197418000E-11};
    double Rad_430[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.3781366E6, 3.39619E6,
                           7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,    1.195E6};
-   double GM_440[10]   = {0.295912208284119561E-03, 0.491250019488931818E-10,
-                          0.724345233264411869E-09, 0.899701139294734660E-09,
-                          0.954954882972581189E-10, 0.282534582522579175E-06,
-                          0.845970599337629027E-07, 0.129202656496823994E-07,
-                          0.152435734788519386E-07, 0.217509646489335811E-11};
    double Rad_440[10] = {6.95700E8, 2.44053E6, 6.0518E6, 6.3781366E6, 3.39619E6,
                          7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.1883E6};
    double Mu_GMAT[10] = {1.3271244001799E20, 2.2032080486418E13,
@@ -3972,52 +4132,63 @@ void LoadPlanets(void)
                          6.8365340638793E15, 9.8160088770700E11};
    double Rad_GMAT[10] = {6.95990E8, 2.4397E6, 6.0519E6, 6.3781363E6, 3.397E6,
                           7.1492E7,  6.0268E7, 2.5559E7, 2.5269E7,    1.162E6};
+
    double Mu[10], Rad[10];
    /* Physical Properties */
-   if (EphemOption == EPH_MEAN) {
-      for (int i = 0; i < 10; ++i)
-         Mu[i] = Mu_mean[i];
-      for (int i = 0; i < 10; ++i)
-         Rad[i] = Rad_mean[i];
+   switch (ephem) {
+      case EPH_MEAN:
+         for (int i = 0; i < 10; ++i)
+            Mu[i] = Mu_mean[i];
+         for (int i = 0; i < 10; ++i)
+            Rad[i] = Rad_mean[i];
+         break;
+      case EPH_GMAT421:
+      case EPH_GMAT424:
+         for (int i = 0; i < 10; ++i)
+            Mu[i] = Mu_GMAT[i];
+         for (int i = 0; i < 10; ++i)
+            Rad[i] = Rad_GMAT[i];
+         break;
+      case EPH_SPICE:
+         break;
+      default:
+         // handle the DE lookup cases here
+         for (i = SOL + 1; i <= PLUTO; i++) {
+            char gm_str[6] = {'\0'};
+            if (i == SOL)
+               strcpy(gm_str, "GMS");
+            if (i == EARTH)
+               strcpy(gm_str, "GMB");
+            else
+               sprintf(gm_str, "GM%ld", i);
+
+            Mu[i] = getDEHeader1041Data(jpl_hdr, gm_str) * AUd2ms;
+         }
+         Mu[EARTH] = Mu[EARTH] / (1.0 + 1.0 / EMRAT);
+
+         switch (ephem) {
+            case EPH_DE421:
+               for (int i = 0; i < 10; ++i)
+                  Rad[i] = Rad_421[i];
+               break;
+            case EPH_DE424:
+               for (int i = 0; i < 10; ++i)
+                  Rad[i] = Rad_424[i];
+               break;
+            case EPH_DE430:
+               for (int i = 0; i < 10; ++i)
+                  Rad[i] = Rad_430[i];
+               break;
+            case EPH_DE440:
+               for (int i = 0; i < 10; ++i)
+                  Rad[i] = Rad_440[i];
+               break;
+            default:
+               break;
+         }
+         break;
    }
-   else if (EphemOption == EPH_DE421) {
-      for (int i = 0; i < 10; ++i)
-         Mu[i] = GM_421[i] * AUd2ms;
-      ;
-      for (int i = 0; i < 10; ++i)
-         Rad[i] = Rad_421[i];
-      Mu[EARTH] = (GM_421[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
-   }
-   else if (EphemOption == EPH_DE424) {
-      for (int i = 0; i < 10; ++i)
-         Mu[i] = GM_424[i] * AUd2ms;
-      ;
-      for (int i = 0; i < 10; ++i)
-         Rad[i] = Rad_424[i];
-      Mu[EARTH] = (GM_424[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
-   }
-   else if (EphemOption == EPH_DE430) {
-      for (int i = 0; i < 10; ++i)
-         Mu[i] = GM_430[i] * AUd2ms;
-      ;
-      for (int i = 0; i < 10; ++i)
-         Rad[i] = Rad_430[i];
-      Mu[EARTH] = (GM_430[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
-   }
-   else if (EphemOption == EPH_DE440) {
-      for (int i = 0; i < 10; ++i)
-         Mu[i] = GM_440[i] * AUd2ms;
-      ;
-      for (int i = 0; i < 10; ++i)
-         Rad[i] = Rad_440[i];
-      Mu[EARTH] = (GM_440[EARTH] / (1.0 + 1.0 / EMRAT)) * AUd2ms;
-   }
-   else if (EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      for (int i = 0; i < 10; ++i)
-         Mu[i] = Mu_GMAT[i];
-      for (int i = 0; i < 10; ++i)
-         Rad[i] = Rad_GMAT[i];
-   }
+
    /* Default Pyhsical Parameters */
    double J2[10] = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
                     0.0, 0.0, 0.0, 0.0,        0.0};
@@ -4044,15 +4215,15 @@ void LoadPlanets(void)
    }
 
 #ifdef _ENABLE_SPICE_
-   const char OrientationName[10][20] = {
-       "SUN",     "MERCURY", "VENUS",  "EARTH",   "MARS",
-       "JUPITER", "SATURN",  "URANUS", "NEPTUNE", "PLUTO"};
    if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
+      // hardcoded values with SPICE values
+      const char OrientationName[10][20] = {
+          "SUN",     "MERCURY", "VENUS",  "EARTH",   "MARS",
+          "JUPITER", "SATURN",  "URANUS", "NEPTUNE", "PLUTO"};
       double tmp_holder     = 0;
       double tmp_holder3[3] = {0};
       int dim               = 0;
-      for (int i = 0; i < 10; i++) {
+      for (int i = SOL; i <= PLUTO; i++) {
          bodvrd_c(PlanetName[i], "GM", 1, &dim, &tmp_holder);
          Mu[i] = tmp_holder * 1E9;
 
@@ -4140,32 +4311,33 @@ void LoadPlanets(void)
    long i, j;
 
    for (i = MERCURY; i <= PLUTO; i++) {
-      strcpy(World[i].Name, PlanetName[i]);
-      strcpy(World[i].MapFileName, MapFileName[i]);
-      strcpy(World[i].ColTexFileName, "NONE");
-      strcpy(World[i].BumpTexFileName, "NONE");
-      World[i].mu             = Mu[i];
-      World[i].J2             = J2[i];
-      World[i].rad            = Rad[i];
-      World[i].w              = W[i];
-      World[i].PriMerAngJ2000 = PriMerAngJ2000[i] * D2R;
-      World[i].Parent         = SOL;
-      World[i].eph.World      = SOL;
-      World[i].eph.mu         = World[SOL].mu;
-      World[i].DipoleMoment   = DipoleMoment[i];
+      struct WorldType *W = &worlds[i];
+      strcpy(W->Name, PlanetName[i]);
+      strcpy(W->MapFileName, MapFileName[i]);
+      strcpy(W->ColTexFileName, "NONE");
+      strcpy(W->BumpTexFileName, "NONE");
+      W->mu             = Mu[i];
+      W->J2             = J2[i];
+      W->rad            = Rad[i];
+      W->w              = W[i];
+      W->PriMerAngJ2000 = PriMerAngJ2000[i] * D2R;
+      W->Parent         = SOL;
+      W->eph.World      = SOL;
+      W->eph.mu         = World[SOL].mu;
+      W->DipoleMoment   = DipoleMoment[i];
       for (j = 0; j < 3; j++) {
-         World[i].DipoleAxis[j]   = DipoleAxis[i][j];
-         World[i].DipoleOffset[j] = DipoleOffset[i][j];
-         World[i].Color[j]        = Color[i][j];
+         W->DipoleAxis[j]   = DipoleAxis[i][j];
+         W->DipoleOffset[j] = DipoleOffset[i][j];
+         W->Color[j]        = Color[i][j];
       }
-      World[i].Color[3] = 1.0;
+      W->Color[3] = 1.0;
       for (j = 0; j < 14; j++)
-         World[i].Glyph[j] = Glyph[i][j];
-      World[i].Atmo.Exists = HasAtmo[i];
+         W->Glyph[j] = Glyph[i][j];
+      W->Atmo.Exists = HasAtmo[i];
 
       if (GravPertActive) {
          /* Gravitation Model */
-         struct SphereHarmType *gravModel = &World[i].GravModel;
+         struct SphereHarmType *gravModel = &W->GravModel;
          if (!strcmp(gravModel->modelFile, "")) {
             if (!strcmp(GravFileName[i], "") && gravModel->N > 1) {
                fprintf(stderr,
@@ -4175,7 +4347,7 @@ void LoadPlanets(void)
                        "main 'Model' directory and add the file name as a "
                        "'Model File' field to the Gravitation Model for this "
                        "world in 'Inp_Sim'. Exiting...\n",
-                       World[i].Name);
+                       W->Name);
                exit(EXIT_FAILURE);
             }
             strcpy(gravModel->modelFile, GravFileName[i]);
@@ -4184,101 +4356,105 @@ void LoadPlanets(void)
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
                gravModel->r_ref = grav_r_ref[i];
-            World[i].J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+            W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
    }
 
-   World[EARTH].Atmo.GasColor[0]  = 0.17523;
-   World[EARTH].Atmo.GasColor[1]  = 0.40785;
-   World[EARTH].Atmo.GasColor[2]  = 1.0;
-   World[EARTH].Atmo.DustColor[0] = 1.0;
-   World[EARTH].Atmo.DustColor[1] = 1.0;
-   World[EARTH].Atmo.DustColor[2] = 1.0;
-   World[EARTH].Atmo.RayScat[0]   = 5.8E-6;
-   World[EARTH].Atmo.RayScat[1]   = 13.5E-6;
-   World[EARTH].Atmo.RayScat[2]   = 33.1E-6;
-   World[EARTH].Atmo.RayScaleHt   = 8000.0;
-   World[EARTH].Atmo.MieScat      = 4.0E-6;
-   World[EARTH].Atmo.MieScaleHt   = 1200.0;
-   World[EARTH].Atmo.MieG         = 0.76;
-   World[EARTH].Atmo.MaxHt        = 8.0 * World[EARTH].Atmo.RayScaleHt;
-   World[EARTH].Atmo.rad          = World[EARTH].rad + World[EARTH].Atmo.MaxHt;
+   worlds[EARTH].Atmo.GasColor[0]  = 0.17523;
+   worlds[EARTH].Atmo.GasColor[1]  = 0.40785;
+   worlds[EARTH].Atmo.GasColor[2]  = 1.0;
+   worlds[EARTH].Atmo.DustColor[0] = 1.0;
+   worlds[EARTH].Atmo.DustColor[1] = 1.0;
+   worlds[EARTH].Atmo.DustColor[2] = 1.0;
+   worlds[EARTH].Atmo.RayScat[0]   = 5.8E-6;
+   worlds[EARTH].Atmo.RayScat[1]   = 13.5E-6;
+   worlds[EARTH].Atmo.RayScat[2]   = 33.1E-6;
+   worlds[EARTH].Atmo.RayScaleHt   = 8000.0;
+   worlds[EARTH].Atmo.MieScat      = 4.0E-6;
+   worlds[EARTH].Atmo.MieScaleHt   = 1200.0;
+   worlds[EARTH].Atmo.MieG         = 0.76;
+   worlds[EARTH].Atmo.MaxHt        = 8.0 * worlds[EARTH].Atmo.RayScaleHt;
+   worlds[EARTH].Atmo.rad = worlds[EARTH].rad + worlds[EARTH].Atmo.MaxHt;
 
-   World[MARS].Atmo.GasColor[0]  = 0.70588;
-   World[MARS].Atmo.GasColor[1]  = 0.50196;
-   World[MARS].Atmo.GasColor[2]  = 0.19608;
-   World[MARS].Atmo.DustColor[0] = 0.5;
-   World[MARS].Atmo.DustColor[1] = 0.5;
-   World[MARS].Atmo.DustColor[2] = 0.5;
-   World[MARS].Atmo.RayScat[0]   = 19.918E-6;
-   World[MARS].Atmo.RayScat[1]   = 13.57E-6;
-   World[MARS].Atmo.RayScat[2]   = 5.75E-6;
-   World[MARS].Atmo.RayScaleHt   = 11000.0;
-   World[MARS].Atmo.MieScat      = 0.0E-6;
-   World[MARS].Atmo.MieScaleHt   = 11000.0;
-   World[MARS].Atmo.MieG         = 0.76;
-   World[MARS].Atmo.MaxHt        = 8.0 * World[MARS].Atmo.RayScaleHt;
-   World[MARS].Atmo.rad          = World[MARS].rad + World[MARS].Atmo.MaxHt;
+   worlds[MARS].Atmo.GasColor[0]  = 0.70588;
+   worlds[MARS].Atmo.GasColor[1]  = 0.50196;
+   worlds[MARS].Atmo.GasColor[2]  = 0.19608;
+   worlds[MARS].Atmo.DustColor[0] = 0.5;
+   worlds[MARS].Atmo.DustColor[1] = 0.5;
+   worlds[MARS].Atmo.DustColor[2] = 0.5;
+   worlds[MARS].Atmo.RayScat[0]   = 19.918E-6;
+   worlds[MARS].Atmo.RayScat[1]   = 13.57E-6;
+   worlds[MARS].Atmo.RayScat[2]   = 5.75E-6;
+   worlds[MARS].Atmo.RayScaleHt   = 11000.0;
+   worlds[MARS].Atmo.MieScat      = 0.0E-6;
+   worlds[MARS].Atmo.MieScaleHt   = 11000.0;
+   worlds[MARS].Atmo.MieG         = 0.76;
+   worlds[MARS].Atmo.MaxHt        = 8.0 * worlds[MARS].Atmo.RayScaleHt;
+   worlds[MARS].Atmo.rad          = worlds[MARS].rad + worlds[MARS].Atmo.MaxHt;
 
+   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
+   const double j2000sec_tt = JDToDynTime(jd);
    /* .. Load planetary orbit elements for date of interest */
    for (i = MERCURY; i <= PLUTO; i++) {
-      PlanetEphemerides(i, TT.JulDay, World[i].eph.mu, &World[i].eph.SMA,
-                        &World[i].eph.ecc, &World[i].eph.inc,
-                        &World[i].eph.RAAN, &World[i].eph.ArgP,
-                        &World[i].eph.tp, &World[i].eph.anom, &World[i].eph.SLR,
-                        &World[i].eph.alpha, &World[i].eph.rmin,
-                        &World[i].eph.MeanMotion, &World[i].eph.Period);
+      struct WorldType *W = &worlds[i];
+      PlanetEphemerides(i, jd, W->eph.mu, &W->eph.SMA, &W->eph.ecc, &W->eph.inc,
+                        &W->eph.RAAN, &W->eph.ArgP, &W->eph.tp, &W->eph.anom,
+                        &W->eph.SLR, &W->eph.alpha, &W->eph.rmin,
+                        &W->eph.MeanMotion, &W->eph.Period);
       /* TODO: These ephems are expressed in mean-equinox-of-date (MEME) */
       /* Would it be worthwhile to transform to J2000? */
    }
 
    for (i = MERCURY; i <= PLUTO; i++) {
+      struct WorldType *W = &worlds[i];
       if (i != EARTH) {
          A2C(312, (PoleRA[i] + 90.0) * D2R, (90.0 - PoleDec[i]) * D2R, 0.0,
              CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[i].CNH);
-         C2Q(World[i].CNH, World[i].qnh);
-         QxQT(World[i].qnh, qjh, World[i].qnj);
+         MxM(CNJ, worlds[EARTH].CNH, W->CNH);
+         C2Q(W->CNH, W->qnh);
+         QxQT(W->qnh, qjh, W->qnj);
       }
    }
 
    /* .. Saturn's Rings */
-   World[SATURN].HasRing   = 1;
-   World[SATURN].RingInner = 67258.0E3;
-   World[SATURN].RingOuter = 181328.0E3;
+   worlds[SATURN].HasRing   = 1;
+   worlds[SATURN].RingInner = 67258.0E3;
+   worlds[SATURN].RingOuter = 181328.0E3;
 
    for (i = MERCURY; i <= PLUTO; i++) {
-      World[i].RadOfInfluence =
-          RadiusOfInfluence(World[i].eph.mu, World[i].mu, World[i].eph.SMA);
-      World[i].Type = PLANET;
+      struct WorldType *W = &worlds[i];
+      W->RadOfInfluence   = RadiusOfInfluence(W->eph.mu, W->mu, W->eph.SMA);
+      W->Type             = PLANET;
    }
 
    for (i = MERCURY; i <= PLUTO; i++) {
-      if (World[i].Exists) {
-         Eph = &World[i].eph;
+      struct WorldType *W = &worlds[i];
+      if (W->Exists) {
+         Eph = &W->eph;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+                j2000sec_tt - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
          for (j = 0; j < 3; j++)
-            World[i].PosH[j] = Eph->PosN[j];
-         World[i].PriMerAng =
-             fmod(World[i].PriMerAngJ2000 + World[i].w * DynTime, TwoPi);
-         SimpRot(Zaxis, World[i].PriMerAng, World[i].CWN);
-         C2Q(World[i].CWN, World[i].qwn);
+            W->PosH[j] = Eph->PosN[j];
+         W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * j2000sec_tt, TwoPi);
+         SimpRot(Zaxis, W->PriMerAng, W->CWN);
+         C2Q(W->CWN, W->qwn);
       }
    }
    /* .. Earth rotation is a special case */
-   GMST                   = JD2GMST(UTC.JulDay);
-   World[EARTH].PriMerAng = TwoPi * GMST;
+   GMST                    = JD2GMST(UTC.JulDay);
+   worlds[EARTH].PriMerAng = TwoPi * GMST;
    HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(Zaxis, World[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
-   C2Q(World[EARTH].CWN, World[EARTH].qwn);
+   SimpRot(Zaxis, worlds[EARTH].PriMerAng, C_W_TETE);
+   MxM(C_W_TETE, C_TETE_J2000, worlds[EARTH].CWN);
+   C2Q(worlds[EARTH].CWN, worlds[EARTH].qwn);
 
-   strcpy(World[EARTH].BumpTexFileName, "EarthBump.ppm");
+   strcpy(worlds[EARTH].BumpTexFileName, "EarthBump.ppm");
 }
 /*********************************************************************/
-void LoadMoonOfEarth(void)
+void LoadMoonOfEarth(const ephemType ephem, const JDType jd,
+                     const JPLHeaderType *const jpl_hdr,
+                     struct WorldType *const worlds)
 {
 #define Nm 1
 
@@ -4288,35 +4464,27 @@ void LoadMoonOfEarth(void)
    const float Color[4]            = {0.440417f, 0.441343f, 0.441084f, 1.0f};
    /* Physical Properties */
    double mu[Nm], rad[Nm];
-   double GM;
-   if (EphemOption == EPH_MEAN) {
-      mu[0]  = 4.902801E12;
-      rad[0] = 1.738E6;
+
+   switch (ephem) {
+      case EPH_MEAN:
+         mu[0]  = 4.902801E12;
+         rad[0] = 1.738E6;
+         break;
+      case EPH_GMAT421:
+      case EPH_GMAT424:
+         mu[0]  = 4.9028005821478E12;
+         rad[0] = 1.7382E6;
+         break;
+      case EPH_SPICE:
+         break;
+      default:
+         // handle the DE cases here
+         mu[0]  = getDEHeader1041Data(jpl_hdr, "GMB");
+         mu[0]  = (mu[0] / (1.0 + EMRAT)) * AUd2ms;
+         rad[0] = 1.7374E6;
+         break;
    }
-   else if (EphemOption == EPH_DE421) {
-      GM     = 0.899701140826804900E-09;
-      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.902800076E12;
-      rad[0] = 1.7374E6;
-   }
-   else if (EphemOption == EPH_DE424) {
-      GM     = 0.899701140826804900E-09;
-      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.902800013E12;
-      rad[0] = 1.7374E6;
-   }
-   else if (EphemOption == EPH_DE430) {
-      GM     = 0.899701139019987100E-09;
-      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.9028000661637961E12;
-      rad[0] = 1.7374E6;
-   }
-   else if (EphemOption == EPH_DE440) {
-      GM     = 0.899701139294734660E-09;
-      mu[0]  = (GM / (1.0 + EMRAT)) * AUd2ms; // 4.9028001184575496E12;
-      rad[0] = 1.7374E6;
-   }
-   else if (EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      mu[0]  = 4.9028005821478E12;
-      rad[0] = 1.7382E6;
-   }
+
    /* Default Pyhsical Parameters */
    double J2[Nm]                 = {2.027E-4};
    double w[Nm]                  = {2.66E-6};
@@ -4335,7 +4503,6 @@ void LoadMoonOfEarth(void)
    const unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
                                     0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
    double PriMerAngJ2000[Nm]     = {0.0};
-   ;
    double Epoch;
 
    long Ip = EARTH;
@@ -4373,7 +4540,7 @@ void LoadMoonOfEarth(void)
    }
 #endif
 
-   P       = &World[Ip];
+   P       = &worlds[Ip];
    P->Nsat = 1;
    P->Sat  = (long *)calloc(Nm, sizeof(long));
    if (P->Sat == NULL) {
@@ -4384,7 +4551,7 @@ void LoadMoonOfEarth(void)
 
    for (Im = 0; Im < Nm; Im++) {
       Iw         = LUNA + Im;
-      M          = &World[Iw];
+      M          = &worlds[Iw];
       E          = &M->eph;
       P->Sat[Im] = Iw;
 
@@ -4418,6 +4585,7 @@ void LoadMoonOfEarth(void)
       E->MeanMotion = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
       E->Period     = TwoPi / E->MeanMotion;
       E->tp         = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
+      // TODO: DynTime0 is a headache here
       while ((E->tp - DynTime0) < -E->Period)
          E->tp += E->Period;
       while ((E->tp - DynTime0) > E->Period)
@@ -4427,7 +4595,8 @@ void LoadMoonOfEarth(void)
       E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
       E->rmin  = E->SMA * (1.0 - E->ecc);
 
-      E->anom           = TrueAnomaly(E->mu, E->SLR, E->ecc, DynTime - E->tp);
+      const double j2000sec_tt = JDToDynTime(jd);
+      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
       M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
       if (EphemOption != EPH_SPICE) {
@@ -4435,17 +4604,17 @@ void LoadMoonOfEarth(void)
          LunaInertialFrame(TDB.JulDay, CNJ);
       }
       else {
-         M->PriMerAng = fmod(M->PriMerAngJ2000 + M->w * DynTime, TwoPi);
+         M->PriMerAng = fmod(M->PriMerAngJ2000 + M->w * j2000sec_tt, TwoPi);
          A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
              CNJ);
       }
-      MxM(CNJ, World[EARTH].CNH, M->CNH);
+      MxM(CNJ, worlds[EARTH].CNH, M->CNH);
       C2Q(M->CNH, M->qnh);
       QxQT(M->qnh, qjh, M->qnj);
       M->Type = MOON;
       // else {
       //    LunaInertialFrame(TT.JulDay, CNJ);
-      //    MxM(CNJ, World[EARTH].CNH, M->CNH);
+      //    MxM(CNJ, worlds[EARTH].CNH, M->CNH);
       //    C2Q(M->CNH, M->qnh);
       //    QxQT(M->qnh, qjh, M->qnj);
       //    M->PriMerAng = LunaPriMerAng(TT.JulDay);
@@ -4482,7 +4651,9 @@ void LoadMoonOfEarth(void)
 // TODO: THE REMAINING MOONS SHOULD GET THE SAME AS ABOVE TREATMENT
 /**********************************************************************/
 /*  See JPL web pages MoonEphems and MoonParms in Development folder  */
-void LoadMoonsOfMars(void)
+void LoadMoonsOfMars(const ephemType ephem, const JDType jd,
+                     const JPLHeaderType *const jpl_hdr,
+                     struct WorldType *const worlds)
 {
 #define Nm 2
 
@@ -4645,7 +4816,9 @@ void LoadMoonsOfMars(void)
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfJupiter(void)
+void LoadMoonsOfJupiter(const ephemType ephem, const JDType jd,
+                        const JPLHeaderType *const jpl_hdr,
+                        struct WorldType *const worlds)
 {
 #define Nm 16
 
@@ -4834,7 +5007,9 @@ void LoadMoonsOfJupiter(void)
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfSaturn(void)
+void LoadMoonsOfSaturn(const ephemType ephem, const JDType jd,
+                       const JPLHeaderType *const jpl_hdr,
+                       struct WorldType *const worlds)
 {
 #define Nm 18
 
@@ -5028,7 +5203,9 @@ void LoadMoonsOfSaturn(void)
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfUranus(void)
+void LoadMoonsOfUranus(const ephemType ephem, const JDType jd,
+                       const JPLHeaderType *const jpl_hdr,
+                       struct WorldType *const worlds)
 {
 #define Nm 5
 
@@ -5188,7 +5365,9 @@ void LoadMoonsOfUranus(void)
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfNeptune(void)
+void LoadMoonsOfNeptune(const ephemType ephem, const JDType jd,
+                        const JPLHeaderType *const jpl_hdr,
+                        struct WorldType *const worlds)
 {
 #define Nm 2
 
@@ -5327,7 +5506,9 @@ void LoadMoonsOfNeptune(void)
 #undef Nm
 }
 /**********************************************************************/
-void LoadMoonsOfPluto(void)
+void LoadMoonsOfPluto(const ephemType ephem, const JDType jd,
+                      const JPLHeaderType *const jpl_hdr,
+                      struct WorldType *const worlds)
 {
 #define Nm 1
 
@@ -5487,7 +5668,9 @@ void LoadMoonsOfPluto(void)
 #undef Nm
 }
 /**********************************************************************/
-void LoadMinorBodies(void)
+void LoadMinorBodies(const ephemType ephem, const JDType jd,
+                     const JPLHeaderType *const jpl_hdr,
+                     struct WorldType *const worlds)
 {
    // TODO: change minorbodies.txt to yaml
    // TODO: Arbitrarily many minor bodies (this will take effort)
@@ -5645,7 +5828,7 @@ void LoadRegions(void)
          exit(EXIT_FAILURE);
       }
 
-      R->World = DecodeString(WorldID);
+      R->World = GetWorldID(WorldID);
       if (R->World < 0 || R->World > NWORLD) {
          fprintf(
              stderr,
@@ -5980,21 +6163,24 @@ void FilesMatchingFmt(const char path[128], const char fmt[10],
    globfree(&results);
 }
 /******************************************************************************/
-long LoadJplEphems(char EphemPath[128], double JD)
+long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
+                   const JDType jd, struct WorldType *const worlds)
 {
    static FILE *infile = NULL;
    long BlockNum, NumEntries;
    long FoundBlock;
    char line[512];
-   double JD1, JD2;
+   double jd_block[2];
    long i, n, Ic, Iw;
    long Nseg, Start, N;
    struct Cheb3DType *Cheb;
 
-   // putting it here for now, will likely move it later
-   static JPLHeaderType jpl_hdr = {0};
-   if (jpl_hdr.n_data == 0)
-      InitJplHeader(EphemOption, EphemPath, &jpl_hdr);
+   JDType jd_tdb_mjd = jd, jd_tdb_z = jd;
+   ChangeSystemEpoch(TDB_TIME, MJD_EPOCH, &jd_tdb_mjd);
+   ChangeSystemEpoch(TDB_TIME, ZERO_EPOCH, &jd_tdb_z);
+
+   if (jpl_hdr->n_data == 0)
+      InitJplHeader(EphemOption, EphemPath, jpl_hdr);
 
    // search for the list of file to use with this EphemOption
    // only need to do this once and keep it around
@@ -6003,13 +6189,13 @@ long LoadJplEphems(char EphemPath[128], double JD)
    static long n_match           = 0;
    if (f_names == NULL) {
       char search_fmt[20] = "ascp*.";
-      strcat(search_fmt, jpl_hdr.eph_str);
+      strcat(search_fmt, jpl_hdr->eph_str);
       FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
       if (!n_match) {
          fprintf(stderr,
                  "Could not find any files in directory '%s' for DE type '%s' "
                  "matching glob format '%s'. Exiting...\n",
-                 jpl_hdr.eph_path, jpl_hdr.eph_str, search_fmt);
+                 jpl_hdr->eph_path, jpl_hdr->eph_str, search_fmt);
          exit(EXIT_FAILURE);
       }
       f_names = calloc(n_match, sizeof(char[256]));
@@ -6033,12 +6219,20 @@ long LoadJplEphems(char EphemPath[128], double JD)
                   }
             }
          }
+         // convert to desired Epoch
+         for (int j = 0; j < 2; j++) {
+            JDType jd_range_tmp = {.day    = jd_ranges[i][j],
+                                   .epoch  = ZERO_EPOCH,
+                                   .system = TDB_TIME};
+            ChangeEpoch(GMAT_MJD_EPOCH, &jd_range_tmp);
+            jd_ranges[i][j] = jd_range_tmp.day;
+         }
          fclose(infile);
       }
    }
 
    // Make sure the chosen JD is covered by desired DE
-   if (JD < jpl_hdr.jd_range[0]) {
+   if (jd_tdb_mjd.day < jpl_hdr->jd_range[0]) {
       fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
                       "lower-precision planetary ephemerides.\n");
       return (1);
@@ -6047,7 +6241,8 @@ long LoadJplEphems(char EphemPath[128], double JD)
    // Figure out which jd range desired JD is in
    int cur_file = -1;
    for (i = 0; i < n_match; i++) {
-      if (JD >= jd_ranges[i][0] && JD < jd_ranges[i][1]) {
+      if (jd_tdb_mjd.day >= jd_ranges[i][0] &&
+          jd_tdb_mjd.day < jd_ranges[i][1]) {
          cur_file = i;
          break;
       }
@@ -6056,12 +6251,12 @@ long LoadJplEphems(char EphemPath[128], double JD)
       fprintf(stderr,
               "Could not find any files in directory '%s' for DE type '%s' "
               "that Julian Date %lf is contained within. Exiting...\n",
-              jpl_hdr.eph_path, jpl_hdr.eph_str, JD);
+              jpl_hdr->eph_path, jpl_hdr->eph_str, JD);
       exit(EXIT_FAILURE);
    }
 
    // Search found file for block containing chosen JD
-   const long blk_len = jpl_hdr.n_coeff + 2;
+   const long blk_len = jpl_hdr->n_coeff + 2;
    double Block[blk_len];
 
    FoundBlock = 0;
@@ -6072,10 +6267,15 @@ long LoadJplEphems(char EphemPath[128], double JD)
          fgets(line, 512, infile);
          if (sscanf(line, "%lf %lf %lf", &Block[0], &Block[1], &Block[2]) ==
              3) {
-            if (JD >= Block[0] && JD < Block[1]) {
+            if (jd_tdb_z.day >= Block[0] && jd_tdb_z.day < Block[1]) {
                FoundBlock = 1;
-               JD1        = Block[0];
-               JD2        = Block[1];
+
+               for (i = 0; i < 2; i++) {
+                  JDType jd_tmp = {
+                      .day = Block[i], .system = TDB_TIME, .epoch = ZERO_EPOCH};
+                  ChangeEpoch(GMAT_MJD_EPOCH, &jd_tmp);
+                  jd_block[i] = jd_tmp.day;
+               }
             }
          }
       }
@@ -6102,15 +6302,17 @@ long LoadJplEphems(char EphemPath[128], double JD)
       Start = jpl_hdr.group_1050[j][0] - 1;
       N     = jpl_hdr.group_1050[j][1];
 
-      World[Iw].eph.Ncheb = Nseg;
-      World[Iw].eph.Cheb =
+      worlds[Iw].eph.Ncheb = Nseg;
+      worlds[Iw].eph.Cheb =
           (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
       for (Ic = 0; Ic < Nseg; Ic++) {
-         Cheb      = &World[Iw].eph.Cheb[Ic];
-         Cheb->JD1 = JD1 + ((double)Ic) * (JD2 - JD1) / ((double)Nseg);
-         Cheb->JD2 =
-             JD2 - ((double)(Nseg - 1 - Ic)) * (JD2 - JD1) / ((double)Nseg);
-         Cheb->N = N;
+         Cheb      = &worlds[Iw].eph.Cheb[Ic];
+         Cheb->JD1 = jd_block[0] + ((double)Ic) * (jd_block[1] - jd_block[0]) /
+                                       ((double)Nseg);
+         Cheb->JD2 = jd_block[1] - ((double)(Nseg - 1 - Ic)) *
+                                       (jd_block[1] - jd_block[0]) /
+                                       ((double)Nseg);
+         Cheb->N   = N;
          for (n = 0; n < N; n++) {
             for (i = 0; i < 3; i++) {
                Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
@@ -6124,12 +6326,13 @@ long LoadJplEphems(char EphemPath[128], double JD)
    AU    = getDEHeader1041Data(&jpl_hdr, "AU");    // Kilometers per 1 AU
 
    // Conversion of GM from AU^3/day^2 to m^3/s^2 using DE appropriate values
-   AUd2ms = (ipow(AU, 3) / ipow(86400.0, 2)) * 1.0e9;
+   AUd2ms = (ipow(AU, 3) / ipow(SEC_PER_DAY, 2)) * 1.0e9;
 
    return (0);
 }
 /**********************************************************************/
-void UpdateJplEphems(void)
+void UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
+                     struct WorldType *const worlds)
 {
    long i, Ic, Iw;
    struct Cheb3DType *Cheb;
@@ -6142,25 +6345,36 @@ void UpdateJplEphems(void)
    double PosJ[3], VelJ[3], CNJ[3][3];
    double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
           C_TETE_J2000[3][3] = {{0.0}};
-   double GMST               = JD2GMST(UTC.JulDay);
+
+   double GMST = JD2GMST(UTC.JulDay);
+
+   JDType jd_tt_j2000 = jd, jd_tdb_mjd = jd;
+   ChangeEpoch(J2000_EPOCH, &jd_tt_j2000);
+   ChangeSystem(TT_TIME, &jd_tt_j2000);
+   JDType jd_tdb_j2000 = jd_tt_j2000;
+   ChangeSystem(TDB_TIME, &jd_tdb_j2000);
+   const double j2000_sec = JDToDynTime(jd_tt_j2000);
+
+   ChangeEpoch(GMAT_MJD_EPOCH, &jd_tdb_mjd);
+   ChangeSystem(TDB_TIME, &jd_tdb_mjd);
 
    /* .. Initialize Planetary Pos/Vel */
    for (Iw = SOL; Iw <= LUNA; Iw++) {
-      W   = &World[Iw];
+      W   = &worlds[Iw];
       Eph = &W->eph;
       /* Determine segment */
       Ic = 0;
-      while (TDB.JulDay > Eph->Cheb[Ic].JD2)
+      while (jd_tdb_mjd.day > Eph->Cheb[Ic].JD2)
          Ic++;
       /* Apply Chebyshev polynomials */
       Cheb  = &Eph->Cheb[Ic];
       dudJD = 2.0 / (Cheb->JD2 - Cheb->JD1);
-      u     = (TDB.JulDay - Cheb->JD1) * dudJD - 1.0;
+      u     = (jd_tdb_mjd.day - Cheb->JD1) * dudJD - 1.0;
       ChebyPolys(u, Cheb->N, T, U);
       for (i = 0; i < 3; i++) {
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
          PosJ[i] = 1000.0 * P;
-         VelJ[i] = 1000.0 * dPdu * dudJD / 86400.0;
+         VelJ[i] = 1000.0 * dPdu * dudJD / SEC_PER_DAY;
       }
       QTxV(qjh, PosJ, Eph->PosN);
       QTxV(qjh, VelJ, Eph->VelN);
@@ -6168,64 +6382,64 @@ void UpdateJplEphems(void)
    /* Adjust for barycenters */
    /* Move planets from barycentric to Sun-centered */
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      W = &World[Iw];
+      W = &worlds[Iw];
       for (i = 0; i < 3; i++) {
-         W->eph.PosN[i] -= World[SOL].eph.PosN[i];
-         W->eph.VelN[i] -= World[SOL].eph.VelN[i];
+         W->eph.PosN[i] -= worlds[SOL].eph.PosN[i];
+         W->eph.VelN[i] -= worlds[SOL].eph.VelN[i];
          W->PosH[i]      = W->eph.PosN[i];
          W->VelH[i]      = W->eph.VelN[i];
       }
       /* Calculate PriMerAng for Planets */
-      W->PriMerAng = fmod(W->w * DynTime, TwoPi);
+      W->PriMerAng = fmod(W->w * j2000_sec, TwoPi);
       SimpRot(ZAxis, W->PriMerAng, W->CWN);
    }
    /* Calculate PriMerAng for Sun */
-   World[SOL].PriMerAng =
-       fmod(World[SOL].PriMerAngJ2000 + World[SOL].w * DynTime, TwoPi);
-   SimpRot(ZAxis, World[SOL].PriMerAng, World[SOL].CWN);
-   C2Q(World[SOL].CWN, World[SOL].qwn);
+   worlds[SOL].PriMerAng =
+       fmod(worlds[SOL].PriMerAngJ2000 + worlds[SOL].w * j2000_sec, TwoPi);
+   SimpRot(ZAxis, worlds[SOL].PriMerAng, worlds[SOL].CWN);
+   C2Q(worlds[SOL].CWN, worlds[SOL].qwn);
    /* Move Sun to origin */
    for (i = 0; i < 3; i++) {
-      World[SOL].PosH[i]     = 0.0;
-      World[SOL].VelH[i]     = 0.0;
-      World[SOL].eph.PosN[i] = 0.0;
-      World[SOL].eph.VelN[i] = 0.0;
+      worlds[SOL].PosH[i]     = 0.0;
+      worlds[SOL].VelH[i]     = 0.0;
+      worlds[SOL].eph.PosN[i] = 0.0;
+      worlds[SOL].eph.VelN[i] = 0.0;
    }
    /* Adjust Earth from Earth-Moon barycenter */
    /* (Moon PosVel is geocentric, not from barycenter) */
    for (i = 0; i < 3; i++) {
-      EarthMoonBaryPosH[i]      = World[LUNA].eph.PosN[i] / (1.0 + EMRAT);
-      EarthMoonBaryVelH[i]      = World[LUNA].eph.VelN[i] / (1.0 + EMRAT);
-      World[EARTH].eph.PosN[i] -= EarthMoonBaryPosH[i];
-      World[EARTH].eph.VelN[i] -= EarthMoonBaryVelH[i];
-      World[EARTH].PosH[i]      = World[EARTH].eph.PosN[i];
-      World[EARTH].VelH[i]      = World[EARTH].eph.VelN[i];
+      EarthMoonBaryPosH[i]       = worlds[LUNA].eph.PosN[i] / (1.0 + EMRAT);
+      EarthMoonBaryVelH[i]       = worlds[LUNA].eph.VelN[i] / (1.0 + EMRAT);
+      worlds[EARTH].eph.PosN[i] -= EarthMoonBaryPosH[i];
+      worlds[EARTH].eph.VelN[i] -= EarthMoonBaryVelH[i];
+      worlds[EARTH].PosH[i]      = worlds[EARTH].eph.PosN[i];
+      worlds[EARTH].VelH[i]      = worlds[EARTH].eph.VelN[i];
    }
    for (i = 0; i < 3; i++) {
-      rh[i]               = World[LUNA].eph.PosN[i];
-      vh[i]               = World[LUNA].eph.VelN[i];
-      World[LUNA].PosH[i] = World[EARTH].PosH[i] + World[LUNA].eph.PosN[i];
-      World[LUNA].VelH[i] = World[EARTH].VelH[i] + World[LUNA].eph.VelN[i];
+      rh[i]                = worlds[LUNA].eph.PosN[i];
+      vh[i]                = worlds[LUNA].eph.VelN[i];
+      worlds[LUNA].PosH[i] = worlds[EARTH].PosH[i] + worlds[LUNA].eph.PosN[i];
+      worlds[LUNA].VelH[i] = worlds[EARTH].VelH[i] + worlds[LUNA].eph.VelN[i];
    }
    /* Rotate Moon into ECI */
-   QxV(qjh, rh, World[LUNA].eph.PosN);
-   QxV(qjh, vh, World[LUNA].eph.VelN);
-   World[LUNA].PriMerAng = LunaPriMerAng(TDB.JulDay);
-   SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
-   LunaInertialFrame(TDB.JulDay, CNJ);
-   MxM(CNJ, World[EARTH].CNH, World[LUNA].CNH);
-   C2Q(World[LUNA].CNH, World[LUNA].qnh);
-   QxQT(World[LUNA].qnh, qjh, World[LUNA].qnj);
+   QxV(qjh, rh, worlds[LUNA].eph.PosN);
+   QxV(qjh, vh, worlds[LUNA].eph.VelN);
+   worlds[LUNA].PriMerAng = LunaPriMerAng(jd_tdb_j2000);
+   SimpRot(ZAxis, worlds[LUNA].PriMerAng, worlds[LUNA].CWN);
+   LunaInertialFrame(jd_tdb_j2000, CNJ);
+   MxM(CNJ, worlds[EARTH].CNH, worlds[LUNA].CNH);
+   C2Q(worlds[LUNA].CNH, worlds[LUNA].qnh);
+   QxQT(worlds[LUNA].qnh, qjh, worlds[LUNA].qnj);
 
    /* .. Earth rotation is a special case */
-   World[EARTH].PriMerAng = TwoPi * GMST;
+   worlds[EARTH].PriMerAng = TwoPi * GMST;
    HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
+   SimpRot(ZAxis, worlds[EARTH].PriMerAng, C_W_TETE);
+   MxM(C_W_TETE, C_TETE_J2000, worlds[EARTH].CWN);
 
    for (Iw = MERCURY; Iw <= LUNA; Iw++) {
-      Eph = &World[Iw].eph;
-      RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
+      Eph = &worlds[Iw].eph;
+      RV2Eph(j2000_sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
              &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
              &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
    }
@@ -6412,12 +6626,41 @@ void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3],
    }
 }
 /**********************************************************************/
-long UpdateEphems(const ephemType ephem, const double JD_TDB,
-                  const JPLHeaderType *jpl_hdr, struct WorldType *const worlds)
+long LoadEphems(const ephemType ephem, const JDType jd,
+                JPLHeaderType *const jpl_hdr, struct WorldType *const worlds)
+{
+   /* Preload Ephemeris Kernels/Definitions */
+   switch (EphemOption) {
+      case EPH_MEAN: // No Ephem to Load
+         break;
+      case EPH_DE430:
+      case EPH_DE440:
+      case EPH_DE421:
+      case EPH_DE424:
+      case EPH_GMAT421:
+      case EPH_GMAT424:
+         LoadJplEphems(ModelPath, jd, jpl_hdr, worlds);
+         break;
+      case EPH_SPICE:
+#ifdef _ENABLE_SPICE_
+         // Load SPICE to get SPICE-provided values for mu, J2, etc
+         LoadSpiceKernels(ModelPath);
+#endif
+         break;
+      default:
+         fprintf(stderr, "Unknown Ephem Type. Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
+}
+/**********************************************************************/
+long UpdateEphems(const ephemType ephem, const JDType jd,
+                  struct WorldType *const worlds)
 {
    switch (ephem) {
       case EPH_MEAN: {
-         UpdateMeanEphems();
+         /* If EPH_MEAN, update planets/luna to get higher fidelity model for
+          * LUNA */
+         UpdateMeanEphems(jd, worlds);
       } break;
       case EPH_DE430:
       case EPH_DE440:
@@ -6425,32 +6668,39 @@ long UpdateEphems(const ephemType ephem, const double JD_TDB,
       case EPH_DE424:
       case EPH_GMAT421:
       case EPH_GMAT424: {
-         UpdateJplEphems();
+         /* Load Planetary/Luna ephems */
+         UpdateJplEphems(jd, worlds);
       } break;
       case EPH_SPICE: {
 #ifdef _ENABLE_SPICE_
-         const double j2000sec = jd2j2000sec(JD_TDB);
-         UpdateSpiceEphems(j2000sec);
+         UpdateSpiceEphems(jd, worlds);
 #endif
       } break;
       default:
          fprintf(stderr, "Uknown Ephem Type. Exiting...\n");
          exit(EXIT_FAILURE);
-         // return 0;  ?
+         // return 1;  ?
    }
+
+   /* .. Minor Bodies */
+
+   UpdateMinorBodies(jd, &worlds[MINORBODY_0]);
    /* .. Other planets' moons */
    if (EphemOption != EPH_SPICE)
-      UpdateNonEphemMoons();
-   return 1;
+      UpdateNonEphemMoons(jd, worlds);
+   return 0;
 }
 /**********************************************************************/
-void UpdateMeanEphems(const double JD, struct WorldType *const worlds)
+void UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
 {
-   // TODO: JD IS UTC HERE
    struct OrbitType *Eph;
    struct WorldType *W;
-   const double GMST     = JD2GMST(JD);
-   const double j2000sec = JDToTime(JD); // UTC!!
+
+   ChangeSystem(UTC_TIME, &jd);
+   JDType jd_z = jd;
+   ChangeEpoch(ZERO_EPOCH, &jd_z);
+   const double GMST     = JD2GMST(jd_z.day);
+   const double j2000sec = JDToTime(jd);
    double r1[3], rh[3], vh[3];
    const double ZAxis[3] = {0.0, 0.0, 1.0};
    long j, Ip;
@@ -6476,78 +6726,84 @@ void UpdateMeanEphems(const double JD, struct WorldType *const worlds)
    if (worlds[LUNA].Exists) {
       Eph = &worlds[LUNA].eph;
       /* Meeus computes Luna Position in geocentric ecliptic */
-      LunaPosition(TT.JulDay, rh);
-      LunaPosition(TT.JulDay + 0.01, r1);
+      JDType jd_z_tt = jd;
+      ChangeSystem(TT_TIME, &jd_z_tt);
+      LunaPosition(jd_z_tt.day, rh);
+      LunaPosition(jd_z_tt.day + 0.01, r1);
       for (j = 0; j < 3; j++)
          vh[j] = (r1[j] - rh[j]) / (864.0);
       /* Convert to Earth's N frame */
-      MxV(World[EARTH].CNH, rh, Eph->PosN);
-      MxV(World[EARTH].CNH, vh, Eph->VelN);
+      MxV(worlds[EARTH].CNH, rh, Eph->PosN);
+      MxV(worlds[EARTH].CNH, vh, Eph->VelN);
       /* Find Luna's osculating elements */
       RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
              &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
              &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
-      World[LUNA].PriMerAng = LunaPriMerAng(TT.JulDay);
-      SimpRot(ZAxis, World[LUNA].PriMerAng, World[LUNA].CWN);
+      worlds[LUNA].PriMerAng = LunaPriMerAng(jd_z_tt.day);
+      SimpRot(ZAxis, worlds[LUNA].PriMerAng, worlds[LUNA].CWN);
       for (j = 0; j < 3; j++) {
-         World[LUNA].PosH[j] = rh[j] + World[EARTH].PosH[j];
-         World[LUNA].VelH[j] = vh[j] + World[EARTH].VelH[j];
+         worlds[LUNA].PosH[j] = rh[j] + worlds[EARTH].PosH[j];
+         worlds[LUNA].VelH[j] = vh[j] + worlds[EARTH].VelH[j];
       }
    }
    /* .. Earth rotation is a special case */
-   World[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(UTC.JulDay, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, World[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, World[EARTH].CWN);
+   worlds[EARTH].PriMerAng = TwoPi * GMST;
+   HiFiEarthPrecNute(jd_z.day, C_TEME_TETE, C_TETE_J2000);
+   SimpRot(ZAxis, worlds[EARTH].PriMerAng, C_W_TETE);
+   MxM(C_W_TETE, C_TETE_J2000, worlds[EARTH].CWN);
 }
 /**********************************************************************/
-void UpdateMinorBodies(void)
+void UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds)
 {
    struct OrbitType *Eph;
    struct WorldType *W;
    double ZAxis[3] = {0.0, 0.0, 1.0};
    long j, Imb;
 
+   const double j2000_sec = JDToDynTime(jd);
+
    /* .. Locate Asteroids and Comets */
    for (Imb = 0; Imb < Nmb; Imb++) {
-      if (World[55 + Imb].Exists) {
-         W   = &World[55 + Imb];
+      if (minor_worlds[Imb].Exists) {
+         W   = &minor_worlds[Imb];
          Eph = &W->eph;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+                j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
          for (j = 0; j < 3; j++) {
             W->PosH[j] = Eph->PosN[j];
             W->VelH[j] = Eph->VelN[j];
          }
-         W->PriMerAng = fmod(W->w * DynTime, TwoPi);
+         W->PriMerAng = fmod(W->w * j2000_sec, TwoPi);
          SimpRot(ZAxis, W->PriMerAng, W->CWN);
       }
    }
 }
 /**********************************************************************/
-void UpdateNonEphemMoons(void)
+void UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds)
 {
    struct OrbitType *Eph;
    double rh[3], vh[3];
    double ZAxis[3] = {0.0, 0.0, 1.0};
    long i, Ip, Iw;
 
+   const double j2000_sec = JDToDynTime(jd);
+
    /* .. Other planets' moons */
    for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
-      if (Ip != EARTH && World[Ip].Exists) {
-         for (long Im = 0; Im < World[Ip].Nsat; Im++) {
-            Iw  = World[Ip].Sat[Im];
-            Eph = &World[Iw].eph;
+      if (Ip != EARTH && worlds[Ip].Exists) {
+         for (long Im = 0; Im < worlds[Ip].Nsat; Im++) {
+            Iw  = worlds[Ip].Sat[Im];
+            Eph = &worlds[Iw].eph;
             Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                   DynTime - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-            World[Iw].PriMerAng = fmod(World[Iw].w * DynTime, TwoPi);
-            SimpRot(ZAxis, World[Iw].PriMerAng, World[Iw].CWN);
-            C2Q(World[Iw].CWN, World[Iw].qwn);
-            MTxV(World[Ip].CNH, Eph->PosN, rh);
-            MTxV(World[Ip].CNH, Eph->VelN, vh);
+                   j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+            worlds[Iw].PriMerAng = fmod(worlds[Iw].w * j2000_sec, TwoPi);
+            SimpRot(ZAxis, worlds[Iw].PriMerAng, worlds[Iw].CWN);
+            C2Q(worlds[Iw].CWN, worlds[Iw].qwn);
+            MTxV(worlds[Ip].CNH, Eph->PosN, rh);
+            MTxV(worlds[Ip].CNH, Eph->VelN, vh);
             for (i = 0; i < 3; i++) {
-               World[Iw].PosH[i] = rh[i] + World[Ip].PosH[i];
-               World[Iw].VelH[i] = vh[i] + World[Ip].VelH[i];
+               worlds[Iw].PosH[i] = rh[i] + worlds[Ip].PosH[i];
+               worlds[Iw].VelH[i] = vh[i] + worlds[Ip].VelH[i];
             }
          }
       }
@@ -6564,38 +6820,30 @@ long LoadSpiceKernels(char SpicePath[80])
    furnsh_c(MetaKernelPath);
    return (0);
 }
-long UpdateSpiceEphems(double JS)
+long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds)
 {
-   long Iw, Ip, Im;
+   WorldID Iw, Ip, Im;
    int i;
    double CNJ[3][3];
 
-   static SpiceInt major_bodies_naif_state[55] = {0};
-   static int first                            = FALSE;
+   static SpiceInt major_bodies_naif_state[MINORBODY_0] = {0};
+
+   static int first = FALSE;
+
+   ChangeSystem(TDB_TIME, &jd);
+   ChangeEpoch(J2000_EPOCH, &jd);
+   const double JS = jd.day * SEC_PER_DAY;
 
    if (!first) {
-      const char MajorBodiesNamesState[55][15] = {
-          "SUN",        "MERCURY",  "VENUS",     "EARTH",
-          "MARS",       "JUPITER",  "SATURN",    "URANUS",
-          "NEPTUNE",    "PLUTO",    "MOON",      "PHOBOS",
-          "DEIMOS",     "IO",       "EUROPA",    "GANYMEDE",
-          "CALLISTO",   "AMALTHEA", "HIMALIA",   "ELARA",
-          "PASIPHAE",   "SINOPE",   "LYSITHEA",  "CARME",
-          "ANANKE",     "LEDA",     "THEBE",     "ADRASTEA",
-          "METIS",      "MIMAS",    "ENCELADUS", "TETHYS",
-          "DIONE",      "RHEA",     "TITAN",     "HYPERION",
-          "IAPETUS",    "PHOEBE",   "JANUS",     "EPIMETHEUS",
-          "HELENE",     "TELESTO",  "CALYPSO",   "ATLAS",
-          "PROMETHEUS", "PANDORA",  "PAN",       "ARIEL",
-          "UMBRIEL",    "TITANIA",  "OBERON",    "MIRANDA",
-          "TRITON",     "NEREID",   "CHARON"}; // names of "major" bodies
-      for (i = 0; i < 55; i++) {
+      // Get NAIF ids of "major" bodies
+      for (Iw = SOL; Iw < MINORBODY_0; Iw++) {
+         char maj_body_name_state[15] = {'\0'};
+         WorldIDString(Iw, maj_body_name_state);
          SpiceBoolean found = FALSE;
-         bodn2c_c(MajorBodiesNamesState[i], &major_bodies_naif_state[i],
-                  &found);
+         bodn2c_c(maj_body_name_state, &major_bodies_naif_state[i], &found);
          if (!found) {
             fprintf(stderr, "Could not find NAIF ID for body %s. Exiting...\n",
-                    MajorBodiesNamesState[i]);
+                    maj_body_name_state);
             exit(EXIT_FAILURE);
          }
       }
@@ -6603,24 +6851,36 @@ long UpdateSpiceEphems(double JS)
 
    // Some smaller moons do not have valid orientation data.
    // We replace these with the orientation of their planet
-
-   const char MajorBodiesNamesOrientation[55][15] = {
-       "SUN",       "MERCURY",  "VENUS",    "EARTH",   "MARS",
-       "JUPITER",   "SATURN",   "URANUS",   "NEPTUNE", "PLUTO",
-       "MOON",      "PHOBOS",   "DEIMOS",   "IO",      "EUROPA",
-       "GANYMEDE",  "CALLISTO", "AMALTHEA", "JUPITER", "JUPITER",
-       "JUPITER",   "JUPITER",  "JUPITER",  "JUPITER", "JUPITER",
-       "JUPITER",   "THEBE",    "ADRASTEA", "METIS",   "MIMAS",
-       "ENCELADUS", "TETHYS",   "DIONE",    "RHEA",    "TITAN",
-       "SATURN",    "IAPETUS",  "PHOEBE",   "JANUS",   "EPIMETHEUS",
-       "HELENE",    "TELESTO",  "CALYPSO",  "ATLAS",   "PROMETHEUS",
-       "PANDORA",   "PAN",      "ARIEL",    "UMBRIEL", "TITANIA",
-       "OBERON",    "MIRANDA",  "TRITON",   "NEPTUNE", "CHARON"};
-
+   char MajorBodiesNamesOrientation[55][15] = {'\0'};
    // Substitutions:
    // HIMALIA, ELARA, PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA -> JUPITER
    // HYPERION -> SATURN
    // NEREID -> NEPTUNE
+
+   for (Iw = SOL; Iw < MINORBODY_0; Iw++) {
+      WorldID id = Iw;
+      switch (Iw) {
+         case HIMALIA:
+         case ELARA:
+         case PASIPHAE:
+         case SINOPE:
+         case LYSITHEA:
+         case CARME:
+         case ANANKE:
+         case LEDA:
+            id = JUPITER;
+            break;
+         case HYPERION:
+            id = SATURN;
+            break;
+         case NEREID:
+            id = NEPTUNE;
+            break;
+         default:
+            break;
+      }
+      WorldIDString(Iw, MajorBodiesNamesOrientation[Iw]);
+   }
 
    struct OrbitType *Eph;
    struct WorldType *W;
@@ -6632,8 +6892,8 @@ long UpdateSpiceEphems(double JS)
 
    // Read all planets
    for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      if (World[Iw].Exists) {
-         W   = &World[Iw];
+      if (worlds[Iw].Exists) {
+         W   = &worlds[Iw];
          Eph = &W->eph;
          spkez_c(major_bodies_naif_state[Iw], JS, "ECLIPJ2000", "NONE",
                  major_bodies_naif_state[0], Nstate,
@@ -6655,24 +6915,24 @@ long UpdateSpiceEphems(double JS)
          strcat(frame_name, MajorBodiesNamesOrientation[Iw]);
 
          // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-         MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
+         MxMT(worlds[Iw].CNH, worlds[EARTH].CNH, CNJ);
 
          pxform_c("J2000", frame_name, JS, CWJ);
 
          // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-         MxMT(CWJ, CNJ, World[Iw].CWN);
-         C2Q(World[Iw].CWN, World[Iw].qwn);
-         logso3(World[Iw].CWN, ang);
-         World[Iw].PriMerAng = ang[2];
+         MxMT(CWJ, CNJ, worlds[Iw].CWN);
+         C2Q(worlds[Iw].CWN, worlds[Iw].qwn);
+         logso3(worlds[Iw].CWN, ang);
+         worlds[Iw].PriMerAng = ang[2];
       }
    }
 
    // Read all moons
    for (Ip = EARTH; Ip <= PLUTO; Ip++) {
-      if (World[Ip].Exists) {
-         for (Im = 0; Im < World[Ip].Nsat; Im++) {
-            Iw  = World[Ip].Sat[Im];
-            W   = &World[Iw];
+      if (worlds[Ip].Exists) {
+         for (Im = 0; Im < worlds[Ip].Nsat; Im++) {
+            Iw  = worlds[Ip].Sat[Im];
+            W   = &worlds[Iw];
             Eph = &W->eph;
 
             spkez_c(
@@ -6714,22 +6974,22 @@ long UpdateSpiceEphems(double JS)
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-            MxMT(World[Iw].CNH, World[EARTH].CNH, CNJ);
+            MxMT(worlds[Iw].CNH, worlds[EARTH].CNH, CNJ);
 
             pxform_c("J2000", frame_name, JS,
                      CWJ); // matrix from J2000 (ICRF) -> body fixed
 
             // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-            MxMT(CWJ, CNJ, World[Iw].CWN);
-            C2Q(World[Iw].CWN, World[Iw].qwn);
-            logso3(World[Iw].CWN, ang);
-            World[Iw].PriMerAng = ang[2];
+            MxMT(CWJ, CNJ, worlds[Iw].CWN);
+            C2Q(worlds[Iw].CWN, worlds[Iw].qwn);
+            logso3(worlds[Iw].CWN, ang);
+            worlds[Iw].PriMerAng = ang[2];
          }
       }
    }
 
    for (Iw = MERCURY; Iw <= LUNA; Iw++) {
-      Eph = &World[Iw].eph;
+      Eph = &worlds[Iw].eph;
       RV2Eph(DynTime, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
              &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
              &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
@@ -7440,7 +7700,7 @@ void InitSim(int argc, char **argv)
       const char *label =
           fy_node_get_scalar(fy_node_by_path_def(seqNode, "/Label"), &str_len);
       strncpy(GroundStation[Ignd].Label, label, str_len > 39 ? 39 : str_len);
-      GroundStation[Ignd].World = DecodeString(response);
+      GroundStation[Ignd].World = GetWorldID(response);
       GroundStation[Ignd].Exists =
           getYAMLBool(fy_node_by_path_def(iterNode, "/Ground Station/Enabled"));
    }
@@ -7485,59 +7745,27 @@ void InitSim(int argc, char **argv)
               &TDB.Minute, &TDB.Second, DTSIM);
    TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
-   /* Preload Ephemeris Kernels/Definitions */
-   switch (EphemOption) {
-      case EPH_MEAN: // No Ephem to Load
-         break;
-      case EPH_DE430:
-      case EPH_DE440:
-      case EPH_DE421:
-      case EPH_DE424:
-      case EPH_GMAT421:
-      case EPH_GMAT424:
-         LoadJplEphems(ModelPath, TDB.JulDay);
-         break;
-      case EPH_SPICE:
-#ifdef _ENABLE_SPICE_
-         // Load SPICE to get SPICE-provided values for mu, J2, etc
-         LoadSpiceKernels(ModelPath);
-#endif
-         break;
-      default:
-         fprintf(stderr, "Unknown Ephem Type. Exiting...\n");
-         exit(EXIT_FAILURE);
-   }
+   LoadEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Load Sun and Planets */
-   LoadSun();
-   LoadPlanets();
+   LoadSun(EphemOption, JD_TDB_MJD, &JplHeader, World);
+   LoadPlanets(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Load Moons */
    if (World[EARTH].Exists)
-      LoadMoonOfEarth();
+      LoadMoonOfEarth(EphemOption, JD_TDB_MJD, &JplHeader, World);
    if (World[MARS].Exists)
-      LoadMoonsOfMars();
+      LoadMoonsOfMars(EphemOption, JD_TDB_MJD, &JplHeader, World);
    if (World[JUPITER].Exists)
-      LoadMoonsOfJupiter();
+      LoadMoonsOfJupiter(EphemOption, JD_TDB_MJD, &JplHeader, World);
    if (World[SATURN].Exists)
-      LoadMoonsOfSaturn();
+      LoadMoonsOfSaturn(EphemOption, JD_TDB_MJD, &JplHeader, World);
    if (World[URANUS].Exists)
-      LoadMoonsOfUranus();
+      LoadMoonsOfUranus(EphemOption, JD_TDB_MJD, &JplHeader, World);
    if (World[NEPTUNE].Exists)
-      LoadMoonsOfNeptune();
+      LoadMoonsOfNeptune(EphemOption, JD_TDB_MJD, &JplHeader, World);
    if (World[PLUTO].Exists)
-      LoadMoonsOfPluto();
-
-   /* Load Planetary/Luna ephems */
-   if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 ||
-       EphemOption == EPH_DE430 || EphemOption == EPH_DE440 ||
-       EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      UpdateJplEphems();
-   }
-#ifdef _ENABLE_SPICE_
-   else if (EphemOption == EPH_SPICE)
-      UpdateSpiceEphems(DynTime);
-#endif
+      LoadMoonsOfPluto(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Asteroids and Comets */
    if (MinorBodiesExist)
@@ -7545,13 +7773,7 @@ void InitSim(int argc, char **argv)
    else
       Nmb = 0;
 
-   /* .. If EPH_MEAN, update planets/luna to get higher fidelity model for LUNA
-    */
-   if (EphemOption == EPH_MEAN)
-      UpdateMeanEphems();
-   /* .. Other planets' moons */
-   if (EphemOption != EPH_SPICE)
-      UpdateNonEphemMoons();
+   UpdateEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Regions */
    LoadRegions();

@@ -27,7 +27,7 @@
 */
 
 /* Ephem Tags */
-typedef enum {
+typedef enum ephemType {
    EPH_NULL = -1, // dummy value for initialization/logging errors
    EPH_MEAN = 0,
    EPH_DE430,
@@ -843,7 +843,7 @@ struct SCType {
 struct TargetType {
    /*~ Internal Variables ~*/
    long Type;
-   long World;
+   WorldID World;
    long RefOrb;
    long SC;
    long Body;
@@ -898,7 +898,7 @@ struct POVType {
 struct RegionType {
    /*~ Internal Variables ~*/
    long Exists;
-   long World;
+   WorldID World;
    double Lng, Lat, Alt; /* Origin location */
    double PosW[3];
    double CW[3][3]; /* Region frame is East-North-Up */
@@ -1050,7 +1050,7 @@ struct TdrsType {
 struct GroundStationType {
    /*~ Internal Variables ~*/
    long Exists;
-   long World;
+   WorldID World;
    long Show;
    double lng, lat;
    double PosW[3]; /* Position vector in World frame */
@@ -1081,7 +1081,7 @@ struct OrreryPOVType {
    /*~ Internal Variables ~*/
    long Regime; /* CENTRAL or THREE_BODY */
    long CenterType;
-   long World;
+   WorldID World;
    long LagSys;
    long MinorBody;
    long LP;

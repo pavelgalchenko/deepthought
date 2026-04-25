@@ -699,7 +699,7 @@ double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3])
 /*  Index 1=Mercury, 2=Venus, ... 9=Pluto.  0=Sun is not used.        */
 /*  Note that the elements for Pluto are not from Meeus, but from a   */
 /*  lower-fidelity data set from JPL.                                 */
-void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
+void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *ArgP, double *tp,
                        double *anom, double *SLR, double *alpha, double *rmin,
                        double *MeanMotion, double *Period)
@@ -763,11 +763,13 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 
    double AU2m = 149597870000.0;
 
+   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
+
    /* .. Time since J2000, in Julian centuries */
-   T = (JD - 2451545.0) / 36525.0;
+   T = jd.day / 36525.0;
 
    /* .. Time since J2000, in seconds */
-   SecSinceJ2000 = (JD - 2451545.0) * 86400.0;
+   SecSinceJ2000 = jd.day * 86400.0;
 
    /* .. Mean Longitude */
    L = (La0[i] + T * (La1[i] + T * (La2[i] + T * La3[i]))) * D2R;
@@ -808,15 +810,18 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 /*  This function gives the location of Luna, with respect to the    */
 /*  geocentric ecliptic frame.  Refer to Chap 47 of Meeus,           */
 /*  "Astronomical Algorithms" QB51.3.E43 M42, 1998.                  */
-void LunaPosition(double JD, double r[3])
+void LunaPosition(const JDType jd, double r[3])
 {
    // dug a bit through Astronomical Algorithmsm,
    // JD is Terrestrial Dynamical Time here...
 
+   ChangeSystem(TT_TIME, &jd);
+   ChangeEpoch(J2000_EPOCH, &jd);
+
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
 
-   T = (JD - 2451545.0) / 36525.0;
+   T = jd.day / 36525.0;
 
    Lp = (218.3164477 +
          T * (481267.88123421 +
@@ -1146,8 +1151,11 @@ void LunaPosition(double JD, double r[3])
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(double JulDay, double CNJ[3][3])
+void LunaInertialFrame(const JDType jd, double CNJ[3][3])
 {
+   ChangeSystem(TDB_TIME, &jd);
+   ChangeEpoch(J2000_EPOCH, &jd);
+
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
@@ -1158,7 +1166,7 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
    double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
-   D = JulDay - 2451545.0;
+   D = jd.day;
    T = D / 36525.0;
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
@@ -1223,7 +1231,7 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-double LunaPriMerAng(double JulDay)
+double LunaPriMerAng(const JDType jd)
 {
    double D;
    double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
@@ -1231,7 +1239,10 @@ double LunaPriMerAng(double JulDay)
    double SinE8, SinE9, SinE10, SinE11, SinE12, SinE13;
    double PriMerAng;
 
-   D = JulDay - 2451545.0;
+   ChangeSystem(TDB_TIME, &jd);
+   ChangeEpoch(J2000_EPOCH, &jd);
+
+   D = jd.day;
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
    E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;

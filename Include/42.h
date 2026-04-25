@@ -98,13 +98,17 @@ EXTERN long ContactActive;
 EXTERN long SloshActive;
 EXTERN long AlbedoActive; /* Affects CSS measurements */
 EXTERN long ComputeEnvTrq;
-EXTERN ephemType EphemOption; /* MEAN, DE421, DE424, DE430, DE440, GMAT421,
-                                 GMAT424, or SPICE */
+EXTERN ephemType EphemOption;   /* MEAN, DE421, DE424, DE430, DE440, GMAT421,
+                                   GMAT424, or SPICE */
+EXTERN JPLHeaderType JplHeader; /* Stores header information for
+                                   DE ephem types*/
 
 /* Calendar Time is all based in Terrestrial Dynamical Time (TT or TDT) unless
  * otherwise noted */
-EXTERN double DynTime0;   /* Time in sec since J2000 Epoch at Sim Start (TT) */
-EXTERN double DynTime;    /* Absolute Time (TT), sec since J2000 Epoch */
+EXTERN JDType
+    JD_TDB_MJD;         /* Julian day in TDB with reference to GMAT MJD epoch*/
+EXTERN double DynTime0; /* Time in sec since J2000 Epoch at Sim Start (TT) */
+EXTERN double DynTime;  /* Absolute Time (TT), sec since J2000 Epoch */
 EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;  /* UTC = TAI - LeapSec */
@@ -250,14 +254,14 @@ void LoadPlanets(void);
 /* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
 long LoadSpiceKernels(char SpicePath[80]);
 /* handler to determine which Update*Ephems() subfunction to call */
-long UpdateEphems(const ephemType ephem, const double JD_TDB,
+long UpdateEphems(const ephemType ephem, const JDType jd,
                   const JPLHeaderType *jpl_hdr, struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using SPICE*/
-long UpdateSpiceEphems(double JS, struct WorldType *const worlds);
+long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
-long LoadJplEphems(char EphemPath[128], double JD,
-                   struct WorldType *const worlds);
+long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
+                   const JDType jd, struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
 long UpdateJplEphems(struct WorldType *const worlds);
 /* Update celestial body locations using MEAN method */
