@@ -446,14 +446,14 @@ void DSM_PosHReport(void)
             for (i = 0; i < 3; ++i) {
                SC_LEI[i] = SC[Isc].PosN[i];
             }
-            LunaInertialFrame(TDB.JulDay, CNJ);
+            LunaInertialFrame(JD_TDB_MJD, CNJ);
             MTxV(CNJ, SC_LEI, SC_LCI);
             for (i = 0; i < 3; ++i) {
                SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
             }
          }
          else if (Orb[SC[Isc].RefOrb].World == EARTH) {
-            LunaInertialFrame(TDB.JulDay, CNJ);
+            LunaInertialFrame(JD_TDB_MJD, CNJ);
             for (i = 0; i < 3; ++i) {
                SC_ECI[i] = SC[Isc].PosN[i];
                SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
@@ -462,6 +462,7 @@ void DSM_PosHReport(void)
          }
          else
             break;
+         // TODO
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.JulDay, TT.JulDay);
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.tdbTime, DynTime);
          fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH[0],
@@ -646,10 +647,7 @@ void DSM_NAV_StateReport(void)
                writeTime = TRUE;
                switch (state) {
                   case TIME_STATE:
-                     fprintf(stateFile[Isc], PRNT_DBL,
-                             DateToTime(Nav->Date.Year, Nav->Date.Month,
-                                        Nav->Date.Day, Nav->Date.Hour,
-                                        Nav->Date.Minute, Nav->Date.Second));
+                     fprintf(stateFile[Isc], PRNT_DBL, DateToTime(Nav->Date));
                      break;
                   case ROTMAT_STATE:
                      for (int i = 0; i < 3; i++)

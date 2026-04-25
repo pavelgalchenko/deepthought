@@ -189,19 +189,23 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
                       double RKFdt);
 void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
                         double Frc[3]);
-void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3],
-                  double trgtPosH[3], double *trgtPriMerAng,
+void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *const worlds,
+                  double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
                   double trgtCNH[3][3]);
-void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3],
-                    double trgtPosH[3], double *trgtPriMerAng,
-                    double trgtCNH[3][3]);
+void Rk4SpiceEphems(JDType jd, long trgtWORLD, struct WorldType *const worlds,
+                    double trgtPosN[3], double trgtPosH[3],
+                    double *trgtPriMerAng, double trgtCNH[3][3]);
 
 long SimStep(void);
-void Ephemerides(void);
+void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
+                 struct OrbitType *const orbs);
 void OrbitMotion(double Time);
-void Environment(struct SCType *S);
-void Perturbations(struct SCType *S);
-void Sensors(struct SCType *S);
+void Environment(struct WorldType *const worlds, struct OrbitType *const orbs,
+                 struct SCType *S);
+void Perturbations(struct WorldType *const worlds, struct OrbitType *const orbs,
+                   struct SCType *S);
+void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
+             struct SCType *S);
 void SensorDriver(struct SCType *S);
 void FlightSoftWare(struct SCType *S);
 void ActuatorDriver(struct SCType *S);
@@ -255,7 +259,8 @@ void LoadPlanets(void);
 long LoadSpiceKernels(char SpicePath[80]);
 /* handler to determine which Update*Ephems() subfunction to call */
 long UpdateEphems(const ephemType ephem, const JDType jd,
-                  const JPLHeaderType *jpl_hdr, struct WorldType *const worlds);
+                  const JPLHeaderType *const jpl_hdr,
+                  struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using SPICE*/
 long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
@@ -287,8 +292,7 @@ void CfdSlosh(struct SCType *S);
 void FakeCfdSlosh(struct SCType *S);
 void SendStatesToSpirent(void);
 
-void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
-              long *minute, double *second);
+DateType NOS3Time();
 
 void InterProcessComm(void);
 void InitInterProcessComm(void);

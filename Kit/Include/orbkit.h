@@ -94,7 +94,7 @@ typedef enum WorldID {
    MIRANDA,
    /* Major Moons of Neptune */
    TRITON,
-   NERIED,
+   NEREID,
    /* Pluto's moon */
    CHARON,
    /* Minor Bodies */
@@ -321,20 +321,20 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
             double *e, double *i, double *RAAN, double *ArgP, double *th,
             double *tp, double *SLR, double *alpha, double *rmin,
             double *MeanMotion, double *Period);
-void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
-                 double LeapSec, struct OrbitType *O);
+void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
+                 struct OrbitType *O);
 void MeanEph2RV(struct OrbitType *O, double DynTime);
 long LoadTleFromFile(const char *Path, const char *TleFileName,
-                     const char *TleLabel, double DynTime, double JD,
-                     double LeapSec, struct OrbitType *O);
+                     const char *TleLabel, double DynTime, JDType jd,
+                     struct OrbitType *O);
 double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3]);
-void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
+void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *omg, double *tp,
                        double *anom, double *p, double *alpha, double *rmin,
                        double *MeanMotion, double *Period);
 void LunaPosition(const JDType jd, double r[3]);
 void LunaInertialFrame(const JDType jd, double CNJ[3][3]);
-double LunaPriMerAng(double JulDay);
+double LunaPriMerAng(JDType JulDay);
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
 void FindCEN(double r[3], double CEN[3][3]);
 void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]);

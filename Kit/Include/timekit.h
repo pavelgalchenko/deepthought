@@ -86,12 +86,12 @@ double TTtoTDB_Time(double SecSinceJ2000);
 // double MJDToJD(double MJD);
 // double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
 //                  double Second);
-double TimeToJD(double Time);
+JDType TimeToJD(double SecSince, TimeSystem system, Epoch epoch);
 double JDToTime(const JDType JD);
 double JDToDynTime(const JDType JD);
 double DateToTime(const DateType date);
-JDType DateToJD(const DateType date, const Epoch epoch,
-                const TimeSystem system);
+JDType DateToJD(const DateType date, const TimeSystem old_system,
+                const Epoch epoch, const TimeSystem system);
 void DateToCCSDS(const DateType date, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds);
 void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
@@ -106,7 +106,7 @@ DateType JDToDate(const JDType jd);
 DateType TimeToDate(double Time, double LSB);
 long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
-double JD2GMST(double JD);
+double JD2GMST(JDType JD);
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);

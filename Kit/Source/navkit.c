@@ -243,8 +243,8 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
    // TODO: change for spice
    struct WorldType *W = &World[orbCenter];
    double PriMerAng    = 0.0;
-   const double time   = DateToTime(date->Year, date->Month, date->Day,
-                                    date->Hour, date->Minute, date->Second);
+   const double time   = DateToTime(*date);
+   JDType jd           = DateToJD(*date, TT_TIME, J2000_EPOCH, TT_TIME);
 
    /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
@@ -255,11 +255,11 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
          else {
             DateType dateUTC = *date;
             updateTime(&dateUTC, -(32.184 + LeapSec));
-            PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
+            PriMerAng = TwoPi * JD2GMST(jd);
          }
       } break;
       case LUNA: {
-         PriMerAng = LunaPriMerAng(date->JulDay);
+         PriMerAng = LunaPriMerAng(jd);
       } break;
       case SOL: // TODO: SOL does not rotate
          break;
@@ -1403,16 +1403,21 @@ data
 /*--------------------------------------------------------------------*/
 /*                   Auxillary helper functions                       */
 /*--------------------------------------------------------------------*/
-void getEarthAtmoParams(const double JD, double *NavFlux10p7,
+void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
                         double *NavGeomagIndex)
 {
+   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
    if (AtmoOption == TWOSIGMA_ATMO) {
-      *NavFlux10p7    = LinInterp(SchattenTable[0], SchattenTable[1], JD, 410);
-      *NavGeomagIndex = LinInterp(SchattenTable[0], SchattenTable[3], JD, 410);
+      *NavFlux10p7 =
+          LinInterp(SchattenTable[0], SchattenTable[1], jd.day, 1009);
+      *NavGeomagIndex =
+          LinInterp(SchattenTable[0], SchattenTable[3], jd.day, 1009);
    }
    else if (AtmoOption == NOMINAL_ATMO) {
-      *NavFlux10p7    = LinInterp(SchattenTable[0], SchattenTable[2], JD, 410);
-      *NavGeomagIndex = LinInterp(SchattenTable[0], SchattenTable[4], JD, 410);
+      *NavFlux10p7 =
+          LinInterp(SchattenTable[0], SchattenTable[2], jd.day, 1009);
+      *NavGeomagIndex =
+          LinInterp(SchattenTable[0], SchattenTable[4], jd.day, 1009);
    }
    else {
       // Pull from user-defined values in Inp_Sim.txt
@@ -3016,8 +3021,8 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             MxV(CWN, PosN, PosW);
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
-               getEarthAtmoParams(Nav->Date.JulDay, &NavFlux10p7,
-                                  &NavGeomagIndex);
+               JDType jd = DateToJD(Nav->Date, TT_TIME, MJD_EPOCH, TT_TIME);
+               getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
                AtmoDensity =
                    NRLMSISE00(Nav->Date.Year, Nav->Date.doy, Nav->Date.Hour,
                               Nav->Date.Minute, Nav->Date.Second, PosW,

@@ -98,7 +98,7 @@ void FindSCinFormation(struct SCType *S)
 #endif
 }
 /**********************************************************************/
-void CheckOrbitRectification(struct OrbitType *O)
+void CheckOrbitRectification(struct SCType *scs, struct OrbitType *O)
 {
    long Isc, i;
    double m     = 0.0;
@@ -109,11 +109,11 @@ void CheckOrbitRectification(struct OrbitType *O)
    struct SCType *S;
 
    for (Isc = 0; Isc < Nsc; Isc++) {
-      if (SC[Isc].Exists && SC[Isc].RefOrb == O->Tag) {
-         m += SC[Isc].mass;
+      if (scs[Isc].Exists && scs[Isc].RefOrb == O->Tag) {
+         m += scs[Isc].mass;
          for (i = 0; i < 3; i++) {
-            mr[i] += SC[Isc].mass * SC[Isc].PosR[i];
-            mv[i] += SC[Isc].mass * SC[Isc].VelR[i];
+            mr[i] += scs[Isc].mass * scs[Isc].PosR[i];
+            mv[i] += scs[Isc].mass * scs[Isc].VelR[i];
          }
       }
    }
@@ -134,8 +134,8 @@ void CheckOrbitRectification(struct OrbitType *O)
       a = MAGV(O->PosN);
       n = sqrt(O->mu / (a * a * a));
       for (Isc = 0; Isc < Nsc; Isc++) {
-         if (SC[Isc].Exists && SC[Isc].RefOrb == O->Tag) {
-            S = &SC[Isc];
+         if (scs[Isc].Exists && scs[Isc].RefOrb == O->Tag) {
+            S = &scs[Isc];
             for (i = 0; i < 3; i++) {
                S->PosR[i] -= PosR[i];
                S->VelR[i] -= VelR[i];
@@ -151,7 +151,8 @@ void CheckOrbitRectification(struct OrbitType *O)
 /*  variables are referenced.  Changing orbit Worlds changes the N   */
 /*  frame being used.  To avoid discontinuities in actual positions   */
 /*  or attitudes, several dynamical variables must be adjusted.       */
-void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld)
+void ChangeNFrame(struct SCType *const scs, struct WorldType *const worlds,
+                  struct OrbitType *O, long OldWorld, long NewWorld)
 {
    double CN1H[3][3], CN2H[3][3], CL1H[3][3], CL2H[3][3], CH[3][3], VH[3];
    double CBN1[3][3], CBN2[3][3];
@@ -163,8 +164,8 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld)
 
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         CN1H[i][j] = World[OldWorld].CNH[i][j];
-         CN2H[i][j] = World[NewWorld].CNH[i][j];
+         CN1H[i][j] = worlds[OldWorld].CNH[i][j];
+         CN2H[i][j] = worlds[NewWorld].CNH[i][j];
       }
    }
 
@@ -187,7 +188,7 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld)
 
    /* .. SC */
    for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
+      S = &scs[Isc];
       if (S->Exists && S->RefOrb == O->Tag) {
          MxM(S->CLN, CN1H, CL1H);
 
@@ -234,7 +235,7 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld)
       POV.Host.World = NewWorld;
       MxM(POV.CN, CN1H, CH);
       MxMT(CH, CN2H, POV.CN);
-      MxMT(POV.CN, SC[POV.Host.SC].CLN, POV.CL);
+      MxMT(POV.CN, scs[POV.Host.SC].CLN, POV.CL);
 
       if (POV.Frame == FRAME_N) {
          for (i = 0; i < 3; i++) {
@@ -265,7 +266,9 @@ void ChangeNFrame(struct OrbitType *O, long OldWorld, long NewWorld)
    }
 }
 /**********************************************************************/
-void CheckChangeOfOrbitWorld(struct OrbitType *O)
+void CheckChangeOfOrbitWorld(struct SCType *const scs,
+                             struct WorldType *const worlds,
+                             struct OrbitType *O)
 {
 #define NO_TRANSITION         0
 #define CENTRAL1_TO_THREEBODY 1
@@ -281,21 +284,21 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
 
    if (O->Regime == ORB_CENTRAL) {
       /* Falling "in" from Body 1-centered to 3-body */
-      P = &World[O->World];
+      P = &worlds[O->World];
       for (Im = 0; Im < P->Nsat; Im++) {
          Iw = P->Sat[Im];
          for (i = 0; i < 3; i++)
-            dr[i] = O->PosN[i] - World[Iw].eph.PosN[i];
-         if (MAGV(dr) < 1.99 * World[Iw].RadOfInfluence) {
+            dr[i] = O->PosN[i] - worlds[Iw].eph.PosN[i];
+         if (MAGV(dr) < 1.99 * worlds[Iw].RadOfInfluence) {
             Transition = CENTRAL1_TO_THREEBODY;
             Body1      = O->World;
             Body2      = Iw;
          }
       }
-      if (MAGV(O->PosN) > 0.51 * World[O->World].RadOfInfluence) {
+      if (MAGV(O->PosN) > 0.51 * worlds[O->World].RadOfInfluence) {
          /* Falling "out" from Body 2-centered to 3-body */
          Transition = CENTRAL2_TO_THREEBODY;
-         Body1      = World[O->World].Parent;
+         Body1      = worlds[O->World].Parent;
          Body2      = O->World;
       }
    }
@@ -303,8 +306,8 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
       /* Falling "in" from 3-body to Body 2-centered */
       Iw = O->Body2;
       for (i = 0; i < 3; i++)
-         dr[i] = O->PosN[i] - World[Iw].eph.PosN[i];
-      if (MAGV(dr) < 0.49 * World[Iw].RadOfInfluence) {
+         dr[i] = O->PosN[i] - worlds[Iw].eph.PosN[i];
+      if (MAGV(dr) < 0.49 * worlds[Iw].RadOfInfluence) {
          Transition = THREEBODY_TO_CENTRAL2;
          Body1      = O->Body1;
          Body2      = O->Body2;
@@ -312,8 +315,8 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
       else {
          /* Falling "out" from 3-body to Body 1-centered */
          for (i = 0; i < 3; i++)
-            dr[i] = O->PosN[i] - World[Iw].eph.PosN[i];
-         if (MAGV(dr) > 2.01 * World[Iw].RadOfInfluence) {
+            dr[i] = O->PosN[i] - worlds[Iw].eph.PosN[i];
+         if (MAGV(dr) > 2.01 * worlds[Iw].RadOfInfluence) {
             Transition = THREEBODY_TO_CENTRAL1;
             Body1      = O->Body1;
             Body2      = O->Body2;
@@ -328,8 +331,8 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
          O->Regime = ORB_THREE_BODY;
          O->Body1  = Body1;
          O->Body2  = Body2;
-         O->mu1    = World[Body1].mu;
-         O->mu2    = World[Body2].mu;
+         O->mu1    = worlds[Body1].mu;
+         O->mu2    = worlds[Body2].mu;
          printf("Orbit %ld transitioned from Central-1 to 3-body orbit at Time "
                 "= %lf\n",
                 O->Tag, SimTime);
@@ -339,16 +342,16 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
          O->Body1  = Body1;
          O->Body2  = Body2;
          O->World  = Body1;
-         O->mu1    = World[Body1].mu;
-         O->mu2    = World[Body2].mu;
+         O->mu1    = worlds[Body1].mu;
+         O->mu2    = worlds[Body2].mu;
          O->mu     = O->mu1;
-         MTxV(World[Body2].CNH, O->PosN, rh);
-         MTxV(World[Body2].CNH, O->VelN, vh);
-         MxV(World[Body1].CNH, rh, O->PosN);
-         MxV(World[Body1].CNH, vh, O->VelN);
+         MTxV(worlds[Body2].CNH, O->PosN, rh);
+         MTxV(worlds[Body2].CNH, O->VelN, vh);
+         MxV(worlds[Body1].CNH, rh, O->PosN);
+         MxV(worlds[Body1].CNH, vh, O->VelN);
          for (i = 0; i < 3; i++) {
-            O->PosN[i] += World[Body2].eph.PosN[i];
-            O->VelN[i] += World[Body2].eph.VelN[i];
+            O->PosN[i] += worlds[Body2].eph.PosN[i];
+            O->VelN[i] += worlds[Body2].eph.VelN[i];
          }
          RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
                 &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha,
@@ -356,34 +359,34 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
          printf("Orbit %ld transitioned to 3-body orbit at Time = %lf\n",
                 O->Tag, SimTime);
          /* Change of N frame has far-ranging effects */
-         ChangeNFrame(O, Body2, Body1);
+         ChangeNFrame(scs, worlds, O, Body2, Body1);
          break;
       case THREEBODY_TO_CENTRAL1:
          O->Regime = ORB_CENTRAL;
          O->World  = Body1;
-         O->mu     = World[O->World].mu;
+         O->mu     = worlds[O->World].mu;
          printf("Orbit %ld transitioned to central orbit at Time = %lf\n",
                 O->Tag, SimTime);
          break;
       case THREEBODY_TO_CENTRAL2:
          O->Regime = ORB_CENTRAL;
          O->World  = Body2;
-         O->mu     = World[O->World].mu;
+         O->mu     = worlds[O->World].mu;
          for (i = 0; i < 3; i++) {
-            O->PosN[i] -= World[Body2].eph.PosN[i];
-            O->VelN[i] -= World[Body2].eph.VelN[i];
+            O->PosN[i] -= worlds[Body2].eph.PosN[i];
+            O->VelN[i] -= worlds[Body2].eph.VelN[i];
          }
-         MTxV(World[Body1].CNH, O->PosN, rh);
-         MTxV(World[Body1].CNH, O->VelN, vh);
-         MxV(World[Body2].CNH, rh, O->PosN);
-         MxV(World[Body2].CNH, vh, O->VelN);
+         MTxV(worlds[Body1].CNH, O->PosN, rh);
+         MTxV(worlds[Body1].CNH, O->VelN, vh);
+         MxV(worlds[Body2].CNH, rh, O->PosN);
+         MxV(worlds[Body2].CNH, vh, O->VelN);
          RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
                 &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha,
                 &O->rmin, &O->MeanMotion, &O->Period);
          printf("Orbit %ld transitioned to central orbit at Time = %lf\n",
                 O->Tag, SimTime);
          /* Change of N frame has far-ranging effects */
-         ChangeNFrame(O, Body1, Body2);
+         ChangeNFrame(scs, worlds, O, Body1, Body2);
          break;
    }
 
@@ -396,8 +399,7 @@ void CheckChangeOfOrbitWorld(struct OrbitType *O)
 /**********************************************************************/
 void SplineToPosVel(struct OrbitType *O)
 {
-   long NodeYear, NodeMonth, NodeDay, NodeHour, NodeMin;
-   double NodeSec;
+   DateType NodeDate;
    char newline;
    long i, j, k;
    double X[4], Y[4];
@@ -413,12 +415,12 @@ void SplineToPosVel(struct OrbitType *O)
          }
       }
       fscanf(O->SplineFile,
-             "%ld-%ld-%ldT%ld:%ld:%lf %lf %lf %lf %lf %lf %lf %[\n]", &NodeYear,
-             &NodeMonth, &NodeDay, &NodeHour, &NodeMin, &NodeSec,
-             &O->NodePos[3][0], &O->NodePos[3][1], &O->NodePos[3][2],
-             &O->NodeVel[3][0], &O->NodeVel[3][1], &O->NodeVel[3][2], &newline);
-      O->NodeDynTime[3] =
-          DateToTime(NodeYear, NodeMonth, NodeDay, NodeHour, NodeMin, NodeSec);
+             "%ld-%ld-%ldT%ld:%ld:%lf %lf %lf %lf %lf %lf %lf %[\n]",
+             &NodeDate.Year, &NodeDate.Month, &NodeDate.Day, &NodeDate.Hour,
+             &NodeDate.Minute, &NodeDate.Second, &O->NodePos[3][0],
+             &O->NodePos[3][1], &O->NodePos[3][2], &O->NodeVel[3][0],
+             &O->NodeVel[3][1], &O->NodeVel[3][2], &newline);
+      O->NodeDynTime[3]  = DateToTime(NodeDate);
       O->NodeDynTime[3] += DynTime - CivilTime; /* Adjust from UTC to TT */
       for (j = 0; j < 3; j++) {
          O->NodePos[3][j] *= 1000.0;
@@ -560,7 +562,8 @@ void OrbitMotion(double Time)
    }
 }
 /**********************************************************************/
-void Ephemerides(void)
+void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
+                 struct OrbitType *const orbs)
 {
    struct OrbitType *O;
    struct WorldType *W;
@@ -572,34 +575,7 @@ void Ephemerides(void)
    long i, j, Ir, Isc;
    double MagR1, MeanMotion;
 
-   /* .. Locate Planets and Luna */
-   if (EphemOption == EPH_MEAN) {
-      /* Moved Mean Ephem calculations to function in 42int.c, cleaner build */
-      UpdateMeanEphems();
-   }
-   /* Moved JPL Ephem calculations to functions in 42int.c, cleaner build */
-   else if (EphemOption == EPH_DE421 || EphemOption == EPH_DE424 ||
-            EphemOption == EPH_DE430 || EphemOption == EPH_DE440 ||
-            EphemOption == EPH_GMAT421 || EphemOption == EPH_GMAT424) {
-      /* Update DE block if needed */
-      if (TDB.JulDay > World[SOL].eph.Cheb[1].JD2)
-         LoadJplEphems(ModelPath, (double)TDB.JulDay);
-      UpdateJplEphems();
-   }
-#ifdef _ENABLE_SPICE_
-   else if (EphemOption == EPH_SPICE) {
-      UpdateSpiceEphems(DynTime);
-   }
-#endif
-   else {
-      fprintf(stderr, "Bogus Ephem Option in Ephemerides.  Bailing out.\n");
-      exit(EXIT_FAILURE);
-   }
-
-   /* Moved non ephem calculations to functions in 42int.c, cleaner build */
-   UpdateMinorBodies();
-   if (EphemOption != EPH_SPICE)
-      UpdateNonEphemMoons();
+   UpdateEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    /* Updates some Lagrange point parameters, can help get a more accurate CLN
@@ -620,7 +596,7 @@ void Ephemerides(void)
    /* .. Regions */
    for (Ir = 0; Ir < Nrgn; Ir++) {
       R = &Rgn[Ir];
-      W = &World[R->World];
+      W = &worlds[R->World];
       MTxV(W->CWN, R->PosW, R->PosN);
       R->VelN[0] = -W->w * R->PosN[1];
       R->VelN[1] = W->w * R->PosN[0];
@@ -629,9 +605,9 @@ void Ephemerides(void)
    }
 
    /* .. TDRS Spacecraft */
-   TDRSPosVel(World[EARTH].PriMerAng, DynTime, ptn, vtn);
+   TDRSPosVel(worlds[EARTH].PriMerAng, DynTime, ptn, vtn);
    for (i = 0; i < 10; i++) {
-      MxV(World[EARTH].CWN, ptn[i], Tdrs[i].rw);
+      MxV(worlds[EARTH].CWN, ptn[i], Tdrs[i].rw);
       for (j = 0; j < 3; j++) {
          Tdrs[i].PosN[j] = ptn[i][j];
          Tdrs[i].VelN[j] = vtn[i][j];
@@ -643,10 +619,10 @@ void Ephemerides(void)
 
    /* .. SC */
    for (Isc = 0; Isc < Nsc; Isc++) {
-      if (SC[Isc].Exists) {
-         S = &SC[Isc];
-         O = &Orb[S->RefOrb];
-         W = &World[O->World];
+      if (scs[Isc].Exists) {
+         S = &scs[Isc];
+         O = &orbs[S->RefOrb];
+         W = &worlds[O->World];
 
          /* Local-vertical frame tied to SC */
          if (O->Regime == ORB_ZERO) {

@@ -593,7 +593,7 @@ void ChangeEpoch(const Epoch new_epoch, JDType *const jd)
    ChangeSystem(jd->system, &jd_tt);
    *jd = jd_tt;
 }
-void ChangeSystemEpoch(const Epoch new_epoch, const TimeSystem new_system,
+void ChangeSystemEpoch(const TimeSystem new_system, const Epoch new_epoch,
                        JDType *const jd)
 {
    // This whole kit needs some testing, but this is currently how I prefer to

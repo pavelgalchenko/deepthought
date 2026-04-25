@@ -524,7 +524,6 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
    struct OrbitType *O;
    double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
    double FrcN_harm[3] = {0}, SCPosN_harm[3] = {0};
-   double RK4TIME;
    long Iw, Im, j;
    long OrbCenter, SecCenter;
    double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3] = {0};
@@ -536,11 +535,13 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
       SCPosN_harm[j] = u[j];
    }
 
-   RK4TIME = TDB.JulDay + RKFdt / 86400.0L;
+   JDType jd_tdb_mjd = JD_TDB_MJD;
+
+   jd_tdb_mjd.day = JD_TDB_MJD.day + RKFdt / 86400.0;
    if (EphemOption != EPH_SPICE) {
-      if (RK4TIME > World[SOL].eph.Cheb[1].JD2) {
+      if (jd_tdb_mjd.day > World[SOL].eph.Cheb[1].JD2) {
          revertCHEB = 1;
-         LoadJplEphems(ModelPath, RK4TIME);
+         LoadJplEphems(ModelPath, &JplHeader, jd_tdb_mjd, World);
       }
    }
 
@@ -551,26 +552,26 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
    struct WorldType *WCenter = &World[OrbCenter];
 #ifdef _ENABLE_SPICE_
    if (EphemOption == EPH_SPICE) {
-      Rk4SpiceEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
-                     cntrCNH);
+      Rk4SpiceEphems(jd_tdb_mjd, OrbCenter, World, cntrPosN, cntrPosH,
+                     &cntrPriMerAng, cntrCNH);
    }
    else
 #endif
-      Rk4JplEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
-                   cntrCNH);
+      Rk4JplEphems(jd_tdb_mjd, OrbCenter, World, cntrPosN, cntrPosH,
+                   &cntrPriMerAng, cntrCNH);
 
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
 #ifdef _ENABLE_SPICE_
          if (EphemOption == EPH_SPICE) {
-            Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                           trgtCNH);
+            Rk4SpiceEphems(jd_tdb_mjd, Iw, World, trgtPosN, trgtPosH,
+                           &trgtPriMerAng, trgtCNH);
          }
          else
 #endif
-            Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                         trgtCNH);
+            Rk4JplEphems(jd_tdb_mjd, Iw, World, trgtPosN, trgtPosH,
+                         &trgtPriMerAng, trgtCNH);
 
          for (j = 0; j < 3; j++)
             ph[j] = trgtPosH[j] - cntrPosH[j];
@@ -590,13 +591,13 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
          if (Iw != SecCenter) {
 #ifdef _ENABLE_SPICE_
             if (EphemOption == EPH_SPICE) {
-               Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                              trgtCNH);
+               Rk4SpiceEphems(jd_tdb_mjd, Iw, World, trgtPosN, trgtPosH,
+                              &trgtPriMerAng, trgtCNH);
             }
             else
 #endif
-               Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                            trgtCNH);
+               Rk4JplEphems(jd_tdb_mjd, Iw, World, trgtPosN, trgtPosH,
+                            &trgtPriMerAng, trgtCNH);
 
             for (j = 0; j < 3; j++) {
                p[j] = trgtPosN[j];
@@ -617,7 +618,7 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
 
    if (EphemOption != EPH_SPICE) {
       if (revertCHEB) {
-         LoadJplEphems(ModelPath, TDB.JulDay);
+         LoadJplEphems(ModelPath, &JplHeader, JD_TDB_MJD, World);
       }
    }
 

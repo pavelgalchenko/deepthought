@@ -57,6 +57,7 @@ double TTtoTDB_Time(double SecSinceJ2000)
 /*    GMAT Math Spec 2026, page 12                                    */
 static void _date2jd(const DateType date, JDType *const jd)
 {
+   // TODO
    // helper function for other converters
    const double Y = date.Year;
    const double M = date.Month;
@@ -86,11 +87,12 @@ JDType Date2JD(const DateType date, const Epoch epoch)
    return jd;
 }
 /**********************************************************************/
-/*  This function is agnostic to the TT-to-UTC offset.  You get out   */
-/*  what you put in.                                                  */
-double TimeToJD(double SecSinceJ2000)
+/*  Converts seconds since 'epoch' in 'system' to a JDType format     */
+JDType TimeToJD(double SecSince, TimeSystem system, Epoch epoch)
 {
-   return (SecSinceJ2000 / 86400.0 + 2451545.0);
+   JDType jd = {
+       .day = SecSince / SEC_PER_DAY, .system = system, .epoch = epoch};
+   return jd;
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
@@ -116,11 +118,12 @@ double JDToDynTime(JDType jd)
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
 
-double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
-                  double Second)
+double DateToTime(const DateType date)
 {
    long A, B;
    double Days;
+   long Year  = date.Year;
+   long Month = date.Month;
 
    if (Month < 3) {
       Year--;
@@ -131,12 +134,12 @@ double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
    B = 2 - A + A / 4;
 
    /* Days since J2000 Epoch (01 Jan 2000 12:00:00.0) */
-   Days = floor(365.25 * (Year - 2000)) + floor(30.6001 * (Month + 1)) + Day +
-          B - 50.5;
+   Days = floor(365.25 * (Year - 2000)) + floor(30.6001 * (Month + 1)) +
+          date.Day + B - 50.5;
 
    /* Add fractional day */
-   return (86400.0 * Days + 3600.0 * ((double)Hour) + 60.0 * ((double)Minute) +
-           Second);
+   return (SEC_PER_DAY * Days + 3600.0 * ((double)date.Hour) +
+           60.0 * ((double)date.Minute) + date.Second);
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to Julian Day   */
@@ -145,14 +148,14 @@ double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-// TODO: FOLLOW THIS FUNCTION AROUND, IT IS ASSUMING date IS TT FOR NOW
-JDType DateToJD(const DateType date, const Epoch epoch, const TimeSystem system)
+JDType DateToJD(const DateType date, const TimeSystem old_system,
+                const Epoch epoch, const TimeSystem system)
 {
    long A, B;
    long Year  = date.Year;
    long Month = date.Month;
 
-   JDType jd = {.day = 0, .epoch = ZERO_EPOCH, .system = TT_TIME};
+   JDType jd = {.day = 0, .epoch = ZERO_EPOCH, .system = old_system};
 
    if (date.Month < 3) {
       Year--;
@@ -168,8 +171,7 @@ JDType DateToJD(const DateType date, const Epoch epoch, const TimeSystem system)
    jd.day += ((double)date.Hour) / 24.0 + ((double)date.Minute) / 1440.0 +
              date.Second / SEC_PER_DAY;
 
-   ChangeSystem(system, &jd);
-   ChangeEpoch(epoch, &jd);
+   ChangeSystemEpoch(system, epoch, &jd);
 
    return (jd);
 }
@@ -210,24 +212,21 @@ double MJDToJD(double MJD)
 void DateToCCSDS(DateType date, ccsdsCoarse *ccsdsSeconds,
                  ccsdsFine *ccsdsSubSeconds)
 {
-   const long Year     = date.Year;
-   const long Month    = date.Month;
-   const long Day      = date.Day;
-   const long Hour     = date.Hour;
-   const long Minute   = date.Minute;
-   const double Second = date.Second;
-
    DateType date_day = {0};
    date_day.Year     = date.Year;
    date_day.Month    = date.Month;
    date_day.Day      = date.Day;
 
-   const double epoch = EpochValueTT(CCSDS_EPOCH);
-   double JD          = DateToJD(date_day) - epoch;
+   JDType jd = DateToJD(date_day, UTC_TIME, CCSDS_EPOCH, TT_TIME);
+
+   double jd_i   = 0;
+   double jd_dbl = modf(jd.day, &jd_i);
 
    double integral;
-   *ccsdsSubSeconds = (modf(Second, &integral) * CCSDS_FINE_MAX) + 0.5;
-   *ccsdsSeconds    = JD * 86400.0 + Hour * 3600.0 + Minute * 60.0 + integral;
+   *ccsdsSubSeconds = (modf(date.Second, &integral) * CCSDS_FINE_MAX) + 0.5;
+   *ccsdsSeconds =
+       jd_i * SEC_PER_DAY + date.Hour * 3600 + date.Minute * 60 + integral;
+   // TODO: handle jd_dbl
 }
 /**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
@@ -295,11 +294,12 @@ DateType JDToDate(const JDType jd)
 
    DateType date = {0};
 
-   ChangeSystem(TT_TIME, &jd);
-   ChangeEpoch(ZERO_EPOCH, &jd);
+   JDType jd_tt_z = jd;
+   ChangeSystem(TT_TIME, &jd_tt_z);
+   ChangeEpoch(ZERO_EPOCH, &jd_tt_z);
 
-   Z = floor(jd.day + 0.5);
-   F = (jd.day + 0.5) - Z;
+   Z = floor(jd_tt_z.day + 0.5);
+   F = (jd_tt_z.day + 0.5) - Z;
 
    if (Z < 2299161.0) {
       A = Z;
@@ -444,10 +444,12 @@ void DOY2MD(long Year, long DayOfYear, long *Month, long *Day)
 /*  Find Greenwich Mean Sidereal Time (GMST)                          */
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*  GMST is output in units of days.                                  */
-/*  This function requires JD in UTC                                  */
-double JD2GMST(double JD)
+double JD2GMST(JDType jd)
 {
    double T, JD0, GMST0, GMST;
+
+   ChangeSystemEpoch(UTC_TIME, ZERO_EPOCH, &jd);
+   const double JD = jd.day;
 
    JD0 = floor(JD) + 0.5;
 
@@ -543,7 +545,7 @@ void RealSystemTime(DateType *const date, double DT)
    Time = UnixTime - 946728000.0;
 
    *date     = TimeToDate(Time, DT);
-   date->DOY = MD2DOY(date->Year, date->Month, date->Day);
+   date->doy = MD2DOY(date->Year, date->Month, date->Day);
 #endif
 }
 /**********************************************************************/

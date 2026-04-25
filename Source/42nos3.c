@@ -48,8 +48,7 @@ static void InitializeTimeNode(void);
 static void TimeTickCallback(NE_SimTime time);
 #endif
 
-void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
-              long *minute, double *second)
+DateType NOS3Time()
 {
 
 #if defined(_WIN32)
@@ -65,8 +64,9 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
 #elif defined(__linux__)
    static long First = 1;
    int64_t ticks;
+   DateType date = {0};
+   JDType jd     = {0};
    double abs_time;
-   double jd;
    if (First) {
       First = 0;
       ReadNos3InpFile();
@@ -77,10 +77,11 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
       exit(3);
    }
    ticks    = NE_bus_get_time(Bus);
-   abs_time = DynTime0 + (ticks * DTSIM) - LeapSec - 32.184;
-   jd       = TimeToJD(abs_time);
-   JDToDate(jd, year, month, day, hour, minute, second);
-   *day_of_year = MD2DOY(*year, *month, *day);
+   abs_time = DynTime0 + (ticks * DTSIM);
+   jd       = TimeToJD(abs_time, TT_TIME, J2000_EPOCH);
+   ChangeSystem(UTC_TIME, &jd);
+   date     = JDToDate(jd);
+   date.doy = MD2DOY(date.Year, date.Month, date.Day);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
    fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");

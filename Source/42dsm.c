@@ -211,7 +211,6 @@ void InitDSM(struct SCType *S)
    Nav->ccsdsSeconds     = 0;
    Nav->ccsdsSubseconds  = 0;
    Nav->steps            = 0;
-   Nav->Date0.JulDay     = 0;
    Nav->Date0.Year       = 0;
    Nav->Date0.Month      = 0;
    Nav->Date0.Day        = 0;
@@ -1606,14 +1605,13 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
             if (Nav->stateActive[state] == TRUE) {
                startInd = Nav->stateInd[state];
                switch (state) {
-                  case TIME_STATE:
-                     Nav->Date0.JulDay = dataDest[startInd];
-                     JDToDate(dataDest[startInd], &Nav->Date0.Year,
-                              &Nav->Date0.Month, &Nav->Date0.Day,
-                              &Nav->Date0.Hour, &Nav->Date0.Minute,
-                              &Nav->Date0.Second);
-                     Nav->Date = Nav->Date0;
-                     break;
+                  case TIME_STATE: {
+                     JDType jd  = {.day    = dataDest[startInd],
+                                   .epoch  = J2000_EPOCH,
+                                   .system = TDB_TIME};
+                     Nav->Date0 = JDToDate(jd);
+                     Nav->Date  = Nav->Date0;
+                  } break;
                   case ROTMAT_STATE:
                   case QUAT_STATE: {
                      double tmpM[3][3] = {{0.0}};
@@ -1709,18 +1707,16 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       Nav->steps        = 0;
       const double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
 
-      TimeToDate(t0, &Nav->Date0.Year, &Nav->Date0.Month, &Nav->Date0.Day,
-                 &Nav->Date0.Hour, &Nav->Date0.Minute, &Nav->Date0.Second,
-                 CCSDS_STEP_SIZE);
+      Nav->Date0 = TimeToDate(t0, CCSDS_STEP_SIZE);
       DateToCCSDS(Nav->Date0, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
       updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
                      -(32.184 + LeapSec));
 
       Nav->Date0.doy =
           MD2DOY(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day);
-      Nav->Date0.JulDay =
-          DateToJD(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day,
-                   Nav->Date0.Hour, Nav->Date0.Minute, Nav->Date0.Second);
+      // Nav->Date0.JulDay =
+      //     DateToJD(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day,
+      //              Nav->Date0.Hour, Nav->Date0.Minute, Nav->Date0.Second);
       Nav->Date = Nav->Date0;
 
       Nav->Init             = FALSE;
@@ -3369,9 +3365,7 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    KalmanFilt(AC, DSM);
-   const DateType *navDate = &Nav->Date;
-   DSMState->Time = DateToTime(navDate->Year, navDate->Month, navDate->Day,
-                               navDate->Hour, navDate->Minute, navDate->Second);
+   DSMState->Time = DateToTime(Nav->Date);
    AC->Time       = DSMState->Time;
    // Overwrite data in AC structure with filtered data
    for (enum States state = INIT_STATE; state <= FIN_STATE; state++) {
