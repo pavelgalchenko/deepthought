@@ -62,6 +62,7 @@ typedef struct {
    TimeSystem system;
    double day;
    Epoch epoch;
+   // TODO: track an integer day and a double part of day independently?
 
    // TODO: enforce epoch as TT?
    // Typical values for epoch are:

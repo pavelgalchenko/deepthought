@@ -55,10 +55,10 @@ double TTtoTDB_Time(double SecSinceJ2000)
 /**********************************************************************/
 /*    ignores date.JD                                                 */
 /*    GMAT Math Spec 2026, page 12                                    */
-static void _date2jd(const DateType date, JDType *const jd)
+JDType Date2JD(const DateType date, const Epoch epoch)
 {
-   // TODO
-   // helper function for other converters
+   JDType jd = {.day = 0, .epoch = epoch, .system = GD_CONV_EPOCH};
+
    const double Y = date.Year;
    const double M = date.Month;
    const double D = date.Day;
@@ -67,23 +67,13 @@ static void _date2jd(const DateType date, JDType *const jd)
    const double s = date.Second;
 
    const long a = 367 * Y;
-   const long b = 7.0 * (Y + floor((M + 9.0) / 12.0)) / 4.0;
+   const long b = 7.0 * (Y + trunc((M + 9.0) / 12.0)) / 4.0;
    const long c = 275.0 * M / 9.0;
 
-   long epoch_diff_l   = 0;
-   double epoch_diff_d = 0.0;
-   _epoch_diff_tt(jd->epoch, GD_CONV_EPOCH, &epoch_diff_l, &epoch_diff_d);
+   jd.day = a - b + c + D;
+   ChangeSystem(GMAT_MJD_EPOCH, &jd);
+   jd.day += ((s / 60.0 + m) / 60.0 + H) / 24.0;
 
-   const double pod = ((s / 60.0 + m) / 60.0 + H) / 24.0 + epoch_diff_d;
-   const long jday  = a - b + c + D + epoch_diff_l;
-   jd->day          = (double)jday + pod;
-   jd->system       = TT_TIME;
-}
-JDType Date2JD(const DateType date, const Epoch epoch)
-{
-   JDType jd = {0};
-   jd.epoch  = epoch;
-   _date2jd(date, &jd);
    return jd;
 }
 /**********************************************************************/
