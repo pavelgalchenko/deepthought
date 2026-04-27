@@ -15,10 +15,11 @@
 // NOTE: Uses the global 'ModelPath'
 
 // TODO: do we want these in the header?
-#define _ZERO_EPOCH_TT     (0.0)
+#define _ZERO_EPOCH_TT     (0.0)       // Jan  1, -4712, 12:00:00
 #define _GD_JD_EPOCH_TT    (1721013.5) // Nov 18, -0001, 00:00:00, in GD->JD
 #define _TCB_TDB_EPOCH_TT  (2443144.5) // Jan  1,  1977, 00:00:00, in tcb->tdb
 #define _MJD_EPOCH_TT      (2400000.5) // Nov 17,  1858, 00:00:00
+#define _J1900_EPOCH_TT    (2415019.5) // Dec 31,  1899, 00:00:00, in JD->GD
 #define _GMAT_MJD_EPOCH_TT (2430000.0) // Jan  5,  1941, 12:00:00
 #define _CCSDS_EPOCH_TT    (2436204.5) // Jan 1,   1958, 00:00:00
 #define _J2000_EPOCH_TT    (2451545.0) // Jan 1 ,  2000, 12:00:00, J2000 epoch
@@ -28,7 +29,7 @@
 #pragma GCC diagnostic error "-Wswitch"
 #pragma GCC diagnostic error "-Wswitch-enum"
 
-static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
+static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
                            double *const part_of_day)
 {
    // handle the easy cases here
@@ -39,14 +40,14 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
    }
 
    // determine part of day value
-   const int a_nonzero_d = (a == GD_CONV_EPOCH || a == TCB_TDB_CONV_EPOCH ||
-                            a == MJD_EPOCH || a == CCSDS_EPOCH);
-   const int b_nonzero_d = (b == GD_CONV_EPOCH || b == TCB_TDB_CONV_EPOCH ||
-                            b == MJD_EPOCH || b == CCSDS_EPOCH);
-   if (a_nonzero_d && !b_nonzero_d)
+   const int a_nonzero_d =
+       (a == GD_CONV_EPOCH || a == TCB_TDB_CONV_EPOCH || a == MJD_EPOCH ||
+        a == CCSDS_EPOCH || a == J1900_EPOCH);
+   const int b_nonzero_d =
+       (b == GD_CONV_EPOCH || b == TCB_TDB_CONV_EPOCH || b == MJD_EPOCH ||
+        b == CCSDS_EPOCH || b == J1900_EPOCH);
+   if ((a_nonzero_d && !b_nonzero_d) || (!a_nonzero_d && b_nonzero_d))
       *part_of_day = 0.5;
-   else if (!a_nonzero_d && b_nonzero_d)
-      *part_of_day = -0.5;
    else
       *part_of_day = 0.0;
 
@@ -60,6 +61,37 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
    //    i.e. hoping for a lookup table by the time we get to execution time
    // maybe see about going to C23 to have constexpr?
    switch (a) {
+      case J1900_EPOCH: {
+         switch (b) {
+            case J2000_EPOCH: {
+               *day = (long)(_J1900_EPOCH_TT - _J2000_EPOCH_TT);
+               break;
+            }
+            case GMAT_MJD_EPOCH: {
+               *day = (long)(_J1900_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               break;
+            }
+            case MJD_EPOCH: {
+               *day = (long)(_J1900_EPOCH_TT - _MJD_EPOCH_TT);
+               break;
+            }
+            case GD_CONV_EPOCH: {
+               *day = (long)(_J1900_EPOCH_TT - _GD_JD_EPOCH_TT);
+               break;
+            }
+            case TCB_TDB_CONV_EPOCH: {
+               *day = (long)(_J1900_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               break;
+            }
+            case CCSDS_EPOCH: {
+               *day = (long)(_J1900_EPOCH_TT - CCSDS_EPOCH);
+               break;
+            }
+            case ZERO_EPOCH:
+            case J1900_EPOCH:
+               break;
+         }
+      } break;
       case J2000_EPOCH: {
          switch (b) {
             case GMAT_MJD_EPOCH: {
@@ -79,7 +111,11 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - CCSDS_EPOCH);
+               *day = (long)(_J2000_EPOCH_TT - _CCSDS_EPOCH_TT);
+               break;
+            }
+            case J1900_EPOCH: {
+               *day = (long)(_J2000_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -106,7 +142,11 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - CCSDS_EPOCH);
+               *day = (long)(_MJD_EPOCH_TT - _CCSDS_EPOCH_TT);
+               break;
+            }
+            case J1900_EPOCH: {
+               *day = (long)(_MJD_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -133,7 +173,11 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - CCSDS_EPOCH);
+               *day = (long)(_GMAT_MJD_EPOCH_TT - _CCSDS_EPOCH_TT);
+               break;
+            }
+            case J1900_EPOCH: {
+               *day = (long)(_GMAT_MJD_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -163,6 +207,10 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
                *day = (long)(_GD_JD_EPOCH_TT - CCSDS_EPOCH);
                break;
             }
+            case J1900_EPOCH: {
+               *day = (long)(_GD_JD_EPOCH_TT - _J1900_EPOCH_TT);
+               break;
+            }
             case ZERO_EPOCH:
             case GD_CONV_EPOCH:
                break;
@@ -188,6 +236,10 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
             }
             case CCSDS_EPOCH: {
                *day = (long)(_TCB_TDB_EPOCH_TT - CCSDS_EPOCH);
+               break;
+            }
+            case J1900_EPOCH: {
+               *day = (long)(_TCB_TDB_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -217,6 +269,10 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
                *day = (long)(_CCSDS_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
+            case J1900_EPOCH: {
+               *day = (long)(_CCSDS_EPOCH_TT - _J1900_EPOCH_TT);
+               break;
+            }
             case ZERO_EPOCH:
             case CCSDS_EPOCH:
                break;
@@ -225,6 +281,9 @@ static void _epoch_diff_tt(const Epoch a, const Epoch b, long *const day,
       case ZERO_EPOCH:
          break;
    }
+
+   if (a < 0)
+      *part_of_day *= -1.0;
 }
 
 #define sec_per_day    (86400.0)
@@ -310,7 +369,7 @@ static double _jd_tai2utc(const JDType tai_jd)
 
    // NEEDED SO THAT GetLeapSec() DOES NOT GET BACK HERE
    JDType tai_utc_jd = tai_jd;
-   tai_utc_jd.epoch  = UTC_TIME;
+   tai_utc_jd.system = UTC_TIME;
 
    const double leap_sec  = GetLeapSec(tai_utc_jd);
    tai_utc_jd.day        -= (leap_sec / sec_per_day);
@@ -440,7 +499,7 @@ static JDType _jdtt(const JDType jd)
 /**********************************************************************/
 
 // return the desired epoch in JD TT
-double EpochValueTT(Epoch epoch)
+double EpochValueTT(EpochTT epoch)
 {
    switch (epoch) {
       case ZERO_EPOCH:
@@ -457,6 +516,8 @@ double EpochValueTT(Epoch epoch)
          return _CCSDS_EPOCH_TT;
       case J2000_EPOCH:
          return _J2000_EPOCH_TT;
+      case J1900_EPOCH:
+         return _J1900_EPOCH_TT;
    }
    return 0.0;
 }
@@ -481,7 +542,9 @@ double GetLeapSec(const JDType jd)
    // ensure jd is UTC with MJD epoch
    // dug through GMAT source code, JD in tai-utc.dat is UTC
    JDType jd_mjd_utc = _jdutc(jd);
-   ChangeEpoch(MJD_EPOCH, &jd_mjd_utc);
+   ChangeEpoch(MJD_EPOCH,
+               &jd_mjd_utc); // TODO: this causes infinite recursion due to the
+                             // conversion to TT_TIME embeded within
 
    static long n_entries          = 0;
    static JDType *jd_list_mjd_utc = NULL; // list of JD in UTC with MJD epoch
@@ -571,29 +634,37 @@ void ChangeSystem(const TimeSystem new_system, JDType *const jd)
 }
 
 // changes the epoch of JD
-void ChangeEpoch(const Epoch new_epoch, JDType *const jd)
+void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
 {
    if (new_epoch == jd->epoch)
       return; // nothing to do
 
-   // TODO: something better for non tt time systems?
-   // currently, convert to tt first, change the epoch, then change back??
-   // honestly, is this even correct?
+   // TODO: What kind of care needs to be taken with non TT_TIME systems, since
+   // the epochs are currently defined as TT?
+   // Current idea is convert to TT_TIME first, change the epoch, then change
+   // back?? honestly, is this even correct?
+   // Without changing anything, this  causes and infinite recursion since
+   // GetLeapSec() changes to MJD_EPOCH
+
+   // In GMAT, *it looks like* they don't bother with this
+   // could come from, in part, GMAT being more reserved with what epochs to use
+   // regularly
 
    long epoch_diff_l   = 0;
    double epoch_diff_d = 0.0;
    _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_d);
 
-   JDType jd_tt = _jdtt(*jd);
+   // JDType jd_tt = _jdtt(*jd);
    double jd_l = 0.0, jd_d = 0.0;
-   jd_d      = modf(jd_tt.day, &jd_l);
-   jd_tt.day = (double)((long)jd_l + epoch_diff_l) + (jd_d + epoch_diff_d);
+   jd_d      = modf(jd->day, &jd_l);
+   jd->day   = (double)((long)jd_l + epoch_diff_l) + (jd_d + epoch_diff_d);
    jd->epoch = new_epoch;
 
-   ChangeSystem(jd->system, &jd_tt);
-   *jd = jd_tt;
+   // ChangeSystem(jd->system, &jd_tt);
+   // *jd = jd_tt;
 }
-void ChangeSystemEpoch(const TimeSystem new_system, const Epoch new_epoch,
+
+void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
                        JDType *const jd)
 {
    // This whole kit needs some testing, but this is currently how I prefer to

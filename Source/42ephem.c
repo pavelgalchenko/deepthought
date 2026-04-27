@@ -468,7 +468,8 @@ void SplineToPosVel(struct OrbitType *O)
    }
 }
 /**********************************************************************/
-void OrbitMotion(double Time)
+void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
+                 double Time)
 {
    long Iorb, i, j;
    struct OrbitType *O;
@@ -496,7 +497,7 @@ void OrbitMotion(double Time)
                LagModes2RV(Time, &LagSys[O->Sys], O, O->PosN, O->VelN);
             }
             else if (O->LagDOF == LAGDOF_COWELL) {
-               ThreeBodyOrbitRK4(O);
+               ThreeBodyOrbitRK4(worlds, O);
                RV2LagModes(Time, &LagSys[O->Sys], O);
                O->Epoch = Time;
             }

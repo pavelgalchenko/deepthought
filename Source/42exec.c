@@ -94,17 +94,17 @@ long AdvanceTime(void)
          CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, DTSIM);
+         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
          // TT.JulDay = TimeToJD(DynTime);
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD);
+         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
          TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
          TDB.tdbTime = JDToTime(JD_TDB_MJD);
 
-         UTC     = TimeToDate(CivilTime, DTSIM);
+         UTC     = TimeToDate(CivilTime, UTC_TIME, DTSIM);
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
          // UTC.JulDay = TimeToJD(CivilTime);
 
@@ -122,16 +122,16 @@ long AdvanceTime(void)
          CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, DTSIM);
+         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD);
+         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
          TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
+         TDB.tdbTime = JDToTime(JD_TDB_MJD);
 
-         UTC     = TimeToDate(CivilTime, DTSIM);
+         UTC     = TimeToDate(CivilTime, UTC_TIME, DTSIM);
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 
          GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
@@ -152,14 +152,14 @@ long AdvanceTime(void)
          DynTime    = AtomicTime + 32.184;
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, DTSIM);
+         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
+         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
          TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
+         TDB.tdbTime = JDToTime(JD_TDB_MJD);
 
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 
@@ -168,20 +168,20 @@ long AdvanceTime(void)
 
          break;
       case NOS3_TIME:
-         NOS3Time(&UTC);
+         UTC        = NOS3Time();
          CivilTime  = DateToTime(UTC);
          AtomicTime = CivilTime + LeapSec;
          DynTime    = AtomicTime + 32.184;
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, DTSIM);
+         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
          TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
+         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
          TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
+         TDB.tdbTime = JDToTime(JD_TDB_MJD);
 
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 
@@ -341,11 +341,11 @@ long SimStep(void)
          S = &SC[Isc];
          if (S->Exists) {
             /* Magnetic Field, Atmospheric Density */
-            Environment(World, Orb, S);
+            Environment(JD_TDB_MJD, World, Orb, S);
             Perturbations(World, Orb, S); /* Environmental Forces and Torques */
             Sensors(World, Orb, S);
             FlightSoftWare(S);
-            Actuators(World, Orb, S);
+            Actuators(S);
             PartitionForces(S); /* Orbit-affecting and "internal" */
          }
       }
@@ -368,10 +368,10 @@ long SimStep(void)
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists)
-         Dynamics(&SC[Isc]);
+         Dynamics(World, Orb, &SC[Isc]);
    }
    SimComplete = AdvanceTime();
-   OrbitMotion(DynTime);
+   OrbitMotion(World, Orb, DynTime);
 
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
@@ -389,7 +389,7 @@ long SimStep(void)
       S = &SC[Isc];
       if (S->Exists) {
          /* Magnetic Field, Atmospheric Density */
-         Environment(World, Orb, S);
+         Environment(JD_TDB_MJD, World, Orb, S);
          Perturbations(World, Orb, S); /* Environmental Forces and Torques */
          Sensors(World, Orb, S);
          FlightSoftWare(S);

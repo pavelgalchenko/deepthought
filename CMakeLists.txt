@@ -95,7 +95,7 @@ set(42_SOURCES
     ${SOURCE}/42dsm.c
     )
 
-target_include_directories(deepthought PRIVATE kit/Include Include)
+target_include_directories(deepthought PRIVATE Kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
 
 if(SPICE)
@@ -136,7 +136,7 @@ if(SPICE)
 endif()
 
 # Configure Test Target
-target_include_directories(Test PRIVATE kit/Include Include)
+target_include_directories(Test PRIVATE Kit/Include Include)
 target_sources(Test
     PRIVATE
     Tests/tests.c

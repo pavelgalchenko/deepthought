@@ -34,23 +34,26 @@
 /**********************************************************************/
 /**********************************************************************/
 
-typedef enum Epoch {
-   ZERO_EPOCH = 0,
-   GD_CONV_EPOCH,
-   TCB_TDB_CONV_EPOCH,
-   MJD_EPOCH,
-   GMAT_MJD_EPOCH,
-   CCSDS_EPOCH,
-   J2000_EPOCH,
+typedef enum EpochTT {
+   ZERO_EPOCH = 0,     // Jan  1, -4712, 12:00:00
+   GD_CONV_EPOCH,      // Nov 18, -0001, 00:00:00, in GD->JD
+   TCB_TDB_CONV_EPOCH, // Jan  1,  1977, 00:00:00, in tcb->tdb
+   MJD_EPOCH,          // Nov 17,  1858, 00:00:00
+   J1900_EPOCH,        // Dec 31,  1899, 00:00:00, in JD->GD
+   GMAT_MJD_EPOCH,     // Jan  5,  1941, 12:00:00
+   CCSDS_EPOCH,        // Jan 1,   1958, 00:00:00
+   J2000_EPOCH,        // Jan 1 ,  2000, 12:00:00, J2000 epoch
    // TODO: other epochs?
-} Epoch; // TODO: type different name?
+} EpochTT;
+// TODO: add CUSTOM_EPOCH, but then epoch in JDType will need to be a struct
+// with members of EpochTT and a value that is used only for the custom value
 
 typedef enum TimeSystem {
    UTC_TIME = 0, // Coordinated Universal Time
    TAI_TIME,     // International Atomic Time
    TCB_TIME,     // Barycentric Coordinate Time
    TDB_TIME,     // Barycentric Dynamical Time
-   TT_TIME,      // Terrestrial Time, sometimes uses old TDT term
+   TT_TIME,      // Terrestrial Time, sometimes referred as old TDT term
    // TODO: add TT(BIPM)? others?
 } TimeSystem;
 
@@ -61,22 +64,17 @@ typedef struct {
    // by 'epoch' will always be in the TT system
    TimeSystem system;
    double day;
-   Epoch epoch;
+   EpochTT epoch;
    // TODO: track an integer day and a double part of day independently?
-
-   // TODO: enforce epoch as TT?
-   // Typical values for epoch are:
-   //    - 0.0 TT for typical Julian Day
-   //    - 2,430,000.0 TT for GMAT-like modified Julian Day
-   //    - 2,451,545.0 TT for J2000 epoch
-   // Epoch epoch; ?
+   // GMAT uses an integer day, integer seconds of day, and a double fractional
+   // second
 } JDType;
 
 double GetLeapSec(const JDType jd);
-double EpochValueTT(Epoch epoch);
-void ChangeEpoch(const Epoch new_epoch, JDType *const jd);
+double EpochValueTT(EpochTT epoch);
+void ChangeEpoch(const EpochTT new_epoch, JDType *const jd);
 void ChangeSystem(const TimeSystem new_system, JDType *const jd);
-void ChangeSystemEpoch(const TimeSystem new_system, const Epoch new_epoch,
+void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
                        JDType *const jd);
 
 /*

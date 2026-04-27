@@ -18,46 +18,100 @@
 ** #endif
 */
 
-double TTtoTDB_JD(double SecSinceJ2000)
+/**********************************************************************/
+/* Convert CCSDS Seconds and subseconds */
+/* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
+/* midnight, Jan 1st, 1958                                            */
+double ccsds2time(const CCSDSTime ccsds_time)
 {
-   double T_TT, m_E, deltaTDB, JD_TDB;
-   static double TDB_COEFF1             = 0.00165;
-   static double TDB_COEFF2             = 0.00001385;
-   static double M_E_OFFSET             = 357.5277233;
-   static double M_E_COEFF1             = 35999.05034;
-   static double SEC_PER_JULIAN_CENTURY = 3155760000.00;
-
-   T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
-
-   m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
-   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
-   JD_TDB   = (SecSinceJ2000 + deltaTDB) / 86400.0 + 2451545.0;
-
-   return (JD_TDB);
-}
-double TTtoTDB_Time(double SecSinceJ2000)
-{
-   double T_TT, m_E, deltaTDB, time_TDB;
-   static double TDB_COEFF1             = 0.001658;
-   static double TDB_COEFF2             = 0.00001385;
-   static double M_E_OFFSET             = 357.5277233;
-   static double M_E_COEFF1             = 35999.05034;
-   static double SEC_PER_JULIAN_CENTURY = 3155760000.00;
-
-   T_TT = SecSinceJ2000 / SEC_PER_JULIAN_CENTURY;
-
-   m_E      = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
-   deltaTDB = (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
-   time_TDB = SecSinceJ2000 + deltaTDB;
-
-   return (time_TDB);
+   const DateType date = ccsds2date(ccsds_time);
+   return DateToTime(date);
 }
 /**********************************************************************/
-/*    ignores date.JD                                                 */
-/*    GMAT Math Spec 2026, page 12                                    */
-JDType Date2JD(const DateType date, const Epoch epoch)
+/* Convert CCSDS Seconds and Subseconds to TT Date with epoch        */
+/* midnight, Jan 1st, 1958                                            */
+DateType ccsds2date(const CCSDSTime ccsds_time)
 {
-   JDType jd = {.day = 0, .epoch = epoch, .system = GD_CONV_EPOCH};
+   static const double ccsdsStep = CCSDS_STEP_SIZE;
+
+   const long subDay = ccsds_time.coarse % 86400;
+   const long days   = ccsds_time.coarse / 86400;
+   JDType jd         = {.day = days, .system = TT_TIME, .epoch = CCSDS_EPOCH};
+
+   DateType date = JDToDate(jd, TT_TIME);
+   updateTime(&date, (double)subDay * SEC_PER_DAY +
+                         (double)ccsds_time.fine * ccsdsStep);
+
+   return date;
+}
+/**********************************************************************/
+CCSDSTime CCSDSSub(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
+{
+   CCSDSTime dccsds;
+
+   dccsds.coarse = a_ccsds.coarse - b_ccsds.coarse;
+   dccsds.fine   = a_ccsds.fine - b_ccsds.fine;
+
+   if (a_ccsds.fine < b_ccsds.fine)
+      dccsds.coarse--;
+
+   return dccsds;
+}
+/**********************************************************************/
+CCSDSTime CCSDSAdd(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
+{
+   CCSDSTime dccsds;
+
+   dccsds.coarse = a_ccsds.coarse + b_ccsds.coarse;
+   dccsds.fine   = a_ccsds.fine + b_ccsds.fine;
+
+   if (dccsds.fine < a_ccsds.fine)
+      dccsds.coarse++;
+
+   return dccsds;
+}
+/**********************************************************************/
+CCSDSTime CCSDSAddSeconds(const CCSDSTime time, const double dt)
+{
+   if (dt >= 0.0) {
+      const CCSDSTime sec_ccsds = seconds2ccsds(dt);
+      return CCSDSAdd(time, sec_ccsds);
+   }
+   else {
+      const CCSDSTime sec_ccsds = seconds2ccsds(-dt);
+      return CCSDSSub(time, sec_ccsds);
+   }
+}
+/**********************************************************************/
+double ccsds2seconds(const CCSDSTime ccsds)
+{
+   return (double)ccsds.coarse + (double)ccsds.fine * CCSDS_STEP_SIZE;
+}
+/**********************************************************************/
+CCSDSTime seconds2ccsds(const double sec)
+{
+   double integral = 0;
+   CCSDSTime ccsds = {0};
+   ccsds.fine      = modf(sec, &integral) * CCSDS_FINE_MAX + 0.5;
+   ccsds.coarse    = integral;
+   return ccsds;
+}
+/**********************************************************************/
+int isequal_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
+{
+   return (a_ccsds.fine == b_ccsds.fine) && (a_ccsds.coarse == b_ccsds.coarse);
+}
+/**********************************************************************/
+int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
+{
+   return (a_ccsds.coarse < b_ccsds.coarse) ||
+          ((a_ccsds.coarse == b_ccsds.coarse) && a_ccsds.fine < b_ccsds.fine);
+}
+/**********************************************************************/
+/*    GMAT 2026 Math Specification, page 12                           */
+JDType Date2JD(const DateType date, const EpochTT epoch)
+{
+   JDType jd = {.day = 0, .epoch = GD_CONV_EPOCH, .system = date.system};
 
    const double Y = date.Year;
    const double M = date.Month;
@@ -66,19 +120,19 @@ JDType Date2JD(const DateType date, const Epoch epoch)
    const double m = date.Minute;
    const double s = date.Second;
 
-   const long a = 367 * Y;
-   const long b = 7.0 * (Y + trunc((M + 9.0) / 12.0)) / 4.0;
-   const long c = 275.0 * M / 9.0;
+   const long c = (M + 9) / 12;
+   const long b = (275 * M / 9);
+   const long a = (7 * (Y + c)) / 4;
 
-   jd.day = a - b + c + D;
-   ChangeSystem(GMAT_MJD_EPOCH, &jd);
+   jd.day = 367 * Y - a + b + D;
+   ChangeEpoch(GMAT_MJD_EPOCH, &jd);
    jd.day += ((s / 60.0 + m) / 60.0 + H) / 24.0;
 
    return jd;
 }
 /**********************************************************************/
 /*  Converts seconds since 'epoch' in 'system' to a JDType format     */
-JDType TimeToJD(double SecSince, TimeSystem system, Epoch epoch)
+JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch)
 {
    JDType jd = {
        .day = SecSince / SEC_PER_DAY, .system = system, .epoch = epoch};
@@ -99,6 +153,11 @@ double JDToDynTime(JDType jd)
 {
    ChangeSystem(TT_TIME, &jd);
    return JDToTime(jd);
+}
+/**********************************************************************/
+static int _is_leap_yr(long yr)
+{
+   return (yr % 4 == 0 && yr % 100 != 0) || yr % 400 == 0;
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to              */
@@ -138,14 +197,14 @@ double DateToTime(const DateType date)
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-JDType DateToJD(const DateType date, const TimeSystem old_system,
-                const Epoch epoch, const TimeSystem system)
+JDType DateToJD(const DateType date, const EpochTT epoch,
+                const TimeSystem system)
 {
    long A, B;
    long Year  = date.Year;
    long Month = date.Month;
 
-   JDType jd = {.day = 0, .epoch = ZERO_EPOCH, .system = old_system};
+   JDType jd = {.day = 0, .epoch = ZERO_EPOCH, .system = date.system};
 
    if (date.Month < 3) {
       Year--;
@@ -166,224 +225,108 @@ JDType DateToJD(const DateType date, const TimeSystem old_system,
    return (jd);
 }
 /**********************************************************************/
-/*  Convert Y, M, D, H, m and s to Modified Julian Day (MJD)          */
-/*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1900) */
-/*  Ref. GMAT Math Spec.                                              */
-double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
-                 double Second)
-{
-   int A, B, C;
-   double JD, MJD;
-   double partofday;
-
-   C = (int)((Month + 9) / 12);
-   B = (int)(275 * Month / 9);
-   A = (int)(7 * (Year + C) / 4);
-
-   partofday = (((Second / 60) + Minute) / 60 + Hour) / 24;
-
-   JD = 367 * Year - A + B + Day + 1721013.5;
-
-   MJD = (JD - 2430000.0) + partofday;
-
-   return (MJD);
-}
-double JDToMJD(double JD)
-{
-   return (JD - 2430000.0);
-}
-double MJDToJD(double MJD)
-{
-   return (MJD + 2430000.0);
-}
-/**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
 /* midnight, Jan 1st, 1958                                            */
-void DateToCCSDS(DateType date, ccsdsCoarse *ccsdsSeconds,
-                 ccsdsFine *ccsdsSubSeconds)
+CCSDSTime date2ccsds(const DateType date)
 {
+   CCSDSTime ccsds_time;
    DateType date_day = {0};
+   date_day.system   = date.system;
    date_day.Year     = date.Year;
    date_day.Month    = date.Month;
    date_day.Day      = date.Day;
 
-   JDType jd = DateToJD(date_day, UTC_TIME, CCSDS_EPOCH, TT_TIME);
+   JDType jd = DateToJD(date_day, CCSDS_EPOCH, TT_TIME);
 
-   double jd_i   = 0;
-   double jd_dbl = modf(jd.day, &jd_i);
-
+   // TODO: jd.day can have an influence on CCSDSTime::fine
    double integral;
-   *ccsdsSubSeconds = (modf(date.Second, &integral) * CCSDS_FINE_MAX) + 0.5;
-   *ccsdsSeconds =
-       jd_i * SEC_PER_DAY + date.Hour * 3600 + date.Minute * 60 + integral;
-   // TODO: handle jd_dbl
+   ccsds_time.fine = (modf(date.Second, &integral) * CCSDS_FINE_MAX) + 0.5;
+   ccsds_time.coarse =
+       jd.day * SEC_PER_DAY + date.Hour * 3600 + date.Minute * 60 + integral;
+   return ccsds_time;
 }
 /**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
 /* midnight, Jan 1st, 1958                                            */
-void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
-                 ccsdsFine *ccsdsSubSeconds)
+CCSDSTime TimeToCCSDS(double UTC)
 {
    const double LSB = CCSDS_STEP_SIZE;
-   DateType date    = TimeToDate(UTC, LSB);
-   DateToCCSDS(date, ccsdsSeconds, ccsdsSubSeconds);
+   DateType date    = TimeToDate(UTC, UTC_TIME, LSB);
+   return date2ccsds(date);
 }
 /**********************************************************************/
 /* Convert CCSDS Seconds and Subseconds to UTC Date with epoch        */
 /* midnight, Jan 1st, 1958                                            */
-void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
-                 DateType *date)
+DateType CCSDSToDate(CCSDSTime ccsds_time)
 {
    const double ccsdsStep = CCSDS_STEP_SIZE;
-   const double subDay    = fmod((double)ccsdsSeconds, 86400.0);
-   const long days        = ccsdsSeconds / 86400;
+   const double subDay    = fmod((double)ccsds_time.coarse, 86400.0);
+   const long days        = ccsds_time.coarse / 86400;
    JDType jd = {.day = days, .epoch = CCSDS_EPOCH, .system = TT_TIME};
+   DateType date;
 
-   *date = JDToDate(jd);
-   updateTime(date, subDay + (double)ccsdsSubSeconds * ccsdsStep);
-}
-/**********************************************************************/
-double CCSDSAdd(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
-                const ccsdsCoarse b_coarse, const ccsdsFine b_fine)
-{
-   const double ccsdsStepSize = CCSDS_STEP_SIZE;
-
-   double out =
-       (double)(a_coarse + b_coarse) + (a_fine + b_fine) * ccsdsStepSize;
-
-   ccsdsFine test;
-   if (__builtin_add_overflow(a_fine, b_fine, &test))
-      out += 1.0;
-
-   return out;
-}
-/**********************************************************************/
-double CCSDSSub(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
-                const ccsdsCoarse b_coarse, const ccsdsFine b_fine)
-{
-   const double ccsdsStepSize = CCSDS_STEP_SIZE;
-
-   double out =
-       (double)(a_coarse - b_coarse) + (a_fine - b_fine) * ccsdsStepSize;
-
-   ccsdsFine test;
-   if (__builtin_sub_overflow(a_fine, b_fine, &test))
-      out -= 1.0;
-
-   return out;
+   date = JDToDate(jd, jd.system);
+   updateTime(&date, subDay + (double)ccsds_time.fine * ccsdsStep);
+   return date;
 }
 /**********************************************************************/
 /*   Convert Julian Day to Year, Month, Day, Hour, Minute, and Second */
-/*   Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991. */
-/*  This function is agnostic to the TT-to-UTC offset.  You get out   */
-/*  what you put in.                                                  */
-DateType JDToDate(const JDType jd)
+/*   Ref. GMAT 2026 Mathematical Specification, pp. 12-13,            */
+/*     From: Vallado, Fundamentals of Astrodyanmics and Applications, */
+/*     2nd Ed, Microcosm Press, El Segundo CA, 2001                   */
+DateType JDToDate(const JDType jd, const TimeSystem system)
 {
-   double Z, F, A, B, C, D, E, alpha;
-   double FD;
+   // TODO: don't have my copy of vallado on hand at the moment, double check
+   // when I do
+   double lp_yrs, days, T_1900, tmp;
+   long l_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
    DateType date = {0};
+   date.system   = system;
 
-   JDType jd_tt_z = jd;
-   ChangeSystem(TT_TIME, &jd_tt_z);
-   ChangeEpoch(ZERO_EPOCH, &jd_tt_z);
+   JDType jd_sys_1900 = jd;
+   ChangeSystemEpoch(system, J1900_EPOCH, &jd_sys_1900);
 
-   Z = floor(jd_tt_z.day + 0.5);
-   F = (jd_tt_z.day + 0.5) - Z;
-
-   if (Z < 2299161.0) {
-      A = Z;
+   T_1900    = jd_sys_1900.day / 365.25;
+   date.Year = 1900 + trunc(T_1900);
+   lp_yrs    = trunc((date.Year - 1900 - 1) * 0.25);
+   days      = jd_sys_1900.day - ((date.Year - 1900) * 365 + lp_yrs);
+   if (days < 1.0) {
+      date.Year--;
+      lp_yrs = trunc((date.Year - 1900 - 1) * 0.25);
+      days   = jd_sys_1900.day - ((date.Year - 1900) * 365 + lp_yrs);
    }
-   else {
-      alpha = floor((Z - 1867216.25) / 36524.25);
-      A     = Z + 1.0 + alpha - floor(alpha / 4.0);
+   // modification from ref to cover leap years beyond the year % 4==0 rule
+   if (_is_leap_yr(date.Year))
+      l_month[1] = 29;
+   date.doy = trunc(days);
+
+   int i    = 0;
+   long sum = 0;
+   for (i = 0; i < 11; i++) {
+      if (sum + l_month[i + 1] > date.doy)
+         break;
+      sum += l_month[i];
    }
-
-   B = A + 1524.0;
-   C = floor((B - 122.1) / 365.25);
-   D = floor(365.25 * C);
-   E = floor((B - D) / 30.6001);
-
-   FD       = B - D - floor(30.6001 * E) + F;
-   date.Day = (long)FD;
-
-   if (E < 14.0) {
-      date.Month = (long)(E - 1.0);
-      date.Year  = (long)(C - 4716.0);
-   }
-   else {
-      date.Month = (long)(E - 13.0);
-      date.Year  = (long)(C - 4715.0);
-   }
-
-   FD          = FD - floor(FD);
-   FD          = FD * 24.0;
-   date.Hour   = (long)FD;
-   FD          = FD - floor(FD);
-   FD          = FD * 60.0;
-   date.Minute = (long)FD;
-   FD          = FD - floor(FD);
-   date.Second = FD * 60.0;
+   date.Month  = i + 1;
+   date.Day    = date.doy - sum;
+   tmp         = (days - date.doy) * 24;
+   date.Hour   = trunc(tmp);
+   date.Minute = trunc((tmp - date.Hour) * 60);
+   date.Second = (tmp - date.Hour - date.Minute / 60.0) * 3600.0;
    return date;
 }
 /**********************************************************************/
 /*   Convert Time to Year, Month, Day, Hour, Minute, and Second       */
-/*   Time is seconds since J2000 epoch (01 Jan 2000 12:00:00.0)       */
-/*   Outputs are rounded to LSB to avoid loss of precision            */
-/*   Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991. */
-/*   This function is agnostic to the TT-to-UTC offset.  You get out  */
-/*   what you put in.                                                 */
-DateType TimeToDate(double Time, double LSB)
+DateType TimeToDate(double Time, TimeSystem system, double LSB)
 {
-   double Z, F, A, B, C, D, E, alpha;
-   double FD, JD;
+   // TODO: LSB??
+   // depending on LSB value, it could cause issues with TT vs TAI
 
-   DateType date = {0};
+   JDType jd = {
+       .day = Time / SEC_PER_DAY, .system = system, .epoch = J2000_EPOCH};
+   DateType date = JDToDate(jd, system);
 
-   JD = Time / SEC_PER_DAY + EpochValueTT(J2000_EPOCH);
-
-   Z = floor(JD + 0.5);
-   F = (JD + 0.5) - Z;
-
-   if (Z < 2299161.0) {
-      A = Z;
-   }
-   else {
-      alpha = floor((Z - 1867216.25) / 36524.25);
-      A     = Z + 1.0 + alpha - floor(alpha / 4.0);
-   }
-
-   B = A + 1524.0;
-   C = floor((B - 122.1) / 365.25);
-   D = floor(365.25 * C);
-   E = floor((B - D) / 30.6001);
-
-   FD       = B - D - floor(30.6001 * E) + F;
-   date.Day = (long)FD;
-
-   if (E < 14.0) {
-      date.Month = (long)(E - 1.0);
-      date.Year  = (long)(C - 4716.0);
-   }
-   else {
-      date.Month = (long)(E - 13.0);
-      date.Year  = (long)(C - 4715.0);
-   }
-
-   FD = Time - 43200.0 + 0.5 * LSB;
-   FD = FD - ((long)(FD / 86400.0)) * 86400.0;
-   if (FD < 0.0)
-      FD += 86400.0;
-
-   date.Hour = (long)(FD / 3600.0);
-
-   FD -= 3600.0 * (date.Hour);
-
-   date.Minute = (long)(FD / 60.0);
-
-   date.Second = FD - 60.0 * (date.Minute);
-
-   /* Clean up roundoff */
    date.Second = ((long)(date.Second / LSB)) * LSB;
    return date;
 }
@@ -414,7 +357,7 @@ void DOY2MD(long Year, long DayOfYear, long *Month, long *Day)
 {
    long K;
 
-   if (Year % 4 == 0) {
+   if (_is_leap_yr(Year)) {
       K = 1;
    }
    else {
@@ -438,12 +381,12 @@ double JD2GMST(JDType jd)
 {
    double T, JD0, GMST0, GMST;
 
-   ChangeSystemEpoch(UTC_TIME, ZERO_EPOCH, &jd);
+   ChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd);
    const double JD = jd.day;
 
    JD0 = floor(JD) + 0.5;
 
-   T = (JD0 - 2451545.0) / 36525.0;
+   T = JD0 / 36525.0;
 
    /* .. GMST at UT=0h, in deg */
    GMST0 =
@@ -467,12 +410,12 @@ void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
 {
    double DaysSinceEpoch, DaysSinceRollover, DaysSinceWeek;
 
-   DaysSinceEpoch    = 7300.5 + GpsTime / 86400.0;
+   DaysSinceEpoch    = 7300.5 + GpsTime / SEC_PER_DAY;
    *GpsRollover      = (long)(DaysSinceEpoch / 7168.0);
    DaysSinceRollover = DaysSinceEpoch - 7168.0 * ((double)*GpsRollover);
    *GpsWeek          = (long)(DaysSinceRollover / 7.0);
    DaysSinceWeek     = DaysSinceRollover - 7.0 * ((double)*GpsWeek);
-   *GpsSecond        = DaysSinceWeek * 86400.0;
+   *GpsSecond        = DaysSinceWeek * SEC_PER_DAY;
 }
 /**********************************************************************/
 /* GPS Epoch is 6 Jan 1980 00:00:00.0 UTC                             */
@@ -482,7 +425,7 @@ void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
 /* so J2000-GPS epoch is 7300.5 days minus (19+32.184) sec            */
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond)
 {
-   return (((GpsRollover * 1024.0 + GpsWeek) * 7.0 - 7300.5) * 86400.0 +
+   return (((GpsRollover * 1024.0 + GpsWeek) * 7.0 - 7300.5) * SEC_PER_DAY +
            GpsSecond);
 }
 
@@ -534,7 +477,7 @@ void RealSystemTime(DateType *const date, double DT)
    /* Time is since J2000 */
    Time = UnixTime - 946728000.0;
 
-   *date     = TimeToDate(Time, DT);
+   *date     = TimeToDate(Time, UTC_TIME, DT);
    date->doy = MD2DOY(date->Year, date->Month, date->Day);
 #endif
 }
@@ -593,6 +536,8 @@ double RealRunTime(double *RealTimeDT, double LSB)
 
 void updateTime(DateType *Time, const double dSeconds)
 {
+   JDType jd = DateToJD(*Time, GMAT_MJD_EPOCH, Time->system);
+
    if (fabs(dSeconds) > 0.0) {
       Time->Second  += dSeconds;
       long quotient  = Time->Second / 60.0;
@@ -621,13 +566,54 @@ void updateTime(DateType *Time, const double dSeconds)
             }
 
             if (quotient != 0) {
-               // Time->JulDay =
-               //     floor(Time->JulDay + 0.5 + (double)quotient) - 0.5;
-               // long tmpHr = 0, tmpMin = 0;
-               // double tmpSec = 0.0;
-               // JDToDate(Time->JulDay, &Time->Year, &Time->Month, &Time->Day,
-               //          &tmpHr, &tmpMin, &tmpSec);
-               Time->doy = MD2DOY(Time->Year, Time->Month, Time->Day);
+               jd.day = (long)(jd.day + 0.5 + (double)quotient) - 0.5;
+               DateType date_day = {0};
+               date_day.system   = Time->system;
+               date_day.Year     = Time->Year;
+               date_day.Month    = Time->Month;
+               date_day.Day      = Time->Day;
+               date_day          = JDToDate(jd, Time->system);
+               Time->Year        = date_day.Year;
+               Time->Month       = date_day.Month;
+               Time->Day         = date_day.Day;
+               Time->doy         = MD2DOY(Time->Year, Time->Month, Time->Day);
+               /* ALTERNATIVELY
+               long l_month[12] = {31, 28, 31, 30, 31, 30,
+                                   31, 31, 30, 31, 30, 31};
+
+               Time->doy = Time->Day + quotient;
+               int mnth  = Time->Month;
+
+               int l_yr = 365;
+
+               if (_is_leap_yr(Time->Year)) {
+                  l_yr       = 366;
+                  l_month[1] = 29;
+               }
+
+               for (int i = 0; i < mnth - 1; i++) {
+                  Time->doy += l_month[i];
+               }
+
+               long yr = Time->Year;
+               while (Time->doy < 0) {
+                  Time->Year--;
+                  l_yr = 365;
+                  if (_is_leap_yr(Time->Year)) {
+                     l_yr = 366;
+                  }
+                  Time->doy += l_yr;
+               }
+               while (Time->doy > l_yr) {
+                  Time->Year++;
+                  l_yr = 365;
+                  if (_is_leap_yr(Time->Year)) {
+                     l_yr = 366;
+                  }
+                  Time->doy -= l_yr;
+               }
+               DOY2MD(Time->Year, Time->doy, &Time->Month, &Time->Day);
+               */
             }
          }
       }

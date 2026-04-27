@@ -405,6 +405,8 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
    double J2 = 1.08262998905E-3;
    double Coef;
 
+   date.system = UTC_TIME;
+
    strncpy(YearString, &Line1[18], 2);
    YearString[2] = 0;
    date.Year     = (long)atoi(YearString);
@@ -418,7 +420,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
    date.doy      = (long)FloatDOY;
    FracDay       = FloatDOY - ((double)date.doy);
    DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
-   jdEpoch      = DateToJD(date, UTC_TIME, J2000_EPOCH, TT_TIME);
+   jdEpoch      = DateToJD(date, J2000_EPOCH, TT_TIME);
    jdEpoch.day += FracDay;
    O->Epoch     = JDToDynTime(jdEpoch);
    j2000_tt     = JDToDynTime(jd);

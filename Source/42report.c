@@ -463,7 +463,10 @@ void DSM_PosHReport(void)
          else
             break;
          // TODO
-         fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.JulDay, TT.JulDay);
+         JDType jd_tdb_j2000 = DateToJD(TDB, J2000_EPOCH, TDB_TIME);
+         JDType jd_tt_j2000  = DateToJD(TDB, TT_TIME, TDB_TIME);
+         fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, jd_tdb_j2000.day,
+                 jd_tt_j2000.day);
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.tdbTime, DynTime);
          fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH[0],
                  World[VENUS].PosH[1], World[VENUS].PosH[2]);
@@ -557,7 +560,6 @@ void DSM_NAV_StateReport(void)
    static FILE **stateFile, **covFile, **timeFile;
    static long First = 1;
    long Isc;
-   enum States state;
    char s[40];
 
    struct DSMNavType *Nav;
@@ -579,7 +581,8 @@ void DSM_NAV_StateReport(void)
          sprintf(s, "DSM_navcov_%02li.42", Isc);
          covFile[Isc] = FileOpen(OutPath, s, "wt");
          Nav          = &SC[Isc].DSM.DsmNav;
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                switch (state) {
                   // case TIME_STATE:
@@ -608,7 +611,8 @@ void DSM_NAV_StateReport(void)
             }
          }
          fprintf(stateFile[Isc], "\n");
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                switch (state) {
                   // case TIME_STATE:
@@ -642,7 +646,8 @@ void DSM_NAV_StateReport(void)
       if (SC[Isc].Exists && SC[Isc].DSM.DsmNav.NavigationActive == TRUE) {
          long writeTime = FALSE;
          Nav            = &SC[Isc].DSM.DsmNav;
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                writeTime = TRUE;
                switch (state) {
@@ -696,7 +701,8 @@ void DSM_NAV_StateReport(void)
          double m[navDim];
          UnscentedStateTForm(Nav, m, Nav->P);
 
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             int stateInd = Nav->navInd[state];
             if (Nav->stateActive[state] == TRUE) {
                for (int i = 0; i < Nav->navSize[state]; i++) {
@@ -712,145 +718,153 @@ void DSM_NAV_StateReport(void)
 }
 /*********************************************************************/
 // Last time I tried to analyze all the data from this, I ran out of memory...
-#ifdef _REPORT_RESIDUALS_
-void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1])
+#ifdef REPORT_RESIDUALS
+void DSM_NAV_ResidualsReport(const double time, const long Isc, long *First,
+                             double **residuals[FIN_SENSOR + 1])
 {
    static FILE **residualFile;
-   static long First = TRUE;
-   long Isc;
-   enum SensorType sensor;
+   static long configure_files = TRUE;
    char s[40];
 
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav = &SC[Isc].DSM.DsmNav;
 
-   if (First) {
-      residualFile = (FILE **)calloc(Nsc, sizeof(FILE *));
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         sprintf(s, "DSM_residuals_%02li.42", Isc);
-         residualFile[Isc] = FileOpen(OutPath, s, "wt");
-         Nav               = &SC[Isc].DSM.DsmNav;
-         FILE *file        = residualFile[Isc];
-         fprintf(file, "Time; ");
-         for (sensor = INIT_SENSOR; sensor < FIN_SENSOR; sensor++) {
-            if (Nav->sensorActive[sensor] == TRUE) {
-               for (int i = 0; i < Nav->nSensor[sensor]; i++) {
-                  switch (sensor) {
-                     case GPS_SENSOR:
-                        fprintf(file,
-                                "GPS[%02i]_Pos_x GPS[%02i]_Pos_y "
-                                "GPS[%02i]_Pos_z GPS[%02i]_Vel_x "
-                                "GPS[%02i]_Vel_y GPS[%02i]_Vel_z ",
-                                i, i, i, i, i, i);
-                        break;
-                     case STARTRACK_SENSOR:
-                        fprintf(
-                            file,
-                            "STARTRACK[%02i]_Theta_x STARTRACK[%02i]_Theta_z "
-                            "STARTRACK[%02i]_Theta_z ",
-                            i, i, i);
-                        break;
-                     case FSS_SENSOR:
-                        fprintf(file, "FSS[%02i]_Theta_h FSS[%02i]_Theta_v ", i,
-                                i);
-                        break;
-                     case CSS_SENSOR:
-                        fprintf(file, "CSS[%02i]_Out ", i);
-                        break;
-                     case GYRO_SENSOR:
-                        fprintf(file, "GYRO[%02i]_Out ", i);
-                        break;
-                     case MAG_SENSOR:
-                        fprintf(file, "MAG[%02i]_Out ", i);
-                        break;
-                     case ACCEL_SENSOR:
-                        fprintf(file, "ACCEL[%02i]_Out ", i);
-
-                        break;
-                     default:
-                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
-                               "configured correctly in "
-                               "navkit.c. Exiting...\n");
-                        exit(EXIT_FAILURE);
-                        break;
-                  }
-                  fprintf(file, "; ");
-               }
-            }
-         }
-         fprintf(file, "\n");
-      }
-      First = FALSE;
+   if (configure_files) {
+      residualFile    = (FILE **)calloc(Nsc, sizeof(FILE *));
+      configure_files = FALSE;
    }
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      Nav        = &SC[Isc].DSM.DsmNav;
-      FILE *file = residualFile[Isc];
-      fprintf(file, PRNT_DBL " ; ", time);
-      for (sensor = INIT_SENSOR; sensor < FIN_SENSOR; sensor++) {
-         if (Nav->sensorActive[sensor] == TRUE) {
-            for (int i = 0; i < Nav->nSensor[sensor]; i++) {
-               if (residuals[sensor][i] != NULL) {
-                  switch (sensor) {
-                     case GPS_SENSOR:
-                        for (int j = 0; j < 6; j++)
-                           fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
-                        break;
-                     case STARTRACK_SENSOR:
-                        for (int j = 0; j < 3; j++)
-                           fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
-                        break;
-                     case FSS_SENSOR:
-                        for (int j = 0; j < 2; j++)
-                           fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
-                        break;
-                     case CSS_SENSOR:
-                     case GYRO_SENSOR:
-                     case MAG_SENSOR:
-                     case ACCEL_SENSOR:
-                        fprintf(file, PRNT_DBL, residuals[sensor][i][0]);
-                        break;
-                     default:
-                        printf(
-                            "INIT_SENSOR and/or FIN_SENSOR are not configured "
-                            "correctly in navkit.c. Exiting...\n");
-                        exit(EXIT_FAILURE);
-                        break;
+
+   if (*First) {
+      sprintf(s, "DSM_residuals_%02li.42", Isc);
+      residualFile[Isc] = FileOpen(OutPath, s, "wt");
+      Nav               = &SC[Isc].DSM.DsmNav;
+      FILE *file        = residualFile[Isc];
+      fprintf(file, "CCSDS_Time ; ");
+      FOR_SENSORS(sensor)
+      {
+         for (int i = 0; i < Nav->nSensor[sensor]; i++) {
+            if (Nav->sensorActive[sensor][i] == TRUE) {
+               switch (sensor) {
+                  case GPS_SENSOR:
+                     fprintf(file,
+                             "GPS[%02i]_Pos_x ; GPS[%02i]_Pos_y ; "
+                             "GPS[%02i]_Pos_z ; GPS[%02i]_Vel_x ; "
+                             "GPS[%02i]_Vel_y ; GPS[%02i]_Vel_z ; ",
+                             i, i, i, i, i, i);
+                     break;
+                  case STARTRACK_SENSOR:
+                     fprintf(file,
+                             "STARTRACK[%02i]_Theta_x ; "
+                             "STARTRACK[%02i]_Theta_y ; "
+                             "STARTRACK[%02i]_Theta_z ; ",
+                             i, i, i);
+                     break;
+                  case FSS_SENSOR: {
+                     const struct FssType *fss = &SC[Isc].FSS[i];
+                     switch (fss->type) {
+                        case CONVENTIONAL_FSS:
+                           fprintf(file,
+                                   "FSS[%02i]_Theta_h ; FSS[%02i]_Theta_v ; ",
+                                   i, i);
+                           break;
+                        case GS_FSS:
+                           fprintf(file, "FSS[%02i]_Phi ; FSS[%02i]_Theta ; ",
+                                   i, i);
+                           break;
+                     }
+                     break;
                   }
+                  case CSS_SENSOR:
+                     fprintf(file, "CSS[%02i]_Out ; ", i);
+                     break;
+                  case GYRO_SENSOR:
+                     fprintf(file, "GYRO[%02i]_Out ; ", i);
+                     break;
+                  case MAG_SENSOR:
+                     fprintf(file, "MAG[%02i]_Out ; ", i);
+                     break;
+                  case ACCEL_SENSOR:
+                     fprintf(file, "ACCEL[%02i]_Out ; ", i);
+                     break;
+                  default:
+                     ek_exception(
+                         EK_THROW,
+                         "INIT_SENSOR and/or FIN_SENSOR are not configured "
+                         "correctly in navkit.h. Exiting...\n");
+                     break;
                }
-               else {
-                  switch (sensor) {
-                     case GPS_SENSOR:
-                        for (int j = 0; j < 6; j++)
-                           fprintf(file, "nan ");
-                        break;
-                     case STARTRACK_SENSOR:
-                        for (int j = 0; j < 3; j++)
-                           fprintf(file, "nan ");
-                        break;
-                     case FSS_SENSOR:
-                        for (int j = 0; j < 2; j++)
-                           fprintf(file, "nan ");
-                        break;
-                     case CSS_SENSOR:
-                     case GYRO_SENSOR:
-                     case MAG_SENSOR:
-                     case ACCEL_SENSOR:
-                        fprintf(file, "nan ");
-                        break;
-                     default:
-                        printf(
-                            "INIT_SENSOR and/or FIN_SENSOR are not configured "
-                            "correctly in navkit.c. Exiting...\n");
-                        exit(EXIT_FAILURE);
-                        break;
-                  }
-               }
-               fprintf(file, "; ");
             }
          }
       }
       fprintf(file, "\n");
-      fflush(file);
+      *First = FALSE;
    }
+   Nav        = &SC[Isc].DSM.DsmNav;
+   FILE *file = residualFile[Isc];
+   fprintf(file, PRNT_DBL " ; ", time);
+   FOR_SENSORS(sensor)
+   {
+      for (int i = 0; i < Nav->nSensor[sensor]; i++) {
+         if (Nav->sensorActive[sensor][i] == TRUE) {
+            if (residuals[sensor][i] != NULL) {
+               switch (sensor) {
+                  case GPS_SENSOR:
+                     for (int j = 0; j < 6; j++)
+                        fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
+                     break;
+                  case STARTRACK_SENSOR:
+                     for (int j = 0; j < 3; j++)
+                        fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
+                     break;
+                  case FSS_SENSOR:
+                     for (int j = 0; j < 2; j++)
+                        fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
+                     break;
+                  case CSS_SENSOR:
+                  case GYRO_SENSOR:
+                  case MAG_SENSOR:
+                  case ACCEL_SENSOR:
+                     fprintf(file, PRNT_DBL, residuals[sensor][i][0]);
+                     break;
+                  default:
+                     printf("INIT_SENSOR and/or FIN_SENSOR are not configured "
+                            "correctly in navkit.h. Exiting...\n");
+                     exit(EXIT_FAILURE);
+                     break;
+               }
+            }
+            else {
+               switch (sensor) {
+                  case GPS_SENSOR:
+                     for (int j = 0; j < 6; j++)
+                        fprintf(file, "nan ");
+                     break;
+                  case STARTRACK_SENSOR:
+                     for (int j = 0; j < 3; j++)
+                        fprintf(file, "nan ");
+                     break;
+                  case FSS_SENSOR:
+                     for (int j = 0; j < 2; j++)
+                        fprintf(file, "nan ");
+                     break;
+                  case CSS_SENSOR:
+                  case GYRO_SENSOR:
+                  case MAG_SENSOR:
+                  case ACCEL_SENSOR:
+                     fprintf(file, "nan ");
+                     break;
+                  default:
+                     printf("INIT_SENSOR and/or FIN_SENSOR are not configured "
+                            "correctly in navkit.c. Exiting...\n");
+                     exit(EXIT_FAILURE);
+                     break;
+               }
+            }
+            fprintf(file, "; ");
+         }
+      }
+   }
+   fprintf(file, "\n");
+   fflush(file);
 }
 #endif
 /*********************************************************************/
@@ -1406,7 +1420,7 @@ void Report(void)
                  SC[0].svn[1], SC[0].svn[2]);
          fprintf(svbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svb[0],
                  SC[0].svb[1], SC[0].svb[2]);
-         fprintf(KEfile, PRNT_DBL "\n", FindTotalKineticEnergy(&SC[0]));
+         fprintf(KEfile, PRNT_DBL "\n", FindTotalKineticEnergy(Orb, &SC[0]));
          // fprintf(ProjAreaFile, PRNT_DBL PRNT_DBL"\n",
          //    FindTotalProjectedArea(&SC[0],ZAxis),
          //    FindTotalUnshadedProjectedArea(&SC[0],ZAxis));

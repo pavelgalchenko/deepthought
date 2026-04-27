@@ -19,6 +19,14 @@
 */
 
 /**********************************************************************/
+int any_int(const long n, const int *vec)
+{
+   for (long i = 0; i < n; i++)
+      if (vec[i])
+         return 1;
+   return 0;
+}
+/**********************************************************************/
 int all_int(const long n, const int *vec)
 {
    for (long i = 0; i < n; i++)

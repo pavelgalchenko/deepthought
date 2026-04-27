@@ -935,7 +935,7 @@ struct WorldType {
    long Type; /* STAR, PLANET, MOON, ASTEROID, COMET */
    long Parent;
    long Nsat;
-   long *Sat; /* [*Nsat*] */
+   WorldID *Sat; /* [*Nsat*] */
 
    /* Physical Properties */
    double mu;              /* Gravitation constant  */

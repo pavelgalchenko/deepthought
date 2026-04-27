@@ -64,8 +64,7 @@ DateType NOS3Time()
 #elif defined(__linux__)
    static long First = 1;
    int64_t ticks;
-   DateType date = {0};
-   JDType jd     = {0};
+   JDType jd = {0};
    double abs_time;
    if (First) {
       First = 0;
@@ -80,8 +79,7 @@ DateType NOS3Time()
    abs_time = DynTime0 + (ticks * DTSIM);
    jd       = TimeToJD(abs_time, TT_TIME, J2000_EPOCH);
    ChangeSystem(UTC_TIME, &jd);
-   date     = JDToDate(jd);
-   date.doy = MD2DOY(date.Year, date.Month, date.Day);
+   return JDToDate(jd, TT_TIME);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
    fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");

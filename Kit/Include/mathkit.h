@@ -40,6 +40,7 @@
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
+int any_int(const long n, const int *vec);
 int all_int(const long n, const int *vec);
 double signum(const double x);
 double sinc(const double x);

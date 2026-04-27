@@ -8,6 +8,9 @@ option(SHADERS "Compile with shaders" ON)
 # Compile with GSFC Watermark -DGSFC=ON
 option(GSFC "Enable GSFC Watermark" OFF)
 
+# Compile with SPICE -DSPICE=OFF
+option(SPICE "Compile with SPICE" ON)
+
 # Compile enabling address sanitizer -DSANITIZER=ON
 option(SANITIZER "Enable address sanitizer in debug build" OFF)
 
@@ -77,6 +80,44 @@ target_compile_definitions(42kit PRIVATE $<$<BOOL:${GSFC}>:_USE_GSFC_WATERMARK_>
 
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${DEBUG_DATA}>:_DEBUG_GRAV_ _DEBUG_MAG_>)
 
+
+if(SPICE)
+    # Based on similar section in GMAT cmake
+    set(CSPICE_TEMP_DIR ${CMAKE_SOURCE_DIR}/cspice)
+
+    find_path(CSPICE_DIR
+        NAMES include/SpiceUsr.h
+        PATHS 
+            ${CSPICE_TEMP_DIR}
+        DOC "Path to CSpice root directory (containing include/, lib/, etc.)"
+        NO_DEFAULT_PATH
+        )
+
+    # Make sure CSPICE exists
+    if(CSPICE_DIR)
+        MESSAGE(STATUS "Found CSPICE: " ${CSPICE_DIR})
+
+        # Set CSPICE library files
+        # if(WIN32)
+        #     SET(CSPICE_EXT "lib")
+        # else()
+        SET(CSPICE_EXT "a")
+        # endif()
+        SET(CSPICE_LIB "${CSPICE_DIR}/lib/cspice.${CSPICE_EXT}")
+        # SET(CSPICE_LIB_DEBUG "${CSPICE_DIR}/lib/cspiced.${CSPICE_EXT}")
+        SET(CSPICE_INCLUDE_DIR "${CSPICE_DIR}/include")
+        if(NOT EXISTS ${CSPICE_LIB_DEBUG})
+            SET(CSPICE_LIB_DEBUG ${CSPICE_LIB})
+        endif()
+    else()
+        MESSAGE(ERROR "CSPICE NOT FOUND. Set CSPICE_DIR to path to include/SpiceUsr.h and re-configure.")
+    endif()
+    add_compile_definitions(_ENABLE_SPICE_)
+    
+    target_link_libraries(42kit PUBLIC optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
+    target_include_directories(42kit PUBLIC ${CSPICE_INCLUDE_DIR})
+endif()
+
 # Configure 42kit with libfyaml publicly to share with targets
 # if something in deepthought is using yaml, it is also using iokit
 find_package(PkgConfig REQUIRED)
@@ -100,9 +141,17 @@ if (GUI)
     find_package(GLUT REQUIRED)
     target_link_libraries(42kit PUBLIC ${GLUT_LIBRARIES})
 
+    set(GL_SOURCES
+        PRIVATE
+        ${KIT}/glkit.c
+        ${KIT}/42glkit.c
+        ${KIT}/42gpgpukit.c
+        )
+    target_sources(42kit ${GL_SOURCES})
+
     if (GLUT_OR_GLFW STREQUAL "GLUT")
         set(GLUT_SOURCES
-            PUBLIC
+            PRIVATE
             ${KIT}/42glutkit.c
             )
         target_sources(42kit ${GLUT_SOURCES})
@@ -113,16 +162,9 @@ if (GUI)
         target_link_libraries(42kit PRIVATE ${GLFW_LIBRARIES})
         set(GLFW_SOURCES
             PUBLIC
-            ${KIT}/42glutkit.c
+            ${KIT}/42glfwkit.c
             )
         target_sources(42kit ${GLFW_SOURCES})
     endif()
 
-    set(GL_SOURCES
-        PRIVATE
-        ${KIT}/glkit.c
-        ${KIT}/42glkit.c
-        ${KIT}/42gpgpukit.c
-        )
-    target_sources(42kit ${GL_SOURCES})
 endif()
