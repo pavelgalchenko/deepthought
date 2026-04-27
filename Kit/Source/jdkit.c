@@ -650,6 +650,9 @@ void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    // could come from, in part, GMAT being more reserved with what epochs to use
    // regularly
 
+   // Upon furthur reading in Vallado, algorithms from there assume Julian Dates
+   // are in UT1 unless otherwise specified
+
    long epoch_diff_l   = 0;
    double epoch_diff_d = 0.0;
    _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_d);

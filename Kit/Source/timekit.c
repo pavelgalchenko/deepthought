@@ -107,7 +107,11 @@ int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
           ((a_ccsds.coarse == b_ccsds.coarse) && a_ccsds.fine < b_ccsds.fine);
 }
 /**********************************************************************/
-/*    GMAT 2026 Math Specification, page 12                           */
+/*   Convert Gregorian Date to a Julian Date format. Uses the same    */
+/*   time system as 'date' and returns desired 'epoch'                */
+/*     Adapted From: Vallado, Fundamentals of Astrodyanmics and       */
+/*     Applications, 4th Ed, Microcosm Press, El Segundo CA, 2013,    */
+/*     p. 183                                                         */
 JDType Date2JD(const DateType date, const EpochTT epoch)
 {
    JDType jd = {.day = 0, .epoch = GD_CONV_EPOCH, .system = date.system};
@@ -124,7 +128,7 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
    const long a = (7 * (Y + c)) / 4;
 
    jd.day = 367 * Y - a + b + D;
-   ChangeEpoch(GMAT_MJD_EPOCH, &jd);
+   ChangeEpoch(epoch, &jd);
    jd.day += ((s / 60.0 + m) / 60.0 + H) / 24.0;
 
    return jd;
@@ -264,13 +268,11 @@ DateType CCSDSToDate(CCSDSTime ccsds_time)
 }
 /**********************************************************************/
 /*   Convert Julian Day to Year, Month, Day, Hour, Minute, and Second */
-/*   Ref. GMAT 2026 Mathematical Specification, pp. 12-13,            */
-/*     From: Vallado, Fundamentals of Astrodyanmics and Applications, */
-/*     2nd Ed, Microcosm Press, El Segundo CA, 2001                   */
+/*     Adapted From: Vallado, Fundamentals of Astrodyanmics and       */
+/*     Applications, 4th Ed, Microcosm Press, El Segundo CA, 2013,    */
+/*     p. 202                                                         */
 DateType JDToDate(const JDType jd, const TimeSystem system)
 {
-   // TODO: don't have my copy of vallado on hand at the moment, double check
-   // when I do
    double lp_yrs, days, T_1900, tmp;
    long l_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -282,8 +284,14 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
 
    T_1900    = jd_sys_1900.day / 365.25;
    date.Year = 1900 + trunc(T_1900);
-   lp_yrs    = trunc((date.Year - 1900 - 1) * 0.25);
-   days      = jd_sys_1900.day - ((date.Year - 1900) * 365 + lp_yrs);
+   if (date.Year >= 2100) {
+      fprintf(stderr, "JDToDate is not valid for years greater than or equal "
+                      "2100 due to unhandled leap years. Exiting...\n");
+      exit(EXIT_FAILURE);
+      // TODO: change the lp_yrs calculation to handle more leap years
+   }
+   lp_yrs = trunc((date.Year - 1900 - 1) * 0.25);
+   days   = jd_sys_1900.day - ((date.Year - 1900) * 365 + lp_yrs);
    if (days < 1.0) {
       date.Year--;
       lp_yrs = trunc((date.Year - 1900 - 1) * 0.25);
@@ -559,13 +567,8 @@ void updateTime(DateType *Time, const double dSeconds)
             }
 
             if (quotient != 0) {
-               jd.day = (long)(jd.day + 0.5 + (double)quotient) - 0.5;
-               DateType date_day = {0};
-               date_day.system   = Time->system;
-               date_day.Year     = Time->Year;
-               date_day.Month    = Time->Month;
-               date_day.Day      = Time->Day;
-               date_day          = JDToDate(jd, Time->system);
+               jd.day            = floor(jd.day + 0.5 + (double)quotient) - 0.5;
+               DateType date_day = JDToDate(jd, Time->system);
                Time->Year        = date_day.Year;
                Time->Month       = date_day.Month;
                Time->Day         = date_day.Day;
