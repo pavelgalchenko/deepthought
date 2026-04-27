@@ -158,7 +158,7 @@ if (GUI)
     else()
         target_compile_definitions(42kit PUBLIC _USE_GLFW_)
         find_package(glfw3 REQUIRED)
-        target_link_libraries(42kit PRIVATE glfw)
+        target_link_libraries(42kit INTERFACE glfw)
         target_link_libraries(42kit PRIVATE ${GLFW_LIBRARIES})
         set(GLFW_SOURCES
             PUBLIC
