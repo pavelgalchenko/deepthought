@@ -70,19 +70,20 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 /*                       Measurement Jacobians                        */
 /*--------------------------------------------------------------------*/
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long sensorNum);
+                         const long sensorNum, double **N);
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **startrackJacobianFun(struct AcType *const AC,
-                              struct DSMType *const DSM, const long sensorNum);
+                              struct DSMType *const DSM, const long sensorNum,
+                              double **N);
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long sensorNum);
+                          const long sensorNum, double **N);
 
 double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
                 const long sensorNum);

@@ -20,11 +20,11 @@
 ** #endif
 */
 
-#ifdef __USE_LIBFYAML_CORE__
+// #ifdef __USE_LIBFYAML_CORE__
 #include "libfyaml/libfyaml-core.h"
-#else
-#include "libfyaml.h"
-#endif
+// #else
+// #include "libfyaml.h"
+// #endif
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>

@@ -181,13 +181,14 @@ struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
    meas->type            = sourceMeas->type;
    meas->dim             = sourceMeas->dim;
    meas->errDim          = sourceMeas->errDim;
+   meas->noiseDim        = sourceMeas->noiseDim;
 
    meas->data = calloc(meas->dim, sizeof(double));
-   meas->R    = calloc(meas->errDim, sizeof(double));
-   meas->N    = CreateMatrix(meas->errDim, meas->errDim);
+   meas->R    = calloc(meas->noiseDim, sizeof(double));
+   meas->N    = CreateMatrix(meas->errDim, meas->noiseDim);
    for (int i = 0; i < meas->errDim; i++) {
       meas->R[i] = sourceMeas->R[i];
-      for (int j = 0; j < meas->errDim; j++)
+      for (int j = 0; j < meas->noiseDim; j++)
          meas->N[i][j] = sourceMeas->N[i][j];
    }
    meas->sensorNum = sensorNum;
@@ -736,7 +737,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
 //------------------------------------------------------------------------------
 
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long Igyro)
+                         const long Igyro, double **N)
 {
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -803,7 +804,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Imag)
+                        const long Imag, double **N)
 {
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -858,7 +859,7 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Icss)
+                        const long Icss, double **N)
 {
    double tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -911,7 +912,7 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Ifss)
+                        const long Ifss, double **N)
 {
    double B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
    const struct AcFssType *fss  = &AC->FSS[Ifss];
@@ -1008,7 +1009,8 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **startrackJacobianFun(struct AcType *const AC,
-                              struct DSMType *const DSM, const long Ist)
+                              struct DSMType *const DSM, const long Ist,
+                              double **N)
 {
    double tmpM[3][3]                  = {{0.0}}, CSB[3][3];
    static double **tmpAssign          = NULL;
@@ -1055,7 +1057,7 @@ double **startrackJacobianFun(struct AcType *const AC,
 }
 
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Igps)
+                        const long Igps, double **N)
 {
    double tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}}, tmp3[3][3] = {{0.0}},
           tmpX[3][3] = {{0.0}}, tmpV[3] = {0.0};
@@ -1166,7 +1168,7 @@ double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long Iaccel)
+                          const long Iaccel, double **N)
 {
    const struct DSMNavType *Nav = &DSM->DsmNav;
 
@@ -2870,7 +2872,7 @@ void NavSkDot(const long nav_dim, double **sk, double **F, double **M_sqrtQ,
    // F = sk * sk_dot
    MxMG(sk, sk_dot, F, nav_dim, nav_dim, nav_dim);
 
-   // F = sk * sk_dot
+   // transfer F to sk_dot, ensuring lower triangular
    for (long i = 0; i < nav_dim; i++) {
       for (long j = i + 1; j < nav_dim; j++) {
          sk_dot[i][j] = 0.0;
@@ -2896,12 +2898,11 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
    (*Nav->EOMJacobianFun)(AC, DSM, date, CRB, qbr, PosR, VelR, wbr, whlH,
                           AtmoDensity, Nav->NxN);
    GetM(AC, Nav, CRB, qbr, PosR, VelR, wbr, Nav->M);
-
-   NavSkDot(navDim, Sk, Nav->NxN, Nav->M, Skdot);
-
    for (i = 0; i < Nav->navDim; i++)
       for (j = 0; j < Nav->navDim; j++)
-         Nav->NxN[i][j] = Nav->M[i][j] * Nav->sqrQ[j];
+         Nav->NxN2[i][j] = Nav->M[i][j] * Nav->sqrQ[j];
+
+   NavSkDot(navDim, Sk, Nav->NxN, Nav->NxN2, Skdot);
 
    double aeroFrc[3] = {0.0}, aeroTrq[3] = {0.0};
    const long orbCenter          = DSM->refOrb->World;
@@ -3038,8 +3039,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    const double DT        = ccsds2seconds(dccsds);
 
    CCSDSTime date_ccsds            = date2ccsds(Nav->Date);
-   date_ccsds                      = CCSDSAddSeconds(date_ccsds, -(32.184));
-   const CCSDSTime date_off_ccdsds = CCSDSSub(Nav->ccsds_time, date_ccsds);
+   const CCSDSTime date_off_ccdsds = CCSDSSub(*cur_ccsds, date_ccsds);
    const double dateOffset         = ccsds2seconds(date_off_ccdsds);
 
    if (init == TRUE) {
@@ -3187,10 +3187,13 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
               AtmoDensity);
    }
 
-   for (k = 0; k < ORDRK; k++)
+   for (k = 0; k < ORDRK; k++) {
       for (i = 0; i < Nav->navDim; i++)
-         for (j = 0; j < Nav->navDim; j++)
-            Nav->S[i][j] += rkScale[k] * Skk[k][i][j];
+         for (j = 0; j <= i; j++)
+            Nav->S[i][j] += Skk[k][i][j] * rkScale[k];
+      DestroyMatrix(Skk[k]);
+   }
+   DestroyMatrix(Sk);
 
    FOR_STATES(Istate)
    {
@@ -3271,13 +3274,236 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       Nav->whlH[i] = Limit(Nav->whlH[i] + AC->Whl[i].Tcmd * DT,
                            -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
 
+   *cur_ccsds        = next_ccsds;
+   Nav->ccsds_time   = *cur_ccsds;
+   Nav->Date         = ccsds2date(*cur_ccsds, TT_TIME);
    Nav->refLerpAlpha = lerpAlphaState;
    configureRefFrame(Nav, DSM->refOrb, DT / Nav->DT, FALSE);
 }
 
-void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
+void CalcInnovation(const enum SensorType type,
+                    const struct DSMMeasType *const meas,
+                    const double *const meas_est, double *innovation)
+{
+   switch (type) {
+      case STARTRACK_SENSOR: {
+         double tmpq[4];
+         QxQT(meas->data, meas_est, tmpq);
+         Q2AngleVec(tmpq, innovation);
+      } break;
+      default:
+         for (long i = 0; i < meas->errDim; i++)
+            innovation[i] = meas->data[i] - meas_est[i];
+         break;
+   }
+}
+
+void Underweighting(const long nav_dim, const long meas_err_dim,
+                    const long meas_noise_dim, double **HS, double **NsqrtR,
+                    double **out)
 {
    long i, j;
+   // Compare square of matrix 2-norms for underweighting
+   if (M2Norm2G(HS, meas_err_dim, nav_dim) >=
+       (5.0 * M2Norm2G(NsqrtR, meas_err_dim, meas_err_dim))) {
+      const double rtp = sqrt(1.2);
+      for (i = 0; i < nav_dim; i++)
+         for (j = 0; j < meas_err_dim; j++)
+            out[i][j] = HS[j][i] * rtp;
+   }
+   else {
+      for (i = 0; i < nav_dim; i++)
+         for (j = 0; j < meas_err_dim; j++)
+            out[i][j] = HS[j][i];
+   }
+
+   for (i = 0; i < meas_err_dim; i++)
+      for (j = 0; j < meas_err_dim; j++)
+         out[i + nav_dim][j] = NsqrtR[j][i];
+}
+
+void GetMeasBatchParams(const struct DSMMeasListType *const meas_list,
+                        const enum batchType batching,
+                        enum SensorType *const sense_type,
+                        CCSDSTime *const meas_ccsds, long *const meas_err_dim,
+                        long *const meas_noise_dim)
+{
+   *meas_err_dim   = 0;
+   *meas_noise_dim = 0;
+   *sense_type     = meas_list->head->type;
+   *meas_ccsds     = meas_list->head->ccsds_time;
+
+   // TODO: avoid this preallocation mess and go with
+   // realloc (maybe?)
+   switch (batching) {
+      case NONE_BATCH:
+         *meas_err_dim   = meas_list->head->errDim;
+         *meas_noise_dim = meas_list->head->noiseDim;
+         break;
+      case SENSOR_BATCH: {
+         struct DSMMeasType *meas = meas_list->head;
+         while (meas != NULL && meas->type == *sense_type &&
+                isequal_ccsds(*meas_ccsds, meas->ccsds_time)) {
+            *meas_err_dim   += meas->errDim;
+            *meas_noise_dim += meas->noiseDim;
+            meas             = meas->nextMeas;
+         }
+      } break;
+      case TIME_BATCH: {
+         struct DSMMeasType *meas = meas_list->head;
+         while (meas != NULL && isequal_ccsds(*meas_ccsds, meas->ccsds_time)) {
+            *meas_err_dim   += meas->errDim;
+            *meas_noise_dim += meas->noiseDim;
+            meas             = meas->nextMeas;
+         }
+      } break;
+      default:
+         fprintf(stderr,
+                 "Invalid Batching method. If you are reading this, the "
+                 "developer probably has a messed up pointer. Exiting...\n");
+         exit(EXIT_FAILURE);
+         break;
+   }
+}
+
+void ParseMeasList(struct AcType *const AC, struct DSMType *const DSM,
+                   struct DSMMeasListType *const meas_list, const long nav_dim,
+                   const long meas_err_dim, const long meas_noise_dim,
+                   const enum batchType batching, const CCSDSTime meas_ccsds,
+                   const enum SensorType sense_type, double *const innov_time,
+                   long *const innov_exist, double **innovs[FIN_SENSOR + 1],
+                   double *big_innov, double **big_H, double **big_N,
+                   double *big_sqrtR)
+{
+   long cur_err_dim = 0;
+   long cur_r_dim   = 0;
+   double *measEstData, **measJacobian;
+   while (meas_list->head != NULL) {
+      struct DSMMeasType *meas = pop_DSMMeas(meas_list);
+      const long err_dim       = meas->errDim;
+      const long r_dim         = meas->noiseDim;
+
+      double innov[err_dim];
+      measEstData = (*meas->measFun)(AC, DSM, meas->sensorNum);
+      measJacobian =
+          (*meas->measJacobianFun)(AC, DSM, meas->sensorNum, meas->N);
+
+      CalcInnovation(meas->type, meas, measEstData, innov);
+
+#ifdef REPORT_RESIDUALS
+      *innov_time  = (double)ccsds2seconds(meas->ccsds_time);
+      *innov_exist = TRUE;
+      innovs[meas->type][meas->sensorNum] = calloc(err_dim, sizeof(double));
+      for (long i = 0; i < err_dim; i++)
+         innovs[meas->type][meas->sensorNum][i] = innov[i];
+#endif
+      for (long i = 0; i < r_dim; i++) {
+         big_sqrtR[cur_r_dim + i] = meas->R[i];
+         for (long j = 0; j < err_dim; j++)
+            big_N[cur_err_dim + j][cur_r_dim + i] = meas->N[j][i];
+      }
+
+      for (long i = 0; i < err_dim; i++) {
+         big_innov[cur_err_dim + i] = innov[i];
+         for (long j = 0; j < nav_dim; j++)
+            big_H[cur_err_dim + i][j] = measJacobian[i][j];
+      }
+
+      cur_err_dim += err_dim;
+      cur_r_dim   += r_dim;
+      free(measEstData);
+      DestroyMatrix(measJacobian);
+      DestroyMeas(meas);
+
+      if ((batching == NONE_BATCH) || (meas_list->head == NULL) ||
+          (!isequal_ccsds(meas_list->head->ccsds_time,
+                          meas_ccsds)) || // TIME_BATCH
+          (batching == SENSOR_BATCH && meas_list->head->type != sense_type)) {
+         break;
+      }
+   }
+}
+
+void SkUpdate(const long nav_dim, const long meas_err_dim, double **Uk,
+              const long id, double **Sk)
+{
+   long u_inds[meas_err_dim];
+   double u_list[meas_err_dim][nav_dim];
+
+   for (long i = 0; i < meas_err_dim; i++) {
+      u_inds[i] = i;
+      for (long j = 0; j < nav_dim; j++)
+         u_list[i][j] = Uk[j][i];
+   }
+
+   for (long i = 0; i < meas_err_dim; i++) {
+      if (!cholDowndate(Sk, u_list[u_inds[i]], nav_dim)) {
+         if (u_inds[i] < i) {
+            // if the currently offending u caused problems earlier, we're
+            // out of luck
+            fprintf(stderr,
+                    "Cholesky Downdate failed for SC[%li]! Exiting...\n", id);
+            exit(EXIT_FAILURE);
+         }
+
+         // move the offending u to the end of the list, do it later
+         const double tmp_i = u_inds[i];
+         for (long j = i; j < meas_err_dim - 1; j++)
+            u_inds[j] = u_inds[j + 1];
+         u_inds[meas_err_dim - 1] = tmp_i;
+      }
+   }
+   for (long i = 0; i < nav_dim; i++)
+      for (long j = 0; j < i; j++)
+         Sk[j][i] = 0.0;
+}
+
+void GetKUk(const long nav_dim, const long meas_err_dim,
+            const long meas_noise_dim, double **S, double **N, double *sqrtR,
+            double **H, double **K, double **Uk)
+{
+   // passing around the pointer to keep notation
+   // consistent and save memory ops
+   double **Sz, **C;
+
+   // UNDERWEIGHTING
+   double **HS = CreateMatrix(meas_err_dim, nav_dim);
+   MxMG(H, S, HS, meas_err_dim, nav_dim, nav_dim);
+   double **NsqrtR = CreateMatrix(meas_err_dim, meas_noise_dim);
+   for (long i = 0; i < meas_err_dim; i++)
+      for (long j = 0; j < meas_noise_dim; j++)
+         NsqrtR[i][j] = N[i][j] * sqrtR[j];
+
+   double **tmp = CreateMatrix(nav_dim + meas_noise_dim, meas_err_dim);
+   Underweighting(nav_dim, meas_err_dim, meas_noise_dim, HS, NsqrtR, tmp);
+   DestroyMatrix(NsqrtR);
+
+   Sz         = CreateMatrix(meas_err_dim, meas_err_dim);
+   double **U = CreateMatrix(nav_dim + meas_err_dim, meas_err_dim);
+   hqrd(tmp, U, Sz, nav_dim + meas_err_dim, meas_err_dim);
+
+   DestroyMatrix(U);
+   DestroyMatrix(tmp);
+
+   C = CreateMatrix(nav_dim, meas_err_dim);
+   MxMTG(S, HS, C, nav_dim, nav_dim, meas_err_dim);
+   DestroyMatrix(HS);
+
+   MxMINVG(C, Sz, Uk, nav_dim, meas_err_dim);
+   for (long i = 0; i < meas_err_dim; i++) {
+      for (long j = i + 1; j < meas_err_dim; j++) {
+         Sz[j][i] = Sz[i][j];
+         Sz[i][j] = 0.0;
+      }
+   }
+   MxMINVG(Uk, Sz, K, nav_dim, meas_err_dim);
+   DestroyMatrix(Sz);
+   DestroyMatrix(C);
+}
+
+void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
+{
+   long i;
    struct DSMNavType *Nav = &DSM->DsmNav;
 
    // TODO: will maybe need to do something to preserve information if a new
@@ -3286,55 +3512,30 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
       configureRefFrame(Nav, DSM->refOrb, 0.0, TRUE);
 
    // Accumulate information from measurements based upon batching method.
-   struct DSMMeasListType *measList = &Nav->measList;
-   Nav->ccsds_time                  = date2ccsds(Nav->Date);
-   Nav->ccsds_time                  = CCSDSAddSeconds(Nav->ccsds_time, -32.184);
-   CCSDSTime cur_ccsds              = Nav->ccsds_time;
-   const CCSDSTime fin_ccsds        = CCSDSAddSeconds(cur_ccsds, Nav->DT);
+   struct DSMMeasListType *const measList = &Nav->measList;
+
+   Nav->ccsds_time           = date2ccsds(Nav->Date);
+   CCSDSTime cur_ccsds       = Nav->ccsds_time;
+   const CCSDSTime fin_ccsds = CCSDSAddSeconds(cur_ccsds, Nav->DT);
    if (measList->head == NULL) {
       PropagateNav(AC, DSM, &cur_ccsds, fin_ccsds, TRUE);
       Nav->steps++;
    }
    else {
       long init = TRUE;
-      while (measList->head != NULL) {
-         long measDim                    = 0;
-         const enum SensorType senseType = measList->head->type;
-         const CCSDSTime meas_ccsds      = measList->head->ccsds_time;
 
-         // TODO: avoid this preallocation mess and go with realloc (maybe?)
-         switch (Nav->batching) {
-            case NONE_BATCH:
-               measDim = measList->head->errDim;
-               break;
-            case SENSOR_BATCH: {
-               struct DSMMeasType *meas = measList->head;
-               while (meas != NULL && meas->type == senseType &&
-                      isequal_ccsds(meas->ccsds_time, meas_ccsds)) {
-                  measDim += meas->errDim;
-                  meas     = meas->nextMeas;
-               }
-            } break;
-            case TIME_BATCH: {
-               struct DSMMeasType *meas = measList->head;
-               while (meas != NULL &&
-                      isequal_ccsds(meas->ccsds_time, meas_ccsds)) {
-                  measDim += meas->errDim;
-                  meas     = meas->nextMeas;
-               }
-            } break;
-            default:
-               fprintf(stderr,
-                       "Invalid Batching method. If you are reading this, the "
-                       "developer probably has a messed up pointer. "
-                       "Exiting...\n");
-               exit(EXIT_FAILURE);
-               break;
-         }
+      while (measList->head != NULL) {
+         long meas_err_dim          = 0;
+         long meas_noise_dim        = 0;
+         CCSDSTime meas_ccsds       = {0};
+         enum SensorType sense_type = NULL_SENSOR;
+         GetMeasBatchParams(measList, Nav->batching, &sense_type, &meas_ccsds,
+                            &meas_err_dim, &meas_noise_dim);
 
          if (isless_ccsds(meas_ccsds, cur_ccsds)) {
-            fprintf(stderr, "Attempted to propagate Navigation state backwards "
-                            "in time. How did that happen? Exiting...\n");
+            fprintf(stderr,
+                    "Attempted to propagate Navigation state backwards in "
+                    "time. How did that happen? Exiting...\n");
             exit(EXIT_FAILURE);
          }
          else {
@@ -3358,168 +3559,50 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
                Nav->innovationsExist = FALSE;
             }
 #endif
-            // TODO: investigate only prop once per Kalman filt call and use
-            // STM and linearization to prop measurements through time
+            // TODO: investigate only prop once per Kalman filt call and
+            // use STM and linearization to prop measurements through time
             PropagateNav(AC, DSM, &cur_ccsds, meas_ccsds, init);
             if (init == TRUE)
                init = FALSE;
          }
 
-         double **bigH, *bigResid, *bigR, **bigN;
-         bigH     = CreateMatrix(measDim, Nav->navDim);
-         bigN     = CreateMatrix(measDim, measDim);
-         bigResid = calloc(measDim, sizeof(double));
-         bigR     = calloc(measDim, sizeof(double));
+         double **bigH, *bigInnov, *big_sqrtR, **bigN;
+         bigH      = CreateMatrix(meas_err_dim, Nav->navDim);
+         bigN      = CreateMatrix(meas_err_dim, meas_noise_dim);
+         bigInnov  = calloc(meas_err_dim, sizeof(double));
+         big_sqrtR = calloc(meas_noise_dim, sizeof(double));
 
-         long curDim = 0;
-         long dim    = -2;
-         double *measEstData, **measJacobian;
+         ParseMeasList(AC, DSM, measList, Nav->navDim, meas_err_dim,
+                       meas_noise_dim, Nav->batching, meas_ccsds, sense_type,
+                       &Nav->innovationTime, &Nav->innovationsExist,
+                       Nav->innovations, bigInnov, bigH, bigN, big_sqrtR);
 
-         while (measList->head != NULL) {
-            struct DSMMeasType *meas = pop_DSMMeas(measList);
-            if (dim != meas->errDim)
-               dim = meas->errDim;
+         double **K  = CreateMatrix(Nav->navDim, meas_err_dim);
+         double **Uk = CreateMatrix(Nav->navDim, meas_err_dim);
+         GetKUk(Nav->navDim, meas_err_dim, meas_noise_dim, Nav->S, bigN,
+                big_sqrtR, bigH, K, Uk);
 
-            double resid[dim];
-            measEstData  = (*meas->measFun)(AC, DSM, meas->sensorNum);
-            measJacobian = (*meas->measJacobianFun)(AC, DSM, meas->sensorNum);
-
-            if (meas->type == STARTRACK_SENSOR) {
-               double tmpq[4];
-               QxQT(meas->data, measEstData, tmpq);
-               Q2AngleVec(tmpq, resid);
-            }
-            else {
-               for (i = 0; i < dim; i++)
-                  resid[i] = meas->data[i] - measEstData[i];
-            }
-#ifdef _REPORT_RESIDUALS_
-            Nav->residuals[meas->type][meas->sensorNum] =
-                calloc(dim, sizeof(double));
-            for (i = 0; i < dim; i++)
-               Nav->residuals[meas->type][meas->sensorNum][i] = resid[i];
-#endif
-
-            for (i = 0; i < dim; i++) {
-               bigResid[curDim + i] = resid[i];
-               bigR[curDim + i]     = meas->R[i];
-               for (j = 0; j < Nav->navDim; j++)
-                  bigH[curDim + i][j] = measJacobian[i][j];
-               for (j = 0; j < dim; j++)
-                  bigN[curDim + i][curDim + j] = meas->N[i][j];
-            }
-
-            curDim += dim;
-            free(measEstData);
-            DestroyMatrix(measJacobian);
-            DestroyMeas(meas);
-
-            if ((Nav->batching == NONE_BATCH) || (measList->head == NULL) ||
-                (!isequal_ccsds(measList->head->ccsds_time,
-                                meas_ccsds)) || // TIME_BATCH
-                (Nav->batching == SENSOR_BATCH &&
-                 measList->head->type != senseType)) {
-               break;
-            }
-         }
-
-         double **Sz, **K, **C, **tmp;
-         C = CreateMatrix(Nav->navDim, measDim);
-
-         // UNDERWEIGHTING
-         double **HS = CreateMatrix(measDim, Nav->navDim);
-         MxMG(bigH, Nav->S, HS, measDim, Nav->navDim, Nav->navDim);
-         double **NR = CreateMatrix(measDim, measDim);
-         for (i = 0; i < measDim; i++)
-            for (j = 0; j < measDim; j++)
-               NR[i][j] = bigN[i][j] * bigR[j];
-
-         tmp = CreateMatrix(Nav->navDim + measDim, measDim);
-         // Compare square of matrix 2-norms for underweighting
-         if (M2Norm2G(HS, measDim, Nav->navDim) >=
-             (5.0 * M2Norm2G(NR, measDim, measDim))) {
-            const double rtp = sqrt(1.2);
-            for (i = 0; i < Nav->navDim; i++)
-               for (j = 0; j < measDim; j++)
-                  tmp[i][j] = HS[j][i] * rtp;
-         }
-         else {
-            for (i = 0; i < Nav->navDim; i++)
-               for (j = 0; j < measDim; j++)
-                  tmp[i][j] = HS[j][i];
-         }
-
-         for (i = 0; i < measDim; i++)
-            for (j = 0; j < measDim; j++)
-               tmp[i + Nav->navDim][j] = NR[j][i];
-
-         DestroyMatrix(NR);
-         Sz         = CreateMatrix(measDim, measDim);
-         double **U = CreateMatrix(Nav->navDim + measDim, measDim);
-         hqrd(tmp, U, Sz, Nav->navDim + measDim, measDim);
-
-         DestroyMatrix(U);
-         DestroyMatrix(tmp);
-
-         double **Uk = CreateMatrix(Nav->navDim, measDim);
-
-         MxMTG(Nav->S, HS, C, Nav->navDim, Nav->navDim, measDim);
-         DestroyMatrix(HS);
-
-         MxMINVG(C, Sz, Uk, Nav->navDim, measDim);
-         for (i = 0; i < measDim; i++) {
-            for (j = i + 1; j < measDim; j++) {
-               Sz[j][i] = Sz[i][j];
-               Sz[i][j] = 0.0;
-            }
-         }
-         K = CreateMatrix(Nav->navDim, measDim);
-         MxMINVG(Uk, Sz, K, Nav->navDim, measDim);
-         MxVG(K, bigResid, Nav->delta, Nav->navDim, measDim);
+         MxVG(K, bigInnov, Nav->delta, Nav->navDim, meas_err_dim);
          (*Nav->updateLaw)(Nav);
-
-         // long downdateFail = FALSE;
-         for (i = 0; i < Nav->navDim; i++)
-            for (j = 0; j <= i; j++) {
-               Nav->NxN[j][i] = 0.0;
-               Nav->NxN[i][j] = Nav->S[i][j];
-            }
-         for (i = 0; i < measDim; i++) {
-            double u[Nav->navDim];
-            for (j = 0; j < Nav->navDim; j++)
-               u[j] = Uk[j][i];
-            if (cholDowndate(Nav->NxN, u, Nav->navDim) == FALSE) {
-               // downdateFail = TRUE;
-               fprintf(stderr, "Cholesky Downdate failed! Exiting...\n");
-               exit(EXIT_FAILURE);
-               // TODO: data dump to help diagnose downdate failure??
-               // TODO: Defer downdate if failure?
-            }
-         }
-         for (i = 0; i < Nav->navDim; i++)
-            for (j = 0; j <= i; j++)
-               Nav->S[i][j] = Nav->NxN[i][j];
-
-         DestroyMatrix(Sz);
-         DestroyMatrix(Uk);
          DestroyMatrix(K);
 
+         SkUpdate(Nav->navDim, meas_err_dim, Uk, DSM->ID, Nav->S);
+
+         DestroyMatrix(Uk);
          DestroyMatrix(bigH);
          DestroyMatrix(bigN);
-         DestroyMatrix(C);
-         free(bigResid);
-         free(bigR);
+         free(bigInnov);
+         free(big_sqrtR);
       }
       if (isless_ccsds(cur_ccsds, fin_ccsds))
          PropagateNav(AC, DSM, &cur_ccsds, fin_ccsds, FALSE);
-
-      Nav->steps++;
    }
+
+   Nav->steps++;
    Nav->Date = Nav->Date0;
 
    updateTime(&Nav->Date, Nav->DT * Nav->steps);
    Nav->ccsds_time = date2ccsds(Nav->Date);
-   Nav->ccsds_time = CCSDSAddSeconds(Nav->ccsds_time, -32.184);
    configureRefFrame(Nav, DSM->refOrb, 1.0 - Nav->refLerpAlpha, TRUE);
    for (i = 0; i < AC->Nwhl; i++)
       Nav->whlH[i] = AC->Whl[i].H;
@@ -3527,7 +3610,6 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
    if (Nav->Init == FALSE)
       Nav->Init = TRUE;
 }
-
 /******************************************************************************/
 //                             Auxillary Functions
 /******************************************************************************/

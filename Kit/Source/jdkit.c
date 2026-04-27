@@ -282,7 +282,7 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
          break;
    }
 
-   if (a < 0)
+   if (*day < 0)
       *part_of_day *= -1.0;
 }
 

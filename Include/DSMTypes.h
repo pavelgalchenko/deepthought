@@ -268,10 +268,11 @@ struct DSMMeasType {
    long sensorNum;
    double *(*measFun)(struct AcType *const, struct DSMType *const, const long);
    double **(*measJacobianFun)(struct AcType *const, struct DSMType *const,
-                               const long);
+                               const long, double **);
    enum SensorType type;
    int dim;
    int errDim;
+   int noiseDim;
    double *R;  // diagonal elements of measurement noise covariance
    double **N; // measurement noise mapping matrix
    double underWeighting;

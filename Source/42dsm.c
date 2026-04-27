@@ -1277,42 +1277,49 @@ void ConfigureMeas(struct DSMMeasType *meas, enum SensorType sensor)
       case GPS_SENSOR:
          meas->dim             = 6;
          meas->errDim          = 6;
+         meas->noiseDim        = 6;
          meas->measJacobianFun = &gpsJacobianFun;
          meas->measFun         = &gpsFun;
          break;
       case STARTRACK_SENSOR:
          meas->dim             = 4;
          meas->errDim          = 3;
+         meas->noiseDim        = 3;
          meas->measJacobianFun = &startrackJacobianFun;
          meas->measFun         = &startrackFun;
          break;
       case FSS_SENSOR:
          meas->dim             = 2;
          meas->errDim          = 2;
+         meas->noiseDim        = 2;
          meas->measJacobianFun = &fssJacobianFun;
          meas->measFun         = &fssFun;
          break;
       case CSS_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &cssJacobianFun;
          meas->measFun         = &cssFun;
          break;
       case GYRO_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &gyroJacobianFun;
          meas->measFun         = &gyroFun;
          break;
       case MAG_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &magJacobianFun;
          meas->measFun         = &magFun;
          break;
       case ACCEL_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &accelJacobianFun;
          meas->measFun         = &accelFun;
          break;
@@ -1320,10 +1327,10 @@ void ConfigureMeas(struct DSMMeasType *meas, enum SensorType sensor)
          break;
    }
    meas->type = sensor;
-   meas->R    = calloc(meas->errDim, sizeof(double));
-   meas->N    = CreateMatrix(meas->errDim, meas->errDim);
+   meas->R    = calloc(meas->noiseDim, sizeof(double));
+   meas->N    = CreateMatrix(meas->errDim, meas->noiseDim);
    // TODO: might move this out later
-   for (int i = 0; i < meas->errDim; i++)
+   for (int i = 0; i < MIN(meas->errDim, meas->noiseDim); i++)
       meas->N[i][i] = 1.0;
 }
 
@@ -1455,7 +1462,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             isGood        = assignYAMLToDoubleArray(
                                 3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                                 tmp) == 3;
-            for (j = 0; j < meas->errDim; j++) {
+            for (j = 0; j < meas->noiseDim; j++) {
                long const ind = (AC->ST[sensorNum].BoreAxis + j) % 3;
                meas->R[ind]   = tmp[j] * D2R / 3600.0;
             }
@@ -1465,7 +1472,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             isGood        = assignYAMLToDoubleArray(
                                 2, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                                 tmp) == 2;
-            for (j = 0; j < meas->errDim; j++) {
+            for (j = 0; j < meas->noiseDim; j++) {
                if (j < 3)
                   meas->R[j] = tmp[0];
                else
@@ -1476,7 +1483,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             isGood = assignYAMLToDoubleArray(
                          1, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                          meas->R) == 1;
-            for (j = meas->errDim - 1; j >= 0; j--)
+            for (j = meas->noiseDim - 1; j >= 0; j--)
                meas->R[j] = meas->R[0] * D2R;
          } break;
          case CSS_SENSOR:
@@ -1716,11 +1723,11 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       Nav->subStepSteps = DTSIM * CCSDS_FINE_MAX + 0.5;
       Nav->subStepSize  = DTSIM;
       Nav->steps        = 0;
-      const double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
+      const double t0 =
+          gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond) - Nav->DT;
 
       Nav->Date0      = TimeToDate(t0, TT_TIME, CCSDS_STEP_SIZE);
       Nav->ccsds_time = date2ccsds(Nav->Date0);
-      Nav->ccsds_time = CCSDSAddSeconds(Nav->ccsds_time, -32.184);
 
       Nav->Date0.doy =
           MD2DOY(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day);

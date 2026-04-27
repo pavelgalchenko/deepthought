@@ -142,9 +142,9 @@
          "program": "${workspaceFolder}/deepthought",
          "args": [
             "-d",
-            "${workspaceFolder}/Missions/DSM_DEMO/",
+            "${workspaceFolder}/Missions/DSM_NAV_DEMO/",
             "-o",
-            "${workspaceFolder}/Missions/DSM_DEMO/blah",
+            "${workspaceFolder}/Missions/DSM_NAV_DEMO/blah",
             "-g",
             "1"
          ],

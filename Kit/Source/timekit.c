@@ -24,23 +24,22 @@
 /* midnight, Jan 1st, 1958                                            */
 double ccsds2time(const CCSDSTime ccsds_time)
 {
-   const DateType date = ccsds2date(ccsds_time);
+   const DateType date = ccsds2date(ccsds_time, TT_TIME);
    return DateToTime(date);
 }
 /**********************************************************************/
 /* Convert CCSDS Seconds and Subseconds to TT Date with epoch        */
 /* midnight, Jan 1st, 1958                                            */
-DateType ccsds2date(const CCSDSTime ccsds_time)
+DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system)
 {
    static const double ccsdsStep = CCSDS_STEP_SIZE;
 
    const long subDay = ccsds_time.coarse % 86400;
    const long days   = ccsds_time.coarse / 86400;
-   JDType jd         = {.day = days, .system = TT_TIME, .epoch = CCSDS_EPOCH};
+   JDType jd         = {.day = days, .system = TAI_TIME, .epoch = CCSDS_EPOCH};
 
-   DateType date = JDToDate(jd, TT_TIME);
-   updateTime(&date, (double)subDay * SEC_PER_DAY +
-                         (double)ccsds_time.fine * ccsdsStep);
+   DateType date = JDToDate(jd, system);
+   updateTime(&date, (double)subDay + (double)ccsds_time.fine * ccsdsStep);
 
    return date;
 }
@@ -230,19 +229,13 @@ JDType DateToJD(const DateType date, const EpochTT epoch,
 CCSDSTime date2ccsds(const DateType date)
 {
    CCSDSTime ccsds_time;
-   DateType date_day = {0};
-   date_day.system   = date.system;
-   date_day.Year     = date.Year;
-   date_day.Month    = date.Month;
-   date_day.Day      = date.Day;
 
-   JDType jd = DateToJD(date_day, CCSDS_EPOCH, TT_TIME);
+   JDType jd      = DateToJD(date, CCSDS_EPOCH, TAI_TIME);
+   double seconds = jd.day * SEC_PER_DAY;
 
-   // TODO: jd.day can have an influence on CCSDSTime::fine
    double integral;
-   ccsds_time.fine = (modf(date.Second, &integral) * CCSDS_FINE_MAX) + 0.5;
-   ccsds_time.coarse =
-       jd.day * SEC_PER_DAY + date.Hour * 3600 + date.Minute * 60 + integral;
+   ccsds_time.fine   = (modf(seconds, &integral) * CCSDS_FINE_MAX) + 0.5;
+   ccsds_time.coarse = integral;
    return ccsds_time;
 }
 /**********************************************************************/

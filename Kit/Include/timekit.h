@@ -105,7 +105,7 @@ typedef struct {
 //                  double Second);
 
 CCSDSTime date2ccsds(const DateType date);
-DateType ccsds2date(const CCSDSTime ccsds_time);
+DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
 
 JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch);
 double JDToTime(const JDType JD);
