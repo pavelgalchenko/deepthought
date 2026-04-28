@@ -946,7 +946,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
 
    if (Success) {
       /* Epoch is in UTC */
-      Epoch_JD  = DateToJD(EpochDate, J2000_EPOCH, TT_TIME);
+      Epoch_JD  = DateToJD(EpochDate, TT_TIME, J2000_EPOCH);
       O->Epoch  = JDToDynTime(Epoch_JD);
       O->Regime = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
@@ -1260,7 +1260,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
                         JDType node_jd =
-                            DateToJD(NodeDate, J2000_EPOCH, TT_TIME);
+                            DateToJD(NodeDate, TT_TIME, J2000_EPOCH);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -1455,7 +1455,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
                         JDType node_jd =
-                            DateToJD(NodeDate, J2000_EPOCH, TT_TIME);
+                            DateToJD(NodeDate, TT_TIME, J2000_EPOCH);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -4240,7 +4240,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          break;
       case EPH_SPICE:
          break;
-      default:
+      default: {
          // handle the DE lookup cases here
          for (WorldID i = SOL + 1; i <= PLUTO; i++) {
             char gm_str[6] = {'\0'};
@@ -4275,7 +4275,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
             default:
                break;
          }
-         break;
+      } break;
    }
 
    /* Default Pyhsical Parameters */
@@ -6163,9 +6163,13 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
       const int sscanf_check = sscanf(line, "GROUP %ld", &grp_num) == 1;
       if (sscanf_check && grp_num == 1030) {
          while (fgets(line, buf_size, hdr_file)) {
-            if (sscanf(line, "%lf %lf %lf", &hdr_data->jd_range[0],
-                       &hdr_data->jd_range[1], &hdr_data->n_days) == 3) {
+            double jd_days[2] = {0};
+            if (sscanf(line, "%lf %lf %lf", &jd_days[0], &jd_days[1],
+                       &hdr_data->n_days) == 3) {
                grp_found[1] = 1;
+               for (int i = 0; i < 2; i++)
+                  hdr_data->jd_range[i] =
+                      JDFromDays(jd_days[i], TDB_TIME, MJD_EPOCH);
                break;
             }
          }
@@ -6287,7 +6291,7 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
    long BlockNum, NumEntries;
    long FoundBlock;
    char line[512];
-   double jd_block[2];
+   JDType jd_block[2];
    long i, n, Ic, Iw;
    long Nseg, Start, N;
    struct Cheb3DType *Cheb;
@@ -6301,9 +6305,9 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
 
    // search for the list of file to use with this EphemOption
    // only need to do this once and keep it around
-   static char (*f_names)[256]   = NULL;
-   static double (*jd_ranges)[2] = NULL;
-   static long n_match           = 0;
+   static char (*f_names)[256]  = NULL;
+   static JDType(*jd_ranges)[2] = NULL;
+   static long n_match          = 0;
    if (f_names == NULL) {
       char search_fmt[20] = "ascp*.";
       strcat(search_fmt, jpl_hdr->eph_str);
@@ -6317,7 +6321,8 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
       }
       f_names = calloc(n_match, sizeof(char[256]));
       FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
-      jd_ranges = calloc(n_match, sizeof(double[2]));
+      jd_ranges             = malloc(n_match * sizeof(JDType[2]));
+      double jd_rng_days[2] = {0.0};
 
       // preload the jd ranges for each file for the chosen DE
       for (i = 0; i < n_match; i++) {
@@ -6328,38 +6333,38 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
          while (fgets(line, 512, infile)) {
             if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
                fgets(line, 512, infile);
-               if (sscanf(line, "%lf %lf %lf", &dummy[0], &jd_ranges[i][1],
+               if (sscanf(line, "%lf %lf %lf", &dummy[0], &jd_rng_days[1],
                           &dummy[1]) == 3)
                   if (!first_block) {
-                     first_block     = 1;
-                     jd_ranges[i][0] = dummy[0];
+                     first_block    = 1;
+                     jd_rng_days[0] = dummy[0];
                   }
             }
          }
          // convert to desired Epoch
          for (int j = 0; j < 2; j++) {
-            JDType jd_range_tmp = {.day    = jd_ranges[i][j],
-                                   .epoch  = ZERO_EPOCH,
-                                   .system = TDB_TIME};
-            ChangeEpoch(GMAT_MJD_EPOCH, &jd_range_tmp);
-            jd_ranges[i][j] = jd_range_tmp.day;
+            jd_ranges[i][j] = JDFromDays(jd_rng_days[j], TDB_TIME, ZERO_EPOCH);
+            ChangeEpoch(GMAT_MJD_EPOCH, &jd_ranges[i][j]);
          }
          fclose(infile);
       }
    }
 
    // Make sure the chosen JD is covered by desired DE
-   if (jd_tdb_mjd.day < jpl_hdr->jd_range[0]) {
-      fprintf(stderr, "JD earlier than JPL ephem input files.  Falling back to "
-                      "lower-precision planetary ephemerides.\n");
-      return (1);
+   if (isless_jd(jd_tdb_mjd, jpl_hdr->jd_range[0]) ||
+       isgreater_jd(jd_tdb_mjd, jpl_hdr->jd_range[1])) {
+      fprintf(stderr,
+              "JD is not contained in DE%s ephem files.  Falling back to "
+              "lower-precision planetary ephemerides.\n",
+              jpl_hdr->eph_str);
+      return (1); // TODO: what do we actually do in this case?
    }
 
    // Figure out which jd range desired JD is in
    int cur_file = -1;
    for (i = 0; i < n_match; i++) {
-      if (jd_tdb_mjd.day >= jd_ranges[i][0] &&
-          jd_tdb_mjd.day < jd_ranges[i][1]) {
+      if (isgreaterequal_jd(jd_tdb_mjd, jd_ranges[i][0]) &&
+          isless_jd(jd_tdb_mjd, jd_ranges[i][1])) {
          cur_file = i;
          break;
       }
@@ -6368,7 +6373,7 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
       fprintf(stderr,
               "Could not find any files in directory '%s' for DE type '%s' "
               "that Julian Date %lf is contained within. Exiting...\n",
-              jpl_hdr->eph_path, jpl_hdr->eph_str, jd_tdb_z.day);
+              jpl_hdr->eph_path, jpl_hdr->eph_str, JDToDays(jd_tdb_z));
       exit(EXIT_FAILURE);
    }
 
@@ -6384,15 +6389,14 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
          fgets(line, 512, infile);
          if (sscanf(line, "%lf %lf %lf", &Block[0], &Block[1], &Block[2]) ==
              3) {
-            if (jd_tdb_z.day >= Block[0] && jd_tdb_z.day < Block[1]) {
+            jd_block[0] = JDFromDays(Block[0], TDB_TIME, ZERO_EPOCH);
+            jd_block[1] = JDFromDays(Block[1], TDB_TIME, ZERO_EPOCH);
+            if (isgreaterequal_jd(jd_tdb_z, jd_block[0]) &&
+                isless_jd(jd_tdb_z, jd_block[1])) {
                FoundBlock = 1;
 
-               for (i = 0; i < 2; i++) {
-                  JDType jd_tmp = {
-                      .day = Block[i], .system = TDB_TIME, .epoch = ZERO_EPOCH};
-                  ChangeEpoch(GMAT_MJD_EPOCH, &jd_tmp);
-                  jd_block[i] = jd_tmp.day;
-               }
+               for (i = 0; i < 2; i++)
+                  ChangeEpoch(GMAT_MJD_EPOCH, &jd_block[i]);
             }
          }
       }
@@ -6423,13 +6427,14 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
       worlds[Iw].eph.Cheb =
           (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
       for (Ic = 0; Ic < Nseg; Ic++) {
-         Cheb      = &worlds[Iw].eph.Cheb[Ic];
-         Cheb->JD1 = jd_block[0] + ((double)Ic) * (jd_block[1] - jd_block[0]) /
-                                       ((double)Nseg);
-         Cheb->JD2 = jd_block[1] - ((double)(Nseg - 1 - Ic)) *
-                                       (jd_block[1] - jd_block[0]) /
-                                       ((double)Nseg);
-         Cheb->N   = N;
+         Cheb                    = &worlds[Iw].eph.Cheb[Ic];
+         double jd_blk_diff_days = JDSubToDays(jd_block[0], jd_block[1]);
+         Cheb->JD1 = JDAddDays(jd_block[0], ((double)Ic) * (jd_blk_diff_days) /
+                                                ((double)Nseg));
+         Cheb->JD2 =
+             JDSubDays(jd_block[1], ((double)(Nseg - 1 - Ic)) *
+                                        (jd_blk_diff_days) / ((double)Nseg));
+         Cheb->N = N;
          for (n = 0; n < N; n++) {
             for (i = 0; i < 3; i++) {
                Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
@@ -6481,12 +6486,12 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
       Eph = &W->eph;
       /* Determine segment */
       Ic = 0;
-      while (jd_tdb_mjd.day > Eph->Cheb[Ic].JD2)
+      while (isgreater_jd(jd_tdb_mjd, Eph->Cheb[Ic].JD2))
          Ic++;
       /* Apply Chebyshev polynomials */
       Cheb  = &Eph->Cheb[Ic];
-      dudJD = 2.0 / (Cheb->JD2 - Cheb->JD1);
-      u     = (jd_tdb_mjd.day - Cheb->JD1) * dudJD - 1.0;
+      dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
+      u     = JDSubToDays(jd_tdb_mjd, Cheb->JD1) * dudJD - 1.0;
       ChebyPolys(u, Cheb->N, T, U);
       for (i = 0; i < 3; i++) {
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
@@ -6588,12 +6593,12 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
    Eph = &W->eph;
    /* Determine segment */
    Ic = 0;
-   while (jd.day > Eph->Cheb[Ic].JD2)
+   while (isgreater_jd(jd, Eph->Cheb[Ic].JD2))
       Ic++;
    /* Apply Chebyshev polynomials */
    Cheb  = &Eph->Cheb[Ic];
-   dudJD = 2.0 / (Cheb->JD2 - Cheb->JD1);
-   u     = (jd.day - Cheb->JD1) * dudJD - 1.0;
+   dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
+   u     = JDSubToDays(jd, Cheb->JD1) * dudJD - 1.0;
    ChebyPolys(u, Cheb->N, T, U);
    for (i = 0; i < 3; i++) {
       ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
@@ -6615,12 +6620,12 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          Eph = &W->eph;
          /* Determine segment */
          Ic = 0;
-         while (jd.day > Eph->Cheb[Ic].JD2)
+         while (isgreater_jd(jd, Eph->Cheb[Ic].JD2))
             Ic++;
          /* Apply Chebyshev polynomials */
          Cheb  = &Eph->Cheb[Ic];
-         dudJD = 2.0 / (Cheb->JD2 - Cheb->JD1);
-         u     = (jd.day - Cheb->JD1) * dudJD - 1.0;
+         dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
+         u     = JDSubToDays(jd, Cheb->JD1) * dudJD - 1.0;
          ChebyPolys(u, Cheb->N, T, U);
          for (i = 0; i < 3; i++) {
             ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
@@ -6659,12 +6664,12 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
       Eph = &W->eph;
       /* Determine segment */
       Ic = 0;
-      while (jd.day > Eph->Cheb[Ic].JD2)
+      while (isgreater_jd(jd, Eph->Cheb[Ic].JD2))
          Ic++;
       /* Apply Chebyshev polynomials */
       Cheb  = &Eph->Cheb[Ic];
-      dudJD = 2.0 / (Cheb->JD2 - Cheb->JD1);
-      u     = (jd.day - Cheb->JD1) * dudJD - 1.0;
+      dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
+      u     = JDSubToDays(jd, Cheb->JD1) * dudJD - 1.0;
       ChebyPolys(u, Cheb->N, T, U);
       for (i = 0; i < 3; i++) {
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
@@ -6796,7 +6801,7 @@ long UpdateEphems(const ephemType ephem, const JDType jd,
       case EPH_DE424:
       case EPH_GMAT421:
       case EPH_GMAT424: {
-         if (jd_tdb_mjd.day > worlds[SOL].eph.Cheb[1].JD2)
+         if (isgreater_jd(jd_tdb_mjd, worlds[SOL].eph.Cheb[1].JD2))
             LoadJplEphems(ModelPath, &JplHeader, jd_tdb_mjd, worlds);
          /* Load Planetary/Luna ephems */
          main_ephem_check = UpdateJplEphems(jd_tdb_mjd, jpl_hdr, worlds);
@@ -6860,7 +6865,7 @@ long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
 
       worlds[LUNA].PriMerAng = LunaPriMerAng(jd_tdb_z);
       LunaPosition(jd_tdb_z, rh);
-      jd_tdb_z.day += 0.01;
+      jd_tdb_z = JDAddDays(jd_tdb_z, 0.01);
       LunaPosition(jd_tdb_z, r1);
       for (j = 0; j < 3; j++)
          vh[j] = (r1[j] - rh[j]) / (864.0);
@@ -6962,7 +6967,7 @@ long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds)
 
    JDType jd_tdb_j2000 = jd;
    ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   const double JS       = jd_tdb_j2000.day * SEC_PER_DAY;
+   const double JS       = JDToDays(jd_tdb_j2000) * SEC_PER_DAY;
    const double j2000sec = JDToDynTime(jd_tdb_j2000);
 
    struct OrbitType *Eph;
@@ -7186,8 +7191,8 @@ void LoadSchatten(void)
       fscanf(infile, "%ld %ld %lf %lf %lf %lf,%[^\n] %[\n]", &date.Year,
              &date.Month, &SchattenTable[1][i], &SchattenTable[2][i],
              &SchattenTable[3][i], &SchattenTable[4][i], junk, &newline);
-      JDType jd           = DateToJD(date, GMAT_MJD_EPOCH, TT_TIME);
-      SchattenTable[0][i] = jd.day;
+      JDType jd           = DateToJD(date, TT_TIME, GMAT_MJD_EPOCH);
+      SchattenTable[0][i] = JDToDays(jd);
    }
    fclose(infile);
 }

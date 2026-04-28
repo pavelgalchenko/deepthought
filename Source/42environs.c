@@ -70,15 +70,16 @@ void Environment(JDType jd, struct WorldType *const worlds,
 
    /* .. Atmospheric Density */
    if (O->World == EARTH) {
+      const double jd_day = JDToDays(jd);
       if (AtmoOption == TWOSIGMA_ATMO) {
-         Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[1], jd.day, 1009);
+         Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[1], jd_day, 1009);
          GeomagIndex =
-             LinInterp(SchattenTable[0], SchattenTable[3], jd.day, 1009);
+             LinInterp(SchattenTable[0], SchattenTable[3], jd_day, 1009);
       }
       else if (AtmoOption == NOMINAL_ATMO) {
-         Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[2], jd.day, 1009);
+         Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[2], jd_day, 1009);
          GeomagIndex =
-             LinInterp(SchattenTable[0], SchattenTable[4], jd.day, 1009);
+             LinInterp(SchattenTable[0], SchattenTable[4], jd_day, 1009);
       }
       /* else USER_ATMO: Flux10p7, GeomagIndex read from Inp_Sim.txt */
 

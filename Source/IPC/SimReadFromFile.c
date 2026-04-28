@@ -915,7 +915,7 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled)
       // TT.JulDay = TimeToJD(DynTime);
       TT         = TimeToDate(DynTime, TT_TIME, DTSIM);
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
-      JD_TDB_MJD = DateToJD(TT, GMAT_MJD_EPOCH, TDB_TIME);
+      JD_TDB_MJD = DateToJD(TT, TDB_TIME, GMAT_MJD_EPOCH);
       TDB        = JDToDate(JD_TDB_MJD, TDB_TIME);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);

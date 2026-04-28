@@ -538,11 +538,9 @@ void GravPertForceRK4(struct WorldType *const worlds,
       SCPosN_harm[j] = u[j];
    }
 
-   JDType jd_tdb_mjd = JD_TDB_MJD;
-
-   jd_tdb_mjd.day = JD_TDB_MJD.day + RKFdt / 86400.0;
+   JDType jd_tdb_mjd = JDAddSeconds(JD_TDB_MJD, RKFdt);
    if (EphemOption != EPH_SPICE) {
-      if (jd_tdb_mjd.day > worlds[SOL].eph.Cheb[1].JD2) {
+      if (isgreater_jd(jd_tdb_mjd, worlds[SOL].eph.Cheb[1].JD2)) {
          revertCHEB = 1;
          LoadJplEphems(ModelPath, &JplHeader, jd_tdb_mjd, worlds);
       }

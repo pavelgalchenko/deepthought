@@ -36,7 +36,7 @@ DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system)
 
    const long subDay = ccsds_time.coarse % 86400;
    const long days   = ccsds_time.coarse / 86400;
-   JDType jd         = {.day = days, .system = TAI_TIME, .epoch = CCSDS_EPOCH};
+   JDType jd         = JDFromDays(days, TAI_TIME, CCSDS_EPOCH);
 
    DateType date = JDToDate(jd, system);
    updateTime(&date, (double)subDay + (double)ccsds_time.fine * ccsdsStep);
@@ -114,8 +114,6 @@ int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
 /*     p. 183                                                         */
 JDType Date2JD(const DateType date, const EpochTT epoch)
 {
-   JDType jd = {.day = 0, .epoch = GD_CONV_EPOCH, .system = date.system};
-
    const double Y = date.Year;
    const double M = date.Month;
    const double D = date.Day;
@@ -123,13 +121,14 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
    const double m = date.Minute;
    const double s = date.Second;
 
-   const long c = (M + 9) / 12;
-   const long b = (275 * M / 9);
-   const long a = (7 * (Y + c)) / 4;
+   const long c = (M + 9.0) / 12.0;
+   const long b = (275.0 * M / 9.0);
+   const long a = (7.0 * (Y + c)) / 4.0;
 
-   jd.day = 367 * Y - a + b + D;
+   const long day = 367 * Y - a + b + D;
+   JDType jd      = JDFromDays(day, date.system, GD_CONV_EPOCH);
    ChangeEpoch(epoch, &jd);
-   jd.day += ((s / 60.0 + m) / 60.0 + H) / 24.0;
+   jd = JDAddDays(jd, ((s / 60.0 + m) / 60.0 + H) / 24.0);
 
    return jd;
 }
@@ -137,18 +136,16 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
 /*  Converts seconds since 'epoch' in 'system' to a JDType format     */
 JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch)
 {
-   JDType jd = {
-       .day = SecSince / SEC_PER_DAY, .system = system, .epoch = epoch};
-   return jd;
+   return JDFromDays(SecSince / SEC_PER_DAY, system, epoch);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
-/*  This function is agnostic to the TT-to-UTC offset.  You get out   */
-/*  what you put in.                                                  */
+/*  This function returns the seconds in whatever system the input    */
+/*  'jd' uses                                                         */
 double JDToTime(JDType jd)
 {
    ChangeEpoch(J2000_EPOCH, &jd);
-   return (jd.day * 86400.0);
+   return (JDToDays(jd) * 86400.0);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch in TT time               */
@@ -200,14 +197,12 @@ double DateToTime(const DateType date)
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 /*  This function is agnostic to the TT-to-UTC offset.  You get out   */
 /*  what you put in.                                                  */
-JDType DateToJD(const DateType date, const EpochTT epoch,
-                const TimeSystem system)
+JDType DateToJD(const DateType date, const TimeSystem system,
+                const EpochTT epoch)
 {
    long A, B;
    long Year  = date.Year;
    long Month = date.Month;
-
-   JDType jd = {.day = 0, .epoch = ZERO_EPOCH, .system = date.system};
 
    if (date.Month < 3) {
       Year--;
@@ -217,14 +212,14 @@ JDType DateToJD(const DateType date, const EpochTT epoch,
    A = Year / 100;
    B = 2 - A + A / 4;
 
-   jd.day = floor(365.25 * (Year + 4716)) + floor(30.6001 * (Month + 1)) +
-            date.Day + B - 1524.5;
+   const double day = floor(365.25 * (Year + 4716)) +
+                      floor(30.6001 * (Month + 1)) + date.Day + B - 1524.5;
 
-   jd.day += ((double)date.Hour) / 24.0 + ((double)date.Minute) / 1440.0 +
-             date.Second / SEC_PER_DAY;
+   JDType jd = JDFromDays(day, date.system, ZERO_EPOCH);
+   jd        = JDAddSeconds(jd, ((double)date.Hour) * 3600 +
+                                    ((double)date.Minute) * 60 + date.Second);
 
    ChangeSystemEpoch(system, epoch, &jd);
-
    return (jd);
 }
 /**********************************************************************/
@@ -234,8 +229,8 @@ CCSDSTime date2ccsds(const DateType date)
 {
    CCSDSTime ccsds_time;
 
-   JDType jd      = DateToJD(date, CCSDS_EPOCH, TAI_TIME);
-   double seconds = jd.day * SEC_PER_DAY;
+   JDType jd            = DateToJD(date, TAI_TIME, CCSDS_EPOCH);
+   const double seconds = JDToDays(jd) * SEC_PER_DAY;
 
    double integral;
    ccsds_time.fine   = (modf(seconds, &integral) * CCSDS_FINE_MAX) + 0.5;
@@ -259,7 +254,7 @@ DateType CCSDSToDate(CCSDSTime ccsds_time)
    const double ccsdsStep = CCSDS_STEP_SIZE;
    const double subDay    = fmod((double)ccsds_time.coarse, 86400.0);
    const long days        = ccsds_time.coarse / 86400;
-   JDType jd = {.day = days, .epoch = CCSDS_EPOCH, .system = TT_TIME};
+   JDType jd              = JDFromDays(days, TT_TIME, CCSDS_EPOCH);
    DateType date;
 
    date = JDToDate(jd, jd.system);
@@ -281,8 +276,9 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
 
    JDType jd_sys_1900 = jd;
    ChangeSystemEpoch(system, J1900_EPOCH, &jd_sys_1900);
+   const double jd_1900_days = JDToDays(jd_sys_1900);
 
-   T_1900    = jd_sys_1900.day / 365.25;
+   T_1900    = jd_1900_days / 365.25;
    date.Year = 1900 + trunc(T_1900);
    if (date.Year >= 2100) {
       fprintf(stderr, "JDToDate is not valid for years greater than or equal "
@@ -291,11 +287,11 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
       // TODO: change the lp_yrs calculation to handle more leap years
    }
    lp_yrs = trunc((date.Year - 1900 - 1) * 0.25);
-   days   = jd_sys_1900.day - ((date.Year - 1900) * 365 + lp_yrs);
+   days   = jd_1900_days - ((date.Year - 1900) * 365 + lp_yrs);
    if (days < 1.0) {
       date.Year--;
       lp_yrs = trunc((date.Year - 1900 - 1) * 0.25);
-      days   = jd_sys_1900.day - ((date.Year - 1900) * 365 + lp_yrs);
+      days   = jd_1900_days - ((date.Year - 1900) * 365 + lp_yrs);
    }
    // modification from ref to cover leap years beyond the year % 4==0 rule
    if (_is_leap_yr(date.Year))
@@ -324,8 +320,7 @@ DateType TimeToDate(double Time, TimeSystem system, double LSB)
    // TODO: LSB??
    // depending on LSB value, it could cause issues with TT vs TAI
 
-   JDType jd = {
-       .day = Time / SEC_PER_DAY, .system = system, .epoch = J2000_EPOCH};
+   JDType jd     = JDFromDays(Time / SEC_PER_DAY, system, J2000_EPOCH);
    DateType date = JDToDate(jd, system);
 
    date.Second = ((long)(date.Second / LSB)) * LSB;
@@ -383,7 +378,7 @@ double JD2GMST(JDType jd)
    double T, JD0, GMST0, GMST;
 
    ChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd);
-   const double JD = jd.day;
+   const double JD = JDToDays(jd);
 
    JD0 = floor(JD) + 0.5;
 
@@ -567,7 +562,7 @@ void updateTime(DateType *Time, const double dSeconds)
             }
 
             if (quotient != 0) {
-               jd.day            = floor(jd.day + 0.5 + (double)quotient) - 0.5;
+               jd                = JDAddDays(jd, quotient);
                DateType date_day = JDToDate(jd, Time->system);
                Time->Year        = date_day.Year;
                Time->Month       = date_day.Month;

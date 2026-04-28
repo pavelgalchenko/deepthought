@@ -111,8 +111,8 @@ JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch);
 double JDToTime(const JDType JD);
 double JDToDynTime(const JDType JD);
 double DateToTime(const DateType date);
-JDType DateToJD(const DateType date, const EpochTT epoch,
-                const TimeSystem system);
+JDType DateToJD(const DateType date, const TimeSystem system,
+                const EpochTT epoch);
 CCSDSTime TimeToCCSDS(double UTC);
 DateType CCSDSToDate(CCSDSTime ccsds_time);
 DateType JDToDate(const JDType jd, const TimeSystem system);

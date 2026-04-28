@@ -420,10 +420,10 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
    date.doy      = (long)FloatDOY;
    FracDay       = FloatDOY - ((double)date.doy);
    DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
-   jdEpoch      = DateToJD(date, J2000_EPOCH, TT_TIME);
-   jdEpoch.day += FracDay;
-   O->Epoch     = JDToDynTime(jdEpoch);
-   j2000_tt     = JDToDynTime(jd);
+   jdEpoch  = DateToJD(date, TT_TIME, J2000_EPOCH);
+   jdEpoch  = JDAddDays(jdEpoch, FracDay);
+   O->Epoch = JDToDynTime(jdEpoch);
+   j2000_tt = JDToDynTime(jd);
 
    strncpy(IncString, &Line2[8], 8);
    IncString[8] = 0;
@@ -767,7 +767,7 @@ void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
    ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
 
    /* .. Time since J2000, in Julian centuries */
-   T = jd.day / 36525.0;
+   T = JDToDays(jd) / 36525.0;
 
    /* .. Time since J2000, in seconds */
    SecSinceJ2000 = JDToDynTime(jd);
@@ -822,7 +822,7 @@ void LunaPosition(const JDType jd, double r[3])
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
 
-   T = jd_tt_j2000.day / 36525.0;
+   T = JDToDays(jd_tt_j2000) / 36525.0;
 
    Lp = (218.3164477 +
          T * (481267.88123421 +
@@ -1167,7 +1167,7 @@ void LunaInertialFrame(const JDType jd, double CNJ[3][3])
    double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
-   D = jd_tdb_j2000.day;
+   D = JDToDays(jd_tdb_j2000);
    T = D / 36525.0;
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
@@ -1243,7 +1243,7 @@ double LunaPriMerAng(const JDType jd)
    JDType jd_tdb_j2000 = jd;
    ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
 
-   D = jd_tdb_j2000.day;
+   D = JDToDays(jd_tdb_j2000);
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
    E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;

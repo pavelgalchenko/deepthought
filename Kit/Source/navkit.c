@@ -249,7 +249,7 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
    struct WorldType *W = &World[orbCenter];
    double PriMerAng    = 0.0;
    const double time   = DateToTime(*date);
-   JDType jd           = DateToJD(*date, J2000_EPOCH, TT_TIME);
+   JDType jd           = DateToJD(*date, TT_TIME, J2000_EPOCH);
 
    /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
@@ -1414,17 +1414,18 @@ void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
 {
    JDType jd_tt_mjd = jd;
    ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
+   double jd_tt_mjd_days = JDToDays(jd_tt_mjd);
    if (AtmoOption == TWOSIGMA_ATMO) {
       *NavFlux10p7 =
-          LinInterp(SchattenTable[0], SchattenTable[1], jd_tt_mjd.day, 1009);
+          LinInterp(SchattenTable[0], SchattenTable[1], jd_tt_mjd_days, 1009);
       *NavGeomagIndex =
-          LinInterp(SchattenTable[0], SchattenTable[3], jd_tt_mjd.day, 1009);
+          LinInterp(SchattenTable[0], SchattenTable[3], jd_tt_mjd_days, 1009);
    }
    else if (AtmoOption == NOMINAL_ATMO) {
       *NavFlux10p7 =
-          LinInterp(SchattenTable[0], SchattenTable[2], jd_tt_mjd.day, 1009);
+          LinInterp(SchattenTable[0], SchattenTable[2], jd_tt_mjd_days, 1009);
       *NavGeomagIndex =
-          LinInterp(SchattenTable[0], SchattenTable[4], jd_tt_mjd.day, 1009);
+          LinInterp(SchattenTable[0], SchattenTable[4], jd_tt_mjd_days, 1009);
    }
    else {
       // Pull from user-defined values in Inp_Sim.txt
@@ -3027,7 +3028,6 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    if (isequal_ccsds(next_ccsds, *cur_ccsds))
       return;
 
-   const double dyn_time  = ccsds2time(*cur_ccsds);
    const CCSDSTime dccsds = CCSDSSub(next_ccsds, *cur_ccsds);
 
    double AtmoDensity = 0.0;
@@ -3060,8 +3060,10 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             double NavFlux10p7, NavGeomagIndex;
             double Alt, PosW[3] = {0.0}, CWN[3][3] = {{0.0}};
 #ifdef _ENABLE_SPICE_
-            if (EphemOption == 3)
+            if (EphemOption == 3) {
+               const double dyn_time = ccsds2time(*cur_ccsds);
                pxform_c("J2000", "IAU_EARTH", dyn_time, CWN);
+            }
             else {
 #endif
                const double PriMerAng = GetPriMerAng(orbCenter, &Nav->Date);
@@ -3072,7 +3074,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             MxV(CWN, PosN, PosW);
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
-               JDType jd = DateToJD(Nav->Date, MJD_EPOCH, TT_TIME);
+               JDType jd = DateToJD(Nav->Date, TT_TIME, MJD_EPOCH);
                getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
                AtmoDensity =
                    NRLMSISE00(Nav->Date.Year, Nav->Date.doy, Nav->Date.Hour,

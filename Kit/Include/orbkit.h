@@ -204,8 +204,8 @@ struct LagrangeSystemType {
 /* Chebyshev coefficients.  Used for DE430 planetary ephemerides. */
 struct Cheb3DType {
    /* Coefficients only valid for JD1 <= JulDay < JD2 */
-   double JD1; // GMAT_MJD, TDB
-   double JD2; // GMAT_MJD, TDB
+   JDType JD1; // GMAT_MJD, TDB
+   JDType JD2; // GMAT_MJD, TDB
    long N;     /* Order <= 20 */
    double Coef[3][20];
 };

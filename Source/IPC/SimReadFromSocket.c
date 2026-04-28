@@ -939,7 +939,7 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
       // TT.JulDay = TimeToJD(DynTime);
       TT         = TimeToDate(DynTime, TT_TIME, DTSIM);
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
-      JD_TDB_MJD = DateToJD(TT, GMAT_MJD_EPOCH, TDB_TIME);
+      JD_TDB_MJD = DateToJD(TT, TDB_TIME, GMAT_MJD_EPOCH);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
       SimTime = DynTime - DynTime0;

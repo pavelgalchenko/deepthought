@@ -2880,8 +2880,9 @@ void DrawCredits(void)
    static double OldJD  = 0;
    static long Toggle   = 1;
 
-   if (JD_TDB_MJD.day - OldJD > 60.0 / 86400.0) {
-      OldJD = JD_TDB_MJD.day;
+   double jd_day = JDToDays(JD_TDB_MJD);
+   if (jd_day - OldJD > 60.0 / 86400.0) {
+      OldJD = jd_day;
       if (Toggle)
          Toggle = 0;
       else

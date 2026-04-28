@@ -76,7 +76,7 @@ struct FormationType {
 };
 
 /* Store information about the JPL DE file by parsing the header file */
-typedef struct {
+typedef struct JPLHeaderType {
    char eph_path[80];
    char eph_str[5];
    char hdr_name[16];
@@ -84,7 +84,7 @@ typedef struct {
    long n_coeff;
    long blk_len;
    long blk_lines;
-   double jd_range[2];
+   JDType jd_range[2];
    double n_days;
    long n_data;
    char (*group_1040)[10];

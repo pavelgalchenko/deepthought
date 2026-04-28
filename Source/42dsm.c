@@ -1625,9 +1625,8 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                startInd = Nav->stateInd[state];
                switch (state) {
                   case TIME_STATE: {
-                     JDType jd  = {.day    = dataDest[startInd],
-                                   .epoch  = J2000_EPOCH,
-                                   .system = TT_TIME};
+                     JDType jd =
+                         JDFromDays(dataDest[startInd], TT_TIME, J2000_EPOCH);
                      Nav->Date0 = JDToDate(jd, TT_TIME);
                      Nav->Date  = Nav->Date0;
                   } break;

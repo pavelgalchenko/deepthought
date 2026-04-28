@@ -58,16 +58,15 @@ typedef enum TimeSystem {
 } TimeSystem;
 
 // some strict typing to enforce correct timing interpretation
-typedef struct {
+typedef struct JDType {
    // Julian day representation
    // while the value of day changes with the time system, the value indicated
    // by 'epoch' will always be in the TT system
    TimeSystem system;
-   double day;
    EpochTT epoch;
-   // TODO: track an integer day and a double part of day independently?
-   // GMAT uses an integer day, integer seconds of day, and a double fractional
-   // second
+   long whole_days;
+   long day_seconds;
+   double frac_second;
 } JDType;
 
 double GetLeapSec(const JDType jd);
@@ -76,6 +75,24 @@ void ChangeEpoch(const EpochTT new_epoch, JDType *const jd);
 void ChangeSystem(const TimeSystem new_system, JDType *const jd);
 void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
                        JDType *const jd);
+double JDToDays(const JDType jd);
+JDType JDFromDays(const double days, const TimeSystem system,
+                  const EpochTT new_epoch);
+
+JDType JDAdd(const JDType a, const JDType b);
+JDType JDAddDays(const JDType a, const double b);
+JDType JDAddSeconds(const JDType a, const double b);
+JDType JDSub(const JDType a, const JDType b);
+JDType JDSubDays(const JDType a, const double b);
+JDType JDSubSeconds(const JDType a, const double b);
+double JDAddToDays(const JDType a, const JDType b);
+double JDSubToDays(const JDType a, const JDType b);
+
+int isequal_jd(const JDType a, const JDType b);
+int isless_jd(const JDType a, const JDType b);
+int islessequal_jd(const JDType a, const JDType b);
+int isgreater_jd(const JDType a, const JDType b);
+int isgreaterequal_jd(const JDType a, const JDType b);
 
 /*
 ** #ifdef __cplusplus

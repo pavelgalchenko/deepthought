@@ -29,6 +29,23 @@
 #pragma GCC diagnostic error "-Wswitch"
 #pragma GCC diagnostic error "-Wswitch-enum"
 
+static double _epoch_pod(const EpochTT epoch)
+{
+   switch (epoch) {
+      case ZERO_EPOCH:
+      case GMAT_MJD_EPOCH:
+      case J2000_EPOCH:
+         break;
+      case GD_CONV_EPOCH:
+      case TCB_TDB_CONV_EPOCH:
+      case MJD_EPOCH:
+      case J1900_EPOCH:
+      case CCSDS_EPOCH:
+         return 0.5;
+   }
+   return 0.0;
+}
+
 static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
                            double *const part_of_day)
 {
@@ -40,16 +57,7 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
    }
 
    // determine part of day value
-   const int a_nonzero_d =
-       (a == GD_CONV_EPOCH || a == TCB_TDB_CONV_EPOCH || a == MJD_EPOCH ||
-        a == CCSDS_EPOCH || a == J1900_EPOCH);
-   const int b_nonzero_d =
-       (b == GD_CONV_EPOCH || b == TCB_TDB_CONV_EPOCH || b == MJD_EPOCH ||
-        b == CCSDS_EPOCH || b == J1900_EPOCH);
-   if ((a_nonzero_d && !b_nonzero_d) || (!a_nonzero_d && b_nonzero_d))
-      *part_of_day = 0.5;
-   else
-      *part_of_day = 0.0;
+   *part_of_day = fabs(_epoch_pod(a) - _epoch_pod(b));
 
    if (b == ZERO_EPOCH)
       *day = (long)(EpochValueTT(a));
@@ -286,30 +294,32 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       *part_of_day *= -1.0;
 }
 
-#define sec_per_day    (86400.0)
-#define _day_tt2tai(x) (x) - ((32.184) / sec_per_day)
-#define _day_tai2tt(x) (x) + ((32.184) / sec_per_day)
+#define sec_per_day   (86400)
+#define _jd_tt2tai(x) JDSubSeconds((x), (32.184))
+#define _jd_tai2tt(x) JDAddSeconds((x), (32.184))
 
 /**********************************************************************/
 //  time system low level conversion helpers
 /**********************************************************************/
 #define L_B (1.550505e-8)
-static double _jd_tcb2tdb(const JDType tcb_jd)
+static JDType _jd_tcb2tdb(const JDType tcb_jd)
 {
-   // JDType tt_jd_conv = _jdtt(tcb_jd);// nope, do not
-   // ChangeEpoch(TCB_TDB_CONV_EPOCH, &tt_jd_conv);
+   // JDType jd_tt_conv = _jdtt(tcb_jd);// nope, do not
+   // ChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
    // TODO: pretending that we don't need this for now
    fprintf(stderr, "Julian Day conversion from TCB to TDB is not implemented. "
                    "Exiting...\n");
    exit(EXIT_FAILURE);
 }
-static JDType _jdtt(const JDType);
-static double jd_tdb2tcb(const JDType tdb_jd)
+static JDType _jdtt(JDType);
+static JDType jd_tdb2tcb(JDType tdb_jd)
 {
-   JDType tt_jd_conv = _jdtt(tdb_jd);
-   ChangeEpoch(TCB_TDB_CONV_EPOCH, &tt_jd_conv);
-   const double d_tcb_tdb = L_B * tt_jd_conv.day * sec_per_day;
-   return (tdb_jd.day + d_tcb_tdb);
+   JDType jd_tt_conv = _jdtt(tdb_jd);
+   ChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
+   const double d_tcb_tdb = L_B * JDToDays(jd_tt_conv);
+
+   tdb_jd.system = TCB_TIME;
+   return JDAddSeconds(tdb_jd, d_tcb_tdb);
 }
 #undef L_B
 
@@ -324,7 +334,7 @@ static double _d_tt_tdb(JDType jd)
    // Approximation from GMAT 2026 Mathematical Specification, p10
    // assuming input jd is tt already
    ChangeEpoch(J2000_EPOCH, &jd);
-   const double T_TT = jd.day / DAY_PER_JULIAN_CENTURY;
+   const double T_TT = JDToDays(jd) / DAY_PER_JULIAN_CENTURY;
    const double m_E  = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
    return (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
 }
@@ -334,28 +344,33 @@ static double _d_tt_tdb(JDType jd)
 #undef M_E_COEFF1
 #undef DAY_PER_JULIAN_CENTURY
 
-static double _jd_tt2tdb(const JDType tt_jd)
+static JDType _jd_tt2tdb(JDType tt_jd)
 {
-   const double deltaTDB = _d_tt_tdb(tt_jd);
-   return (tt_jd.day + deltaTDB);
+   const double delta_TDB = _d_tt_tdb(tt_jd);
+
+   tt_jd.system = TDB_TIME;
+   return JDAddDays(tt_jd, delta_TDB);
 }
-static double _jd_tdb2tt(const JDType tdb_jd)
+static JDType _jd_tdb2tt(JDType tdb_jd)
 {
    // Using the same approximation as GMAT, i.e. pretend we're already in TT
    JDType tdb_tt_jd       = tdb_jd;
    tdb_tt_jd.system       = TT_TIME;
    const double delta_TDB = _d_tt_tdb(tdb_tt_jd);
-   return (tdb_jd.day - delta_TDB);
+
+   tdb_jd.system = TT_TIME;
+   return JDSubDays(tdb_jd, delta_TDB);
 }
 
 // UTC headaches
-static double _jd_utc2tai(const JDType utc_jd)
+static JDType _jd_utc2tai(JDType utc_jd)
 {
    const double leap_sec = GetLeapSec(utc_jd);
 
-   return utc_jd.day + (leap_sec / sec_per_day);
+   utc_jd.system = TAI_TIME;
+   return JDAddSeconds(utc_jd, leap_sec);
 }
-static double _jd_tai2utc(const JDType tai_jd)
+static JDType _jd_tai2utc(JDType tai_jd)
 {
    // IF 'GetLeapSec()' GETS BACK HERE, WE'LL HAVE INFINITE RECURSION. AVOID!!
 
@@ -371,13 +386,14 @@ static double _jd_tai2utc(const JDType tai_jd)
    JDType tai_utc_jd = tai_jd;
    tai_utc_jd.system = UTC_TIME;
 
-   const double leap_sec  = GetLeapSec(tai_utc_jd);
-   tai_utc_jd.day        -= (leap_sec / sec_per_day);
-   const double test_ls   = GetLeapSec(tai_utc_jd);
+   const double leap_sec = GetLeapSec(tai_utc_jd);
+   tai_utc_jd            = JDSubSeconds(tai_utc_jd, leap_sec);
+   const double test_ls  = GetLeapSec(tai_utc_jd);
    if (test_ls != leap_sec)
-      tai_utc_jd.day = tai_jd.day - (test_ls / sec_per_day);
+      tai_utc_jd = JDSubSeconds(tai_jd, test_ls);
 
-   return tai_utc_jd.day;
+   tai_utc_jd.system = UTC_TIME;
+   return tai_utc_jd;
 }
 /**********************************************************************/
 //  end time system low level conversion helpers
@@ -391,16 +407,13 @@ static JDType _jdutc(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case TCB_TIME:
-         jd_out.day    = _jd_tcb2tdb(jd_out);
-         jd_out.system = TDB_TIME;
+         jd_out = _jd_tcb2tdb(jd_out);
       case TDB_TIME:
-         jd_out.day    = _jd_tdb2tt(jd_out);
-         jd_out.system = TT_TIME;
+         jd_out = _jd_tdb2tt(jd_out);
       case TT_TIME:
-         jd_out.day    = _day_tt2tai(jd_out.day);
-         jd_out.system = TAI_TIME;
+         jd_out = _jd_tt2tai(jd_out);
       case TAI_TIME:
-         jd_out.day = _jd_tai2utc(jd_out);
+         jd_out = _jd_tai2utc(jd_out);
          break;
       case UTC_TIME:
          break;
@@ -413,16 +426,14 @@ static JDType _jdtai(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UTC_TIME: {
-         jd_out.day = _jd_utc2tai(jd_out);
+         jd_out = _jd_utc2tai(jd_out);
       } break;
       case TCB_TIME:
-         jd_out.day    = _jd_tcb2tdb(jd_out);
-         jd_out.system = TDB_TIME;
+         jd_out = _jd_tcb2tdb(jd_out);
       case TDB_TIME:
-         jd_out.day    = _jd_tdb2tt(jd_out);
-         jd_out.system = TT_TIME;
+         jd_out = _jd_tdb2tt(jd_out);
       case TT_TIME:
-         jd_out.day = _day_tt2tai(jd_out.day);
+         jd_out = _jd_tt2tai(jd_out);
       case TAI_TIME:
          break;
    }
@@ -434,16 +445,13 @@ static JDType _jdtcb(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UTC_TIME:
-         jd_out.day    = _jd_utc2tai(jd_out);
-         jd_out.system = TAI_TIME;
+         jd_out = _jd_utc2tai(jd_out);
       case TAI_TIME:
-         jd_out.day    = _day_tai2tt(jd_out.day);
-         jd_out.system = TT_TIME;
+         jd_out = _jd_tai2tt(jd_out);
       case TT_TIME:
-         jd_out.day    = _jd_tt2tdb(jd_out);
-         jd_out.system = TDB_TIME;
+         jd_out = _jd_tt2tdb(jd_out);
       case TDB_TIME:
-         jd_out.day = jd_tdb2tcb(jd_out);
+         jd_out = jd_tdb2tcb(jd_out);
          break;
       case TCB_TIME:
          break;
@@ -456,16 +464,14 @@ static JDType _jdtdb(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UTC_TIME:
-         jd_out.day    = _jd_utc2tai(jd_out);
-         jd_out.system = TAI_TIME;
+         jd_out = _jd_utc2tai(jd_out);
       case TAI_TIME:
-         jd_out.day    = _day_tai2tt(jd_out.day);
-         jd_out.system = TT_TIME;
+         jd_out = _jd_tai2tt(jd_out);
       case TT_TIME:
-         jd_out.day = _jd_tt2tdb(jd_out);
+         jd_out = _jd_tt2tdb(jd_out);
          break;
       case TCB_TIME:
-         jd_out.day = _jd_tcb2tdb(jd_out);
+         jd_out = _jd_tcb2tdb(jd_out);
       case TDB_TIME:
          break;
    }
@@ -477,16 +483,14 @@ static JDType _jdtt(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UTC_TIME:
-         jd_out.day    = _jd_utc2tai(jd_out);
-         jd_out.system = TAI_TIME;
+         jd_out = _jd_utc2tai(jd_out);
       case TAI_TIME:
-         jd_out.day = _day_tai2tt(jd_out.day);
+         jd_out = _jd_tai2tt(jd_out);
          break;
       case TCB_TIME:
-         jd_out.day    = _jd_tcb2tdb(jd_out);
-         jd_out.system = TDB_TIME;
+         jd_out = _jd_tcb2tdb(jd_out);
       case TDB_TIME:
-         jd_out.day = _jd_tdb2tt(jd_out);
+         jd_out = _jd_tdb2tt(jd_out);
          break;
       case TT_TIME:
          break;
@@ -583,16 +587,16 @@ double GetLeapSec(const JDType jd)
       int i = 0;
       while (fgets(line, 512, file)) {
          int y, d;
-         char mon[16] = {'\0'};
-
-         int sscanf_check = sscanf(
+         char mon[16]           = {'\0'};
+         double jd_mjd_utc_days = 0;
+         int sscanf_check       = sscanf(
              line, "%i %s %i =JD %lf TAI-UTC= %lf S + (MJD - %lf) X %lf S", &y,
-             mon, &d, &jd_list_mjd_utc[i].day, &offset_1[i], &offset_2[i],
+             mon, &d, &jd_mjd_utc_days, &offset_1[i], &offset_2[i],
              &offset_3[i]);
 
          if (sscanf_check) {
-            jd_list_mjd_utc[i].epoch  = ZERO_EPOCH;
-            jd_list_mjd_utc[i].system = UTC_TIME;
+            jd_list_mjd_utc[i] =
+                JDFromDays(jd_mjd_utc_days, UTC_TIME, ZERO_EPOCH);
             ChangeEpoch(MJD_EPOCH, &jd_list_mjd_utc[i]);
 
             i++;
@@ -603,8 +607,9 @@ double GetLeapSec(const JDType jd)
 
    // TODO: double check
    for (int i = n_entries - 1; i >= 0; i--)
-      if (jd_mjd_utc.day >= jd_list_mjd_utc[i].day)
-         return offset_1[i] + ((jd_mjd_utc.day - offset_2[i]) * offset_3[i]);
+      if (isgreaterequal_jd(jd_mjd_utc, jd_list_mjd_utc[i]))
+         return offset_1[i] +
+                ((JDToDays(jd_mjd_utc) - offset_2[i]) * offset_3[i]);
 
    return 0;
 }
@@ -658,9 +663,8 @@ void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_d);
 
    // JDType jd_tt = _jdtt(*jd);
-   double jd_l = 0.0, jd_d = 0.0;
-   jd_d      = modf(jd->day, &jd_l);
-   jd->day   = (double)((long)jd_l + epoch_diff_l) + (jd_d + epoch_diff_d);
+   *jd       = JDAddDays(*jd, epoch_diff_l);
+   *jd       = JDAddDays(*jd, epoch_diff_d);
    jd->epoch = new_epoch;
 
    // ChangeSystem(jd->system, &jd_tt);
@@ -674,6 +678,206 @@ void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
    // change the jd formats due to the limitations currently in ChangeEpoch()
    ChangeEpoch(new_epoch, jd);
    ChangeSystem(new_system, jd);
+}
+
+// returns the number of Julian days from 'jd.epoch' according to 'jd.system'
+double JDToDays(const JDType jd)
+{
+   return (double)jd.whole_days +
+          (jd.day_seconds + jd.frac_second) / sec_per_day;
+}
+
+JDType JDFromDays(const double days, const TimeSystem system,
+                  const EpochTT new_epoch)
+{
+   JDType jd            = {0};
+   jd.epoch             = new_epoch;
+   jd.system            = system;
+   jd.whole_days        = days;
+   const double pod_sec = (days - jd.whole_days) * sec_per_day;
+   jd.day_seconds       = pod_sec;
+   jd.frac_second       = pod_sec - jd.day_seconds;
+   return jd;
+}
+
+static void _error_epoch_system(const JDType a, const JDType b,
+                                const char *call_func)
+{
+   if (a.epoch != b.epoch || a.system != b.system) {
+      fprintf(stderr,
+              "In function %s, both input JDTypes must have the same system "
+              "and epoch. Exiting...\n",
+              call_func);
+      exit(EXIT_FAILURE);
+   }
+}
+
+JDType JDAdd(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "JDAdd");
+   JDType jdout       = a;
+   jdout.whole_days  += b.whole_days;
+   jdout.day_seconds += b.day_seconds;
+   jdout.frac_second += b.frac_second;
+   while (jdout.frac_second >= 1.0) {
+      jdout.frac_second -= 1.0;
+      jdout.day_seconds++;
+   }
+   while (jdout.day_seconds > sec_per_day) {
+      jdout.day_seconds -= sec_per_day;
+      jdout.whole_days++;
+   }
+   return jdout;
+}
+JDType JDAddDays(const JDType a, const double b)
+{
+   JDType jdout      = a;
+   long b_l          = b;
+   double tmp        = (b - b_l) * sec_per_day;
+   long b_sec        = tmp;
+   double b_frac_sec = tmp - b_sec;
+
+   jdout.whole_days  += b_l;
+   jdout.day_seconds += b_sec;
+   jdout.frac_second += b_frac_sec;
+   while (jdout.frac_second >= 1.0) {
+      jdout.frac_second -= 1.0;
+      jdout.day_seconds++;
+   }
+   while (jdout.day_seconds > sec_per_day) {
+      jdout.day_seconds -= sec_per_day;
+      jdout.whole_days++;
+   }
+   return jdout;
+}
+JDType JDAddSeconds(const JDType a, const double b)
+{
+   JDType jdout = a;
+   double dummy;
+   const double b_frac_sec = modf(b, &dummy);
+   const long b_l          = dummy / sec_per_day;
+   const long b_sec        = ((long)dummy) % sec_per_day;
+
+   jdout.whole_days  += b_l;
+   jdout.day_seconds += b_sec;
+   jdout.frac_second += b_frac_sec;
+   while (jdout.frac_second >= 1.0) {
+      jdout.frac_second -= 1.0;
+      jdout.day_seconds++;
+   }
+   while (jdout.day_seconds > sec_per_day) {
+      jdout.day_seconds -= sec_per_day;
+      jdout.whole_days++;
+   }
+   return jdout;
+}
+
+JDType JDSub(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "JDSub");
+   JDType jdout       = a;
+   jdout.whole_days  -= b.whole_days;
+   jdout.day_seconds -= b.day_seconds;
+   jdout.frac_second -= b.frac_second;
+   while (jdout.frac_second < 0) {
+      jdout.frac_second += 1.0;
+      jdout.day_seconds--;
+   }
+   while (jdout.day_seconds < 0) {
+      jdout.day_seconds += sec_per_day;
+      jdout.whole_days--;
+   }
+   return jdout;
+}
+JDType JDSubDays(const JDType a, const double b)
+{
+   JDType jdout      = a;
+   long b_l          = b;
+   double tmp        = (b - b_l) * sec_per_day;
+   long b_sec        = tmp;
+   double b_frac_sec = tmp - b_sec;
+
+   jdout.whole_days  -= b_l;
+   jdout.day_seconds -= b_sec;
+   jdout.frac_second -= b_frac_sec;
+   while (jdout.frac_second < 0) {
+      jdout.frac_second += 1.0;
+      jdout.day_seconds--;
+   }
+   while (jdout.day_seconds < 0) {
+      jdout.day_seconds += sec_per_day;
+      jdout.whole_days--;
+   }
+   return jdout;
+}
+JDType JDSubSeconds(const JDType a, const double b)
+{
+   JDType jdout = a;
+   double dummy;
+   const double b_frac_sec = modf(b, &dummy);
+   const long b_l          = dummy / sec_per_day;
+   const long b_sec        = ((long)dummy) % sec_per_day;
+
+   jdout.whole_days  -= b_l;
+   jdout.day_seconds -= b_sec;
+   jdout.frac_second -= b_frac_sec;
+   while (jdout.frac_second < 0) {
+      jdout.frac_second += 1.0;
+      jdout.day_seconds--;
+   }
+   while (jdout.day_seconds < 0) {
+      jdout.day_seconds += sec_per_day;
+      jdout.whole_days--;
+   }
+   return jdout;
+}
+
+double JDAddToDays(const JDType a, const JDType b)
+{
+   return JDToDays(JDAdd(a, b));
+}
+double JDSubToDays(const JDType a, const JDType b)
+{
+   return JDToDays(JDSub(a, b));
+}
+
+int isequal_jd(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "isequal_jd");
+   return ((a.whole_days == b.whole_days) && (a.day_seconds == b.day_seconds) &&
+           (a.frac_second == b.frac_second));
+}
+int isless_jd(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "isless_jd");
+   const int is_day_less = a.whole_days < b.whole_days;
+   const int is_sec_less =
+       (a.whole_days == b.whole_days) && (a.day_seconds < b.day_seconds);
+   const int is_frac_less = (a.whole_days == b.whole_days) &&
+                            (a.day_seconds == b.day_seconds) &&
+                            (a.frac_second < b.frac_second);
+   return is_day_less || is_sec_less || is_frac_less;
+}
+int islessequal_jd(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "islessequal_jd");
+   return isequal_jd(a, b) || isless_jd(a, b);
+}
+int isgreater_jd(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "isgreater_jd");
+   const int is_day_greater = a.whole_days > b.whole_days;
+   const int is_sec_greater =
+       (a.whole_days == b.whole_days) && (a.day_seconds > b.day_seconds);
+   const int is_frac_greater = (a.whole_days == b.whole_days) &&
+                               (a.day_seconds == b.day_seconds) &&
+                               (a.frac_second > b.frac_second);
+   return is_day_greater || is_sec_greater || is_frac_greater;
+}
+int isgreaterequal_jd(const JDType a, const JDType b)
+{
+   _error_epoch_system(a, b, "isgreaterequal_jd");
+   return isequal_jd(a, b) || isgreater_jd(a, b);
 }
 
 #pragma GCC diagnostic pop
