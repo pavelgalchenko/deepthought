@@ -107,6 +107,21 @@ int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
           ((a_ccsds.coarse == b_ccsds.coarse) && a_ccsds.fine < b_ccsds.fine);
 }
 /**********************************************************************/
+DateType DateTypeInit(const TimeSystem system, const long Year,
+                      const long Month, const long Day, const long Hour,
+                      const long Minute, const double Second)
+{
+   DateType date = {.Year   = Year,
+                    .Month  = Month,
+                    .Day    = Day,
+                    .Hour   = Hour,
+                    .Minute = Minute,
+                    .Second = Second,
+                    .system = system};
+   date.doy      = MD2DOY(date.Year, date.Month, date.Day);
+   return date;
+}
+/**********************************************************************/
 /*   Convert Gregorian Date to a Julian Date format. Uses the same    */
 /*   time system as 'date' and returns desired 'epoch'                */
 /*     Adapted From: Vallado, Fundamentals of Astrodyanmics and       */

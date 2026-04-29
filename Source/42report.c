@@ -465,9 +465,10 @@ void DSM_PosHReport(void)
          // TODO
          JDType jd_tdb_j2000 = DateToJD(TDB, TDB_TIME, J2000_EPOCH);
          JDType jd_tt_j2000  = DateToJD(TDB, TT_TIME, J2000_EPOCH);
+         double tdbTime      = JDToTime(JD_TDB_MJD);
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, JDToDays(jd_tdb_j2000),
                  JDToDays(jd_tt_j2000));
-         fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, TDB.tdbTime, DynTime);
+         fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, tdbTime, DynTime);
          fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH[0],
                  World[VENUS].PosH[1], World[VENUS].PosH[2]);
          fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[EARTH].PosH[0],

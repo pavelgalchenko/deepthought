@@ -100,9 +100,8 @@ long AdvanceTime(void)
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
+         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC     = TimeToDate(CivilTime, UTC_TIME, DTSIM);
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
@@ -127,9 +126,8 @@ long AdvanceTime(void)
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
+         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC     = TimeToDate(CivilTime, UTC_TIME, DTSIM);
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
@@ -157,9 +155,8 @@ long AdvanceTime(void)
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
+         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 
@@ -179,9 +176,8 @@ long AdvanceTime(void)
 
          JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
          ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-         TDB.tdbTime = JDToTime(JD_TDB_MJD);
+         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
+         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
          UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
 

@@ -4433,8 +4433,8 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                fprintf(stderr,
                        "World %s was requested to use a spherical harmonic "
                        "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
+                       "neither in 'Inp_Sim' nor in source. Add the file to "
+                       "the main 'Model' directory and add the file name as a "
                        "'Model File' field to the Gravitation Model for this "
                        "world in 'Inp_Sim'. Exiting...\n",
                        W->Name);
@@ -4543,1258 +4543,691 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    strcpy(worlds[EARTH].BumpTexFileName, "EarthBump.ppm");
 }
 /*********************************************************************/
-void LoadMoonOfEarth(const ephemType ephem, const JDType jd,
-                     const JPLHeaderType *const jpl_hdr,
-                     struct WorldType *const worlds)
+void NMoon(const WorldID planet, long *const n_moon, WorldID *const first_moon)
 {
-#define Nm 1
-
-   const char Name[Nm][40]         = {"Luna"};
-   const char MapFileName[Nm][40]  = {"Luna.ppm"};
-   const char GravFileName[Nm][20] = {"GLGM2.txt"};
-   const float Color[4]            = {0.440417f, 0.441343f, 0.441084f, 1.0f};
-   /* Physical Properties */
-   double mu[Nm], rad[Nm];
-
-   switch (ephem) {
-      case EPH_MEAN:
-         mu[0]  = 4.902801E12;
-         rad[0] = 1.738E6;
+   switch (planet) {
+      case MERCURY:
+      case VENUS:
+         *n_moon     = 0;
+         *first_moon = 0;
          break;
-      case EPH_GMAT421:
-      case EPH_GMAT424:
-         mu[0]  = 4.9028005821478E12;
-         rad[0] = 1.7382E6;
+      case EARTH:
+         *n_moon     = 1;
+         *first_moon = LUNA;
          break;
-      case EPH_SPICE:
+      case MARS:
+         *n_moon     = 2;
+         *first_moon = PHOBOS;
          break;
-      default:
-         // handle the DE cases here
-         mu[0]  = getDEHeader1041Data(jpl_hdr, "GMB");
-         mu[0]  = (mu[0] / (1.0 + EMRAT)) * AUd2ms;
-         rad[0] = 1.7374E6;
+      case JUPITER:
+         *n_moon     = 16;
+         *first_moon = IO;
          break;
-   }
-
-   /* Default Pyhsical Parameters */
-   double J2[Nm]                 = {2.027E-4};
-   double w[Nm]                  = {2.66E-6};
-   double PoleRA[Nm]             = {0.0};
-   double PoleDec[Nm]            = {0.0};
-   const double SMA[Nm]          = {384400000.0};
-   const double ecc[Nm]          = {0.0549};
-   const double inc[Nm]          = {0.0};
-   const double RAAN[Nm]         = {0.0};
-   const double omg[Nm]          = {0.0};
-   const long EpochYear[Nm]      = {2000};
-   const long EpochMon[Nm]       = {1};
-   const long EpochDay[Nm]       = {1};
-   const long EpochHour[Nm]      = {12};
-   const double MeanAnom[Nm]     = {0.0};
-   const unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
-                                    0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
-   double PriMerAngJ2000[Nm]     = {0.0};
-   double Epoch;
-
-   long Ip = EARTH;
-   WorldID Iw, Im;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
-   double CNJ[3][3];
-
-#ifdef _ENABLE_SPICE_
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      bodvrd_c("Moon", "GM", 1, &dim, &tmp_holder);
-      mu[0] = tmp_holder * 1E9;
-
-      bodvrd_c("Moon", "J2", 1, &dim, &tmp_holder);
-      J2[0] = tmp_holder;
-
-      bodvrd_c("Moon", "RADII", 3, &dim, tmp_holder3);
-      rad[0] = tmp_holder3[0] * 1e3;
-
-      bodvrd_c("Moon", "PM", 3, &dim, tmp_holder3);
-      PriMerAngJ2000[0] = tmp_holder3[0];
-      w[0] = tmp_holder3[1] * D2R /
-             spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-      bodvrd_c("Moon", "POLE_RA", 3, &dim, tmp_holder3);
-      PoleRA[0] = tmp_holder3[0];
-
-      bodvrd_c("Moon", "POLE_DEC", 3, &dim, tmp_holder3);
-      PoleDec[0] = tmp_holder3[0];
-   }
-#endif
-
-   P       = &worlds[Ip];
-   P->Nsat = 1;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
-      fprintf(stderr,
-              "Earth P->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = LUNA + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
-
-      M->Exists = TRUE;
-      M->Parent = EARTH;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "LunaCol.ppm");
-      strcpy(M->BumpTexFileName, "LunaBump.ppm");
-      for (i = 0; i < 4; i++)
-         M->Color[i] = Color[i];
-      for (i = 0; i < 14; i++)
-         M->Glyph[i] = Glyph[i];
-      M->mu             = mu[Im];
-      M->J2             = J2[Im];
-      M->rad            = rad[Im];
-      M->w              = w[Im];
-      M->PriMerAngJ2000 = PriMerAngJ2000[Im] * D2R;
-      E->Exists         = TRUE;
-      E->Regime         = ORB_CENTRAL;
-      E->World          = Ip;
-      E->mu             = P->mu;
-      E->SMA            = SMA[Im];
-      E->ecc            = ecc[Im];
-      E->inc            = inc[Im];
-      E->RAAN           = RAAN[Im];
-      E->ArgP           = omg[Im];
-
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      EpochDate.Hour     = EpochHour[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      // TODO: DynTime0 is a headache here
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
-
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
-
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
-
-      if (EphemOption != EPH_SPICE) {
-         JDType jd_tdb_j2000 = jd;
-         ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-         M->PriMerAng = fmod(LunaPriMerAng(jd_tdb_j2000), TwoPi);
-         LunaInertialFrame(jd_tdb_j2000, CNJ);
-      }
-      else {
-         M->PriMerAng = fmod(M->PriMerAngJ2000 + M->w * j2000sec_tt, TwoPi);
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-      }
-      MxM(CNJ, worlds[EARTH].CNH, M->CNH);
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      M->Type = MOON;
-      // else {
-      //    LunaInertialFrame(TT.JulDay, CNJ);
-      //    MxM(CNJ, worlds[EARTH].CNH, M->CNH);
-      //    C2Q(M->CNH, M->qnh);
-      //    QxQT(M->qnh, qjh, M->qnj);
-      //    M->PriMerAng = LunaPriMerAng(TT.JulDay);
-      //    M->Type      = MOON;
-      // }
-
-      /* Gravitation Model */
-      if (GravPertActive) {
-         struct SphereHarmType *gravModel = &M->GravModel;
-         if (!strcmp(gravModel->modelFile, "")) {
-            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
-               fprintf(stderr,
-                       "World %s was requested to use a spherical harmonic "
-                       "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
-                       "'Model File' field to the Gravitation Model for this "
-                       "world in 'Inp_Sim'. Exiting...\n",
-                       M->Name);
-               exit(EXIT_FAILURE);
-            }
-            strcpy(gravModel->modelFile, GravFileName[Im]);
-         }
-         LoadGravModel(ModelPath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[Im];
-            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
+      case SATURN:
+         *n_moon     = 18;
+         *first_moon = MIMAS;
+         break;
+      case URANUS:
+         *n_moon     = 5;
+         *first_moon = ARIEL;
+         break;
+      case NEPTUNE:
+         *n_moon     = 2;
+         *first_moon = TRITON;
+         break;
+      case PLUTO:
+         *n_moon     = 1;
+         *first_moon = CHARON;
+         break;
+      default: {
+         char w_name[32] = {'\0'};
+         WorldID2String(planet, w_name);
+         fprintf(stderr, "Planet %s with id %u has no moons. Exiting...\n",
+                 w_name, planet);
+         exit(EXIT_FAILURE);
       }
    }
-#undef Nm
 }
-// TODO: THE REMAINING MOONS SHOULD GET THE SAME AS ABOVE TREATMENT
-/**********************************************************************/
-/*  See JPL web pages MoonEphems and MoonParms in Development folder  */
-void LoadMoonsOfMars(const ephemType ephem, const JDType jd,
-                     const JPLHeaderType *const jpl_hdr,
-                     struct WorldType *const worlds)
+/*********************************************************************/
+void MoonDefaultData(const WorldID planet, const long Im, char name[40],
+                     char map_file_name[30], char grav_file_name[20],
+                     char geom_file_name[20], char ori_name[40],
+                     double *const j2, double *const mu, double *const rad,
+                     double *const w, double *const pole_ra,
+                     double *const pole_dec, double *const sma,
+                     double *const ecc, double *const inc, double *const raan,
+                     double *const omg, double *const mean_anom,
+                     DateType *const epoch_date)
 {
-#define Nm 2
-
-   const char Name[Nm][40]         = {"Phobos", "Deimos"};
-   const char MapFileName[Nm][40]  = {"Rockball", "Rockball"};
-   const char GravFileName[Nm][20] = {"", ""};
-   double mu[Nm]                   = {7.158E5, 9.8E4};
-   double rad[Nm]                  = {11.1E3, 6.2E3};
-   double w[Nm]                    = {0.0, 0.0};
-   double PoleRA[Nm]               = {0.0};
-   double PoleDec[Nm]              = {0.0};
-   double CNJ[3][3];
-   const double SMA[Nm]      = {9380.0E3, 23460.0E3};
-   const double ecc[Nm]      = {0.0151, 0.0002};
-   const double inc[Nm]      = {1.075, 1.793};
-   const double RAAN[Nm]     = {164.931, 339.600};
-   const double omg[Nm]      = {150.247, 290.496};
-   const long EpochYear[Nm]  = {1950, 1950};
-   const long EpochMon[Nm]   = {1, 1};
-   const long EpochDay[Nm]   = {1, 1};
-   const double MeanAnom[Nm] = {92.474, 296.230};
-   double Epoch;
-
-   long Ip = MARS;
-   WorldID Im, Iw;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
-
-#ifdef _ENABLE_SPICE_
-   const char OrientationName[Nm][40] = {"PHOBOS", "DEIMOS"};
-   double PriMerAngJ2000[Nm];
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      for (i = 0; i < Nm; i++) {
-         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
-         mu[i] = tmp_holder * 1E9;
-
-         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
-         rad[i] = tmp_holder3[0] * 1e3;
-
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i] = tmp_holder3[1] * D2R /
-                spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
-
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
-#endif
-
-   P       = &worlds[Ip];
-   P->Nsat = Nm;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
+   char p_name[32] = {'\0'};
+   WorldID2String(planet, p_name);
+   long n_moon;
+   WorldID first_moon;
+   NMoon(planet, &n_moon, &first_moon);
+   if (Im >= n_moon) {
       fprintf(stderr,
-              "Mars P->Sat calloc returned null pointer.  Bailing out!\n");
+              "Planet %s only has %ld moons and moon number %ld was requested. "
+              "Exiting...\n",
+              p_name, n_moon, Im);
       exit(EXIT_FAILURE);
    }
+   switch (planet) {
+      case EARTH: {
+         const char Names[][40]            = {"Luna"};
+         const char MapFileNames[][40]     = {"Rockball"};
+         const char GravFileNames[][20]    = {""};
+         const char GeomFileNames[][20]    = {"Phobos.obj"};
+         const char OrientationNames[][40] = {"PHOBOS"};
+         const double mus[]                = {7.158E5};
+         const double rads[]               = {11.1E3};
+         const double ws[]                 = {2.66E-6};
+         const double j2s[]                = {2.027E-4};
+         const double PoleRAs[]            = {0.0};
+         const double PoleDecs[]           = {0.0};
+         const double SMAs[]               = {384400000.0};
+         const double eccs[]               = {0.0549};
+         const double incs[]               = {0.0};
+         const double RAANs[]              = {0.0};
+         const double omgs[]               = {0.0};
+         const double MeanAnoms[]          = {0.0};
+         const long EpochYears[]           = {2000};
+         const long EpochMons[]            = {1};
+         const long EpochDays[]            = {1};
+         const long EpochHours[]           = {12};
 
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = PHOBOS + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
 
-      M->Exists = TRUE;
-      M->Parent = MARS;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "NONE");
-      strcpy(M->BumpTexFileName, "NONE");
-      if (M->mu == 0)
-         M->mu = mu[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
-      M->PriMerAng = 0.0;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im] * D2R;
-      E->RAAN      = RAAN[Im] * D2R;
-      E->ArgP      = omg[Im];
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], EpochHours[Im], 0, 0);
+      } break;
+      case MARS: {
+         const char Names[][40]            = {"Phobos", "Deimos"};
+         const char MapFileNames[][40]     = {"Rockball", "Rockball"};
+         const char GravFileNames[][20]    = {"", ""};
+         const char GeomFileNames[][20]    = {"Phobos.obj", ""};
+         const char OrientationNames[][40] = {"PHOBOS", "DEIMOS"};
+         const double mus[]                = {7.158E5, 9.8E4};
+         const double rads[]               = {11.1E3, 6.2E3};
+         const double ws[]                 = {0.0, 0.0};
+         const double j2s[]                = {0.0, 0.0};
+         const double PoleRAs[]            = {0.0, 0.0};
+         const double PoleDecs[]           = {0.0, 0.0};
+         const double SMAs[]               = {9380.0E3, 23460.0E3};
+         const double eccs[]               = {0.0151, 0.0002};
+         const double incs[]               = {1.075, 1.793};
+         const double RAANs[]              = {164.931, 339.600};
+         const double omgs[]               = {150.247, 290.496};
+         const double MeanAnoms[]          = {92.474, 296.230};
+         const long EpochYears[]           = {1950, 1950};
+         const long EpochMons[]            = {1, 1};
+         const long EpochDays[]            = {1, 1};
 
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
 
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], 0, 0, 0);
+      } break;
+      case JUPITER: {
+         const char Names[][40] = {
+             "Io",    "Europa",   "Ganymede", "Callisto", "Amalthea", "Himalia",
+             "Elara", "Pasiphae", "Sinope",   "Lysithea", "Carme",    "Ananke",
+             "Leda",  "Thebe",    "Adrastea", "Metis"};
+         const char MapFileNames[][40] = {
+             "NONE", "Iceball", "NONE", "NONE", "NONE", "NONE", "NONE", "NONE",
+             "NONE", "NONE",    "NONE", "NONE", "NONE", "NONE", "NONE", "NONE"};
+         const char GravFileNames[][20]    = {"", "", "", "", "", "", "", "",
+                                              "", "", "", "", "", "", "", ""};
+         const char GeomFileNames[][20]    = {"", "", "", "", "", "", "", "",
+                                              "", "", "", "", "", "", "", ""};
+         const char OrientationNames[][40] = {
+             "IO",       "EUROPA",  "GANYMEDE", "CALLISTO",
+             "AMALTHEA", "JUPITER", "JUPITER",  "JUPITER",
+             "JUPITER",  "JUPITER", "JUPITER",  "JUPITER",
+             "JUPITER",  "THEBE",   "ADRASTEA", "METIS"};
+         const double mus[]  = {5.959E9, 3202.739E9, 9887.834E9, 7179.289E9,
+                                1.38E8,  4.5E8,      5.8E7,      2.0E7,
+                                5.0E6,   4.2E6,      8.8E6,      2.0E6,
+                                7.3E5,   1.0E8,      5.0E5,      8.0E6};
+         const double rads[] = {1821.6E3, 1560.8E3, 2631.2E3, 2410.3E3,
+                                83.45E3,  85.0E3,   43.0E3,   30.0E3,
+                                19.0E3,   18.0E3,   23.0E3,   14.0E3,
+                                10.0E3,   49.3E3,   8.2E3,    21.5E3};
+         const double ws[]   = {
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         };
+         const double j2s[] = {
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         };
+         const double PoleRAs[] = {
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         };
+         const double PoleDecs[] = {
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+         };
+         const double SMAs[] = {4.2180E8,  6.7110E8,  1.07040E9, 1.8827E9,
+                                1.814E8,   1.1461E10, 1.1741E10, 2.3624E10,
+                                2.3939E10, 1.1717E10, 2.3404E10, 2.1276E10,
+                                1.1165E10, 2.219E8,   1.29E8,    1.28E8};
+         const double eccs[] = {0.0041, 0.0094, 0.0013, 0.0074, 0.0032, 0.1623,
+                                0.2174, 0.4090, 0.2495, 0.1124, 0.2533, 0.2435,
+                                0.1636, 0.0176, 0.0018, 0.0012};
+         const double incs[] = {
+             0.036,   0.466,  0.177,   0.192,   0.380,  27.496, 26.627, 151.431,
+             158.109, 28.302, 164.907, 148.889, 27.457, 1.08,   0.054,  0.019};
+         const double RAANs[]     = {43.977,  219.106, 63.552,  298.848,
+                                     108.946, 57.245,  109.373, 312.990,
+                                     303.081, 5.528,   113.738, 7.615,
+                                     217.137, 235.694, 228.378, 146.912};
+         const double omgs[]      = {84.129,  88.97,   192.417, 52.643,
+                                     155.873, 331.995, 143.591, 170.45,
+                                     346.394, 49.486,  28.199,  100.619,
+                                     272.349, 234.269, 328.047, 297.177};
+         const long EpochYears[]  = {1997, 1997, 1997, 1997, 1997, 2000,
+                                     2000, 2000, 2000, 2000, 2000, 2000,
+                                     2000, 1997, 1997, 1997};
+         const long EpochMons[]   = {1, 1, 1, 1, 1, 1, 1, 1,
+                                     1, 1, 1, 1, 1, 1, 1, 1};
+         const long EpochDays[]   = {16, 16, 16, 16, 16, 1,  1,  1,
+                                     1,  1,  1,  1,  1,  16, 16, 16};
+         const double MeanAnoms[] = {342.021, 171.016, 317.54,  181.408,
+                                     185.194, 68.721,  332.962, 280.193,
+                                     168.397, 329.121, 234.027, 248.793,
+                                     228.076, 135.956, 135.673, 276.047};
 
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
 
-      if (EphemOption != EPH_SPICE) {
-         /* CNH assumed to be same as parent planet */
-         for (i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-               M->CNH[i][j] = P->CNH[i][j];
-         }
-      }
-      else {
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[Iw].CNH, World[Iw].qnh);
-      }
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], 0, 0, 0);
+      } break;
+      case SATURN: {
+         const char Names[][40] = {
+             "Mimas",      "Enceladus", "Tethys",  "Dione",   "Rhea",
+             "Titan",      "Hyperion",  "Iapetus", "Phoebe",  "Janus",
+             "Epimetheus", "Helene",    "Telesto", "Calypso", "Atlas",
+             "Prometheus", "Pandora",   "Pan"};
+         const char MapFileNames[][40] = {
+             "NONE", "Iceball2", "NONE", "NONE", "NONE", "NONE",
+             "NONE", "NONE",     "NONE", "NONE", "NONE", "NONE",
+             "NONE", "NONE",     "NONE", "NONE", "NONE", "NONE"};
+         const char GravFileNames[][20] = {"", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", ""};
+         const char GeomFileNames[][20] = {"", "", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", "", ""};
+         const char OrientationNames[][40] = {
+             "MIMAS",      "ENCELADUS", "TETHYS",  "DIONE",   "RHEA",
+             "TITAN",      "SATURN",    "IAPETUS", "PHOEBE",  "JANUS",
+             "EPIMETHEUS", "HELENE",    "TELESTO", "CALYPSO", "ATLAS",
+             "PROMETHEUS", "PANDORA",   "PAN"};
+         const double mus[] = {
+             2.53E9, 7.21E9,   4.121E10, 7.3113E10, 1.5407E11, 8.97819E12,
+             3.7E8,  1.205E11, 5.531E8,  1.266E8,   3.51E7,    1.7E6,
+             4.8E5,  2.4E5,    1.4E5,    1.246E7,   9.95E6,    3.3E5};
+         const double rads[]    = {198.8E3,  252.3E3, 536.3E3, 562.5E3, 764.5E3,
+                                   2575.5E3, 133.0E3, 734.5E3, 106.6E3, 90.4E3,
+                                   58.3E3,   16.0E3,  12.0E3,  9.5E3,   10.E3,
+                                   46.8e3,   40.6E3,  12.8E3};
+         const double ws[]      = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+         const double j2s[]     = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+         const double PoleRAs[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+         const double PoleDecs[] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+         const double SMAs[]     = {
+             1.8554E8,  2.3804E8,  2.9467E8,    3.7742E8, 5.2707E8, 1.22187E9,
+             1.50088E9, 3.56084E9, 1.294778E10, 1.5146E8, 1.5141E8, 3.7742E8,
+             2.9471E8,  2.9471E8,  1.3767E8,    1.3938E8, 1.4172E8, 1.3358E8};
+         const double eccs[]  = {0.0196, 0.0047, 0.0001, 0.0022, 0.001,  0.0288,
+                                 0.0274, 0.0283, 0.1635, 0.0068, 0.0098, 0.0071,
+                                 0.0002, 0.0005, 0.0012, 0.0022, 0.0042, 0.0};
+         const double incs[]  = {1.572, 0.009, 1.091,   0.028, 0.331, 0.28,
+                                 0.63,  7.489, 175.986, 0.163, 0.351, 0.213,
+                                 1.18,  1.499, 0.003,   0.008, 0.05,  0.001};
+         const double RAANs[] = {153.152, 93.204,  330.882, 168.909, 311.531,
+                                 24.502,  264.022, 75.831,  241.57,  46.899,
+                                 85.244,  40.039,  300.256, 25.327,  0.5,
+                                 259.504, 327.215, 40.557};
+         const double omgs[]  = {14.352,  211.923, 262.845, 168.82,  256.609,
+                                 185.671, 324.183, 275.921, 345.582, 241.778,
+                                 312.63,  292.056, 341.795, 234.788, 331.521,
+                                 164.389, 83.461,  139.318};
+         const long EpochYears[]  = {2004, 2004, 2004, 2004, 2004, 2004,
+                                     2004, 2004, 2004, 2004, 2004, 2004,
+                                     2004, 2004, 2004, 2004, 2004, 2004};
+         const long EpochMons[]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                     1, 1, 1, 1, 1, 1, 1, 1, 1};
+         const long EpochDays[]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
+                                     1, 1, 1, 1, 1, 1, 1, 1, 1};
+         const double MeanAnoms[] = {
+             255.312, 197.047, 189.003, 65.99,   311.551, 15.154,
+             295.906, 356.029, 287.593, 242.754, 308.322, 134.07,
+             200.143, 101.961, 157.738, 242.224, 202.697, 246.065};
 
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      for (i = 0; i < 4; i++)
-         M->Color[i] = 1.0;
-      M->Type = MOON;
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
 
-      /* Gravitation Model */
-      if (GravPertActive) {
-         struct SphereHarmType *gravModel = &M->GravModel;
-         if (!strcmp(gravModel->modelFile, "")) {
-            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
-               fprintf(stderr,
-                       "World %s was requested to use a spherical harmonic "
-                       "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' nor in source. Add the file to "
-                       "the main 'Model' directory and add the file name as a "
-                       "'Model File' field to the Gravitation Model for this "
-                       "world in 'Inp_Sim'. Exiting...\n",
-                       M->Name);
-               exit(EXIT_FAILURE);
-            }
-            strcpy(gravModel->modelFile, GravFileName[Im]);
-         }
-         LoadGravModel(ModelPath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[Im];
-            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], 0, 0, 0);
+      } break;
+      case URANUS: {
+         const char Names[][40] = {"Ariel", "Umbriel", "Titania", "Oberon",
+                                   "Miranda"};
+         const char MapFileNames[][40]  = {"NONE", "NONE", "NONE", "NONE",
+                                           "NONE"};
+         const char GravFileNames[][20] = {"", "", "", "", ""};
+         const char GeomFileNames[][20] = {"", "", "", "", ""};
+         const double mus[]     = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
+         const double rads[]    = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
+         const double ws[]      = {0.0, 0.0, 0.0, 0.0, 0.0};
+         const double j2s[]     = {0.0, 0.0, 0.0, 0.0, 0.0};
+         const double PoleRAs[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+         const double PoleDecs[] = {0.0, 0.0, 0.0, 0.0, 0.0};
+         const double SMAs[]     = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
+         const double eccs[]     = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
+         const double incs[]     = {0.041, 0.128, 0.079, 0.068, 4.338};
+         const double RAANs[]    = {22.394, 33.485, 99.771, 279.771, 326.438};
+         const double omgs[]     = {115.349, 84.709, 284.4, 104.4, 68.312};
+         const long EpochYears[] = {1980, 1980, 1980, 1980, 1980};
+         const long EpochMons[]  = {1, 1, 1, 1, 1};
+         const long EpochDays[]  = {1, 1, 1, 1, 1};
+         const double MeanAnoms[] = {39.481, 12.469, 24.614, 283.088, 311.33};
+         const char OrientationNames[][40] = {"ARIEL", "UMBRIEL", "TITANIA",
+                                              "OBERON", "MIRANDA"};
+
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
+
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], 0, 0, 0);
+      } break;
+      case NEPTUNE: {
+         const char Names[][40]            = {"Triton", "Nereid"};
+         const char MapFileNames[][40]     = {"NONE", "NONE"};
+         const char GravFileNames[][20]    = {"", ""};
+         const char GeomFileNames[][20]    = {"", ""};
+         const double mus[]                = {1427.9E9, 2.06E9};
+         const double rads[]               = {1353.4E3, 170.0E3};
+         const double ws[]                 = {0.0, 0.0};
+         const double j2s[]                = {0.0, 0.0};
+         const double PoleRAs[]            = {0.0, 0.0};
+         const double PoleDecs[]           = {0.0, 0.0};
+         const double SMAs[]               = {3.548E8, 5.5134E9};
+         const double eccs[]               = {0.0, 0.7512};
+         const double incs[]               = {156.834, 7.232};
+         const double RAANs[]              = {172.431, 334.762};
+         const double omgs[]               = {344.046, 280.83};
+         const long EpochYears[]           = {1989, 1989};
+         const long EpochMons[]            = {8, 8};
+         const long EpochDays[]            = {25, 25};
+         const double MeanAnoms[]          = {264.775, 359.341};
+         const char OrientationNames[][40] = {"TRITON", "NEPTUNE"};
+
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
+
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], 0, 0, 0);
+      } break;
+      case PLUTO: {
+         const char Names[][40]            = {"Charon"};
+         const char MapFileNames[][40]     = {"Iceball"};
+         const char GravFileNames[][20]    = {""};
+         const char GeomFileNames[][20]    = {""};
+         const double mus[]                = {108.0E9};
+         const double rads[]               = {593.0E3};
+         const double ws[]                 = {0.0};
+         const double j2s[]                = {0.0};
+         const double PoleRAs[]            = {0.0};
+         const double PoleDecs[]           = {0.0};
+         const double SMAs[]               = {1.7536E7};
+         const double eccs[]               = {0.0022};
+         const double incs[]               = {0.001};
+         const double RAANs[]              = {85.187};
+         const double omgs[]               = {71.255};
+         const long EpochYears[]           = {2000};
+         const long EpochMons[]            = {1};
+         const long EpochDays[]            = {1};
+         const long EpochHours[]           = {12};
+         const double MeanAnoms[]          = {147.848};
+         const char OrientationNames[][40] = {"CHARON"};
+
+         strcat(name, Names[Im]);
+         strcat(map_file_name, MapFileNames[Im]);
+         strcat(grav_file_name, GravFileNames[Im]);
+         strcat(geom_file_name, GeomFileNames[Im]);
+         strcat(ori_name, OrientationNames[Im]);
+
+         *j2         = j2s[Im];
+         *mu         = mus[Im];
+         *rad        = rads[Im];
+         *w          = ws[Im];
+         *pole_ra    = PoleRAs[Im];
+         *pole_dec   = PoleDecs[Im];
+         *sma        = SMAs[Im];
+         *ecc        = eccs[Im];
+         *inc        = incs[Im];
+         *raan       = RAANs[Im];
+         *omg        = omgs[Im];
+         *mean_anom  = MeanAnoms[Im];
+         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
+                                    EpochDays[Im], EpochHours[Im], 0, 0);
+      } break;
+      default: {
+         fprintf(
+             stderr,
+             "Planet %s with id %u has no moon configurations. Exiting...\n",
+             p_name, planet);
+         exit(EXIT_FAILURE);
       }
    }
-   strcpy(World[PHOBOS].GeomFileName, "Phobos.obj");
-   Geom = LoadWingsObjFile(ModelPath, World[PHOBOS].GeomFileName, &Matl, &Nmatl,
-                           Geom, &Ngeom, &World[PHOBOS].GeomTag, FALSE);
-
-#undef Nm
 }
-/**********************************************************************/
-void LoadMoonsOfJupiter(const ephemType ephem, const JDType jd,
-                        const JPLHeaderType *const jpl_hdr,
-                        struct WorldType *const worlds)
+/*********************************************************************/
+void LoadMoons(const ephemType ephem, const JDType jd,
+               const JPLHeaderType *const jpl_hdr,
+               struct WorldType *const worlds)
 {
-#define Nm 16
+   for (WorldID p_id = MERCURY; p_id <= PLUTO; p_id++) {
+      struct WorldType *P = &worlds[p_id];
+      if (P->Exists) {
+         long n_moon = 0;
+         WorldID first_moon;
+         NMoon(p_id, &n_moon, &first_moon);
 
-   const char Name[Nm][40] = {"Io",       "Europa",   "Ganymede", "Callisto",
-                              "Amalthea", "Himalia",  "Elara",    "Pasiphae",
-                              "Sinope",   "Lysithea", "Carme",    "Ananke",
-                              "Leda",     "Thebe",    "Adrastea", "Metis"};
-   const char MapFileName[Nm][40] = {
-       "NONE", "Iceball", "NONE", "NONE", "NONE", "NONE", "NONE", "NONE",
-       "NONE", "NONE",    "NONE", "NONE", "NONE", "NONE", "NONE", "NONE"};
-   const char GravFileName[Nm][20] = {"", "", "", "", "", "", "", "",
-                                      "", "", "", "", "", "", "", ""};
+         char p_name[32] = {'\0'};
+         WorldID2String(p_id, p_name);
 
-   double mu[Nm]  = {5.959E9, 3202.739E9, 9887.834E9, 7179.289E9, 1.38E8, 4.5E8,
-                     5.8E7,   2.0E7,      5.0E6,      4.2E6,      8.8E6,  2.0E6,
-                     7.3E5,   1.0E8,      5.0E5,      8.0E6};
-   double rad[Nm] = {1821.6E3, 1560.8E3, 2631.2E3, 2410.3E3, 83.45E3, 85.0E3,
-                     43.0E3,   30.0E3,   19.0E3,   18.0E3,   23.0E3,  14.0E3,
-                     10.0E3,   49.3E3,   8.2E3,    21.5E3};
-   double w[Nm]   = {
-       0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-   };
-   double PoleRA[Nm]  = {0.0};
-   double PoleDec[Nm] = {0.0};
-   double CNJ[3][3];
-   const double SMA[Nm]  = {4.2180E8,  6.7110E8,  1.07040E9, 1.8827E9,
-                            1.814E8,   1.1461E10, 1.1741E10, 2.3624E10,
-                            2.3939E10, 1.1717E10, 2.3404E10, 2.1276E10,
-                            1.1165E10, 2.219E8,   1.29E8,    1.28E8};
-   const double ecc[Nm]  = {0.0041, 0.0094, 0.0013, 0.0074, 0.0032, 0.1623,
-                            0.2174, 0.4090, 0.2495, 0.1124, 0.2533, 0.2435,
-                            0.1636, 0.0176, 0.0018, 0.0012};
-   const double inc[Nm]  = {0.036,  0.466,   0.177,   0.192,  0.380,   27.496,
-                            26.627, 151.431, 158.109, 28.302, 164.907, 148.889,
-                            27.457, 1.08,    0.054,   0.019};
-   const double RAAN[Nm] = {43.977,  219.106, 63.552,  298.848, 108.946, 57.245,
-                            109.373, 312.990, 303.081, 5.528,   113.738, 7.615,
-                            217.137, 235.694, 228.378, 146.912};
-   const double omg[Nm]  = {84.129,  88.97,   192.417, 52.643, 155.873, 331.995,
-                            143.591, 170.45,  346.394, 49.486, 28.199,  100.619,
-                            272.349, 234.269, 328.047, 297.177};
-   const long EpochYear[Nm]  = {1997, 1997, 1997, 1997, 1997, 2000, 2000, 2000,
-                                2000, 2000, 2000, 2000, 2000, 1997, 1997, 1997};
-   const long EpochMon[Nm]   = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-   const long EpochDay[Nm]   = {16, 16, 16, 16, 16, 1,  1,  1,
-                                1,  1,  1,  1,  1,  16, 16, 16};
-   const double MeanAnom[Nm] = {
-       342.021, 171.016, 317.54,  181.408, 185.194, 68.721,  332.962, 280.193,
-       168.397, 329.121, 234.027, 248.793, 228.076, 135.956, 135.673, 276.047};
-   double Epoch;
-
-   long Ip = JUPITER;
-   WorldID Im, Iw;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
-
-#ifdef _ENABLE_SPICE_
-   const char OrientationName[Nm][40] = {
-       "IO",      "EUROPA",  "GANYMEDE", "CALLISTO", "AMALTHEA", "JUPITER",
-       "JUPITER", "JUPITER", "JUPITER",  "JUPITER",  "JUPITER",  "JUPITER",
-       "JUPITER", "THEBE",   "ADRASTEA", "METIS"};
-   double PriMerAngJ2000[Nm];
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      for (i = 0; i < Nm; i++) {
-         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
-         mu[i] = tmp_holder * 1E9;
-
-         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
-         rad[i] = tmp_holder3[0] * 1e3;
-
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i] = tmp_holder3[1] * D2R /
-                spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
-
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
-#endif
-
-   P       = &worlds[Ip];
-   P->Nsat = Nm;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
-      fprintf(stderr,
-              "Jupiter P->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = IO + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
-
-      M->Exists = TRUE;
-      M->Parent = JUPITER;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "NONE");
-      strcpy(M->BumpTexFileName, "NONE");
-      if (M->mu == 0)
-         M->mu = mu[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
-      M->PriMerAng = 0.0;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im] * D2R;
-      E->RAAN      = RAAN[Im] * D2R;
-      E->ArgP      = omg[Im] * D2R;
-
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
-
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
-
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
-
-      if (EphemOption != EPH_SPICE) {
-         /* CNH assumed to be same as parent planet */
-         for (i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-               M->CNH[i][j] = P->CNH[i][j];
+         P->Nsat = n_moon;
+         P->Sat  = (WorldID *)calloc(n_moon, sizeof(long));
+         if (P->Sat == NULL) {
+            fprintf(stderr,
+                    "%s P->Sat calloc returned null pointer. Exiting...\n",
+                    p_name);
+            exit(EXIT_FAILURE);
          }
-      }
-      else {
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[Iw].CNH, World[Iw].qnh);
-      }
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      for (i = 0; i < 4; i++)
-         M->Color[i] = 1.0;
-      M->Type = MOON;
 
-      /* Gravitation Model */
-      if (GravPertActive) {
-         struct SphereHarmType *gravModel = &M->GravModel;
-         if (!strcmp(gravModel->modelFile, "")) {
-            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
-               fprintf(stderr,
-                       "World %s was requested to use a spherical harmonic "
-                       "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
-                       "'Model File' field to the Gravitation Model for this "
-                       "world in 'Inp_Sim'. Exiting...\n",
-                       M->Name);
-               exit(EXIT_FAILURE);
+         for (long im = 0; im < n_moon; im++) {
+            const WorldID m_id  = im + first_moon;
+            struct WorldType *M = &worlds[m_id];
+
+            float color[4]          = {1.0};
+            unsigned char glyph[14] = {'\0'};
+            char name[40] = {'\0'}, map_file_name[30] = {'\0'},
+                 grav_file_name[20] = {'\0'}, geom_file_name[20] = {'\0'},
+                 ori_name[40] = {'\0'}, col_tex_f_name[40] = {"NONE"},
+                 bmp_tex_f_name[40] = {"NONE"};
+            double j2, mu, rad, w, pole_ra, pole_dec, sma, ecc, inc, raan, omg,
+                mean_anom;
+            DateType epoch_date;
+            MoonDefaultData(p_id, im, name, map_file_name, grav_file_name,
+                            geom_file_name, ori_name, &j2, &mu, &rad, &w,
+                            &pole_ra, &pole_dec, &sma, &ecc, &inc, &raan, &omg,
+                            &mean_anom, &epoch_date);
+            double primerang_j2000 = 0.0;
+#ifdef _ENABLE_SPICE_
+            if (EphemOption == EPH_SPICE) {
+               // If we are using SPICE, replace the hardcoded values with SPICE
+               // values
+               int dim;
+               double tmp_3[3];
+               bodvrd_c(name, "GM", 1, &dim, &mu);
+               mu = mu * 1E9;
+
+               if (m_id == LUNA)
+                  bodvrd_c("Moon", "J2", 1, &dim, &j2);
+
+               bodvrd_c(name, "RADII", 3, &dim, tmp_3);
+               rad = tmp_3[0] * 1e3;
+
+               bodvrd_c(ori_name, "PM", 3, &dim, tmp_3);
+               primerang_j2000 = tmp_3[0];
+               w               = tmp_3[1] * D2R / spd_c();
+               // converts the prime meridian rate in deg/day to rad/s
+               bodvrd_c(ori_name, "POLE_RA", 3, &dim, tmp_3);
+               pole_ra = tmp_3[0];
+
+               bodvrd_c(ori_name, "POLE_DEC", 3, &dim, tmp_3);
+               pole_dec = tmp_3[0];
             }
-            strcpy(gravModel->modelFile, GravFileName[Im]);
-         }
-         LoadGravModel(ModelPath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[Im];
-            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
-      }
-   }
-#undef Nm
-}
-/**********************************************************************/
-void LoadMoonsOfSaturn(const ephemType ephem, const JDType jd,
-                       const JPLHeaderType *const jpl_hdr,
-                       struct WorldType *const worlds)
-{
-#define Nm 18
-
-   const char Name[Nm][40] = {
-       "Mimas",    "Enceladus", "Tethys", "Dione",      "Rhea",       "Titan",
-       "Hyperion", "Iapetus",   "Phoebe", "Janus",      "Epimetheus", "Helene",
-       "Telesto",  "Calypso",   "Atlas",  "Prometheus", "Pandora",    "Pan"};
-   const char MapFileName[Nm][40] = {"NONE", "Iceball2", "NONE", "NONE", "NONE",
-                                     "NONE", "NONE",     "NONE", "NONE", "NONE",
-                                     "NONE", "NONE",     "NONE", "NONE", "NONE",
-                                     "NONE", "NONE",     "NONE"};
-   const char GravFileName[Nm][20] = {"", "", "", "", "", "", "", "", "",
-                                      "", "", "", "", "", "", "", "", ""};
-
-   double mu[Nm]      = {2.53E9,     7.21E9, 4.121E10, 7.3113E10, 1.5407E11,
-                         8.97819E12, 3.7E8,  1.205E11, 5.531E8,   1.266E8,
-                         3.51E7,     1.7E6,  4.8E5,    2.4E5,     1.4E5,
-                         1.246E7,    9.95E6, 3.3E5};
-   double rad[Nm]     = {198.8E3, 252.3E3, 536.3E3, 562.5E3, 764.5E3, 2575.5E3,
-                         133.0E3, 734.5E3, 106.6E3, 90.4E3,  58.3E3,  16.0E3,
-                         12.0E3,  9.5E3,   10.E3,   46.8e3,  40.6E3,  12.8E3};
-   double w[Nm]       = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-   double PoleRA[Nm]  = {0.0};
-   double PoleDec[Nm] = {0.0};
-   double CNJ[3][3];
-   const double SMA[Nm] = {
-       1.8554E8,  2.3804E8,  2.9467E8,    3.7742E8, 5.2707E8, 1.22187E9,
-       1.50088E9, 3.56084E9, 1.294778E10, 1.5146E8, 1.5141E8, 3.7742E8,
-       2.9471E8,  2.9471E8,  1.3767E8,    1.3938E8, 1.4172E8, 1.3358E8};
-   const double ecc[Nm]  = {0.0196, 0.0047, 0.0001, 0.0022, 0.001,  0.0288,
-                            0.0274, 0.0283, 0.1635, 0.0068, 0.0098, 0.0071,
-                            0.0002, 0.0005, 0.0012, 0.0022, 0.0042, 0.0};
-   const double inc[Nm]  = {1.572, 0.009, 1.091,   0.028, 0.331, 0.28,
-                            0.63,  7.489, 175.986, 0.163, 0.351, 0.213,
-                            1.18,  1.499, 0.003,   0.008, 0.05,  0.001};
-   const double RAAN[Nm] = {153.152, 93.204, 330.882, 168.909, 311.531, 24.502,
-                            264.022, 75.831, 241.57,  46.899,  85.244,  40.039,
-                            300.256, 25.327, 0.5,     259.504, 327.215, 40.557};
-   const double omg[Nm]  = {14.352,  211.923, 262.845, 168.82,  256.609,
-                            185.671, 324.183, 275.921, 345.582, 241.778,
-                            312.63,  292.056, 341.795, 234.788, 331.521,
-                            164.389, 83.461,  139.318};
-   const long EpochYear[Nm]  = {2004, 2004, 2004, 2004, 2004, 2004,
-                                2004, 2004, 2004, 2004, 2004, 2004,
-                                2004, 2004, 2004, 2004, 2004, 2004};
-   const long EpochMon[Nm]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                1, 1, 1, 1, 1, 1, 1, 1, 1};
-   const long EpochDay[Nm]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
-                                1, 1, 1, 1, 1, 1, 1, 1, 1};
-   const double MeanAnom[Nm] = {255.312, 197.047, 189.003, 65.99,   311.551,
-                                15.154,  295.906, 356.029, 287.593, 242.754,
-                                308.322, 134.07,  200.143, 101.961, 157.738,
-                                242.224, 202.697, 246.065};
-   double Epoch;
-
-   long Ip = SATURN;
-   WorldID Im, Iw;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
-
-#ifdef _ENABLE_SPICE_
-   const char OrientationName[Nm][40] = {
-       "MIMAS",   "ENCELADUS", "TETHYS", "DIONE",      "RHEA",       "TITAN",
-       "SATURN",  "IAPETUS",   "PHOEBE", "JANUS",      "EPIMETHEUS", "HELENE",
-       "TELESTO", "CALYPSO",   "ATLAS",  "PROMETHEUS", "PANDORA",    "PAN"};
-   double PriMerAngJ2000[Nm];
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      for (i = 0; i < Nm; i++) {
-         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
-         mu[i] = tmp_holder * 1E9;
-
-         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
-         rad[i] = tmp_holder3[0] * 1e3;
-
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i] = tmp_holder3[1] * D2R /
-                spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
-
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
 #endif
+            if (m_id == LUNA) {
+               // LUNA has a lot of special cases for its parameters
+               switch (ephem) {
+                  case EPH_MEAN:
+                     mu  = 4.902801E12;
+                     rad = 1.738E6;
+                     break;
+                  case EPH_GMAT421:
+                  case EPH_GMAT424:
+                     mu  = 4.9028005821478E12;
+                     rad = 1.7382E6;
+                     break;
+                  case EPH_SPICE:
+                     break;
+                  default:
+                     // handle the DE cases here
+                     mu  = getDEHeader1041Data(jpl_hdr, "GMB");
+                     mu  = (mu / (1.0 + EMRAT)) * AUd2ms;
+                     rad = 1.7374E6;
+                     break;
+               }
+               strcpy(col_tex_f_name, "LunaCol.ppm");
+               strcpy(bmp_tex_f_name, "LunaBump.ppm");
 
-   P       = &worlds[Ip];
-   P->Nsat = Nm;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
-      fprintf(stderr,
-              "Saturn P->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
+               const float luna_color[4] = {0.440417f, 0.441343f, 0.441084f,
+                                            1.0f};
 
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = MIMAS + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
+               const unsigned char luna_glyph[14] = {
+                   0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
+                   0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
 
-      M->Exists = TRUE;
-      M->Parent = SATURN;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "NONE");
-      strcpy(M->BumpTexFileName, "NONE");
-      if (M->mu == 0)
-         M->mu = mu[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
-      M->PriMerAng = 0.0;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im];
-      E->RAAN      = RAAN[Im];
-      E->ArgP      = omg[Im];
-
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
-
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
-
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
-
-      if (EphemOption != EPH_SPICE) {
-         /* CNH assumed to be same as parent planet */
-         for (i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-               M->CNH[i][j] = P->CNH[i][j];
-         }
-      }
-      else {
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[Iw].CNH, World[Iw].qnh);
-      }
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      for (i = 0; i < 4; i++)
-         M->Color[i] = 1.0;
-      M->Type = MOON;
-
-      /* Gravitation Model */
-      if (GravPertActive) {
-         struct SphereHarmType *gravModel = &M->GravModel;
-         if (!strcmp(gravModel->modelFile, "")) {
-            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
-               fprintf(stderr,
-                       "World %s was requested to use a spherical harmonic "
-                       "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
-                       "'Model File' field to the Gravitation Model for this "
-                       "world in 'Inp_Sim'. Exiting...\n",
-                       M->Name);
-               exit(EXIT_FAILURE);
+               for (int i = 0; i < 4; i++)
+                  color[i] = luna_color[i];
+               for (int i = 0; i < 14; i++)
+                  glyph[i] = luna_glyph[i];
             }
-            strcpy(gravModel->modelFile, GravFileName[Im]);
-         }
-         LoadGravModel(ModelPath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[Im];
-            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
-      }
-   }
-#undef Nm
-}
-/**********************************************************************/
-void LoadMoonsOfUranus(const ephemType ephem, const JDType jd,
-                       const JPLHeaderType *const jpl_hdr,
-                       struct WorldType *const worlds)
-{
-#define Nm 5
 
-   const char Name[Nm][40]         = {"Ariel", "Umbriel", "Titania", "Oberon",
-                                      "Miranda"};
-   const char MapFileName[Nm][40]  = {"NONE", "NONE", "NONE", "NONE", "NONE"};
-   const char GravFileName[Nm][20] = {"", "", "", "", ""};
-   double mu[Nm]                   = {90.3E9, 78.2E9, 235.3E9, 201.1E9, 4.4E9};
-   double rad[Nm]     = {578.9E3, 584.7E3, 788.9E3, 761.4E3, 235.8E3};
-   double w[Nm]       = {0.0, 0.0, 0.0, 0.0, 0.0};
-   double PoleRA[Nm]  = {0.0};
-   double PoleDec[Nm] = {0.0};
-   double CNJ[3][3];
-   const double SMA[Nm]      = {1.909E8, 2.66E8, 4.363E8, 5.835E8, 1.299E8};
-   const double ecc[Nm]      = {0.0012, 0.0039, 0.0011, 0.0014, 0.0013};
-   const double inc[Nm]      = {0.041, 0.128, 0.079, 0.068, 4.338};
-   const double RAAN[Nm]     = {22.394, 33.485, 99.771, 279.771, 326.438};
-   const double omg[Nm]      = {115.349, 84.709, 284.4, 104.4, 68.312};
-   const long EpochYear[Nm]  = {1980, 1980, 1980, 1980, 1980};
-   const long EpochMon[Nm]   = {1, 1, 1, 1, 1};
-   const long EpochDay[Nm]   = {1, 1, 1, 1, 1};
-   const double MeanAnom[Nm] = {39.481, 12.469, 24.614, 283.088, 311.33};
-   double Epoch;
+            struct OrbitType *E = &M->eph;
+            P->Sat[im]          = m_id;
 
-   long Ip = URANUS;
-   WorldID Im, Iw;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
+            M->Exists = TRUE;
+            M->Parent = p_id;
+            strcpy(M->Name, name);
+            strcpy(M->MapFileName, map_file_name);
+            strcpy(M->ColTexFileName, col_tex_f_name);
+            strcpy(M->BumpTexFileName, bmp_tex_f_name);
 
-#ifdef _ENABLE_SPICE_
-   const char OrientationName[Nm][40] = {"ARIEL", "UMBRIEL", "TITANIA",
-                                         "OBERON", "MIRANDA"};
-   double PriMerAngJ2000[Nm];
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      for (i = 0; i < Nm; i++) {
-         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
-         mu[i] = tmp_holder * 1E9;
+            M->mu        = mu;
+            M->rad       = rad;
+            M->w         = w;
+            M->PriMerAng = 0.0;
+            E->Exists    = TRUE;
+            E->Regime    = ORB_CENTRAL;
+            E->World     = p_id;
+            E->mu        = P->mu;
+            E->SMA       = sma;
+            E->ecc       = ecc;
+            E->inc       = inc * D2R;
+            E->RAAN      = raan * D2R;
+            E->ArgP      = omg * D2R;
 
-         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
-         rad[i] = tmp_holder3[0] * 1e3;
+            M->PriMerAngJ2000 = primerang_j2000 * D2R;
 
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i] = tmp_holder3[1] * D2R /
-                spd_c(); // converts the prime meridian rate in deg/day to rad/s
+            double epoch_j2000_sec = DateToTime(epoch_date);
+            E->MeanMotion          = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
+            E->Period              = TwoPi / E->MeanMotion;
+            E->tp = epoch_j2000_sec - mean_anom * D2R / E->MeanMotion;
+            while ((E->tp - DynTime0) < -E->Period)
+               E->tp += E->Period;
+            while ((E->tp - DynTime0) > E->Period)
+               E->tp -= E->Period;
+            E->alpha = 1.0 / E->SMA;
+            E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
+            E->rmin  = E->SMA * (1.0 - E->ecc);
 
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
+            const double j2000sec_tt = JDToDynTime(jd);
+            E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
+            M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
-#endif
-
-   P       = &worlds[Ip];
-   P->Nsat = Nm;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
-      fprintf(stderr,
-              "Uranus P->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = ARIEL + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
-
-      M->Exists = TRUE;
-      M->Parent = URANUS;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "NONE");
-      strcpy(M->BumpTexFileName, "NONE");
-      if (M->mu == 0)
-         M->mu = mu[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
-      M->PriMerAng = 0.0;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im];
-      E->RAAN      = RAAN[Im];
-      E->ArgP      = omg[Im];
-
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
-
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
-
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
-
-      if (EphemOption != EPH_SPICE) {
-         /* CNH assumed to be same as parent planet */
-         for (i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-               M->CNH[i][j] = P->CNH[i][j];
-         }
-      }
-      else {
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[Iw].CNH, World[Iw].qnh);
-      }
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      for (i = 0; i < 4; i++)
-         M->Color[i] = 1.0;
-      M->Type = MOON;
-
-      /* Gravitation Model */
-      if (GravPertActive) {
-         struct SphereHarmType *gravModel = &M->GravModel;
-         if (!strcmp(gravModel->modelFile, "")) {
-            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
-               fprintf(stderr,
-                       "World %s was requested to use a spherical harmonic "
-                       "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
-                       "'Model File' field to the Gravitation Model for this "
-                       "world in 'Inp_Sim'. Exiting...\n",
-                       M->Name);
-               exit(EXIT_FAILURE);
+            if (EphemOption != EPH_SPICE) {
+               /* CNH assumed to be same as parent planet */
+               for (int i = 0; i < 3; i++) {
+                  for (int j = 0; j < 3; j++)
+                     M->CNH[i][j] = P->CNH[i][j];
+               }
             }
-            strcpy(gravModel->modelFile, GravFileName[Im]);
-         }
-         LoadGravModel(ModelPath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[Im];
-            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
-      }
-   }
-#undef Nm
-}
-/**********************************************************************/
-void LoadMoonsOfNeptune(const ephemType ephem, const JDType jd,
-                        const JPLHeaderType *const jpl_hdr,
-                        struct WorldType *const worlds)
-{
-#define Nm 2
-
-   const char Name[Nm][40]         = {"Triton", "Nereid"};
-   const char MapFileName[Nm][40]  = {"NONE", "NONE"};
-   const char GravFileName[Nm][20] = {"", ""};
-   double mu[Nm]                   = {1427.9E9, 2.06E9};
-   double rad[Nm]                  = {1353.4E3, 170.0E3};
-   double w[Nm]                    = {0.0, 0.0};
-   double PoleRA[Nm]               = {0.0};
-   double PoleDec[Nm]              = {0.0};
-   double CNJ[3][3];
-   const double SMA[Nm]      = {3.548E8, 5.5134E9};
-   const double ecc[Nm]      = {0.0, 0.7512};
-   const double inc[Nm]      = {156.834, 7.232};
-   const double RAAN[Nm]     = {172.431, 334.762};
-   const double omg[Nm]      = {344.046, 280.83};
-   const long EpochYear[Nm]  = {1989, 1989};
-   const long EpochMon[Nm]   = {8, 8};
-   const long EpochDay[Nm]   = {25, 25};
-   const double MeanAnom[Nm] = {264.775, 359.341};
-   double Epoch;
-
-   long Ip = NEPTUNE;
-   WorldID Im, Iw;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
-
-#ifdef _ENABLE_SPICE_
-   const char OrientationName[Nm][40] = {"TRITON", "NEPTUNE"};
-   double PriMerAngJ2000[Nm];
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      for (i = 0; i < Nm; i++) {
-         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
-         mu[i] = tmp_holder * 1E9;
-
-         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
-         rad[i] = tmp_holder3[0] * 1e3;
-
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i] = tmp_holder3[1] * D2R /
-                spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
-
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
-#endif
-
-   P       = &worlds[Ip];
-   P->Nsat = Nm;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
-      fprintf(stderr,
-              "Neptune P->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = TRITON + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
-
-      M->Exists = TRUE;
-      M->Parent = NEPTUNE;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "NONE");
-      strcpy(M->BumpTexFileName, "NONE");
-      M->mu        = mu[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
-      M->PriMerAng = 0.0;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im];
-      E->RAAN      = RAAN[Im];
-      E->ArgP      = omg[Im];
-
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
-
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
-
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
-
-      if (EphemOption != EPH_SPICE) {
-         /* CNH assumed to be same as parent planet */
-         for (i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-               M->CNH[i][j] = P->CNH[i][j];
-         }
-      }
-      else {
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[Iw].CNH, World[Iw].qnh);
-      }
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      for (i = 0; i < 4; i++)
-         M->Color[i] = 1.0;
-      M->Type = MOON;
-
-      /* Gravitation Model */
-      struct SphereHarmType *gravModel = &M->GravModel;
-      strcpy(gravModel->modelFile, GravFileName[Im]);
-      LoadGravModel(ModelPath, gravModel);
-      if (gravModel->C != NULL)
-         M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-   }
-#undef Nm
-}
-/**********************************************************************/
-void LoadMoonsOfPluto(const ephemType ephem, const JDType jd,
-                      const JPLHeaderType *const jpl_hdr,
-                      struct WorldType *const worlds)
-{
-#define Nm 1
-
-   const char Name[Nm][40]         = {"Charon"};
-   const char MapFileName[Nm][40]  = {"Iceball"};
-   const char GravFileName[Nm][20] = {""};
-   double mu[Nm]                   = {108.0E9};
-   double rad[Nm]                  = {593.0E3};
-   double w[Nm]                    = {0.0};
-   double PoleRA[Nm]               = {0.0};
-   double PoleDec[Nm]              = {0.0};
-   double CNJ[3][3];
-   const double SMA[Nm]      = {1.7536E7};
-   const double ecc[Nm]      = {0.0022};
-   const double inc[Nm]      = {0.001};
-   const double RAAN[Nm]     = {85.187};
-   const double omg[Nm]      = {71.255};
-   const long EpochYear[Nm]  = {2000};
-   const long EpochMon[Nm]   = {1};
-   const long EpochDay[Nm]   = {1};
-   const long EpochHour[Nm]  = {12};
-   const double MeanAnom[Nm] = {147.848};
-   double Epoch;
-
-   long Ip = PLUTO;
-   WorldID Iw, Im;
-   long i;
-   struct WorldType *M, *P;
-   struct OrbitType *E;
-
-#ifdef _ENABLE_SPICE_
-   const char OrientationName[Nm][40] = {"CHARON"};
-   double PriMerAngJ2000[Nm];
-   double tmp_holder;
-   double tmp_holder3[3];
-   int dim;
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      for (i = 0; i < Nm; i++) {
-         bodvrd_c(Name[i], "GM", 1, &dim, &tmp_holder);
-         mu[i] = tmp_holder * 1E9;
-
-         bodvrd_c(Name[i], "RADII", 3, &dim, tmp_holder3);
-         rad[i] = tmp_holder3[0] * 1e3;
-
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         w[i] = tmp_holder3[1] * D2R /
-                spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
-
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
-#endif
-
-   P       = &worlds[Ip];
-   P->Nsat = 1;
-   P->Sat  = (WorldID *)calloc(Nm, sizeof(long));
-   if (P->Sat == NULL) {
-      fprintf(stderr,
-              "Pluto P->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-
-   for (Im = 0; Im < Nm; Im++) {
-      Iw         = CHARON + Im;
-      M          = &worlds[Iw];
-      E          = &M->eph;
-      P->Sat[Im] = Iw;
-
-      M->Exists = TRUE;
-      M->Parent = PLUTO;
-      strcpy(M->Name, Name[Im]);
-      strcpy(M->MapFileName, MapFileName[Im]);
-      strcpy(M->ColTexFileName, "NONE");
-      strcpy(M->BumpTexFileName, "NONE");
-      if (M->mu == 0)
-         M->mu = mu[Im];
-      M->rad       = rad[Im];
-      M->w         = w[Im];
-      M->PriMerAng = 0.0;
-      E->Exists    = TRUE;
-      E->Regime    = ORB_CENTRAL;
-      E->World     = Ip;
-      E->mu        = P->mu;
-      E->SMA       = SMA[Im];
-      E->ecc       = ecc[Im];
-      E->inc       = inc[Im];
-      E->RAAN      = RAAN[Im];
-      E->ArgP      = omg[Im];
-
-      DateType EpochDate = {0};
-      EpochDate.Year     = EpochYear[Im];
-      EpochDate.Month    = EpochMon[Im];
-      EpochDate.Day      = EpochDay[Im];
-      EpochDate.Hour     = EpochHour[Im];
-      Epoch              = DateToTime(EpochDate);
-      E->MeanMotion      = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
-      E->Period          = TwoPi / E->MeanMotion;
-      E->tp              = Epoch - MeanAnom[Im] * D2R / E->MeanMotion;
-      while ((E->tp - DynTime0) < -E->Period)
-         E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
-         E->tp -= E->Period;
-
-      E->alpha = 1.0 / E->SMA;
-      E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
-      E->rmin  = E->SMA * (1.0 - E->ecc);
-
-      const double j2000sec_tt = JDToDynTime(jd);
-      E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
-      M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
-
-      if (EphemOption != EPH_SPICE) {
-         /* CNH assumed to be same as parent planet */
-         for (i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-               M->CNH[i][j] = P->CNH[i][j];
-         }
-      }
-      else {
-         A2C(312, (PoleRA[Im] + 90.0) * D2R, (90.0 - PoleDec[Im]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, World[EARTH].CNH, World[Iw].CNH);
-         C2Q(World[Iw].CNH, World[Iw].qnh);
-      }
-      C2Q(M->CNH, M->qnh);
-      QxQT(M->qnh, qjh, M->qnj);
-      for (i = 0; i < 4; i++)
-         M->Color[i] = 1.0;
-      M->Type = MOON;
-
-      /* Gravitation Model */
-      if (GravPertActive) {
-         struct SphereHarmType *gravModel = &M->GravModel;
-         if (!strcmp(gravModel->modelFile, "")) {
-            if (!strcmp(GravFileName[Im], "") && gravModel->N > 1) {
-               fprintf(stderr,
-                       "World %s was requested to use a spherical harmonic "
-                       "gravity model, but does not have a file configured, "
-                       "neither in 'Inp_Sim' or in source. Add the file to the "
-                       "main 'Model' directory and add the file name as a "
-                       "'Model File' field to the Gravitation Model for this "
-                       "world in 'Inp_Sim'. Exiting...\n",
-                       M->Name);
-               exit(EXIT_FAILURE);
+            else {
+               double CNJ[3][3];
+               A2C(312, (pole_ra + 90.0) * D2R, (90.0 - pole_dec) * D2R, 0.0,
+                   CNJ);
+               MxM(CNJ, worlds[EARTH].CNH, M->CNH);
+               C2Q(M->CNH, M->qnh);
             }
-            strcpy(gravModel->modelFile, GravFileName[Im]);
-         }
-         LoadGravModel(ModelPath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad[Im];
-            M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+
+            C2Q(M->CNH, M->qnh);
+            QxQT(M->qnh, qjh, M->qnj);
+            for (int i = 0; i < 4; i++)
+               M->Color[i] = color[i];
+            for (int i = 0; i < 14; i++)
+               M->Glyph[i] = glyph[i];
+            M->Type = MOON;
+
+            /* Gravitation Model */
+            if (GravPertActive) {
+               struct SphereHarmType *gravModel = &M->GravModel;
+               if (!strcmp(gravModel->modelFile, "")) {
+                  if (!strcmp(grav_file_name, "") && gravModel->N > 1) {
+                     fprintf(
+                         stderr,
+                         "World %s was requested to use a spherical harmonic "
+                         "gravity model, but does not have a file configured, "
+                         "neither in 'Inp_Sim' nor in source. Add the file to "
+                         "the main 'Model' directory and add the file name as "
+                         "a "
+                         "'Model File' field to the Gravitation Model for this "
+                         "world in 'Inp_Sim'. Exiting...\n",
+                         M->Name);
+                     exit(EXIT_FAILURE);
+                  }
+                  strcpy(gravModel->modelFile, grav_file_name);
+               }
+               LoadGravModel(ModelPath, gravModel);
+               if (im != LUNA && gravModel->C != NULL) {
+                  if (gravModel->r_ref == 0)
+                     gravModel->r_ref = rad;
+                  M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
+               }
+            }
+
+            strcpy(M->GeomFileName, geom_file_name);
+            if (strcmp(M->GeomFileName, "")) {
+               Geom =
+                   LoadWingsObjFile(ModelPath, M->GeomFileName, &Matl, &Nmatl,
+                                    Geom, &Ngeom, &M->GeomTag, FALSE);
+            }
          }
       }
    }
-#undef Nm
 }
-/**********************************************************************/
+/*********************************************************************/
 void LoadMinorBodies(const ephemType ephem, const JDType jd,
                      const JPLHeaderType *const jpl_hdr,
                      struct WorldType *const worlds)
@@ -7807,9 +7240,8 @@ void InitSim(int argc, char **argv)
 
    JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
    ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-   TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
-   TDB.doy     = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-   TDB.tdbTime = JDToTime(JD_TDB_MJD);
+   TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
+   TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
    LoadEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
@@ -7818,20 +7250,7 @@ void InitSim(int argc, char **argv)
    LoadPlanets(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Load Moons */
-   if (World[EARTH].Exists)
-      LoadMoonOfEarth(EphemOption, JD_TDB_MJD, &JplHeader, World);
-   if (World[MARS].Exists)
-      LoadMoonsOfMars(EphemOption, JD_TDB_MJD, &JplHeader, World);
-   if (World[JUPITER].Exists)
-      LoadMoonsOfJupiter(EphemOption, JD_TDB_MJD, &JplHeader, World);
-   if (World[SATURN].Exists)
-      LoadMoonsOfSaturn(EphemOption, JD_TDB_MJD, &JplHeader, World);
-   if (World[URANUS].Exists)
-      LoadMoonsOfUranus(EphemOption, JD_TDB_MJD, &JplHeader, World);
-   if (World[NEPTUNE].Exists)
-      LoadMoonsOfNeptune(EphemOption, JD_TDB_MJD, &JplHeader, World);
-   if (World[PLUTO].Exists)
-      LoadMoonsOfPluto(EphemOption, JD_TDB_MJD, &JplHeader, World);
+   LoadMoons(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
    /* .. Asteroids and Comets */
    if (MinorBodiesExist)

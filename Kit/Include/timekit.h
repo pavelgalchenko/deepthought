@@ -83,10 +83,10 @@ typedef struct {
    // TODO: I think remove JD, add a time system property
    TimeSystem system;
 
-   JDType JD;
+   // JDType JD;
    // double MJD;
    // double JulDay;
-   double tdbTime; // TDB_TIME, J2000_EPOCH
+   // double tdbTime; // TDB_TIME, J2000_EPOCH
    long Year;
    long Month;
    long Day;
@@ -103,6 +103,10 @@ typedef struct {
 // double MJDToJD(double MJD);
 // double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
 //                  double Second);
+
+DateType DateTypeInit(const TimeSystem system, const long Year,
+                      const long Month, const long Day, const long Hour,
+                      const long Minute, const double Second);
 
 CCSDSTime date2ccsds(const DateType date);
 DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
