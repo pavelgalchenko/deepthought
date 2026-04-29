@@ -5025,6 +5025,8 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                const JPLHeaderType *const jpl_hdr,
                struct WorldType *const worlds)
 {
+   // TODO: wrapping in LoadPlanets() into this function? a lot of what is done
+   // in LoadPlanets is in here too
    for (WorldID p_id = MERCURY; p_id <= PLUTO; p_id++) {
       struct WorldType *P = &worlds[p_id];
       if (P->Exists) {
@@ -5201,9 +5203,8 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                          "gravity model, but does not have a file configured, "
                          "neither in 'Inp_Sim' nor in source. Add the file to "
                          "the main 'Model' directory and add the file name as "
-                         "a "
-                         "'Model File' field to the Gravitation Model for this "
-                         "world in 'Inp_Sim'. Exiting...\n",
+                         "a 'Model File' field to the Gravitation Model for "
+                         "this world in 'Inp_Sim'. Exiting...\n",
                          M->Name);
                      exit(EXIT_FAILURE);
                   }

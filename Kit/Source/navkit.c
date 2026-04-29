@@ -2611,7 +2611,7 @@ void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean, double **P)
    }
 }
 
-void configureRefFrame(struct DSMNavType *const Nav,
+void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset)
 {
@@ -2621,9 +2621,9 @@ void configureRefFrame(struct DSMNavType *const Nav,
    double targetVelN[3] = {0.0};
 
    if (reset == TRUE)
-      Nav->refLerpAlpha = 1.0;
+      *lerp_alpha = 1.0;
    else
-      Nav->refLerpAlpha += dLerpAlpha;
+      *lerp_alpha += dLerpAlpha;
 
    if (Nav->Init == FALSE) {
       for (i = 0; i < 3; i++)
@@ -2668,11 +2668,12 @@ void configureRefFrame(struct DSMNavType *const Nav,
       } break;
    }
 
+   const double one_m_alpha = 1.0 - *lerp_alpha;
    for (i = 0; i < 3; i++) {
-      Nav->refPos[i] = (1.0 - Nav->refLerpAlpha) * Nav->oldRefPos[i] +
-                       Nav->refLerpAlpha * targetPosN[i];
-      Nav->refVel[i] = (1.0 - Nav->refLerpAlpha) * Nav->oldRefVel[i] +
-                       Nav->refLerpAlpha * targetVelN[i];
+      Nav->refPos[i] =
+          one_m_alpha * Nav->oldRefPos[i] + *lerp_alpha * targetPosN[i];
+      Nav->refVel[i] =
+          one_m_alpha * Nav->oldRefVel[i] + *lerp_alpha * targetVelN[i];
    }
 
    switch (Nav->refFrame) {
@@ -2707,8 +2708,8 @@ void configureRefFrame(struct DSMNavType *const Nav,
          Nav->refVel[i] = refVel[i] - wxr[i];
    }
 
-   if (Nav->Init == TRUE && fabs(1.0 - Nav->refLerpAlpha) > __DBL_EPSILON__) {
-      const double dt = (1.0 - Nav->refLerpAlpha) * Nav->DT;
+   if (Nav->Init == TRUE && fabs(one_m_alpha) > __DBL_EPSILON__) {
+      const double dt = one_m_alpha * Nav->DT;
       for (i = 0; i < 3; i++)
          Nav->refAccel[i] = (targetVelN[i] - Nav->refVel[i]) / dt;
    }
@@ -2721,7 +2722,7 @@ void configureRefFrame(struct DSMNavType *const Nav,
          Nav->oldRefOmega[i]    = Nav->refOmega[i];
          Nav->oldRefOmegaDot[i] = Nav->refOmegaDot[i];
       }
-      Nav->refLerpAlpha = 0.0;
+      *lerp_alpha = 0.0;
    }
 }
 
@@ -3035,7 +3036,6 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    long i, j, k;
 
    struct DSMNavType *Nav = &DSM->DsmNav;
-   double lerpAlphaState  = Nav->refLerpAlpha;
    const double DT        = ccsds2seconds(dccsds);
 
    CCSDSTime date_ccsds            = date2ccsds(Nav->Date);
@@ -3092,6 +3092,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       }
    }
    double dLerpAlpha = 0.0;
+   double lerpAlphak = Nav->refLerpAlpha;
    // RK4
    double CRBk[ORDRK][3][3], qbrk[ORDRK][4], PosRk[ORDRK][3], VelRk[ORDRK][3],
        wbrk[ORDRK][3];
@@ -3110,8 +3111,8 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    for (k = 0; k < ORDRK; k++) {
       DateType date = Nav->Date;
       updateTime(&date, dateOffset + DTk[k]);
-      Nav->refLerpAlpha = lerpAlphaState;
-      dLerpAlpha        = DTk[k] / Nav->DT;
+      lerpAlphak = Nav->refLerpAlpha;
+      dLerpAlpha = DTk[k] / Nav->DT;
       double CRB[3][3], qbr[4], PosR[3], VelR[3], wbr[3], whlH[AC->Nwhl];
       if (k == 0) {
          for (i = 0; i < Nav->navDim; i++)
@@ -3182,7 +3183,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             whlH[i] = Limit(Nav->whlH[i] + whlHk[k - 1][i] * DTk[k],
                             -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
       }
-      configureRefFrame(Nav, DSM->refOrb, dLerpAlpha, FALSE);
+      configureRefFrame(Nav, &lerpAlphak, DSM->refOrb, dLerpAlpha, FALSE);
       getForceAndTorque(AC, Nav, CRB, whlH);
       NavEOMs(AC, DSM, &date, CRB, qbr, PosR, VelR, wbr, whlH, Sk, CRBk[k],
               qbrk[k], PosRk[k], VelRk[k], wbrk[k], whlHk[k], Skk[k],
@@ -3276,11 +3277,10 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       Nav->whlH[i] = Limit(Nav->whlH[i] + AC->Whl[i].Tcmd * DT,
                            -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
 
-   *cur_ccsds        = next_ccsds;
-   Nav->ccsds_time   = *cur_ccsds;
-   Nav->Date         = ccsds2date(*cur_ccsds, TT_TIME);
-   Nav->refLerpAlpha = lerpAlphaState;
-   configureRefFrame(Nav, DSM->refOrb, DT / Nav->DT, FALSE);
+   *cur_ccsds      = next_ccsds;
+   Nav->ccsds_time = *cur_ccsds;
+   Nav->Date       = ccsds2date(*cur_ccsds, TT_TIME);
+   configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb, DT / Nav->DT, FALSE);
 }
 
 void CalcInnovation(const enum SensorType type,
@@ -3511,7 +3511,7 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
    // TODO: will maybe need to do something to preserve information if a new
    // Nav filter is called
    if (Nav->Init == FALSE)
-      configureRefFrame(Nav, DSM->refOrb, 0.0, TRUE);
+      configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb, 0.0, TRUE);
 
    // Accumulate information from measurements based upon batching method.
    struct DSMMeasListType *const measList = &Nav->measList;
@@ -3605,7 +3605,8 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 
    updateTime(&Nav->Date, Nav->DT * Nav->steps);
    Nav->ccsds_time = date2ccsds(Nav->Date);
-   configureRefFrame(Nav, DSM->refOrb, 1.0 - Nav->refLerpAlpha, TRUE);
+   configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb,
+                     1.0 - Nav->refLerpAlpha, TRUE);
    for (i = 0; i < AC->Nwhl; i++)
       Nav->whlH[i] = AC->Whl[i].H;
 

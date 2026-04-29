@@ -56,7 +56,7 @@ double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
 double **GetStateLinTForm(struct DSMNavType *const Nav);
 void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
                          double **P);
-void configureRefFrame(struct DSMNavType *const Nav,
+void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset);
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
