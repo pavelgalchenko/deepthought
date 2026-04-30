@@ -15,9 +15,11 @@
 #define __JDKIT_H__
 
 #include "42constants.h"
+#include "rationalkit.h"
 #include <ctype.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +69,7 @@ typedef struct JDType {
    long whole_days;
    long day_seconds;
    double frac_second;
+   // TODO: do I want to make day_seconds and frac_sec a combined Rational?
 } JDType;
 
 double GetLeapSec(const JDType jd);
@@ -78,10 +81,15 @@ void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
 double JDToDays(const JDType jd);
 JDType JDFromDays(const double days, const TimeSystem system,
                   const EpochTT new_epoch);
+JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch);
+double JDToSeconds(JDType jd);
+double JDToTime(JDType jd);
+double JDToDynTime(JDType JD);
 
 JDType JDAdd(const JDType a, const JDType b);
 JDType JDAddDays(const JDType a, const double b);
 JDType JDAddSeconds(const JDType a, const double b);
+JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat);
 JDType JDSub(const JDType a, const JDType b);
 JDType JDSubDays(const JDType a, const double b);
 JDType JDSubSeconds(const JDType a, const double b);

@@ -38,6 +38,7 @@ set(KIT_SOURCES
     ${KIT}/envkit.c
     ${KIT}/fswkit.c
     ${KIT}/geomkit.c
+    ${KIT}/rationalkit.c
     ${KIT}/mathkit.c
     ${KIT}/nrlmsise00kit.c
     ${KIT}/orbkit.c

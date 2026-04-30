@@ -1183,7 +1183,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                }
 
                if (O->J2DriftEnabled) {
-                  OscEphToMeanEph(O->mu, J2, rad, DynTime0, O);
+                  OscEphToMeanEph(O->mu, J2, rad, JD_TT_MJD_0, O);
                }
                Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
                       O->Epoch - O->tp, O->PosN, O->VelN, &O->anom);
@@ -1202,7 +1202,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                       &O->inc, &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR,
                       &O->alpha, &O->rmin, &O->MeanMotion, &O->Period);
                if (O->J2DriftEnabled) {
-                  OscEphToMeanEph(O->mu, J2, rad, DynTime0, O);
+                  OscEphToMeanEph(O->mu, J2, rad, JD_TT_MJD_0, O);
                }
             } break;
             case INP_FILE: {
@@ -5157,9 +5157,10 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             E->MeanMotion          = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
             E->Period              = TwoPi / E->MeanMotion;
             E->tp = epoch_j2000_sec - mean_anom * D2R / E->MeanMotion;
-            while ((E->tp - DynTime0) < -E->Period)
+            const double tt_j2000_sec_0 = JDToDynTime(JD_TT_MJD_0);
+            while ((E->tp - tt_j2000_sec_0) < -E->Period)
                E->tp += E->Period;
-            while ((E->tp - DynTime0) > E->Period)
+            while ((E->tp - tt_j2000_sec_0) > E->Period)
                E->tp -= E->Period;
             E->alpha = 1.0 / E->SMA;
             E->SLR   = E->SMA * (1.0 - E->ecc * E->ecc);
@@ -5299,9 +5300,10 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
       E->SLR        = E->SMA * (1.0 - E->ecc * E->ecc);
       E->rmin       = E->SMA * (1.0 - E->ecc);
       E->tp = Epoch - TimeSincePeriapsis(E->mu, E->SLR, E->ecc, E->anom);
-      while ((E->tp - DynTime0) < -E->Period)
+      const double tt_j2000_sec_0 = JDToDynTime(JD_TT_MJD_0);
+      while ((E->tp - tt_j2000_sec_0) < -E->Period)
          E->tp += E->Period;
-      while ((E->tp - DynTime0) > E->Period)
+      while ((E->tp - tt_j2000_sec_0) > E->Period)
          E->tp -= E->Period;
 
       Geom = LoadWingsObjFile(ModelPath, W->GeomFileName, &Matl, &Nmatl, Geom,
@@ -6826,8 +6828,10 @@ void InitSim(int argc, char **argv)
                       "Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   TimeMode = DecodeString(response);
-   GLEnable = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
+   DTSIM_RAT = double2rational(DTSIM);
+   DTOUT_RAT = double2rational(DTOUT);
+   TimeMode  = DecodeString(response);
+   GLEnable  = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
    if (CLI_ARGS.graphics != NULL) {
       printf("\n!!!!!! Graphics Overriden !!!!! \n");
@@ -7216,33 +7220,31 @@ void InitSim(int argc, char **argv)
                            &JunkTag, FALSE);
 
    /* .. Time */
+   TT.system  = TT_TIME;
+   UTC.system = UTC_TIME;
+   TDB.system = TDB_TIME;
    if (TimeMode == EXTERNAL_TIME) {
       printf("Initializing with External Time\n");
       RealSystemTime(&UTC, DTSIM);
    }
-   CivilTime  = DateToTime(UTC);
-   AtomicTime = CivilTime + LeapSec;
-   DynTime0   = AtomicTime + 32.184;
+
+   UTC.doy     = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
+   SimTime     = 0.0;
+   JD_TT_MJD_0 = DateToJD(UTC, UTC_TIME, J2000_EPOCH);
+   CivilTime   = JDToTime(JD_TT_MJD_0);
+   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD_0);
+   JD_TT_MJD  = JD_TT_MJD_0;
+   JD_TDB_MJD = JD_TT_MJD;
+   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+
+   DynTime    = JDToDynTime(JD_TT_MJD);
+   AtomicTime = DynTime - 32.184; /* TAI */
    GpsTime    = AtomicTime - 19.0;
-   DynTime    = DynTime0;
 
-   TT.system  = TT_TIME;
-   UTC.system = UTC_TIME;
-   TDB.system = TDB_TIME;
-
-   // TT.JulDay = TimeToJD(DynTime);
-   TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
-   TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-   // UTC.JulDay = TimeToJD(CivilTime);
-   UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
+   TT  = JDToDate(JD_TT_MJD, TT_TIME);
+   TDB = JDToDate(JD_TDB_MJD, TDB_TIME);
 
    GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-
-   JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
-   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-   TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
-   TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
 
    LoadEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
 

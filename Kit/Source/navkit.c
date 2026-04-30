@@ -257,11 +257,8 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
          if (EphemOption == EPH_MEAN) {
             PriMerAng = W->PriMerAngJ2000 + W->w * time;
          }
-         else {
-            DateType dateUTC = *date;
-            updateTime(&dateUTC, -(32.184 + LeapSec));
+         else
             PriMerAng = TwoPi * JD2GMST(jd);
-         }
       } break;
       case LUNA: {
          PriMerAng = LunaPriMerAng(jd);
@@ -276,7 +273,6 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
       case NEPTUNE:
       case PLUTO:
          PriMerAng = W->w * time;
-
          // TODO: This is from Ephemerides() in 42ephem.c
          if (EphemOption == EPH_MEAN)
             PriMerAng += W->PriMerAngJ2000;
@@ -3519,10 +3515,8 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
    Nav->ccsds_time           = date2ccsds(Nav->Date);
    CCSDSTime cur_ccsds       = Nav->ccsds_time;
    const CCSDSTime fin_ccsds = CCSDSAddSeconds(cur_ccsds, Nav->DT);
-   if (measList->head == NULL) {
+   if (measList->head == NULL)
       PropagateNav(AC, DSM, &cur_ccsds, fin_ccsds, TRUE);
-      Nav->steps++;
-   }
    else {
       long init = TRUE;
 

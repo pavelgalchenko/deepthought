@@ -148,28 +148,6 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
    return jd;
 }
 /**********************************************************************/
-/*  Converts seconds since 'epoch' in 'system' to a JDType format     */
-JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch)
-{
-   return JDFromDays(SecSince / SEC_PER_DAY, system, epoch);
-}
-/**********************************************************************/
-/* Time is elapsed seconds since J2000 epoch                          */
-/*  This function returns the seconds in whatever system the input    */
-/*  'jd' uses                                                         */
-double JDToTime(JDType jd)
-{
-   ChangeEpoch(J2000_EPOCH, &jd);
-   return (JDToDays(jd) * 86400.0);
-}
-/**********************************************************************/
-/* Time is elapsed seconds since J2000 epoch in TT time               */
-double JDToDynTime(JDType jd)
-{
-   ChangeSystem(TT_TIME, &jd);
-   return JDToTime(jd);
-}
-/**********************************************************************/
 static int _is_leap_yr(long yr)
 {
    return (yr % 4 == 0 && yr % 100 != 0) || yr % 400 == 0;

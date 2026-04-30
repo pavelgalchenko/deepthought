@@ -377,7 +377,7 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
                          double FuturePos[3]);
-void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
+void OscEphToMeanEph(double mu, double J2, double Rw, JDType jd,
                      struct OrbitType *O);
 void MeanEphToOscEph(struct OrbitType *O, double DynTime);
 

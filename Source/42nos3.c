@@ -65,7 +65,6 @@ DateType NOS3Time()
    static long First = 1;
    int64_t ticks;
    JDType jd = {0};
-   double abs_time;
    if (First) {
       First = 0;
       ReadNos3InpFile();
@@ -75,10 +74,8 @@ DateType NOS3Time()
       perror("NOS3Time error on sem_wait");
       exit(3);
    }
-   ticks    = NE_bus_get_time(Bus);
-   abs_time = DynTime0 + (ticks * DTSIM);
-   jd       = TimeToJD(abs_time, TT_TIME, J2000_EPOCH);
-   ChangeSystem(UTC_TIME, &jd);
+   ticks = NE_bus_get_time(Bus);
+   jd    = JDAddSeconds(JD_TT_MJD, ticks * DTSIM);
    return JDToDate(jd, TT_TIME);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"

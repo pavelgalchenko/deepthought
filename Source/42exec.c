@@ -47,17 +47,19 @@ void ReportProgress(void)
    }
 }
 /**********************************************************************/
-void ManageFlags(void)
+void ManageFlags(long *const nout, long *const GLnout, int *set_nout)
 {
-   long nout, GLnout;
    static long iout   = 1000000;
    static long GLiout = 1000000;
 
-   nout   = ((long)(DTOUT / DTSIM + 0.5));
-   GLnout = ((long)(DTOUTGL / DTSIM + 0.5));
+   if (!*set_nout) {
+      *set_nout = TRUE;
+      *nout     = RationalRoundUp(RationalDivide(DTOUT_RAT, DTSIM_RAT));
+      *GLnout   = RationalRoundUp(RationalDivide(DTOUTGL_RAT, DTSIM_RAT));
+   }
 
    iout++;
-   if (iout >= nout) {
+   if (iout >= *nout) {
       iout    = 0;
       OutFlag = TRUE;
    }
@@ -65,7 +67,7 @@ void ManageFlags(void)
       OutFlag = FALSE;
 
    GLiout++;
-   if (GLiout >= GLnout) {
+   if (GLiout >= *GLnout) {
       GLiout    = 0;
       GLOutFlag = TRUE;
    }
@@ -78,112 +80,85 @@ long AdvanceTime(void)
    static long itime    = 0;
    static long PrevTick = 0;
    static long CurrTick = 1;
-   long Done;
+   long Done            = 0;
 
    // TODO: This is where the real fun is
 
    /* Advance time to next Timestep */
    switch (TimeMode) {
-      case FAST_TIME:
-         SimTime += DTSIM;
-         itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
-         SimTime  = ((double)itime) * DTSIM;
-         DynTime  = DynTime0 + SimTime;
-
-         AtomicTime = DynTime - 32.184;     /* TAI */
-         CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
-         GpsTime    = AtomicTime - 19.0;
-
-         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-         // TT.JulDay = TimeToJD(DynTime);
-
-         JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC     = TimeToDate(CivilTime, UTC_TIME, DTSIM);
-         UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
-         // UTC.JulDay = TimeToJD(CivilTime);
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-
-         break;
       case REAL_TIME:
          usleep(1.0E6 * DTSIM);
-         SimTime += DTSIM;
-         itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
-         SimTime  = ((double)itime) * DTSIM;
-         DynTime  = DynTime0 + SimTime;
+      case FAST_TIME: {
+         // TODO: was thinking about changing it around so that the time is
+         // stepped with JD_TDB_MJD = JD_TDB_MJD_0 + SimTime, but that means
+         // SimTime and other time step info becomes TDB instead of TT
+         // Becuase of this, do we want to get rid of JD_TDB_MJD in favor of
+         // JD_TT_MJD?
 
-         AtomicTime = DynTime - 32.184;     /* TAI */
-         CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
+         // TODO: this implementation will eventually get notable floating point
+         // errors if SimTime gets sufficiently large
+         itime++;
+         SimTime    = ((double)itime) * DTSIM;
+         JD_TT_MJD  = JDAddMultRatSecs(JD_TT_MJD_0, itime, DTSIM_RAT);
+         JD_TDB_MJD = JD_TT_MJD;
+         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+
+         JDType jd_utc_j2000 = JD_TT_MJD;
+         ChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd_utc_j2000);
+
+         TT  = JDToDate(JD_TT_MJD, TT_TIME);
+         UTC = JDToDate(jd_utc_j2000, UTC_TIME);
+         TDB = JDToDate(JD_TDB_MJD, TDB_TIME);
+
+         DynTime    = JDToDynTime(JD_TT_MJD);
+         CivilTime  = JDToTime(jd_utc_j2000); /* UTC "clock" time */
+         AtomicTime = DynTime - 32.184;       /* TAI */
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC     = TimeToDate(CivilTime, UTC_TIME, DTSIM);
-         UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
-
          GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-
-         break;
-      case EXTERNAL_TIME:
+      } break;
+      case EXTERNAL_TIME: {
          while (CurrTick == PrevTick) {
             CurrTick = (long)(1.0E-6 * usec() / DTSIM);
          }
-         PrevTick  = CurrTick;
-         SimTime  += DTSIM;
-         itime     = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
-         SimTime   = ((double)itime) * DTSIM;
-
+         PrevTick = CurrTick;
+         itime++;
+         SimTime = ((double)itime) * DTSIM;
          RealSystemTime(&UTC, DTSIM);
-         CivilTime  = DateToTime(UTC);
-         AtomicTime = CivilTime + LeapSec;
-         DynTime    = AtomicTime + 32.184;
+         JD_TT_MJD = DateToJD(UTC, UTC_TIME, GMAT_MJD_EPOCH);
+         CivilTime = JDToTime(JD_TT_MJD);
+         ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD);
+         JD_TDB_MJD = JD_TT_MJD;
+         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+
+         DynTime    = JDToDynTime(JD_TT_MJD);
+         AtomicTime = DynTime - 32.184; /* TAI */
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
+         TT          = JDToDate(JD_TT_MJD, TT_TIME);
+         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
+         JD_TT_MJD_0 = JDSubSeconds(JD_TT_MJD, SimTime);
 
          GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-         DynTime0 = DynTime - SimTime;
+      } break;
+      case NOS3_TIME: {
+         UTC       = NOS3Time();
+         JD_TT_MJD = DateToJD(UTC, UTC_TIME, GMAT_MJD_EPOCH);
+         CivilTime = JDToTime(JD_TT_MJD);
+         ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD);
+         JD_TDB_MJD = JD_TT_MJD;
+         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
 
-         break;
-      case NOS3_TIME:
-         UTC        = NOS3Time();
-         CivilTime  = DateToTime(UTC);
-         AtomicTime = CivilTime + LeapSec;
-         DynTime    = AtomicTime + 32.184;
+         DynTime    = JDToDynTime(JD_TT_MJD);
+         AtomicTime = DynTime - 32.184; /* TAI */
          GpsTime    = AtomicTime - 19.0;
 
-         TT     = TimeToDate(DynTime, TT_TIME, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         JD_TDB_MJD = TimeToJD(DynTime, TT_TIME, J2000_EPOCH);
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+         TT      = JDToDate(JD_TT_MJD, TT_TIME);
          TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
+         SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
 
          GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-         SimTime = DynTime - DynTime0;
-         break;
+      } break;
    }
 
    /* Check for end of run */
@@ -317,13 +292,15 @@ long SimStep(void)
    struct SCType *S;
    long SimComplete;
    double TotalRunTime;
+   static long nout = 0, GLnout = 0;
+   static int set_nout = FALSE;
 
    if (First) {
       First   = 0;
       SimTime = 0.0;
       /* First call just initializes timer */
       RealRunTime(&TotalRunTime, DTSIM);
-      ManageFlags();
+      ManageFlags(&nout, &GLnout, &set_nout);
 
       /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
       Ephemerides(SC, World, Orb);
@@ -356,7 +333,7 @@ long SimStep(void)
    }
 
    ReportProgress();
-   ManageFlags();
+   ManageFlags(&nout, &GLnout, &set_nout);
 
    /* Read and Interpret Command Script File */
    CmdInterpreter();

@@ -942,7 +942,7 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
       JD_TDB_MJD = DateToJD(TT, TDB_TIME, GMAT_MJD_EPOCH);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-      SimTime = DynTime - DynTime0;
+      SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
    }
 
    /* .. Refresh SC states that depend on inputs */

@@ -1384,6 +1384,7 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
 
    if (sscanf(CmdLine, "%lf GL Output Step = %lf", CmdTime, &DTOUTGL) == 2) {
       NewCmdProcessed = TRUE;
+      DTOUTGL_RAT     = double2rational(DTOUTGL);
    }
    if (sscanf(CmdLine, "%lf POV CmdRange = %lf", CmdTime, &POV.CmdRange) == 2) {
       NewCmdProcessed = TRUE;

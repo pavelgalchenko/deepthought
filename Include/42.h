@@ -35,6 +35,7 @@
 #include "jdkit.h"
 #include "mathkit.h"
 #include "orbkit.h"
+#include "rationalkit.h"
 #include "sigkit.h"
 #include "sphkit.h"
 #include "timekit.h"
@@ -75,8 +76,10 @@ EXTERN double Pi, TwoPi, HalfPi, SqrtTwo, SqrtHalf, A2R, R2A, GoldenRatio;
 
 /* Simulation Control */
 EXTERN long TimeMode; /* FAST_TIME, REAL_TIME, EXTERNAL_SYNCH, NOS3_TIME */
+// All of these are TT seconds
 EXTERN double SimTime, STOPTIME, DTSIM, DTOUT, DTOUTGL;
 EXTERN long OutFlag, GLOutFlag, GLEnable, CleanUpFlag;
+EXTERN Rational DTSIM_RAT, DTOUT_RAT, DTOUTGL_RAT;
 
 /* Making global parameters for updated JPL EPHEM methods */
 EXTERN double EMRAT;  /* Earth/Moon Mass Ratio */
@@ -105,10 +108,15 @@ EXTERN JPLHeaderType JplHeader; /* Stores header information for
 
 /* Calendar Time is all based in Terrestrial Dynamical Time (TT or TDT) unless
  * otherwise noted */
+
+EXTERN JDType JD_TDB_MJD; /* JD in TDB with reference to GMAT MJD epoch*/
 EXTERN JDType
-    JD_TDB_MJD;         /* Julian day in TDB with reference to GMAT MJD epoch*/
-EXTERN double DynTime0; /* Time in sec since J2000 Epoch at Sim Start (TT) */
-EXTERN double DynTime;  /* Absolute Time (TT), sec since J2000 Epoch */
+    JD_TT_MJD_0; /* JD since sim start in TT with reference to GMAT MJD epoch*/
+EXTERN JDType JD_TT_MJD; /* JD in TT with reference to GMAT MJD epoch*/
+
+// EXTERN double DynTime0;   /* Time in sec since J2000 Epoch at Sim Start (TT)
+// */
+EXTERN double DynTime;    /* Absolute Time (TT), sec since J2000 Epoch */
 EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;  /* UTC = TAI - LeapSec */

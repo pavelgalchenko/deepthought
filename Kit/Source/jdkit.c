@@ -541,6 +541,9 @@ static int isLineBlank(char *const line)
 // returns the number of leap seconds for specified JD
 double GetLeapSec(const JDType jd)
 {
+   // TODO: this and other functions does not handle the time being *during* a
+   // leap second
+
    // TODO: use spice instead if available?
 
    // ensure jd is UTC with MJD epoch
@@ -700,6 +703,34 @@ JDType JDFromDays(const double days, const TimeSystem system,
    return jd;
 }
 
+/**********************************************************************/
+/*  Converts seconds since 'epoch' in 'system' to a JDType format     */
+JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch)
+{
+   return JDFromDays((double)SecSince / sec_per_day, system, epoch);
+}
+/**********************************************************************/
+/* Time is elapsed seconds since J2000 epoch                          */
+/*  This function returns the seconds in whatever system the input    */
+/*  'jd' uses                                                         */
+double JDToSeconds(JDType jd)
+{
+   return ((double)jd.whole_days * sec_per_day + (double)jd.day_seconds +
+           jd.frac_second);
+}
+double JDToTime(JDType jd)
+{
+   ChangeEpoch(J2000_EPOCH, &jd);
+   return JDToSeconds(jd);
+}
+/**********************************************************************/
+/* Time is elapsed seconds since J2000 epoch in TT time               */
+double JDToDynTime(JDType jd)
+{
+   ChangeSystem(TT_TIME, &jd);
+   return JDToTime(jd);
+}
+
 static void _error_epoch_system(const JDType a, const JDType b,
                                 const char *call_func)
 {
@@ -761,6 +792,33 @@ JDType JDAddSeconds(const JDType a, const double b)
    jdout.whole_days  += b_l;
    jdout.day_seconds += b_sec;
    jdout.frac_second += b_frac_sec;
+   while (jdout.frac_second >= 1.0) {
+      jdout.frac_second -= 1.0;
+      jdout.day_seconds++;
+   }
+   while (jdout.day_seconds > sec_per_day) {
+      jdout.day_seconds -= sec_per_day;
+      jdout.whole_days++;
+   }
+   return jdout;
+}
+/**********************************************************************/
+/*  Add (mul * b) seconds to the Julian Date in jd using an integer   */
+/*  arithmetic multiplication algorithm                               */
+JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat)
+{
+   JDType jdout = jd;
+
+   signed long whole;
+   Rational out = IntegerRationalMult(mul, rat);
+
+   const long b_l   = out.whole / sec_per_day;
+   const long b_sec = out.whole % sec_per_day;
+   out.whole        = 0;
+
+   jdout.whole_days  += b_l;
+   jdout.day_seconds += b_sec;
+   jdout.frac_second += rational2double(out);
    while (jdout.frac_second >= 1.0) {
       jdout.frac_second -= 1.0;
       jdout.day_seconds++;
@@ -881,8 +939,8 @@ int isgreaterequal_jd(const JDType a, const JDType b)
 }
 
 #pragma GCC diagnostic pop
-#undef tdt2tdb
-#undef tdb2tdt
+#undef _jd_tai2tt
+#undef _jd_tt2tai
 #undef sec_per_day
 
 /* #ifdef __cplusplus

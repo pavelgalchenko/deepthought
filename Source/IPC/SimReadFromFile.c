@@ -919,7 +919,7 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled)
       TDB        = JDToDate(JD_TDB_MJD, TDB_TIME);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-      SimTime = DynTime - DynTime0;
+      SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
    }
 
    /* .. Refresh SC states that depend on inputs */

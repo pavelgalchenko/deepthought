@@ -80,13 +80,7 @@ int isequal_ccsds(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time);
 int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds);
 
 typedef struct {
-   // TODO: I think remove JD, add a time system property
    TimeSystem system;
-
-   // JDType JD;
-   // double MJD;
-   // double JulDay;
-   // double tdbTime; // TDB_TIME, J2000_EPOCH
    long Year;
    long Month;
    long Day;
@@ -111,9 +105,6 @@ DateType DateTypeInit(const TimeSystem system, const long Year,
 CCSDSTime date2ccsds(const DateType date);
 DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
 
-JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch);
-double JDToTime(const JDType JD);
-double JDToDynTime(const JDType JD);
 double DateToTime(const DateType date);
 JDType DateToJD(const DateType date, const TimeSystem system,
                 const EpochTT epoch);

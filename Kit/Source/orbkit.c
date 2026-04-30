@@ -2884,11 +2884,13 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
 /* Use this function to initialize mean eph at sim start              */
-void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
+void OscEphToMeanEph(double mu, double J2, double Rw, JDType jd,
                      struct OrbitType *O)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g, E;
    double a, p, p2, Coef;
+
+   const double tt_j2000_sec_0 = JDToDynTime(jd);
 
    sin2i = sin(O->inc) * sin(O->inc);
 
@@ -2915,8 +2917,8 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    O->RAANdot = -Coef * cos(O->inc);
    O->ArgPdot = Coef * (2.0 - 2.5 * sin2i);
 
-   O->RAAN0 = O->RAAN - O->RAANdot * (DynTime - O->Epoch);
-   O->ArgP0 = O->ArgP - O->ArgPdot * (DynTime - O->Epoch);
+   O->RAAN0 = O->RAAN - O->RAANdot * (tt_j2000_sec_0 - O->Epoch);
+   O->ArgP0 = O->ArgP - O->ArgPdot * (tt_j2000_sec_0 - O->Epoch);
 
    /* 10.126 */
    O->J2Rw2bya = J2 * Rw * Rw / O->MeanSMA;
@@ -2924,7 +2926,7 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    E = atan2(sqrt(1.0 - O->ecc * O->ecc) * sin(O->anom), O->ecc + cos(O->anom));
    O->MeanAnom = E - O->ecc * sin(E);
    O->MeanAnom0 =
-       fmod(O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch), TWOPI);
+       fmod(O->MeanAnom - O->MeanMotion * (tt_j2000_sec_0 - O->Epoch), TWOPI);
 }
 /* #ifdef __cplusplus
 ** }

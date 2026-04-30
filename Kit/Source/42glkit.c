@@ -5666,6 +5666,7 @@ void ReadGraphicsInpFile(void)
                       "Exiting...\n");
       exit(EXIT_FAILURE);
    }
+   DTOUTGL_RAT = double2rational(DTOUTGL);
 
    MapWindowExists = getYAMLBool(fy_node_by_path_def(node, "/Map Exists"));
    OrreryWindowExists =
