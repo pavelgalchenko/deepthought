@@ -40,6 +40,8 @@
 #define MAX(x, y) ((x) < (y) ? (y) : (x))
 #endif
 
+int any_int(const long n, const int *vec);
+int all_int(const long n, const int *vec);
 double signum(const double x);
 double sinc(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
@@ -52,6 +54,7 @@ void VxMT(const double V[3], const double M[3][3], double W[3]);
 void MTxV(const double M[3][3], const double V[3], double W[3]);
 void SxV(const double S, const double V[3], double W[3]);
 void SxM(const double S, const double A[3][3], double B[3][3]);
+double det3x3(const double M[3][3]);
 void MINV4(const double A[4][4], double B[4][4]);
 void MINV3(const double A[3][3], double B[3][3]);
 void MINV2(const double A[2][2], double B[2][2]);
@@ -84,8 +87,8 @@ void Legendre(const long N, const long M, const double x,
 void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
                         double **C, double **S, double **Norm, double gradV[3]);
-void MxMG(double **A, double **B, double **C, const long N, const long K,
-          const long M);
+void MxMG(double **A, double **B, double **C, const int N, const int K,
+          const int M);
 void MxMTG(double **A, double **B, double **C, const long N, const long K,
            const long M);
 void MTxMG(double **A, double **B, double **C, const long N, const long K,
@@ -153,6 +156,7 @@ void hqrd(double **A, double **U, double **R, long const n, long const m);
 void bhqrd(double **A, double **U, double **R, long const n, long const m,
            long const bSize);
 
+double ipow(double base, long exp);
 void expm(double **A, double **e, long const n);
 long isSignificant(int const m, int const n, double **A, double **B);
 void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);

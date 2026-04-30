@@ -1,5 +1,5 @@
 # Based shamelessly on CODEX CMakeLists
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.19)
 
 # set project name
 project(deepthought VERSION 1.0 LANGUAGES C)
@@ -7,6 +7,7 @@ project(deepthought VERSION 1.0 LANGUAGES C)
 # specify c++ standard
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_EXTENSIONS ON)
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Wall")
 
 if (CMAKE_SYSTEM_NAME EQUAL "Windows")
@@ -22,27 +23,18 @@ endif()
 # Compile with Graphics -DGUI=OFF
 option(GUI "Compile with graphics" ON)
 
-# Compile with Shaders -DSHADERS=OFF
-option(SHADERS "Compile with shaders" ON)
-
 # Compile with SPICE -DSPICE=OFF
 option(SPICE "Compile with SPICE" ON)
-
-# Compile with GSFC Watermark -DGSFC=ON
-option(GSFC "Enable GSFC Watermark" OFF)
 
 # Compile with Ac Standalone -DSTANDALONE=ON
 option(STANDALONE "Compile AcApp as standalone" OFF)
 
-# Compile to output debug information -DDEBUG_DATA=ON
-option(DEBUG_DATA "Enable outputing model debug data" OFF)
+# Compile enabling address sanitizer -DSANITIZER=ON
+option(SANITIZER "Enable address sanitizer in debug build" OFF)
 
-# For graphics interface, choose GLUT or GLFW GUI libraries
-# GLUT is well known, but GLFW is better for newer Mac's hires displays
-# -DGLUT_OR_GLFW=GLFW
-set(GLUT_OR_GLFW GLUT CACHE STRING "Use GLUT or GLFW for graphics")
-set_property(CACHE GLUT_OR_GLFW PROPERTY STRINGS GLUT GLFW)
-
+# take note of the buid options in Kit/CMakeLists.txt as well
+################################################################################
+################################################################################
 ################################################################################
 
 # by default, we will build a Release version. However, feel free to
@@ -54,55 +46,24 @@ endif()
 
 add_executable(deepthought)
 add_executable(Test EXCLUDE_FROM_ALL)
-link_libraries(m)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
 
-if(SHADERS)
-    add_compile_definitions(_USE_SHADERS_)
-endif()
+target_compile_options(deepthought PRIVATE -fpic -Wall -Wshadow -Wno-deprecated)
+target_compile_options(deepthought PRIVATE $<$<CONFIG:Release>:-O2>)
+target_compile_options(deepthought PRIVATE $<$<CONFIG:Debug>:-O0 -pg -ggdb -fno-omit-frame-pointer>)
 
-if(SPICE)
-    add_compile_definitions(_ENABLE_SPICE_)
-    set(CSPICE_DIR ${CMAKE_SOURCE_DIR}/cspice)
-    find_library(CSPICE_LIB cspice  PATHS ${CSPICE_DIR}/lib)
-    if (NOT CSPICE_LIB)
-        add_library(cspice STATIC IMPORTED)
-        set_target_properties(cspice PROPERTIES IMPORTED_LOCATION ${CSPICE_DIR}/lib/cspice.a)
-        set_target_properties(cspice PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CSPICE_DIR}/include)
-        target_link_libraries(deepthought PUBLIC cspice)
-        target_link_libraries(Test PUBLIC cspice)
-    else()
-        target_include_directories(deepthought PUBLIC ${CSPICE_DIR}/include)
-        target_link_libraries(deepthought PUBLIC ${CSPICE_LIB})
+# addresssanitizer
+target_compile_options(deepthought PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
+target_link_options(deepthought BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=undefined -fsanitize=address>)
 
-        # #Link spice to Test
-        target_include_directories(Test PUBLIC ${CSPICE_DIR}/include)
-        target_link_libraries(Test PUBLIC ${CSPICE_LIB})
-    endif()
-endif()
-
-
-set(CMAKE_C_FLAGS "-fpic -Wall -Wshadow -Wno-deprecated " CACHE STRING "Set C Compiler Flags" FORCE)
-
-
-# explicitly set compile flags for all, debug, and release
-set(CMAKE_C_FLAGS_DEBUG "-pg")
-set(CMAKE_C_FLAGS_RELEASE "-O2")
-
-if(C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs")
-endif()
+target_compile_options(deepthought PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS}>:-Wno-unused-local-typedefs>)
 
 # set include directories
-include_directories(
-    Include
-    Kit/Include
-)
+include_directories(Include)
 
 # Configure Sources
-set(KIT Kit/Source)
 set(SOURCE Source)
 
 set(SIM_IPC_SOURCES
@@ -113,23 +74,7 @@ set(SIM_IPC_SOURCES
     ${SOURCE}/IPC/SimReadFromSocket.c
     )
 
-set(KIT_SOURCES
-    ${KIT}/iokit.c
-    ${KIT}/dcmkit.c
-    ${KIT}/envkit.c
-    ${KIT}/fswkit.c
-    ${KIT}/geomkit.c
-    ${KIT}/mathkit.c
-    ${KIT}/nrlmsise00kit.c
-    ${KIT}/orbkit.c
-    ${KIT}/radbeltkit.c
-    ${KIT}/sigkit.c
-    ${KIT}/sphkit.c
-    ${KIT}/timekit.c
-    ${KIT}/docoptkit.c
-    )
-
-    set(42_SOURCES
+set(42_SOURCES
     PRIVATE
     ${SOURCE}/42exec.c
     ${SOURCE}/42actuators.c
@@ -148,59 +93,50 @@ set(KIT_SOURCES
     ${SOURCE}/42sensors.c
     ${SOURCE}/42nos3.c
     ${SOURCE}/42dsm.c
-    ${KIT}/dsmkit.c
-    ${KIT}/navkit.c
     )
 
-set(AC_KIT_SOURCES
-    PRIVATE
-    ${KIT}/dcmkit.c
-    ${KIT}/mathkit.c
-    ${KIT}/fswkit.c
-    ${KIT}/iokit.c
-    ${KIT}/timekit.c
-    )
-
-set(AC_IPC_SOURCES
-    PRIVATE
-    ${SOURCE}/IPC/AppReadFromFile.c
-    ${SOURCE}/IPC/AppWriteToSocket.c
-    ${SOURCE}/IPC/AppReadFromSocket.c
-    ${SOURCE}/IPC/AppWriteToFile.c
-    )
-
-set(AC_SOURCES
-    PRIVATE
-    ${SOURCE}/AcApp.c
-    )
-
-add_library(42kit SHARED ${KIT_SOURCES})
-set_target_properties(42kit PROPERTIES LIBRARY_OUTPUT_DIRECTORY Kit)
-
-target_include_directories(deepthought PRIVATE kit/Include Include)
+target_include_directories(deepthought PRIVATE Kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
 
-if(GSFC)
-    add_compile_definitions(_USE_GSFC_WATERMARK_)
-endif()
+if(SPICE)
+    # Based on similar section in GMAT cmake
+    set(CSPICE_TEMP_DIR ${CMAKE_SOURCE_DIR}/cspice)
 
-if(DEBUG_DATA)
-    add_compile_definitions(_DEBUG_GRAV_)
-    add_compile_definitions(_DEBUG_MAG_)
-endif()
+    find_path(CSPICE_DIR
+        NAMES include/SpiceUsr.h
+        PATHS 
+            ${CSPICE_TEMP_DIR}
+        DOC "Path to CSpice root directory (containing include/, lib/, etc.)"
+        NO_DEFAULT_PATH
+        )
 
-# Configure 42kit with libfyaml publicly to share with targets
-# if something in deepthought is using yaml, it is also using iokit
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(LIBFYAML REQUIRED libfyaml>=0.8)
-target_include_directories(42kit PUBLIC kit/Include)
-target_include_directories(42kit PUBLIC ${LIBFYAML_INCLUDE_DIRS})
-target_link_directories(42kit PUBLIC ${LIBFYAML_LIBRARY_DIRS})
-target_link_libraries(42kit PUBLIC ${LIBFYAML_LIBRARIES} ${CMAKE_DL_LIBS})
-target_link_libraries(deepthought PRIVATE 42kit)
+    # Make sure CSPICE exists
+    if(CSPICE_DIR)
+        MESSAGE(STATUS "Found CSPICE: " ${CSPICE_DIR})
+
+        # Set CSPICE library files
+        # if(WIN32)
+        #     SET(CSPICE_EXT "lib")
+        # else()
+        SET(CSPICE_EXT "a")
+        # endif()
+        SET(CSPICE_LIB "${CSPICE_DIR}/lib/cspice.${CSPICE_EXT}")
+        # SET(CSPICE_LIB_DEBUG "${CSPICE_DIR}/lib/cspiced.${CSPICE_EXT}")
+        SET(CSPICE_INCLUDE_DIR "${CSPICE_DIR}/include")
+        if(NOT EXISTS ${CSPICE_LIB_DEBUG})
+            SET(CSPICE_LIB_DEBUG ${CSPICE_LIB})
+        endif()
+    else()
+        MESSAGE(ERROR "CSPICE NOT FOUND. Set CSPICE_DIR to path to include/SpiceUsr.h and re-configure.")
+    endif()
+    add_compile_definitions(_ENABLE_SPICE_)
+    
+    target_link_libraries(deepthought PUBLIC optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
+    target_include_directories(deepthought PUBLIC ${CSPICE_INCLUDE_DIR})
+endif()
 
 # Configure Test Target
-target_include_directories(Test PRIVATE kit/Include Include)
+target_include_directories(Test PRIVATE Kit/Include Include)
 target_sources(Test
     PRIVATE
     Tests/tests.c
@@ -209,11 +145,39 @@ target_sources(Test
     Tests/test_lib.c
     ${42_SOURCES}
     ${SIM_IPC_SOURCES}
-    )
+)
+
+# link 42kit
+add_subdirectory(Kit)
+target_link_libraries(deepthought PRIVATE 42kit)
 target_link_libraries(Test PRIVATE 42kit)
+# Configure Sources
+#   TODO: trying to separate this out, but its here for now for AC_SOURCES and GUI reasons
+set(KIT Kit/Source)
+
+set(AC_SOURCES
+    PRIVATE
+    ${SOURCE}/AcApp.c
+    )
 
 if(STANDALONE)
-    add_executable(AcApp EXCLUDE_FROM_ALL)
+    set(AC_KIT_SOURCES
+        PRIVATE
+        ${KIT}/dcmkit.c
+        ${KIT}/mathkit.c
+        ${KIT}/fswkit.c
+        ${KIT}/iokit.c
+        ${KIT}/timekit.c
+        )
+
+    set(AC_IPC_SOURCES
+        PRIVATE
+        ${SOURCE}/IPC/AppReadFromFile.c
+        ${SOURCE}/IPC/AppWriteToSocket.c
+        ${SOURCE}/IPC/AppReadFromSocket.c
+        ${SOURCE}/IPC/AppWriteToFile.c
+        )
+    add_executable(AcApp)
     target_compile_definitions(AcApp PRIVATE _AC_STANDALONE_)
     target_sources(AcApp ${AC_SOURCES} ${AC_KIT_SOURCES} ${AC_IPC_SOURCES})
     target_include_directories(AcApp PRIVATE kit/Include)
@@ -227,42 +191,5 @@ else()
     target_sources(Test ${AC_SOURCES})
 endif()
 
-if (GUI)
-    # configure GUI
-    find_package(OpenGL REQUIRED)
-    find_package(GLUT REQUIRED)
-    add_compile_definitions(_ENABLE_GUI_)
-    add_compile_definitions(GL_SILENCE_DEPRECATION)
-    target_link_libraries(deepthought PRIVATE ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
-    target_link_libraries(Test PRIVATE ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES})
-
-    set(GL_SOURCES
-        PRIVATE
-        ${KIT}/glkit.c
-        Source/42gl.c
-        Source/42gpgpu.c
-        )
-    target_sources(deepthought ${GL_SOURCES})
-    target_sources(Test ${GL_SOURCES})
-
-    if (GLUT_OR_GLFW STREQUAL "GLUT")
-        add_compile_definitions(_USE_GLUT_)
-        set(GLUT_SOURCES
-            PRIVATE
-            Source/42glut.c
-            )
-        target_sources(deepthought ${GLUT_SOURCES})
-        target_sources(Test ${GLUT_SOURCES})
-    else()
-        add_compile_definitions(_USE_GLFW_)
-        find_package(glfw3 REQUIRED)
-        target_link_libraries(deepthought PRIVATE glfw)
-        target_link_libraries(Test PRIVATE glfw)
-        set(GLFW_SOURCES
-            PRIVATE
-            Source/42glfw.c
-            )
-        target_sources(deepthought ${GLFW_SOURCES})
-        target_sources(Test ${GLFW_SOURCES})
-    endif()
-endif()
+# configure GUI
+target_compile_definitions(deepthought PRIVATE $<$<BOOL:${GUI}>:_ENABLE_GUI_>)

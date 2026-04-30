@@ -96,9 +96,9 @@ void SphericalHarmGravForce(const long N, const long M,
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
-void IGRFMagField(const char *ModelPath, const struct DateType UTC,
-                  const long N, const long M, const double pbn[3],
-                  const double PriMerAng, double MagVecN[3])
+void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
+                  const long M, const double pbn[3], const double PriMerAng,
+                  double MagVecN[3])
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
 #define nYears 26
@@ -596,7 +596,7 @@ void SimpleEarthPrecNute(double JD, double C_TEME_TETE[3][3],
 /**********************************************************************/
 /* Ref Montenbruck and Gill, "Satellite Orbits: Models, Methods,      */
 /* Applications", TL1080.M66                                          */
-void HiFiEarthPrecNute(double JD, double C_TEME_TETE[3][3],
+void HiFiEarthPrecNute(JDType jd, double C_TEME_TETE[3][3],
                        double C_TETE_J2000[3][3])
 {
 
@@ -687,7 +687,9 @@ void HiFiEarthPrecNute(double JD, double C_TEME_TETE[3][3],
       BOm   = -(1934.0 * 3600.0 + 8.0 * 60.0 + 10.539);
    }
 
-   T     = (JD - 2451545.0) / 36525.0;
+   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
+
+   T     = JDToDays(jd) / 36525.0;
    zeta  = (2306.2181 + (0.30188 + 0.017998 * T) * T) * T * A2R;
    theta = (2004.3109 - (0.42665 + 0.041833 * T) * T) * T * A2R;
    z     = zeta + (0.79280 + 0.000205 * T) * T * T * A2R;

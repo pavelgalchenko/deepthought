@@ -35,9 +35,9 @@ void SphericalHarmGravForce(const long N, const long M,
                             const struct WorldType *W, const double PriMerAng,
                             const double mass, const double pbn[3],
                             double FgeoN[3]);
-void IGRFMagField(const char *ModelPath, const struct DateType UTC,
-                  const long N, const long M, const double pbn[3],
-                  const double PriMerAng, double MagVecN[3]);
+void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
+                  const long M, const double pbn[3], const double PriMerAng,
+                  double MagVecN[3]);
 void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
                     double DipoleOffset[3], double p[3], double PriMerAng,
                     double MagVecN[3]);
@@ -49,7 +49,7 @@ double NRLMSISE00(long Year, long DOY, long Hour, long Minute, double Second,
 double MarsAtmosphereModel(double r[3]);
 void SimpleEarthPrecNute(double JD, double C_TEME_TETE[3][3],
                          double C_TETE_J2000[3][3]);
-void HiFiEarthPrecNute(double JD, double C_TEME_TETE[3][3],
+void HiFiEarthPrecNute(JDType JD, double C_TEME_TETE[3][3],
                        double C_TETE_J2000[3][3]);
 void WGS84ToECEF(double glat, double glong, double alt, double p[3]);
 void ECEFToWGS84(double p[3], double *glat, double *glong, double *alt);

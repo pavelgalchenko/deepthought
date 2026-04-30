@@ -1949,8 +1949,7 @@ void FlightSoftWare(struct SCType *S)
    if (S->FswTag == DSM_FSW) {
       if (S->DSM.DsmNav.NavigationActive == TRUE) {
          struct DSMNavType *Nav = &S->DSM.DsmNav;
-         updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
-                        Nav->subStepSize);
+         Nav->ccsds_time = CCSDSAddSeconds(Nav->ccsds_time, Nav->subStepSize);
       }
       DsmSensorModule(&S->AC, &S->DSM);
    }

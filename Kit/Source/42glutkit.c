@@ -13,10 +13,10 @@
 
 #include "42.h"
 #define EXTERN extern
-#include "42gl.h"
+#include "42glkit.h"
 #undef EXTERN
 #define EXTERN
-#include "42glfw.h"
+#include "42glutkit.h"
 #undef EXTERN
 
 /* #ifdef __cplusplus
@@ -28,7 +28,7 @@
 /*********************************************************************/
 void SetupViewVolume(int width, int height)
 {
-   glfwSetWindowSize(CamWindow, width, height);
+   glViewport(0, 0, width, height);
 
    POV.AR     = ((double)width) / ((double)height);
    POV.Height = POV.Near * tan(0.5 * POV.Angle * D2R);
@@ -41,101 +41,117 @@ void SetupViewVolume(int width, int height)
        cos(1.2 * sqrt(POV.Width * POV.Width + POV.Height * POV.Height));
    POV.SinFov = sqrt(1.0 - POV.CosFov * POV.CosFov);
 }
+/**********************************************************************/
+void TimerHandler(int value)
+{
+   TimerHasExpired = 1;
+}
 /*********************************************************************/
-void MainLoop(void)
+void Idle(void)
 {
    long MaxCamFrame = 20000;
    char CamFileName[40];
    long Done = 0;
 
-   while (!Done) {
-
-      if (PauseFlag) {
-         glfwMakeContextCurrent(CamWindow);
-         CamRenderExec();
-         glfwSwapBuffers(CamWindow);
-         if (MapWindowExists) {
-            glfwMakeContextCurrent(MapWindow);
-            DrawMap();
-            glfwSwapBuffers(MapWindow);
-         }
-         if (OrreryWindowExists) {
-            glfwMakeContextCurrent(OrreryWindow);
-            DrawOrrery();
-            glfwSwapBuffers(OrreryWindow);
-         }
-         if (SphereWindowExists) {
-            glfwMakeContextCurrent(SphereWindow);
-            DrawUnitSphere();
-            glfwSwapBuffers(SphereWindow);
-         }
-         glfwMakeContextCurrent(NULL);
+   if (PauseFlag) {
+      glutSetWindow(CamWindow);
+      CamRenderExec();
+      glutSwapBuffers();
+      if (MapWindowExists) {
+         glutSetWindow(MapWindow);
+         DrawMap();
+         glutSwapBuffers();
       }
-      else {
-         POV.w[0] = 0.0;
-         POV.w[1] = 0.0;
-         POV.w[2] = 0.0;
-         Done     = SimStep();
+      if (OrreryWindowExists) {
+         glutSetWindow(OrreryWindow);
+         DrawOrrery();
+         glutSwapBuffers();
+      }
+      if (SphereWindowExists) {
+         glutSetWindow(SphereWindow);
+         DrawUnitSphere();
+         glutSwapBuffers();
+      }
+
+      glutPostRedisplay();
+   }
+   else {
+      POV.w[0] = 0.0;
+      POV.w[1] = 0.0;
+      POV.w[2] = 0.0;
+      if (TimerHasExpired) {
+         TimerHasExpired = 0;
+         glutTimerFunc(TimerDuration, TimerHandler, 0);
+         Done = SimStep();
          if (GLOutFlag) {
-            glfwMakeContextCurrent(CamWindow);
+            glutSetWindow(CamWindow);
             CamRenderExec();
-            glfwSwapBuffers(CamWindow);
+            glutSwapBuffers();
             if (MapWindowExists) {
-               glfwMakeContextCurrent(MapWindow);
+               glutSetWindow(MapWindow);
                DrawMap();
-               glfwSwapBuffers(MapWindow);
+               glutSwapBuffers();
             }
             if (OrreryWindowExists) {
-               glfwMakeContextCurrent(OrreryWindow);
+               glutSetWindow(OrreryWindow);
                DrawOrrery();
-               glfwSwapBuffers(OrreryWindow);
+               glutSwapBuffers();
             }
             if (SphereWindowExists) {
-               glfwMakeContextCurrent(SphereWindow);
+               glutSetWindow(SphereWindow);
                DrawUnitSphere();
-               glfwSwapBuffers(SphereWindow);
+               glutSwapBuffers();
             }
+
+            glutPostRedisplay();
             if (CaptureCam) {
                CamFrame++;
                sprintf(CamFileName, "CamFrame%05ld.ppm", CamFrame);
-               glfwMakeContextCurrent(CamWindow);
+               glutSetWindow(CamWindow);
                CaptureScreenToPpm("./Screenshots/", CamFileName, CamHeight,
                                   CamWidth);
                printf("Captured Cam Frame %ld\n", CamFrame);
                if (CamFrame > MaxCamFrame)
                   CamFrame = 0;
             }
-            glfwMakeContextCurrent(NULL);
          }
       }
-
-      glfwPollEvents();
    }
-   exit(0);
+
+   if (Done)
+      exit(0);
 }
 /**********************************************************************/
-void GlfwErrorHandler(int error, const char *description)
-{
-   fprintf(stderr, "GLFW Error: %s\n", description);
-}
-/**********************************************************************/
-void KeyHandler(GLFWwindow *Window, int key, int scancode, int action, int mods)
+/* Backspace = 0x08, Tab = 0x09, Line Feed = 0x0A */
+/* Carriage Return = 0x0D, Esc = 0x27, Delete = 0x7F */
+void AsciiKeyHandler(unsigned char CharCode, int x, int y)
 {
 
    static long Refresh = FALSE;
+   int ShiftKey;
 
-   if (action == GLFW_PRESS) {
-      switch (key) {
-         case GLFW_KEY_Q:
+   /* Check for GLUT_ACTIVE_SHIFT, GLUT_ACTIVE_CTRL, GLUT_ACTIVE_ALT */
+   ShiftKey = glutGetModifiers();
+
+   if (ShiftKey & GLUT_ACTIVE_CTRL) {
+      switch (CharCode) {
+         case 'q':
             exit(0);
             break;
-         case GLFW_KEY_P:
+      }
+   }
+   else {
+      switch (CharCode) {
+         case 'q':
+            exit(0);
+            break;
+         case 'p':
             if (PauseFlag)
                PauseFlag = FALSE;
             else
                PauseFlag = TRUE;
             break;
-         case GLFW_KEY_C:
+         case 'c':
             if (CaptureCam)
                CaptureCam = FALSE;
             else {
@@ -143,76 +159,81 @@ void KeyHandler(GLFWwindow *Window, int key, int scancode, int action, int mods)
                CamFrame   = 0;
             }
             break;
-         case GLFW_KEY_SPACE:
+         case ' ':
             if (ShowHUD)
                ShowHUD = 0;
             else
                ShowHUD = 1;
             break;
-         case GLFW_KEY_R:
+         case 'r':
             break;
-         case GLFW_KEY_W:
+         case 'w':
             if (ShowWatermark)
                ShowWatermark = 0;
             else
                ShowWatermark = 1;
-         case GLFW_KEY_UP:
-            break;
-         case GLFW_KEY_DOWN:
-            break;
-         case GLFW_KEY_LEFT:
-            POV.Angle *= 0.625;
-            if (POV.Angle < 1.0)
-               POV.Angle = 1.0;
-            SetupViewVolume(CamWidth, CamHeight);
-            break;
-         case GLFW_KEY_RIGHT:
-            POV.Angle *= 1.6;
-            if (POV.Angle > 60.0)
-               POV.Angle = 60.0;
-            SetupViewVolume(CamWidth, CamHeight);
-            break;
-         case GLFW_KEY_PAGE_UP:
-            break;
-         case GLFW_KEY_PAGE_DOWN:
-            break;
-         case GLFW_KEY_HOME:
-            break;
-         case GLFW_KEY_END:
-            break;
-         case GLFW_KEY_INSERT:
-            break;
-         case GLFW_KEY_F1:
-            glfwMakeContextCurrent(CamWindow);
-            CaptureScreenToPpm("./Screenshots/", "CamSnap.ppm", CamHeight,
-                               CamWidth);
-            break;
-         case GLFW_KEY_F2:
-            if (MapWindowExists) {
-               glfwMakeContextCurrent(MapWindow);
-               CaptureScreenToPpm("./Screenshots/", "MapSnap.ppm", MapHeight,
-                                  MapWidth);
-            }
-            break;
-      }
-
-      if (Refresh) {
-         Refresh = FALSE;
-         SetPovOrientation();
       }
    }
+
+   if (Refresh) {
+      Refresh = FALSE;
+      SetPovOrientation();
+   }
 }
-/******************************************************************************/
-void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action, int Mods)
+/**********************************************************************/
+void SpecialKeyHandler(int key, int x, int y)
+{
+
+   switch (key) {
+      case GLUT_KEY_UP:
+         break;
+      case GLUT_KEY_DOWN:
+         break;
+      case GLUT_KEY_LEFT:
+         POV.Angle *= 0.625;
+         if (POV.Angle < 1.0)
+            POV.Angle = 1.0;
+         SetupViewVolume(CamWidth, CamHeight);
+         break;
+      case GLUT_KEY_RIGHT:
+         POV.Angle *= 1.6;
+         if (POV.Angle > 60.0)
+            POV.Angle = 60.0;
+         SetupViewVolume(CamWidth, CamHeight);
+         break;
+      case GLUT_KEY_PAGE_UP:
+         break;
+      case GLUT_KEY_PAGE_DOWN:
+         break;
+      case GLUT_KEY_HOME:
+         break;
+      case GLUT_KEY_END:
+         break;
+      case GLUT_KEY_INSERT:
+         break;
+      case GLUT_KEY_F1:
+         glutSetWindow(CamWindow);
+         CaptureScreenToPpm("./Screenshots/", "CamSnap.ppm", CamHeight,
+                            CamWidth);
+         break;
+      case GLUT_KEY_F2:
+         if (MapWindowExists) {
+            glutSetWindow(MapWindow);
+            CaptureScreenToPpm("./Screenshots/", "MapSnap.ppm", MapHeight,
+                               MapWidth);
+         }
+         break;
+   }
+}
+/**********************************************************************/
+void CamMouseButtonHandler(int Button, int State, int x, int y)
 {
    static long Refresh = FALSE;
    long Pick, i;
-   double x, y;
 
    /* printf("Mouse Button Event\n"); */
-   if (Button == GLFW_MOUSE_BUTTON_1) {
-      if (Action == GLFW_PRESS) {
-         glfwGetCursorPos(CamWindow, &x, &y);
+   if (Button == GLUT_LEFT_BUTTON) {
+      if (State == GLUT_DOWN) {
          if (x >= PovWidget.xmin && x <= PovWidget.xmax &&
              y >= PovWidget.ymin && y <= PovWidget.ymax) {
             /* POV Widget */
@@ -503,18 +524,16 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action, int Mods)
             else
                PausedByMouse = 0;
             PauseFlag   = 1;
-            MouseDown   = 1;
             MouseClickX = x;
             MouseClickY = y;
          }
          /* printf("Mouse Down\n"); */
       }
-      else { /* UP */
+      else { /* GLUT_UP */
          /* printf("Mouse Up\n"); */
          if (PausedByMouse)
             PauseFlag = 0;
          PausedByMouse = 0;
-         MouseDown     = 0;
          POV.w[1]      = 0.0;
          POV.w[0]      = 0.0;
       }
@@ -526,17 +545,18 @@ void CamMouseButtonHandler(GLFWwindow *Window, int Button, int Action, int Mods)
    }
 }
 /**********************************************************************/
-void CamMouseMotionHandler(GLFWwindow *Window, double x, double y)
+void CamMouseActiveMotionHandler(int x, int y)
 {
-   if (MouseDown && POV.Mode == TRACK_HOST) {
-      POV.w[1] = MouseScaleFactor * (x - MouseClickX);
-      POV.w[0] = MouseScaleFactor * (y - MouseClickY);
+   if (POV.Mode == TRACK_HOST) {
+      POV.w[1] = MouseScaleFactor * (double)(x - MouseClickX);
+      POV.w[0] = MouseScaleFactor * (double)(y - MouseClickY);
       POV.w[2] = 0.0;
    }
 }
 /**********************************************************************/
-void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
-                              int Mods)
+void CamMousePassiveMotionHandler(int x, int y) {}
+/**********************************************************************/
+void OrreryMouseButtonHandler(int Button, int State, int x, int y)
 {
    struct SpotType *S;
    long i, j, Pick;
@@ -547,14 +567,12 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
    struct LagrangePointType *LP;
    struct OrreryPOVType *O;
    long Done;
-   double x, y;
 
    O = &Orrery;
 
    /* printf("Mouse Button Event\n"); */
-   if (Button == GLFW_MOUSE_BUTTON_1) {
-      if (Action == GLFW_PRESS) {
-         glfwGetCursorPos(OrreryWindow, &x, &y);
+   if (Button == GLUT_LEFT_BUTTON) {
+      if (State == GLUT_DOWN) {
          /* Orrery Widget */
          if (x >= OrreryWidget.xmin && x <= OrreryWidget.xmax &&
              y >= OrreryWidget.ymin && y <= OrreryWidget.ymax) {
@@ -733,18 +751,20 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
    }
 }
 /**********************************************************************/
-void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
-                              int Mods)
+void OrreryMouseActiveMotionHandler(int x, int y) {}
+/**********************************************************************/
+void OrreryMousePassiveMotionHandler(int x, int y) {}
+/**********************************************************************/
+void SphereMouseButtonHandler(int Button, int State, int x, int y)
 {
    struct SpotType *S;
    struct WidgetType *W;
    long i, Pick;
-   double x, y;
 
-   if (Button == GLFW_MOUSE_BUTTON_1) {
-      if (Action == GLFW_PRESS) {
-         glfwGetCursorPos(SphereWindow, &x, &y);
-         y = SphereWindowHeight - y; /* Flip vertically */
+   y = SphereWindowHeight - y; /* Flip vertically */
+
+   if (Button == GLUT_LEFT_BUTTON) {
+      if (State == GLUT_DOWN) {
 
          /* Center Widget */
          W = &CenterWidget;
@@ -901,40 +921,33 @@ void SphereMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
    }
 }
 /**********************************************************************/
-void FrameReshape(GLFWwindow *Window, int width, int height)
+void CamReshapeHandler(int width, int height)
 {
-   glfwMakeContextCurrent(Window);
-   glViewport(0, 0, width, height);
-}
-/**********************************************************************/
-void CamReshape(GLFWwindow *Window, int width, int height)
-{
-   glfwMakeContextCurrent(Window);
    CamWidth  = width;
    CamHeight = height;
-   SetupViewVolume(width, height);
+   SetupViewVolume(CamWidth, CamHeight);
 }
 /**********************************************************************/
-void MapReshape(GLFWwindow *Window, int width, int height)
+void MapReshapeHandler(int width, int height)
 {
-   glfwMakeContextCurrent(Window);
    MapWidth  = width;
    MapHeight = height;
-   glfwSetWindowSize(MapWindow, width, height);
+   glutReshapeWindow(width, height);
 }
 /**********************************************************************/
-void OrreryReshape(GLFWwindow *Window, int width, int height)
+void OrreryReshapeHandler(int width, int height)
 {
    struct OrreryPOVType *O;
    O            = &Orrery;
    OrreryWidth  = width;
    OrreryHeight = height;
-   glfwSetWindowSize(OrreryWindow, width, height);
-   InitOrreryWidget();
+   glutReshapeWindow(width, height);
+   glViewport(0, 0, width, height);
+   ReinitOrreryWidget();
    O->Radius = ((double)OrreryWidth) / (2.0 * 80.0) * O->Scale[O->Zoom];
 }
 /**********************************************************************/
-void SphereReshape(GLFWwindow *Window, int width, int height)
+void SphereReshapeHandler(int width, int height)
 {
    double ymin;
 
@@ -946,7 +959,7 @@ void SphereReshape(GLFWwindow *Window, int width, int height)
    SphereWindowHeight =
        SphereWindowWidth / 2 + 16 * (NumSphereWindowMenuLines + 2);
 
-   glfwSetWindowSize(SphereWindow, SphereWindowWidth, SphereWindowHeight);
+   glutReshapeWindow(SphereWindowWidth, SphereWindowHeight);
 
    glMatrixMode(GL_PROJECTION);
    glLoadIdentity();
@@ -956,16 +969,17 @@ void SphereReshape(GLFWwindow *Window, int width, int height)
    gluOrtho2D(180.0, -180.0, ymin, 90.0);
    glMatrixMode(GL_MODELVIEW);
 
-   InitSphereWidgets();
+   ReinitSphereWidgets();
 }
 /*********************************************************************/
 void InitCamWindow(void)
 {
+   int GlutParm;
 
-#ifdef __APPLE__
-   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-#endif
-   CamWindow = glfwCreateWindow(CamWidth, CamHeight, CamTitle, NULL, NULL);
+   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+   // glutInitDisplayString("rgba double depth hidpi");
+   glutInitWindowSize(CamWidth, CamHeight);
+   CamWindow = glutCreateWindow(CamTitle);
 #if (defined(GLEW_BUILD) || defined(GLEW_STATIC))
    if (GLEW_OK != glewInit()) {
       fprintf(stderr, "glew failed to initialize in InitCamWindow\n");
@@ -973,10 +987,8 @@ void InitCamWindow(void)
    }
 #endif
 
-   glfwMakeContextCurrent(CamWindow);
-   glfwSwapInterval(1); /* Vsync */
-   glfwSetWindowPos(CamWindow, 0, 30);
-   glViewport(0, 0, CamWidth, CamHeight);
+   glutSetWindow(CamWindow);
+   glutPositionWindow(0, 30);
 
    /* .. Set GL state variables */
    glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -1000,11 +1012,15 @@ void InitCamWindow(void)
    glEnable(GL_NORMALIZE);
 
    /* .. Set Callback Functions */
-   glfwSetMouseButtonCallback(CamWindow, CamMouseButtonHandler);
-   glfwSetCursorPosCallback(CamWindow, CamMouseMotionHandler);
-   glfwSetKeyCallback(CamWindow, KeyHandler);
-   glfwSetFramebufferSizeCallback(CamWindow, FrameReshape);
-   glfwSetWindowSizeCallback(CamWindow, CamReshape);
+   glutDisplayFunc(CamRenderExec);
+   glutIdleFunc(Idle);
+   glutMouseFunc(CamMouseButtonHandler);
+   glutMotionFunc(CamMouseActiveMotionHandler);
+   glutPassiveMotionFunc(CamMousePassiveMotionHandler);
+   glutKeyboardFunc(AsciiKeyHandler);
+   glutSpecialFunc(SpecialKeyHandler);
+   glutReshapeFunc(CamReshapeHandler);
+   /*glutSetCursor(GLUT_CURSOR_INHERIT);*/
 
    /* .. Set up view volume */
    POV.Near    = 1.0;
@@ -1038,6 +1054,15 @@ void InitCamWindow(void)
    BannerColor[2] = 0.4;
    BannerColor[3] = 1.0;
 
+   GlutParm = glutGet(GLUT_WINDOW_WIDTH);
+   printf("Cam Window Width = %d\n", GlutParm);
+   GlutParm = glutGet(GLUT_WINDOW_HEIGHT);
+   printf("Cam Window Height = %d\n", GlutParm);
+   GlutParm = glutGet(GLUT_SCREEN_WIDTH);
+   printf("Cam Screen Width = %d\n", GlutParm);
+   GlutParm = glutGet(GLUT_SCREEN_HEIGHT);
+   printf("Cam Screen Height = %d\n", GlutParm);
+
    printf("Done Initializing Cam Window\n");
 }
 /*********************************************************************/
@@ -1050,17 +1075,16 @@ void InitMapWindow(void)
    GLuint IceballMapTexTag;
    GLuint Iceball2MapTexTag;
 
-#ifdef __APPLE__
-   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-#endif
-   MapWindow = glfwCreateWindow(MapWidth, MapHeight, MapTitle, NULL, NULL);
-   glfwMakeContextCurrent(MapWindow);
-   glfwSetWindowPos(MapWindow, CamWidth, 30);
+   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+   glutInitWindowSize(MapWidth, MapHeight);
+   MapWindow = glutCreateWindow(MapTitle);
+   glutSetWindow(MapWindow);
+   glutPositionWindow(CamWidth, 30);
 
    /* .. Set Callback Functions */
-   glfwSetKeyCallback(MapWindow, KeyHandler);
-   glfwSetFramebufferSizeCallback(MapWindow, FrameReshape);
-   glfwSetWindowSizeCallback(MapWindow, MapReshape);
+   glutDisplayFunc(DrawMap);
+   glutIdleFunc(Idle);
+   glutKeyboardFunc(AsciiKeyHandler);
 
    /* .. Set GL state variables */
    glClearColor(0.0, 0.0, 0.3, 1.0);
@@ -1166,19 +1190,20 @@ void InitOrreryWindow(void)
       strcpy(O->ScaleLabel[i], ScaleLabel[i]);
    }
 
-#ifdef __APPLE__
-   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-#endif
-   OrreryWindow =
-       glfwCreateWindow(OrreryWidth, OrreryHeight, OrreryTitle, NULL, NULL);
-   glfwMakeContextCurrent(OrreryWindow);
-   glfwSetWindowPos(OrreryWindow, CamWidth, MapHeight + 66);
+   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
+   glutInitWindowSize(OrreryWidth, OrreryHeight);
+   OrreryWindow = glutCreateWindow(OrreryTitle);
+   glutSetWindow(OrreryWindow);
+   glutPositionWindow(CamWidth, MapHeight + 66);
 
    /* .. Set Callback Functions */
-   glfwSetMouseButtonCallback(OrreryWindow, OrreryMouseButtonHandler);
-   glfwSetKeyCallback(OrreryWindow, KeyHandler);
-   glfwSetFramebufferSizeCallback(OrreryWindow, FrameReshape);
-   glfwSetWindowSizeCallback(OrreryWindow, OrreryReshape);
+   glutDisplayFunc(DrawOrrery);
+   glutIdleFunc(Idle);
+   glutKeyboardFunc(AsciiKeyHandler);
+   glutMouseFunc(OrreryMouseButtonHandler);
+   glutMotionFunc(OrreryMouseActiveMotionHandler);
+   glutPassiveMotionFunc(OrreryMousePassiveMotionHandler);
+   glutReshapeFunc(OrreryReshapeHandler);
 
    /* .. Set GL state variables */
    glClearColor(0.141, 0.12, 0.27, 1.0);
@@ -1216,6 +1241,7 @@ void InitOrreryWindow(void)
 void InitSphereWindow(void)
 {
    double ymin;
+   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
 
    NumSphereWindowMenuLines = 6;
    /* In addition to changing this, the number of entries in each
@@ -1224,18 +1250,16 @@ void InitSphereWindow(void)
 
    SphereWindowWidth  = 512;
    SphereWindowHeight = 256 + 16 * (NumSphereWindowMenuLines + 2);
-#ifdef __APPLE__
-   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
-#endif
-   SphereWindow = glfwCreateWindow(SphereWindowWidth, SphereWindowHeight,
-                                   "42 Unit Sphere Viewer", NULL, NULL);
-   glfwMakeContextCurrent(SphereWindow);
-   glfwSetWindowPos(SphereWindow, CamWidth + MapWidth, 30);
+   glutInitWindowSize(SphereWindowWidth, SphereWindowHeight);
+   SphereWindow = glutCreateWindow("42 Unit Sphere Viewer");
+   glutSetWindow(SphereWindow);
+   glutPositionWindow(CamWidth + MapWidth, 30);
 
-   glfwSetMouseButtonCallback(SphereWindow, SphereMouseButtonHandler);
-   glfwSetKeyCallback(SphereWindow, KeyHandler);
-   glfwSetFramebufferSizeCallback(SphereWindow, FrameReshape);
-   glfwSetWindowSizeCallback(SphereWindow, SphereReshape);
+   glutDisplayFunc(DrawUnitSphere);
+   glutIdleFunc(Idle);
+   glutKeyboardFunc(AsciiKeyHandler);
+   glutMouseFunc(SphereMouseButtonHandler);
+   glutReshapeFunc(SphereReshapeHandler);
 
    glClearColor(0.0, 0.0, 0.0, 1.0);
    glPolygonMode(GL_FRONT, GL_FILL);
@@ -1291,7 +1315,7 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
    if (sscanf(CmdLine, "%lf CamSnap %s", CmdTime, response) == 2) {
       NewCmdProcessed = TRUE;
       if (DecodeString(response) == TRUE) {
-         glfwMakeContextCurrent(CamWindow);
+         glutSetWindow(CamWindow);
          CaptureScreenToPpm("./Screenshots/", "CamSnap.ppm", CamHeight,
                             CamWidth);
       }
@@ -1300,7 +1324,7 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
    if (sscanf(CmdLine, "%lf MapSnap %s", CmdTime, response) == 2) {
       NewCmdProcessed = TRUE;
       if (DecodeString(response) == TRUE && MapWindowExists) {
-         glfwMakeContextCurrent(MapWindow);
+         glutSetWindow(MapWindow);
          CaptureScreenToPpm("./Screenshots/", "MapSnap.ppm", MapHeight,
                             MapWidth);
       }
@@ -1360,6 +1384,7 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
 
    if (sscanf(CmdLine, "%lf GL Output Step = %lf", CmdTime, &DTOUTGL) == 2) {
       NewCmdProcessed = TRUE;
+      DTOUTGL_RAT     = double2rational(DTOUTGL);
    }
    if (sscanf(CmdLine, "%lf POV CmdRange = %lf", CmdTime, &POV.CmdRange) == 2) {
       NewCmdProcessed = TRUE;
@@ -1403,7 +1428,7 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
    return (NewCmdProcessed);
 }
 /*********************************************************************/
-void HandoffToGui(int argc, char **argv)
+int HandoffToGui(int argc, char **argv)
 {
    PausedByMouse = 0;
 
@@ -1413,27 +1438,29 @@ void HandoffToGui(int argc, char **argv)
    SetPovOrientation();
    UpdatePOV();
 
-   printf("Initializing glfw\n");
+   printf("Initializing GLUT\n");
    glutInit(&argc, argv);
-   glfwSetErrorCallback(GlfwErrorHandler);
-   if (!glfwInit()) {
-      fprintf(stderr, "Error initializing glfw\n");
-      exit(EXIT_FAILURE);
-   }
    printf("Initializing Cam Window\n");
    InitCamWindow();
-   if (MapWindowExists)
+   if (MapWindowExists) {
       InitMapWindow();
-   if (OrreryWindowExists)
+   }
+   if (OrreryWindowExists) {
       InitOrreryWindow();
-   if (SphereWindowExists)
+   }
+   if (SphereWindowExists) {
       InitSphereWindow();
+   }
 
    /* Comment out when OpenGL installation is stable */
    /* CheckOpenGLProperties(); */
 
    /* .. Dive into Event Loop */
-   MainLoop();
+   TimerDuration   = 0;
+   TimerHasExpired = 1;
+   glutMainLoop();
+
+   return (0);
 }
 /* #ifdef __cplusplus
 ** }

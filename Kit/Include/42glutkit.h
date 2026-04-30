@@ -11,29 +11,24 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#ifndef __42GLUT_H__
-#define __42GLUT_H__
+#ifndef __42GLUTKIT_H__
+#define __42GLUTKIT_H__
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-/*
-** #ifdef __cplusplus
-** namespace _42 {
-** using namespace Kit;
-** #endif
-*/
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 EXTERN GLuint CamWindow;
 EXTERN GLuint MapWindow;
 EXTERN GLuint OrreryWindow;
 EXTERN GLuint SphereWindow;
 
-/*
-** #ifdef __cplusplus
-** }
-** #endif
-*/
+#ifdef __cplusplus
+}
+#endif
 
-#endif /* __42GLUT_H__ */
+#endif /* __42GLUTKIT_H__ */

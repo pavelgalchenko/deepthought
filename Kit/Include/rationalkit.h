@@ -11,29 +11,24 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#ifndef __42GLFW_H__
-#define __42GLFW_H__
+#ifndef __RATIONALKIT_H__
+#define __RATIONALKIT_H__
 
-#include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-/*
-** #ifdef __cplusplus
-** namespace _42 {
-** using namespace Kit;
-** #endif
-*/
+// represents a number using the form "whole + p/q"
+typedef struct Rational {
+   signed long whole;
+   signed long p;
+   signed long q;
+} Rational;
 
-EXTERN GLFWwindow *CamWindow;
-EXTERN GLFWwindow *MapWindow;
-EXTERN GLFWwindow *OrreryWindow;
-EXTERN GLFWwindow *SphereWindow;
+Rational IntegerRationalMult(const long mul, const Rational rat);
+Rational RationalDivide(const Rational a, const Rational b);
+Rational double2rational(const double val);
+double rational2double(Rational rat);
+long RationalRoundUp(Rational rat);
+long RationalRoundDown(Rational rat);
 
-/*
-** #ifdef __cplusplus
-** }
-** #endif
-*/
-
-#endif /* __42GLFW_H__ */
+#endif /* __RATIONALKIT_H__ */

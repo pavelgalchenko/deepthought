@@ -113,6 +113,10 @@ EXTERN GLuint MoonMapFragShader, MoonMapShaderProgram;
 EXTERN GLuint AlbedoVtxShader, AlbedoFragShader, AlbedoShaderProgram;
 EXTERN GLuint TexReduceVtxShader, TexReduceFragShader, TexReduceShaderProgram;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void DrawBitmapString(void *font, const char *string);
 void DrawStrokeString(void *font, const char *string);
 GLuint LoadFont8x11(void);
@@ -133,8 +137,10 @@ void RotateL2R(double C[3][3]);
 void RotateR2L(double C[3][3]);
 void MxM4f(float A[16], float B[16], float C[16]);
 void Minv4f(float A[16], float Ai[16]);
-void BuildModelMatrix(double CBN[3][3], double pbn[3], float ModelMatrix[16]);
-void BuildViewMatrix(double CEN[3][3], double pen[3], float ViewMatrix[16]);
+void BuildModelMatrix(const double CBN[3][3], const double pbn[3],
+                      float ModelMatrix[16]);
+void BuildViewMatrix(const double CEN[3][3], const double pen[3],
+                     float ViewMatrix[16]);
 void CaptureScreenToPpm(const char *path, const char *filename, long Nh,
                         long Nw);
 void TexToPpm(const char *path, const char *filename, long Nh, long Nw, long Nb,
@@ -209,6 +215,10 @@ GLuint TextToShader(GLchar *Text, GLuint Type, const char *Name);
 GLuint BuildShaderProgram(GLuint VtxShader, GLuint FragShader,
                           const char *Name);
 void ValidateShaderProgram(GLuint ShaderProgram, const char *Name);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 /*
