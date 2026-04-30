@@ -15,20 +15,25 @@
 #define __RATIONALKIT_H__
 
 #include <stdlib.h>
-#include <string.h>
 
-// represents a number using the form "whole + p/q"
+// represents a number using the form "whole + (num/denom)"
 typedef struct Rational {
    signed long whole;
-   signed long p;
-   signed long q;
+   signed long num;
+   signed long den;
 } Rational;
 
 Rational IntegerRationalMult(const long mul, const Rational rat);
+Rational RationalMult(const Rational a, const Rational b);
 Rational RationalDivide(const Rational a, const Rational b);
+Rational RationalAdd(const Rational a, const Rational b);
+Rational RationalSub(const Rational a, const Rational b);
 Rational double2rational(const double val);
-double rational2double(Rational rat);
-long RationalRoundUp(Rational rat);
-long RationalRoundDown(Rational rat);
+double rational2double(const Rational rat);
+long RationalRoundUp(const Rational rat);
+long RationalRoundDown(const Rational rat);
+int isequal_rational(const Rational a, const Rational b);
+int isless_rational(const Rational a, const Rational b);
+int isgreater_rational(const Rational a, const Rational b);
 
 #endif /* __RATIONALKIT_H__ */

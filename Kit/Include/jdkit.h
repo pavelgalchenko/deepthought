@@ -67,8 +67,9 @@ typedef struct JDType {
    TimeSystem system;
    EpochTT epoch;
    long whole_days;
-   long day_seconds;
-   double frac_second;
+   Rational seconds;
+   // long day_seconds;
+   // double frac_second;
    // TODO: do I want to make day_seconds and frac_sec a combined Rational?
 } JDType;
 

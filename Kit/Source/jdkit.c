@@ -686,20 +686,18 @@ void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
 // returns the number of Julian days from 'jd.epoch' according to 'jd.system'
 double JDToDays(const JDType jd)
 {
-   return (double)jd.whole_days +
-          (jd.day_seconds + jd.frac_second) / sec_per_day;
+   return (double)jd.whole_days + (rational2double(jd.seconds)) / sec_per_day;
 }
 
 JDType JDFromDays(const double days, const TimeSystem system,
                   const EpochTT new_epoch)
 {
-   JDType jd            = {0};
-   jd.epoch             = new_epoch;
-   jd.system            = system;
-   jd.whole_days        = days;
-   const double pod_sec = (days - jd.whole_days) * sec_per_day;
-   jd.day_seconds       = pod_sec;
-   jd.frac_second       = pod_sec - jd.day_seconds;
+   JDType jd               = {0};
+   jd.epoch                = new_epoch;
+   jd.system               = system;
+   jd.whole_days           = days;
+   const Rational part_day = double2rational(days - jd.whole_days);
+   jd.seconds              = IntegerRationalMult(sec_per_day, part_day);
    return jd;
 }
 
@@ -715,8 +713,7 @@ JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch)
 /*  'jd' uses                                                         */
 double JDToSeconds(JDType jd)
 {
-   return ((double)jd.whole_days * sec_per_day + (double)jd.day_seconds +
-           jd.frac_second);
+   return ((double)jd.whole_days * sec_per_day + rational2double(jd.seconds));
 }
 double JDToTime(JDType jd)
 {
@@ -743,151 +740,87 @@ static void _error_epoch_system(const JDType a, const JDType b,
    }
 }
 
+// ensure everything in JDType is reduced, and that if whole_days < 0, then so
+// are seconds.whole and seconds.num, and vice-versa
+static void _reduce(JDType *const jd)
+{
+   jd->whole_days    += jd->seconds.whole / sec_per_day;
+   jd->seconds.whole %= sec_per_day;
+   if (jd->whole_days > 0 && jd->seconds.whole < 0) {
+      jd->seconds.whole += sec_per_day;
+      jd->whole_days--;
+   }
+   else if (jd->whole_days < 0 && jd->seconds.whole > 0) {
+      jd->seconds.whole -= sec_per_day;
+      jd->whole_days++;
+   }
+   if (jd->seconds.whole > 0 && jd->seconds.num < 0) {
+      jd->seconds.num += jd->seconds.den;
+      jd->seconds.whole--;
+   }
+   else if (jd->seconds.whole < 0 && jd->seconds.num > 0) {
+      jd->seconds.num -= jd->seconds.den;
+      jd->seconds.whole++;
+   }
+}
+
 JDType JDAdd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "JDAdd");
-   JDType jdout       = a;
-   jdout.whole_days  += b.whole_days;
-   jdout.day_seconds += b.day_seconds;
-   jdout.frac_second += b.frac_second;
-   while (jdout.frac_second >= 1.0) {
-      jdout.frac_second -= 1.0;
-      jdout.day_seconds++;
-   }
-   while (jdout.day_seconds > sec_per_day) {
-      jdout.day_seconds -= sec_per_day;
-      jdout.whole_days++;
-   }
+   JDType jdout      = a;
+   jdout.whole_days += b.whole_days;
+   jdout.seconds     = RationalAdd(jdout.seconds, b.seconds);
+   _reduce(&jdout);
    return jdout;
 }
 JDType JDAddDays(const JDType a, const double b)
 {
-   JDType jdout      = a;
-   long b_l          = b;
-   double tmp        = (b - b_l) * sec_per_day;
-   long b_sec        = tmp;
-   double b_frac_sec = tmp - b_sec;
-
-   jdout.whole_days  += b_l;
-   jdout.day_seconds += b_sec;
-   jdout.frac_second += b_frac_sec;
-   while (jdout.frac_second >= 1.0) {
-      jdout.frac_second -= 1.0;
-      jdout.day_seconds++;
-   }
-   while (jdout.day_seconds > sec_per_day) {
-      jdout.day_seconds -= sec_per_day;
-      jdout.whole_days++;
-   }
-   return jdout;
+   JDType jdb = JDFromDays(b, a.system, a.epoch);
+   return JDAdd(a, jdb);
 }
 JDType JDAddSeconds(const JDType a, const double b)
 {
-   JDType jdout = a;
-   double dummy;
-   const double b_frac_sec = modf(b, &dummy);
-   const long b_l          = dummy / sec_per_day;
-   const long b_sec        = ((long)dummy) % sec_per_day;
-
-   jdout.whole_days  += b_l;
-   jdout.day_seconds += b_sec;
-   jdout.frac_second += b_frac_sec;
-   while (jdout.frac_second >= 1.0) {
-      jdout.frac_second -= 1.0;
-      jdout.day_seconds++;
-   }
-   while (jdout.day_seconds > sec_per_day) {
-      jdout.day_seconds -= sec_per_day;
-      jdout.whole_days++;
-   }
-   return jdout;
+   JDType jdb     = a;
+   jdb.whole_days = b / sec_per_day;
+   jdb.seconds    = double2rational(fmod(b, sec_per_day));
+   return JDAdd(a, jdb);
 }
 /**********************************************************************/
 /*  Add (mul * b) seconds to the Julian Date in jd using an integer   */
 /*  arithmetic multiplication algorithm                               */
 JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat)
 {
-   JDType jdout = jd;
+   JDType jdb = jd;
 
-   signed long whole;
-   Rational out = IntegerRationalMult(mul, rat);
+   Rational seconds = IntegerRationalMult(mul, rat);
+   jdb.whole_days   = seconds.whole / sec_per_day;
+   seconds.whole    = seconds.whole % sec_per_day;
+   jdb.seconds      = seconds;
 
-   const long b_l   = out.whole / sec_per_day;
-   const long b_sec = out.whole % sec_per_day;
-   out.whole        = 0;
-
-   jdout.whole_days  += b_l;
-   jdout.day_seconds += b_sec;
-   jdout.frac_second += rational2double(out);
-   while (jdout.frac_second >= 1.0) {
-      jdout.frac_second -= 1.0;
-      jdout.day_seconds++;
-   }
-   while (jdout.day_seconds > sec_per_day) {
-      jdout.day_seconds -= sec_per_day;
-      jdout.whole_days++;
-   }
-   return jdout;
+   return JDAdd(jd, jdb);
 }
 
 JDType JDSub(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "JDSub");
-   JDType jdout       = a;
-   jdout.whole_days  -= b.whole_days;
-   jdout.day_seconds -= b.day_seconds;
-   jdout.frac_second -= b.frac_second;
-   while (jdout.frac_second < 0) {
-      jdout.frac_second += 1.0;
-      jdout.day_seconds--;
-   }
-   while (jdout.day_seconds < 0) {
-      jdout.day_seconds += sec_per_day;
-      jdout.whole_days--;
-   }
+
+   JDType jdout      = a;
+   jdout.whole_days -= b.whole_days;
+   jdout.seconds     = RationalSub(jdout.seconds, b.seconds);
+   _reduce(&jdout);
    return jdout;
 }
 JDType JDSubDays(const JDType a, const double b)
 {
-   JDType jdout      = a;
-   long b_l          = b;
-   double tmp        = (b - b_l) * sec_per_day;
-   long b_sec        = tmp;
-   double b_frac_sec = tmp - b_sec;
-
-   jdout.whole_days  -= b_l;
-   jdout.day_seconds -= b_sec;
-   jdout.frac_second -= b_frac_sec;
-   while (jdout.frac_second < 0) {
-      jdout.frac_second += 1.0;
-      jdout.day_seconds--;
-   }
-   while (jdout.day_seconds < 0) {
-      jdout.day_seconds += sec_per_day;
-      jdout.whole_days--;
-   }
-   return jdout;
+   JDType jdb = JDFromDays(b, a.system, a.epoch);
+   return JDSub(a, jdb);
 }
 JDType JDSubSeconds(const JDType a, const double b)
 {
-   JDType jdout = a;
-   double dummy;
-   const double b_frac_sec = modf(b, &dummy);
-   const long b_l          = dummy / sec_per_day;
-   const long b_sec        = ((long)dummy) % sec_per_day;
-
-   jdout.whole_days  -= b_l;
-   jdout.day_seconds -= b_sec;
-   jdout.frac_second -= b_frac_sec;
-   while (jdout.frac_second < 0) {
-      jdout.frac_second += 1.0;
-      jdout.day_seconds--;
-   }
-   while (jdout.day_seconds < 0) {
-      jdout.day_seconds += sec_per_day;
-      jdout.whole_days--;
-   }
-   return jdout;
+   JDType jdb     = a;
+   jdb.whole_days = b / sec_per_day;
+   jdb.seconds    = double2rational(b - (jdb.whole_days * sec_per_day));
+   return JDSub(a, jdb);
 }
 
 double JDAddToDays(const JDType a, const JDType b)
@@ -902,19 +835,16 @@ double JDSubToDays(const JDType a, const JDType b)
 int isequal_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isequal_jd");
-   return ((a.whole_days == b.whole_days) && (a.day_seconds == b.day_seconds) &&
-           (a.frac_second == b.frac_second));
+   return ((a.whole_days == b.whole_days) &&
+           isequal_rational(a.seconds, b.seconds));
 }
 int isless_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isless_jd");
    const int is_day_less = a.whole_days < b.whole_days;
    const int is_sec_less =
-       (a.whole_days == b.whole_days) && (a.day_seconds < b.day_seconds);
-   const int is_frac_less = (a.whole_days == b.whole_days) &&
-                            (a.day_seconds == b.day_seconds) &&
-                            (a.frac_second < b.frac_second);
-   return is_day_less || is_sec_less || is_frac_less;
+       (a.whole_days == b.whole_days) && isless_rational(a.seconds, b.seconds);
+   return is_day_less || is_sec_less;
 }
 int islessequal_jd(const JDType a, const JDType b)
 {
@@ -925,12 +855,9 @@ int isgreater_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isgreater_jd");
    const int is_day_greater = a.whole_days > b.whole_days;
-   const int is_sec_greater =
-       (a.whole_days == b.whole_days) && (a.day_seconds > b.day_seconds);
-   const int is_frac_greater = (a.whole_days == b.whole_days) &&
-                               (a.day_seconds == b.day_seconds) &&
-                               (a.frac_second > b.frac_second);
-   return is_day_greater || is_sec_greater || is_frac_greater;
+   const int is_sec_greater = (a.whole_days == b.whole_days) &&
+                              isgreater_rational(a.seconds, b.seconds);
+   return is_day_greater || is_sec_greater;
 }
 int isgreaterequal_jd(const JDType a, const JDType b)
 {

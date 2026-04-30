@@ -20,6 +20,9 @@ option(DEBUG_DATA "Enable outputing model debug data" OFF)
 # Compile enabling residual reporting -DREPORT_RESIUALS=ON
 option(REPORT_RESIDUALS "Enable navigation measurement residual reporting" OFF)
 
+# Ignore long not being smaller than long long -DIGNORE_LONG=TRUE
+option(IGNORE_LONG "Enable navigation measurement residual reporting" FALSE)
+
 # For graphics interface, choose GLUT or GLFW GUI libraries
 # GLUT is well known, but GLFW is better for newer Mac's hires displays
 # -DGLUT_OR_GLFW=GLFW
@@ -67,6 +70,8 @@ target_link_options(42kit BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=undef
 target_compile_options(42kit PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS}>:-Wno-unused-local-typedefs>)
 
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${SHADERS}>:_USE_SHADERS_>)
+
+target_compile_definitions(42kit PRIVATE $<$<BOOL:${IGNORE_LONG}>:_IGNORE_LONG_>)
 
 
 # set_target_properties(42kit PROPERTIES VERSION ${PROJECT_VERSION})
