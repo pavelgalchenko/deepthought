@@ -68,9 +68,6 @@ typedef struct JDType {
    EpochTT epoch;
    long whole_days;
    Rational seconds;
-   // long day_seconds;
-   // double frac_second;
-   // TODO: do I want to make day_seconds and frac_sec a combined Rational?
 } JDType;
 
 double GetLeapSec(const JDType jd);
@@ -82,7 +79,8 @@ void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
 double JDToDays(const JDType jd);
 JDType JDFromDays(const double days, const TimeSystem system,
                   const EpochTT new_epoch);
-JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch);
+JDType JDFromSeconds(const double seconds, const TimeSystem system,
+                     const EpochTT new_epoch);
 double JDToSeconds(JDType jd);
 double JDToTime(JDType jd);
 double JDToDynTime(JDType JD);
@@ -90,10 +88,12 @@ double JDToDynTime(JDType JD);
 JDType JDAdd(const JDType a, const JDType b);
 JDType JDAddDays(const JDType a, const double b);
 JDType JDAddSeconds(const JDType a, const double b);
+JDType JDAddRationalSeconds(const JDType a, const Rational b);
 JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat);
 JDType JDSub(const JDType a, const JDType b);
 JDType JDSubDays(const JDType a, const double b);
 JDType JDSubSeconds(const JDType a, const double b);
+JDType JDSubRationalSeconds(const JDType a, const Rational b);
 double JDAddToDays(const JDType a, const JDType b);
 double JDSubToDays(const JDType a, const JDType b);
 

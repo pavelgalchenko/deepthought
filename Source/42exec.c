@@ -125,7 +125,7 @@ long AdvanceTime(void)
          itime++;
          SimTime = ((double)itime) * DTSIM;
          RealSystemTime(&UTC, DTSIM);
-         JD_TT_MJD = DateToJD(UTC, UTC_TIME, GMAT_MJD_EPOCH);
+         JD_TT_MJD = Date2JD(UTC, GMAT_MJD_EPOCH);
          CivilTime = JDToTime(JD_TT_MJD);
          ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD);
          JD_TDB_MJD = JD_TT_MJD;
@@ -143,7 +143,7 @@ long AdvanceTime(void)
       } break;
       case NOS3_TIME: {
          UTC       = NOS3Time();
-         JD_TT_MJD = DateToJD(UTC, UTC_TIME, GMAT_MJD_EPOCH);
+         JD_TT_MJD = Date2JD(UTC, GMAT_MJD_EPOCH);
          CivilTime = JDToTime(JD_TT_MJD);
          ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD);
          JD_TDB_MJD = JD_TT_MJD;

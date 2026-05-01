@@ -3388,7 +3388,7 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    KalmanFilt(AC, DSM);
-   DSMState->Time = DateToTime(Nav->Date);
+   DSMState->Time = Date2Time(Nav->Date);
    AC->Time       = DSMState->Time;
    // Overwrite data in AC structure with filtered data
    FOR_STATES(state)

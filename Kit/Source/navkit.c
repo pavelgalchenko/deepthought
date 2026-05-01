@@ -230,14 +230,12 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
    const double secPerDay       = 86400.0;
    const double dayperWk        = 7.0;
    const double daysperRollover = 7168.0;
-   const double gpst0J2000 =
-       -7300.5 + (32.184 + 19) / secPerDay; // -7300.499407592695
+   const double gpst0J2000      = -7300.5; // -7300.499407592695
 
-   const double DaysSinceWeek     = gpsSec / secPerDay;
-   const double DaysSinceRollover = DaysSinceWeek + dayperWk * gpsWk;
+   const double DaysSinceRollover = dayperWk * gpsWk;
    const double DaysSinceEpoch =
        DaysSinceRollover + daysperRollover * gpsRollover;
-   return ((DaysSinceEpoch + gpst0J2000) * secPerDay);
+   return ((DaysSinceEpoch + gpst0J2000) * secPerDay) + gpsSec + (32.184 + 19);
 }
 
 /**********************************************************************/
@@ -248,8 +246,9 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
    // TODO: change for spice
    struct WorldType *W = &World[orbCenter];
    double PriMerAng    = 0.0;
-   const double time   = DateToTime(*date);
-   JDType jd           = DateToJD(*date, TT_TIME, J2000_EPOCH);
+   const double time   = Date2Time(*date);
+   JDType jd           = Date2JD(*date, J2000_EPOCH);
+   ChangeSystem(TT_TIME, &jd);
 
    /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
@@ -3070,7 +3069,8 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             MxV(CWN, PosN, PosW);
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
-               JDType jd = DateToJD(Nav->Date, TT_TIME, MJD_EPOCH);
+               JDType jd = Date2JD(Nav->Date, MJD_EPOCH);
+               ChangeSystem(TT_TIME, &jd);
                getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
                AtmoDensity =
                    NRLMSISE00(Nav->Date.Year, Nav->Date.doy, Nav->Date.Hour,

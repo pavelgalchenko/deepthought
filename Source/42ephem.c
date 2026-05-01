@@ -420,7 +420,7 @@ void SplineToPosVel(struct OrbitType *O)
              &NodeDate.Minute, &NodeDate.Second, &O->NodePos[3][0],
              &O->NodePos[3][1], &O->NodePos[3][2], &O->NodeVel[3][0],
              &O->NodeVel[3][1], &O->NodeVel[3][2], &newline);
-      O->NodeDynTime[3]  = DateToTime(NodeDate);
+      O->NodeDynTime[3]  = Date2Time(NodeDate);
       O->NodeDynTime[3] += DynTime - CivilTime; /* Adjust from UTC to TT */
       for (j = 0; j < 3; j++) {
          O->NodePos[3][j] *= 1000.0;

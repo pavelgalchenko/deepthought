@@ -92,7 +92,7 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - CCSDS_EPOCH);
+               *day = (long)(_J1900_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -212,7 +212,7 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - CCSDS_EPOCH);
+               *day = (long)(_GD_JD_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
@@ -243,7 +243,7 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - CCSDS_EPOCH);
+               *day = (long)(_TCB_TDB_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
@@ -294,9 +294,11 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       *part_of_day *= -1.0;
 }
 
-#define sec_per_day   (86400)
-#define _jd_tt2tai(x) JDSubSeconds((x), (32.184))
-#define _jd_tai2tt(x) JDAddSeconds((x), (32.184))
+#define sec_per_day (86400)
+#define _jd_tt2tai(x)                                                          \
+   JDSubRationalSeconds((x), (Rational){.whole = 32, .num = 184, .den = 1000})
+#define _jd_tai2tt(x)                                                          \
+   JDAddRationalSeconds((x), (Rational){.whole = 32, .num = 184, .den = 1000})
 
 /**********************************************************************/
 //  time system low level conversion helpers
@@ -312,7 +314,7 @@ static JDType _jd_tcb2tdb(const JDType tcb_jd)
    exit(EXIT_FAILURE);
 }
 static JDType _jdtt(JDType);
-static JDType jd_tdb2tcb(JDType tdb_jd)
+static JDType _jd_tdb2tcb(JDType tdb_jd)
 {
    JDType jd_tt_conv = _jdtt(tdb_jd);
    ChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
@@ -451,7 +453,7 @@ static JDType _jdtcb(const JDType jd)
       case TT_TIME:
          jd_out = _jd_tt2tdb(jd_out);
       case TDB_TIME:
-         jd_out = jd_tdb2tcb(jd_out);
+         jd_out = _jd_tdb2tcb(jd_out);
          break;
       case TCB_TIME:
          break;
@@ -700,12 +702,17 @@ JDType JDFromDays(const double days, const TimeSystem system,
    jd.seconds              = IntegerRationalMult(sec_per_day, part_day);
    return jd;
 }
-
 /**********************************************************************/
 /*  Converts seconds since 'epoch' in 'system' to a JDType format     */
-JDType TimeToJD(double SecSince, TimeSystem system, EpochTT epoch)
+JDType JDFromSeconds(const double seconds, const TimeSystem system,
+                     const EpochTT new_epoch)
 {
-   return JDFromDays((double)SecSince / sec_per_day, system, epoch);
+   JDType jd     = {0};
+   jd.epoch      = new_epoch;
+   jd.system     = system;
+   jd.whole_days = seconds / sec_per_day;
+   jd.seconds    = double2rational(fmod(seconds, sec_per_day));
+   return jd;
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch                          */
@@ -780,9 +787,16 @@ JDType JDAddDays(const JDType a, const double b)
 }
 JDType JDAddSeconds(const JDType a, const double b)
 {
-   JDType jdb     = a;
-   jdb.whole_days = b / sec_per_day;
-   jdb.seconds    = double2rational(fmod(b, sec_per_day));
+   JDType jdb = JDFromSeconds(b, a.system, a.epoch);
+   return JDAdd(a, jdb);
+}
+JDType JDAddRationalSeconds(const JDType a, const Rational b)
+{
+   JDType jdb  = {0};
+   jdb.system  = a.system;
+   jdb.epoch   = a.epoch;
+   jdb.seconds = b;
+   _reduce(&jdb);
    return JDAdd(a, jdb);
 }
 /**********************************************************************/
@@ -817,9 +831,16 @@ JDType JDSubDays(const JDType a, const double b)
 }
 JDType JDSubSeconds(const JDType a, const double b)
 {
-   JDType jdb     = a;
-   jdb.whole_days = b / sec_per_day;
-   jdb.seconds    = double2rational(b - (jdb.whole_days * sec_per_day));
+   JDType jdb = JDFromSeconds(b, a.system, a.epoch);
+   return JDSub(a, jdb);
+}
+JDType JDSubRationalSeconds(const JDType a, const Rational b)
+{
+   JDType jdb  = {0};
+   jdb.system  = a.system;
+   jdb.epoch   = a.epoch;
+   jdb.seconds = b;
+   _reduce(&jdb);
    return JDSub(a, jdb);
 }
 

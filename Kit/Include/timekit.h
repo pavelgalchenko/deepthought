@@ -105,11 +105,12 @@ DateType DateTypeInit(const TimeSystem system, const long Year,
 CCSDSTime date2ccsds(const DateType date);
 DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
 
+double Date2Time(const DateType date);
 double DateToTime(const DateType date);
 JDType DateToJD(const DateType date, const TimeSystem system,
                 const EpochTT epoch);
+JDType Date2JD(const DateType date, const EpochTT epoch);
 CCSDSTime TimeToCCSDS(double UTC);
-DateType CCSDSToDate(CCSDSTime ccsds_time);
 DateType JDToDate(const JDType jd, const TimeSystem system);
 DateType TimeToDate(double Time, TimeSystem system, double LSB);
 long MD2DOY(long Year, long Month, long Day);

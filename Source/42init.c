@@ -946,7 +946,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
 
    if (Success) {
       /* Epoch is in UTC */
-      Epoch_JD  = DateToJD(EpochDate, TT_TIME, J2000_EPOCH);
+      Epoch_JD = Date2JD(EpochDate, J2000_EPOCH);
+      ChangeSystem(TT_TIME, &Epoch_JD);
       O->Epoch  = JDToDynTime(Epoch_JD);
       O->Regime = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
@@ -1259,8 +1260,8 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i][0], &O->NodePos[i][1],
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
-                        JDType node_jd =
-                            DateToJD(NodeDate, TT_TIME, J2000_EPOCH);
+                        JDType node_jd = Date2JD(NodeDate, J2000_EPOCH);
+                        ChangeSystem(TT_TIME, &node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -1454,8 +1455,8 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i][0], &O->NodePos[i][1],
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
-                        JDType node_jd =
-                            DateToJD(NodeDate, TT_TIME, J2000_EPOCH);
+                        JDType node_jd = Date2JD(NodeDate, J2000_EPOCH);
+                        ChangeSystem(TT_TIME, &node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -5153,7 +5154,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 
             M->PriMerAngJ2000 = primerang_j2000 * D2R;
 
-            double epoch_j2000_sec = DateToTime(epoch_date);
+            double epoch_j2000_sec = Date2Time(epoch_date);
             E->MeanMotion          = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
             E->Period              = TwoPi / E->MeanMotion;
             E->tp = epoch_j2000_sec - mean_anom * D2R / E->MeanMotion;
@@ -5293,7 +5294,7 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
       fscanf(infile, "%ld %ld %ld %ld %[^\n] %[\n]", &EpochDate.Year,
              &EpochDate.Month, &EpochDate.Day, &EpochDate.Hour, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->anom, junk, &newline);
-      Epoch         = DateToTime(EpochDate);
+      Epoch         = Date2Time(EpochDate);
       E->MeanMotion = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
       E->Period     = TwoPi / E->MeanMotion;
       E->alpha      = 1.0 / E->SMA;
@@ -6627,7 +6628,7 @@ void LoadSchatten(void)
       fscanf(infile, "%ld %ld %lf %lf %lf %lf,%[^\n] %[\n]", &date.Year,
              &date.Month, &SchattenTable[1][i], &SchattenTable[2][i],
              &SchattenTable[3][i], &SchattenTable[4][i], junk, &newline);
-      JDType jd           = DateToJD(date, TT_TIME, GMAT_MJD_EPOCH);
+      JDType jd           = Date2JD(date, GMAT_MJD_EPOCH);
       SchattenTable[0][i] = JDToDays(jd);
    }
    fclose(infile);
@@ -7230,7 +7231,7 @@ void InitSim(int argc, char **argv)
 
    UTC.doy     = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
    SimTime     = 0.0;
-   JD_TT_MJD_0 = DateToJD(UTC, UTC_TIME, J2000_EPOCH);
+   JD_TT_MJD_0 = Date2JD(UTC, J2000_EPOCH);
    CivilTime   = JDToTime(JD_TT_MJD_0);
    ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD_0);
    JD_TT_MJD  = JD_TT_MJD_0;

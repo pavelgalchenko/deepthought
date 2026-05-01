@@ -21,7 +21,7 @@ option(DEBUG_DATA "Enable outputing model debug data" OFF)
 option(REPORT_RESIDUALS "Enable navigation measurement residual reporting" OFF)
 
 # Ignore long not being smaller than long long -DIGNORE_LONG=TRUE
-option(IGNORE_LONG "Enable navigation measurement residual reporting" FALSE)
+option(IGNORE_LONG "Ignore compilation warning that long long is not larger than long in rationalkit." FALSE)
 
 # For graphics interface, choose GLUT or GLFW GUI libraries
 # GLUT is well known, but GLFW is better for newer Mac's hires displays
@@ -72,7 +72,6 @@ target_compile_options(42kit PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPED
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${SHADERS}>:_USE_SHADERS_>)
 
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${IGNORE_LONG}>:_IGNORE_LONG_>)
-
 
 # set_target_properties(42kit PROPERTIES VERSION ${PROJECT_VERSION})
 # set_target_properties(42kit PROPERTIES PUBLIC_HEADER )

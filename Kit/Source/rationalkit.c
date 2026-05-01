@@ -21,17 +21,36 @@
 #define STR2(x) #x
 #define STR(X)  STR2(X)
 
-// Use 'long long int' if its larger than 'long int' or if we have nothing
-// better, otherwise use int128 if we have it
+// Use 'long long int' if its larger than 'long int'. If not use int128 if we
+// have it; fall back on int64 if nothing else
 #if (__SIZEOF_LONG__ < __SIZEOF_LONG_LONG__)
 typedef long long int longlong;
 #define _SIZEOF_LONGLONG_ __SIZEOF_LONG_LONG__
+#define __llabs__(x)      llabs(x)
 #elif __SIZEOF_LONG__ == 8
 typedef __int128_t longlong;
 #define _SIZEOF_LONGLONG_ __SIZEOF_INT128__
+static longlong __llabs__(longlong x)
+{
+   static const __uint128_t UINT128_MAX = (__uint128_t)((longlong)-1L);
+
+   x ^= UINT128_MAX;
+   return x - UINT128_MAX;
+}
 #elif
-typedef __INT64_TYPE__ longlong
+typedef __INT64_TYPE__ longlong;
 #define _SIZEOF_LONGLONG_ 8
+static longlong __llabs__(longlong x)
+{
+   static const __uint64_t UINT64_MAX = (__uint64_t)((longlong)-1L);
+
+   x ^= UINT64_MAX;
+   return x - UINT64_MAX;
+}
+#endif
+
+#ifndef MAX
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #endif
 
 /**********************************************************************/
@@ -63,12 +82,12 @@ static signed long _gcd(long a, long b)
 /*  Algorithm for 128 bit integers                                    */
 static longlong _llgcd(longlong a, longlong b)
 {
-   if (a == 0LL)
+   if (a == 0)
       return b;
-   if (b == 0LL)
+   if (b == 0)
       return a;
-   a = llabs(a);
-   b = llabs(b);
+   a = __llabs__(a);
+   b = __llabs__(b);
    while (b) {
       longlong t = b;
       b          = a % b;
@@ -96,7 +115,7 @@ static signed long _lcm(long a, long b)
 static void _reduce_by_gcd(long *const a, long *const b)
 {
    const signed long gcd = _gcd(*a, *b);
-   if (gcd >= 0) {
+   if (gcd > 0) {
       *a = *a / gcd;
       *b = *b / gcd;
    }
@@ -106,7 +125,7 @@ static void _reduce_by_gcd(long *const a, long *const b)
 static void _llreduce_by_gcd(longlong *const a, longlong *const b)
 {
    const longlong gcd = _llgcd(*a, *b);
-   if (gcd >= 0LL) {
+   if (gcd > 0) {
       *a = *a / gcd;
       *b = *b / gcd;
    }
@@ -114,11 +133,13 @@ static void _llreduce_by_gcd(longlong *const a, longlong *const b)
 /**********************************************************************/
 static void _cleanup(Rational *const rat)
 {
+   if (rat->den == 0)
+      rat->den = 1;
    _reduce_by_gcd(&rat->num, &rat->den);
    _positive_denom(rat);
    if (labs(rat->num) > rat->den) {
       rat->whole += rat->num / rat->den;
-      rat->num    = rat->num % rat->den;
+      rat->num   %= rat->den;
    }
 }
 /**********************************************************************/
@@ -158,9 +179,9 @@ Rational RationalMult(const Rational a, const Rational b)
    _llreduce_by_gcd(&num_b, &den_b);
 
    longlong den           = den_a * den_b;
-   const longlong a_gcd   = _llgcd(num_a, out.den);
+   const longlong a_gcd   = _llgcd(num_a, den);
    const longlong com_gcd = _llgcd(a_gcd, num_b);
-   if (com_gcd >= 0) {
+   if (com_gcd > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
@@ -199,7 +220,7 @@ Rational RationalAdd(const Rational a, const Rational b)
 
    const longlong a_gcd   = _llgcd(num_a, den);
    const longlong com_gcd = _llgcd(a_gcd, num_b);
-   if (com_gcd >= 0) {
+   if (com_gcd > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
@@ -222,7 +243,7 @@ Rational RationalSub(const Rational a, const Rational b)
 
    const longlong a_gcd   = _llgcd(num_a, den);
    const longlong com_gcd = _llgcd(a_gcd, num_b);
-   if (com_gcd >= 0) {
+   if (__llabs__(com_gcd) > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
@@ -260,15 +281,15 @@ Rational double2rational(const double val)
                   "Size of unsigned long not equal to size of double.");
 
    u.x = val;
+
+   const int sign = (u.x < 0) ? 1 : 0;   // determine sign
+   u.x            = (sign) ? -u.x : u.x; // make u.x positive
    if (u.bits == 0) {
       out.whole = 0;
       out.num   = 0;
       out.den   = 1;
       return out;
    }
-   // Extract and remove sign bit before processing
-   const int sign  = (u.bits >> 63) & 1;
-   u.bits         &= ~(__UINT64_C(1) << 63); // clear sign bit
 
    signed long mantissa = (u.bits & DBL_FRAC_MASK) | DBL_IMPLICIT;
    int exponent         = (int)((u.bits >> DBL_EXP_SHIFT) & DBL_EXP_MASK) -

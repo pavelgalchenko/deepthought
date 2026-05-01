@@ -75,7 +75,7 @@ DateType NOS3Time()
       exit(3);
    }
    ticks = NE_bus_get_time(Bus);
-   jd    = JDAddSeconds(JD_TT_MJD, ticks * DTSIM);
+   jd    = JDAddMultRatSecs(JD_TT_MJD, ticks, DTSIM_RAT);
    return JDToDate(jd, TT_TIME);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"

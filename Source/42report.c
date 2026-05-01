@@ -463,8 +463,8 @@ void DSM_PosHReport(void)
          else
             break;
          // TODO
-         JDType jd_tdb_j2000 = DateToJD(TDB, TDB_TIME, J2000_EPOCH);
-         JDType jd_tt_j2000  = DateToJD(TDB, TT_TIME, J2000_EPOCH);
+         JDType jd_tdb_j2000 = Date2JD(TDB, J2000_EPOCH);
+         JDType jd_tt_j2000  = Date2JD(TT, J2000_EPOCH);
          double tdbTime      = JDToTime(JD_TDB_MJD);
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, JDToDays(jd_tdb_j2000),
                  JDToDays(jd_tt_j2000));
@@ -653,7 +653,7 @@ void DSM_NAV_StateReport(void)
                writeTime = TRUE;
                switch (state) {
                   case TIME_STATE:
-                     fprintf(stateFile[Isc], PRNT_DBL, DateToTime(Nav->Date));
+                     fprintf(stateFile[Isc], PRNT_DBL, Date2Time(Nav->Date));
                      break;
                   case ROTMAT_STATE:
                      for (int i = 0; i < 3; i++)

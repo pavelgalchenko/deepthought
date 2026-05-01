@@ -157,8 +157,8 @@ long NavAux_Tests()
          DateType date_copy = date;
          updateNavTime(&date_copy, updateAmount[j]);
          double updatedTime =
-             DateToTime(date_copy.Year, date_copy.Month, date_copy.Day,
-                        date_copy.Hour, date_copy.Minute, date_copy.Second);
+             Date2Time(date_copy.Year, date_copy.Month, date_copy.Day,
+                       date_copy.Hour, date_copy.Minute, date_copy.Second);
 
          snprintf(trialInfo, 39, "%i, %i", i, j);
          // TODO: timing should probably be in long double

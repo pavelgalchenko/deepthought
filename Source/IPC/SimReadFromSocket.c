@@ -932,14 +932,15 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
       UTC.Minute = Minute;
       UTC.Second = Second;
       DOY2MD(UTC.Year, UTC.doy, &UTC.Month, &UTC.Day);
-      CivilTime  = DateToTime(UTC);
+      CivilTime  = Date2Time(UTC);
       AtomicTime = CivilTime + LeapSec;
       GpsTime    = AtomicTime - 19.0;
       DynTime    = AtomicTime + 32.184;
       // TT.JulDay = TimeToJD(DynTime);
       TT         = TimeToDate(DynTime, TT_TIME, DTSIM);
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
-      JD_TDB_MJD = DateToJD(TT, TDB_TIME, GMAT_MJD_EPOCH);
+      JD_TDB_MJD = Date2JD(TT, GMAT_MJD_EPOCH);
+      ChangeSystem(TDB_TIME, &JD_TDB_MJD);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
       SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
