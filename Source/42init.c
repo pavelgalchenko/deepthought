@@ -924,6 +924,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
 
    DateType EpochDate = {0};
    EpochDate.system   = UTC_TIME;
+   double sec         = 0;
 
    infile = FileOpen(Path, TrvFileName, "r");
 
@@ -936,7 +937,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
             Success = 1;
             fscanf(infile, "%s %s %ld-%ld-%ld %ld:%ld:%lf\n", response1,
                    response2, &EpochDate.Year, &EpochDate.Month, &EpochDate.Day,
-                   &EpochDate.Hour, &EpochDate.Minute, &EpochDate.Second);
+                   &EpochDate.Hour, &EpochDate.Minute, &sec);
             fscanf(infile, "%lf %lf %lf\n", &R[0], &R[1], &R[2]);
             fscanf(infile, "%lf %lf %lf\n", &V[0], &V[1], &V[2]);
          }
@@ -946,7 +947,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
 
    if (Success) {
       /* Epoch is in UTC */
-      Epoch_JD = Date2JD(EpochDate, J2000_EPOCH);
+      EpochDate.Second = double2rational(sec);
+      Epoch_JD         = Date2JD(EpochDate, J2000_EPOCH);
       ChangeSystem(TT_TIME, &Epoch_JD);
       O->Epoch  = JDToDynTime(Epoch_JD);
       O->Regime = DecodeString(response1);
@@ -1248,6 +1250,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                      O->SplineFile = FileOpen(InOutPath, elementFileName, "rt");
                      O->SplineActive   = TRUE;
                      DateType NodeDate = {0};
+                     double sec        = 0;
                      NodeDate.system   = UTC_TIME;
                      char newline;
                      for (i = 0; i < 4; i++) {
@@ -1256,11 +1259,12 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             "%ld-%ld-%ldT%ld:%ld:%lf %lf %lf %lf %lf %lf %lf "
                             "%[\n]",
                             &NodeDate.Year, &NodeDate.Month, &NodeDate.Day,
-                            &NodeDate.Hour, &NodeDate.Minute, &NodeDate.Second,
+                            &NodeDate.Hour, &NodeDate.Minute, &sec,
                             &O->NodePos[i][0], &O->NodePos[i][1],
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
-                        JDType node_jd = Date2JD(NodeDate, J2000_EPOCH);
+                        NodeDate.Second = double2rational(sec);
+                        JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
                         ChangeSystem(TT_TIME, &node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
@@ -1443,6 +1447,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                      O->SplineFile = FileOpen(InOutPath, elementFileName, "rt");
                      O->SplineActive   = TRUE;
                      DateType NodeDate = {0};
+                     double sec        = 0;
                      NodeDate.system   = UTC_TIME;
                      char newline;
                      for (i = 0; i < 4; i++) {
@@ -1451,11 +1456,12 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             "%ld-%ld-%ldT%ld:%ld:%lf %lf %lf %lf %lf %lf %lf "
                             "%[\n]",
                             &NodeDate.Year, &NodeDate.Month, &NodeDate.Day,
-                            &NodeDate.Hour, &NodeDate.Minute, &NodeDate.Second,
+                            &NodeDate.Hour, &NodeDate.Minute, &sec,
                             &O->NodePos[i][0], &O->NodePos[i][1],
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
-                        JDType node_jd = Date2JD(NodeDate, J2000_EPOCH);
+                        NodeDate.Second = double2rational(sec);
+                        JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
                         ChangeSystem(TT_TIME, &node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
@@ -4642,20 +4648,21 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          strcat(geom_file_name, GeomFileNames[Im]);
          strcat(ori_name, OrientationNames[Im]);
 
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], EpochHours[Im], 0, 0);
+         *j2        = j2s[Im];
+         *mu        = mus[Im];
+         *rad       = rads[Im];
+         *w         = ws[Im];
+         *pole_ra   = PoleRAs[Im];
+         *pole_dec  = PoleDecs[Im];
+         *sma       = SMAs[Im];
+         *ecc       = eccs[Im];
+         *inc       = incs[Im];
+         *raan      = RAANs[Im];
+         *omg       = omgs[Im];
+         *mean_anom = MeanAnoms[Im];
+         *epoch_date =
+             DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],
+                          EpochHours[Im], 0, (Rational){0});
       } break;
       case MARS: {
          const char Names[][40]            = {"Phobos", "Deimos"};
@@ -4698,7 +4705,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, 0);
+                                    EpochDays[Im], 0, 0, (Rational){0});
       } break;
       case JUPITER: {
          const char Names[][40] = {
@@ -4790,7 +4797,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, 0);
+                                    EpochDays[Im], 0, 0, (Rational){0});
       } break;
       case SATURN: {
          const char Names[][40] = {
@@ -4877,7 +4884,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, 0);
+                                    EpochDays[Im], 0, 0, (Rational){0});
       } break;
       case URANUS: {
          const char Names[][40] = {"Ariel", "Umbriel", "Titania", "Oberon",
@@ -4923,7 +4930,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, 0);
+                                    EpochDays[Im], 0, 0, (Rational){0});
       } break;
       case NEPTUNE: {
          const char Names[][40]            = {"Triton", "Nereid"};
@@ -4966,7 +4973,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, 0);
+                                    EpochDays[Im], 0, 0, (Rational){0});
       } break;
       case PLUTO: {
          const char Names[][40]            = {"Charon"};
@@ -4997,20 +5004,21 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          strcat(geom_file_name, GeomFileNames[Im]);
          strcat(ori_name, OrientationNames[Im]);
 
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], EpochHours[Im], 0, 0);
+         *j2        = j2s[Im];
+         *mu        = mus[Im];
+         *rad       = rads[Im];
+         *w         = ws[Im];
+         *pole_ra   = PoleRAs[Im];
+         *pole_dec  = PoleDecs[Im];
+         *sma       = SMAs[Im];
+         *ecc       = eccs[Im];
+         *inc       = incs[Im];
+         *raan      = RAANs[Im];
+         *omg       = omgs[Im];
+         *mean_anom = MeanAnoms[Im];
+         *epoch_date =
+             DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],
+                          EpochHours[Im], 0, (Rational){0});
       } break;
       default: {
          fprintf(
@@ -6937,8 +6945,9 @@ void InitSim(int argc, char **argv)
 
    /* .. Environment */
    /* .. Date and time (UTC) */
-   node          = fy_node_by_path_def(root, "/Time");
-   long millisec = 0;
+   node              = fy_node_by_path_def(root, "/Time");
+   Rational millisec = (Rational){.whole = 0, .num = 0, .den = 1000};
+   double sec        = 0;
    if (fy_node_scanf(node,
                      "/Date/Year %ld "
                      "/Date/Month %ld "
@@ -6949,11 +6958,12 @@ void InitSim(int argc, char **argv)
                      "/Time/Millisecond %ld "
                      "/Leap Seconds %lf",
                      &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
-                     &UTC.Second, &millisec, &LeapSec) != 8) {
+                     &sec, &millisec.num, &LeapSec) != 8) {
       fprintf(stderr, "Time is improperly configured in Inp_Sim. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   UTC.Second += millisec / 1000.0;
+   UTC.Second = double2rational(sec);
+   UTC.Second = RationalAdd(UTC.Second, millisec);
 
    /* .. Choices for Modeling Solar Activity */
    // TODO: add atmo model properties to world and use this to

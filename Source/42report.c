@@ -1351,7 +1351,8 @@ void Report(void)
       fprintf(timefile, PRNT_DBL "\n", SimTime);
       fprintf(DynTimeFile, PRNT_DBL "\n", DynTime);
       fprintf(UtcDateFile, " %ld:%02ld:%02ld:%02ld:%02ld:%09.6lf\n", UTC.Year,
-              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
+              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute,
+              rational2double(UTC.Second));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             D = &SC[Isc].Dyn;

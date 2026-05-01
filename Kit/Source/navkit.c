@@ -3072,10 +3072,10 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
                JDType jd = Date2JD(Nav->Date, MJD_EPOCH);
                ChangeSystem(TT_TIME, &jd);
                getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
+               Nav->Date.doy =
+                   MD2DOY(Nav->Date.Year, Nav->Date.Month, Nav->Date.Day);
                AtmoDensity =
-                   NRLMSISE00(Nav->Date.Year, Nav->Date.doy, Nav->Date.Hour,
-                              Nav->Date.Minute, Nav->Date.Second, PosW,
-                              NavFlux10p7, NavGeomagIndex);
+                   NRLMSISE00(Nav->Date, PosW, NavFlux10p7, NavGeomagIndex);
             }
             else
                AtmoDensity = 0.0;

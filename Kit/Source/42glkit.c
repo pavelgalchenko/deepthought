@@ -818,7 +818,7 @@ void DrawCamHUD(void)
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
 
    sprintf(s, "UTC %03ld-%02ld:%02ld:%05.2lf", UTC.doy, UTC.Hour, UTC.Minute,
-           UTC.Second);
+           rational2double(UTC.Second));
    glRasterPos2i(10, 50);
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
 
@@ -2857,11 +2857,11 @@ void DrawClock(void)
 
    if (MapShow[MAP_TLM_CLOCK]) {
       sprintf(s, "%s %04ld-%03ld-%02ld:%02ld:%02ld", TlmLabel, UTC.Year,
-              UTC.doy, UTC.Hour, UTC.Minute, (long)UTC.Second);
+              UTC.doy, UTC.Hour, UTC.Minute, (long)rational2double(UTC.Second));
    }
    else {
       sprintf(s, "%s %04ld-%03ld-%02ld:%02ld:%02ld", SysLabel, UTC.Year,
-              UTC.doy, UTC.Hour, UTC.Minute, (long)UTC.Second);
+              UTC.doy, UTC.Hour, UTC.Minute, (long)rational2double(UTC.Second));
    }
    glRasterPos2i(MapWidth - 8 * strlen(s), 15);
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);

@@ -104,7 +104,7 @@ int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
 /**********************************************************************/
 DateType DateTypeInit(const TimeSystem system, const long Year,
                       const long Month, const long Day, const long Hour,
-                      const long Minute, const double Second)
+                      const long Minute, const Rational Second)
 {
    DateType date = {.Year   = Year,
                     .Month  = Month,
@@ -113,7 +113,9 @@ DateType DateTypeInit(const TimeSystem system, const long Year,
                     .Minute = Minute,
                     .Second = Second,
                     .system = system};
-   date.doy      = MD2DOY(date.Year, date.Month, date.Day);
+   if (!date.Second.den)
+      date.Second.den = 1;
+   date.doy = MD2DOY(date.Year, date.Month, date.Day);
    return date;
 }
 /**********************************************************************/
@@ -124,12 +126,12 @@ DateType DateTypeInit(const TimeSystem system, const long Year,
 /*     p. 183                                                         */
 JDType Date2JD(const DateType date, const EpochTT epoch)
 {
-   const double Y = date.Year;
-   const double M = date.Month;
-   const double D = date.Day;
-   const double H = date.Hour;
-   const double m = date.Minute;
-   const double s = date.Second;
+   const long Y = date.Year;
+   const long M = date.Month;
+   const long D = date.Day;
+   const long H = date.Hour;
+   const long m = date.Minute;
+   Rational s   = date.Second;
 
    const long c = (M + 9.0) / 12.0;
    const long b = (275.0 * M / 9.0);
@@ -138,7 +140,8 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
    const long day = 367 * Y - a + b + D;
    JDType jd      = JDFromDays(day, date.system, GD_CONV_EPOCH);
    ChangeEpoch(epoch, &jd);
-   jd = JDAddSeconds(jd, s + 60.0 * (m + H * 60.0));
+   s.whole += 60 * (m + 60 * H);
+   jd       = JDAddRationalSeconds(jd, s);
 
    return jd;
 }
@@ -182,7 +185,7 @@ double DateToTime(const DateType date)
 
    /* Add fractional day */
    return (SEC_PER_DAY * Days + 3600.0 * ((double)date.Hour) +
-           60.0 * ((double)date.Minute) + date.Second);
+           60.0 * ((double)date.Minute) + rational2double(date.Second));
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to Julian Day   */
@@ -209,9 +212,10 @@ JDType DateToJD(const DateType date, const TimeSystem system,
    const double day = floor(365.25 * (Year + 4716)) +
                       floor(30.6001 * (Month + 1)) + date.Day + B - 1524.5;
 
-   JDType jd = JDFromDays(day, date.system, ZERO_EPOCH);
-   jd        = JDAddSeconds(jd, ((double)date.Hour) * 3600 +
-                                    ((double)date.Minute) * 60 + date.Second);
+   JDType jd   = JDFromDays(day, date.system, ZERO_EPOCH);
+   Rational s  = date.Second;
+   s.whole    += 60 * (date.Minute + 60 * date.Hour);
+   jd          = JDAddRationalSeconds(jd, s);
 
    ChangeSystemEpoch(system, epoch, &jd);
    return (jd);
@@ -284,12 +288,13 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
          break;
       sum += l_month[i];
    }
-   date.Month  = i + 1;
-   date.Day    = date.doy - sum;
-   tmp         = (days - date.doy) * 24;
-   date.Hour   = trunc(tmp);
-   date.Minute = trunc((tmp - date.Hour) * 60);
-   date.Second = (tmp - date.Hour - date.Minute / 60.0) * 3600.0;
+   date.Month     = i + 1;
+   date.Day       = date.doy - sum;
+   tmp            = (days - date.doy) * 24;
+   date.Hour      = trunc(tmp);
+   date.Minute    = trunc((tmp - date.Hour) * 60);
+   Rational hours = double2rational(tmp - date.Hour - (double)date.Minute / 60);
+   date.Second    = IntegerRationalMult(3600, hours);
    return date;
 }
 /**********************************************************************/
@@ -301,8 +306,6 @@ DateType TimeToDate(double Time, TimeSystem system, double LSB)
 
    JDType jd     = JDFromSeconds(Time, system, J2000_EPOCH);
    DateType date = JDToDate(jd, system);
-
-   date.Second = ((long)(date.Second / LSB)) * LSB;
    return date;
 }
 /**********************************************************************/
@@ -514,11 +517,13 @@ void updateTime(DateType *Time, const double dSeconds)
    JDType jd = Date2JD(*Time, GMAT_MJD_EPOCH);
 
    if (fabs(dSeconds) > 0.0) {
-      Time->Second  += dSeconds;
-      long quotient  = Time->Second / 60.0;
-      Time->Second   = fmod(Time->Second, 60.0);
-      if (Time->Second < 0) {
-         Time->Second += 60;
+      Rational rat_dseconds = double2rational(dSeconds);
+
+      Time->Second        = RationalAdd(Time->Second, rat_dseconds);
+      long quotient       = Time->Second.whole / 60.0;
+      Time->Second.whole %= 60;
+      if (Time->Second.whole < 0) {
+         Time->Second.whole += 60;
          quotient--;
       }
 

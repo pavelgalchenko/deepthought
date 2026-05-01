@@ -187,7 +187,8 @@ void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
       r         = MAGV(pbn);
       reporting = 1;
       fprintf(magFile, "%ld/%02ld/%02ld %02ld:%02ld:%.6lf\n", UTC.Year,
-              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
+              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute,
+              rational2double(UTC.Second));
       for (theta = 0.5; theta <= 179.5; theta += 0.5) {
          for (phi = -180.0; phi < 180.0; phi += 0.5) {
             cth            = cos(theta * D2R);
@@ -209,7 +210,8 @@ void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
    }
 
    const double doy  = (UTC.doy - 1) + (UTC.Hour - 1) / 24.0 +
-                       UTC.Minute / 1440.0 + UTC.Second / 86400.0;
+                       UTC.Minute / 1440.0 +
+                       (rational2double(UTC.Second)) / 86400.0;
    const double year = UTC.Year + doy / (UTC.Year % 4 ? 365.0 : 366.0);
    if (year > 2020) {
       if (!warned && year > t[nYears - 1] + 5) {

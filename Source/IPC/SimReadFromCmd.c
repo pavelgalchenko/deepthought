@@ -909,20 +909,22 @@ void ReadFromCmd(void)
       UTC.doy    = doy;
       UTC.Hour   = Hour;
       UTC.Minute = Minute;
-      UTC.Second = Second;
+      UTC.Second = double2rational(Second);
       DOY2MD(UTC.Year, UTC.doy, &UTC.Month, &UTC.Day);
-      CivilTime  = Date2Time(UTC.Year, UTC.Month, UTC.Day, UTC.Hour, UTC.Minute,
-                             UTC.Second);
+      CivilTime  = Date2Time(UTC);
       AtomicTime = CivilTime + LeapSec;
       GpsTime    = AtomicTime - 19.0;
       DynTime    = AtomicTime + 32.184;
-      TT.JulDay  = TimeToJD(DynTime);
-      TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
-                 &TT.Second, DTSIM);
+      // TT.JulDay  = TimeToJD(DynTime);
+      TT         = TimeToDate(DynTime, TT_TIME, DTSIM);
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
-      UTC.JulDay = TimeToJD(CivilTime);
+      JD_TT_MJD  = Date2JD(TT, GMAT_MJD_EPOCH);
+      JD_TDB_MJD = JD_TT_MJD;
+      ChangeSystem(TDB_TIME, &JD_TDB_MJD);
+      TDB = JDToDate(JD_TDB_MJD, TDB_TIME);
+      // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-      SimTime = DynTime - DynTime0;
+      SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
    }
 
    /* .. Refresh SC states that depend on inputs */

@@ -87,7 +87,7 @@ typedef struct {
    long doy;
    long Hour;
    long Minute;
-   double Second;
+   Rational Second;
 } DateType;
 
 // double TDB_JDtoTT(double TDB_JD);
@@ -100,7 +100,7 @@ typedef struct {
 
 DateType DateTypeInit(const TimeSystem system, const long Year,
                       const long Month, const long Day, const long Hour,
-                      const long Minute, const double Second);
+                      const long Minute, const Rational Second);
 
 CCSDSTime date2ccsds(const DateType date);
 DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);

@@ -23,11 +23,13 @@ typedef struct Rational {
    signed long den;
 } Rational;
 
-Rational IntegerRationalMult(const long mul, const Rational rat);
-Rational RationalMult(const Rational a, const Rational b);
-Rational RationalDivide(const Rational a, const Rational b);
-Rational RationalAdd(const Rational a, const Rational b);
-Rational RationalSub(const Rational a, const Rational b);
+Rational IntegerRationalMult(const long mul, Rational rat);
+Rational IntegerRationalMultMod(const long mul, Rational rat, long mod,
+                                long *const carry);
+Rational RationalMult(Rational a, Rational b);
+Rational RationalDivide(Rational a, Rational b);
+Rational RationalAdd(Rational a, Rational b);
+Rational RationalSub(Rational a, Rational b);
 Rational double2rational(const double val);
 double rational2double(const Rational rat);
 long RationalRoundUp(const Rational rat);

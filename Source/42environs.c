@@ -54,7 +54,8 @@ void Environment(JDType jd, struct WorldType *const worlds,
                      P->PriMerAng, S->bvn);
    }
    else if (MagModel.Type == IGRF && O->World == EARTH) {
-      IGRFMagField(ModelPath, UTC, MagModel.N, MagModel.M, S->PosN,
+      DateType utc_date = JDToDate(jd, UTC_TIME);
+      IGRFMagField(ModelPath, utc_date, MagModel.N, MagModel.M, S->PosN,
                    P->PriMerAng, S->bvn);
    }
    else {
@@ -86,9 +87,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
       MxV(World[EARTH].CWN, S->PosN, PosW);
       Alt = MAGV(PosW) - World[EARTH].rad;
       if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
-         S->AtmoDensity =
-             NRLMSISE00(date_tt.Year, date_tt.doy, date_tt.Hour, date_tt.Minute,
-                        date_tt.Second, PosW, Flux10p7, GeomagIndex);
+         S->AtmoDensity = NRLMSISE00(date_tt, PosW, Flux10p7, GeomagIndex);
       }
       else
          S->AtmoDensity = 0.0;

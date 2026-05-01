@@ -806,10 +806,7 @@ JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat)
 {
    JDType jdb = jd;
 
-   Rational seconds = IntegerRationalMult(mul, rat);
-   jdb.whole_days   = seconds.whole / sec_per_day;
-   seconds.whole    = seconds.whole % sec_per_day;
-   jdb.seconds      = seconds;
+   jdb.seconds = IntegerRationalMultMod(mul, rat, sec_per_day, &jdb.whole_days);
 
    return JDAdd(jd, jdb);
 }

@@ -405,6 +405,8 @@ void SplineToPosVel(struct OrbitType *O)
    double X[4], Y[4];
    double x[3], v[3], xn[3], vn[3];
 
+   NodeDate.system = UTC_TIME;
+
    /* .. Get nodes from O->SplineFile */
    while (DynTime > O->NodeDynTime[2]) {
       for (i = 0; i < 3; i++) {
@@ -414,12 +416,14 @@ void SplineToPosVel(struct OrbitType *O)
             O->NodeVel[i][j] = O->NodeVel[i + 1][j];
          }
       }
+      double sec = 0;
       fscanf(O->SplineFile,
              "%ld-%ld-%ldT%ld:%ld:%lf %lf %lf %lf %lf %lf %lf %[\n]",
              &NodeDate.Year, &NodeDate.Month, &NodeDate.Day, &NodeDate.Hour,
-             &NodeDate.Minute, &NodeDate.Second, &O->NodePos[3][0],
-             &O->NodePos[3][1], &O->NodePos[3][2], &O->NodeVel[3][0],
-             &O->NodeVel[3][1], &O->NodeVel[3][2], &newline);
+             &NodeDate.Minute, &sec, &O->NodePos[3][0], &O->NodePos[3][1],
+             &O->NodePos[3][2], &O->NodeVel[3][0], &O->NodeVel[3][1],
+             &O->NodeVel[3][2], &newline);
+      NodeDate.Second    = double2rational(sec);
       O->NodeDynTime[3]  = Date2Time(NodeDate);
       O->NodeDynTime[3] += DynTime - CivilTime; /* Adjust from UTC to TT */
       for (j = 0; j < 3; j++) {

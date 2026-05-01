@@ -18,6 +18,9 @@
 ** #endif
 */
 
+// TODO: ensure den <= __LONG_MAX__
+//   plan: if den gets too large, find closest representable rational
+
 #define STR2(x) #x
 #define STR(X)  STR2(X)
 
@@ -34,6 +37,8 @@ static longlong __llabs__(longlong x)
 {
    static const __uint128_t UINT128_MAX = (__uint128_t)((longlong)-1L);
 
+   if (x > 0)
+      return x;
    x ^= UINT128_MAX;
    return x - UINT128_MAX;
 }
@@ -131,8 +136,15 @@ static void _llreduce_by_gcd(longlong *const a, longlong *const b)
    }
 }
 /**********************************************************************/
+static void _validate(Rational *const rat)
+{
+   if (rat->den == 0)
+      rat->den = 1;
+}
+/**********************************************************************/
 static void _cleanup(Rational *const rat)
 {
+   _validate(rat);
    if (rat->den == 0)
       rat->den = 1;
    _reduce_by_gcd(&rat->num, &rat->den);
@@ -145,7 +157,7 @@ static void _cleanup(Rational *const rat)
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
 /*  Rational fractional part                                          */
-Rational IntegerRationalMult(const long mul, const Rational rat)
+Rational IntegerRationalMult(const long mul, Rational rat)
 {
 #ifndef _IGNORE_LONG_
    _Static_assert(
@@ -157,6 +169,8 @@ Rational IntegerRationalMult(const long mul, const Rational rat)
                                                              "-DIGNORE_LONG="
                                                              "TRUE.");
 #endif
+   _validate(&rat);
+
    Rational out;
    longlong product = ((longlong)mul * rat.num);
    out.whole        = (long)((product / rat.den) + ((longlong)mul * rat.whole));
@@ -166,8 +180,33 @@ Rational IntegerRationalMult(const long mul, const Rational rat)
    return out;
 }
 /**********************************************************************/
-Rational RationalMult(const Rational a, const Rational b)
+/*  Multiply integer by rational, returning integer whole part and    */
+/*  Rational fractional part                                          */
+/*  This version sets:  '*carry = out.whole / mod'                    */
+/*                and:  'out.whole %= mod'                            */
+Rational IntegerRationalMultMod(const long mul, Rational rat, long mod,
+                                long *const carry)
 {
+   _validate(&rat);
+   if (!mod)
+      mod = 1;
+
+   Rational out;
+   longlong product = ((longlong)mul * rat.num);
+   longlong whole   = (product / rat.den) + ((longlong)mul * rat.whole);
+   *carry           = (long)(whole / mod);
+   out.whole        = (long)(whole % mod);
+   out.num          = (long)(product % rat.den);
+   out.den          = rat.den;
+   _cleanup(&out);
+   return out;
+}
+/**********************************************************************/
+Rational RationalMult(Rational a, Rational b)
+{
+   _validate(&a);
+   _validate(&b);
+
    Rational out;
    longlong num_a = (longlong)a.whole * a.den + a.num;
    longlong den_a = (longlong)a.den;
@@ -195,8 +234,11 @@ Rational RationalMult(const Rational a, const Rational b)
 }
 /**********************************************************************/
 /*  Compute a / b where a and b are both Rationals                    */
-Rational RationalDivide(const Rational a, const Rational b)
+Rational RationalDivide(Rational a, Rational b)
 {
+   _validate(&a);
+   _validate(&b);
+
    Rational out   = {0};
    longlong num_a = (longlong)a.whole * a.den + a.num;
    longlong den_a = (longlong)a.den;
@@ -210,8 +252,11 @@ Rational RationalDivide(const Rational a, const Rational b)
    return out;
 }
 /**********************************************************************/
-Rational RationalAdd(const Rational a, const Rational b)
+Rational RationalAdd(Rational a, Rational b)
 {
+   _validate(&a);
+   _validate(&b);
+
    Rational out;
    out.whole      = a.whole + b.whole;
    longlong den   = (longlong)a.den * b.den;
@@ -233,8 +278,11 @@ Rational RationalAdd(const Rational a, const Rational b)
    return out;
 }
 /**********************************************************************/
-Rational RationalSub(const Rational a, const Rational b)
+Rational RationalSub(Rational a, Rational b)
 {
+   _validate(&a);
+   _validate(&b);
+
    Rational out;
    out.whole      = a.whole - b.whole;
    longlong den   = (longlong)a.den * b.den;
@@ -271,7 +319,7 @@ Rational RationalSub(const Rational a, const Rational b)
 
 Rational double2rational(const double val)
 {
-   Rational out;
+   Rational out = {.whole = 0, .num = 0, .den = 1};
    union {
       double x;
       __UINT64_TYPE__ bits;
@@ -282,7 +330,8 @@ Rational double2rational(const double val)
 
    u.x = val;
 
-   const int sign = (u.x < 0) ? 1 : 0;   // determine sign
+   // grab sign bit (need to do it this way due to -0)
+   const int sign = (u.bits >> 63) & 1;
    u.x            = (sign) ? -u.x : u.x; // make u.x positive
    if (u.bits == 0) {
       out.whole = 0;
@@ -297,13 +346,36 @@ Rational double2rational(const double val)
 
    // val = mantissa * 2^exponent exactly
    if (exponent >= 0) {
-      out.num = mantissa << exponent; // exact integer, den=1
-      out.den = 1;
+      static int max_shift = 63 - __DBL_MANT_DIG__; // = 10 for IEEE 754 double
+      if (exponent > max_shift) {
+         // exact value overflows int64_t; shift down (low bits are zero for
+         // exact ints)
+         out.num = mantissa << max_shift;
+         out.den = 1;
+      }
+      else {
+         out.num = mantissa << exponent; // exact integer, den=1
+         out.den = 1;
+      }
    }
-   else {
+   else if (-exponent <= 62) {
       out.num = mantissa;
       out.den = __INT64_C(1) << (-exponent);
       _reduce_by_gcd(&out.num, &out.den);
+   }
+   else {
+      // -exponent > 62: num would overflow
+      const int excess = (-exponent) - 62;
+      if (excess >= __DBL_MANT_DIG__) {
+         // Value too small to represent; round to zero
+         out.num = 0;
+         out.den = 1;
+      }
+      else {
+         // Best approximation: scale both down to fit in int64_t
+         out.num = mantissa >> excess;
+         out.den = __INT64_C(1) << 62;
+      }
    }
    out.num   = (sign) ? -out.num : out.num;
    out.whole = out.num / out.den;
@@ -312,8 +384,9 @@ Rational double2rational(const double val)
    return out;
 }
 /**********************************************************************/
-double rational2double(const Rational rat)
+double rational2double(Rational rat)
 {
+   _validate(&rat);
    return ((double)rat.num / rat.den) + (double)rat.whole;
 }
 /**********************************************************************/
