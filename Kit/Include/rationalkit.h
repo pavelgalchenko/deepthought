@@ -14,6 +14,7 @@
 #ifndef __RATIONALKIT_H__
 #define __RATIONALKIT_H__
 
+#include <math.h>
 #include <stdlib.h>
 
 // represents a number using the form "whole + (num/denom)"

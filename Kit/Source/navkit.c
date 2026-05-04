@@ -28,8 +28,8 @@
 */
 
 extern double EnckeFQ(double const r[3], double const delta[3]);
-extern void Legendre(long N, long M, double x, double P[N + 1][M + 1],
-                     double sdP[N + 1][M + 1]);
+extern void Legendre(const long N, const long M, const double x,
+                     double P[N + 1][M + 1], double sdP[N + 1][M + 1]);
 #ifdef _REPORT_RESIDUALS_
 extern void DSM_NAV_ResidualsReport(double time,
                                     double **residuals[FIN_SENSOR + 1]);

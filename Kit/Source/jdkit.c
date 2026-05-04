@@ -29,7 +29,9 @@
 #pragma GCC diagnostic error "-Wswitch"
 #pragma GCC diagnostic error "-Wswitch-enum"
 
-static double _epoch_pod(const EpochTT epoch)
+#define sec_per_day (86400)
+
+static Rational _epoch_pod_seconds(const EpochTT epoch)
 {
    switch (epoch) {
       case ZERO_EPOCH:
@@ -41,23 +43,25 @@ static double _epoch_pod(const EpochTT epoch)
       case MJD_EPOCH:
       case J1900_EPOCH:
       case CCSDS_EPOCH:
-         return 0.5;
+         return (Rational){.whole = sec_per_day / 2, .num = 0, .den = 1};
    }
-   return 0.0;
+   return (Rational){.whole = 0, .num = 0, .den = 1};
 }
 
 static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
-                           double *const part_of_day)
+                           Rational *const part_of_day)
 {
    // handle the easy cases here
    if (a == b) {
       *day         = 0;
-      *part_of_day = 0.0;
+      *part_of_day = (Rational){.whole = 0, .num = 0, .den = 1};
       return;
    }
 
    // determine part of day value
-   *part_of_day = fabs(_epoch_pod(a) - _epoch_pod(b));
+   *part_of_day = RationalSub(_epoch_pod_seconds(a), _epoch_pod_seconds(b));
+   part_of_day->whole = labs(part_of_day->whole);
+   part_of_day->num   = labs(part_of_day->num);
 
    if (b == ZERO_EPOCH)
       *day = (long)(EpochValueTT(a));
@@ -290,11 +294,12 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
          break;
    }
 
-   if (*day < 0)
-      *part_of_day *= -1.0;
+   if (*day < 0) {
+      part_of_day->whole *= -1;
+      part_of_day->num   *= -1;
+   }
 }
 
-#define sec_per_day (86400)
 #define _jd_tt2tai(x)                                                          \
    JDSubRationalSeconds((x), (Rational){.whole = 32, .num = 184, .den = 1000})
 #define _jd_tai2tt(x)                                                          \
@@ -663,13 +668,13 @@ void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    // Upon furthur reading in Vallado, algorithms from there assume Julian Dates
    // are in UT1 unless otherwise specified
 
-   long epoch_diff_l   = 0;
-   double epoch_diff_d = 0.0;
-   _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_d);
+   long epoch_diff_l         = 0;
+   Rational epoch_diff_pod_s = (Rational){.whole = 0, .num = 0, .den = 0};
+   _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_pod_s);
 
    // JDType jd_tt = _jdtt(*jd);
    *jd       = JDAddDays(*jd, epoch_diff_l);
-   *jd       = JDAddDays(*jd, epoch_diff_d);
+   *jd       = JDAddRationalSeconds(*jd, epoch_diff_pod_s);
    jd->epoch = new_epoch;
 
    // ChangeSystem(jd->system, &jd_tt);

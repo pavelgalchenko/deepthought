@@ -21,6 +21,8 @@
 // TODO: ensure den <= __LONG_MAX__
 //   plan: if den gets too large, find closest representable rational
 
+// TODO: do wrappers for defines to be portable between, e.g., gcc and clang
+
 #define STR2(x) #x
 #define STR(X)  STR2(X)
 
@@ -29,10 +31,36 @@
 #if (__SIZEOF_LONG__ < __SIZEOF_LONG_LONG__)
 typedef long long int longlong;
 #define _SIZEOF_LONGLONG_ __SIZEOF_LONG_LONG__
-#define __llabs__(x)      llabs(x)
+static longlong __llgcd__(longlong a, longlong b)
+{
+   if (a == 0L)
+      return b;
+   if (b == 0L)
+      return a;
+   a = labs(a);
+   b = labs(b);
+
+   // TODO: __builtin_ctzl is a gcc builtin for determining the number of
+   // trailing zeros in an unsigned integer type. Will need to do our own
+   // defines/wrappers to get compatibility with other compilers
+   const int shift   = __builtin_ctzll(a | b);
+   a               >>= __builtin_ctzll(a);
+   do {
+      b >>= __builtin_ctzll(b);
+      if (a > b) {
+         // swap the values without needing memory for a third
+         a = a ^ b;
+         b = a ^ b;
+         a = b ^ a;
+      }
+   } while (b -= a);
+   return a << shift;
+}
+#define __llabs__(x) llabs(x)
 #elif __SIZEOF_LONG__ == 8
 typedef __int128_t longlong;
 #define _SIZEOF_LONGLONG_ __SIZEOF_INT128__
+#define __llgcd__         _llgcd
 static longlong __llabs__(longlong x)
 {
    static const __uint128_t UINT128_MAX = (__uint128_t)((longlong)-1L);
@@ -45,6 +73,7 @@ static longlong __llabs__(longlong x)
 #elif
 typedef __INT64_TYPE__ longlong;
 #define _SIZEOF_LONGLONG_ 8
+#define __llgcd__         _llgcd
 static longlong __llabs__(longlong x)
 {
    static const __uint64_t UINT64_MAX = (__uint64_t)((longlong)-1L);
@@ -66,24 +95,6 @@ static void _positive_denom(Rational *const rat)
 }
 /**********************************************************************/
 /*  Find Greatest Common Divisor of two integers by Eulcidean         */
-/*  Algorithm                                                         */
-static signed long _gcd(long a, long b)
-{
-   if (a == 0L)
-      return b;
-   if (b == 0L)
-      return a;
-   a = labs(a);
-   b = labs(b);
-   while (b) {
-      long t = b;
-      b      = a % b;
-      a      = t;
-   }
-   return a;
-}
-/**********************************************************************/
-/*  Find Greatest Common Divisor of two integers by Eulcidean         */
 /*  Algorithm for 128 bit integers                                    */
 static longlong _llgcd(longlong a, longlong b)
 {
@@ -101,11 +112,40 @@ static longlong _llgcd(longlong a, longlong b)
    return a;
 }
 /**********************************************************************/
+/*  From Stack Overflow user Maxim Egorushkin                         */
+/*  Computes the Greatest Common Divisior of two longs using the      */
+/*  Binary GCD algorithm, with speedups from builtins                 */
+static long _fast_gcd(long a, long b)
+{
+   if (a == 0L)
+      return b;
+   if (b == 0L)
+      return a;
+   a = labs(a);
+   b = labs(b);
+
+   // TODO: __builtin_ctzl is a gcc builtin for determining the number of
+   // trailing zeros in an unsigned integer type. Will need to do our own
+   // defines/wrappers to get compatibility with other compilers
+   const int shift   = __builtin_ctzl(a | b);
+   a               >>= __builtin_ctzl(a);
+   do {
+      b >>= __builtin_ctzl(b);
+      if (a > b) {
+         // swap the values without needing memory for a third
+         a = a ^ b;
+         b = a ^ b;
+         a = b ^ a;
+      }
+   } while (b -= a);
+   return a << shift;
+}
+/**********************************************************************/
 /*  Find the Least Common Multiple of two integers by the identity    */
 /*  lcm = (a * b) / gcd(a, b)                                         */
 static signed long _lcm(long a, long b)
 {
-   const long gcd = _gcd(a, b);
+   const long gcd = _fast_gcd(a, b);
    if (gcd) {
       if (b > a)
          b /= gcd;
@@ -119,7 +159,7 @@ static signed long _lcm(long a, long b)
 /*  Reduce two longs by their greatest common divisor                 */
 static void _reduce_by_gcd(long *const a, long *const b)
 {
-   const signed long gcd = _gcd(*a, *b);
+   const signed long gcd = _fast_gcd(*a, *b);
    if (gcd > 0) {
       *a = *a / gcd;
       *b = *b / gcd;
@@ -129,7 +169,7 @@ static void _reduce_by_gcd(long *const a, long *const b)
 /*  Reduce two longs by their greatest common divisor                 */
 static void _llreduce_by_gcd(longlong *const a, longlong *const b)
 {
-   const longlong gcd = _llgcd(*a, *b);
+   const longlong gcd = __llgcd__(*a, *b);
    if (gcd > 0) {
       *a = *a / gcd;
       *b = *b / gcd;
@@ -145,8 +185,6 @@ static void _validate(Rational *const rat)
 static void _cleanup(Rational *const rat)
 {
    _validate(rat);
-   if (rat->den == 0)
-      rat->den = 1;
    _reduce_by_gcd(&rat->num, &rat->den);
    _positive_denom(rat);
    if (labs(rat->num) > rat->den) {
@@ -218,8 +256,8 @@ Rational RationalMult(Rational a, Rational b)
    _llreduce_by_gcd(&num_b, &den_b);
 
    longlong den           = den_a * den_b;
-   const longlong a_gcd   = _llgcd(num_a, den);
-   const longlong com_gcd = _llgcd(a_gcd, num_b);
+   const longlong a_gcd   = __llgcd__(num_a, den);
+   const longlong com_gcd = __llgcd__(a_gcd, num_b);
    if (com_gcd > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
@@ -263,8 +301,8 @@ Rational RationalAdd(Rational a, Rational b)
    longlong num_a = (longlong)a.num * b.den;
    longlong num_b = (longlong)b.num * a.den;
 
-   const longlong a_gcd   = _llgcd(num_a, den);
-   const longlong com_gcd = _llgcd(a_gcd, num_b);
+   const longlong a_gcd   = __llgcd__(num_a, den);
+   const longlong com_gcd = __llgcd__(a_gcd, num_b);
    if (com_gcd > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
@@ -289,8 +327,8 @@ Rational RationalSub(Rational a, Rational b)
    longlong num_a = (longlong)a.num * b.den;
    longlong num_b = (longlong)b.num * a.den;
 
-   const longlong a_gcd   = _llgcd(num_a, den);
-   const longlong com_gcd = _llgcd(a_gcd, num_b);
+   const longlong a_gcd   = __llgcd__(num_a, den);
+   const longlong com_gcd = __llgcd__(a_gcd, num_b);
    if (__llabs__(com_gcd) > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
@@ -339,14 +377,14 @@ Rational double2rational(const double val)
       out.den   = 1;
       return out;
    }
-
    signed long mantissa = (u.bits & DBL_FRAC_MASK) | DBL_IMPLICIT;
    int exponent         = (int)((u.bits >> DBL_EXP_SHIFT) & DBL_EXP_MASK) -
                           DBL_EXP_BIAS - DBL_FRAC_BITS;
 
-   // val = mantissa * 2^exponent exactly
+   // TODO: this needs testing, especially with small numbers
    if (exponent >= 0) {
-      static int max_shift = 63 - __DBL_MANT_DIG__; // = 10 for IEEE 754 double
+      // val = mantissa * 2^exponent exactly
+      const int max_shift = 63 - __DBL_MANT_DIG__; // = 10 for IEEE 754 double
       if (exponent > max_shift) {
          // exact value overflows int64_t; shift down (low bits are zero for
          // exact ints)
