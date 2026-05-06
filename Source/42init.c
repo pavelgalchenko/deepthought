@@ -1278,7 +1278,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                            exit(EXIT_FAILURE);
                         }
                      }
-                     SplineToPosVel(O);
+                     SplineToPosVel(O, j2000_tt);
                   } break;
                   default:
                      fprintf(stderr,
@@ -1475,7 +1475,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                            exit(EXIT_FAILURE);
                         }
                      }
-                     SplineToPosVel(O);
+                     SplineToPosVel(O, j2000_tt);
                   }
 
                   break;
@@ -6631,6 +6631,7 @@ void LoadSchatten(void)
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
 
    DateType date = {0};
+   date.Second   = RATIONAL_ZERO;
    date.system   = TT_TIME;
    for (i = 0; i < 1009; i++) {
       fscanf(infile, "%ld %ld %lf %lf %lf %lf,%[^\n] %[\n]", &date.Year,

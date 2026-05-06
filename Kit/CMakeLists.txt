@@ -20,9 +20,6 @@ option(DEBUG_DATA "Enable outputing model debug data" OFF)
 # Compile enabling residual reporting -DREPORT_RESIUALS=ON
 option(REPORT_RESIDUALS "Enable navigation measurement residual reporting" OFF)
 
-# Ignore long not being smaller than long long -DIGNORE_LONG=TRUE
-option(IGNORE_LONG "Ignore compilation warning that long long is not larger than long in rationalkit." FALSE)
-
 # For graphics interface, choose GLUT or GLFW GUI libraries
 # GLUT is well known, but GLFW is better for newer Mac's hires displays
 # -DGLUT_OR_GLFW=GLFW

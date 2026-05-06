@@ -37,15 +37,16 @@ static Rational _epoch_pod_seconds(const EpochTT epoch)
       case ZERO_EPOCH:
       case GMAT_MJD_EPOCH:
       case J2000_EPOCH:
+      default:
          break;
       case GD_CONV_EPOCH:
       case TCB_TDB_CONV_EPOCH:
       case MJD_EPOCH:
       case J1900_EPOCH:
       case CCSDS_EPOCH:
-         return (Rational){.whole = sec_per_day / 2, .num = 0, .den = 1};
+         return InitRational(sec_per_day / 2, 0, 1);
    }
-   return (Rational){.whole = 0, .num = 0, .den = 1};
+   return RATIONAL_ZERO;
 }
 
 static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
@@ -54,14 +55,13 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
    // handle the easy cases here
    if (a == b) {
       *day         = 0;
-      *part_of_day = (Rational){.whole = 0, .num = 0, .den = 1};
+      *part_of_day = RATIONAL_ZERO;
       return;
    }
 
    // determine part of day value
    *part_of_day = RationalSub(_epoch_pod_seconds(a), _epoch_pod_seconds(b));
-   part_of_day->whole = labs(part_of_day->whole);
-   part_of_day->num   = labs(part_of_day->num);
+   *part_of_day = RationalAbs(*part_of_day);
 
    if (b == ZERO_EPOCH)
       *day = (long)(EpochValueTT(a));
@@ -295,15 +295,14 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
    }
 
    if (*day < 0) {
-      part_of_day->whole *= -1;
-      part_of_day->num   *= -1;
+      *part_of_day = RationalNegate(*part_of_day);
    }
 }
 
 #define _jd_tt2tai(x)                                                          \
-   JDSubRationalSeconds((x), (Rational){.whole = 32, .num = 184, .den = 1000})
+   JDSubRationalSeconds((x), (Rational){.whole = 32, .num = 23, .den = 125})
 #define _jd_tai2tt(x)                                                          \
-   JDAddRationalSeconds((x), (Rational){.whole = 32, .num = 184, .den = 1000})
+   JDAddRationalSeconds((x), (Rational){.whole = 32, .num = 23, .den = 125})
 
 /**********************************************************************/
 //  time system low level conversion helpers
@@ -668,8 +667,8 @@ void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    // Upon furthur reading in Vallado, algorithms from there assume Julian Dates
    // are in UT1 unless otherwise specified
 
-   long epoch_diff_l         = 0;
-   Rational epoch_diff_pod_s = (Rational){.whole = 0, .num = 0, .den = 0};
+   long epoch_diff_l = 0;
+   Rational epoch_diff_pod_s;
    _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_pod_s);
 
    // JDType jd_tt = _jdtt(*jd);
@@ -756,24 +755,18 @@ static void _error_epoch_system(const JDType a, const JDType b,
 // are seconds.whole and seconds.num, and vice-versa
 static void _reduce(JDType *const jd)
 {
-   jd->whole_days    += jd->seconds.whole / sec_per_day;
-   jd->seconds.whole %= sec_per_day;
-   if (jd->whole_days > 0 && jd->seconds.whole < 0) {
-      jd->seconds.whole += sec_per_day;
-      jd->whole_days--;
+   jd->whole_days += RationalIntMod(&jd->seconds, sec_per_day);
+   if (jd->whole_days * jd->seconds.whole < 0) {
+      if (jd->whole_days > 0) {
+         jd->seconds.whole += sec_per_day;
+         jd->whole_days--;
+      }
+      else if (jd->whole_days < 0) {
+         jd->seconds.whole -= sec_per_day;
+         jd->whole_days++;
+      }
    }
-   else if (jd->whole_days < 0 && jd->seconds.whole > 0) {
-      jd->seconds.whole -= sec_per_day;
-      jd->whole_days++;
-   }
-   if (jd->seconds.whole > 0 && jd->seconds.num < 0) {
-      jd->seconds.num += jd->seconds.den;
-      jd->seconds.whole--;
-   }
-   else if (jd->seconds.whole < 0 && jd->seconds.num > 0) {
-      jd->seconds.num -= jd->seconds.den;
-      jd->seconds.whole++;
-   }
+   ReduceRational(&jd->seconds);
 }
 
 JDType JDAdd(const JDType a, const JDType b)

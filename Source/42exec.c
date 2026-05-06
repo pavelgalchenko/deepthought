@@ -287,7 +287,7 @@ long SimStep(void)
       ManageFlags(&nout, &GLnout, &set_nout);
 
       /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-      Ephemerides(SC, World, Orb);
+      Ephemerides(SC, World, Orb, JD_TDB_MJD);
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
@@ -335,7 +335,7 @@ long SimStep(void)
 
    InterProcessComm(); /* Send and receive from external processes */
    /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-   Ephemerides(SC, World, Orb);
+   Ephemerides(SC, World, Orb, JD_TDB_MJD);
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {

@@ -238,7 +238,7 @@ CCSDSTime date2ccsds(const DateType date)
 
    JDType jd = Date2JD(date, CCSDS_EPOCH);
    ChangeSystem(TAI_TIME, &jd);
-   ccsds_time.coarse = jd.whole_days * SEC_PER_DAY + jd.seconds.whole;
+   ccsds_time.coarse = JDToTime(jd);
    jd.seconds.whole  = 0;
    ccsds_time.fine   = (rational2double(jd.seconds) * CCSDS_FINE_MAX) + 0.5;
    return ccsds_time;
@@ -522,9 +522,8 @@ void updateTime(DateType *Time, const double dSeconds)
    if (fabs(dSeconds) > 0.0) {
       Rational rat_dseconds = double2rational(dSeconds);
 
-      Time->Second        = RationalAdd(Time->Second, rat_dseconds);
-      long quotient       = Time->Second.whole / 60.0;
-      Time->Second.whole %= 60;
+      Time->Second  = RationalAdd(Time->Second, rat_dseconds);
+      long quotient = RationalIntMod(&Time->Second, 60);
       if (Time->Second.whole < 0) {
          Time->Second.whole += 60;
          quotient--;

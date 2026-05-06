@@ -1996,7 +1996,6 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
    double x = x0;
    double dx;
    double f = 0.0, fp = 0.0;
-   ;
    long k = 0;
    do {
       fdf(x, params, &f, &fp);

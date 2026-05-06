@@ -208,7 +208,7 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
 
 long SimStep(void);
 void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
-                 struct OrbitType *const orbs);
+                 struct OrbitType *const orbs, const JDType jd);
 void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
                  double Time);
 void Environment(JDType jd, struct WorldType *const worlds,
@@ -302,7 +302,7 @@ void UpdateLagrangePoints(void);
 long LoadTRVfromFile(const char *Path, const char *TrvFileName,
                      const char *ElemLabel, double DynTime,
                      struct OrbitType *O);
-void SplineToPosVel(struct OrbitType *O);
+void SplineToPosVel(struct OrbitType *O, const double dyntime);
 
 void CfdSlosh(struct SCType *S);
 void FakeCfdSlosh(struct SCType *S);

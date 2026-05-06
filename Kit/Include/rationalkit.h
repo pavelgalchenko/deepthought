@@ -32,17 +32,25 @@ typedef struct Rational {
    Rat_Long den;
 } Rational;
 
-Rational IntegerRationalMult(const long mul, Rational rat);
-Rational IntegerRationalMultMod(const long mul, Rational rat, long mod,
-                                long *const carry);
+#define RATIONAL_ZERO ((Rational){.whole = 0, .num = 0, .den = 1})
+
+Rational InitRational(const Rat_Long whole, const Rat_Long num,
+                      const Rat_Long den);
+Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod);
+void ReduceRational(Rational *const);
+Rational IntegerRationalMult(const Rat_Long mul, Rational rat);
+Rational IntegerRationalMultMod(const Rat_Long mul, Rational rat, Rat_Long mod,
+                                Rat_Long *const carry);
 Rational RationalMult(Rational a, Rational b);
 Rational RationalDivide(Rational a, Rational b);
 Rational RationalAdd(Rational a, Rational b);
 Rational RationalSub(Rational a, Rational b);
 Rational double2rational(const double val);
 double rational2double(const Rational rat);
-long RationalRoundUp(const Rational rat);
-long RationalRoundDown(const Rational rat);
+Rat_Long RationalRoundUp(const Rational rat);
+Rat_Long RationalRoundDown(const Rational rat);
+Rational RationalAbs(Rational rat);
+Rational RationalNegate(Rational rat);
 int isequal_rational(const Rational a, const Rational b);
 int isless_rational(const Rational a, const Rational b);
 int isgreater_rational(const Rational a, const Rational b);

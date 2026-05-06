@@ -2359,7 +2359,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
 /**********************************************************************/
 /*   Notional position and velocities for TDRS satellites             */
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
-void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
+void TDRSPosVel(double PriMerAng, double dyntime, double ptn[10][3],
                 double vtn[10][3])
 {
 
@@ -2399,11 +2399,11 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
    }
 
    for (j = 0; j < 10; j++) {
-      om  = om0[j] + omdrift[j] * time;
-      LAN = LAN0[j] * D2R + LANdrift[j] * time;
+      om  = om0[j] + omdrift[j] * dyntime;
+      LAN = LAN0[j] * D2R + LANdrift[j] * dyntime;
 
-      Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, time, ptn[j], vtn[j],
-             &anom);
+      Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, dyntime, ptn[j],
+             vtn[j], &anom);
    }
 }
 /**********************************************************************/

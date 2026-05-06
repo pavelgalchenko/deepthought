@@ -397,7 +397,7 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
 #undef THREEBODY_TO_CENTRAL2
 }
 /**********************************************************************/
-void SplineToPosVel(struct OrbitType *O)
+void SplineToPosVel(struct OrbitType *O, const double dyntime)
 {
    DateType NodeDate;
    char newline;
@@ -408,7 +408,7 @@ void SplineToPosVel(struct OrbitType *O)
    NodeDate.system = UTC_TIME;
 
    /* .. Get nodes from O->SplineFile */
-   while (DynTime > O->NodeDynTime[2]) {
+   while (dyntime > O->NodeDynTime[2]) {
       for (i = 0; i < 3; i++) {
          O->NodeDynTime[i] = O->NodeDynTime[i + 1];
          for (j = 0; j < 3; j++) {
@@ -441,10 +441,10 @@ void SplineToPosVel(struct OrbitType *O)
    for (j = 0; j < 3; j++) {
       for (k = 0; k < 4; k++)
          Y[k] = O->NodePos[k][j];
-      x[j] = CubicSpline(DynTime, X, Y);
+      x[j] = CubicSpline(dyntime, X, Y);
       for (k = 0; k < 4; k++)
          Y[k] = O->NodeVel[k][j];
-      v[j] = CubicSpline(DynTime, X, Y);
+      v[j] = CubicSpline(dyntime, X, Y);
    }
 
    if (O->Regime == ORB_CENTRAL) {
@@ -472,7 +472,7 @@ void SplineToPosVel(struct OrbitType *O)
 }
 /**********************************************************************/
 void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
-                 double Time)
+                 double dyntime)
 {
    long Iorb, i, j;
    struct OrbitType *O;
@@ -497,25 +497,25 @@ void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
       if (O->Exists) {
          if (O->Regime == ORB_THREE_BODY) {
             if (O->LagDOF == LAGDOF_MODES) {
-               LagModes2RV(Time, &LagSys[O->Sys], O, O->PosN, O->VelN);
+               LagModes2RV(dyntime, &LagSys[O->Sys], O, O->PosN, O->VelN);
             }
             else if (O->LagDOF == LAGDOF_COWELL) {
                ThreeBodyOrbitRK4(worlds, O);
-               RV2LagModes(Time, &LagSys[O->Sys], O);
-               O->Epoch = Time;
+               RV2LagModes(dyntime, &LagSys[O->Sys], O);
+               O->Epoch = dyntime;
             }
             else if (O->LagDOF == LAGDOF_SPLINE) {
-               SplineToPosVel(O);
+               SplineToPosVel(O, dyntime);
             }
          }
          else if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
             if (O->SplineActive)
-               SplineToPosVel(O);
+               SplineToPosVel(O, dyntime);
             else if (O->J2DriftEnabled)
-               MeanEph2RV(O, Time);
+               MeanEph2RV(O, dyntime);
             else {
                Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
-                      Time - O->tp, O->PosN, O->VelN, &O->anom);
+                      dyntime - O->tp, O->PosN, O->VelN, &O->anom);
             }
          }
          /* Else is ORB_ZERO or ORB_FLIGHT, and no action required */
@@ -567,7 +567,7 @@ void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
 }
 /**********************************************************************/
 void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
-                 struct OrbitType *const orbs)
+                 struct OrbitType *const orbs, const JDType jd)
 {
    struct OrbitType *O;
    struct WorldType *W;
@@ -579,7 +579,9 @@ void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
    long i, j, Ir, Isc;
    double MagR1, MeanMotion;
 
-   UpdateEphems(EphemOption, JD_TDB_MJD, &JplHeader, worlds);
+   UpdateEphems(EphemOption, jd, &JplHeader, worlds);
+
+   const double jd2000_tt_sec = JDToDynTime(jd);
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    /* Updates some Lagrange point parameters, can help get a more accurate CLN
@@ -591,8 +593,8 @@ void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
       LS = &LagSys[i];
       if (LS->Exists) {
          for (j = 0; j < 5; j++) {
-            FindLagPtPosVel(DynTime, LS, j, LS->LP[j].PosN, LS->LP[j].VelN,
-                            LS->CLN);
+            FindLagPtPosVel(jd2000_tt_sec, LS, j, LS->LP[j].PosN,
+                            LS->LP[j].VelN, LS->CLN);
          }
       }
    }
@@ -609,7 +611,7 @@ void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
    }
 
    /* .. TDRS Spacecraft */
-   TDRSPosVel(worlds[EARTH].PriMerAng, DynTime, ptn, vtn);
+   TDRSPosVel(worlds[EARTH].PriMerAng, jd2000_tt_sec, ptn, vtn);
    for (i = 0; i < 10; i++) {
       MxV(worlds[EARTH].CWN, ptn[i], Tdrs[i].rw);
       for (j = 0; j < 3; j++) {

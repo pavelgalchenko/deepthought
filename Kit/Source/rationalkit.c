@@ -21,8 +21,6 @@
 // TODO: ensure den <= __LONG_MAX__
 //   plan: if den gets too large, find closest representable rational
 
-// TODO: do wrappers for defines to be portable between, e.g., gcc and clang
-
 #define STR2(x) #x
 #define STR(X)  STR2(X)
 
@@ -30,11 +28,45 @@
 // have it
 #ifdef __SIZEOF_INT128__
 typedef __int128_t Rat_LongLong;
-#define _SIZEOF_LONGLONG_ (__SIZEOF_INT128__)
-static unsigned int _ctzll(__uint128_t v)
+typedef __uint128_t Rat_ULongLong;
+#define _SIZEOF_RATLONGLONG_ (__SIZEOF_INT128__)
+#elif (__SIZEOF_LONG_LONG__ > __SIZEOF_RATLONG__)
+typedef signed long long int Rat_LongLong;
+typedef unsigned long long int Rat_ULongLong;
+#define _SIZEOF_RATLONGLONG_ (__SIZEOF_LONG_LONG__)
+#define _absll               (llabs)
+#else
+_Static_assert(
+    0, "Configuration does not support rationalkit. Two different sizes of "
+       "integer types are required, preferrably 64-bit/128-bit.");
+#endif
+
+#if (__SIZEOF_DOUBLE__ == __SIZEOF_LONG_LONG__)
+typedef unsigned long long int Rat_Dbl_Cmp;
+#elif (__SIZEOF_DOUBLE__ == __SIZEOF_LONG__)
+typedef unsigned long int Rat_Dbl_Cmp;
+#elif (__SIZEOF_DOUBLE__ == __SIZEOF_INT__)
+typedef unsigned int Rat_Dbl_Cmp;
+#else
+_Static_assert(0, "Configuration does not support rationalkit. Unable to find "
+                  "an integer type the same size as double.");
+#endif
+
+#ifdef __has_builtin
+#if __has_builtin(__builtin_ctzl)
+#define _ctzl (__builtin_ctzl)
+#endif
+#if (_SIZEOF_RATLONGLONG_) == (__SIZEOF_LONG_LONG__) &&                        \
+    __has_builtin(__builtin_ctzll)
+#define _ctzll (__builtin_ctzll)
+#endif
+#endif
+
+#ifndef _ctzl
+static unsigned int _ctzl(__uint64_t v)
 {
    if (!v)
-      return _SIZEOF_LONGLONG_ * __CHAR_BIT__;
+      return _SIZEOF_LONG_ * __CHAR_BIT__;
    // do binary search to find the first set bit
    //    From Stanford's Bit Twiddling Hacks
    //    https://graphics.stanford.edu/%7Eseander/bithacks.html#ZerosOnRightParallel
@@ -44,14 +76,12 @@ static unsigned int _ctzll(__uint128_t v)
    }
    else {
       c = 1;
-      if ((v & 0xffffffffffffffff) == 0) {
-         v >>= 64;
-         c  += 64;
-      }
+#if __SIZEOF_RATLONG__ > 4
       if ((v & 0xffffffff) == 0) {
          v >>= 32;
          c  += 32;
       }
+#endif
       if ((v & 0xffff) == 0) {
          v >>= 16;
          c  += 16;
@@ -73,33 +103,73 @@ static unsigned int _ctzll(__uint128_t v)
 
    return c;
 }
+#endif
 
-static __uint128_t _absll(Rat_LongLong x)
+#ifndef _ctzll
+static unsigned int _ctzll(Rat_ULongLong v)
+{
+   if (!v)
+      return _SIZEOF_RATLONGLONG_ * __CHAR_BIT__;
+   // do binary search to find the first set bit
+   //    From Stanford's Bit Twiddling Hacks
+   //    https://graphics.stanford.edu/%7Eseander/bithacks.html#ZerosOnRightParallel
+   unsigned int c;
+   if (v & 0x1) {
+      c = 0;
+   }
+   else {
+      c = 1;
+#if _SIZEOF_RATLONGLONG_ > 8
+      if ((v & 0xffffffffffffffff) == 0) {
+         v >>= 64;
+         c  += 64;
+      }
+#endif
+#if _SIZEOF_RATLONGLONG_ > 4
+      if ((v & 0xffffffff) == 0) {
+         v >>= 32;
+         c  += 32;
+      }
+#endif
+      if ((v & 0xffff) == 0) {
+         v >>= 16;
+         c  += 16;
+      }
+      if ((v & 0xff) == 0) {
+         v >>= 8;
+         c  += 8;
+      }
+      if ((v & 0xf) == 0) {
+         v >>= 4;
+         c  += 4;
+      }
+      if ((v & 0x3) == 0) {
+         v >>= 2;
+         c  += 2;
+      }
+      c -= v & 0x1;
+   }
+
+   return c;
+}
+#endif
+
+#ifndef _absll
+static Rat_ULongLong _absll(Rat_LongLong x)
 {
    if (x >= 0)
       return x;
    return -x;
 }
-#elif (__SIZEOF_LONG_LONG__ > __SIZEOF_RATLONG__)
-typedef signed long long int Rat_LongLong;
-#define _SIZEOF_RATLONGLONG_ (__SIZEOF_LONG_LONG__)
-#define _ctzll               (__builtin_ctzll)
-#define _absll(x)            (llabs(x))
-#else
-_Static_assert(
-    0, "Configuration does not support rationalkit. Two different sizes of "
-       "integer types are required, preferrably 64-bit/128-bit.");
 #endif
 
-#if (__SIZEOF_DOUBLE__ == __SIZEOF_LONG_LONG__)
-typedef unsigned long long int Rat_Dbl_Cmp;
-#elif (__SIZEOF_DOUBLE__ == __SIZEOF_LONG__)
-typedef unsigned long int Rat_Dbl_Cmp;
-#elif (__SIZEOF_DOUBLE__ == __SIZEOF_INT__)
-typedef unsigned int Rat_Dbl_Cmp;
-#else
-_Static_assert(0, "Configuration does not support rationalkit. Unable to find "
-                  "an integer type the same size as double.");
+#if __SIZEOF_RATLONG__ != __SIZEOF_LONG__
+static Rat_ULong absl(Rat_Long x)
+{
+   if (x >= 0)
+      return x;
+   return -x;
+}
 #endif
 
 #ifndef MAX
@@ -109,8 +179,10 @@ _Static_assert(0, "Configuration does not support rationalkit. Unable to find "
 /**********************************************************************/
 static void _positive_denom(Rational *const rat)
 {
-   rat->num = (rat->den > 0) ? rat->num : -rat->num;
-   rat->den = (rat->den > 0) ? rat->den : -rat->den;
+   if (rat->den < 0) {
+      rat->num = -rat->num;
+      rat->den = -rat->den;
+   }
 }
 /**********************************************************************/
 static Rat_LongLong _gcdll(Rat_LongLong a, Rat_LongLong b)
@@ -208,32 +280,54 @@ static void _validate(Rational *const rat)
       rat->den = 1;
 }
 /**********************************************************************/
+static void _reduce(Rational *const rat)
+{
+   rat->whole += rat->num / rat->den;
+   rat->num   %= rat->den;
+   if (rat->whole * rat->num < 0) {
+      if (rat->whole > 0) {
+         rat->num += rat->den;
+         rat->whole--;
+      }
+      else if (rat->whole < 0) {
+         rat->num -= rat->den;
+         rat->whole++;
+      }
+   }
+}
+/**********************************************************************/
 static void _cleanup(Rational *const rat)
 {
    _validate(rat);
-   _reduce_by_gcd(&rat->num, &rat->den);
    _positive_denom(rat);
-   if (labs(rat->num) > rat->den) {
-      rat->whole += rat->num / rat->den;
-      rat->num   %= rat->den;
-   }
+   _reduce_by_gcd(&rat->num, &rat->den);
+   _reduce(rat);
+}
+/**********************************************************************/
+Rational InitRational(const Rat_Long whole, const Rat_Long num,
+                      const Rat_Long den)
+{
+   Rational rat = {.whole = whole, .num = num, .den = den};
+   _cleanup(&rat);
+   return rat;
+}
+/**********************************************************************/
+Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod)
+{
+   Rat_Long old_whole  = rat->whole;
+   rat->whole         %= mod;
+   return old_whole / mod;
+}
+/**********************************************************************/
+void ReduceRational(Rational *const rat)
+{
+   _cleanup(rat);
 }
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
 /*  Rational fractional part                                          */
 Rational IntegerRationalMult(const Rat_Long mul, Rational rat)
 {
-#ifndef _IGNORE_LONG_
-   _Static_assert(
-       sizeof(Rat_Long) < sizeof(Rat_LongLong),
-       "Size of 'long' is " STR(
-           __SIZEOF_LONG__) ", which is not less than the size of 'long "
-                            "long', " STR(
-                                _SIZEOF_RATLONGLONG_) ". To ignore, "
-                                                      "reconfigure with "
-                                                      "-DIGNORE_LONG="
-                                                      "TRUE.");
-#endif
    _validate(&rat);
 
    Rational out;
@@ -321,6 +415,12 @@ Rational RationalDivide(Rational a, Rational b)
    return out;
 }
 /**********************************************************************/
+Rational RationalAddWhole(Rational a, Rat_Long b)
+{
+   a.whole += b;
+   return a;
+}
+/**********************************************************************/
 Rational RationalAdd(Rational a, Rational b)
 {
    _validate(&a);
@@ -388,7 +488,7 @@ Rational RationalSub(Rational a, Rational b)
 
 Rational double2rational(const double val)
 {
-   Rational out = {.whole = 0, .num = 0, .den = 1};
+   Rational out = RATIONAL_ZERO;
    union {
       double x;
       Rat_Dbl_Cmp bits;
@@ -399,12 +499,9 @@ Rational double2rational(const double val)
    // grab sign bit (need to do it this way due to -0)
    const int sign = (u.bits >> 63) & 1;
    u.x            = (sign) ? -u.x : u.x; // make u.x positive
-   if (u.bits == 0) {
-      out.whole = 0;
-      out.num   = 0;
-      out.den   = 1;
-      return out;
-   }
+   if (u.bits == 0)
+      return RATIONAL_ZERO;
+
    Rat_Long mantissa = (u.bits & DBL_FRAC_MASK) | DBL_IMPLICIT;
    int exponent      = (int)((u.bits >> DBL_EXP_SHIFT) & DBL_EXP_MASK) -
                        DBL_EXP_BIAS - DBL_FRAC_BITS;
@@ -456,14 +553,28 @@ double rational2double(Rational rat)
    return ((double)rat.num / rat.den) + (double)rat.whole;
 }
 /**********************************************************************/
-long RationalRoundUp(const Rational rat)
+Rat_Long RationalRoundUp(const Rational rat)
 {
    return rat.whole + ((labs(rat.num) > 0 && rat.whole > 0) ? 1 : 0);
 }
 /**********************************************************************/
-long RationalRoundDown(const Rational rat)
+Rat_Long RationalRoundDown(const Rational rat)
 {
    return rat.whole - ((labs(rat.num) > 0 && rat.whole < 0) ? 1 : 0);
+}
+/**********************************************************************/
+Rational RationalAbs(Rational rat)
+{
+   rat.whole = labs(rat.whole);
+   rat.num   = labs(rat.num);
+   return rat;
+}
+/**********************************************************************/
+Rational RationalNegate(Rational rat)
+{
+   rat.whole = -rat.whole;
+   rat.num   = -rat.num;
+   return rat;
 }
 /**********************************************************************/
 int isequal_rational(Rational a, Rational b)

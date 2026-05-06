@@ -217,7 +217,7 @@ void InitDSM(struct SCType *S)
    Nav->Date0.doy         = 0;
    Nav->Date0.Hour        = 0;
    Nav->Date0.Minute      = 0;
-   Nav->Date0.Second      = (Rational){.whole = 0, .num = 0, .den = 1};
+   Nav->Date0.Second      = RATIONAL_ZERO;
    Nav->Date              = Nav->Date0;
 
    FOR_STATES(i)
