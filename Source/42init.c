@@ -7236,7 +7236,7 @@ void InitSim(int argc, char **argv)
    TDB.system = TDB_TIME;
    if (TimeMode == EXTERNAL_TIME) {
       printf("Initializing with External Time\n");
-      RealSystemTime(&UTC, DTSIM);
+      UTC = RealSystemTime();
    }
 
    UTC.doy     = MD2DOY(UTC.Year, UTC.Month, UTC.Day);

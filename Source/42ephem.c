@@ -423,9 +423,8 @@ void SplineToPosVel(struct OrbitType *O)
              &NodeDate.Minute, &sec, &O->NodePos[3][0], &O->NodePos[3][1],
              &O->NodePos[3][2], &O->NodeVel[3][0], &O->NodeVel[3][1],
              &O->NodeVel[3][2], &newline);
-      NodeDate.Second    = double2rational(sec);
-      O->NodeDynTime[3]  = Date2Time(NodeDate);
-      O->NodeDynTime[3] += DynTime - CivilTime; /* Adjust from UTC to TT */
+      NodeDate.Second   = double2rational(sec);
+      O->NodeDynTime[3] = Date2TimeSystem(NodeDate, TT_TIME);
       for (j = 0; j < 3; j++) {
          O->NodePos[3][j] *= 1000.0;
          O->NodeVel[3][j] *= 1000.0;
@@ -494,7 +493,7 @@ void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
 #endif
 
    for (Iorb = 0; Iorb < Norb; Iorb++) {
-      O = &Orb[Iorb];
+      O = &orbs[Iorb];
       if (O->Exists) {
          if (O->Regime == ORB_THREE_BODY) {
             if (O->LagDOF == LAGDOF_MODES) {
@@ -539,7 +538,7 @@ void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
                   O->PosN[i] = R->PosN[i];
                   O->VelN[i] = R->VelN[i];
                }
-               FindENU(O->PosN, World[O->World].w, O->CLN, O->wln);
+               FindENU(O->PosN, worlds[O->World].w, O->CLN, O->wln);
                break;
             case ORB_N_BODY:
             case ORB_CENTRAL:
@@ -580,7 +579,7 @@ void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
    long i, j, Ir, Isc;
    double MagR1, MeanMotion;
 
-   UpdateEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
+   UpdateEphems(EphemOption, JD_TDB_MJD, &JplHeader, worlds);
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    /* Updates some Lagrange point parameters, can help get a more accurate CLN

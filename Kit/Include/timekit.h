@@ -106,13 +106,14 @@ CCSDSTime date2ccsds(const DateType date);
 DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
 
 double Date2Time(const DateType date);
+double Date2TimeSystem(const DateType date, const TimeSystem system);
 double DateToTime(const DateType date);
 JDType DateToJD(const DateType date, const TimeSystem system,
                 const EpochTT epoch);
 JDType Date2JD(const DateType date, const EpochTT epoch);
 CCSDSTime TimeToCCSDS(double UTC);
 DateType JDToDate(const JDType jd, const TimeSystem system);
-DateType TimeToDate(double Time, TimeSystem system, double LSB);
+DateType TimeToDate(double Time, TimeSystem system);
 long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
 double JD2GMST(JDType JD);
@@ -120,7 +121,7 @@ void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);
 double usec(void);
-void RealSystemTime(DateType *const date, double LSB);
+DateType RealSystemTime();
 double RealRunTime(double *RealTimeDT, double LSB);
 void updateTime(DateType *Time, const double dSeconds);
 

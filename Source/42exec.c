@@ -75,6 +75,23 @@ void ManageFlags(long *const nout, long *const GLnout, int *set_nout)
       GLOutFlag = FALSE;
 }
 /**********************************************************************/
+static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
+                         DateType *const tt, DateType *const tdb,
+                         double *const tt_time, double *const tai_time,
+                         double *const gps_time, long *const gps_rollover,
+                         long *const gps_wk, double *const gps_sec)
+{
+   *tdb_mjd_jd = tt_jd;
+   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &*tdb_mjd_jd);
+   *tt  = JDToDate(tt_jd, TT_TIME);
+   *tdb = JDToDate(*tdb_mjd_jd, TDB_TIME);
+
+   *tt_time  = JDToDynTime(tt_jd);
+   *tai_time = *tt_time - 32.184;
+   *gps_time = *tai_time - 19.0;
+   GpsTimeToGpsDate(*gps_time, gps_rollover, gps_wk, gps_sec);
+}
+/**********************************************************************/
 long AdvanceTime(void)
 {
    static long itime    = 0;
@@ -92,30 +109,16 @@ long AdvanceTime(void)
          // TODO: was thinking about changing it around so that the time is
          // stepped with JD_TDB_MJD = JD_TDB_MJD_0 + SimTime, but that means
          // SimTime and other time step info becomes TDB instead of TT
-         // Becuase of this, do we want to get rid of JD_TDB_MJD in favor of
+         // Because of this, do we want to get rid of JD_TDB_MJD in favor of
          // JD_TT_MJD?
 
          // TODO: this implementation will eventually get notable floating point
          // errors if SimTime gets sufficiently large
          itime++;
-         SimTime    = ((double)itime) * DTSIM;
-         JD_TT_MJD  = JDAddMultRatSecs(JD_TT_MJD_0, itime, DTSIM_RAT);
-         JD_TDB_MJD = JD_TT_MJD;
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+         SimTime = ((double)itime) * DTSIM;
 
-         JDType jd_utc_j2000 = JD_TT_MJD;
-         ChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd_utc_j2000);
-
-         TT  = JDToDate(JD_TT_MJD, TT_TIME);
-         UTC = JDToDate(jd_utc_j2000, UTC_TIME);
-         TDB = JDToDate(JD_TDB_MJD, TDB_TIME);
-
-         DynTime    = JDToDynTime(JD_TT_MJD);
-         CivilTime  = JDToTime(jd_utc_j2000); /* UTC "clock" time */
-         AtomicTime = DynTime - 32.184;       /* TAI */
-         GpsTime    = AtomicTime - 19.0;
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
+         JD_TT_MJD = JDAddMultRatSecs(JD_TT_MJD_0, itime, DTSIM_RAT);
+         UTC       = JDToDate(JD_TT_MJD, UTC_TIME);
       } break;
       case EXTERNAL_TIME: {
          while (CurrTick == PrevTick) {
@@ -124,42 +127,23 @@ long AdvanceTime(void)
          PrevTick = CurrTick;
          itime++;
          SimTime = ((double)itime) * DTSIM;
-         RealSystemTime(&UTC, DTSIM);
+         UTC     = RealSystemTime();
+
          JD_TT_MJD = Date2JD(UTC, GMAT_MJD_EPOCH);
-         CivilTime = JDToTime(JD_TT_MJD);
-         ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD);
-         JD_TDB_MJD = JD_TT_MJD;
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
-
-         DynTime    = JDToDynTime(JD_TT_MJD);
-         AtomicTime = DynTime - 32.184; /* TAI */
-         GpsTime    = AtomicTime - 19.0;
-
-         TT          = JDToDate(JD_TT_MJD, TT_TIME);
-         TDB         = JDToDate(JD_TDB_MJD, TDB_TIME);
+         ChangeSystem(TT_TIME, &JD_TT_MJD);
          JD_TT_MJD_0 = JDSubSeconds(JD_TT_MJD, SimTime);
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
       } break;
       case NOS3_TIME: {
-         UTC       = NOS3Time();
-         JD_TT_MJD = Date2JD(UTC, GMAT_MJD_EPOCH);
-         CivilTime = JDToTime(JD_TT_MJD);
-         ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD);
-         JD_TDB_MJD = JD_TT_MJD;
-         ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+         const Rational tick_time = NOS3Time(DTSIM_RAT);
+         SimTime                  = rational2double(tick_time);
 
-         DynTime    = JDToDynTime(JD_TT_MJD);
-         AtomicTime = DynTime - 32.184; /* TAI */
-         GpsTime    = AtomicTime - 19.0;
-
-         TT      = JDToDate(JD_TT_MJD, TT_TIME);
-         TDB     = JDToDate(JD_TDB_MJD, TDB_TIME);
-         SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
+         JD_TT_MJD = JDAddRationalSeconds(JD_TT_MJD_0, tick_time);
+         UTC       = JDToDate(JD_TT_MJD, UTC_TIME);
       } break;
    }
+   CivilTime = Date2Time(UTC); /* UTC "clock" time */
+   _ttjd2others(JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &DynTime, &AtomicTime,
+                &GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
    /* Check for end of run */
    if (SimTime > STOPTIME)

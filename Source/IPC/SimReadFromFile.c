@@ -913,7 +913,7 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled)
       GpsTime    = AtomicTime - 19.0;
       DynTime    = AtomicTime + 32.184;
       // TT.JulDay  = TimeToJD(DynTime);
-      TT         = TimeToDate(DynTime, TT_TIME, DTSIM);
+      TT         = TimeToDate(DynTime, TT_TIME);
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
       JD_TT_MJD  = Date2JD(TT, GMAT_MJD_EPOCH);
       JD_TDB_MJD = JD_TT_MJD;

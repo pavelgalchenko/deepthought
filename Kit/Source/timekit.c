@@ -161,6 +161,14 @@ double Date2Time(const DateType date)
    return JDToTime(jd);
 }
 /**********************************************************************/
+/*  Same as above, but also converts the output time system           */
+double Date2TimeSystem(const DateType date, const TimeSystem system)
+{
+   JDType jd = Date2JD(date, J2000_EPOCH);
+   ChangeSystem(system, &jd);
+   return JDToTime(jd);
+}
+/**********************************************************************/
 /*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1582) */
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
 
@@ -240,8 +248,7 @@ CCSDSTime date2ccsds(const DateType date)
 /* midnight, Jan 1st, 1958                                            */
 CCSDSTime TimeToCCSDS(double UTC)
 {
-   const double LSB = CCSDS_STEP_SIZE;
-   DateType date    = TimeToDate(UTC, UTC_TIME, LSB);
+   DateType date = TimeToDate(UTC, UTC_TIME);
    return date2ccsds(date);
 }
 /**********************************************************************/
@@ -299,11 +306,8 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
 }
 /**********************************************************************/
 /*   Convert Time to Year, Month, Day, Hour, Minute, and Second       */
-DateType TimeToDate(double Time, TimeSystem system, double LSB)
+DateType TimeToDate(double Time, TimeSystem system)
 {
-   // TODO: LSB??
-   // depending on LSB value, it could cause issues with TT vs TAI
-
    JDType jd     = JDFromSeconds(Time, system, J2000_EPOCH);
    DateType date = JDToDate(jd, system);
    return date;
@@ -441,8 +445,8 @@ double usec(void)
 }
 /**********************************************************************/
 /* Get time from operating system, and convert to compatible format.  */
-/* TODO:  Is this date returned in TT or UTC?                         */
-void RealSystemTime(DateType *const date, double DT)
+/* Returns the UTC date.                                              */
+DateType RealSystemTime()
 {
 #if (defined(__APPLE__) || defined(__linux__))
    struct timeval now;
@@ -455,8 +459,7 @@ void RealSystemTime(DateType *const date, double DT)
    /* Time is since J2000 */
    Time = UnixTime - 946728000.0;
 
-   *date     = TimeToDate(Time, UTC_TIME, DT);
-   date->doy = MD2DOY(date->Year, date->Month, date->Day);
+   return TimeToDate(Time, UTC_TIME);
 #endif
 }
 /**********************************************************************/
@@ -489,12 +492,12 @@ double RealRunTime(double *RealTimeDT, double LSB)
    DateType date = {0};
 
    if (First) {
-      First = 0;
-      RealSystemTime(&date, LSB);
+      First      = 0;
+      date       = RealSystemTime();
       OldSysTime = Date2Time(date);
    }
 
-   RealSystemTime(&date, LSB);
+   date        = RealSystemTime();
    SysTime     = Date2Time(date);
    *RealTimeDT = SysTime - OldSysTime;
    OldSysTime  = SysTime;

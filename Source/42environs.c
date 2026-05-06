@@ -84,8 +84,8 @@ void Environment(JDType jd, struct WorldType *const worlds,
       }
       /* else USER_ATMO: Flux10p7, GeomagIndex read from Inp_Sim.txt */
 
-      MxV(World[EARTH].CWN, S->PosN, PosW);
-      Alt = MAGV(PosW) - World[EARTH].rad;
+      MxV(worlds[EARTH].CWN, S->PosN, PosW);
+      Alt = MAGV(PosW) - worlds[EARTH].rad;
       if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
          S->AtmoDensity = NRLMSISE00(date_tt, PosW, Flux10p7, GeomagIndex);
       }

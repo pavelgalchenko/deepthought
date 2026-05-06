@@ -17,11 +17,19 @@
 #include <math.h>
 #include <stdlib.h>
 
+#ifdef __INT64_MAX__
+typedef int64_t Rat_Long;
+#define __SIZEOF_RATLONG__ (8)
+#else
+typedef signed long int Rat_Long;
+#define __SIZEOF_RATLONG__ (__SIZEOF_LONG__)
+#endif
+
 // represents a number using the form "whole + (num/denom)"
 typedef struct Rational {
-   signed long whole;
-   signed long num;
-   signed long den;
+   Rat_Long whole;
+   Rat_Long num;
+   Rat_Long den;
 } Rational;
 
 Rational IntegerRationalMult(const long mul, Rational rat);

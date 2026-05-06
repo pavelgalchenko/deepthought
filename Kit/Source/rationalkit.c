@@ -27,60 +27,79 @@
 #define STR(X)  STR2(X)
 
 // Use 'long long int' if its larger than 'long int'. If not use int128 if we
-// have it; fall back on int64 if nothing else
-#if (__SIZEOF_LONG__ < __SIZEOF_LONG_LONG__)
-typedef long long int longlong;
-#define _SIZEOF_LONGLONG_ __SIZEOF_LONG_LONG__
-static longlong __llgcd__(longlong a, longlong b)
+// have it
+#ifdef __SIZEOF_INT128__
+typedef __int128_t Rat_LongLong;
+#define _SIZEOF_LONGLONG_ (__SIZEOF_INT128__)
+static unsigned int _ctzll(__uint128_t v)
 {
-   if (a == 0L)
-      return b;
-   if (b == 0L)
-      return a;
-   a = labs(a);
-   b = labs(b);
-
-   // TODO: __builtin_ctzl is a gcc builtin for determining the number of
-   // trailing zeros in an unsigned integer type. Will need to do our own
-   // defines/wrappers to get compatibility with other compilers
-   const int shift   = __builtin_ctzll(a | b);
-   a               >>= __builtin_ctzll(a);
-   do {
-      b >>= __builtin_ctzll(b);
-      if (a > b) {
-         // swap the values without needing memory for a third
-         a = a ^ b;
-         b = a ^ b;
-         a = b ^ a;
+   if (!v)
+      return _SIZEOF_LONGLONG_ * __CHAR_BIT__;
+   // do binary search to find the first set bit
+   //    From Stanford's Bit Twiddling Hacks
+   //    https://graphics.stanford.edu/%7Eseander/bithacks.html#ZerosOnRightParallel
+   unsigned int c;
+   if (v & 0x1) {
+      c = 0;
+   }
+   else {
+      c = 1;
+      if ((v & 0xffffffffffffffff) == 0) {
+         v >>= 64;
+         c  += 64;
       }
-   } while (b -= a);
-   return a << shift;
-}
-#define __llabs__(x) llabs(x)
-#elif __SIZEOF_LONG__ == 8
-typedef __int128_t longlong;
-#define _SIZEOF_LONGLONG_ __SIZEOF_INT128__
-#define __llgcd__         _llgcd
-static longlong __llabs__(longlong x)
-{
-   static const __uint128_t UINT128_MAX = (__uint128_t)((longlong)-1L);
+      if ((v & 0xffffffff) == 0) {
+         v >>= 32;
+         c  += 32;
+      }
+      if ((v & 0xffff) == 0) {
+         v >>= 16;
+         c  += 16;
+      }
+      if ((v & 0xff) == 0) {
+         v >>= 8;
+         c  += 8;
+      }
+      if ((v & 0xf) == 0) {
+         v >>= 4;
+         c  += 4;
+      }
+      if ((v & 0x3) == 0) {
+         v >>= 2;
+         c  += 2;
+      }
+      c -= v & 0x1;
+   }
 
-   if (x > 0)
+   return c;
+}
+
+static __uint128_t _absll(Rat_LongLong x)
+{
+   if (x >= 0)
       return x;
-   x ^= UINT128_MAX;
-   return x - UINT128_MAX;
+   return -x;
 }
-#elif
-typedef __INT64_TYPE__ longlong;
-#define _SIZEOF_LONGLONG_ 8
-#define __llgcd__         _llgcd
-static longlong __llabs__(longlong x)
-{
-   static const __uint64_t UINT64_MAX = (__uint64_t)((longlong)-1L);
+#elif (__SIZEOF_LONG_LONG__ > __SIZEOF_RATLONG__)
+typedef signed long long int Rat_LongLong;
+#define _SIZEOF_RATLONGLONG_ (__SIZEOF_LONG_LONG__)
+#define _ctzll               (__builtin_ctzll)
+#define _absll(x)            (llabs(x))
+#else
+_Static_assert(
+    0, "Configuration does not support rationalkit. Two different sizes of "
+       "integer types are required, preferrably 64-bit/128-bit.");
+#endif
 
-   x ^= UINT64_MAX;
-   return x - UINT64_MAX;
-}
+#if (__SIZEOF_DOUBLE__ == __SIZEOF_LONG_LONG__)
+typedef unsigned long long int Rat_Dbl_Cmp;
+#elif (__SIZEOF_DOUBLE__ == __SIZEOF_LONG__)
+typedef unsigned long int Rat_Dbl_Cmp;
+#elif (__SIZEOF_DOUBLE__ == __SIZEOF_INT__)
+typedef unsigned int Rat_Dbl_Cmp;
+#else
+_Static_assert(0, "Configuration does not support rationalkit. Unable to find "
+                  "an integer type the same size as double.");
 #endif
 
 #ifndef MAX
@@ -94,28 +113,35 @@ static void _positive_denom(Rational *const rat)
    rat->den = (rat->den > 0) ? rat->den : -rat->den;
 }
 /**********************************************************************/
-/*  Find Greatest Common Divisor of two integers by Eulcidean         */
-/*  Algorithm for 128 bit integers                                    */
-static longlong _llgcd(longlong a, longlong b)
+static Rat_LongLong _gcdll(Rat_LongLong a, Rat_LongLong b)
 {
-   if (a == 0)
+   if (a == 0L)
       return b;
-   if (b == 0)
+   if (b == 0L)
       return a;
-   a = __llabs__(a);
-   b = __llabs__(b);
-   while (b) {
-      longlong t = b;
-      b          = a % b;
-      a          = t;
-   }
-   return a;
+   a = _absll(a);
+   b = _absll(b);
+
+   // TODO: __builtin_ctzl is a gcc builtin for determining the number of
+   // trailing zeros in an unsigned integer type. Will need to do our own
+   // defines/wrappers to get compatibility with other compilers
+   const int shift   = _ctzll(a | b);
+   a               >>= _ctzll(a);
+   do {
+      b >>= _ctzll(b);
+      if (a > b) {
+         Rat_LongLong t = a;
+         a              = b;
+         b              = t;
+      }
+   } while (b -= a);
+   return a << shift;
 }
 /**********************************************************************/
 /*  From Stack Overflow user Maxim Egorushkin                         */
 /*  Computes the Greatest Common Divisior of two longs using the      */
 /*  Binary GCD algorithm, with speedups from builtins                 */
-static long _fast_gcd(long a, long b)
+static Rat_Long _gcdl(Rat_Long a, Rat_Long b)
 {
    if (a == 0L)
       return b;
@@ -143,9 +169,9 @@ static long _fast_gcd(long a, long b)
 /**********************************************************************/
 /*  Find the Least Common Multiple of two integers by the identity    */
 /*  lcm = (a * b) / gcd(a, b)                                         */
-static signed long _lcm(long a, long b)
+static Rat_Long _lcml(Rat_Long a, Rat_Long b)
 {
-   const long gcd = _fast_gcd(a, b);
+   const Rat_Long gcd = _gcdl(a, b);
    if (gcd) {
       if (b > a)
          b /= gcd;
@@ -157,9 +183,9 @@ static signed long _lcm(long a, long b)
 }
 /**********************************************************************/
 /*  Reduce two longs by their greatest common divisor                 */
-static void _reduce_by_gcd(long *const a, long *const b)
+static void _reduce_by_gcd(Rat_Long *const a, Rat_Long *const b)
 {
-   const signed long gcd = _fast_gcd(*a, *b);
+   const Rat_Long gcd = _gcdl(*a, *b);
    if (gcd > 0) {
       *a = *a / gcd;
       *b = *b / gcd;
@@ -167,9 +193,9 @@ static void _reduce_by_gcd(long *const a, long *const b)
 }
 /**********************************************************************/
 /*  Reduce two longs by their greatest common divisor                 */
-static void _llreduce_by_gcd(longlong *const a, longlong *const b)
+static void _reduce_by_gcdll(Rat_LongLong *const a, Rat_LongLong *const b)
 {
-   const longlong gcd = __llgcd__(*a, *b);
+   const Rat_LongLong gcd = _gcdll(*a, *b);
    if (gcd > 0) {
       *a = *a / gcd;
       *b = *b / gcd;
@@ -195,25 +221,27 @@ static void _cleanup(Rational *const rat)
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
 /*  Rational fractional part                                          */
-Rational IntegerRationalMult(const long mul, Rational rat)
+Rational IntegerRationalMult(const Rat_Long mul, Rational rat)
 {
 #ifndef _IGNORE_LONG_
    _Static_assert(
-       sizeof(long) < sizeof(longlong),
+       sizeof(Rat_Long) < sizeof(Rat_LongLong),
        "Size of 'long' is " STR(
            __SIZEOF_LONG__) ", which is not less than the size of 'long "
-                            "long', " STR(_SIZEOF_LONGLONG_) ". To ignore, "
-                                                             "reconfigure with "
-                                                             "-DIGNORE_LONG="
-                                                             "TRUE.");
+                            "long', " STR(
+                                _SIZEOF_RATLONGLONG_) ". To ignore, "
+                                                      "reconfigure with "
+                                                      "-DIGNORE_LONG="
+                                                      "TRUE.");
 #endif
    _validate(&rat);
 
    Rational out;
-   longlong product = ((longlong)mul * rat.num);
-   out.whole        = (long)((product / rat.den) + ((longlong)mul * rat.whole));
-   out.num          = (long)(product % rat.den);
-   out.den          = rat.den;
+   Rat_LongLong product = ((Rat_LongLong)mul * rat.num);
+   out.whole =
+       (Rat_Long)((product / rat.den) + ((Rat_LongLong)mul * rat.whole));
+   out.num = (Rat_Long)(product % rat.den);
+   out.den = rat.den;
    _cleanup(&out);
    return out;
 }
@@ -222,20 +250,23 @@ Rational IntegerRationalMult(const long mul, Rational rat)
 /*  Rational fractional part                                          */
 /*  This version sets:  '*carry = out.whole / mod'                    */
 /*                and:  'out.whole %= mod'                            */
-Rational IntegerRationalMultMod(const long mul, Rational rat, long mod,
-                                long *const carry)
+Rational IntegerRationalMultMod(const Rat_Long mul, Rational rat, Rat_Long mod,
+                                Rat_Long *const carry)
 {
    _validate(&rat);
    if (!mod)
       mod = 1;
 
    Rational out;
-   longlong product = ((longlong)mul * rat.num);
-   longlong whole   = (product / rat.den) + ((longlong)mul * rat.whole);
-   *carry           = (long)(whole / mod);
-   out.whole        = (long)(whole % mod);
-   out.num          = (long)(product % rat.den);
-   out.den          = rat.den;
+   Rat_LongLong product  = ((Rat_LongLong)mul * rat.num);
+   Rat_LongLong wholea   = product / rat.den;
+   Rat_LongLong wholeb   = (Rat_LongLong)mul * rat.whole;
+   *carry                = (Rat_Long)((wholea / mod) + (wholeb / mod));
+   out.whole             = (Rat_Long)((wholea % mod) + (wholeb % mod));
+   *carry               += out.whole / mod;
+   out.whole            %= mod;
+   out.num               = (Rat_Long)(product % rat.den);
+   out.den               = rat.den;
    _cleanup(&out);
    return out;
 }
@@ -246,27 +277,27 @@ Rational RationalMult(Rational a, Rational b)
    _validate(&b);
 
    Rational out;
-   longlong num_a = (longlong)a.whole * a.den + a.num;
-   longlong den_a = (longlong)a.den;
-   longlong num_b = (longlong)b.whole * b.den + b.num;
-   longlong den_b = (longlong)b.den;
+   Rat_LongLong num_a = (Rat_LongLong)a.whole * a.den + a.num;
+   Rat_LongLong den_a = (Rat_LongLong)a.den;
+   Rat_LongLong num_b = (Rat_LongLong)b.whole * b.den + b.num;
+   Rat_LongLong den_b = (Rat_LongLong)b.den;
 
    // TODO: shouldn't need to do this step if a and b are already reduced
-   _llreduce_by_gcd(&num_a, &den_a);
-   _llreduce_by_gcd(&num_b, &den_b);
+   _reduce_by_gcdll(&num_a, &den_a);
+   _reduce_by_gcdll(&num_b, &den_b);
 
-   longlong den           = den_a * den_b;
-   const longlong a_gcd   = __llgcd__(num_a, den);
-   const longlong com_gcd = __llgcd__(a_gcd, num_b);
+   Rat_LongLong den           = den_a * den_b;
+   const Rat_LongLong a_gcd   = _gcdll(num_a, den);
+   const Rat_LongLong com_gcd = _gcdll(a_gcd, num_b);
    if (com_gcd > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   longlong product = num_a * num_b;
-   out.whole        = (long)(product / den);
-   out.num          = (long)(product % den);
-   out.den          = (long)den;
+   Rat_LongLong product = num_a * num_b;
+   out.whole            = (Rat_Long)(product / den);
+   out.num              = (Rat_Long)(product % den);
+   out.den              = (Rat_Long)den;
    _cleanup(&out);
    return out;
 }
@@ -277,15 +308,15 @@ Rational RationalDivide(Rational a, Rational b)
    _validate(&a);
    _validate(&b);
 
-   Rational out   = {0};
-   longlong num_a = (longlong)a.whole * a.den + a.num;
-   longlong den_a = (longlong)a.den;
-   longlong num_b = (longlong)b.whole * b.den + b.num;
-   longlong den_b = (longlong)b.den;
-   _llreduce_by_gcd(&num_a, &num_b);
-   _llreduce_by_gcd(&den_a, &den_b);
-   out.num = (long)(num_a * den_b);
-   out.den = (long)(den_a * num_b);
+   Rational out       = {0};
+   Rat_LongLong num_a = (Rat_LongLong)a.whole * a.den + a.num;
+   Rat_LongLong den_a = (Rat_LongLong)a.den;
+   Rat_LongLong num_b = (Rat_LongLong)b.whole * b.den + b.num;
+   Rat_LongLong den_b = (Rat_LongLong)b.den;
+   _reduce_by_gcdll(&num_a, &num_b);
+   _reduce_by_gcdll(&den_a, &den_b);
+   out.num = (Rat_Long)(num_a * den_b);
+   out.den = (Rat_Long)(den_a * num_b);
    _cleanup(&out);
    return out;
 }
@@ -296,22 +327,22 @@ Rational RationalAdd(Rational a, Rational b)
    _validate(&b);
 
    Rational out;
-   out.whole      = a.whole + b.whole;
-   longlong den   = (longlong)a.den * b.den;
-   longlong num_a = (longlong)a.num * b.den;
-   longlong num_b = (longlong)b.num * a.den;
+   out.whole          = a.whole + b.whole;
+   Rat_LongLong den   = (Rat_LongLong)a.den * b.den;
+   Rat_LongLong num_a = (Rat_LongLong)a.num * b.den;
+   Rat_LongLong num_b = (Rat_LongLong)b.num * a.den;
 
-   const longlong a_gcd   = __llgcd__(num_a, den);
-   const longlong com_gcd = __llgcd__(a_gcd, num_b);
+   const Rat_LongLong a_gcd   = _gcdll(num_a, den);
+   const Rat_LongLong com_gcd = _gcdll(a_gcd, num_b);
    if (com_gcd > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   longlong sum  = num_a + num_b;
-   out.whole    += (long)(sum / den);
-   out.num       = (long)(sum % den);
-   out.den       = (long)den;
+   Rat_LongLong sum  = num_a + num_b;
+   out.whole        += (Rat_Long)(sum / den);
+   out.num           = (Rat_Long)(sum % den);
+   out.den           = (Rat_Long)den;
    _cleanup(&out);
    return out;
 }
@@ -322,22 +353,22 @@ Rational RationalSub(Rational a, Rational b)
    _validate(&b);
 
    Rational out;
-   out.whole      = a.whole - b.whole;
-   longlong den   = (longlong)a.den * b.den;
-   longlong num_a = (longlong)a.num * b.den;
-   longlong num_b = (longlong)b.num * a.den;
+   out.whole          = a.whole - b.whole;
+   Rat_LongLong den   = (Rat_LongLong)a.den * b.den;
+   Rat_LongLong num_a = (Rat_LongLong)a.num * b.den;
+   Rat_LongLong num_b = (Rat_LongLong)b.num * a.den;
 
-   const longlong a_gcd   = __llgcd__(num_a, den);
-   const longlong com_gcd = __llgcd__(a_gcd, num_b);
-   if (__llabs__(com_gcd) > 0) {
+   const Rat_LongLong a_gcd   = _gcdll(num_a, den);
+   const Rat_LongLong com_gcd = _gcdll(a_gcd, num_b);
+   if (_absll(com_gcd) > 0) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   longlong diff  = num_a - num_b;
-   out.whole     += (long)(diff / den);
-   out.num        = (long)(diff % den);
-   out.den        = (long)den;
+   Rat_LongLong diff  = num_a - num_b;
+   out.whole         += (Rat_Long)(diff / den);
+   out.num            = (Rat_Long)(diff % den);
+   out.den            = (Rat_Long)den;
    _cleanup(&out);
    return out;
 }
@@ -360,11 +391,8 @@ Rational double2rational(const double val)
    Rational out = {.whole = 0, .num = 0, .den = 1};
    union {
       double x;
-      __UINT64_TYPE__ bits;
+      Rat_Dbl_Cmp bits;
    } u;
-
-   _Static_assert(sizeof(__UINT64_TYPE__) == sizeof(double),
-                  "Size of unsigned long not equal to size of double.");
 
    u.x = val;
 
@@ -377,9 +405,9 @@ Rational double2rational(const double val)
       out.den   = 1;
       return out;
    }
-   signed long mantissa = (u.bits & DBL_FRAC_MASK) | DBL_IMPLICIT;
-   int exponent         = (int)((u.bits >> DBL_EXP_SHIFT) & DBL_EXP_MASK) -
-                          DBL_EXP_BIAS - DBL_FRAC_BITS;
+   Rat_Long mantissa = (u.bits & DBL_FRAC_MASK) | DBL_IMPLICIT;
+   int exponent      = (int)((u.bits >> DBL_EXP_SHIFT) & DBL_EXP_MASK) -
+                       DBL_EXP_BIAS - DBL_FRAC_BITS;
 
    // TODO: this needs testing, especially with small numbers
    if (exponent >= 0) {
@@ -449,9 +477,9 @@ int isless_rational(Rational a, Rational b)
 {
    _cleanup(&a);
    _cleanup(&b);
-   const long lcm  = _lcm(a.den, b.den);
-   a.num          *= (lcm / a.den);
-   b.num          *= (lcm / b.den);
+   const Rat_Long lcm  = _lcml(a.den, b.den);
+   a.num              *= (lcm / a.den);
+   b.num              *= (lcm / b.den);
    return (a.whole < b.whole) || ((a.whole == b.whole) && (a.num < b.num));
 }
 /**********************************************************************/
@@ -459,9 +487,9 @@ int isgreater_rational(Rational a, Rational b)
 {
    _cleanup(&a);
    _cleanup(&b);
-   const long lcm  = _lcm(a.den, b.den);
-   a.num          *= (lcm / a.den);
-   b.num          *= (lcm / b.den);
+   const Rat_Long lcm  = _lcml(a.den, b.den);
+   a.num              *= (lcm / a.den);
+   b.num              *= (lcm / b.den);
    return (a.whole > b.whole) || ((a.whole == b.whole) && (a.num > b.num));
 }
 

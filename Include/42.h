@@ -308,7 +308,7 @@ void CfdSlosh(struct SCType *S);
 void FakeCfdSlosh(struct SCType *S);
 void SendStatesToSpirent(void);
 
-DateType NOS3Time();
+Rational NOS3Time(const Rational tick_sec);
 
 void InterProcessComm(void);
 void InitInterProcessComm(void);

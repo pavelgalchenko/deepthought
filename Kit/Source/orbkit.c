@@ -497,7 +497,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
-void MeanEph2RV(struct OrbitType *O, double DynTime)
+void MeanEph2RV(struct OrbitType *O, double dyntime)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g;
    double CPN[3][3], cth, sth, R, pr[3], pv[3];
@@ -506,13 +506,13 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
 
    /* 10.121a,b */
    if (O->J2DriftEnabled) {
-      O->ArgP = O->ArgP0 + O->ArgPdot * (DynTime - O->Epoch);
-      O->RAAN = O->RAAN0 + O->RAANdot * (DynTime - O->Epoch);
+      O->ArgP = O->ArgP0 + O->ArgPdot * (dyntime - O->Epoch);
+      O->RAAN = O->RAAN0 + O->RAANdot * (dyntime - O->Epoch);
    }
 
    /* 10.122 */
    O->MeanAnom =
-       fmod(O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch) - PI, TWOPI) +
+       fmod(O->MeanAnom0 + O->MeanMotion * (dyntime - O->Epoch) - PI, TWOPI) +
        PI;
 
    O->anom = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
@@ -610,7 +610,7 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
 /**********************************************************************/
 /* TLEs use UTC.  42 orbits use TT.  So LeapSec are needed.           */
 long LoadTleFromFile(const char *Path, const char *TleFileName,
-                     const char *TleLabel, double DynTime, JDType jd,
+                     const char *TleLabel, double dyntime, JDType jd,
                      struct OrbitType *O)
 {
    FILE *infile;
@@ -637,7 +637,7 @@ long LoadTleFromFile(const char *Path, const char *TleFileName,
          fgets(line1, 80, infile);
          fgets(line2, 80, infile);
          TLE2MeanEph(line1, line2, jd, O);
-         MeanEph2RV(O, DynTime);
+         MeanEph2RV(O, dyntime);
       }
    }
    fclose(infile);
@@ -2847,7 +2847,7 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 /*                will arrive.                                        */
 /*  Two iterations gives < mm accuracy for GEO-LEO distances.         */
 /*  Will need more iterations for interplanetary-scale applications.  */
-void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
+void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
                          double FuturePos[3])
 {
@@ -2860,26 +2860,26 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
       RelPos[i] = Target->PosN[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime - dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, Vel, &anom);
 
    for (i = 0; i < 3; i++)
       RelPos[i] = PastPos[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime - dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, Vel, &anom);
 
    /* .. Future */
    for (i = 0; i < 3; i++)
       RelPos[i] = Target->PosN[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, PastPos, Vel, &anom);
 
    for (i = 0; i < 3; i++)
       RelPos[i] = PastPos[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, PastPos, Vel, &anom);
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */

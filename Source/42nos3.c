@@ -48,7 +48,9 @@ static void InitializeTimeNode(void);
 static void TimeTickCallback(NE_SimTime time);
 #endif
 
-DateType NOS3Time()
+// Returns the Rational representation of the number of seconds that have passed
+// since the simulation has started.
+Rational NOS3Time(const Rational tick_sec)
 {
 
 #if defined(_WIN32)
@@ -64,7 +66,6 @@ DateType NOS3Time()
 #elif defined(__linux__)
    static long First = 1;
    int64_t ticks;
-   JDType jd = {0};
    if (First) {
       First = 0;
       ReadNos3InpFile();
@@ -75,8 +76,7 @@ DateType NOS3Time()
       exit(3);
    }
    ticks = NE_bus_get_time(Bus);
-   jd    = JDAddMultRatSecs(JD_TT_MJD, ticks, DTSIM_RAT);
-   return JDToDate(jd, TT_TIME);
+   return IntegerRationalMult(ticks, tick_sec);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
    fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");
