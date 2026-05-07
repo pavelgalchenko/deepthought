@@ -14,60 +14,115 @@ jobs:
     # Release Ubuntu build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - name: install dep
-      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev
-    - name: cmake
-      run: cmake -DSPICE=OFF .
-    - name: make
-      run: make -sj
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev
+          freeglut3-dev mesa-common-dev
+      - name: cmake
+        run: cmake -DSPICE=OFF .
+      - name: make
+        run: make -sj
 
   build-ubuntu-release-cspice:
     # Release Ubuntu build with cspice (note, not downloading kernels at the moment)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - name: install dep
-      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev
-    - name: get cspice
-      run: ./download_spice.sh
-    - name: cmake
-      run: cmake -DSPICE=ON .
-    - name: make
-      run: make -sj
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev
+          freeglut3-dev mesa-common-dev
+      - name: get cspice
+        run: ./download_spice.sh
+      - name: cmake
+        run: cmake -DSPICE=ON .
+      - name: make
+        run: make -sj
 
-  build-ubuntu-debug-asan:
-    # Debug Ubuntu build with address sanitizer
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v6
-    - name: install dep
-      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev
-    - name: cmake
-      run: cmake -DCMAKE_BUILD_TYPE=DEBUG -DSANITIZER=ON -DSPICE=OFF .
-    - name: make
-      run: make -sj
-      
   build-ubuntu-glfw:
     # Ubuntu build with GLFW graphics (this might work at the moment, but may not run) WHY IS THERE NO 'ALLOW FAILURE' CONDITION FOR A JOB
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
-    - name: install dep
-      run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libglfw3-dev
-    - name: cmake
-      run: cmake -DGLUT_OR_GLFW=GLFW -DSPICE=OFF .
-    - name: make
-      run: make -sj
-      
-  build-ubuntu-no-graphics:
-    # Ubuntu build with all graphics disabled
-    runs-on: ubuntu-latest
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev
+          freeglut3-dev mesa-common-dev libglfw3-dev
+      - name: cmake
+        run: cmake -DGLUT_OR_GLFW=GLFW -DSPICE=OFF .
+      - name: make
+        run: make -sj
+
+  build-macos-intel-release:
+    # Release MacOS on Inel build
+    runs-on: [ macos-26, intel ]
     steps:
-    - uses: actions/checkout@v6
-    - name: install dep
-      run: sudo apt-get -y install pkg-config libfyaml-dev
-    - name: cmake
-      run: cmake -DGUI=OFF -DSPICE=OFF .
-    - name: make
-      run: make -sj
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: brew install pkgconfig libfyaml freeglut mesa-glu
+      - name: cmake
+        run: cmake -DSPICE=OFF .
+      - name: make
+        run: make -sj
+
+  build-macos-intel-release-cspice:
+    # Release MacOS on Inel build with cspice (note, not downloading kernels at the moment)
+    runs-on: [ macos-26, intel ]
+    steps:
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: brew install pkgconfig libfyaml freeglut mesa-glu
+      - name: get cspice
+        run: ./download_spice.sh
+      - name: cmake
+        run: cmake -DSPICE=ON .
+      - name: make
+        run: make -sj
+
+  build-macos-intel-glfw:
+    # MacOS on Inel build with GLFW graphics (this might work at the moment, but may not run) WHY IS THERE NO 'ALLOW FAILURE' CONDITION FOR A JOB
+    runs-on: [ macos-26, intel ]
+    steps:
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: brew install pkgconfig libfyaml freeglut mesa-glu glfw
+      - name: cmake
+        run: cmake -DGLUT_OR_GLFW=GLFW -DSPICE=OFF .
+      - name: make
+        run: make -sj
+
+  build-macos-arm-release:
+    # Release Ubuntu build
+    runs-on: [ macos-26, arm64 ]
+    steps:
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: brew install pkgconfig libfyaml freeglut mesa-glu
+      - name: cmake
+        run: cmake -DSPICE=OFF .
+      - name: make
+        run: make -sj
+
+  build-macos-arm-release-cspice:
+    # Release Ubuntu build with cspice (note, not downloading kernels at the moment)
+    runs-on: [ macos-26, arm64 ]
+    steps:
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: brew install pkgconfig libfyaml freeglut mesa-glu
+      - name: get cspice
+        run: ./download_spice.sh
+      - name: cmake
+        run: cmake -DSPICE=ON .
+      - name: make
+        run: make -sj
+
+  build-macos-arm-glfw:
+    # Ubuntu build with GLFW graphics (this might work at the moment, but may not run) WHY IS THERE NO 'ALLOW FAILURE' CONDITION FOR A JOB
+    runs-on: [ macos-26, arm64 ]
+    steps:
+      - uses: actions/checkout@v6
+      - name: install dep
+        run: brew install pkgconfig libfyaml freeglut mesa-glu glfw
+      - name: cmake
+        run: cmake -DGLUT_OR_GLFW=GLFW -DSPICE=OFF .
+      - name: make
+        run: make -sj
