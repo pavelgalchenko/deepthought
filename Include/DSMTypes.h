@@ -13,9 +13,8 @@
 
 #ifndef __DSMTYPES_H__
 #define __DSMTYPES_H__
+#include "orbkit.h"
 #include "timekit.h"
-
-#define REPORT_RESIDUALS FALSE
 
 // Controller Type Definitions
 enum CtrlType {
@@ -60,8 +59,11 @@ enum SensorType {
    ACCEL_SENSOR,
 };
 // Update these to be the zeroth and last items in SensorType
-#define INIT_SENSOR GPS_SENSOR
-#define FIN_SENSOR  ACCEL_SENSOR
+#define INIT_SENSOR (GPS_SENSOR)
+#define FIN_SENSOR  (ACCEL_SENSOR)
+
+#define FOR_SENSORS(x)                                                         \
+   for (enum SensorType(x) = INIT_SENSOR; (x) <= FIN_SENSOR; (x)++)
 
 // Nav Filter Type Definitions
 enum NavType {
@@ -87,8 +89,10 @@ enum States {
    // actuation filtering???
 };
 // Update these to be the zeroth and last items in States
-#define INIT_STATE TIME_STATE
-#define FIN_STATE  VEL_STATE
+#define INIT_STATE (TIME_STATE)
+#define FIN_STATE  (VEL_STATE)
+
+#define FOR_STATES(x) for (enum States(x) = INIT_STATE; (x) <= FIN_STATE; (x)++)
 
 enum batchType {
    NONE_BATCH = 0,
@@ -122,7 +126,7 @@ struct DSMCmdVecType {
    long CmdMode;
    long Frame;
    long TrgType;
-   long TrgWorld;
+   WorldID TrgWorld;
    long TrgSC;
    long TrgBody;
    double N[3];  /* Components in N */
@@ -257,18 +261,18 @@ struct AcType;
 struct DSMMeasType {
    /*~ Parameters ~*/
    double time;
-   ccsdsCoarse ccsdsSeconds;
-   ccsdsFine ccsdsSubseconds;
+   CCSDSTime ccsds_time;
    double *data;
 
    /*~ Internal Variables ~*/
    long sensorNum;
    double *(*measFun)(struct AcType *const, struct DSMType *const, const long);
    double **(*measJacobianFun)(struct AcType *const, struct DSMType *const,
-                               const long);
+                               const long, double **);
    enum SensorType type;
    int dim;
    int errDim;
+   int noiseDim;
    double *R;  // diagonal elements of measurement noise covariance
    double **N; // measurement noise mapping matrix
    double underWeighting;
@@ -348,19 +352,19 @@ struct DSMNavType {
    long Init;
    unsigned long steps;
    double subStepSize;
-   long subStepSteps; // number of ccsdsSubseconds counts per subStepSize
-   ccsdsCoarse ccsdsSeconds;
-   ccsdsFine ccsdsSubseconds;
-   long stateDim; // total dimension of navigation state space
-   long navDim;   // total dimension of estimation error space
+   long subStepSteps;    // number of ccsdsSubseconds counts per subStepSize
+   CCSDSTime ccsds_time; // UTC, Epoch: Midnight Jan 1, 1958
+   long stateDim;        // total dimension of navigation state space
+   long navDim;          // total dimension of estimation error space
    long stateSize[FIN_STATE + 1];
    long navSize[FIN_STATE + 1];
    long stateInd[FIN_STATE + 1];
    long navInd[FIN_STATE + 1];
-   struct DateType Date0;
-   struct DateType Date;
+   DateType Date0; // TT
+   DateType Date;  // TT
    double DT;
-   double **P; // Estimation Error Covariance
+   double **P; // Estimation Error Covariance, used only as scratch for
+               // reporting and graphics
    double **S; // Lower-triangular Cholesky factorization of P
    double *delta;
 
@@ -393,9 +397,9 @@ struct DSMNavType {
    double **M;        // dynamics noise mapping matrix
    double *sqrQ;      // Diagonal elements of noise covariance
    void (*EOMJacobianFun)(struct AcType *const, struct DSMType *const,
-                          const struct DateType *, double const[3][3],
-                          double const[4], double const[3], double const[3],
-                          double const[3], double const[], const double);
+                          const DateType *, double const[3][3], double const[4],
+                          double const[3], double const[3], double const[3],
+                          double const[], const double, double **);
    void (*updateLaw)(struct DSMNavType *const);
    // linked list of measurement buffer. Ordered by time. Head is measurement
    // with the smallest time in the queue.
@@ -404,16 +408,19 @@ struct DSMNavType {
    // Use final element of relevant enums+1 to ensure these arrays are just as
    // big as needed
    struct DSMMeasType
-       *measTypes[FIN_SENSOR + 1];   // index corresponding to enum SensorType
-                                     // holds default sensor data
-   int sensorActive[FIN_SENSOR + 1]; // TRUE/FALSE; index corresponding to enum
-                                     // SensorType indicates sensor is used
-   int nSensor[FIN_SENSOR +
-               1]; // each index incates the number of the corresponding sensor
-   int stateActive[FIN_STATE + 1]; // TRUE/FALSE; index corresponding to enum
-                                   // States indicates state is filtered
+       *measTypes[FIN_SENSOR + 1];    // index corresponding to enum SensorType
+                                      // holds default sensor data
+   int *sensorActive[FIN_SENSOR + 1]; // TRUE/FALSE; index corresponding to enum
+                                      // SensorType indicates sensor is used
+   int nSensor[FIN_SENSOR + 1];       // each index incates the number of the
+                                      // corresponding sensor
+   int stateActive[FIN_STATE + 1];    // TRUE/FALSE; index corresponding to enum
+                                      // States indicates state is filtered
 
-   double **residuals[FIN_SENSOR + 1];
+   long innovationsReportFirst;
+   double innovationTime;
+   long innovationsExist;
+   double **innovations[FIN_SENSOR + 1];
    long reportConfigured;
 };
 

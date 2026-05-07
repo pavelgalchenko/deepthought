@@ -46,7 +46,7 @@ struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
                                long const sensorNum);
 int comparator_DSMMeas(const void *v1, const void *v2);
 
-void updateNavCCSDS(ccsdsCoarse *sec, ccsdsFine *subsec, const double dSeconds);
+void updateNavCCSDS(CCSDSTime ccsds_time, const double dSeconds);
 double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
                         const double gpsSec);
 
@@ -56,13 +56,13 @@ double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
 double **GetStateLinTForm(struct DSMNavType *const Nav);
 void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
                          double **P);
-void configureRefFrame(struct DSMNavType *const Nav,
+void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset);
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
                        double const CRB[3][3], double const *whlH);
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
-                  const long dCCSDSSec, const long dCCSDSSubSec,
+                  CCSDSTime *const cur_ccsds, const CCSDSTime next_ccsds,
                   const long init);
 void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 
@@ -70,19 +70,20 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 /*                       Measurement Jacobians                        */
 /*--------------------------------------------------------------------*/
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long sensorNum);
+                         const long sensorNum, double **N);
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **startrackJacobianFun(struct AcType *const AC,
-                              struct DSMType *const DSM, const long sensorNum);
+                              struct DSMType *const DSM, const long sensorNum,
+                              double **N);
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N);
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long sensorNum);
+                          const long sensorNum, double **N);
 
 double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
                 const long sensorNum);
@@ -104,10 +105,11 @@ double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, double const CRB[3][3],
+                         const DateType *date, double const CRB[3][3],
                          double const qbr[4], double const PosR[3],
                          double const VelR[3], double const wbr[3],
-                         double const whlH[AC->Nwhl], const double AtmoDensity);
+                         double const whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian);
 void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
@@ -115,10 +117,11 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, double const CRB[3][3],
+                         const DateType *date, double const CRB[3][3],
                          double const qbr[4], double const PosR[3],
                          double const VelR[3], double const wbr[3],
-                         double const whlH[AC->Nwhl], const double AtmoDensity);
+                         double const whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian);
 void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
@@ -126,10 +129,11 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const struct DateType *date, double const CRB[3][3],
+                        const DateType *date, double const CRB[3][3],
                         double const qbr[4], double const PosR[3],
                         double const VelR[3], double const wbr[3],
-                        double const whlH[AC->Nwhl], const double AtmoDensity);
+                        double const whlH[AC->Nwhl], const double AtmoDensity,
+                        double **jacobian);
 void MEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /******************************************************************************/

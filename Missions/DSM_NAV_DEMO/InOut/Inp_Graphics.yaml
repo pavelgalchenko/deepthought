@@ -51,7 +51,7 @@ POV:
   Up Axis: NEG_Y
   POV Range: 40.0
   POV Vertical Angle: 30.0
-  POV Host Position: [0.0, 0.0, 0.0]
+  POV Host Position: [ 0.0, 0.0, 0.0 ]
   POV View: FRONT
 Cam:
   # -----------------------------Camera Configuration------------------------------
@@ -120,7 +120,7 @@ Cam:
   Dimensions:
     Width: 800
     Height: 800
-  Mouse Scale Factor: 5e-05
+  Mouse Scale Factor: 5e-5
   Gamma Exponent: 1.8
   Cam Show:
     N Axes:

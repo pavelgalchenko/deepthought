@@ -912,7 +912,8 @@ void Minv4f(float A[16], float Ai[16])
    Ai[15] = b44 / DetA;
 }
 /**********************************************************************/
-void BuildModelMatrix(double CBN[3][3], double pbn[3], float ModelMatrix[16])
+void BuildModelMatrix(const double CBN[3][3], const double pbn[3],
+                      float ModelMatrix[16])
 {
    long i, j;
 
@@ -926,7 +927,8 @@ void BuildModelMatrix(double CBN[3][3], double pbn[3], float ModelMatrix[16])
    ModelMatrix[15] = 1.0f;
 }
 /**********************************************************************/
-void BuildViewMatrix(double CEN[3][3], double pen[3], float ViewMatrix[16])
+void BuildViewMatrix(const double CEN[3][3], const double pen[3],
+                     float ViewMatrix[16])
 {
    double pene[3];
    long i, j;

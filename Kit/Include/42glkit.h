@@ -11,8 +11,8 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#ifndef __42GL_H__
-#define __42GL_H__
+#ifndef __42GLKIT_H__
+#define __42GLKIT_H__
 
 #include <math.h>
 #include <stdio.h>
@@ -64,6 +64,7 @@ enum MAP_MENU {
 #define ONSCREEN  0
 #define OFFSCREEN 1
 
+// TODO: double check what globals are needed.
 EXTERN long MapWindowExists, OrreryWindowExists, SphereWindowExists;
 
 EXTERN double RunTime, FrameRate, RealTimeDT;
@@ -230,6 +231,10 @@ EXTERN GLfloat CNE[9];                /* DCM between N and Eye frame */
 EXTERN char Banner[120];
 EXTERN GLfloat BannerColor[4];
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void GeomToDisplayLists(struct GeomType *G);
 void UpdatePOV(void);
 void CamRenderExec(void);
@@ -239,7 +244,9 @@ void DrawUnitSphere(void);
 void SetPovOrientation(void);
 void InitCamWidgets(void);
 void InitOrreryWidget(void);
+void ReinitOrreryWidget(void);
 void InitSphereWidgets(void);
+void ReinitSphereWidgets(void);
 void LoadShadowMapFBO(void);
 void Load3DNoise(void);
 void LoadCamLists(void);
@@ -250,10 +257,14 @@ void ReadGraphicsInpFile(void);
 void LoadFOVs(void);
 void InitColors(void);
 
+#ifdef __cplusplus
+}
+#endif
+
 /*
 ** #ifdef __cplusplus
 ** }
 ** #endif
 */
 
-#endif /* __42GL_H__ */
+#endif /* __42GLKIT_H__ */

@@ -29,82 +29,6 @@
 #define IDX4(x, y, z, w, Ny, Nz, Nw)                                           \
    ((((x) * (Ny) + (y)) * (Nz) + (z)) * (Nw) + (w))
 
-#define SOL     0
-#define MERCURY 1
-#define VENUS   2
-#define EARTH   3
-#define MARS    4
-#define JUPITER 5
-#define SATURN  6
-#define URANUS  7
-#define NEPTUNE 8
-#define PLUTO   9
-#define LUNA    10
-/* Moons of Mars */
-#define PHOBOS 11
-#define DEIMOS 12
-/* Major Moons of Jupiter */
-#define IO       13
-#define EUROPA   14
-#define GANYMEDE 15
-#define CALLISTO 16
-#define AMALTHEA 17
-#define HIMALIA  18
-#define ELARA    19
-#define PASIPHAE 20
-#define SINOPE   21
-#define LYSITHEA 22
-#define CARME    23
-#define ANANKE   24
-#define LEDA     25
-#define THEBE    26
-#define ADRASTEA 27
-#define METIS    28
-/* Major Moons of Saturn */
-#define MIMAS      29
-#define ENCELADUS  30
-#define TETHYS     31
-#define DIONE      32
-#define RHEA       33
-#define TITAN      34
-#define HYPERION   35
-#define IAPETUS    36
-#define PHOEBE     37
-#define JANUS      38
-#define EPIMETHEUS 39
-#define HELENE     40
-#define TELESTO    41
-#define CALYPSO    42
-#define ATLAS      43
-#define PROMETHEUS 44
-#define PANDORA    45
-#define PAN        46
-/* Major Moons of Uranus */
-#define ARIEL   47
-#define UMBRIEL 48
-#define TITANIA 49
-#define OBERON  50
-#define MIRANDA 51
-/* Major Moons of Neptune */
-#define TRITON 52
-#define NERIED 53
-/* Pluto's moon */
-#define CHARON 54
-
-/* Minor Bodies */
-#define MINORBODY_0 55
-#define MINORBODY_1 56
-#define MINORBODY_2 57
-#define MINORBODY_3 58
-#define MINORBODY_4 59
-#define MINORBODY_5 60
-#define MINORBODY_6 61
-#define MINORBODY_7 62
-#define MINORBODY_8 63
-#define MINORBODY_9 64
-
-#define NWORLD 65
-
 #define POSITIVE 1
 #define NEGATIVE 0
 
@@ -188,15 +112,6 @@
 #define ORBDOF_EULER_HILL 1
 #define ORBDOF_ENCKE      2
 #define ORBDOF_COWELL     3
-
-#define EPH_MEAN    0
-#define EPH_DE430   1
-#define EPH_DE440   2
-#define EPH_DE421   3
-#define EPH_DE424   4
-#define EPH_GMAT421 5
-#define EPH_GMAT424 6
-#define EPH_SPICE   9
 
 #define REFPT_CM    0
 #define REFPT_JOINT 1

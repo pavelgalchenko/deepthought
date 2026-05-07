@@ -19,6 +19,22 @@
 */
 
 /**********************************************************************/
+int any_int(const long n, const int *vec)
+{
+   for (long i = 0; i < n; i++)
+      if (vec[i])
+         return 1;
+   return 0;
+}
+/**********************************************************************/
+int all_int(const long n, const int *vec)
+{
+   for (long i = 0; i < n; i++)
+      if (!vec[i])
+         return 0;
+   return 1;
+}
+/**********************************************************************/
 double signum(const double x)
 {
    return (x >= 0 ? 1.0 : -1.0);
@@ -165,6 +181,13 @@ void SxM(const double S, const double A[3][3], double B[3][3])
    B[2][0] = S * A[2][0];
    B[2][1] = S * A[2][1];
    B[2][2] = S * A[2][2];
+}
+/******************************************************************************/
+double det3x3(const double M[3][3])
+{
+   return M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) -
+          M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) +
+          M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
@@ -619,13 +642,39 @@ double fact(long const n)
 /**********************************************************************/
 double oddfact(long const n)
 {
-   double F = 1.0;
-   long i;
+   static double *memo   = NULL;
+   static long memo_size = 0;
+   if (n < 0) {
+      fprintf(stderr, "oddfact: argument out of range. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   if (memo == NULL && n > 0) {
+      memo_size = 2;
+      memo      = calloc(memo_size, sizeof(double));
+      if (memo == NULL) {
+         fprintf(stderr, "oddfact: memory allocation failed. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      memo[0] = 1.0;
+      memo[1] = 1.0;
+   }
 
-   for (i = 1; i <= n; i += 2)
-      F *= i;
-
-   return F;
+   if (n >= memo_size) {
+      double *tmp = realloc(memo, (n + 1) * sizeof(double));
+      if (tmp == NULL) {
+         fprintf(stderr, "oddfact: memory allocation failed. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      memo = tmp;
+      for (long i = memo_size; i <= n; i++) {
+         if (i % 2 == 0)
+            memo[i] = 1.0;
+         else
+            memo[i] = i * memo[i - 2];
+      }
+      memo_size = n + 1;
+   }
+   return memo[n];
 }
 /**********************************************************************/
 /*  Compute fact(n)/fact(m), where n > m                              */
@@ -781,19 +830,25 @@ void SphericalHarmonics(const long N, const long M, const double r,
 }
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
-void MxMG(double **A, double **B, double **C, const long N, const long K,
-          const long M)
+void MxMG(double **A, double **B, double **C, const int N, const int K,
+          const int M)
 {
-   long i, j, k;
 
-   for (i = 0; i < N; i++) {
-      for (j = 0; j < M; j++) {
+   // transpose B for better cache locality
+   double **BT = CreateMatrix(M, K);
+   for (int i = 0; i < M; i++)
+      for (int j = 0; j < K; j++)
+         BT[i][j] = B[j][i];
+
+   for (int i = 0; i < N; i++) {
+      for (int j = 0; j < M; j++) {
          C[i][j] = 0.0;
-         for (k = 0; k < K; k++) {
-            C[i][j] += A[i][k] * B[k][j];
+         for (int k = 0; k < K; k++) {
+            C[i][j] += A[i][k] * BT[j][k];
          }
       }
    }
+   DestroyMatrix(BT);
 }
 /**********************************************************************/
 /*  A is NxK, B is MxK, C is NxM                                      */
@@ -1941,7 +1996,6 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
    double x = x0;
    double dx;
    double f = 0.0, fp = 0.0;
-   ;
    long k = 0;
    do {
       fdf(x, params, &f, &fp);
@@ -2485,6 +2539,21 @@ void bhqrd(double **A, double **U, double **R, long const n, long const m,
       DestroyMatrix(Rb);
       DestroyMatrix(Tq);
    }
+}
+/******************************************************************************/
+// Algorithm for calculating integer powers of doubles
+double ipow(double base, long exp)
+{
+   double result = 1.0;
+   do {
+      if (exp & 1)
+         result *= base;
+      exp >>= 1;
+      if (!exp)
+         break;
+      base *= base;
+   } while (1);
+   return result;
 }
 /******************************************************************************/
 // Taylor series method for Matrix Exponential, adapted from John Burkardt

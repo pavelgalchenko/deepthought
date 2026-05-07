@@ -15,6 +15,7 @@
 #define __TIMEKIT_H__
 
 #include "42constants.h"
+#include "jdkit.h"
 #include <math.h>
 #include <stdint.h>
 #if defined(_WIN32)
@@ -31,7 +32,7 @@
 /***************************** CCSDS CONFIGURATION ****************************/
 // TODO: 24 bit words for Coarse and Fine time fields; 0 bit field for fine
 #define CCSDS_COARSE_TIME_BYTES 4 // 1, 2, or 4 bytes long
-#define CCSDS_FINE_TIME_BYTES   2 // 1, or 2 bytes long
+#define CCSDS_FINE_TIME_BYTES   2 // 1 or 2 bytes long
 
 #if CCSDS_COARSE_TIME_BYTES == 1
 typedef uint8_t ccsdsCoarse;
@@ -60,56 +61,69 @@ typedef uint16_t ccsdsFine;
 ** #endif
 */
 
-struct DateType {
-   double MJD;
-   double JulDay;
-   double tdbTime;
+#define SEC_PER_DAY (86400.0)
+
+typedef struct CCSDSTime {
+   ccsdsCoarse coarse;
+   ccsdsFine fine;
+} CCSDSTime;
+
+CCSDSTime CCSDSSub(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time);
+CCSDSTime CCSDSAdd(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time);
+CCSDSTime CCSDSAddSeconds(const CCSDSTime time, const double dt);
+double ccsds2seconds(const CCSDSTime ccsds);
+CCSDSTime seconds2ccsds(const double);
+CCSDSTime jdutc2ccsds(const double UTC);
+CCSDSTime jdtt2ccsds(const double TT, const double LeapSec);
+double ccsds2time(const CCSDSTime ccsds_time);
+int isequal_ccsds(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time);
+int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds);
+
+typedef struct {
+   TimeSystem system;
    long Year;
    long Month;
    long Day;
    long doy;
    long Hour;
    long Minute;
-   double Second;
-};
+   Rational Second;
+} DateType;
 
-double TTtoTDB_JD(double SecSinceJ2000);
-double TTtoTDB_Time(double SecSinceJ2000);
-double JDToMJD(double JD);
-double MJDToJD(double MJD);
-double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
-                 double Second);
-double TimeToJD(double Time);
-double JDToTime(double JD);
-double DateToTime(long Year, long Month, long Day, long Hour, long Minute,
-                  double Second);
-double DateToJD(long Year, long Month, long Day, long Hour, long Minute,
-                double Second);
-void DateToCCSDS(struct DateType date, ccsdsCoarse *ccsdsSeconds,
-                 ccsdsFine *ccsdsSubSeconds);
-void TimeToCCSDS(double UTC, ccsdsCoarse *ccsdsSeconds,
-                 ccsdsFine *ccsdsSubSeconds);
-void CCSDSToDate(ccsdsCoarse ccsdsSeconds, ccsdsFine ccsdsSubSeconds,
-                 struct DateType *date);
-double CCSDSAdd(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
-                const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
-double CCSDSSub(const ccsdsCoarse a_coarse, const ccsdsFine a_fine,
-                const ccsdsCoarse b_coarse, const ccsdsFine b_fine);
-void JDToDate(double JD, long *Year, long *Month, long *Day, long *Hour,
-              long *Minute, double *Second);
-void TimeToDate(double Time, long *Year, long *Month, long *Day, long *Hour,
-                long *Minute, double *Second, double LSB);
+// double TDB_JDtoTT(double TDB_JD);
+// double TTtoTDB_JD(double SecSinceJ2000);
+// double TTtoTDB_Time(double SecSinceJ2000);
+// double JDToMJD(double JD);
+// double MJDToJD(double MJD);
+// double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
+//                  double Second);
+
+DateType DateTypeInit(const TimeSystem system, const long Year,
+                      const long Month, const long Day, const long Hour,
+                      const long Minute, const Rational Second);
+
+CCSDSTime date2ccsds(const DateType date);
+DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
+
+double Date2Time(const DateType date);
+double Date2TimeSystem(const DateType date, const TimeSystem system);
+double DateToTime(const DateType date);
+JDType DateToJD(const DateType date, const TimeSystem system,
+                const EpochTT epoch);
+JDType Date2JD(const DateType date, const EpochTT epoch);
+CCSDSTime TimeToCCSDS(double UTC);
+DateType JDToDate(const JDType jd, const TimeSystem system);
+DateType TimeToDate(double Time, TimeSystem system);
 long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
-double JD2GMST(double JD);
+double JD2GMST(JDType JD);
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);
 double usec(void);
-void RealSystemTime(long *Year, long *DOY, long *Month, long *Day, long *Hour,
-                    long *Minute, double *Second, double LSB);
+DateType RealSystemTime();
 double RealRunTime(double *RealTimeDT, double LSB);
-void updateTime(struct DateType *Time, const double dSeconds);
+void updateTime(DateType *Time, const double dSeconds);
 
 /*
 ** #ifdef __cplusplus

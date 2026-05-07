@@ -25,6 +25,20 @@
 ** namespace _42 {
 ** #endif
 */
+
+/* Ephem Tags */
+typedef enum ephemType {
+   EPH_NULL = -1, // dummy value for initialization/logging errors
+   EPH_MEAN = 0,
+   EPH_DE430,
+   EPH_DE440,
+   EPH_DE421,
+   EPH_DE424,
+   EPH_GMAT421,
+   EPH_GMAT424,
+   EPH_SPICE,
+} ephemType;
+
 /* FSW Tags */
 enum fswType {
    PASSIVE_FSW = 0,
@@ -60,6 +74,23 @@ struct FormationType {
    double CL[3][3];
    double PosR[3]; /* Position of F wrt R, expressed in N */
 };
+
+/* Store information about the JPL DE file by parsing the header file */
+typedef struct JPLHeaderType {
+   char eph_path[80];
+   char eph_str[5];
+   char hdr_name[16];
+   ephemType eph;
+   long n_coeff;
+   long blk_len;
+   long blk_lines;
+   JDType jd_range[2];
+   double n_days;
+   long n_data;
+   char (*group_1040)[10];
+   double *group_1041;
+   int group_1050[11][3];
+} JPLHeaderType;
 
 /* "Analysis" nodes, used both for Flex, ("Force" nodes and "Measurement" nodes)
  */
@@ -812,7 +843,7 @@ struct SCType {
 struct TargetType {
    /*~ Internal Variables ~*/
    long Type;
-   long World;
+   WorldID World;
    long RefOrb;
    long SC;
    long Body;
@@ -867,7 +898,7 @@ struct POVType {
 struct RegionType {
    /*~ Internal Variables ~*/
    long Exists;
-   long World;
+   WorldID World;
    double Lng, Lat, Alt; /* Origin location */
    double PosW[3];
    double CW[3][3]; /* Region frame is East-North-Up */
@@ -904,7 +935,7 @@ struct WorldType {
    long Type; /* STAR, PLANET, MOON, ASTEROID, COMET */
    long Parent;
    long Nsat;
-   long *Sat; /* [*Nsat*] */
+   WorldID *Sat; /* [*Nsat*] */
 
    /* Physical Properties */
    double mu;              /* Gravitation constant  */
@@ -1019,7 +1050,7 @@ struct TdrsType {
 struct GroundStationType {
    /*~ Internal Variables ~*/
    long Exists;
-   long World;
+   WorldID World;
    long Show;
    double lng, lat;
    double PosW[3]; /* Position vector in World frame */
@@ -1050,7 +1081,7 @@ struct OrreryPOVType {
    /*~ Internal Variables ~*/
    long Regime; /* CENTRAL or THREE_BODY */
    long CenterType;
-   long World;
+   WorldID World;
    long LagSys;
    long MinorBody;
    long LP;

@@ -20,6 +20,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#define PRNT_DBL      "%18.36le "
+#define PRNT_DBL_3VEC PRNT_DBL PRNT_DBL PRNT_DBL
+
 /* #ifdef __cplusplus
 ** namespace _42 {
 ** using namespace Kit;
@@ -93,10 +96,10 @@ void MagReport(void)
       magfile = FileOpen(OutPath, "MagBVB.42", "wt");
    }
 
-   fprintf(magfile, "%le %le %le %le %le %le %le %le %le \n", SC[0].bvb[0],
-           SC[0].bvb[1], SC[0].bvb[2], SC[0].MAG[0].Field, SC[0].MAG[1].Field,
-           SC[0].MAG[2].Field, SC[0].AC.bvb[0], SC[0].AC.bvb[1],
-           SC[0].AC.bvb[2]);
+   fprintf(magfile, PRNT_DBL_3VEC PRNT_DBL_3VEC PRNT_DBL_3VEC "\n",
+           SC[0].bvb[0], SC[0].bvb[1], SC[0].bvb[2], SC[0].MAG[0].Field,
+           SC[0].MAG[1].Field, SC[0].MAG[2].Field, SC[0].AC.bvb[0],
+           SC[0].AC.bvb[1], SC[0].AC.bvb[2]);
 }
 /*********************************************************************/
 void GyroReport(void)
@@ -110,8 +113,8 @@ void GyroReport(void)
    }
 
    fprintf(gyrofile,
-           "%le %le %le %le %le %le %le %le %le %le %le %le %le %le %le %le "
-           "%le %le \n",
+           PRNT_DBL_3VEC PRNT_DBL_3VEC PRNT_DBL_3VEC PRNT_DBL_3VEC
+               PRNT_DBL_3VEC PRNT_DBL_3VEC "\n",
            SC[0].B[0].wn[0], SC[0].B[0].wn[1], SC[0].B[0].wn[2],
            SC[0].Gyro[0].TrueRate, SC[0].Gyro[1].TrueRate,
            SC[0].Gyro[2].TrueRate, SC[0].Gyro[0].Bias, SC[0].Gyro[1].Bias,
@@ -144,11 +147,11 @@ void DSM_AttitudeReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le %18.36le ",
+         fprintf(attitudefile[Isc], PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL,
                  SC[Isc].B[0].qn[0], SC[Isc].B[0].qn[1], SC[Isc].B[0].qn[2],
                  SC[Isc].B[0].qn[3]);
-         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].B[0].wn[0], SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
+         fprintf(attitudefile[Isc], PRNT_DBL_3VEC, SC[Isc].B[0].wn[0],
+                 SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
          fprintf(attitudefile[Isc], "\n");
       }
       fflush(attitudefile[Isc]);
@@ -178,11 +181,11 @@ void DSM_AC_AttitudeReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le %18.36le ",
+         fprintf(attitudefile[Isc], PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL,
                  SC[Isc].AC.qbn[0], SC[Isc].AC.qbn[1], SC[Isc].AC.qbn[2],
                  SC[Isc].AC.qbn[3]);
-         fprintf(attitudefile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].AC.wbn[0], SC[Isc].AC.wbn[1], SC[Isc].AC.wbn[2]);
+         fprintf(attitudefile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.wbn[0],
+                 SC[Isc].AC.wbn[1], SC[Isc].AC.wbn[2]);
          fprintf(attitudefile[Isc], "\n");
       }
       fflush(attitudefile[Isc]);
@@ -215,12 +218,11 @@ void DSM_InertialReport(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          MxV(SC[0].CLN, SC[Isc].PosN, PosL);
-         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].PosN[0], SC[Isc].PosN[1], SC[Isc].PosN[2]);
-         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].VelN[0], SC[Isc].VelN[1], SC[Isc].VelN[2]);
-         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ", PosL[0],
-                 PosL[1], PosL[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].PosN[0],
+                 SC[Isc].PosN[1], SC[Isc].PosN[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].VelN[0],
+                 SC[Isc].VelN[1], SC[Isc].VelN[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, PosL[0], PosL[1], PosL[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
@@ -258,10 +260,8 @@ void DSM_RelativeReport(void)
          for (int i = 0; i < 3; i++)
             velr[i] -= posr[i];
          MxV(O->CLN, S->PosR, posr);
-         fprintf(relativefile[Isc], "%18.36le %18.36le %18.36le ", posr[0],
-                 posr[1], posr[2]);
-         fprintf(relativefile[Isc], "%18.36le %18.36le %18.36le ", velr[0],
-                 velr[1], velr[2]);
+         fprintf(relativefile[Isc], PRNT_DBL_3VEC, posr[0], posr[1], posr[2]);
+         fprintf(relativefile[Isc], PRNT_DBL_3VEC, velr[0], velr[1], velr[2]);
          fprintf(relativefile[Isc], "\n");
       }
       fflush(relativefile[Isc]);
@@ -274,7 +274,7 @@ void DSM_PlanetEphemReport(void)
    static FILE **suntrackfile;
    static long First = 1;
    long Iw;
-   char s[40];
+   char s[50];
    double svh[3], svw[3], CWH[3][3];
    double Lat, Lng;
 
@@ -299,10 +299,10 @@ void DSM_PlanetEphemReport(void)
    }
    for (Iw = 1; Iw < NWORLD; Iw++) { // Skip Sun
       if (World[Iw].Exists) {
-         fprintf(ephemfile[Iw], "%18.36le %18.36le %18.36le ",
-                 World[Iw].PosH[0], World[Iw].PosH[1], World[Iw].PosH[2]);
-         fprintf(ephemfile[Iw], "%18.36le %18.36le %18.36le ",
-                 World[Iw].VelH[0], World[Iw].VelH[1], World[Iw].VelH[2]);
+         fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].PosH[0],
+                 World[Iw].PosH[1], World[Iw].PosH[2]);
+         fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].VelH[0],
+                 World[Iw].VelH[1], World[Iw].VelH[2]);
          fprintf(ephemfile[Iw], "\n");
 
          for (int i = 0; i < 3; i++)
@@ -314,7 +314,7 @@ void DSM_PlanetEphemReport(void)
          Lng = atan2(svw[1], svw[0]) * R2D;
          Lat = asin(svw[2]) * R2D;
 
-         fprintf(suntrackfile[Iw], "%18.36le %18.36le ", Lat, Lng);
+         fprintf(suntrackfile[Iw], PRNT_DBL PRNT_DBL, Lat, Lng);
          fprintf(suntrackfile[Iw], "\n");
       }
       fflush(ephemfile[Iw]);
@@ -345,10 +345,10 @@ void DSM_AC_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].AC.PosN[0], SC[Isc].AC.PosN[1], SC[Isc].AC.PosN[2]);
-         fprintf(inertialfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].AC.VelN[0], SC[Isc].AC.VelN[1], SC[Isc].AC.VelN[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.PosN[0],
+                 SC[Isc].AC.PosN[1], SC[Isc].AC.PosN[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.VelN[0],
+                 SC[Isc].AC.VelN[1], SC[Isc].AC.VelN[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
@@ -394,10 +394,10 @@ void DSM_StateRot3BodyReport(void)
                             World[LS->Body2].eph.VelN, SC[Isc].PosN,
                             SC[Isc].VelN, posRot, velRot);
 
-            fprintf(staterotfile[Isc], "%18.36le %18.36le %18.36le ", posRot[0],
-                    posRot[1], posRot[2]);
-            fprintf(staterotfile[Isc], "%18.36le %18.36le %18.36le ", velRot[0],
-                    velRot[1], velRot[2]);
+            fprintf(staterotfile[Isc], PRNT_DBL_3VEC, posRot[0], posRot[1],
+                    posRot[2]);
+            fprintf(staterotfile[Isc], PRNT_DBL_3VEC, velRot[0], velRot[1],
+                    velRot[2]);
             fprintf(staterotfile[Isc], "\n");
          }
       }
@@ -446,51 +446,50 @@ void DSM_PosHReport(void)
             for (i = 0; i < 3; ++i) {
                SC_LEI[i] = SC[Isc].PosN[i];
             }
-            LunaInertialFrame(TDB.JulDay, CNJ);
+            LunaInertialFrame(JD_TDB_MJD, CNJ);
             MTxV(CNJ, SC_LEI, SC_LCI);
             for (i = 0; i < 3; ++i) {
                SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
             }
          }
          else if (Orb[SC[Isc].RefOrb].World == EARTH) {
-            LunaInertialFrame(TDB.JulDay, CNJ);
+            LunaInertialFrame(JD_TDB_MJD, CNJ);
             for (i = 0; i < 3; ++i) {
                SC_ECI[i] = SC[Isc].PosN[i];
                SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
             }
             MxV(CNJ, SC_LCI, SC_LEI);
          }
-         fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.JulDay, TT.JulDay);
-         fprintf(poshfile[Isc], "%18.48le %18.48le ", TDB.tdbTime, DynTime);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[VENUS].PosH[0], World[VENUS].PosH[1],
-                 World[VENUS].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[EARTH].PosH[0], World[EARTH].PosH[1],
-                 World[EARTH].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[LUNA].PosH[0], World[LUNA].PosH[1], World[LUNA].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[LUNA].eph.PosN[0], World[LUNA].eph.PosN[1],
-                 World[LUNA].eph.PosN[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[MARS].PosH[0], World[MARS].PosH[1], World[MARS].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[JUPITER].PosH[0], World[JUPITER].PosH[1],
-                 World[JUPITER].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ",
-                 World[SATURN].PosH[0], World[SATURN].PosH[1],
-                 World[SATURN].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosN[0],
-                 SC[0].PosN[1], SC[0].PosN[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC[0].PosH[0],
-                 SC[0].PosH[1], SC[0].PosH[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_ECI[0],
-                 SC_ECI[1], SC_ECI[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LCI[0],
-                 SC_LCI[1], SC_LCI[2]);
-         fprintf(poshfile[Isc], "%18.36le %18.36le %18.36le ", SC_LEI[0],
-                 SC_LEI[1], SC_LEI[2]);
+         else
+            break;
+         // TODO
+         JDType jd_tdb_j2000 = Date2JD(TDB, J2000_EPOCH);
+         JDType jd_tt_j2000  = Date2JD(TT, J2000_EPOCH);
+         double tdbTime      = JDToTime(JD_TDB_MJD);
+         fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, JDToDays(jd_tdb_j2000),
+                 JDToDays(jd_tt_j2000));
+         fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, tdbTime, DynTime);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH[0],
+                 World[VENUS].PosH[1], World[VENUS].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[EARTH].PosH[0],
+                 World[EARTH].PosH[1], World[EARTH].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[LUNA].PosH[0],
+                 World[LUNA].PosH[1], World[LUNA].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[LUNA].eph.PosN[0],
+                 World[LUNA].eph.PosN[1], World[LUNA].eph.PosN[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[MARS].PosH[0],
+                 World[MARS].PosH[1], World[MARS].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[JUPITER].PosH[0],
+                 World[JUPITER].PosH[1], World[JUPITER].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[SATURN].PosH[0],
+                 World[SATURN].PosH[1], World[SATURN].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC[0].PosN[0], SC[0].PosN[1],
+                 SC[0].PosN[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC[0].PosH[0], SC[0].PosH[1],
+                 SC[0].PosH[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_ECI[0], SC_ECI[1], SC_ECI[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_LCI[0], SC_LCI[1], SC_LCI[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_LEI[0], SC_LEI[1], SC_LEI[2]);
          fprintf(poshfile[Isc], "\n");
       }
       fflush(poshfile[Isc]);
@@ -546,10 +545,10 @@ void DSM_Rot3BodyReport(void)
             SimpRot(z_axis, ang_rot, DCM);
             MxV(DCM, posRot, posRot);
             MxV(DCM, velRot, velRot);
-            fprintf(rotfile[Isc], "%18.36le %18.36le %18.36le ", posRot[0],
-                    posRot[1], posRot[2]);
-            fprintf(rotfile[Isc], "%18.36le %18.36le %18.36le ", velRot[0],
-                    velRot[1], velRot[2]);
+            fprintf(rotfile[Isc], PRNT_DBL_3VEC, posRot[0], posRot[1],
+                    posRot[2]);
+            fprintf(rotfile[Isc], PRNT_DBL_3VEC, velRot[0], velRot[1],
+                    velRot[2]);
             fprintf(rotfile[Isc], "\n");
          }
       }
@@ -562,7 +561,6 @@ void DSM_NAV_StateReport(void)
    static FILE **stateFile, **covFile, **timeFile;
    static long First = 1;
    long Isc;
-   enum States state;
    char s[40];
 
    struct DSMNavType *Nav;
@@ -584,7 +582,8 @@ void DSM_NAV_StateReport(void)
          sprintf(s, "DSM_navcov_%02li.42", Isc);
          covFile[Isc] = FileOpen(OutPath, s, "wt");
          Nav          = &SC[Isc].DSM.DsmNav;
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                switch (state) {
                   // case TIME_STATE:
@@ -613,7 +612,8 @@ void DSM_NAV_StateReport(void)
             }
          }
          fprintf(stateFile[Isc], "\n");
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                switch (state) {
                   // case TIME_STATE:
@@ -647,44 +647,43 @@ void DSM_NAV_StateReport(void)
       if (SC[Isc].Exists && SC[Isc].DSM.DsmNav.NavigationActive == TRUE) {
          long writeTime = FALSE;
          Nav            = &SC[Isc].DSM.DsmNav;
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                writeTime = TRUE;
                switch (state) {
                   case TIME_STATE:
-                     fprintf(stateFile[Isc], "%18.36le ",
-                             DateToTime(Nav->Date.Year, Nav->Date.Month,
-                                        Nav->Date.Day, Nav->Date.Hour,
-                                        Nav->Date.Minute, Nav->Date.Second));
+                     fprintf(stateFile[Isc], PRNT_DBL, Date2Time(Nav->Date));
                      break;
                   case ROTMAT_STATE:
                      for (int i = 0; i < 3; i++)
-                        for (int j = 0; j < 3; j++)
-                           fprintf(stateFile[Isc], "%18.36le ", Nav->CRB[i][j]);
+                        fprintf(stateFile[Isc], PRNT_DBL_3VEC, Nav->CRB[i][0],
+                                Nav->CRB[i][1], Nav->CRB[i][2]);
                      break;
                   case QUAT_STATE:
-                     for (int i = 0; i < 4; i++)
-                        fprintf(stateFile[Isc], "%18.36le ", Nav->qbr[i]);
+                     fprintf(stateFile[Isc],
+                             PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL, Nav->qbr[0],
+                             Nav->qbr[1], Nav->qbr[2], Nav->qbr[3]);
                      break;
                   case OMEGA_STATE:
-                     fprintf(stateFile[Isc], "%18.36le %18.36le %18.36le ",
-                             Nav->wbr[0], Nav->wbr[1], Nav->wbr[2]);
+                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, Nav->wbr[0],
+                             Nav->wbr[1], Nav->wbr[2]);
                      break;
                   case POS_STATE: {
                      double tmpV1[3] = {0.0}, tmpV2[3] = {0.0};
                      for (int i = 0; i < 3; i++)
                         tmpV1[i] = Nav->PosR[i] + Nav->refPos[i];
                      MTxV(Nav->refCRN, tmpV1, tmpV2);
-                     fprintf(stateFile[Isc], "%18.36le %18.36le %18.36le ",
-                             tmpV2[0], tmpV2[1], tmpV2[2]);
+                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2[0], tmpV2[1],
+                             tmpV2[2]);
                   } break;
                   case VEL_STATE: {
                      double tmpV1[3] = {0.0}, tmpV2[3] = {0.0};
                      for (int i = 0; i < 3; i++)
                         tmpV1[i] = Nav->VelR[i] + Nav->refVel[i];
                      MTxV(Nav->refCRN, tmpV1, tmpV2);
-                     fprintf(stateFile[Isc], "%18.36le %18.36le %18.36le ",
-                             tmpV2[0], tmpV2[1], tmpV2[2]);
+                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2[0], tmpV2[1],
+                             tmpV2[2]);
                   } break;
                   default:
                      break;
@@ -695,7 +694,7 @@ void DSM_NAV_StateReport(void)
          fflush(stateFile[Isc]);
 
          if (writeTime) {
-            fprintf(timeFile[Isc], "%18.36le\n", DynTime);
+            fprintf(timeFile[Isc], PRNT_DBL "\n", DynTime);
             fflush(timeFile[Isc]);
          }
 
@@ -703,11 +702,12 @@ void DSM_NAV_StateReport(void)
          double m[navDim];
          UnscentedStateTForm(Nav, m, Nav->P);
 
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             int stateInd = Nav->navInd[state];
             if (Nav->stateActive[state] == TRUE) {
                for (int i = 0; i < Nav->navSize[state]; i++) {
-                  fprintf(covFile[Isc], "%18.36le ",
+                  fprintf(covFile[Isc], PRNT_DBL,
                           sqrt(Nav->P[stateInd + i][stateInd + i]));
                }
             }
@@ -719,145 +719,153 @@ void DSM_NAV_StateReport(void)
 }
 /*********************************************************************/
 // Last time I tried to analyze all the data from this, I ran out of memory...
-#if REPORT_RESIDUALS == TRUE
-void DSM_NAV_ResidualsReport(double time, double **residuals[FIN_SENSOR + 1])
+#ifdef REPORT_RESIDUALS
+void DSM_NAV_ResidualsReport(const double time, const long Isc, long *First,
+                             double **residuals[FIN_SENSOR + 1])
 {
    static FILE **residualFile;
-   static long First = TRUE;
-   long Isc;
-   enum SensorType sensor;
+   static long configure_files = TRUE;
    char s[40];
 
-   struct DSMNavType *Nav;
+   struct DSMNavType *Nav = &SC[Isc].DSM.DsmNav;
 
-   if (First) {
-      residualFile = (FILE **)calloc(Nsc, sizeof(FILE *));
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         sprintf(s, "DSM_residuals_%02li.42", Isc);
-         residualFile[Isc] = FileOpen(OutPath, s, "wt");
-         Nav               = &SC[Isc].DSM.DsmNav;
-         FILE *file        = residualFile[Isc];
-         fprintf(file, "Time; ");
-         for (sensor = INIT_SENSOR; sensor < FIN_SENSOR; sensor++) {
-            if (Nav->sensorActive[sensor] == TRUE) {
-               for (int i = 0; i < Nav->nSensor[sensor]; i++) {
-                  switch (sensor) {
-                     case GPS_SENSOR:
-                        fprintf(file,
-                                "GPS[%02i]_Pos_x GPS[%02i]_Pos_y "
-                                "GPS[%02i]_Pos_z GPS[%02i]_Vel_x "
-                                "GPS[%02i]_Vel_y GPS[%02i]_Vel_z ",
-                                i, i, i, i, i, i);
-                        break;
-                     case STARTRACK_SENSOR:
-                        fprintf(
-                            file,
-                            "STARTRACK[%02i]_Theta_x STARTRACK[%02i]_Theta_z "
-                            "STARTRACK[%02i]_Theta_z ",
-                            i, i, i);
-                        break;
-                     case FSS_SENSOR:
-                        fprintf(file, "FSS[%02i]_Theta_h FSS[%02i]_Theta_v ", i,
-                                i);
-                        break;
-                     case CSS_SENSOR:
-                        fprintf(file, "CSS[%02i]_Out ", i);
-                        break;
-                     case GYRO_SENSOR:
-                        fprintf(file, "GYRO[%02i]_Out ", i);
-                        break;
-                     case MAG_SENSOR:
-                        fprintf(file, "MAG[%02i]_Out ", i);
-                        break;
-                     case ACCEL_SENSOR:
-                        fprintf(file, "ACCEL[%02i]_Out ", i);
-
-                        break;
-                     default:
-                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
-                               "configured correctly in "
-                               "navkit.c. Exiting...\n");
-                        exit(EXIT_FAILURE);
-                        break;
-                  }
-                  fprintf(file, "; ");
-               }
-            }
-         }
-         fprintf(file, "\n");
-      }
-      First = FALSE;
+   if (configure_files) {
+      residualFile    = (FILE **)calloc(Nsc, sizeof(FILE *));
+      configure_files = FALSE;
    }
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      Nav        = &SC[Isc].DSM.DsmNav;
-      FILE *file = residualFile[Isc];
-      fprintf(file, "%18.36le ; ", time);
-      for (sensor = INIT_SENSOR; sensor < FIN_SENSOR; sensor++) {
-         if (Nav->sensorActive[sensor] == TRUE) {
-            for (int i = 0; i < Nav->nSensor[sensor]; i++) {
-               if (residuals[sensor][i] != NULL) {
-                  switch (sensor) {
-                     case GPS_SENSOR:
-                        for (int j = 0; j < 6; j++)
-                           fprintf(file, "%18.20le ", residuals[sensor][i][j]);
-                        break;
-                     case STARTRACK_SENSOR:
-                        for (int j = 0; j < 3; j++)
-                           fprintf(file, "%18.20le ", residuals[sensor][i][j]);
-                        break;
-                     case FSS_SENSOR:
-                        for (int j = 0; j < 2; j++)
-                           fprintf(file, "%18.20le ", residuals[sensor][i][j]);
-                        break;
-                     case CSS_SENSOR:
-                     case GYRO_SENSOR:
-                     case MAG_SENSOR:
-                     case ACCEL_SENSOR:
-                        fprintf(file, "%18.20le ", residuals[sensor][i][0]);
-                        break;
-                     default:
-                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
-                               "configured correctly in "
-                               "navkit.c. Exiting...\n");
-                        exit(EXIT_FAILURE);
-                        break;
+
+   if (*First) {
+      sprintf(s, "DSM_residuals_%02li.42", Isc);
+      residualFile[Isc] = FileOpen(OutPath, s, "wt");
+      Nav               = &SC[Isc].DSM.DsmNav;
+      FILE *file        = residualFile[Isc];
+      fprintf(file, "CCSDS_Time ; ");
+      FOR_SENSORS(sensor)
+      {
+         for (int i = 0; i < Nav->nSensor[sensor]; i++) {
+            if (Nav->sensorActive[sensor][i] == TRUE) {
+               switch (sensor) {
+                  case GPS_SENSOR:
+                     fprintf(file,
+                             "GPS[%02i]_Pos_x ; GPS[%02i]_Pos_y ; "
+                             "GPS[%02i]_Pos_z ; GPS[%02i]_Vel_x ; "
+                             "GPS[%02i]_Vel_y ; GPS[%02i]_Vel_z ; ",
+                             i, i, i, i, i, i);
+                     break;
+                  case STARTRACK_SENSOR:
+                     fprintf(file,
+                             "STARTRACK[%02i]_Theta_x ; "
+                             "STARTRACK[%02i]_Theta_y ; "
+                             "STARTRACK[%02i]_Theta_z ; ",
+                             i, i, i);
+                     break;
+                  case FSS_SENSOR: {
+                     const struct FssType *fss = &SC[Isc].FSS[i];
+                     switch (fss->type) {
+                        case CONVENTIONAL_FSS:
+                           fprintf(file,
+                                   "FSS[%02i]_Theta_h ; FSS[%02i]_Theta_v ; ",
+                                   i, i);
+                           break;
+                        case GS_FSS:
+                           fprintf(file, "FSS[%02i]_Phi ; FSS[%02i]_Theta ; ",
+                                   i, i);
+                           break;
+                     }
+                     break;
                   }
+                  case CSS_SENSOR:
+                     fprintf(file, "CSS[%02i]_Out ; ", i);
+                     break;
+                  case GYRO_SENSOR:
+                     fprintf(file, "GYRO[%02i]_Out ; ", i);
+                     break;
+                  case MAG_SENSOR:
+                     fprintf(file, "MAG[%02i]_Out ; ", i);
+                     break;
+                  case ACCEL_SENSOR:
+                     fprintf(file, "ACCEL[%02i]_Out ; ", i);
+                     break;
+                  default:
+                     ek_exception(
+                         EK_THROW,
+                         "INIT_SENSOR and/or FIN_SENSOR are not configured "
+                         "correctly in navkit.h. Exiting...\n");
+                     break;
                }
-               else {
-                  switch (sensor) {
-                     case GPS_SENSOR:
-                        for (int j = 0; j < 6; j++)
-                           fprintf(file, "nan ");
-                        break;
-                     case STARTRACK_SENSOR:
-                        for (int j = 0; j < 3; j++)
-                           fprintf(file, "nan ");
-                        break;
-                     case FSS_SENSOR:
-                        for (int j = 0; j < 2; j++)
-                           fprintf(file, "nan ");
-                        break;
-                     case CSS_SENSOR:
-                     case GYRO_SENSOR:
-                     case MAG_SENSOR:
-                     case ACCEL_SENSOR:
-                        fprintf(file, "nan ");
-                        break;
-                     default:
-                        printf("INIT_SENSOR and/or FIN_SENSOR are not "
-                               "configured correctly in "
-                               "navkit.c. Exiting...\n");
-                        exit(EXIT_FAILURE);
-                        break;
-                  }
-               }
-               fprintf(file, "; ");
             }
          }
       }
       fprintf(file, "\n");
-      fflush(file);
+      *First = FALSE;
    }
+   Nav        = &SC[Isc].DSM.DsmNav;
+   FILE *file = residualFile[Isc];
+   fprintf(file, PRNT_DBL " ; ", time);
+   FOR_SENSORS(sensor)
+   {
+      for (int i = 0; i < Nav->nSensor[sensor]; i++) {
+         if (Nav->sensorActive[sensor][i] == TRUE) {
+            if (residuals[sensor][i] != NULL) {
+               switch (sensor) {
+                  case GPS_SENSOR:
+                     for (int j = 0; j < 6; j++)
+                        fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
+                     break;
+                  case STARTRACK_SENSOR:
+                     for (int j = 0; j < 3; j++)
+                        fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
+                     break;
+                  case FSS_SENSOR:
+                     for (int j = 0; j < 2; j++)
+                        fprintf(file, PRNT_DBL, residuals[sensor][i][j]);
+                     break;
+                  case CSS_SENSOR:
+                  case GYRO_SENSOR:
+                  case MAG_SENSOR:
+                  case ACCEL_SENSOR:
+                     fprintf(file, PRNT_DBL, residuals[sensor][i][0]);
+                     break;
+                  default:
+                     printf("INIT_SENSOR and/or FIN_SENSOR are not configured "
+                            "correctly in navkit.h. Exiting...\n");
+                     exit(EXIT_FAILURE);
+                     break;
+               }
+            }
+            else {
+               switch (sensor) {
+                  case GPS_SENSOR:
+                     for (int j = 0; j < 6; j++)
+                        fprintf(file, "nan ");
+                     break;
+                  case STARTRACK_SENSOR:
+                     for (int j = 0; j < 3; j++)
+                        fprintf(file, "nan ");
+                     break;
+                  case FSS_SENSOR:
+                     for (int j = 0; j < 2; j++)
+                        fprintf(file, "nan ");
+                     break;
+                  case CSS_SENSOR:
+                  case GYRO_SENSOR:
+                  case MAG_SENSOR:
+                  case ACCEL_SENSOR:
+                     fprintf(file, "nan ");
+                     break;
+                  default:
+                     printf("INIT_SENSOR and/or FIN_SENSOR are not configured "
+                            "correctly in navkit.c. Exiting...\n");
+                     exit(EXIT_FAILURE);
+                     break;
+               }
+            }
+            fprintf(file, "; ");
+         }
+      }
+   }
+   fprintf(file, "\n");
+   fflush(file);
 }
 #endif
 /*********************************************************************/
@@ -887,18 +895,16 @@ void DSM_ATT_ControlReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.therr[0], SC[Isc].DSM.therr[1],
-                 SC[Isc].DSM.therr[2]);
-         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.werr[0], SC[Isc].DSM.werr[1], SC[Isc].DSM.werr[2]);
-         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.Tcmd[0], SC[Isc].DSM.Tcmd[1], SC[Isc].DSM.Tcmd[2]);
-         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.dTcmd[0], SC[Isc].DSM.dTcmd[1],
-                 SC[Isc].DSM.dTcmd[2]);
-         fprintf(attcontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.Mcmd[0], SC[Isc].DSM.Mcmd[1], SC[Isc].DSM.Mcmd[2]);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.therr[0],
+                 SC[Isc].DSM.therr[1], SC[Isc].DSM.therr[2]);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.werr[0],
+                 SC[Isc].DSM.werr[1], SC[Isc].DSM.werr[2]);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.Tcmd[0],
+                 SC[Isc].DSM.Tcmd[1], SC[Isc].DSM.Tcmd[2]);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.dTcmd[0],
+                 SC[Isc].DSM.dTcmd[1], SC[Isc].DSM.dTcmd[2]);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.Mcmd[0],
+                 SC[Isc].DSM.Mcmd[1], SC[Isc].DSM.Mcmd[2]);
          fprintf(attcontrolfile[Isc], "\n");
       }
       fflush(attcontrolfile[Isc]);
@@ -930,16 +936,14 @@ void DSM_POS_ControlReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.perr[0], SC[Isc].DSM.perr[1], SC[Isc].DSM.perr[2]);
-         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.verr[0], SC[Isc].DSM.verr[1], SC[Isc].DSM.verr[2]);
-         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.FcmdN[0], SC[Isc].DSM.FcmdN[1],
-                 SC[Isc].DSM.FcmdN[2]);
-         fprintf(poscontrolfile[Isc], "%18.36le %18.36le %18.36le ",
-                 SC[Isc].DSM.FcmdB[0], SC[Isc].DSM.FcmdB[1],
-                 SC[Isc].DSM.FcmdB[2]);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.perr[0],
+                 SC[Isc].DSM.perr[1], SC[Isc].DSM.perr[2]);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.verr[0],
+                 SC[Isc].DSM.verr[1], SC[Isc].DSM.verr[2]);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.FcmdN[0],
+                 SC[Isc].DSM.FcmdN[1], SC[Isc].DSM.FcmdN[2]);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.FcmdB[0],
+                 SC[Isc].DSM.FcmdB[1], SC[Isc].DSM.FcmdB[2]);
          fprintf(poscontrolfile[Isc], "\n");
       }
       fflush(poscontrolfile[Isc]);
@@ -984,14 +988,14 @@ void DSM_EphemReport(void)
          orb_anom = WrapTo2Pi(Orb[SC[Isc].RefOrb].anom);
          orb_time = TwoPi / sqrt(Orb[SC[Isc].RefOrb].mu /
                                  (pow(Orb[SC[Isc].RefOrb].SMA, 3)));
-         fprintf(ephemfile[Isc], "%18.36le ", orb_beta);
-         fprintf(ephemfile[Isc], "%18.36le ", orb_inc);
-         fprintf(ephemfile[Isc], "%18.36le ", orb_AOP);
-         fprintf(ephemfile[Isc], "%18.36le ", orb_RAAN);
-         fprintf(ephemfile[Isc], "%18.36le ", orb_anom);
-         fprintf(ephemfile[Isc], "%18.36le ", Orb[SC[Isc].RefOrb].SMA);
-         fprintf(ephemfile[Isc], "%18.36le ", Orb[SC[Isc].RefOrb].ecc);
-         fprintf(ephemfile[Isc], "%18.36le", orb_time);
+         fprintf(ephemfile[Isc], PRNT_DBL, orb_beta);
+         fprintf(ephemfile[Isc], PRNT_DBL, orb_inc);
+         fprintf(ephemfile[Isc], PRNT_DBL, orb_AOP);
+         fprintf(ephemfile[Isc], PRNT_DBL, orb_RAAN);
+         fprintf(ephemfile[Isc], PRNT_DBL, orb_anom);
+         fprintf(ephemfile[Isc], PRNT_DBL, Orb[SC[Isc].RefOrb].SMA);
+         fprintf(ephemfile[Isc], PRNT_DBL, Orb[SC[Isc].RefOrb].ecc);
+         fprintf(ephemfile[Isc], PRNT_DBL, orb_time);
          fprintf(ephemfile[Isc], "\n");
       }
       fflush(ephemfile[Isc]);
@@ -1062,7 +1066,7 @@ void DSM_THRReport(void)
       if (SC[Isc].Exists) {
          if (SC[Isc].Nthr > 0) {
             for (i = 0; i < SC[Isc].Nthr; i++)
-               fprintf(THRFile[Isc], "%lf ", SC[Isc].AC.Thr[i].PulseWidthCmd);
+               fprintf(THRFile[Isc], PRNT_DBL, SC[Isc].AC.Thr[i].PulseWidthCmd);
             fprintf(THRFile[Isc], "\n");
          }
       }
@@ -1092,8 +1096,8 @@ void DSM_SVBReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(SVBFile[Isc], "%18.36le %18.36le %18.36le ", SC[Isc].svb[0],
-                 SC[Isc].svb[1], SC[Isc].svb[2]);
+         fprintf(SVBFile[Isc], PRNT_DBL_3VEC, SC[Isc].svb[0], SC[Isc].svb[1],
+                 SC[Isc].svb[2]);
          fprintf(SVBFile[Isc], "\n");
       }
       fflush(SVBFile[Isc]);
@@ -1132,7 +1136,7 @@ void DSM_GroundTrackReport(void)
          MxV(W->CWN, SC[Isc].PosN, p);
          reclat_c(p, &junk, &Lng, &Lat);
 
-         fprintf(gtrackfile[Isc], "%18.36le %18.36le ", Lat * R2D, Lng * R2D);
+         fprintf(gtrackfile[Isc], PRNT_DBL PRNT_DBL, Lat * R2D, Lng * R2D);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);
@@ -1157,22 +1161,18 @@ void OrbPropReport(void)
    }
 
    if (OutFlag) {
-      fprintf(FixedFile,
-              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-              SC[0].PosN[0], SC[0].PosN[1], SC[0].PosN[2], SC[0].VelN[0],
-              SC[0].VelN[1], SC[0].VelN[2]);
-      fprintf(EnckeFile,
-              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-              SC[1].PosN[0], SC[1].PosN[1], SC[1].PosN[2], SC[1].VelN[0],
-              SC[1].VelN[1], SC[1].VelN[2]);
-      fprintf(CowellFile,
-              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-              SC[2].PosN[0], SC[2].PosN[1], SC[2].PosN[2], SC[2].VelN[0],
-              SC[2].VelN[1], SC[2].VelN[2]);
-      fprintf(EulHillFile,
-              "%24.18le %24.18le %24.18le %24.18le %24.18le %24.18le\n",
-              SC[3].PosN[0], SC[3].PosN[1], SC[3].PosN[2], SC[3].VelN[0],
-              SC[3].VelN[1], SC[3].VelN[2]);
+      fprintf(FixedFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[0].PosN[0],
+              SC[0].PosN[1], SC[0].PosN[2], SC[0].VelN[0], SC[0].VelN[1],
+              SC[0].VelN[2]);
+      fprintf(EnckeFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[1].PosN[0],
+              SC[1].PosN[1], SC[1].PosN[2], SC[1].VelN[0], SC[1].VelN[1],
+              SC[1].VelN[2]);
+      fprintf(CowellFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[2].PosN[0],
+              SC[2].PosN[1], SC[2].PosN[2], SC[2].VelN[0], SC[2].VelN[1],
+              SC[2].VelN[2]);
+      fprintf(EulHillFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[3].PosN[0],
+              SC[3].PosN[1], SC[3].PosN[2], SC[3].VelN[0], SC[3].VelN[1],
+              SC[3].VelN[2]);
    }
 }
 /*********************************************************************/
@@ -1189,8 +1189,8 @@ void GmatReport(void)
 
    if (OutFlag) {
       for (i = 0; i < 9; i++) {
-         fprintf(outfile, "%24.18le %24.18le %24.18le ", SC[i].PosN[0],
-                 SC[i].PosN[1], SC[i].PosN[2]);
+         fprintf(outfile, PRNT_DBL_3VEC, SC[i].PosN[0], SC[i].PosN[1],
+                 SC[i].PosN[2]);
       }
       fprintf(outfile, "\n");
    }
@@ -1217,25 +1217,25 @@ void PerturbReport(void)
       First = 0;
    }
 
-   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqB[0], SC[0].gravTrqB[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].gravTrqB[0], SC[0].gravTrqB[1],
            SC[0].gravTrqB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].gravTrqN[0], SC[0].gravTrqN[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].gravTrqN[0], SC[0].gravTrqN[1],
            SC[0].gravTrqN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqB[0], SC[0].srpTrqB[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpTrqB[0], SC[0].srpTrqB[1],
            SC[0].srpTrqB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpTrqN[0], SC[0].srpTrqN[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpTrqN[0], SC[0].srpTrqN[1],
            SC[0].srpTrqN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqB[0], SC[0].aeroTrqB[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroTrqB[0], SC[0].aeroTrqB[1],
            SC[0].aeroTrqB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroTrqN[0], SC[0].aeroTrqN[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroTrqN[0], SC[0].aeroTrqN[1],
            SC[0].aeroTrqN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcB[0], SC[0].srpFrcB[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpFrcB[0], SC[0].srpFrcB[1],
            SC[0].srpFrcB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].srpFrcN[0], SC[0].srpFrcN[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpFrcN[0], SC[0].srpFrcN[1],
            SC[0].srpFrcN[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcB[0], SC[0].aeroFrcB[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroFrcB[0], SC[0].aeroFrcB[1],
            SC[0].aeroFrcB[2]);
-   fprintf(perturbfile, "%le %le %le ", SC[0].aeroFrcN[0], SC[0].aeroFrcN[1],
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroFrcN[0], SC[0].aeroFrcN[1],
            SC[0].aeroFrcN[2]);
    fprintf(perturbfile, "\n");
 
@@ -1348,39 +1348,38 @@ void Report(void)
    }
 
    if (OutFlag) {
-      fprintf(timefile, "%lf\n", SimTime);
-      fprintf(DynTimeFile, "%lf\n", DynTime);
+      fprintf(timefile, PRNT_DBL "\n", SimTime);
+      fprintf(DynTimeFile, PRNT_DBL "\n", DynTime);
       fprintf(UtcDateFile, " %ld:%02ld:%02ld:%02ld:%02ld:%09.6lf\n", UTC.Year,
-              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute, UTC.Second);
+              UTC.Month, UTC.Day, UTC.Hour, UTC.Minute,
+              rational2double(UTC.Second));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             D = &SC[Isc].Dyn;
-            for (i = 0; i < D->Nu; i++)
-               fprintf(ufile[Isc], "%18.36le ", D->u[i]);
+            fprintf(ufile[Isc], PRNT_DBL_3VEC, D->u[0], D->u[1], D->u[2]);
             fprintf(ufile[Isc], "\n");
-            for (i = 0; i < D->Nx; i++)
-               fprintf(xfile[Isc], "%18.36le ", D->x[i]);
+            fprintf(xfile[Isc], PRNT_DBL_3VEC, D->x[0], D->x[1], D->x[2]);
             fprintf(xfile[Isc], "\n");
             if (SC[Isc].FlexActive) {
                for (i = 0; i < D->Nf; i++)
-                  fprintf(uffile[Isc], "%18.36le ", D->uf[i]);
+                  fprintf(uffile[Isc], PRNT_DBL, D->uf[i]);
                fprintf(uffile[Isc], "\n");
                for (i = 0; i < D->Nf; i++)
-                  fprintf(xffile[Isc], "%18.36le ", D->xf[i]);
+                  fprintf(xffile[Isc], PRNT_DBL, D->xf[i]);
                fprintf(xffile[Isc], "\n");
             }
             if (SC[Isc].ConstraintsRequested) {
                for (i = 0; i < D->Nc; i++)
-                  fprintf(ConstraintFile[Isc], "%18.36le ",
+                  fprintf(ConstraintFile[Isc], PRNT_DBL,
                           D->GenConstraintFrc[i]);
                fprintf(ConstraintFile[Isc], "\n");
             }
          }
       }
       if (SC[0].Exists) {
-         fprintf(PosNfile, "%le %le %le\n", SC[0].PosN[0], SC[0].PosN[1],
+         fprintf(PosNfile, PRNT_DBL_3VEC "\n", SC[0].PosN[0], SC[0].PosN[1],
                  SC[0].PosN[2]);
-         fprintf(VelNfile, "%le %le %le\n", SC[0].VelN[0], SC[0].VelN[1],
+         fprintf(VelNfile, PRNT_DBL_3VEC "\n", SC[0].VelN[0], SC[0].VelN[1],
                  SC[0].VelN[2]);
          W              = &World[Orb[SC[0].RefOrb].World];
          WorldAngVel[0] = 0.0;
@@ -1391,46 +1390,47 @@ void Report(void)
             VelN[i] = SC[0].VelN[i] - wxR[i];
          MxV(W->CWN, SC[0].PosN, PosW);
          MxV(W->CWN, VelN, VelW);
-         fprintf(PosWfile, "%18.36le %18.36le %18.36le\n", PosW[0], PosW[1],
+         fprintf(PosWfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", PosW[0], PosW[1],
                  PosW[2]);
-         fprintf(VelWfile, "%18.36le %18.36le %18.36le\n", VelW[0], VelW[1],
+         fprintf(VelWfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", VelW[0], VelW[1],
                  VelW[2]);
          if (Orb[SC[0].RefOrb].Regime == ORB_FLIGHT) {
             MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].PosR, PosR);
             MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].VelR, VelR);
-            fprintf(PosRfile, "%le %le %le\n", PosR[0], PosR[1], PosR[2]);
-            fprintf(VelRfile, "%le %le %le\n", VelR[0], VelR[1], VelR[2]);
+            fprintf(PosRfile, PRNT_DBL_3VEC "\n", PosR[0], PosR[1], PosR[2]);
+            fprintf(VelRfile, PRNT_DBL_3VEC "\n", VelR[0], VelR[1], VelR[2]);
          }
          else {
-            fprintf(PosRfile, "%le %le %le\n", SC[0].PosR[0], SC[0].PosR[1],
+            fprintf(PosRfile, PRNT_DBL_3VEC "\n", SC[0].PosR[0], SC[0].PosR[1],
                     SC[0].PosR[2]);
-            fprintf(VelRfile, "%le %le %le\n", SC[0].VelR[0], SC[0].VelR[1],
+            fprintf(VelRfile, PRNT_DBL_3VEC "\n", SC[0].VelR[0], SC[0].VelR[1],
                     SC[0].VelR[2]);
          }
-         fprintf(qbnfile, "%le %le %le %le\n", SC[0].B[0].qn[0],
+         fprintf(qbnfile, PRNT_DBL_3VEC PRNT_DBL "\n", SC[0].B[0].qn[0],
                  SC[0].B[0].qn[1], SC[0].B[0].qn[2], SC[0].B[0].qn[3]);
-         fprintf(wbnfile, "%le %le %le\n", SC[0].B[0].wn[0], SC[0].B[0].wn[1],
-                 SC[0].B[0].wn[2]);
-         fprintf(bvnfile, "%le %le %le\n", SC[0].bvn[0], SC[0].bvn[1],
+         fprintf(wbnfile, PRNT_DBL_3VEC "\n", SC[0].B[0].wn[0],
+                 SC[0].B[0].wn[1], SC[0].B[0].wn[2]);
+         fprintf(bvnfile, PRNT_DBL_3VEC "\n", SC[0].bvn[0], SC[0].bvn[1],
                  SC[0].bvn[2]);
-         fprintf(bvbfile, "%le %le %le\n", SC[0].bvb[0], SC[0].bvb[1],
+         fprintf(bvbfile, PRNT_DBL_3VEC "\n", SC[0].bvb[0], SC[0].bvb[1],
                  SC[0].bvb[2]);
-         fprintf(Hvnfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvn[0],
-                 SC[0].Hvn[1], SC[0].Hvn[2]);
-         fprintf(Hvbfile, "%18.36le %18.36le %18.36le\n", SC[0].Hvb[0],
+         fprintf(Hvnfile, PRNT_DBL_3VEC "\n", SC[0].Hvn[0], SC[0].Hvn[1],
+                 SC[0].Hvn[2]);
+         fprintf(Hvbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].Hvb[0],
                  SC[0].Hvb[1], SC[0].Hvb[2]);
-         fprintf(svnfile, "%18.36le %18.36le %18.36le\n", SC[0].svn[0],
+         fprintf(svnfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svn[0],
                  SC[0].svn[1], SC[0].svn[2]);
-         fprintf(svbfile, "%18.36le %18.36le %18.36le\n", SC[0].svb[0],
+         fprintf(svbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svb[0],
                  SC[0].svb[1], SC[0].svb[2]);
-         fprintf(KEfile, "%18.36le\n", FindTotalKineticEnergy(&SC[0]));
-         // fprintf(ProjAreaFile,"%18.36le %18.36le\n",
+         fprintf(KEfile, PRNT_DBL "\n", FindTotalKineticEnergy(Orb, &SC[0]));
+         // fprintf(ProjAreaFile, PRNT_DBL PRNT_DBL"\n",
          //    FindTotalProjectedArea(&SC[0],ZAxis),
          //    FindTotalUnshadedProjectedArea(&SC[0],ZAxis));
          MxM(CRL, SC[0].CLN, CRN);
          MxMT(SC[0].B[0].CN, CRN, CBR);
          C2A(123, CBR, &Roll, &Pitch, &Yaw);
-         fprintf(RPYfile, "%le %le %le\n", Roll * R2D, Pitch * R2D, Yaw * R2D);
+         fprintf(RPYfile, PRNT_DBL_3VEC "\n", Roll * R2D, Pitch * R2D,
+                 Yaw * R2D);
          if (SC[0].Nw > 0) {
             for (i = 0; i < SC[0].Nw; i++) {
                fprintf(Hwhlfile, "%lf ", SC[0].Whl[i].H);
@@ -1449,18 +1449,18 @@ void Report(void)
          }
          if (SC[0].Nacc > 0) {
             for (i = 0; i < SC[0].Nacc; i++)
-               fprintf(AccFile, "%le %le ", SC[0].Accel[i].TrueAcc,
+               fprintf(AccFile, PRNT_DBL PRNT_DBL, SC[0].Accel[i].TrueAcc,
                        SC[0].Accel[i].MeasAcc);
             fprintf(AccFile, "\n");
          }
          if (SC[0].Ngps > 0) {
-            fprintf(GpsFile, "%le %le %le\n", SC[0].GPS[0].PosN[0],
+            fprintf(GpsFile, PRNT_DBL_3VEC "\n", SC[0].GPS[0].PosN[0],
                     SC[0].GPS[0].PosN[1], SC[0].GPS[0].PosN[2]);
          }
          if (SC[0].Ncss > 0) {
             for (i = 0; i < SC[0].Ncss; i++) {
-               fprintf(IllumFile, "%le ", SC[0].CSS[i].Illum);
-               fprintf(AlbedoFile, "%le ", SC[0].CSS[i].Albedo);
+               fprintf(IllumFile, PRNT_DBL, SC[0].CSS[i].Illum);
+               fprintf(AlbedoFile, PRNT_DBL, SC[0].CSS[i].Albedo);
             }
             fprintf(IllumFile, "\n");
             fprintf(AlbedoFile, "\n");

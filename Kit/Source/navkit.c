@@ -13,6 +13,10 @@
 
 #include "navkit.h"
 
+#ifdef _ENABLE_SPICE_
+#include "SpiceUsr.h"
+#endif
+
 /* REQUIRED GLOBALS                                                   */
 /*    WorldType World                                                 */
 /*    long AtmoOption                                                 */
@@ -24,9 +28,9 @@
 */
 
 extern double EnckeFQ(double const r[3], double const delta[3]);
-extern void Legendre(long N, long M, double x, double P[N + 1][M + 1],
-                     double sdP[N + 1][M + 1]);
-#if REPORT_RESIDUALS == TRUE
+extern void Legendre(const long N, const long M, const double x,
+                     double P[N + 1][M + 1], double sdP[N + 1][M + 1]);
+#ifdef _REPORT_RESIDUALS_
 extern void DSM_NAV_ResidualsReport(double time,
                                     double **residuals[FIN_SENSOR + 1]);
 #endif
@@ -177,13 +181,14 @@ struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
    meas->type            = sourceMeas->type;
    meas->dim             = sourceMeas->dim;
    meas->errDim          = sourceMeas->errDim;
+   meas->noiseDim        = sourceMeas->noiseDim;
 
    meas->data = calloc(meas->dim, sizeof(double));
-   meas->R    = calloc(meas->errDim, sizeof(double));
-   meas->N    = CreateMatrix(meas->errDim, meas->errDim);
+   meas->R    = calloc(meas->noiseDim, sizeof(double));
+   meas->N    = CreateMatrix(meas->errDim, meas->noiseDim);
    for (int i = 0; i < meas->errDim; i++) {
       meas->R[i] = sourceMeas->R[i];
-      for (int j = 0; j < meas->errDim; j++)
+      for (int j = 0; j < meas->noiseDim; j++)
          meas->N[i][j] = sourceMeas->N[i][j];
    }
    meas->sensorNum = sensorNum;
@@ -198,13 +203,13 @@ int comparator_DSMMeas(const void *v1, const void *v2)
 {
    const struct DSMMeasType *m1 = *(struct DSMMeasType **)v1;
    const struct DSMMeasType *m2 = *(struct DSMMeasType **)v2;
-   if (m1->ccsdsSeconds < m2->ccsdsSeconds)
+   if (m1->ccsds_time.coarse < m2->ccsds_time.coarse)
       return -1;
-   else if (m1->ccsdsSeconds > m2->ccsdsSeconds)
+   else if (m1->ccsds_time.coarse > m2->ccsds_time.coarse)
       return +1;
-   else if (m1->ccsdsSubseconds < m2->ccsdsSubseconds)
+   else if (m1->ccsds_time.fine < m2->ccsds_time.fine)
       return -1;
-   else if (m1->ccsdsSubseconds > m2->ccsdsSubseconds)
+   else if (m1->ccsds_time.fine > m2->ccsds_time.fine)
       return +1;
    else if (m1->type < m2->type)
       return -1;
@@ -225,26 +230,25 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
    const double secPerDay       = 86400.0;
    const double dayperWk        = 7.0;
    const double daysperRollover = 7168.0;
-   const double gpst0J2000 =
-       -7300.5 + (32.184 + 19) / secPerDay; // -7300.499407592695
+   const double gpst0J2000      = -7300.5; // -7300.499407592695
 
-   const double DaysSinceWeek     = gpsSec / secPerDay;
-   const double DaysSinceRollover = DaysSinceWeek + dayperWk * gpsWk;
+   const double DaysSinceRollover = dayperWk * gpsWk;
    const double DaysSinceEpoch =
        DaysSinceRollover + daysperRollover * gpsRollover;
-   return ((DaysSinceEpoch + gpst0J2000) * secPerDay);
+   return ((DaysSinceEpoch + gpst0J2000) * secPerDay) + gpsSec + (32.184 + 19);
 }
 
 /**********************************************************************/
 /* Given a time in seconds since J2000 TT, find the Prime Meridian    */
 /* offset angle of a given world.                                     */
-double GetPriMerAng(const long orbCenter, const struct DateType *date)
+double GetPriMerAng(const long orbCenter, const DateType *date)
 {
    // TODO: change for spice
    struct WorldType *W = &World[orbCenter];
    double PriMerAng    = 0.0;
-   const double time   = DateToTime(date->Year, date->Month, date->Day,
-                                    date->Hour, date->Minute, date->Second);
+   const double time   = Date2Time(*date);
+   JDType jd           = Date2JD(*date, J2000_EPOCH);
+   ChangeSystem(TT_TIME, &jd);
 
    /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
@@ -252,14 +256,11 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
          if (EphemOption == EPH_MEAN) {
             PriMerAng = W->PriMerAngJ2000 + W->w * time;
          }
-         else {
-            struct DateType dateUTC = *date;
-            updateTime(&dateUTC, -(32.184 + LeapSec));
-            PriMerAng = TwoPi * JD2GMST(dateUTC.JulDay);
-         }
+         else
+            PriMerAng = TwoPi * JD2GMST(jd);
       } break;
       case LUNA: {
-         PriMerAng = LunaPriMerAng(date->JulDay);
+         PriMerAng = LunaPriMerAng(jd);
       } break;
       case SOL: // TODO: SOL does not rotate
          break;
@@ -271,7 +272,6 @@ double GetPriMerAng(const long orbCenter, const struct DateType *date)
       case NEPTUNE:
       case PLUTO:
          PriMerAng = W->w * time;
-
          // TODO: This is from Ephemerides() in 42ephem.c
          if (EphemOption == EPH_MEAN)
             PriMerAng += W->PriMerAngJ2000;
@@ -480,7 +480,7 @@ void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3])
       accel[j] = mu * (s[j] / s3 - p[j] / p3);
 }
 
-void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
+void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
                       const double PosR[3], const double mass,
                       const struct OrbitType *O, double VelRdot[3])
 {
@@ -565,7 +565,7 @@ void NavGravPertAccel(struct DSMNavType *Nav, const struct DateType *date,
    }
 }
 
-void NavDGravPertAccelDPos(struct DSMNavType *Nav, const struct DateType *date,
+void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
                            double PosR[3], struct OrbitType const *O,
                            double dGravDPos[3][3])
 {
@@ -732,7 +732,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
 //------------------------------------------------------------------------------
 
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long Igyro)
+                         const long Igyro, double **N)
 {
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -799,7 +799,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Imag)
+                        const long Imag, double **N)
 {
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -854,7 +854,7 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Icss)
+                        const long Icss, double **N)
 {
    double tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -907,7 +907,7 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Ifss)
+                        const long Ifss, double **N)
 {
    double B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
    const struct AcFssType *fss  = &AC->FSS[Ifss];
@@ -1004,7 +1004,8 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **startrackJacobianFun(struct AcType *const AC,
-                              struct DSMType *const DSM, const long Ist)
+                              struct DSMType *const DSM, const long Ist,
+                              double **N)
 {
    double tmpM[3][3]                  = {{0.0}}, CSB[3][3];
    static double **tmpAssign          = NULL;
@@ -1051,7 +1052,7 @@ double **startrackJacobianFun(struct AcType *const AC,
 }
 
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Igps)
+                        const long Igps, double **N)
 {
    double tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}}, tmp3[3][3] = {{0.0}},
           tmpX[3][3] = {{0.0}}, tmpV[3] = {0.0};
@@ -1162,7 +1163,7 @@ double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long Iaccel)
+                          const long Iaccel, double **N)
 {
    const struct DSMNavType *Nav = &DSM->DsmNav;
 
@@ -1403,16 +1404,23 @@ data
 /*--------------------------------------------------------------------*/
 /*                   Auxillary helper functions                       */
 /*--------------------------------------------------------------------*/
-void getEarthAtmoParams(const double JD, double *NavFlux10p7,
+void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
                         double *NavGeomagIndex)
 {
+   JDType jd_tt_mjd = jd;
+   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
+   double jd_tt_mjd_days = JDToDays(jd_tt_mjd);
    if (AtmoOption == TWOSIGMA_ATMO) {
-      *NavFlux10p7    = LinInterp(SchattenTable[0], SchattenTable[1], JD, 410);
-      *NavGeomagIndex = LinInterp(SchattenTable[0], SchattenTable[3], JD, 410);
+      *NavFlux10p7 =
+          LinInterp(SchattenTable[0], SchattenTable[1], jd_tt_mjd_days, 1009);
+      *NavGeomagIndex =
+          LinInterp(SchattenTable[0], SchattenTable[3], jd_tt_mjd_days, 1009);
    }
    else if (AtmoOption == NOMINAL_ATMO) {
-      *NavFlux10p7    = LinInterp(SchattenTable[0], SchattenTable[2], JD, 410);
-      *NavGeomagIndex = LinInterp(SchattenTable[0], SchattenTable[4], JD, 410);
+      *NavFlux10p7 =
+          LinInterp(SchattenTable[0], SchattenTable[2], jd_tt_mjd_days, 1009);
+      *NavGeomagIndex =
+          LinInterp(SchattenTable[0], SchattenTable[4], jd_tt_mjd_days, 1009);
    }
    else {
       // Pull from user-defined values in Inp_Sim.txt
@@ -1426,10 +1434,11 @@ void getEarthAtmoParams(const double JD, double *NavFlux10p7,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, const double CRB[3][3],
+                         const DateType *date, const double CRB[3][3],
                          const double qbr[4], const double PosR[3],
                          const double VelR[3], const double wbr[3],
-                         const double whlH[AC->Nwhl], const double AtmoDensity)
+                         const double whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
@@ -1437,7 +1446,6 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double wrnd[3]            = {0.0};
    struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j, rowInd;
-   enum States state;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -1455,11 +1463,12 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    for (i = 0; i < Nav->navDim; i++)
       for (j = 0; j < Nav->navDim; j++)
-         Nav->jacobian[i][j] = 0.0;
+         jacobian[i][j] = 0.0;
 
    if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE]) {
-      for (state = INIT_STATE; state <= FIN_STATE; state++) {
+      FOR_STATES(state)
+      {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                tmpAssign[i][j] = 0.0;
@@ -1468,7 +1477,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
             switch (state) {
                case TIME_STATE:
                   tmpAssign[0][0] = 1.0;
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 1, 1);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 1, 1);
                   break;
                case ROTMAT_STATE:
                   if (Nav->stateActive[OMEGA_STATE]) {
@@ -1477,7 +1486,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                            tmpAssign[i][j] = 0.0;
                         tmpAssign[i][i] = 1.0;
                      }
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[OMEGA_STATE], 3, 3);
                   }
                   break;
@@ -1489,7 +1498,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                   // calculate dwbn_dot/dwbn
                   MTxV(CRB, Nav->refOmega, tmpV3);
@@ -1516,7 +1525,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM3[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
@@ -1525,7 +1534,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   break;
                case POS_STATE:
                   for (i = 0; i < 3; i++) {
@@ -1533,14 +1542,14 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         tmpAssign[i][j] = 0.0;
                      tmpAssign[i][i] = 1.0;
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
-                            Nav->navInd[VEL_STATE], 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, Nav->navInd[VEL_STATE],
+                            3, 3);
                   if (Nav->stateActive[VEL_STATE] == FALSE) {
                      V2CrossM(VelR, tmpM);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
                   }
                   if (Nav->stateActive[OMEGA_STATE] == TRUE) {
@@ -1548,7 +1557,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[OMEGA_STATE], 3, 3);
                   }
                   break;
@@ -1559,40 +1568,40 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                     subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                      V2CrossM(VelR, tmpM2);
                      MxM(tmpM, tmpM2, tmpM3);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM3[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
 
                      V2DoubleCrossM(Nav->refOmega, tmpM);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      V2CrossM(PosR, tmpM2);
                      MxM(tmpM, tmpM2, tmpM3);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM3[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
 
                      V2CrossM(wrnd, tmpM);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      MxM(tmpM, tmpM2, tmpM3);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM3[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
                   }
                   if (Nav->stateActive[OMEGA_STATE] == TRUE) {
@@ -1600,7 +1609,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[OMEGA_STATE], 3, 3);
                   }
                   break;
@@ -1626,7 +1635,8 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   dAeroFrcdVRel[i][j] /= DSM->mass;
                }
          }
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                rowInd = Nav->navInd[state];
                switch (state) {
@@ -1657,7 +1667,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                      }
 
@@ -1674,14 +1684,14 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM2[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      V2CrossM(PosR, tmpM);
                      MxM(tmpM2, tmpM, tmpM3);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM3[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
 
                      if (AeroActive) {
@@ -1689,28 +1699,27 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = dAeroFrcdVRel[i][j];
 
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
-                                  3);
+                        subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                         V2CrossM(VelR, tmpM2);
                         MxM(dAeroFrcdVRel, tmpM2, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = -tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                         V2CrossM(worldWR, tmpM2);
                         MxM(dAeroFrcdVRel, tmpM2, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                         V2CrossM(PosR, tmpM2);
                         MxM(tmpM3, tmpM2, tmpM);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = -tmpM[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                      }
                      break;
@@ -1719,28 +1728,28 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = dAeroTrqdVRel[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[VEL_STATE], 3, 3);
                         V2CrossM(VelR, tmpM2);
                         MxM(dAeroTrqdVRel, tmpM2, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = -tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                         V2CrossM(worldWR, tmpM2);
                         MxM(dAeroTrqdVRel, tmpM2, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                         V2CrossM(PosR, tmpM2);
                         MxM(tmpM3, tmpM2, tmpM);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = -tmpM[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                      }
                      break;
@@ -1777,15 +1786,16 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
    double xbar[nBVec][3];
 
    long curRInd = 0, curBInd = 0;
-   for (j = INIT_STATE; j <= FIN_STATE; j++) {
-      if (j == POS_STATE || j == VEL_STATE) {
+   FOR_STATES(state)
+   {
+      if (state == POS_STATE || state == VEL_STATE) {
          for (i = 0; i < 3; i++)
-            x[curRInd][i] = -Nav->delta[i + Nav->navInd[j]];
+            x[curRInd][i] = -Nav->delta[i + Nav->navInd[state]];
          curRInd++;
       }
-      else if (j == OMEGA_STATE) {
+      else if (state == OMEGA_STATE) {
          for (i = 0; i < 3; i++)
-            xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[j]];
+            xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[state]];
          curBInd++;
       }
    }
@@ -1795,8 +1805,9 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 
    expmTFG(theta, nRVec, nBVec, x, xbar, dR);
    curRInd = 0, curBInd = 0;
-   for (j = INIT_STATE; j <= FIN_STATE; j++) {
-      switch (j) {
+   FOR_STATES(state)
+   {
+      switch (state) {
          case POS_STATE:
             for (i = 0; i < 3; i++)
                dr[i] = x[curRInd][i];
@@ -1841,10 +1852,11 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, const double CRB[3][3],
+                         const DateType *date, const double CRB[3][3],
                          const double qbr[4], const double PosR[3],
                          const double VelR[3], const double wbr[3],
-                         const double whlH[AC->Nwhl], const double AtmoDensity)
+                         const double whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
@@ -1852,7 +1864,6 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double wrnd[3]            = {0.0};
    struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j, rowInd;
-   enum States state;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -1870,7 +1881,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    for (i = 0; i < Nav->navDim; i++)
       for (j = 0; j < Nav->navDim; j++)
-         Nav->jacobian[i][j] = 0.0;
+         jacobian[i][j] = 0.0;
    double aeroTrq[3] = {0.0}, aeroFrc[3] = {0.0};
    if (AeroActive) {
       const long orbCenter = DSM->refOrb->World;
@@ -1883,7 +1894,8 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE] &&
        !Nav->stateActive[QUAT_STATE]) {
-      for (state = INIT_STATE; state <= FIN_STATE; state++) {
+      FOR_STATES(state)
+      {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                tmpAssign[i][j] = 0.0;
@@ -1892,7 +1904,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
             switch (state) {
                case TIME_STATE:
                   tmpAssign[0][0] = 1.0;
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 1, 1);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 1, 1);
                   break;
                case ROTMAT_STATE:
                   for (i = 0; i < 3; i++) {
@@ -1900,7 +1912,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         tmpAssign[i][j] = 0.0;
                      tmpAssign[i][i] = 1.0;
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
                   // this is if wbr is not being filtered
                   // V2CrossM(Nav->wbr,tmpM);
@@ -1915,7 +1927,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = -tmpM[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                   MTxV(CRB, Nav->refOmega, tmpV3);
                   for (i = 0; i < 3; i++)
@@ -1945,7 +1957,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = -tmpM[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
 
                   // calculate dwbn_dot/dwbn
@@ -1971,7 +1983,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM3[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
@@ -1979,14 +1991,14 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM3[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
                   V2CrossM(wbr, tmpM);
                   MxM(tmpM3, tmpM, tmpM2);
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM2[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
                   break;
                case POS_STATE:
@@ -1994,21 +2006,21 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = -tmpM[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   for (i = 0; i < 3; i++) {
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = 0.0;
                      tmpAssign[i][i] = 1.0;
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
-                            Nav->navInd[VEL_STATE], 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, Nav->navInd[VEL_STATE],
+                            3, 3);
                   break;
                case VEL_STATE:
                   V2CrossM(wbr, tmpM);
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = -tmpM[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   for (i = 0; i < 3; i++) {
                      tmpV[i] = Nav->forceB[i] / DSM->mass;
                   }
@@ -2019,7 +2031,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] =
                             tmpM2[i][j] + tmpM3[i][j] / (DSM->mass * DSM->mass);
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
 
                   if (Nav->refFrame != FRAME_N) {
@@ -2029,13 +2041,13 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                     subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                      V2DoubleCrossM(tmpV, tmpM);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
 
                      MTxV(CRB, wrnd, tmpV);
@@ -2043,7 +2055,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                   }
                   break;
@@ -2066,7 +2078,8 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                for (j = 0; j < 3; j++)
                   dAeroFrcdVRel[i][j] /= DSM->mass;
          }
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                rowInd = Nav->navInd[state];
                switch (state) {
@@ -2087,15 +2100,14 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      if (AeroActive) {
                         AdjointT(CRB, dAeroFrcdVRel, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
-                                  3);
+                        subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                         V2CrossM(worldWR, tmpM2);
                         // TODO: double check these two lines
                         MxM(tmpM3, tmpM2, tmpM);
@@ -2103,7 +2115,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
                   } break;
@@ -2113,7 +2125,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[VEL_STATE], 3, 3);
                         V2CrossM(worldWR, tmpM);
                         MxM(dAeroTrqdVRel, tmpM, tmpM3);
@@ -2121,7 +2133,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
                      break;
@@ -2158,15 +2170,16 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
    double xbar[nBVec][3];
 
    long curRInd = 0, curBInd = 0;
-   for (j = INIT_STATE; j <= FIN_STATE; j++) {
-      if (j == POS_STATE || j == VEL_STATE) {
+   FOR_STATES(state)
+   {
+      if (state == POS_STATE || state == VEL_STATE) {
          for (i = 0; i < 3; i++)
-            x[curRInd][i] = -Nav->delta[i + Nav->navInd[j]];
+            x[curRInd][i] = -Nav->delta[i + Nav->navInd[state]];
          curRInd++;
       }
-      else if (j == OMEGA_STATE) {
+      else if (state == OMEGA_STATE) {
          for (i = 0; i < 3; i++)
-            xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[j]];
+            xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[state]];
          curBInd++;
       }
    }
@@ -2176,8 +2189,9 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 
    expmTFG(theta, nRVec, nBVec, x, xbar, dR);
    curRInd = 0, curBInd = 0;
-   for (j = INIT_STATE; j <= FIN_STATE; j++) {
-      switch (j) {
+   FOR_STATES(state)
+   {
+      switch (state) {
          case POS_STATE:
             for (i = 0; i < 3; i++)
                dr[i] = x[curRInd][i];
@@ -2222,10 +2236,11 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const struct DateType *date, const double CRB[3][3],
+                        const DateType *date, const double CRB[3][3],
                         const double qbr[4], const double PosR[3],
                         const double VelR[3], const double wbr[3],
-                        const double whlH[AC->Nwhl], const double AtmoDensity)
+                        const double whlH[AC->Nwhl], const double AtmoDensity,
+                        double **jacobian)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
@@ -2233,7 +2248,6 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double wrnd[3]            = {0.0};
    struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, j, rowInd;
-   enum States state;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -2251,11 +2265,12 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    for (i = 0; i < Nav->navDim; i++)
       for (j = 0; j < Nav->navDim; j++)
-         Nav->jacobian[i][j] = 0.0;
+         jacobian[i][j] = 0.0;
 
    if (Nav->stateActive[QUAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE]) {
-      for (state = INIT_STATE; state <= FIN_STATE; state++) {
+      FOR_STATES(state)
+      {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                tmpAssign[i][j] = 0.0;
@@ -2264,7 +2279,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
             switch (state) {
                case TIME_STATE:
                   tmpAssign[0][0] = 1.0;
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 1, 1);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 1, 1);
                   break;
                case ROTMAT_STATE:
                   break;
@@ -2274,14 +2289,14 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = -tmpM[i][j];
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                   for (i = 0; i < 3; i++) {
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = 0.0;
                      tmpAssign[i][i] = 1.0;
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
                   break;
                case OMEGA_STATE:
@@ -2307,7 +2322,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM2[i][j];
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   break;
                case POS_STATE:
                   for (i = 0; i < 3; i++) {
@@ -2315,8 +2330,8 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         tmpAssign[i][j] = 0.0;
                      tmpAssign[i][i] = 1.0;
                   }
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
-                            Nav->navInd[VEL_STATE], 3, 3);
+                  subMatAdd(jacobian, tmpAssign, rowInd, Nav->navInd[VEL_STATE],
+                            3, 3);
                   break;
                case VEL_STATE:
                   for (i = 0; i < 3; i++) {
@@ -2327,7 +2342,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 3; i++)
                      for (j = 0; j < 3; j++)
                         tmpAssign[i][j] = tmpM2[i][j];
-                  subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                  subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[QUAT_STATE], 3, 3);
 
                   if (Nav->refFrame != FRAME_N) {
@@ -2337,13 +2352,13 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                     subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                      V2DoubleCrossM(tmpV, tmpM);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
 
                      MTxV(CRB, wrnd, tmpV);
@@ -2351,7 +2366,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = -tmpM[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                   }
                   break;
@@ -2374,7 +2389,8 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                for (j = 0; j < 3; j++)
                   dAeroFrcdVRel[i][j] /= DSM->mass;
          }
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                rowInd = Nav->navInd[state];
                switch (state) {
@@ -2394,21 +2410,20 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
                            tmpAssign[i][j] = tmpM2[i][j];
-                     subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                     subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      if (AeroActive) {
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = dAeroFrcdVRel[i][j];
 
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd, rowInd, 3,
-                                  3);
+                        subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                         V2CrossM(worldWR, tmpM2);
                         MxM(dAeroFrcdVRel, tmpM2, tmpM3);
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
                   } break;
@@ -2418,7 +2433,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM3[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[VEL_STATE], 3, 3);
                         V2CrossM(worldWR, tmpM);
                         MxM(dAeroTrqdVRel, tmpM, tmpM3);
@@ -2426,7 +2441,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         for (i = 0; i < 3; i++)
                            for (j = 0; j < 3; j++)
                               tmpAssign[i][j] = tmpM[i][j];
-                        subMatAdd(Nav->jacobian, tmpAssign, rowInd,
+                        subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
                      break;
@@ -2591,7 +2606,7 @@ void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean, double **P)
    }
 }
 
-void configureRefFrame(struct DSMNavType *const Nav,
+void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset)
 {
@@ -2601,9 +2616,9 @@ void configureRefFrame(struct DSMNavType *const Nav,
    double targetVelN[3] = {0.0};
 
    if (reset == TRUE)
-      Nav->refLerpAlpha = 1.0;
+      *lerp_alpha = 1.0;
    else
-      Nav->refLerpAlpha += dLerpAlpha;
+      *lerp_alpha += dLerpAlpha;
 
    if (Nav->Init == FALSE) {
       for (i = 0; i < 3; i++)
@@ -2648,11 +2663,12 @@ void configureRefFrame(struct DSMNavType *const Nav,
       } break;
    }
 
+   const double one_m_alpha = 1.0 - *lerp_alpha;
    for (i = 0; i < 3; i++) {
-      Nav->refPos[i] = (1.0 - Nav->refLerpAlpha) * Nav->oldRefPos[i] +
-                       Nav->refLerpAlpha * targetPosN[i];
-      Nav->refVel[i] = (1.0 - Nav->refLerpAlpha) * Nav->oldRefVel[i] +
-                       Nav->refLerpAlpha * targetVelN[i];
+      Nav->refPos[i] =
+          one_m_alpha * Nav->oldRefPos[i] + *lerp_alpha * targetPosN[i];
+      Nav->refVel[i] =
+          one_m_alpha * Nav->oldRefVel[i] + *lerp_alpha * targetVelN[i];
    }
 
    switch (Nav->refFrame) {
@@ -2687,8 +2703,8 @@ void configureRefFrame(struct DSMNavType *const Nav,
          Nav->refVel[i] = refVel[i] - wxr[i];
    }
 
-   if (Nav->Init == TRUE && fabs(1.0 - Nav->refLerpAlpha) > __DBL_EPSILON__) {
-      const double dt = (1.0 - Nav->refLerpAlpha) * Nav->DT;
+   if (Nav->Init == TRUE && fabs(one_m_alpha) > __DBL_EPSILON__) {
+      const double dt = one_m_alpha * Nav->DT;
       for (i = 0; i < 3; i++)
          Nav->refAccel[i] = (targetVelN[i] - Nav->refVel[i]) / dt;
    }
@@ -2701,83 +2717,81 @@ void configureRefFrame(struct DSMNavType *const Nav,
          Nav->oldRefOmega[i]    = Nav->refOmega[i];
          Nav->oldRefOmegaDot[i] = Nav->refOmegaDot[i];
       }
-      Nav->refLerpAlpha = 0.0;
+      *lerp_alpha = 0.0;
    }
 }
 
 void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
           const double CRB[3][3], const double qbr[4], const double PosR[3],
-          const double VelR[3], const double wbr[3])
+          const double VelR[3], const double wbr[3], double **M)
 {
    double tmp3x3[3][3] = {{0.0}}, MOIInv[3][3] = {{0.0}};
    long i, j;
 
    for (i = 0; i < Nav->navDim; i++)
       for (j = 0; j < Nav->navDim; j++)
-         Nav->M[i][j] = 0.0;
+         M[i][j] = 0.0;
 
    switch (Nav->type) {
       case LIEKF_NAV: {
          for (i = 0; i < Nav->navDim; i++)
-            Nav->M[i][i] = -1.0;
+            M[i][i] = -1.0;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
-               Nav->M[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + j] =
+               M[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + j] =
                    -CRB[j][i];
-               Nav->M[Nav->navInd[VEL_STATE] + i][Nav->navInd[VEL_STATE] + j] =
+               M[Nav->navInd[VEL_STATE] + i][Nav->navInd[VEL_STATE] + j] =
                    -CRB[j][i];
             }
          }
          MINV3(AC->MOI, MOIInv);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[OMEGA_STATE] + i]
-                     [Nav->navInd[OMEGA_STATE] + j] = -MOIInv[i][j];
+               M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[OMEGA_STATE] + j] =
+                   -MOIInv[i][j];
 
          V2CrossM(wbr, tmp3x3);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[OMEGA_STATE] + i]
-                     [Nav->navInd[ROTMAT_STATE] + j] = tmp3x3[i][j];
+               M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
+                   tmp3x3[i][j];
       } break;
       case RIEKF_NAV: {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[ROTMAT_STATE] + i]
-                     [Nav->navInd[ROTMAT_STATE] + j] = -CRB[i][j];
+               M[Nav->navInd[ROTMAT_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
+                   -CRB[i][j];
          for (i = 0; i < 3; i++) {
-            Nav->M[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + i] =
-                -1.0;
-            Nav->M[Nav->navInd[VEL_STATE] + i][Nav->navInd[VEL_STATE] + i] =
-                -1.0;
+            M[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + i] = -1.0;
+            M[Nav->navInd[VEL_STATE] + i][Nav->navInd[VEL_STATE] + i] = -1.0;
          }
          V2CrossM(PosR, MOIInv);
          MxM(MOIInv, CRB, tmp3x3);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[POS_STATE] + i]
-                     [Nav->navInd[ROTMAT_STATE] + j] = -tmp3x3[i][j];
+               M[Nav->navInd[POS_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
+                   -tmp3x3[i][j];
          V2CrossM(VelR, MOIInv);
          MxM(MOIInv, CRB, tmp3x3);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[VEL_STATE] + i]
-                     [Nav->navInd[ROTMAT_STATE] + j] = -tmp3x3[i][j];
+               M[Nav->navInd[VEL_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
+                   -tmp3x3[i][j];
          MINV3(AC->MOI, MOIInv);
          MxM(CRB, MOIInv, tmp3x3);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[OMEGA_STATE] + i]
-                     [Nav->navInd[OMEGA_STATE] + j] = -tmp3x3[i][j];
+               M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[OMEGA_STATE] + j] =
+                   -tmp3x3[i][j];
       } break;
       case MEKF_NAV: {
          for (i = 0; i < Nav->navDim; i++)
-            Nav->M[i][i] = -1.0;
+            M[i][i] = -1.0;
          MINV3(AC->MOI, MOIInv);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               Nav->M[Nav->navInd[OMEGA_STATE] + i]
-                     [Nav->navInd[OMEGA_STATE] + j] = -MOIInv[i][j];
+               M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[OMEGA_STATE] + j] =
+                   -MOIInv[i][j];
       } break;
       default:
          fprintf(stderr, "Navigation active with undefined or ideal navigation "
@@ -2825,16 +2839,67 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
    }
 }
 
-void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
-             const struct DateType *date, const double CRB[3][3],
-             const double qbr[4], const double PosR[3], const double VelR[3],
-             const double wbr[3], const double *whlH, double CRBdot[3][3],
-             double qbrdot[4], double PosRdot[3], double VelRdot[3],
-             double wbrdot[3], double *whlHdot, const double AtmoDensity)
+void NavSkDot(const long nav_dim, double **sk, double **F, double **M_sqrtQ,
+              double **sk_dot)
 {
-   long i, j, iState;
+   // F and M_sqrtQ are used as a scratch space and will be overwritten
+
+   // sk_dot = F * Sk
+   MxMG(F, sk, sk_dot, nav_dim, nav_dim, nav_dim);
+
+   // F = Sk \ (F * Sk)
+   MINVxMG(sk, sk_dot, F, nav_dim, nav_dim);
+
+   // sk_dot = Sk \ (M * sqrtQ)
+   MINVxMG(sk, M_sqrtQ, sk_dot, nav_dim, nav_dim);
+
+   // M_sqrtQ = (Sk \ (M * sqrtQ)) * (Sk \ (M * sqrtQ))^T
+   MxMTG(sk_dot, sk_dot, M_sqrtQ, nav_dim, nav_dim, nav_dim);
+
+   // sk_dot + (sk_dot)^T = F + (F)^T + M_sqrtQ
+   // sk_dot is lower triangular
+   for (long i = 0; i < nav_dim; i++) {
+      for (long j = 0; j < i; j++) {
+         sk_dot[i][j] = F[i][j] + F[j][i] + M_sqrtQ[i][j];
+         sk_dot[j][i] = 0.0;
+      }
+      sk_dot[i][i] = F[i][i] + M_sqrtQ[i][i] / 2.0;
+   }
+
+   // F = sk * sk_dot
+   MxMG(sk, sk_dot, F, nav_dim, nav_dim, nav_dim);
+
+   // transfer F to sk_dot, ensuring lower triangular
+   for (long i = 0; i < nav_dim; i++) {
+      for (long j = i + 1; j < nav_dim; j++) {
+         sk_dot[i][j] = 0.0;
+         sk_dot[j][i] = F[j][i];
+      }
+      sk_dot[i][i] = F[i][i];
+   }
+}
+
+void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
+             const DateType *date, const double CRB[3][3], const double qbr[4],
+             const double PosR[3], const double VelR[3], const double wbr[3],
+             const double *whlH, double **Sk, double CRBdot[3][3],
+             double qbrdot[4], double PosRdot[3], double VelRdot[3],
+             double wbrdot[3], double *whlHdot, double **Skdot,
+             const double AtmoDensity)
+{
+   long i, j;
 
    struct DSMNavType *Nav = &DSM->DsmNav;
+   const long navDim      = Nav->navDim;
+
+   (*Nav->EOMJacobianFun)(AC, DSM, date, CRB, qbr, PosR, VelR, wbr, whlH,
+                          AtmoDensity, Nav->NxN);
+   GetM(AC, Nav, CRB, qbr, PosR, VelR, wbr, Nav->M);
+   for (i = 0; i < Nav->navDim; i++)
+      for (j = 0; j < Nav->navDim; j++)
+         Nav->NxN2[i][j] = Nav->M[i][j] * Nav->sqrQ[j];
+
+   NavSkDot(navDim, Sk, Nav->NxN, Nav->NxN2, Skdot);
 
    double aeroFrc[3] = {0.0}, aeroTrq[3] = {0.0};
    const long orbCenter          = DSM->refOrb->World;
@@ -2845,7 +2910,8 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
    }
    getForceAndTorque(AC, Nav, CRB, whlH);
 
-   for (iState = INIT_STATE; iState <= FIN_STATE; iState++) {
+   FOR_STATES(iState)
+   {
       if (Nav->stateActive[iState] == TRUE) {
          double **pM3x3, wbrX[3][3] = {{0.0}}, tmpV[3] = {0.0},
                          tmpV2[3] = {0.0}, wbn[3] = {0.0};
@@ -2941,6 +3007,9 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                      break;
                }
                break;
+            default:
+               fprintf(stderr, "Invalid State in NavEOMs(). Exiting...\n");
+               exit(EXIT_FAILURE);
          }
       }
    }
@@ -2948,52 +3017,26 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
       whlHdot[Iw] = AC->Whl[Iw].Tcmd;
 }
 
-void updateNavCCSDS(ccsdsCoarse *sec, ccsdsFine *subsec, const double dSeconds)
-{
-   const double sizeCheck = 1.0 / (((unsigned long)(CCSDS_FINE_MAX)) << 1);
-   double integral;
-   const double fractional = modf(dSeconds, &integral);
-
-   *sec += integral;
-   if (fractional > sizeCheck) {
-      const ccsdsFine dSubSec = fractional * CCSDS_FINE_MAX + .5;
-      ccsdsFine test          = 0;
-      if (__builtin_add_overflow(*subsec, dSubSec, &test))
-         (*sec)++;
-      *subsec += dSubSec;
-   }
-   else if (fractional < -sizeCheck) {
-      const ccsdsFine dSubSec = -fractional * CCSDS_FINE_MAX + .5;
-      ccsdsFine test          = 0;
-      if (__builtin_sub_overflow(*subsec, dSubSec, &test))
-         (*sec)--;
-      *subsec -= dSubSec;
-   }
-}
-
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
-                  const long dCCSDSSec, const long dCCSDSSubSec,
+                  CCSDSTime *const cur_ccsds, const CCSDSTime next_ccsds,
                   const long init)
 {
+   if (isequal_ccsds(next_ccsds, *cur_ccsds))
+      return;
+
+   const CCSDSTime dccsds = CCSDSSub(next_ccsds, *cur_ccsds);
+
    double AtmoDensity = 0.0;
 
    long i, j, k;
-   enum States Istate;
 
-   struct DSMNavType *Nav     = &DSM->DsmNav;
-   double lerpAlphaState      = Nav->refLerpAlpha;
-   const double ccsdsStepSize = CCSDS_STEP_SIZE;
-   const double DT =
-       (double)(dCCSDSSec) + (double)(dCCSDSSubSec * ccsdsStepSize);
+   struct DSMNavType *Nav = &DSM->DsmNav;
+   const double DT        = ccsds2seconds(dccsds);
 
-   ccsdsCoarse dateSec;
-   ccsdsFine dateSubsec;
-   DateToCCSDS(Nav->Date, &dateSec, &dateSubsec);
-   updateNavCCSDS(&dateSec, &dateSubsec, -(32.184 + LeapSec));
-   const double dateOffset =
-       CCSDSSub(Nav->ccsdsSeconds, Nav->ccsdsSubseconds, dateSec, dateSubsec);
+   CCSDSTime date_ccsds            = date2ccsds(Nav->Date);
+   const CCSDSTime date_off_ccdsds = CCSDSSub(*cur_ccsds, date_ccsds);
+   const double dateOffset         = ccsds2seconds(date_off_ccdsds);
 
-   GetM(AC, Nav, Nav->CRB, Nav->qbr, Nav->PosR, Nav->VelR, Nav->wbr);
    if (init == TRUE) {
       if (AeroActive) {
          const long orbCenter = DSM->refOrb->World;
@@ -3011,17 +3054,28 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             const double ZAxis[3] = {0.0, 0.0, 1.0};
             double NavFlux10p7, NavGeomagIndex;
             double Alt, PosW[3] = {0.0}, CWN[3][3] = {{0.0}};
-            const double PriMerAng = GetPriMerAng(orbCenter, &Nav->Date);
-            SimpRot(ZAxis, PriMerAng, CWN);
+#ifdef _ENABLE_SPICE_
+            if (EphemOption == 3) {
+               const double dyn_time = ccsds2time(*cur_ccsds);
+               pxform_c("J2000", "IAU_EARTH", dyn_time, CWN);
+            }
+            else {
+#endif
+               const double PriMerAng = GetPriMerAng(orbCenter, &Nav->Date);
+               SimpRot(ZAxis, PriMerAng, CWN);
+#ifdef _ENABLE_SPICE_
+            }
+#endif
             MxV(CWN, PosN, PosW);
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
-               getEarthAtmoParams(Nav->Date.JulDay, &NavFlux10p7,
-                                  &NavGeomagIndex);
+               JDType jd = Date2JD(Nav->Date, MJD_EPOCH);
+               ChangeSystem(TT_TIME, &jd);
+               getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
+               Nav->Date.doy =
+                   MD2DOY(Nav->Date.Year, Nav->Date.Month, Nav->Date.Day);
                AtmoDensity =
-                   NRLMSISE00(Nav->Date.Year, Nav->Date.doy, Nav->Date.Hour,
-                              Nav->Date.Minute, Nav->Date.Second, PosW,
-                              NavFlux10p7, NavGeomagIndex);
+                   NRLMSISE00(Nav->Date, PosW, NavFlux10p7, NavGeomagIndex);
             }
             else
                AtmoDensity = 0.0;
@@ -3032,24 +3086,15 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
          else
             AtmoDensity = 0.0;
       }
-      (*Nav->EOMJacobianFun)(AC, DSM, &Nav->Date, Nav->CRB, Nav->qbr, Nav->PosR,
-                             Nav->VelR, Nav->wbr, Nav->whlH, AtmoDensity);
-      // TODO: find a better way to simplify the STM calculation. This is bound
-      // to be quite slow due to the number of multiplications.
-      for (i = 0; i < Nav->navDim; i++)
-         for (j = 0; j < Nav->navDim; j++)
-            Nav->NxN2[i][j] = Nav->jacobian[i][j] * ccsdsStepSize;
-      expm(Nav->NxN2, Nav->STMStep, Nav->navDim);
-
-      for (i = 0; i < Nav->navDim; i++)
-         for (j = 0; j < Nav->navDim; j++)
-            Nav->NxN2[i][j] = Nav->jacobian[i][j] * Nav->subStepSize;
-      expm(Nav->NxN2, Nav->STM, Nav->navDim);
    }
    double dLerpAlpha = 0.0;
+   double lerpAlphak = Nav->refLerpAlpha;
    // RK4
    double CRBk[ORDRK][3][3], qbrk[ORDRK][4], PosRk[ORDRK][3], VelRk[ORDRK][3],
        wbrk[ORDRK][3];
+   double **Skk[ORDRK] = {NULL};
+   for (k = 0; k < ORDRK; k++)
+      Skk[k] = CreateMatrix(Nav->navDim, Nav->navDim);
    double whlHk[ORDRK][AC->Nwhl];
 #if ORDRK == 4
    const double DTk[ORDRK]     = {0.0, DT * 0.5, DT * 0.5, DT};
@@ -3058,13 +3103,17 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    const double DTk[ORDRK]     = {0.0};
    const double rkScale[ORDRK] = {DT};
 #endif
+   double **Sk = CreateMatrix(Nav->navDim, Nav->navDim);
    for (k = 0; k < ORDRK; k++) {
-      struct DateType date = Nav->Date;
+      DateType date = Nav->Date;
       updateTime(&date, dateOffset + DTk[k]);
-      Nav->refLerpAlpha = lerpAlphaState;
-      dLerpAlpha        = DTk[k] / Nav->DT;
+      lerpAlphak = Nav->refLerpAlpha;
+      dLerpAlpha = DTk[k] / Nav->DT;
       double CRB[3][3], qbr[4], PosR[3], VelR[3], wbr[3], whlH[AC->Nwhl];
       if (k == 0) {
+         for (i = 0; i < Nav->navDim; i++)
+            for (j = 0; j <= i; j++)
+               Sk[i][j] = Nav->S[i][j];
          for (i = 0; i < 3; i++) {
             qbr[i]  = Nav->qbr[i];
             PosR[i] = Nav->PosR[i];
@@ -3079,7 +3128,12 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             whlH[i] = Nav->whlH[i];
       }
       else {
-         for (Istate = INIT_STATE; Istate <= FIN_STATE; Istate++) {
+         for (i = 0; i < Nav->navDim; i++)
+            for (j = 0; j <= i; j++)
+               Sk[i][j] = Nav->S[i][j] + Skk[k - 1][i][j] * DTk[k];
+
+         FOR_STATES(Istate)
+         {
             if (Nav->stateActive[Istate] == TRUE) {
                double CBR[3][3] = {{0.0}};
                switch (Istate) {
@@ -3125,13 +3179,23 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             whlH[i] = Limit(Nav->whlH[i] + whlHk[k - 1][i] * DTk[k],
                             -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
       }
-      configureRefFrame(Nav, DSM->refOrb, dLerpAlpha, FALSE);
+      configureRefFrame(Nav, &lerpAlphak, DSM->refOrb, dLerpAlpha, FALSE);
       getForceAndTorque(AC, Nav, CRB, whlH);
-      NavEOMs(AC, DSM, &date, CRB, qbr, PosR, VelR, wbr, whlH, CRBk[k], qbrk[k],
-              PosRk[k], VelRk[k], wbrk[k], whlHk[k], AtmoDensity);
+      NavEOMs(AC, DSM, &date, CRB, qbr, PosR, VelR, wbr, whlH, Sk, CRBk[k],
+              qbrk[k], PosRk[k], VelRk[k], wbrk[k], whlHk[k], Skk[k],
+              AtmoDensity);
    }
 
-   for (Istate = INIT_STATE; Istate <= FIN_STATE; Istate++) {
+   for (k = 0; k < ORDRK; k++) {
+      for (i = 0; i < Nav->navDim; i++)
+         for (j = 0; j <= i; j++)
+            Nav->S[i][j] += Skk[k][i][j] * rkScale[k];
+      DestroyMatrix(Skk[k]);
+   }
+   DestroyMatrix(Sk);
+
+   FOR_STATES(Istate)
+   {
       if (Nav->stateActive[Istate] == TRUE) {
          double CBR[3][3] = {{0.0}};
          switch (Istate) {
@@ -3205,313 +3269,344 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       }
    }
 
-   for (i = 0; i < Nav->navDim; i++)
-      for (j = 0; j < Nav->navDim; j++)
-         Nav->NxN[i][j] = Nav->M[i][j] * Nav->sqrQ[j];
-
-   const long subSteps = dCCSDSSec * CCSDS_FINE_MAX + dCCSDSSubSec;
-   double **STM        = CreateMatrix(Nav->navDim, Nav->navDim);
-
-   QuickMatPow(Nav->navDim, Nav->STMStep, Nav->STM, Nav->subStepSteps, STM,
-               subSteps);
-
-   MxMG(STM, Nav->NxN, Nav->NxN2, Nav->navDim, Nav->navDim, Nav->navDim);
-   MxMG(STM, Nav->S, Nav->NxN, Nav->navDim, Nav->navDim, Nav->navDim);
-   DestroyMatrix(STM);
-   double **tmp       = CreateMatrix(Nav->navDim + Nav->navDim, Nav->navDim);
-   double **U         = CreateMatrix(Nav->navDim + Nav->navDim, Nav->navDim);
-   const double sqrDT = sqrt(DT);
-   for (i = 0; i < Nav->navDim; i++) {
-      for (j = 0; j < Nav->navDim; j++) {
-         tmp[i][j]               = Nav->NxN[j][i];
-         tmp[i + Nav->navDim][j] = Nav->NxN2[j][i] * sqrDT;
-      }
-   }
-   hqrd(tmp, U, Nav->NxN, Nav->navDim + Nav->navDim, Nav->navDim); //, 3);
-   DestroyMatrix(tmp);
-   DestroyMatrix(U);
-   for (i = 0; i < Nav->navDim; i++)
-      for (j = 0; j <= i; j++)
-         Nav->S[i][j] = Nav->NxN[j][i];
-
    for (i = 0; i < AC->Nwhl; i++)
       Nav->whlH[i] = Limit(Nav->whlH[i] + AC->Whl[i].Tcmd * DT,
                            -AC->Whl[i].Hmax, AC->Whl[i].Hmax);
 
-   Nav->refLerpAlpha = lerpAlphaState;
-   configureRefFrame(Nav, DSM->refOrb, DT / Nav->DT, FALSE);
+   *cur_ccsds      = next_ccsds;
+   Nav->ccsds_time = *cur_ccsds;
+   Nav->Date       = ccsds2date(*cur_ccsds, TT_TIME);
+   configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb, DT / Nav->DT, FALSE);
+}
+
+void CalcInnovation(const enum SensorType type,
+                    const struct DSMMeasType *const meas,
+                    const double *const meas_est, double *innovation)
+{
+   switch (type) {
+      case STARTRACK_SENSOR: {
+         double tmpq[4];
+         QxQT(meas->data, meas_est, tmpq);
+         Q2AngleVec(tmpq, innovation);
+      } break;
+      default:
+         for (long i = 0; i < meas->errDim; i++)
+            innovation[i] = meas->data[i] - meas_est[i];
+         break;
+   }
+}
+
+void Underweighting(const long nav_dim, const long meas_err_dim,
+                    const long meas_noise_dim, double **HS, double **NsqrtR,
+                    double **out)
+{
+   long i, j;
+   // Compare square of matrix 2-norms for underweighting
+   if (M2Norm2G(HS, meas_err_dim, nav_dim) >=
+       (5.0 * M2Norm2G(NsqrtR, meas_err_dim, meas_err_dim))) {
+      const double rtp = sqrt(1.2);
+      for (i = 0; i < nav_dim; i++)
+         for (j = 0; j < meas_err_dim; j++)
+            out[i][j] = HS[j][i] * rtp;
+   }
+   else {
+      for (i = 0; i < nav_dim; i++)
+         for (j = 0; j < meas_err_dim; j++)
+            out[i][j] = HS[j][i];
+   }
+
+   for (i = 0; i < meas_err_dim; i++)
+      for (j = 0; j < meas_err_dim; j++)
+         out[i + nav_dim][j] = NsqrtR[j][i];
+}
+
+void GetMeasBatchParams(const struct DSMMeasListType *const meas_list,
+                        const enum batchType batching,
+                        enum SensorType *const sense_type,
+                        CCSDSTime *const meas_ccsds, long *const meas_err_dim,
+                        long *const meas_noise_dim)
+{
+   *meas_err_dim   = 0;
+   *meas_noise_dim = 0;
+   *sense_type     = meas_list->head->type;
+   *meas_ccsds     = meas_list->head->ccsds_time;
+
+   // TODO: avoid this preallocation mess and go with
+   // realloc (maybe?)
+   switch (batching) {
+      case NONE_BATCH:
+         *meas_err_dim   = meas_list->head->errDim;
+         *meas_noise_dim = meas_list->head->noiseDim;
+         break;
+      case SENSOR_BATCH: {
+         struct DSMMeasType *meas = meas_list->head;
+         while (meas != NULL && meas->type == *sense_type &&
+                isequal_ccsds(*meas_ccsds, meas->ccsds_time)) {
+            *meas_err_dim   += meas->errDim;
+            *meas_noise_dim += meas->noiseDim;
+            meas             = meas->nextMeas;
+         }
+      } break;
+      case TIME_BATCH: {
+         struct DSMMeasType *meas = meas_list->head;
+         while (meas != NULL && isequal_ccsds(*meas_ccsds, meas->ccsds_time)) {
+            *meas_err_dim   += meas->errDim;
+            *meas_noise_dim += meas->noiseDim;
+            meas             = meas->nextMeas;
+         }
+      } break;
+      default:
+         fprintf(stderr,
+                 "Invalid Batching method. If you are reading this, the "
+                 "developer probably has a messed up pointer. Exiting...\n");
+         exit(EXIT_FAILURE);
+         break;
+   }
+}
+
+void ParseMeasList(struct AcType *const AC, struct DSMType *const DSM,
+                   struct DSMMeasListType *const meas_list, const long nav_dim,
+                   const long meas_err_dim, const long meas_noise_dim,
+                   const enum batchType batching, const CCSDSTime meas_ccsds,
+                   const enum SensorType sense_type, double *const innov_time,
+                   long *const innov_exist, double **innovs[FIN_SENSOR + 1],
+                   double *big_innov, double **big_H, double **big_N,
+                   double *big_sqrtR)
+{
+   long cur_err_dim = 0;
+   long cur_r_dim   = 0;
+   double *measEstData, **measJacobian;
+   while (meas_list->head != NULL) {
+      struct DSMMeasType *meas = pop_DSMMeas(meas_list);
+      const long err_dim       = meas->errDim;
+      const long r_dim         = meas->noiseDim;
+
+      double innov[err_dim];
+      measEstData = (*meas->measFun)(AC, DSM, meas->sensorNum);
+      measJacobian =
+          (*meas->measJacobianFun)(AC, DSM, meas->sensorNum, meas->N);
+
+      CalcInnovation(meas->type, meas, measEstData, innov);
+
+#ifdef REPORT_RESIDUALS
+      *innov_time  = (double)ccsds2seconds(meas->ccsds_time);
+      *innov_exist = TRUE;
+      innovs[meas->type][meas->sensorNum] = calloc(err_dim, sizeof(double));
+      for (long i = 0; i < err_dim; i++)
+         innovs[meas->type][meas->sensorNum][i] = innov[i];
+#endif
+      for (long i = 0; i < r_dim; i++) {
+         big_sqrtR[cur_r_dim + i] = meas->R[i];
+         for (long j = 0; j < err_dim; j++)
+            big_N[cur_err_dim + j][cur_r_dim + i] = meas->N[j][i];
+      }
+
+      for (long i = 0; i < err_dim; i++) {
+         big_innov[cur_err_dim + i] = innov[i];
+         for (long j = 0; j < nav_dim; j++)
+            big_H[cur_err_dim + i][j] = measJacobian[i][j];
+      }
+
+      cur_err_dim += err_dim;
+      cur_r_dim   += r_dim;
+      free(measEstData);
+      DestroyMatrix(measJacobian);
+      DestroyMeas(meas);
+
+      if ((batching == NONE_BATCH) || (meas_list->head == NULL) ||
+          (!isequal_ccsds(meas_list->head->ccsds_time,
+                          meas_ccsds)) || // TIME_BATCH
+          (batching == SENSOR_BATCH && meas_list->head->type != sense_type)) {
+         break;
+      }
+   }
+}
+
+void SkUpdate(const long nav_dim, const long meas_err_dim, double **Uk,
+              const long id, double **Sk)
+{
+   long u_inds[meas_err_dim];
+   double u_list[meas_err_dim][nav_dim];
+
+   for (long i = 0; i < meas_err_dim; i++) {
+      u_inds[i] = i;
+      for (long j = 0; j < nav_dim; j++)
+         u_list[i][j] = Uk[j][i];
+   }
+
+   for (long i = 0; i < meas_err_dim; i++) {
+      if (!cholDowndate(Sk, u_list[u_inds[i]], nav_dim)) {
+         if (u_inds[i] < i) {
+            // if the currently offending u caused problems earlier, we're
+            // out of luck
+            fprintf(stderr,
+                    "Cholesky Downdate failed for SC[%li]! Exiting...\n", id);
+            exit(EXIT_FAILURE);
+         }
+
+         // move the offending u to the end of the list, do it later
+         const double tmp_i = u_inds[i];
+         for (long j = i; j < meas_err_dim - 1; j++)
+            u_inds[j] = u_inds[j + 1];
+         u_inds[meas_err_dim - 1] = tmp_i;
+      }
+   }
+   for (long i = 0; i < nav_dim; i++)
+      for (long j = 0; j < i; j++)
+         Sk[j][i] = 0.0;
+}
+
+void GetKUk(const long nav_dim, const long meas_err_dim,
+            const long meas_noise_dim, double **S, double **N, double *sqrtR,
+            double **H, double **K, double **Uk)
+{
+   // passing around the pointer to keep notation
+   // consistent and save memory ops
+   double **Sz, **C;
+
+   // UNDERWEIGHTING
+   double **HS = CreateMatrix(meas_err_dim, nav_dim);
+   MxMG(H, S, HS, meas_err_dim, nav_dim, nav_dim);
+   double **NsqrtR = CreateMatrix(meas_err_dim, meas_noise_dim);
+   for (long i = 0; i < meas_err_dim; i++)
+      for (long j = 0; j < meas_noise_dim; j++)
+         NsqrtR[i][j] = N[i][j] * sqrtR[j];
+
+   double **tmp = CreateMatrix(nav_dim + meas_noise_dim, meas_err_dim);
+   Underweighting(nav_dim, meas_err_dim, meas_noise_dim, HS, NsqrtR, tmp);
+   DestroyMatrix(NsqrtR);
+
+   Sz         = CreateMatrix(meas_err_dim, meas_err_dim);
+   double **U = CreateMatrix(nav_dim + meas_err_dim, meas_err_dim);
+   hqrd(tmp, U, Sz, nav_dim + meas_err_dim, meas_err_dim);
+
+   DestroyMatrix(U);
+   DestroyMatrix(tmp);
+
+   C = CreateMatrix(nav_dim, meas_err_dim);
+   MxMTG(S, HS, C, nav_dim, nav_dim, meas_err_dim);
+   DestroyMatrix(HS);
+
+   MxMINVG(C, Sz, Uk, nav_dim, meas_err_dim);
+   for (long i = 0; i < meas_err_dim; i++) {
+      for (long j = i + 1; j < meas_err_dim; j++) {
+         Sz[j][i] = Sz[i][j];
+         Sz[i][j] = 0.0;
+      }
+   }
+   MxMINVG(Uk, Sz, K, nav_dim, meas_err_dim);
+   DestroyMatrix(Sz);
+   DestroyMatrix(C);
 }
 
 void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
 {
-   long i, j;
+   long i;
    struct DSMNavType *Nav = &DSM->DsmNav;
 
-   // TODO: will maybe need to do something to preserve information if a new Nav
-   // filter is called
+   // TODO: will maybe need to do something to preserve information if a new
+   // Nav filter is called
    if (Nav->Init == FALSE)
-      configureRefFrame(Nav, DSM->refOrb, 0.0, TRUE);
+      configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb, 0.0, TRUE);
 
    // Accumulate information from measurements based upon batching method.
-   struct DSMMeasListType *measList = &Nav->measList;
-   DateToCCSDS(Nav->Date, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
-   updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
-                  -(32.184 + LeapSec));
-   ccsdsCoarse finSeconds  = Nav->ccsdsSeconds;
-   ccsdsFine finSubseconds = Nav->ccsdsSubseconds;
-   updateNavCCSDS(&finSeconds, &finSubseconds, Nav->DT);
-   if (measList->head == NULL) {
-      PropagateNav(
-          AC, DSM, finSeconds - Nav->ccsdsSeconds,
-          (signed long)finSubseconds - (signed long)Nav->ccsdsSubseconds, TRUE);
-      Nav->steps++;
-   }
+   struct DSMMeasListType *const measList = &Nav->measList;
+
+   Nav->ccsds_time           = date2ccsds(Nav->Date);
+   CCSDSTime cur_ccsds       = Nav->ccsds_time;
+   const CCSDSTime fin_ccsds = CCSDSAddSeconds(cur_ccsds, Nav->DT);
+   if (measList->head == NULL)
+      PropagateNav(AC, DSM, &cur_ccsds, fin_ccsds, TRUE);
    else {
       long init = TRUE;
+
       while (measList->head != NULL) {
-         long measDim                    = 0;
-         const enum SensorType senseType = measList->head->type;
-         const long measSec              = measList->head->ccsdsSeconds;
-         const long measSubsec           = measList->head->ccsdsSubseconds;
+         long meas_err_dim          = 0;
+         long meas_noise_dim        = 0;
+         CCSDSTime meas_ccsds       = {0};
+         enum SensorType sense_type = NULL_SENSOR;
+         GetMeasBatchParams(measList, Nav->batching, &sense_type, &meas_ccsds,
+                            &meas_err_dim, &meas_noise_dim);
 
-         // TODO: avoid this preallocation mess and go with realloc (maybe?)
-         switch (Nav->batching) {
-            case NONE_BATCH:
-               measDim = measList->head->errDim;
-               break;
-            case SENSOR_BATCH: {
-               struct DSMMeasType *meas = measList->head;
-               while (meas != NULL && meas->type == senseType &&
-                      meas->ccsdsSeconds == measSec &&
-                      meas->ccsdsSubseconds == measSubsec) {
-                  measDim += meas->errDim;
-                  meas     = meas->nextMeas;
-               }
-            } break;
-            case TIME_BATCH: {
-               struct DSMMeasType *meas = measList->head;
-               while (meas != NULL && meas->ccsdsSeconds == measSec &&
-                      meas->ccsdsSubseconds == measSubsec) {
-                  measDim += meas->errDim;
-                  meas     = meas->nextMeas;
-               }
-            } break;
-            default:
-               fprintf(
-                   stderr,
-                   "Invalid Batching method. If you are reading this, the "
-                   "developer probably has a messed up pointer. Exiting...\n");
-               exit(EXIT_FAILURE);
-               break;
-         }
-
-         const long dSec =
-             (signed long)measSec - (signed long)Nav->ccsdsSeconds;
-         const long dSubsec =
-             ((signed long)measSubsec) - ((signed long)Nav->ccsdsSubseconds);
-
-         const double ccsdsStepSize = CCSDS_STEP_SIZE;
-         const double dt            = dSec + dSubsec * ccsdsStepSize;
-         if (dt >= 0) {
-#if REPORT_RESIDUALS ==                                                        \
-    TRUE // TODO: set a report residuals "bool" in nav and use that instead of
-         // these compile-time directives
-            DSM_NAV_ResidualsReport(Nav->Time + (double)(Nav->subStep * DTSIM),
-                                    Nav->residuals);
-#endif
-            // TODO: investigate only prop once per Kalman filt call and use STM
-            // and linearization to prop measurements through time
-            PropagateNav(AC, DSM, dSec, dSubsec, init);
-            if (init == TRUE)
-               init = FALSE;
-            Nav->ccsdsSeconds    = measSec;
-            Nav->ccsdsSubseconds = measSubsec;
-#if REPORT_RESIDUALS == TRUE
-            for (enum SensorType sensor = INIT_SENSOR; sensor < FIN_SENSOR;
-                 sensor++) {
-               if (Nav->sensorActive[sensor] == TRUE) {
-                  for (i = 0; i < Nav->nSensor[sensor]; i++) {
-                     free(Nav->residuals[sensor][i]);
-                     Nav->residuals[sensor][i] = NULL;
-                  }
-               }
-            }
-#endif
-         }
-         else {
-            fprintf(stderr, "Attempted to propagate Navigation state backwards "
-                            "in time. How did that happen? Exiting...\n");
+         if (isless_ccsds(meas_ccsds, cur_ccsds)) {
+            fprintf(stderr,
+                    "Attempted to propagate Navigation state backwards in "
+                    "time. How did that happen? Exiting...\n");
             exit(EXIT_FAILURE);
          }
-
-         double **bigH, *bigResid, *bigR, **bigN;
-         bigH     = CreateMatrix(measDim, Nav->navDim);
-         bigN     = CreateMatrix(measDim, measDim);
-         bigResid = calloc(measDim, sizeof(double));
-         bigR     = calloc(measDim, sizeof(double));
-
-         long curDim = 0;
-         long dim    = -2;
-         double *measEstData, **measJacobian;
-
-         while (measList->head != NULL) {
-            struct DSMMeasType *meas = pop_DSMMeas(measList);
-            if (dim != meas->errDim)
-               dim = meas->errDim;
-
-            double resid[dim];
-            measEstData  = (*meas->measFun)(AC, DSM, meas->sensorNum);
-            measJacobian = (*meas->measJacobianFun)(AC, DSM, meas->sensorNum);
-
-            if (meas->type == STARTRACK_SENSOR) {
-               double tmpq[4];
-               QxQT(meas->data, measEstData, tmpq);
-               Q2AngleVec(tmpq, resid);
-            }
-            else {
-               for (i = 0; i < dim; i++)
-                  resid[i] = meas->data[i] - measEstData[i];
-            }
-#if REPORT_RESIDUALS == TRUE
-            Nav->residuals[meas->type][meas->sensorNum] =
-                calloc(dim, sizeof(double));
-            for (i = 0; i < dim; i++)
-               Nav->residuals[meas->type][meas->sensorNum][i] = resid[i];
-#endif
-
-            for (i = 0; i < dim; i++) {
-               bigResid[curDim + i] = resid[i];
-               bigR[curDim + i]     = meas->R[i];
-               for (j = 0; j < Nav->navDim; j++)
-                  bigH[curDim + i][j] = measJacobian[i][j];
-               for (j = 0; j < dim; j++)
-                  bigN[curDim + i][curDim + j] = meas->N[i][j];
-            }
-
-            curDim += dim;
-            free(measEstData);
-            DestroyMatrix(measJacobian);
-            DestroyMeas(meas);
-
-            if ((Nav->batching == NONE_BATCH) || (measList->head == NULL) ||
-                (measList->head->ccsdsSubseconds != measSubsec ||
-                 measList->head->ccsdsSeconds != measSec) || // TIME_BATCH
-                (Nav->batching == SENSOR_BATCH &&
-                 measList->head->type != senseType)) {
-               break;
-            }
-         }
-
-         double **Sz, **K, **C, **tmp;
-         C = CreateMatrix(Nav->navDim, measDim);
-
-         // UNDERWEIGHTING
-         double **HS = CreateMatrix(measDim, Nav->navDim);
-         MxMG(bigH, Nav->S, HS, measDim, Nav->navDim, Nav->navDim);
-         double **NR = CreateMatrix(measDim, measDim);
-         for (i = 0; i < measDim; i++)
-            for (j = 0; j < measDim; j++)
-               NR[i][j] = bigN[i][j] * bigR[j];
-
-         tmp = CreateMatrix(Nav->navDim + measDim, measDim);
-         // Compare square of matrix 2-norms for underweighting
-         if (M2Norm2G(HS, measDim, Nav->navDim) >=
-             (5.0 * M2Norm2G(NR, measDim, measDim))) {
-            const double rtp = sqrt(1.2);
-            for (i = 0; i < Nav->navDim; i++)
-               for (j = 0; j < measDim; j++)
-                  tmp[i][j] = HS[j][i] * rtp;
-         }
          else {
-            for (i = 0; i < Nav->navDim; i++)
-               for (j = 0; j < measDim; j++)
-                  tmp[i][j] = HS[j][i];
-         }
-
-         for (i = 0; i < measDim; i++)
-            for (j = 0; j < measDim; j++)
-               tmp[i + Nav->navDim][j] = NR[j][i];
-
-         DestroyMatrix(NR);
-         Sz         = CreateMatrix(measDim, measDim);
-         double **U = CreateMatrix(Nav->navDim + measDim, measDim);
-         hqrd(tmp, U, Sz, Nav->navDim + measDim, measDim);
-
-         DestroyMatrix(U);
-         DestroyMatrix(tmp);
-
-         double **Uk = CreateMatrix(Nav->navDim, measDim);
-
-         MxMTG(Nav->S, HS, C, Nav->navDim, Nav->navDim, measDim);
-         DestroyMatrix(HS);
-
-         MxMINVG(C, Sz, Uk, Nav->navDim, measDim);
-         for (i = 0; i < measDim; i++) {
-            for (j = i + 1; j < measDim; j++) {
-               Sz[j][i] = Sz[i][j];
-               Sz[i][j] = 0.0;
+#ifdef REPORT_RESIDUALS
+            // TODO: set a report residuals "bool" in nav and
+            // use that instead of these compile-time
+            // directives
+            if (Nav->innovationTime > 0.0 && Nav->innovationsExist) {
+               DSM_NAV_ResidualsReport(Nav->innovationTime, AC->ID,
+                                       &Nav->innovationsReportFirst,
+                                       Nav->innovations);
+               FOR_SENSORS(sensor)
+               {
+                  for (i = 0; i < Nav->nSensor[sensor]; i++) {
+                     if (Nav->sensorActive[sensor][i] == TRUE) {
+                        free(Nav->innovations[sensor][i]);
+                        Nav->innovations[sensor][i] = NULL;
+                     }
+                  }
+               }
+               Nav->innovationsExist = FALSE;
             }
+#endif
+            // TODO: investigate only prop once per Kalman filt call and
+            // use STM and linearization to prop measurements through time
+            PropagateNav(AC, DSM, &cur_ccsds, meas_ccsds, init);
+            if (init == TRUE)
+               init = FALSE;
          }
-         K = CreateMatrix(Nav->navDim, measDim);
-         MxMINVG(Uk, Sz, K, Nav->navDim, measDim);
-         MxVG(K, bigResid, Nav->delta, Nav->navDim, measDim);
+
+         double **bigH, *bigInnov, *big_sqrtR, **bigN;
+         bigH      = CreateMatrix(meas_err_dim, Nav->navDim);
+         bigN      = CreateMatrix(meas_err_dim, meas_noise_dim);
+         bigInnov  = calloc(meas_err_dim, sizeof(double));
+         big_sqrtR = calloc(meas_noise_dim, sizeof(double));
+
+         ParseMeasList(AC, DSM, measList, Nav->navDim, meas_err_dim,
+                       meas_noise_dim, Nav->batching, meas_ccsds, sense_type,
+                       &Nav->innovationTime, &Nav->innovationsExist,
+                       Nav->innovations, bigInnov, bigH, bigN, big_sqrtR);
+
+         double **K  = CreateMatrix(Nav->navDim, meas_err_dim);
+         double **Uk = CreateMatrix(Nav->navDim, meas_err_dim);
+         GetKUk(Nav->navDim, meas_err_dim, meas_noise_dim, Nav->S, bigN,
+                big_sqrtR, bigH, K, Uk);
+
+         MxVG(K, bigInnov, Nav->delta, Nav->navDim, meas_err_dim);
          (*Nav->updateLaw)(Nav);
-
-         // long downdateFail = FALSE;
-         for (i = 0; i < Nav->navDim; i++)
-            for (j = 0; j <= i; j++) {
-               Nav->NxN[j][i] = 0.0;
-               Nav->NxN[i][j] = Nav->S[i][j];
-            }
-         for (i = 0; i < measDim; i++) {
-            double u[Nav->navDim];
-            for (j = 0; j < Nav->navDim; j++)
-               u[j] = Uk[j][i];
-            if (cholDowndate(Nav->NxN, u, Nav->navDim) == FALSE) {
-               // downdateFail = TRUE;
-               fprintf(stderr, "Cholesky Downdate failed! Exiting...\n");
-               exit(EXIT_FAILURE);
-               // TODO: data dump to help diagnose downdate failure??
-               // TODO: Defer downdate if failure?
-            }
-         }
-         for (i = 0; i < Nav->navDim; i++)
-            for (j = 0; j <= i; j++)
-               Nav->S[i][j] = Nav->NxN[i][j];
-
-         DestroyMatrix(Sz);
-         DestroyMatrix(Uk);
          DestroyMatrix(K);
 
+         SkUpdate(Nav->navDim, meas_err_dim, Uk, DSM->ID, Nav->S);
+
+         DestroyMatrix(Uk);
          DestroyMatrix(bigH);
          DestroyMatrix(bigN);
-         DestroyMatrix(C);
-         free(bigResid);
-         free(bigR);
+         free(bigInnov);
+         free(big_sqrtR);
       }
-      if (Nav->ccsdsSeconds < finSeconds ||
-          Nav->ccsdsSubseconds < finSubseconds)
-         PropagateNav(AC, DSM, finSeconds - Nav->ccsdsSeconds,
-                      (signed long)finSubseconds -
-                          (signed long)Nav->ccsdsSubseconds,
-                      FALSE);
-
-      Nav->steps++;
+      if (isless_ccsds(cur_ccsds, fin_ccsds))
+         PropagateNav(AC, DSM, &cur_ccsds, fin_ccsds, FALSE);
    }
+
+   Nav->steps++;
    Nav->Date = Nav->Date0;
 
    updateTime(&Nav->Date, Nav->DT * Nav->steps);
-   DateToCCSDS(Nav->Date, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
-   updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
-                  -(32.184 + LeapSec));
-   configureRefFrame(Nav, DSM->refOrb, 1.0 - Nav->refLerpAlpha, TRUE);
+   Nav->ccsds_time = date2ccsds(Nav->Date);
+   configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb,
+                     1.0 - Nav->refLerpAlpha, TRUE);
    for (i = 0; i < AC->Nwhl; i++)
       Nav->whlH[i] = AC->Whl[i].H;
 
    if (Nav->Init == FALSE)
       Nav->Init = TRUE;
 }
-
 /******************************************************************************/
 //                             Auxillary Functions
 /******************************************************************************/

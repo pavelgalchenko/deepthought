@@ -29,7 +29,7 @@
 /*  gravity terms apply equally to A and B[0].  (Assuming gravity-    */
 /*  gradient from non-spherical primary and 3rd-body forces is        */
 /*  negligible.)  Surface forces are included in S->         */
-void AccelerometerModel(struct SCType *S)
+void AccelerometerModel(struct OrbitType *orbs, struct SCType *S)
 {
    struct AccelType *A;
    struct BodyType *B;
@@ -59,7 +59,7 @@ void AccelerometerModel(struct SCType *S)
             AccGGB[i] = 0.0;
          if (GGActive) {
             r    = MAGV(S->PosN);
-            Coef = -3.0 * Orb[S->RefOrb].mu / (r * r * r);
+            Coef = -3.0 * orbs[S->RefOrb].mu / (r * r * r);
             CopyUnitV(S->PosN, rhatn);
             MxV(B->CN, rhatn, rhat);
             MxV(B->CN, B->pn, p);
@@ -323,7 +323,8 @@ void FssModel(struct SCType *S)
    }
 }
 /**********************************************************************/
-void StarTrackerModel(struct SCType *S)
+void StarTrackerModel(struct WorldType *const worlds,
+                      struct OrbitType *const orbs, struct SCType *S)
 {
    struct StarTrackerType *ST;
    struct NodeType *N;
@@ -355,7 +356,7 @@ void StarTrackerModel(struct SCType *S)
          if (BoS > ST->CosSunExclAng)
             ST->Valid = FALSE;
          /* Earth Occultation? (Generalized to whatever world we're orbiting) */
-         W       = &World[Orb[S->RefOrb].World];
+         W       = &worlds[orbs[S->RefOrb].World];
          OrbRad  = MAGV(S->PosN);
          LimbAng = asin(W->rad / OrbRad);
          MxV(S->B[0].CN, S->CLN[2], NadirVecB);
@@ -364,11 +365,11 @@ void StarTrackerModel(struct SCType *S)
             ST->Valid = FALSE;
          /* Moon Occultation? (Only worked out if orbiting Earth.  Customize as
           * needed)*/
-         if ((ST->Valid == TRUE) && (Orb[S->RefOrb].World == EARTH)) {
+         if ((ST->Valid == TRUE) && (orbs[S->RefOrb].World == EARTH)) {
             for (i = 0; i < 3; i++)
-               mvn[i] = World[LUNA].eph.PosN[i] - S->PosN[i];
+               mvn[i] = worlds[LUNA].eph.PosN[i] - S->PosN[i];
             MoonDist = UNITV(mvn);
-            LimbAng  = asin(World[LUNA].rad / MoonDist);
+            LimbAng  = asin(worlds[LUNA].rad / MoonDist);
             MxV(S->B[0].CN, mvn, mvb);
             BoM = VoV(ST->CB[ST->BoreAxis], mvb);
             if (BoM > cos(LimbAng + ST->MoonExclAng))
@@ -396,7 +397,8 @@ void StarTrackerModel(struct SCType *S)
    }
 }
 /**********************************************************************/
-void GpsModel(struct SCType *S)
+void GpsModel(struct WorldType *const worlds, struct OrbitType *const orbs,
+              struct SCType *S)
 {
    struct GpsType *GPS;
    static struct RandomProcessType *GpsNoise;
@@ -412,7 +414,7 @@ void GpsModel(struct SCType *S)
       GpsNoise   = CreateRandomProcess(2);
    }
 
-   if (Orb[S->RefOrb].World == EARTH) {
+   if (orbs[S->RefOrb].World == EARTH) {
       for (Ig = 0; Ig < S->Ngps; Ig++) {
          GPS = &S->GPS[Ig];
 
@@ -432,17 +434,17 @@ void GpsModel(struct SCType *S)
                GPS->VelN[i] =
                    S->VelN[i] + GPS->VelNoise * GaussianRandom(GpsNoise);
             }
-            MxV(World[EARTH].CWN, S->PosN, PosW);
-            MxV(World[EARTH].CWN, GPS->PosN, GPS->PosW);
-            MxV(World[EARTH].CWN, GPS->VelN, GPS->VelW);
+            MxV(worlds[EARTH].CWN, S->PosN, PosW);
+            MxV(worlds[EARTH].CWN, GPS->PosN, GPS->PosW);
+            MxV(worlds[EARTH].CWN, GPS->VelN, GPS->VelW);
             /* Subtract Earth rotation velocity */
-            GPS->VelW[0] -= -World[EARTH].w * PosW[1];
-            GPS->VelW[1] -= World[EARTH].w * PosW[0];
+            GPS->VelW[0] -= -worlds[EARTH].w * PosW[1];
+            GPS->VelW[1] -= worlds[EARTH].w * PosW[0];
 
             MagPosW  = MAGV(GPS->PosW);
             GPS->Lng = atan2(GPS->PosW[1], GPS->PosW[0]);
             GPS->Lat = asin(GPS->PosW[2] / MagPosW);
-            GPS->Alt = MagPosW - World[EARTH].rad;
+            GPS->Alt = MagPosW - worlds[EARTH].rad;
             ECEFToWGS84(GPS->PosW, &GPS->WgsLat, &GPS->WgsLng, &GPS->WgsAlt);
 
             S->AC.GPS[Ig].Rollover = GPS->Rollover;
@@ -621,7 +623,8 @@ void FgsModel(struct SCType *S)
 /**********************************************************************/
 /*  This function is called at the simulation rate.  Sub-sampling of  */
 /*  sensors should be done on a case-by-case basis.                   */
-void Sensors(struct SCType *S)
+void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
+             struct SCType *S)
 {
 
    double evn[3], evb[3];
@@ -640,7 +643,7 @@ void Sensors(struct SCType *S)
 
    /* Accelerometer */
    if (S->Nacc > 0) {
-      AccelerometerModel(S);
+      AccelerometerModel(orbs, S);
    }
 
    /* Gyro */
@@ -653,7 +656,7 @@ void Sensors(struct SCType *S)
    }
 
    /* Magnetometer */
-   if (Orb[S->RefOrb].World == EARTH) {
+   if (orbs[S->RefOrb].World == EARTH) {
       AC->MagValid = TRUE;
       if (S->Nmag == 0) {
          for (i = 0; i < 3; i++)
@@ -691,7 +694,7 @@ void Sensors(struct SCType *S)
       Q2C(AC->qbn, AC->CBN);
    }
    else {
-      StarTrackerModel(S);
+      StarTrackerModel(worlds, orbs, S);
    }
 
    /* GPS Receiver (or ephem model) */
@@ -703,7 +706,7 @@ void Sensors(struct SCType *S)
       }
    }
    else {
-      GpsModel(S);
+      GpsModel(worlds, orbs, S);
    }
 
    /* Earth Sensor */

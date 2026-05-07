@@ -48,8 +48,9 @@ static void InitializeTimeNode(void);
 static void TimeTickCallback(NE_SimTime time);
 #endif
 
-void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
-              long *minute, double *second)
+// Returns the Rational representation of the number of seconds that have passed
+// since the simulation has started.
+Rational NOS3Time(const Rational tick_sec)
 {
 
 #if defined(_WIN32)
@@ -65,8 +66,6 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
 #elif defined(__linux__)
    static long First = 1;
    int64_t ticks;
-   double abs_time;
-   double jd;
    if (First) {
       First = 0;
       ReadNos3InpFile();
@@ -76,11 +75,8 @@ void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
       perror("NOS3Time error on sem_wait");
       exit(3);
    }
-   ticks    = NE_bus_get_time(Bus);
-   abs_time = DynTime0 + (ticks * DTSIM) - LeapSec - 32.184;
-   jd       = TimeToJD(abs_time);
-   JDToDate(jd, year, month, day, hour, minute, second);
-   *day_of_year = MD2DOY(*year, *month, *day);
+   ticks = NE_bus_get_time(Bus);
+   return IntegerRationalMult(ticks, tick_sec);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
    fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");

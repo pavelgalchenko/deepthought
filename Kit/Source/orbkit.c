@@ -382,8 +382,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
 #undef EPS
 }
 /**********************************************************************/
-void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
-                 double LeapSec, struct OrbitType *O)
+void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
+                 struct OrbitType *O)
 {
 #define EPS (1.0E-12)
 
@@ -395,34 +395,36 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
    char omgstring[9];
    char MeanAnomString[9];
    char MeanMotionString[12];
-   long year, DOY, Month, Day;
-   double FloatDOY, FracDay, JDepoch;
-   double DynTime;
+   DateType date = {0};
+   JDType jdEpoch;
+   double FloatDOY, FracDay;
+   double j2000_tt;
    /* Parameters quoted from SatelliteToolbox.jl's sgp4_model.jl */
    double mu = 3.986005E14;
    double Re = 6378.137E3;
    double J2 = 1.08262998905E-3;
    double Coef;
 
+   date.system = UTC_TIME;
+
    strncpy(YearString, &Line1[18], 2);
    YearString[2] = 0;
-   year          = (long)atoi(YearString);
-   if (year < 57)
-      year += 2000;
+   date.Year     = (long)atoi(YearString);
+   if (date.Year < 57)
+      date.Year += 2000;
    else
-      year += 1900;
+      date.Year += 1900;
    strncpy(DOYstring, &Line1[20], 12);
    DOYstring[12] = 0;
    FloatDOY      = (double)atof(DOYstring);
-   DOY           = (long)FloatDOY;
-   FracDay       = FloatDOY - ((double)DOY);
-   DOY2MD(year, DOY, &Month, &Day);
-   JDepoch   = DateToJD(year, Month, Day, 0, 0, 0.0);
-   JDepoch  += FracDay;
-   O->Epoch  = JDToTime(JDepoch);
-   /* Shift Epoch from UTC to TT */
-   O->Epoch += LeapSec + 32.184;
-   DynTime   = JDToTime(JD);
+   date.doy      = (long)FloatDOY;
+   FracDay       = FloatDOY - ((double)date.doy);
+   DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
+   jdEpoch = Date2JD(date, J2000_EPOCH);
+   ChangeSystem(TT_TIME, &jd);
+   jdEpoch  = JDAddDays(jdEpoch, FracDay);
+   O->Epoch = JDToDynTime(jdEpoch);
+   j2000_tt = JDToDynTime(jd);
 
    strncpy(IncString, &Line2[8], 8);
    IncString[8] = 0;
@@ -451,9 +453,9 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 
    /* Time of Periapsis passage given in seconds since J2000 */
    O->tp = O->Epoch - O->MeanAnom0 / (O->MeanMotion);
-   while ((DynTime - O->tp) > O->Period)
+   while ((j2000_tt - O->tp) > O->Period)
       O->tp += O->Period;
-   while ((DynTime - O->tp) < -(O->Period))
+   while ((j2000_tt - O->tp) < -(O->Period))
       O->tp -= O->Period;
 
    O->MeanSMA = pow(mu / (O->MeanMotion * O->MeanMotion), 1.0 / 3.0);
@@ -462,7 +464,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
    O->SLR     = O->SMA * (1.0 - O->ecc * O->ecc);
    O->rmin    = O->SLR / (1.0 + O->ecc);
 
-   O->MeanAnom = O->MeanMotion * (DynTime - O->tp);
+   O->MeanAnom = O->MeanMotion * (j2000_tt - O->tp);
    O->anom     = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
 
    /* Initialize J2 Drift Parameters (ref Markley and Crassidis, Ch. 10) */
@@ -471,12 +473,12 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
       Coef       = 1.5 * J2 * Re * Re / (O->SLR * O->SLR) * O->MeanMotion;
       O->RAANdot = -Coef * cos(O->inc);
       O->ArgPdot = Coef * (2.0 - 2.5 * sin(O->inc) * sin(O->inc));
-      O->RAAN    = O->RAAN0 + O->RAANdot * (DynTime - O->Epoch);
+      O->RAAN    = O->RAAN0 + O->RAANdot * (j2000_tt - O->Epoch);
       while (O->RAAN > PI)
          O->RAAN -= TWOPI;
       while (O->RAAN < -PI)
          O->RAAN += TWOPI;
-      O->ArgP = O->ArgP0 + O->ArgPdot * (DynTime - O->Epoch);
+      O->ArgP = O->ArgP0 + O->ArgPdot * (j2000_tt - O->Epoch);
       while (O->ArgP > PI)
          O->ArgP -= TWOPI;
       while (O->ArgP < -PI)
@@ -495,7 +497,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
-void MeanEph2RV(struct OrbitType *O, double DynTime)
+void MeanEph2RV(struct OrbitType *O, double dyntime)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g;
    double CPN[3][3], cth, sth, R, pr[3], pv[3];
@@ -504,13 +506,13 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
 
    /* 10.121a,b */
    if (O->J2DriftEnabled) {
-      O->ArgP = O->ArgP0 + O->ArgPdot * (DynTime - O->Epoch);
-      O->RAAN = O->RAAN0 + O->RAANdot * (DynTime - O->Epoch);
+      O->ArgP = O->ArgP0 + O->ArgPdot * (dyntime - O->Epoch);
+      O->RAAN = O->RAAN0 + O->RAANdot * (dyntime - O->Epoch);
    }
 
    /* 10.122 */
    O->MeanAnom =
-       fmod(O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch) - PI, TWOPI) +
+       fmod(O->MeanAnom0 + O->MeanMotion * (dyntime - O->Epoch) - PI, TWOPI) +
        PI;
 
    O->anom = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
@@ -608,8 +610,8 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
 /**********************************************************************/
 /* TLEs use UTC.  42 orbits use TT.  So LeapSec are needed.           */
 long LoadTleFromFile(const char *Path, const char *TleFileName,
-                     const char *TleLabel, double DynTime, double JD,
-                     double LeapSec, struct OrbitType *O)
+                     const char *TleLabel, double dyntime, JDType jd,
+                     struct OrbitType *O)
 {
    FILE *infile;
    char line[80], line1[80], line2[80];
@@ -634,8 +636,8 @@ long LoadTleFromFile(const char *Path, const char *TleFileName,
          Success = 1;
          fgets(line1, 80, infile);
          fgets(line2, 80, infile);
-         TLE2MeanEph(line1, line2, JD, LeapSec, O);
-         MeanEph2RV(O, DynTime);
+         TLE2MeanEph(line1, line2, jd, O);
+         MeanEph2RV(O, dyntime);
       }
    }
    fclose(infile);
@@ -699,7 +701,7 @@ double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3])
 /*  Index 1=Mercury, 2=Venus, ... 9=Pluto.  0=Sun is not used.        */
 /*  Note that the elements for Pluto are not from Meeus, but from a   */
 /*  lower-fidelity data set from JPL.                                 */
-void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
+void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *ArgP, double *tp,
                        double *anom, double *SLR, double *alpha, double *rmin,
                        double *MeanMotion, double *Period)
@@ -763,11 +765,13 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 
    double AU2m = 149597870000.0;
 
+   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
+
    /* .. Time since J2000, in Julian centuries */
-   T = (JD - 2451545.0) / 36525.0;
+   T = JDToDays(jd) / 36525.0;
 
    /* .. Time since J2000, in seconds */
-   SecSinceJ2000 = (JD - 2451545.0) * 86400.0;
+   SecSinceJ2000 = JDToDynTime(jd);
 
    /* .. Mean Longitude */
    L = (La0[i] + T * (La1[i] + T * (La2[i] + T * La3[i]))) * D2R;
@@ -808,13 +812,18 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 /*  This function gives the location of Luna, with respect to the    */
 /*  geocentric ecliptic frame.  Refer to Chap 47 of Meeus,           */
 /*  "Astronomical Algorithms" QB51.3.E43 M42, 1998.                  */
-void LunaPosition(double JD, double r[3])
+void LunaPosition(const JDType jd, double r[3])
 {
+   // dug a bit through Astronomical Algorithmsm,
+   // JD is Terrestrial Dynamical Time here...
+
+   JDType jd_tt_j2000 = jd;
+   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
 
-   T = (JD - 2451545.0) / 36525.0;
+   T = JDToDays(jd_tt_j2000) / 36525.0;
 
    Lp = (218.3164477 +
          T * (481267.88123421 +
@@ -1144,8 +1153,11 @@ void LunaPosition(double JD, double r[3])
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(double JulDay, double CNJ[3][3])
+void LunaInertialFrame(const JDType jd, double CNJ[3][3])
 {
+   JDType jd_tdb_j2000 = jd;
+   ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
@@ -1156,7 +1168,7 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
    double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
-   D = JulDay - 2451545.0;
+   D = JDToDays(jd_tdb_j2000);
    T = D / 36525.0;
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
@@ -1221,7 +1233,7 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-double LunaPriMerAng(double JulDay)
+double LunaPriMerAng(const JDType jd)
 {
    double D;
    double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
@@ -1229,7 +1241,10 @@ double LunaPriMerAng(double JulDay)
    double SinE8, SinE9, SinE10, SinE11, SinE12, SinE13;
    double PriMerAng;
 
-   D = JulDay - 2451545.0;
+   JDType jd_tdb_j2000 = jd;
+   ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+
+   D = JDToDays(jd_tdb_j2000);
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
    E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;
@@ -2344,7 +2359,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
 /**********************************************************************/
 /*   Notional position and velocities for TDRS satellites             */
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
-void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
+void TDRSPosVel(double PriMerAng, double dyntime, double ptn[10][3],
                 double vtn[10][3])
 {
 
@@ -2384,11 +2399,11 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
    }
 
    for (j = 0; j < 10; j++) {
-      om  = om0[j] + omdrift[j] * time;
-      LAN = LAN0[j] * D2R + LANdrift[j] * time;
+      om  = om0[j] + omdrift[j] * dyntime;
+      LAN = LAN0[j] * D2R + LANdrift[j] * dyntime;
 
-      Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, time, ptn[j], vtn[j],
-             &anom);
+      Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, dyntime, ptn[j],
+             vtn[j], &anom);
    }
 }
 /**********************************************************************/
@@ -2832,7 +2847,7 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 /*                will arrive.                                        */
 /*  Two iterations gives < mm accuracy for GEO-LEO distances.         */
 /*  Will need more iterations for interplanetary-scale applications.  */
-void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
+void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
                          double FuturePos[3])
 {
@@ -2845,36 +2860,38 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
       RelPos[i] = Target->PosN[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime - dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, Vel, &anom);
 
    for (i = 0; i < 3; i++)
       RelPos[i] = PastPos[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime - dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, Vel, &anom);
 
    /* .. Future */
    for (i = 0; i < 3; i++)
       RelPos[i] = Target->PosN[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, PastPos, Vel, &anom);
 
    for (i = 0; i < 3; i++)
       RelPos[i] = PastPos[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, PastPos, Vel, &anom);
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
 /* Use this function to initialize mean eph at sim start              */
-void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
+void OscEphToMeanEph(double mu, double J2, double Rw, JDType jd,
                      struct OrbitType *O)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g, E;
    double a, p, p2, Coef;
+
+   const double tt_j2000_sec_0 = JDToDynTime(jd);
 
    sin2i = sin(O->inc) * sin(O->inc);
 
@@ -2901,8 +2918,8 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    O->RAANdot = -Coef * cos(O->inc);
    O->ArgPdot = Coef * (2.0 - 2.5 * sin2i);
 
-   O->RAAN0 = O->RAAN - O->RAANdot * (DynTime - O->Epoch);
-   O->ArgP0 = O->ArgP - O->ArgPdot * (DynTime - O->Epoch);
+   O->RAAN0 = O->RAAN - O->RAANdot * (tt_j2000_sec_0 - O->Epoch);
+   O->ArgP0 = O->ArgP - O->ArgPdot * (tt_j2000_sec_0 - O->Epoch);
 
    /* 10.126 */
    O->J2Rw2bya = J2 * Rw * Rw / O->MeanSMA;
@@ -2910,7 +2927,7 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    E = atan2(sqrt(1.0 - O->ecc * O->ecc) * sin(O->anom), O->ecc + cos(O->anom));
    O->MeanAnom = E - O->ecc * sin(E);
    O->MeanAnom0 =
-       fmod(O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch), TWOPI);
+       fmod(O->MeanAnom - O->MeanMotion * (tt_j2000_sec_0 - O->Epoch), TWOPI);
 }
 /* #ifdef __cplusplus
 ** }

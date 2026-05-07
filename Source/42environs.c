@@ -24,7 +24,8 @@
 
 /**********************************************************************/
 /* #define _RADBELT_ */
-void Environment(struct SCType *S)
+void Environment(JDType jd, struct WorldType *const worlds,
+                 struct OrbitType *const orbs, struct SCType *S)
 {
    struct OrbitType *O;
    struct WorldType *P;
@@ -44,8 +45,8 @@ void Environment(struct SCType *S)
    }
 #endif
 
-   O = &Orb[S->RefOrb];
-   P = &World[O->World];
+   O = &orbs[S->RefOrb];
+   P = &worlds[O->World];
 
    /* .. Magnetic Field */
    if (MagModel.Type == DIPOLE) {
@@ -53,7 +54,8 @@ void Environment(struct SCType *S)
                      P->PriMerAng, S->bvn);
    }
    else if (MagModel.Type == IGRF && O->World == EARTH) {
-      IGRFMagField(ModelPath, UTC, MagModel.N, MagModel.M, S->PosN,
+      DateType utc_date = JDToDate(jd, UTC_TIME);
+      IGRFMagField(ModelPath, utc_date, MagModel.N, MagModel.M, S->PosN,
                    P->PriMerAng, S->bvn);
    }
    else {
@@ -64,27 +66,28 @@ void Environment(struct SCType *S)
 
    MxV(S->B[0].CN, S->bvn, S->bvb);
 
+   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
+   DateType date_tt = JDToDate(jd, TT_TIME);
+
    /* .. Atmospheric Density */
    if (O->World == EARTH) {
+      const double jd_day = JDToDays(jd);
       if (AtmoOption == TWOSIGMA_ATMO) {
-         Flux10p7 =
-             LinInterp(SchattenTable[0], SchattenTable[1], TT.JulDay, 1009);
+         Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[1], jd_day, 1009);
          GeomagIndex =
-             LinInterp(SchattenTable[0], SchattenTable[3], TT.JulDay, 1009);
+             LinInterp(SchattenTable[0], SchattenTable[3], jd_day, 1009);
       }
       else if (AtmoOption == NOMINAL_ATMO) {
-         Flux10p7 =
-             LinInterp(SchattenTable[0], SchattenTable[2], TT.JulDay, 1009);
+         Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[2], jd_day, 1009);
          GeomagIndex =
-             LinInterp(SchattenTable[0], SchattenTable[4], TT.JulDay, 1009);
+             LinInterp(SchattenTable[0], SchattenTable[4], jd_day, 1009);
       }
       /* else USER_ATMO: Flux10p7, GeomagIndex read from Inp_Sim.txt */
 
-      MxV(World[EARTH].CWN, S->PosN, PosW);
-      Alt = MAGV(PosW) - World[EARTH].rad;
+      MxV(worlds[EARTH].CWN, S->PosN, PosW);
+      Alt = MAGV(PosW) - worlds[EARTH].rad;
       if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
-         S->AtmoDensity = NRLMSISE00(TT.Year, TT.doy, TT.Hour, TT.Minute,
-                                     TT.Second, PosW, Flux10p7, GeomagIndex);
+         S->AtmoDensity = NRLMSISE00(date_tt, PosW, Flux10p7, GeomagIndex);
       }
       else
          S->AtmoDensity = 0.0;
