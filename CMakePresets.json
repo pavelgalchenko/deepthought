@@ -1,0 +1,33 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "default_debug",
+            "displayName": "Custom configure preset",
+            "description": "Sets Make generator, build and install directory",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "DEBUG_DATA": "OFF",
+                "SPICE": "ON",
+                "GUI": "ON",
+                "SANITIZER": "OFF"
+            }
+        },
+        {
+            "name": "default_release",
+            "displayName": "Custom configure preset",
+            "description": "Sets Make generator, build and install directory",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "DEBUG_DATA": "OFF",
+                "SPICE": "ON",
+                "GUI": "ON",
+                "SANITIZER": "OFF"
+            }
+        }
+    ]
+}

@@ -61,7 +61,7 @@ target_link_options(deepthought BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize
 target_compile_options(deepthought PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS}>:-Wno-unused-local-typedefs>)
 
 # set include directories
-include_directories(Include)
+target_include_directories(deepthought PUBLIC Include)
 
 # Configure Sources
 set(SOURCE Source)
@@ -149,6 +149,7 @@ target_sources(Test
 
 # link 42kit
 add_subdirectory(Kit)
+target_include_directories(42kit PUBLIC Include)
 target_link_libraries(deepthought PRIVATE 42kit)
 target_link_libraries(Test PRIVATE 42kit)
 # Configure Sources

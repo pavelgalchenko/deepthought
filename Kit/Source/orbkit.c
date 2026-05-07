@@ -421,7 +421,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
    FracDay       = FloatDOY - ((double)date.doy);
    DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
    jdEpoch = Date2JD(date, J2000_EPOCH);
-   ChangeEpoch(TT_TIME, &jd);
+   ChangeSystem(TT_TIME, &jd);
    jdEpoch  = JDAddDays(jdEpoch, FracDay);
    O->Epoch = JDToDynTime(jdEpoch);
    j2000_tt = JDToDynTime(jd);

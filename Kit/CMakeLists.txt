@@ -56,7 +56,7 @@ add_library(42kit SHARED ${KIT_SOURCES})
 
 target_link_libraries(42kit PUBLIC m)
 
-target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated)
+target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Release>:-O2>)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Debug>:-fno-omit-frame-pointer>)
 
