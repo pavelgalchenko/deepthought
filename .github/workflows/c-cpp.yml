@@ -15,7 +15,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        arch: [x64]
         compiler: [gcc, clang]
         glut: ["GLUT", "GLFW"]
         spice: ["ON", "OFF"]
@@ -26,14 +25,14 @@ jobs:
           - glut: "GLFW"
             build: "debug"
 
-    runs-on: ["${{ matrix.os }}", "${{ matrix.arch }}"]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
       - name: install dep
         if: ${{ contains(matrix.os, 'ubuntu') }}
         run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev
       - name: get GLFW
-        if: ${{ matrix.glut ==  'GLFW'}}
+        if: ${{ (matrix.glut ==  'GLFW') && (contains(matrix.os, 'ubuntu')) }}
         run: sudo apt-get -y install libglfw3-dev
       - name: get cspice
         if: ${{ matrix.spice == 'ON' }}
