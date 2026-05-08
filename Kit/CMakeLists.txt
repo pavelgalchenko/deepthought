@@ -50,6 +50,7 @@ set(KIT_SOURCES
     ${KIT}/docoptkit.c
     ${KIT}/dsmkit.c
     ${KIT}/navkit.c
+    ${KIT}/rkkit.c
     )
 
 add_library(42kit SHARED ${KIT_SOURCES})

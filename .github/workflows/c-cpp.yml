@@ -14,7 +14,7 @@ jobs:
     # Ubuntu build in various conditions
     strategy:
       matrix:
-        os: [ubuntu-24.04]
+        os: [ubuntu-latest]
         arch: [x64]
         compiler: [gcc, clang]
         glut: ["GLUT", "GLFW"]

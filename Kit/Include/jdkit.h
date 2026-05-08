@@ -109,4 +109,4 @@ int isgreaterequal_jd(const JDType a, const JDType b);
 ** #endif
 */
 
-#endif /* __TIMEKIT_H__ */
+#endif /* __JDKIT_H__ */
