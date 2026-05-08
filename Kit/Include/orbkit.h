@@ -215,6 +215,7 @@ struct OrbitType {
 
    long Tag; /* Orb[Tag].Tag = Tag */
    long Exists;
+   TimeSystem EphemSystem; /* Time system used for this orbit */
    double
        Epoch; /* Sec since J2000 epoch at which orbit elements are referenced */
    enum orbitRegime Regime; /* ZERO, FLIGHT, CENTRAL (Two-body) or THREE_BODY */

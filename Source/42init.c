@@ -762,6 +762,73 @@ ephemType GetEphemType(const char *s)
    exit(EXIT_FAILURE);
 }
 /**********************************************************************/
+TimeSystem GetTimeSystem(const char *s)
+{
+   if (!strncmp(s, "UTC", 3))
+      return UTC_TIME;
+   else if (!strncmp(s, "TAI", 3))
+      return TAI_TIME;
+   else if (!strncmp(s, "TCB", 3))
+      return TCB_TIME;
+   else if (!strncmp(s, "TDB", 3))
+      return TDB_TIME;
+   else if (!strncmp(s, "TT", 2))
+      return TT_TIME;
+   fprintf(stderr, "Bogus input %s in GetTimeSystem (42init.c:%d)\n", s,
+           __LINE__);
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+DateType ReadDateFromYaml(struct fy_node *node, const char *f_name)
+{
+   // TODO: convert input "/Time/Second" to be only accepting of ints
+   Rational millisec     = (Rational){.whole = 0, .num = 0, .den = 1000};
+   double sec            = 0;
+   DateType date         = {0};
+   date.system           = UTC_TIME;
+   char time_sys_str[50] = {'\0'};
+
+   if (fy_node_scanf(node,
+                     "/Date/Year %ld "
+                     "/Date/Month %ld "
+                     "/Date/Day %ld "
+                     "/Time/Hour %ld "
+                     "/Time/Minute %ld "
+                     "/Time/Second %lf "
+                     "/Time/Millisecond %ld ",
+                     &date.Year, &date.Month, &date.Day, &date.Hour,
+                     &date.Minute, &sec, &millisec.num) != 7) {
+      fprintf(stderr, "Time is improperly configured in %50s. Exiting...\n",
+              f_name);
+      exit(EXIT_FAILURE);
+   }
+   date.Second = double2rational(sec);
+   date.Second = RationalAdd(date.Second, millisec);
+
+   date.doy = MD2DOY(date.Year, date.Month, date.doy);
+
+   // check if the optional "System" field exists in this node
+   if (fy_node_scanf(node, "/System %50s", time_sys_str))
+      date.system = GetTimeSystem(time_sys_str);
+
+   // Check if not allowed input time system type (not TDB or TCB)
+   switch (date.system) {
+      case UTC_TIME:
+      case TAI_TIME:
+      case TT_TIME:
+         break;
+      case TCB_TIME:
+      case TDB_TIME:
+      default:
+         fprintf(stderr,
+                 "In file %50s, time system other than UTC, TAI, or TT "
+                 "was specified. Exiting...\n",
+                 f_name);
+         exit(EXIT_FAILURE);
+   }
+   return date;
+}
+/**********************************************************************/
 void EchoDyn(struct SCType *S)
 {
    FILE *outfile;
@@ -923,7 +990,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    JDType Epoch_JD;
 
    DateType EpochDate = {0};
-   EpochDate.system   = UTC_TIME;
+   EpochDate.system   = O->EphemSystem;
    double sec         = 0;
 
    infile = FileOpen(Path, TrvFileName, "r");
@@ -946,10 +1013,9 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    fclose(infile);
 
    if (Success) {
-      /* Epoch is in UTC */
       EpochDate.Second = double2rational(sec);
       Epoch_JD         = Date2JD(EpochDate, J2000_EPOCH);
-      ChangeSystem(TT_TIME, &Epoch_JD);
+      JDChangeSystem(TT_TIME, &Epoch_JD);
       O->Epoch  = JDToDynTime(Epoch_JD);
       O->Regime = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
@@ -1007,7 +1073,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
    long i, j, k;
 
    JDType jd_tt_j2000 = jd;
-   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
    const double j2000_tt = JDToDynTime(jd_tt_j2000);
 
    char fileName[50] = {0};
@@ -1221,8 +1287,23 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                   exit(EXIT_FAILURE);
                }
                inputType = DecodeString(response);
+
+               // Get the time system to be used with this orbit, note that
+               // TLE's use UTC, and thus this input is overriden
+               O->EphemSystem = UTC_TIME;
+               if (fy_node_scanf(node, "/System %49s", response))
+                  O->EphemSystem = GetTimeSystem(response);
+
                switch (inputType) {
                   case INP_TLE: {
+                     if (O->EphemSystem != UTC_TIME) {
+                        fprintf(stdout,
+                                "In orbit file %40s, a time system other than "
+                                "UTC was specified for a TLE input file. "
+                                "Overriding to UTC.\n",
+                                O->FileName);
+                     }
+                     O->EphemSystem = UTC_TIME;
                      if (O->World != EARTH) {
                         fprintf(
                             stderr,
@@ -1251,7 +1332,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                      O->SplineActive   = TRUE;
                      DateType NodeDate = {0};
                      double sec        = 0;
-                     NodeDate.system   = UTC_TIME;
+                     NodeDate.system   = O->EphemSystem;
                      char newline;
                      for (i = 0; i < 4; i++) {
                         fscanf(
@@ -1265,7 +1346,10 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
                         NodeDate.Second = double2rational(sec);
                         JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
-                        ChangeSystem(TT_TIME, &node_jd);
+                        // TODO: do we transform the timestamps to tt to use
+                        // uniformly, or do we convert the current time to
+                        // O->EphemSystem and store the specified value here?
+                        JDChangeSystem(TT_TIME, &node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -1448,7 +1532,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                      O->SplineActive   = TRUE;
                      DateType NodeDate = {0};
                      double sec        = 0;
-                     NodeDate.system   = UTC_TIME;
+                     NodeDate.system   = O->EphemSystem;
                      char newline;
                      for (i = 0; i < 4; i++) {
                         fscanf(
@@ -1462,7 +1546,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
                         NodeDate.Second = double2rational(sec);
                         JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
-                        ChangeSystem(TT_TIME, &node_jd);
+                        JDChangeSystem(TT_TIME, &node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -4491,7 +4575,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    worlds[MARS].Atmo.rad          = worlds[MARS].rad + worlds[MARS].Atmo.MaxHt;
 
    JDType jd_tt_j2000 = jd;
-   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
    const double j2000sec_tt = JDToDynTime(jd_tt_j2000);
    /* .. Load planetary orbit elements for date of interest */
    for (i = MERCURY; i <= PLUTO; i++) {
@@ -4526,10 +4610,29 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       W->Type             = PLANET;
    }
 
+   TimeSystem ephem_sys = TT_TIME;
+   switch (EphemOption) {
+      case EPH_MEAN:
+      default:
+         ephem_sys = TT_TIME;
+         break;
+      case EPH_DE430:
+      case EPH_DE440:
+      case EPH_DE421:
+      case EPH_DE424:
+      case EPH_GMAT421:
+      case EPH_GMAT424:
+      case EPH_SPICE:
+         ephem_sys = TDB_TIME;
+         break;
+   }
+
    for (i = MERCURY; i <= PLUTO; i++) {
       struct WorldType *W = &worlds[i];
       if (W->Exists) {
          Eph = &W->eph;
+
+         Eph->EphemSystem = ephem_sys;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                 j2000sec_tt - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
          for (j = 0; j < 3; j++)
@@ -5137,7 +5240,8 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             }
 
             struct OrbitType *E = &M->eph;
-            P->Sat[im]          = m_id;
+
+            P->Sat[im] = m_id;
 
             M->Exists = TRUE;
             M->Parent = p_id;
@@ -5146,19 +5250,41 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             strcpy(M->ColTexFileName, col_tex_f_name);
             strcpy(M->BumpTexFileName, bmp_tex_f_name);
 
-            M->mu        = mu;
-            M->rad       = rad;
-            M->w         = w;
-            M->PriMerAng = 0.0;
-            E->Exists    = TRUE;
-            E->Regime    = ORB_CENTRAL;
-            E->World     = p_id;
-            E->mu        = P->mu;
-            E->SMA       = sma;
-            E->ecc       = ecc;
-            E->inc       = inc * D2R;
-            E->RAAN      = raan * D2R;
-            E->ArgP      = omg * D2R;
+            TimeSystem ephem_sys = TT_TIME;
+            switch (EphemOption) {
+               case EPH_MEAN:
+               default:
+                  ephem_sys = TT_TIME;
+                  break;
+               case EPH_DE430:
+               case EPH_DE440:
+               case EPH_DE421:
+               case EPH_DE424:
+               case EPH_GMAT421:
+               case EPH_GMAT424:
+                  if (m_id != LUNA) {
+                     ephem_sys = TT_TIME;
+                     break;
+                  }
+               case EPH_SPICE:
+                  ephem_sys = TDB_TIME;
+                  break;
+            }
+
+            M->mu          = mu;
+            M->rad         = rad;
+            M->w           = w;
+            M->PriMerAng   = 0.0;
+            E->Exists      = TRUE;
+            E->EphemSystem = ephem_sys;
+            E->Regime      = ORB_CENTRAL;
+            E->World       = p_id;
+            E->mu          = P->mu;
+            E->SMA         = sma;
+            E->ecc         = ecc;
+            E->inc         = inc * D2R;
+            E->RAAN        = raan * D2R;
+            E->ArgP        = omg * D2R;
 
             M->PriMerAngJ2000 = primerang_j2000 * D2R;
 
@@ -5290,10 +5416,11 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
       MxM(CNJ, worlds[EARTH].CNH, W->CNH);
       C2Q(W->CNH, W->qnh);
       QxQT(W->qnh, qjh, W->qnj);
-      E->Exists = TRUE;
-      E->Regime = ORB_CENTRAL;
-      E->World  = SOL;
-      E->mu     = worlds[SOL].mu;
+      E->Exists      = TRUE;
+      E->EphemSystem = TT_TIME;
+      E->Regime      = ORB_CENTRAL;
+      E->World       = SOL;
+      E->mu          = worlds[SOL].mu;
       fscanf(infile, "%lf %[^\n] %[\n]", &E->SMA, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->ecc, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->inc, junk, &newline);
@@ -5742,8 +5869,8 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
    struct Cheb3DType *Cheb;
 
    JDType jd_tdb_mjd = jd, jd_tdb_z = jd;
-   ChangeSystemEpoch(TDB_TIME, MJD_EPOCH, &jd_tdb_mjd);
-   ChangeSystemEpoch(TDB_TIME, ZERO_EPOCH, &jd_tdb_z);
+   JDChangeSystemEpoch(TDB_TIME, MJD_EPOCH, &jd_tdb_mjd);
+   JDChangeSystemEpoch(TDB_TIME, ZERO_EPOCH, &jd_tdb_z);
 
    if (jpl_hdr->n_data == 0)
       InitJplHeader(EphemOption, EphemPath, jpl_hdr);
@@ -5789,7 +5916,7 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
          // convert to desired Epoch
          for (int j = 0; j < 2; j++) {
             jd_ranges[i][j] = JDFromDays(jd_rng_days[j], TDB_TIME, ZERO_EPOCH);
-            ChangeEpoch(GMAT_MJD_EPOCH, &jd_ranges[i][j]);
+            JDChangeEpoch(GMAT_MJD_EPOCH, &jd_ranges[i][j]);
          }
          fclose(infile);
       }
@@ -5841,7 +5968,7 @@ long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
                FoundBlock = 1;
 
                for (i = 0; i < 2; i++)
-                  ChangeEpoch(GMAT_MJD_EPOCH, &jd_block[i]);
+                  JDChangeEpoch(GMAT_MJD_EPOCH, &jd_block[i]);
             }
          }
       }
@@ -5916,14 +6043,11 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
    double GMST = JD2GMST(jd);
 
    JDType jd_tt_j2000 = jd, jd_tdb_mjd = jd;
-   ChangeEpoch(J2000_EPOCH, &jd_tt_j2000);
-   ChangeSystem(TT_TIME, &jd_tt_j2000);
-   JDType jd_tdb_j2000 = jd_tt_j2000;
-   ChangeSystem(TDB_TIME, &jd_tdb_j2000);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
+   JDType jd_tdb_j2000 = jd_tdb_mjd;
+   JDChangeSystem(TDB_TIME, &jd_tdb_j2000);
    const double j2000_sec = JDToDynTime(jd_tt_j2000);
-
-   ChangeEpoch(GMAT_MJD_EPOCH, &jd_tdb_mjd);
-   ChangeSystem(TDB_TIME, &jd_tdb_mjd);
 
    /* .. Initialize Planetary Pos/Vel */
    for (Iw = SOL; Iw <= LUNA; Iw++) {
@@ -6031,7 +6155,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
    double CNH[3][3] = {0};
 
    // TODO: premake some of the other jd types that are needed
-   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd);
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd);
 
    /* .. Initialize position of system barycenter */
    W   = &worlds[SOL];
@@ -6231,7 +6355,7 @@ long UpdateEphems(const ephemType ephem, const JDType jd,
                   struct WorldType *const worlds)
 {
    JDType jd_tdb_mjd = jd;
-   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
 
    long main_ephem_check = 0;
    switch (ephem) {
@@ -6276,9 +6400,7 @@ long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
    struct OrbitType *Eph;
    struct WorldType *W;
 
-   JDType jd_z = jd;
-   ChangeSystemEpoch(UTC_TIME, ZERO_EPOCH, &jd_z);
-   const double GMST     = JD2GMST(jd_z);
+   const double GMST     = JD2GMST(jd);
    const double j2000sec = JDToDynTime(jd);
    double r1[3], rh[3], vh[3];
    const double ZAxis[3] = {0.0, 0.0, 1.0};
@@ -6306,7 +6428,7 @@ long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
       Eph = &worlds[LUNA].eph;
       /* Meeus computes Luna Position in geocentric ecliptic */
       JDType jd_tdb_z = jd;
-      ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_z);
+      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_z);
 
       worlds[LUNA].PriMerAng = LunaPriMerAng(jd_tdb_z);
       LunaPosition(jd_tdb_z, rh);
@@ -6411,7 +6533,7 @@ long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds)
    double CNJ[3][3];
 
    JDType jd_tdb_j2000 = jd;
-   ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
    const double JS       = JDToDays(jd_tdb_j2000) * SEC_PER_DAY;
    const double j2000sec = JDToDynTime(jd_tdb_j2000);
 
@@ -6545,7 +6667,7 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
    char trgtCNH_STRING[25] = {'\0'};
    int i, j;
 
-   ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
    const double jd_tdb_j2000_sec = JDToTime(jd);
 
    SpiceInt tgt_world_naif = WorldID2NAIFID(trgtWORLD);
@@ -6944,26 +7066,12 @@ void InitSim(int argc, char **argv)
    }
 
    /* .. Environment */
-   /* .. Date and time (UTC) */
-   node              = fy_node_by_path_def(root, "/Time");
-   Rational millisec = (Rational){.whole = 0, .num = 0, .den = 1000};
-   double sec        = 0;
-   if (fy_node_scanf(node,
-                     "/Date/Year %ld "
-                     "/Date/Month %ld "
-                     "/Date/Day %ld "
-                     "/Time/Hour %ld "
-                     "/Time/Minute %ld "
-                     "/Time/Second %lf "
-                     "/Time/Millisecond %ld "
-                     "/Leap Seconds %lf",
-                     &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour, &UTC.Minute,
-                     &sec, &millisec.num, &LeapSec) != 8) {
-      fprintf(stderr, "Time is improperly configured in Inp_Sim. Exiting...\n");
-      exit(EXIT_FAILURE);
-   }
-   UTC.Second = double2rational(sec);
-   UTC.Second = RationalAdd(UTC.Second, millisec);
+   /* .. Date and time */
+   node                = fy_node_by_path_def(root, "/Time");
+   DateType input_date = ReadDateFromYaml(node, "Inp_Sim");
+
+   UTC = input_date;
+   DateChangeSystem(UTC_TIME, &UTC);
 
    /* .. Choices for Modeling Solar Activity */
    // TODO: add atmo model properties to world and use this to
@@ -7243,10 +7351,10 @@ void InitSim(int argc, char **argv)
    SimTime     = 0.0;
    JD_TT_MJD_0 = Date2JD(UTC, J2000_EPOCH);
    CivilTime   = JDToTime(JD_TT_MJD_0);
-   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD_0);
+   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD_0);
    JD_TT_MJD  = JD_TT_MJD_0;
    JD_TDB_MJD = JD_TT_MJD;
-   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
 
    DynTime    = JDToDynTime(JD_TT_MJD);
    AtomicTime = DynTime - 32.184; /* TAI */

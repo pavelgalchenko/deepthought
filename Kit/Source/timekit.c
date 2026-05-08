@@ -139,7 +139,7 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
 
    const long day = 367 * Y - a + b + D;
    JDType jd      = JDFromDays(day, date.system, GD_CONV_EPOCH);
-   ChangeEpoch(epoch, &jd);
+   JDChangeEpoch(epoch, &jd);
    s.whole += 60 * (m + 60 * H);
    jd       = JDAddRationalSeconds(jd, s);
 
@@ -165,8 +165,16 @@ double Date2Time(const DateType date)
 double Date2TimeSystem(const DateType date, const TimeSystem system)
 {
    JDType jd = Date2JD(date, J2000_EPOCH);
-   ChangeSystem(system, &jd);
+   JDChangeSystem(system, &jd);
    return JDToTime(jd);
+}
+/**********************************************************************/
+/*  Change Time System of input DateType                              */
+/*  For now, converts to Julian Date type and converts back to  date  */
+void DateChangeSystem(const TimeSystem new_system, DateType *const date)
+{
+   JDType jd = Date2JD(*date, J2000_EPOCH);
+   *date     = JDToDate(jd, new_system);
 }
 /**********************************************************************/
 /*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1582) */
@@ -225,7 +233,7 @@ JDType DateToJD(const DateType date, const TimeSystem system,
    s.whole    += 60 * (date.Minute + 60 * date.Hour);
    jd          = JDAddRationalSeconds(jd, s);
 
-   ChangeSystemEpoch(system, epoch, &jd);
+   JDChangeSystemEpoch(system, epoch, &jd);
    return (jd);
 }
 /**********************************************************************/
@@ -233,14 +241,13 @@ JDType DateToJD(const DateType date, const TimeSystem system,
 /* midnight, Jan 1st, 1958                                            */
 CCSDSTime date2ccsds(const DateType date)
 {
-   // TODO: SOMETHING WRONG IN HERE
    CCSDSTime ccsds_time;
 
-   JDType jd = Date2JD(date, CCSDS_EPOCH);
-   ChangeSystem(TAI_TIME, &jd);
-   ccsds_time.coarse = JDToTime(jd);
-   jd.seconds.whole  = 0;
-   ccsds_time.fine   = (rational2double(jd.seconds) * CCSDS_FINE_MAX) + 0.5;
+   DateType date_tai = date;
+   DateChangeSystem(TAI_TIME, &date_tai);
+   ccsds_time.coarse     = Date2Time(date_tai);
+   date_tai.Second.whole = 0;
+   ccsds_time.fine = (rational2double(date_tai.Second) * CCSDS_FINE_MAX) + 0.5;
    return ccsds_time;
 }
 /**********************************************************************/
@@ -265,7 +272,7 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
    date.system   = system;
 
    JDType jd_sys_1900 = jd;
-   ChangeSystemEpoch(system, J1900_EPOCH, &jd_sys_1900);
+   JDChangeSystemEpoch(system, J1900_EPOCH, &jd_sys_1900);
    const double jd_1900_days = JDToDays(jd_sys_1900);
 
    T_1900    = jd_1900_days / 365.25;
@@ -363,7 +370,7 @@ double JD2GMST(JDType jd)
 {
    double T, JD0, GMST0, GMST;
 
-   ChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd);
+   JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd);
    const double JD = JDToDays(jd);
 
    JD0 = floor(JD) + 0.5;

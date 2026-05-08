@@ -112,10 +112,7 @@ EXTERN JPLHeaderType JplHeader; /* Stores header information for
 EXTERN JDType JD_TDB_MJD; /* JD in TDB with reference to GMAT MJD epoch*/
 EXTERN JDType
     JD_TT_MJD_0; /* JD since sim start in TT with reference to GMAT MJD epoch*/
-EXTERN JDType JD_TT_MJD; /* JD in TT with reference to GMAT MJD epoch*/
-
-// EXTERN double DynTime0;   /* Time in sec since J2000 Epoch at Sim Start (TT)
-// */
+EXTERN JDType JD_TT_MJD;  /* JD in TT with reference to GMAT MJD epoch*/
 EXTERN double DynTime;    /* Absolute Time (TT), sec since J2000 Epoch */
 EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */

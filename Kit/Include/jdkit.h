@@ -53,9 +53,9 @@ typedef enum EpochTT {
 typedef enum TimeSystem {
    UTC_TIME = 0, // Coordinated Universal Time
    TAI_TIME,     // International Atomic Time
+   TT_TIME,      // Terrestrial Time, sometimes referred as old TDT term
    TCB_TIME,     // Barycentric Coordinate Time
    TDB_TIME,     // Barycentric Dynamical Time
-   TT_TIME,      // Terrestrial Time, sometimes referred as old TDT term
    // TODO: add TT(BIPM)? others?
 } TimeSystem;
 
@@ -72,10 +72,10 @@ typedef struct JDType {
 
 double GetLeapSec(const JDType jd);
 double EpochValueTT(EpochTT epoch);
-void ChangeEpoch(const EpochTT new_epoch, JDType *const jd);
-void ChangeSystem(const TimeSystem new_system, JDType *const jd);
-void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
-                       JDType *const jd);
+void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd);
+void JDChangeSystem(const TimeSystem new_system, JDType *const jd);
+void JDChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
+                         JDType *const jd);
 double JDToDays(const JDType jd);
 JDType JDFromDays(const double days, const TimeSystem system,
                   const EpochTT new_epoch);

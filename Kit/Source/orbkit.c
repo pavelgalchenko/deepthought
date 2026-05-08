@@ -421,7 +421,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
    FracDay       = FloatDOY - ((double)date.doy);
    DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
    jdEpoch = Date2JD(date, J2000_EPOCH);
-   ChangeSystem(TT_TIME, &jd);
+   JDChangeSystem(TT_TIME, &jd);
    jdEpoch  = JDAddDays(jdEpoch, FracDay);
    O->Epoch = JDToDynTime(jdEpoch);
    j2000_tt = JDToDynTime(jd);
@@ -765,7 +765,7 @@ void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
 
    double AU2m = 149597870000.0;
 
-   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
 
    /* .. Time since J2000, in Julian centuries */
    T = JDToDays(jd) / 36525.0;
@@ -818,7 +818,7 @@ void LunaPosition(const JDType jd, double r[3])
    // JD is Terrestrial Dynamical Time here...
 
    JDType jd_tt_j2000 = jd;
-   ChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
@@ -1156,7 +1156,7 @@ void LunaPosition(const JDType jd, double r[3])
 void LunaInertialFrame(const JDType jd, double CNJ[3][3])
 {
    JDType jd_tdb_j2000 = jd;
-   ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
 
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
@@ -1242,7 +1242,7 @@ double LunaPriMerAng(const JDType jd)
    double PriMerAng;
 
    JDType jd_tdb_j2000 = jd;
-   ChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
 
    D = JDToDays(jd_tdb_j2000);
 

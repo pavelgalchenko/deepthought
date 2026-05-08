@@ -14,7 +14,9 @@ jobs:
     # Ubuntu build in various conditions
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
+        arch: [x64]
+        compiler: [gcc, clang]
         glut: ["GLUT", "GLFW"]
         spice: ["ON", "OFF"]
         build: ["release", "debug"]
@@ -24,7 +26,7 @@ jobs:
           - glut: "GLFW"
             build: "debug"
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ["${{ matrix.os }}", "${{ matrix.arch }}"]
     steps:
       - uses: actions/checkout@v6
       - name: install dep
@@ -36,6 +38,8 @@ jobs:
       - name: get cspice
         if: ${{ matrix.spice == 'ON' }}
         run: ./download_spice.sh
+      - name: set compiler
+        run: export CC=$(which ${{ matrix.compiler }})
       - name: cmake
         run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DSPICE=${{ matrix.spice }} -DGLUT_OR_GLFW=${{ matrix.glut }} .
       - name: make

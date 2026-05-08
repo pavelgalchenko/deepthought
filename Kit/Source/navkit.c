@@ -248,7 +248,7 @@ double GetPriMerAng(const long orbCenter, const DateType *date)
    double PriMerAng    = 0.0;
    const double time   = Date2Time(*date);
    JDType jd           = Date2JD(*date, J2000_EPOCH);
-   ChangeSystem(TT_TIME, &jd);
+   JDChangeSystem(TT_TIME, &jd);
 
    /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
@@ -1408,7 +1408,7 @@ void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
                         double *NavGeomagIndex)
 {
    JDType jd_tt_mjd = jd;
-   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
+   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
    double jd_tt_mjd_days = JDToDays(jd_tt_mjd);
    if (AtmoOption == TWOSIGMA_ATMO) {
       *NavFlux10p7 =
@@ -3066,7 +3066,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
                JDType jd = Date2JD(Nav->Date, MJD_EPOCH);
-               ChangeSystem(TT_TIME, &jd);
+               JDChangeSystem(TT_TIME, &jd);
                getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
                Nav->Date.doy =
                    MD2DOY(Nav->Date.Year, Nav->Date.Month, Nav->Date.Day);

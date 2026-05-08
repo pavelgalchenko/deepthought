@@ -66,7 +66,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
 
    MxV(S->B[0].CN, S->bvn, S->bvb);
 
-   ChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
+   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
    DateType date_tt = JDToDate(jd, TT_TIME);
 
    /* .. Atmospheric Density */

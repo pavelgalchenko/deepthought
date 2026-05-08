@@ -82,7 +82,7 @@ static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
                          long *const gps_wk, double *const gps_sec)
 {
    *tdb_mjd_jd = tt_jd;
-   ChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &*tdb_mjd_jd);
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &*tdb_mjd_jd);
    *tt  = JDToDate(tt_jd, TT_TIME);
    *tdb = JDToDate(*tdb_mjd_jd, TDB_TIME);
 
@@ -130,7 +130,7 @@ long AdvanceTime(void)
          UTC     = RealSystemTime();
 
          JD_TT_MJD = Date2JD(UTC, GMAT_MJD_EPOCH);
-         ChangeSystem(TT_TIME, &JD_TT_MJD);
+         JDChangeSystem(TT_TIME, &JD_TT_MJD);
          JD_TT_MJD_0 = JDSubSeconds(JD_TT_MJD, SimTime);
       } break;
       case NOS3_TIME: {

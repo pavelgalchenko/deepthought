@@ -47,6 +47,8 @@ endif()
 add_executable(deepthought)
 add_executable(Test EXCLUDE_FROM_ALL)
 
+target_compile_definitions(deepthought PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
+
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
 
@@ -133,6 +135,16 @@ if(SPICE)
     
     target_link_libraries(deepthought PUBLIC optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
     target_include_directories(deepthought PUBLIC ${CSPICE_INCLUDE_DIR})
+endif()
+
+# Copy World and Model Directories, if building out of source
+if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+    file(COPY 
+        "${CMAKE_CURRENT_SOURCE_DIR}/Model" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/World" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/cspice" 
+        DESTINATION
+        "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 # Configure Test Target

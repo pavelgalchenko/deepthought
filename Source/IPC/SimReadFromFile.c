@@ -917,7 +917,7 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled)
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
       JD_TT_MJD  = Date2JD(TT, GMAT_MJD_EPOCH);
       JD_TDB_MJD = JD_TT_MJD;
-      ChangeSystem(TDB_TIME, &JD_TDB_MJD);
+      JDChangeSystem(TDB_TIME, &JD_TDB_MJD);
       TDB = JDToDate(JD_TDB_MJD, TDB_TIME);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);

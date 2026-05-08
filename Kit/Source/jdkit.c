@@ -311,7 +311,7 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
 static JDType _jd_tcb2tdb(const JDType tcb_jd)
 {
    // JDType jd_tt_conv = _jdtt(tcb_jd);// nope, do not
-   // ChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
+   // JDChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
    // TODO: pretending that we don't need this for now
    fprintf(stderr, "Julian Day conversion from TCB to TDB is not implemented. "
                    "Exiting...\n");
@@ -321,7 +321,7 @@ static JDType _jdtt(JDType);
 static JDType _jd_tdb2tcb(JDType tdb_jd)
 {
    JDType jd_tt_conv = _jdtt(tdb_jd);
-   ChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
+   JDChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
    const double d_tcb_tdb = L_B * JDToDays(jd_tt_conv);
 
    tdb_jd.system = TCB_TIME;
@@ -339,7 +339,7 @@ static double _d_tt_tdb(JDType jd)
    // TODO: use spice instead if available?
    // Approximation from GMAT 2026 Mathematical Specification, p10
    // assuming input jd is tt already
-   ChangeEpoch(J2000_EPOCH, &jd);
+   JDChangeEpoch(J2000_EPOCH, &jd);
    const double T_TT = JDToDays(jd) / DAY_PER_JULIAN_CENTURY;
    const double m_E  = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0) * D2R;
    return (TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(2.0 * m_E));
@@ -555,9 +555,9 @@ double GetLeapSec(const JDType jd)
    // ensure jd is UTC with MJD epoch
    // dug through GMAT source code, JD in tai-utc.dat is UTC
    JDType jd_mjd_utc = _jdutc(jd);
-   ChangeEpoch(MJD_EPOCH,
-               &jd_mjd_utc); // TODO: this causes infinite recursion due to the
-                             // conversion to TT_TIME embeded within
+   JDChangeEpoch(MJD_EPOCH,
+                 &jd_mjd_utc); // TODO: this causes infinite recursion due to
+                               // the conversion to TT_TIME embeded within
 
    static long n_entries          = 0;
    static JDType *jd_list_mjd_utc = NULL; // list of JD in UTC with MJD epoch
@@ -606,7 +606,7 @@ double GetLeapSec(const JDType jd)
          if (sscanf_check) {
             jd_list_mjd_utc[i] =
                 JDFromDays(jd_mjd_utc_days, UTC_TIME, ZERO_EPOCH);
-            ChangeEpoch(MJD_EPOCH, &jd_list_mjd_utc[i]);
+            JDChangeEpoch(MJD_EPOCH, &jd_list_mjd_utc[i]);
 
             i++;
          }
@@ -624,7 +624,7 @@ double GetLeapSec(const JDType jd)
 }
 
 // chages the time system of JD
-void ChangeSystem(const TimeSystem new_system, JDType *const jd)
+void JDChangeSystem(const TimeSystem new_system, JDType *const jd)
 {
    if (jd->system == new_system)
       return;
@@ -648,7 +648,7 @@ void ChangeSystem(const TimeSystem new_system, JDType *const jd)
 }
 
 // changes the epoch of JD
-void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
+void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd)
 {
    if (new_epoch == jd->epoch)
       return; // nothing to do
@@ -676,17 +676,17 @@ void ChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    *jd       = JDAddRationalSeconds(*jd, epoch_diff_pod_s);
    jd->epoch = new_epoch;
 
-   // ChangeSystem(jd->system, &jd_tt);
+   // JDChangeSystem(jd->system, &jd_tt);
    // *jd = jd_tt;
 }
 
-void ChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
-                       JDType *const jd)
+void JDChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
+                         JDType *const jd)
 {
    // This whole kit needs some testing, but this is currently how I prefer to
-   // change the jd formats due to the limitations currently in ChangeEpoch()
-   ChangeEpoch(new_epoch, jd);
-   ChangeSystem(new_system, jd);
+   // change the jd formats due to the limitations currently in JDChangeEpoch()
+   JDChangeEpoch(new_epoch, jd);
+   JDChangeSystem(new_system, jd);
 }
 
 // returns the number of Julian days from 'jd.epoch' according to 'jd.system'
@@ -728,14 +728,14 @@ double JDToSeconds(JDType jd)
 }
 double JDToTime(JDType jd)
 {
-   ChangeEpoch(J2000_EPOCH, &jd);
+   JDChangeEpoch(J2000_EPOCH, &jd);
    return JDToSeconds(jd);
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch in TT time               */
 double JDToDynTime(JDType jd)
 {
-   ChangeSystem(TT_TIME, &jd);
+   JDChangeSystem(TT_TIME, &jd);
    return JDToTime(jd);
 }
 

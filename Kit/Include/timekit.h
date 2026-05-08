@@ -108,6 +108,7 @@ DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system);
 double Date2Time(const DateType date);
 double Date2TimeSystem(const DateType date, const TimeSystem system);
 double DateToTime(const DateType date);
+void DateChangeSystem(const TimeSystem new_system, DateType *const date);
 JDType DateToJD(const DateType date, const TimeSystem system,
                 const EpochTT epoch);
 JDType Date2JD(const DateType date, const EpochTT epoch);

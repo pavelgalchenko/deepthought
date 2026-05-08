@@ -405,7 +405,7 @@ void SplineToPosVel(struct OrbitType *O, const double dyntime)
    double X[4], Y[4];
    double x[3], v[3], xn[3], vn[3];
 
-   NodeDate.system = UTC_TIME;
+   NodeDate.system = O->EphemSystem;
 
    /* .. Get nodes from O->SplineFile */
    while (dyntime > O->NodeDynTime[2]) {

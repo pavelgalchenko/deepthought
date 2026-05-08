@@ -54,6 +54,8 @@ set(KIT_SOURCES
 
 add_library(42kit SHARED ${KIT_SOURCES})
 
+target_compile_definitions(42kit PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
+
 target_link_libraries(42kit PUBLIC m)
 
 target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion)
