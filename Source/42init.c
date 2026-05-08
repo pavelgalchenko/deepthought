@@ -6696,7 +6696,6 @@ void InitSim(int argc, char **argv)
    if (argc > 2)
       sprintf(ModelPath, "./%s/", argv[2]);
 
-   char tempargs[BUFSIZE];
    char *ret;
    DIR *OutDir;
    DIR *ModelDir;

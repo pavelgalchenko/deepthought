@@ -361,7 +361,7 @@ void DSM_StateRot3BodyReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   double full_N_state[6], posRot[3], velRot[3];
+   double posRot[3], velRot[3];
    struct LagrangeSystemType *LS;
 
    if (First) {
@@ -385,11 +385,6 @@ void DSM_StateRot3BodyReport(void)
       if (SC[Isc].Exists) {
          LS = &LagSys[Orb[SC[Isc].RefOrb].Sys];
          if (LS->Exists) {
-            for (int i = 0; i < 3; i++)
-               full_N_state[i] = SC[Isc].PosN[i];
-            for (int i = 0; i < 3; i++)
-               full_N_state[i + 3] = SC[Isc].VelN[i];
-
             StateN2StateRnd(LS, World[LS->Body2].eph.PosN,
                             World[LS->Body2].eph.VelN, SC[Isc].PosN,
                             SC[Isc].VelN, posRot, velRot);

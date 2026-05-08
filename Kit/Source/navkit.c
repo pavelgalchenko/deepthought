@@ -2625,10 +2625,6 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
          Nav->refAccel[i] = 0.0;
    }
 
-   double prevRefVel[3] = {0.0};
-   for (i = 0; i < 3; i++)
-      prevRefVel[i] = Nav->refVel[i];
-
    // Set the position and velocity of reference frame in N frame
    switch (Nav->refOriType) {
       case ORI_WORLD: {
