@@ -6928,18 +6928,22 @@ void InitSim(int argc, char **argv)
    ret = strrchr(ExeDir, '/');
    free(real_path);
 #elif defined __MINGW32__
+   char tempargs[BUFSIZE];
    GetModuleFileName(NULL, tempargs, sizeof(tempargs));
    _fullpath(ExeDir, tempargs, sizeof(tempargs));
    ret = strrchr(ExeDir, '\\');
 #elif defined _WIN32
+   char tempargs[BUFSIZE];
    GetModuleFileName(NULL, tempargs, sizeof(tempargs));
    _fullpath(ExeDir, tempargs, sizeof(tempargs));
    ret = strrchr(ExeDir, '\\');
 #elif defined _WIN64
+   char tempargs[BUFSIZE];
    GetModuleFileName(NULL, tempargs, sizeof(tempargs));
    _fullpath(ExeDir, tempargs, sizeof(tempargs));
    ret = strrchr(ExeDir, '\\');
 #elif defined __APPLE__
+   char tempargs[BUFSIZE];
    uint32_t bytes;
    bytes = 1000;
    bytes = sizeof("/0");

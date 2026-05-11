@@ -4714,7 +4714,7 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
                break;
             default:
                printf("ERROR: MUST USE COWELLS METHOD!!! \n");
-               exit(1);
+               exit(EXIT_FAILURE);
          }
          break;
       case ORB_THREE_BODY:
@@ -4727,6 +4727,7 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
                CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
                break;
             default:
+               break;
          }
          break;
       default:
