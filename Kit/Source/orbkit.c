@@ -18,19 +18,15 @@
 */
 
 /**********************************************************************/
-struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb)
+void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
 {
-   struct OrbitType *NewOrb;
+   memcpy(destOrb, &srcOrb, sizeof(struct OrbitType));
 
-   (*Norb)++;
-   NewOrb =
-       (struct OrbitType *)realloc(OldOrb, (*Norb) * sizeof(struct OrbitType));
-   if (NewOrb == NULL) {
-      fprintf(stderr, "Realloc failed in CloneOrbit\n");
-      exit(EXIT_FAILURE);
+   if (srcOrb.Ncheb) {
+      destOrb->Cheb = malloc(srcOrb.Ncheb * sizeof(struct Cheb3DType));
+      for (int i = 0; i < destOrb->Ncheb; i++)
+         memcpy(&destOrb->Cheb[i], &srcOrb.Cheb[i], sizeof(struct Cheb3DType));
    }
-   memcpy(&NewOrb[(*Norb) - 1], &NewOrb[Iorb], sizeof(struct OrbitType));
-   return (NewOrb);
 }
 /**********************************************************************/
 void eccFDF(const double E, double params[2], double *f, double *fp)

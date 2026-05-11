@@ -332,14 +332,13 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
 }
 
 /**********************************************************************/
-void GravGradFrcTrq(struct WorldType *const worlds,
-                    struct OrbitType *const orbs, struct SCType *S)
+void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
+                    struct SCType *S)
 {
    double r, rb[3], Coef, axIoa[3];
    double rhat[3], c[3], rhatoc;
    long Ib, i;
    struct BodyType *B;
-   struct OrbitType *O;
    struct WorldType *W;
    double GravGradN[3][3], CGG[3][3], GravGradB[3][3], GGxI[3], GGxpn[3];
    double FrcN[3], FrcB[3];
@@ -350,11 +349,9 @@ void GravGradFrcTrq(struct WorldType *const worlds,
       S->gravTrqB[i] = 0;
    }
 
-   O = &orbs[S->RefOrb];
-
-   if ((O->Regime == ORB_ZERO || O->Regime == ORB_FLIGHT) &&
-       O->PolyhedronGravityEnabled) {
-      W = &worlds[O->World];
+   if ((orb->Regime == ORB_ZERO || orb->Regime == ORB_FLIGHT) &&
+       orb->PolyhedronGravityEnabled) {
+      W = &worlds[orb->World];
       PolyhedronGravGrad(&Geom[W->GeomTag], W->Density, S->PosN, W->CWN,
                          GravGradN);
 
@@ -391,7 +388,7 @@ void GravGradFrcTrq(struct WorldType *const worlds,
    }
    else {
       r    = CopyUnitV(S->PosN, rhat);
-      Coef = orbs[S->RefOrb].mu / (r * r * r);
+      Coef = orb->mu / (r * r * r);
 
       if (S->Nb == 1) {
          B = &S->B[0];
@@ -521,10 +518,9 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
 }
 /**********************************************************************/
 void GravPertForceRK4(struct WorldType *const worlds,
-                      struct OrbitType *const orbs, struct SCType *S,
+                      struct OrbitType *const orb, struct SCType *S,
                       double u[6], double FrcN[3], double RKFdt)
 {
-   struct OrbitType *O;
    double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
    double FrcN_harm[3] = {0}, SCPosN_harm[3] = {0};
    long Iw, Im, j;
@@ -546,8 +542,7 @@ void GravPertForceRK4(struct WorldType *const worlds,
       }
    }
 
-   O         = &orbs[S->RefOrb];
-   OrbCenter = O->World;
+   OrbCenter = orb->World;
    SecCenter = -1; /* Nonsense value */
 
    struct WorldType *WCenter = &worlds[OrbCenter];
@@ -626,7 +621,7 @@ void GravPertForceRK4(struct WorldType *const worlds,
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
-void AeroFrcTrq(struct WorldType *const worlds, struct OrbitType *const orbs,
+void AeroFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
                 struct SCType *S)
 {
 
@@ -646,7 +641,7 @@ void AeroFrcTrq(struct WorldType *const worlds, struct OrbitType *const orbs,
       S->aeroTrqB[i] = 0;
    }
 
-   OrbCenter = orbs[S->RefOrb].World;
+   OrbCenter = orb->World;
 
    /* .. Find Velocity Relative to Atmosphere, expressed in N */
    VrelN[0]  = S->VelN[0] + worlds[OrbCenter].w * S->PosN[1];
@@ -1104,40 +1099,24 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
    }
 }
 /**********************************************************************/
-void ContactFrcTrq(struct OrbitType *const orbs, struct SCType *S)
+void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
+                     const long sc_id)
 {
-   struct OrbitType *O;
-   struct RegionType *R;
+   // TODO: split this between sc and not sc contacts. sc contact forces will
+   // need to be outside the integrator.
    struct SCType *Sc;
    struct BodyType *Bi, *Bj;
    struct GeomType *Gi, *Gj;
    double dx[3], cmb[3], cmni[3], cmnj[3];
-   long Ir, i, Ib, Isc, Jb;
+   long i, Isc, Ib, Jb;
 
-   O = &orbs[S->RefOrb];
-
-   /* .. Contact with Regions */
-   for (Ir = 0; Ir < Nrgn; Ir++) {
-      R = &Rgn[Ir];
-      /* Cheap proximity checks */
-      if (!R->Exists)
-         continue;
-      if (R->World != O->World)
-         continue;
-      for (i = 0; i < 3; i++)
-         dx[i] = S->PosN[i] - R->PosN[i];
-      if (MAGV(dx) > S->BBox.radius + Geom[R->GeomTag].BBox.radius)
-         continue;
-
-      /* Check each body vs Region */
-      for (Ib = 0; Ib < S->Nb; Ib++) {
-         BodyRgnContactFrcTrq(S, Ib, R);
-      }
-   }
+   struct SCType *S    = &scs[sc_id];
+   struct OrbitType *O = &orbs[S->RefOrb];
 
    /* .. Contact with other S/C */
    for (Isc = S->ID + 1; Isc < Nsc; Isc++) {
-      Sc = &SC[Isc];
+      // start from S->ID + 1 to avoid double counting forces
+      Sc = &scs[Isc];
       /* Cheap S/Sc proximity checks */
       if (!Sc->Exists)
          continue;
@@ -1171,6 +1150,34 @@ void ContactFrcTrq(struct OrbitType *const orbs, struct SCType *S)
                continue;
             BodyBodyContactFrcTrq(S, Ib, Sc, Jb);
          }
+      }
+   }
+}
+/**********************************************************************/
+void NonSCContactFrcTrq(struct OrbitType *const O, struct SCType *S)
+{
+   // TODO: split this between sc and not sc contacts. sc contact forces will
+   // need to be outside the integrator.
+   struct RegionType *R;
+   double dx[3];
+   long Ir, i, Ib;
+
+   /* .. Contact with Regions */
+   for (Ir = 0; Ir < Nrgn; Ir++) {
+      R = &Rgn[Ir];
+      /* Cheap proximity checks */
+      if (!R->Exists)
+         continue;
+      if (R->World != O->World)
+         continue;
+      for (i = 0; i < 3; i++)
+         dx[i] = S->PosN[i] - R->PosN[i];
+      if (MAGV(dx) > S->BBox.radius + Geom[R->GeomTag].BBox.radius)
+         continue;
+
+      /* Check each body vs Region */
+      for (Ib = 0; Ib < S->Nb; Ib++) {
+         BodyRgnContactFrcTrq(S, Ib, R);
       }
    }
 }
@@ -1236,22 +1243,22 @@ void EnvTrq(struct SCType *S)
 /*  as desired to each spacecraft.                                    */
 /*  Remember that torques are expressed in the Body frame, but forces */
 /*  are expressed in the N frame.                                     */
-
-void Perturbations(struct WorldType *const worlds, struct OrbitType *const orbs,
+void Perturbations(struct WorldType *const worlds, struct OrbitType *const O,
                    struct SCType *S)
 {
-
+   // Only need up to 2 of the worlds, and that is only in the case of a 3 body
+   // orbit
    /* .. Gravity-Gradient Torques */
    if (GGActive)
-      GravGradFrcTrq(worlds, orbs, S);
+      GravGradFrcTrq(worlds, O, S);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive && orbs[S->RefOrb].Regime != ORB_N_BODY)
-      GravPertForce(worlds, orbs, S);
+   if (GravPertActive && O->Regime != ORB_N_BODY)
+      GravPertForce(worlds, O, S);
 
    /* .. Aerodynamic Forces and Torques */
    if (AeroActive)
-      AeroFrcTrq(worlds, orbs, S);
+      AeroFrcTrq(worlds, O, S);
 
    /* .. Solar Radiation Pressure Forces and Torques */
    if (SolPressActive)
@@ -1263,7 +1270,7 @@ void Perturbations(struct WorldType *const worlds, struct OrbitType *const orbs,
 
    /* .. Contact Forces and Torques */
    if (ContactActive)
-      ContactFrcTrq(orbs, S);
+      NonSCContactFrcTrq(O, S);
 
    /* .. CFD Slosh Forces and Torques */
 #ifdef _ENABLE_CFD_SLOSH_

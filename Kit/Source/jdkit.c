@@ -775,6 +775,18 @@ static void _reduce(JDType *const jd)
    ReduceRational(&jd->seconds);
 }
 
+JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
+              const Rational seconds)
+{
+   JDType jd;
+   jd.epoch      = epoch;
+   jd.system     = system;
+   jd.whole_days = days;
+   jd.seconds    = seconds;
+   _reduce(&jd);
+   return jd;
+}
+
 JDType JDAdd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "JDAdd");
@@ -825,16 +837,19 @@ JDType JDSub(const JDType a, const JDType b)
    _reduce(&jdout);
    return jdout;
 }
+
 JDType JDSubDays(const JDType a, const double b)
 {
    JDType jdb = JDFromDays(b, a.system, a.epoch);
    return JDSub(a, jdb);
 }
+
 JDType JDSubSeconds(const JDType a, const double b)
 {
    JDType jdb = JDFromSeconds(b, a.system, a.epoch);
    return JDSub(a, jdb);
 }
+
 JDType JDSubRationalSeconds(const JDType a, const Rational b)
 {
    JDType jdb  = {0};
@@ -845,13 +860,64 @@ JDType JDSubRationalSeconds(const JDType a, const Rational b)
    return JDSub(a, jdb);
 }
 
+JDType JDaxpy(const double a, JDType x, JDType y)
+{
+   // The operation 'z = a * x + y' for 'x' and 'y' being JDType and 'a' being
+   // a scalar double
+   // TODO: this is quite hacky to "just work" for its usage in rkkit
+   x.whole_days   *= a;
+   Rational a_rat  = double2rational(a);
+   x.seconds       = RationalMult(a_rat, x.seconds);
+
+   x.epoch  = y.epoch;
+   x.system = y.system;
+   _reduce(&x);
+
+   return JDAdd(x, y);
+}
+
 double JDAddToDays(const JDType a, const JDType b)
 {
    return JDToDays(JDAdd(a, b));
 }
+
+double JDAddToSeconds(const JDType a, const JDType b)
+{
+   return JDToSeconds(JDAdd(a, b));
+}
+
 double JDSubToDays(const JDType a, const JDType b)
 {
    return JDToDays(JDSub(a, b));
+}
+
+double JDSubToSeconds(const JDType a, const JDType b)
+{
+   return JDToSeconds(JDSub(a, b));
+}
+
+JDType JDAbs(JDType jd)
+{
+   jd.whole_days = labs(jd.whole_days);
+   jd.seconds    = RationalAbs(jd.seconds);
+   return jd;
+}
+
+int ispos_jd(JDType jd)
+{
+   JDChangeEpoch(ZERO_EPOCH, &jd);
+   _reduce(&jd);
+   return (jd.whole_days > 0 ||
+           (jd.whole_days == 0 && ispos_rational(jd.seconds)));
+}
+
+JDType JDNegate(JDType jd)
+{
+   JDChangeEpoch(ZERO_EPOCH, &jd);
+   _reduce(&jd);
+   jd.whole_days = -jd.whole_days;
+   jd.seconds    = RationalNegate(jd.seconds);
+   return jd;
 }
 
 int isequal_jd(const JDType a, const JDType b)
@@ -860,6 +926,7 @@ int isequal_jd(const JDType a, const JDType b)
    return ((a.whole_days == b.whole_days) &&
            isequal_rational(a.seconds, b.seconds));
 }
+
 int isless_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isless_jd");
@@ -868,11 +935,13 @@ int isless_jd(const JDType a, const JDType b)
        (a.whole_days == b.whole_days) && isless_rational(a.seconds, b.seconds);
    return is_day_less || is_sec_less;
 }
+
 int islessequal_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "islessequal_jd");
    return isequal_jd(a, b) || isless_jd(a, b);
 }
+
 int isgreater_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isgreater_jd");
@@ -881,6 +950,7 @@ int isgreater_jd(const JDType a, const JDType b)
                               isgreater_rational(a.seconds, b.seconds);
    return is_day_greater || is_sec_greater;
 }
+
 int isgreaterequal_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isgreaterequal_jd");

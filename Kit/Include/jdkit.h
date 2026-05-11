@@ -70,6 +70,14 @@ typedef struct JDType {
    Rational seconds;
 } JDType;
 
+#define JD_ZERO                                                                \
+   ((JDType){.system     = TT_TIME,                                            \
+             .epoch      = ZERO_EPOCH,                                         \
+             .whole_days = 0,                                                  \
+             .seconds    = RATIONAL_ZERO})
+
+JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
+              const Rational seconds);
 double GetLeapSec(const JDType jd);
 double EpochValueTT(EpochTT epoch);
 void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd);
@@ -94,8 +102,15 @@ JDType JDSub(const JDType a, const JDType b);
 JDType JDSubDays(const JDType a, const double b);
 JDType JDSubSeconds(const JDType a, const double b);
 JDType JDSubRationalSeconds(const JDType a, const Rational b);
+JDType JDaxpy(const double a, const JDType x, JDType y);
 double JDAddToDays(const JDType a, const JDType b);
+double JDAddToSeconds(const JDType a, const JDType b);
 double JDSubToDays(const JDType a, const JDType b);
+double JDSubToSeconds(const JDType a, const JDType b);
+
+JDType JDAbs(JDType jd);
+int ispos_jd(JDType jd);
+JDType JDNegate(JDType jd);
 
 int isequal_jd(const JDType a, const JDType b);
 int isless_jd(const JDType a, const JDType b);

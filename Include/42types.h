@@ -15,6 +15,7 @@
 #include "DSMTypes.h"
 #include "geomkit.h"
 #include "orbkit.h"
+#include "rkkit.h"
 #include "sigkit.h"
 
 #ifndef __42TYPES_H__
@@ -713,133 +714,6 @@ struct EnvTrqType {
    double Hs[3];
 };
 
-struct SCType {
-   /*~ Internal Variables ~*/
-   long ID; /* SC[x].ID = x */
-   long Exists;
-   char Label[40];
-   long DynMethod; /* GAUSS_ELIM, ORDER_N */
-   long OrbDOF;    /* FIXED, EULER_HILL, ENCKE, COWELL */
-   long RefOrb;
-   enum fswType FswTag; /* Tag for FSW function, eg. PROTOTYPE_FSW */
-   double FswSampleTime;
-   long FswMaxCounter;
-   long FswSampleCounter;
-   long InitAC;
-   long InitDSM;
-
-   double aeroProjectedArea;
-   double srpProjectedArea;
-   double gravTrqB[3];
-   double gravTrqN[3];
-   double srpTrqB[3];
-   double srpTrqN[3];
-   double aeroTrqB[3];
-   double aeroTrqN[3];
-   double srpFrcB[3];
-   double srpFrcN[3];
-   double aeroFrcB[3];
-   double aeroFrcN[3];
-
-   long Nb; /* Number of bodies */
-   long Ng; /* Number of joints, = Nb-1 */
-
-   long Nw;   /* Number of wheels */
-   long Nmtb; /* Number of MTB's */
-   long Nthr; /* Number of thrusters */
-
-   long Ngyro; /* Number of Gyro axes */
-   long Nmag;  /* Number of magnetometer axes */
-   long Ncss;  /* Number of coarse sun sensors */
-   long Nfss;  /* Number of Fine Sun Sensors */
-   long Nst;   /* Number of star trackers */
-   long Ngps;  /* Number of GPS receivers */
-   long Nacc;  /* Number of accelerometer axes */
-   long Nfgs;  /* Number of Fine Guidance Sensors */
-   long Nsh;   /* Number of shakers */
-
-   double mass;
-   double cm[3];     /* wrt B0 origin, expressed in B0 frame */
-   double I[3][3];   /* Inertia matrix, wrt SC.cm, expressed in B0 frame */
-   double PosR[3];   /* Position of cm wrt Reference Orbit [[m]], expressed in N
-                        [~=~] */
-   double VelR[3];   /* Velocity of cm wrt R [[m/s]], expressed in N [~=~] */
-   double PosEH[3];  /* Position of cm wrt R, m, in Euler-Hill coords */
-   double VelEH[3];  /* Velocity of cm wrt R, m, in Euler-Hill coords */
-   double PosN[3];   /* Position of cm wrt origin of N, m, expressed in N */
-   double VelN[3];   /* Velocity of cm wrt origin of N, m/sec, expressed in N */
-   double CLN[3][3]; /* Note that SC.CLN != Orb[RefOrb].CLN if SC.PosR != 0.0 */
-   double CEN[3]
-             [3];  /* E = Equatorial frame: e1 = North, e2 = East, e3 = Nadir */
-   double wln[3];  /* Expressed in N */
-   double PosH[3]; /* Position of cm wrt H frame, expressed in H */
-   double VelH[3]; /* Velocity of cm wrt H frame, expressed in H */
-   double FrcN[3]; /* Force, N, expressed in N */
-   double AccN[3]; /* Acceleration due to external force, for accelerometer
-                      model */
-   double svn[3];  /* Sun-pointing unit vector, expressed in N */
-   double svb[3];  /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
-   double bvn[3];  /* Magfield, Tesla, expressed in N */
-   double bvb[3];  /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
-   double Hvn[3];  /* Total SC angular momentum, Nms, expressed in N */
-   double Hvb[3];  /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
-                      [~=~] */
-   long Eclipse;
-   double AtmoDensity;
-   double DragCoef;
-   char FileName[50];
-   char SpriteFileName[40];
-   unsigned int SpriteTexTag;
-   /* The following are for OSCAR */
-   double PosF[3];  /* Position of B0 origin wrt F, expressed in F */
-   double VelF[3];  /* Velocity of B0 origin wrt F, expressed in F */
-   double CF[3][3]; /* Attitude of B0 wrt F */
-   /* Constraint forces and torques are computed if requested */
-   long ConstraintsRequested;
-   /* Mass and flex properties referred to REFPT_CM or REFPT_JOINT */
-   long RefPt;
-   /* Flexible Dynamics Active */
-   long FlexActive;
-   /* Include higher-order coupling terms in rigid-flex dynamics */
-   long IncludeSecondOrderFlexTerms;
-   char ShakerFileName[40];
-   long WhlDragActive;
-   long WhlJitterActive;
-   /* Workspace for KaneNBody */
-   struct DynType Dyn;
-   /* Workspace for Actuator Sizing */
-   struct EnvTrqType EnvTrq;
-   /* Bounding Box used for shadowmap */
-   struct BoundingBoxType BBox;
-   /* See ReadStatesFromSocket */
-   long RequestStateRefresh;
-
-   /* For stability analysis */
-   long GainAndDelayActive;
-   double LoopGain;
-   double LoopDelay;
-
-   /*~ Structures ~*/
-   struct AcType AC;
-   struct DSMType DSM;
-   struct BodyType *B;  /* [*Nb*] */
-   struct JointType *G; /* [*Ng*] */
-   struct JointType GN; /* Joint between N and B[0] */
-   struct IdealActType IdealAct[3];
-   struct WhlType *Whl;          /* [*Nw*] */
-   struct MTBType *MTB;          /* [*Nmtb*] */
-   struct ThrType *Thr;          /* [*Nthr*] */
-   struct GyroType *Gyro;        /* [*Ngyro*] */
-   struct MagnetometerType *MAG; /* [*Nmag*] */
-   struct CssType *CSS;          /* [*Ncss*] */
-   struct FssType *FSS;          /* [*Nfss*] */
-   struct StarTrackerType *ST;   /* [*Nst*] */
-   struct GpsType *GPS;          /* [*Ngps*] */
-   struct AccelType *Accel;      /* [*Nacc*] */
-   struct FgsType *Fgs;          /* [*Nfgs*] */
-   struct ShakerType *Shaker;    /* [*Nsh*] */
-};
-
 struct TargetType {
    /*~ Internal Variables ~*/
    long Type;
@@ -992,6 +866,149 @@ struct WorldType {
    /*~ Structures ~*/
    struct OrbitType eph; /* Ephemeris */
    struct AtmoType Atmo;
+};
+
+struct SCType;
+typedef struct SCRKParams {
+   RKParams base;
+   // TODO: a full allocation of the World array is 126620 bytes and this stores
+   // a copy for each sc. maybe just a global level allocation of a backup
+   // array, and then the below item just shares the pointer between the SCs.
+   struct WorldType *worlds;                  // duplicate of the global World
+   struct RegionType *rgn;                    // duplicate of the global Rgn
+   struct LagrangeSystemType lagsys[NLAGSYS]; // duplicate of all lagsystems
+   struct OrbitType orb;                      // duplicate of sc's orbit
+   struct FormationType frm;                  // duplicate of sc's formation
+   struct SCType *sc;
+} SCRKParams;
+
+struct SCType {
+   /*~ Internal Variables ~*/
+   long ID; /* SC[x].ID = x */
+   long Exists;
+   char Label[40];
+   long DynMethod; /* GAUSS_ELIM, ORDER_N */
+   long OrbDOF;    /* FIXED, EULER_HILL, ENCKE, COWELL */
+   long RefOrb;
+   enum fswType FswTag; /* Tag for FSW function, eg. PROTOTYPE_FSW */
+   double FswSampleTime;
+   long FswMaxCounter;
+   long FswSampleCounter;
+   long InitAC;
+   long InitDSM;
+
+   double aeroProjectedArea;
+   double srpProjectedArea;
+   double gravTrqB[3];
+   double gravTrqN[3];
+   double srpTrqB[3];
+   double srpTrqN[3];
+   double aeroTrqB[3];
+   double aeroTrqN[3];
+   double srpFrcB[3];
+   double srpFrcN[3];
+   double aeroFrcB[3];
+   double aeroFrcN[3];
+
+   long Nb; /* Number of bodies */
+   long Ng; /* Number of joints, = Nb-1 */
+
+   long Nw;   /* Number of wheels */
+   long Nmtb; /* Number of MTB's */
+   long Nthr; /* Number of thrusters */
+
+   long Ngyro; /* Number of Gyro axes */
+   long Nmag;  /* Number of magnetometer axes */
+   long Ncss;  /* Number of coarse sun sensors */
+   long Nfss;  /* Number of Fine Sun Sensors */
+   long Nst;   /* Number of star trackers */
+   long Ngps;  /* Number of GPS receivers */
+   long Nacc;  /* Number of accelerometer axes */
+   long Nfgs;  /* Number of Fine Guidance Sensors */
+   long Nsh;   /* Number of shakers */
+
+   double mass;
+   double cm[3];     /* wrt B0 origin, expressed in B0 frame */
+   double I[3][3];   /* Inertia matrix, wrt SC.cm, expressed in B0 frame */
+   double PosR[3];   /* Position of cm wrt Reference Orbit [[m]], expressed in N
+                        [~=~] */
+   double VelR[3];   /* Velocity of cm wrt R [[m/s]], expressed in N [~=~] */
+   double PosEH[3];  /* Position of cm wrt R, m, in Euler-Hill coords */
+   double VelEH[3];  /* Velocity of cm wrt R, m, in Euler-Hill coords */
+   double PosN[3];   /* Position of cm wrt origin of N, m, expressed in N */
+   double VelN[3];   /* Velocity of cm wrt origin of N, m/sec, expressed in N */
+   double CLN[3][3]; /* Note that SC.CLN != Orb[RefOrb].CLN if SC.PosR != 0.0 */
+   double CEN[3]
+             [3];  /* E = Equatorial frame: e1 = North, e2 = East, e3 = Nadir */
+   double wln[3];  /* Expressed in N */
+   double PosH[3]; /* Position of cm wrt H frame, expressed in H */
+   double VelH[3]; /* Velocity of cm wrt H frame, expressed in H */
+   double FrcN[3]; /* Force, N, expressed in N */
+   double AccN[3]; /* Acceleration due to external force, for accelerometer
+                      model */
+   double svn[3];  /* Sun-pointing unit vector, expressed in N */
+   double svb[3];  /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
+   double bvn[3];  /* Magfield, Tesla, expressed in N */
+   double bvb[3];  /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
+   double Hvn[3];  /* Total SC angular momentum, Nms, expressed in N */
+   double Hvb[3];  /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
+                      [~=~] */
+   long Eclipse;
+   double AtmoDensity;
+   double DragCoef;
+   char FileName[50];
+   char SpriteFileName[40];
+   unsigned int SpriteTexTag;
+   /* The following are for OSCAR */
+   double PosF[3];  /* Position of B0 origin wrt F, expressed in F */
+   double VelF[3];  /* Velocity of B0 origin wrt F, expressed in F */
+   double CF[3][3]; /* Attitude of B0 wrt F */
+   /* Constraint forces and torques are computed if requested */
+   long ConstraintsRequested;
+   /* Mass and flex properties referred to REFPT_CM or REFPT_JOINT */
+   long RefPt;
+   /* Flexible Dynamics Active */
+   long FlexActive;
+   /* Include higher-order coupling terms in rigid-flex dynamics */
+   long IncludeSecondOrderFlexTerms;
+   char ShakerFileName[40];
+   long WhlDragActive;
+   long WhlJitterActive;
+   /* Workspace for KaneNBody */
+   struct DynType Dyn;
+   /* Workspace for Actuator Sizing */
+   struct EnvTrqType EnvTrq;
+   /* Bounding Box used for shadowmap */
+   struct BoundingBoxType BBox;
+   /* See ReadStatesFromSocket */
+   long RequestStateRefresh;
+
+   /* For stability analysis */
+   long GainAndDelayActive;
+   double LoopGain;
+   double LoopDelay;
+
+   /*~ Structures ~*/
+   RungeKutta RKIntegrator;
+   SCRKParams rkparams;
+   struct AcType AC;
+   struct DSMType DSM;
+   struct BodyType *B;  /* [*Nb*] */
+   struct JointType *G; /* [*Ng*] */
+   struct JointType GN; /* Joint between N and B[0] */
+   struct IdealActType IdealAct[3];
+   struct WhlType *Whl;          /* [*Nw*] */
+   struct MTBType *MTB;          /* [*Nmtb*] */
+   struct ThrType *Thr;          /* [*Nthr*] */
+   struct GyroType *Gyro;        /* [*Ngyro*] */
+   struct MagnetometerType *MAG; /* [*Nmag*] */
+   struct CssType *CSS;          /* [*Ncss*] */
+   struct FssType *FSS;          /* [*Nfss*] */
+   struct StarTrackerType *ST;   /* [*Nst*] */
+   struct GpsType *GPS;          /* [*Ngps*] */
+   struct AccelType *Accel;      /* [*Nacc*] */
+   struct FgsType *Fgs;          /* [*Nfgs*] */
+   struct ShakerType *Shaker;    /* [*Nsh*] */
 };
 
 struct SpotType {

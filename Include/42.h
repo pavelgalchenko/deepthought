@@ -36,6 +36,7 @@
 #include "mathkit.h"
 #include "orbkit.h"
 #include "rationalkit.h"
+#include "rkkit.h"
 #include "sigkit.h"
 #include "sphkit.h"
 #include "timekit.h"
@@ -131,7 +132,8 @@ EXTERN double SchattenTable[5][1009]; /* JD TT GMAT MJD, +2sig F10.7, Nom F10.7,
                                          +2sig Kp, Nom Kp */
 
 EXTERN struct WorldType World[NWORLD];
-EXTERN struct LagrangeSystemType LagSys[3];
+EXTERN struct WorldType World_dupe[NWORLD];
+EXTERN struct LagrangeSystemType LagSys[NLAGSYS];
 
 /* Galactic Coordinate Frame */
 EXTERN double CGH[3][3];
@@ -204,14 +206,26 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
                     double trgtCNH[3][3]);
 
 long SimStep(void);
-void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
-                 struct OrbitType *const orbs, const JDType jd);
-void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
-                 double Time);
+void ZeroFrcTrq(struct SCType *S);
+void CloneWorld(struct WorldType *const dest, const struct WorldType src);
+void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
+                      struct RegionType *rgn,
+                      struct LagrangeSystemType *lagsys);
+void SCEphemerides(const JDType jd, struct SCType *sc,
+                   struct WorldType *const world, struct OrbitType *const orb);
+void Ephemerides(const JDType jd, struct SCType *scs,
+                 struct WorldType *const worlds, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys,
+                 struct OrbitType *const orbs);
+void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys, struct OrbitType *const O,
+                 struct FormationType *const frm, double dyntime);
 void Environment(JDType jd, struct WorldType *const worlds,
                  struct OrbitType *const orbs, struct SCType *S);
 void Perturbations(struct WorldType *const worlds, struct OrbitType *const orbs,
                    struct SCType *S);
+void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
+                     const long sc_id);
 void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
              struct SCType *S);
 void SensorDriver(struct SCType *S);
@@ -230,7 +244,7 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
 void BodyStatesToNodeStates(struct SCType *S);
 void PartitionForces(struct SCType *S);
 void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
-              struct SCType *S);
+              struct FormationType *const frm, struct SCType *S);
 void Cleanup(void);
 void FindInterBodyDCMs(struct SCType *S);
 void FindPathVectors(struct SCType *S);
@@ -299,7 +313,8 @@ void UpdateLagrangePoints(void);
 long LoadTRVfromFile(const char *Path, const char *TrvFileName,
                      const char *ElemLabel, double DynTime,
                      struct OrbitType *O);
-void SplineToPosVel(struct OrbitType *O, const double dyntime);
+void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
+                    const double dyntime);
 
 void CfdSlosh(struct SCType *S);
 void FakeCfdSlosh(struct SCType *S);

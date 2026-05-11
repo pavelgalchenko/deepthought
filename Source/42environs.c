@@ -25,9 +25,8 @@
 /**********************************************************************/
 /* #define _RADBELT_ */
 void Environment(JDType jd, struct WorldType *const worlds,
-                 struct OrbitType *const orbs, struct SCType *S)
+                 struct OrbitType *const orb, struct SCType *S)
 {
-   struct OrbitType *O;
    struct WorldType *P;
    double Alt;
    double PosW[3];
@@ -45,15 +44,14 @@ void Environment(JDType jd, struct WorldType *const worlds,
    }
 #endif
 
-   O = &orbs[S->RefOrb];
-   P = &worlds[O->World];
+   P = &worlds[orb->World];
 
    /* .. Magnetic Field */
    if (MagModel.Type == DIPOLE) {
       DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset, S->PosN,
                      P->PriMerAng, S->bvn);
    }
-   else if (MagModel.Type == IGRF && O->World == EARTH) {
+   else if (MagModel.Type == IGRF && orb->World == EARTH) {
       DateType utc_date = JDToDate(jd, UTC_TIME);
       IGRFMagField(ModelPath, utc_date, MagModel.N, MagModel.M, S->PosN,
                    P->PriMerAng, S->bvn);
@@ -70,7 +68,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
    DateType date_tt = JDToDate(jd, TT_TIME);
 
    /* .. Atmospheric Density */
-   if (O->World == EARTH) {
+   if (orb->World == EARTH) {
       const double jd_day = JDToDays(jd);
       if (AtmoOption == TWOSIGMA_ATMO) {
          Flux10p7 = LinInterp(SchattenTable[0], SchattenTable[1], jd_day, 1009);
@@ -93,7 +91,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
          S->AtmoDensity = 0.0;
    }
 
-   else if (O->World == MARS) {
+   else if (orb->World == MARS) {
       S->AtmoDensity = MarsAtmosphereModel(S->PosN);
    }
 
@@ -102,7 +100,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
 
    /* .. Radiation Belt Electron and Proton Fluxes, particles/cm^2/sec */
 #ifdef _RADBELT_
-   if (O->World == EARTH) {
+   if (orb->World == EARTH) {
       MxV(World[EARTH].CWN, S->PosN, PosW);
       UNITV(PosW);
       MagLat = asin(VoV(PosW, World[EARTH].DipoleAxis));

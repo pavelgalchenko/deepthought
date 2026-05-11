@@ -164,12 +164,14 @@ static Rat_ULongLong _absll(Rat_LongLong x)
 #endif
 
 #if __SIZEOF_RATLONG__ != __SIZEOF_LONG__
-static Rat_ULong absl(Rat_Long x)
+static Rat_ULong _absl(Rat_Long x)
 {
    if (x >= 0)
       return x;
    return -x;
 }
+#else
+#define _absl (labs)
 #endif
 
 #ifndef MAX
@@ -219,8 +221,8 @@ static Rat_Long _gcdl(Rat_Long a, Rat_Long b)
       return b;
    if (b == 0L)
       return a;
-   a = labs(a);
-   b = labs(b);
+   a = _absl(a);
+   b = _absl(b);
 
    // TODO: __builtin_ctzl is a gcc builtin for determining the number of
    // trailing zeros in an unsigned integer type. Will need to do our own
@@ -284,7 +286,7 @@ static void _reduce(Rational *const rat)
 {
    rat->whole += rat->num / rat->den;
    rat->num   %= rat->den;
-   if (rat->whole * rat->num < 0) {
+   if ((rat->whole ^ rat->num) < 0) {
       if (rat->whole > 0) {
          rat->num += rat->den;
          rat->whole--;
@@ -555,18 +557,18 @@ double rational2double(Rational rat)
 /**********************************************************************/
 Rat_Long RationalRoundUp(const Rational rat)
 {
-   return rat.whole + ((labs(rat.num) > 0 && rat.whole > 0) ? 1 : 0);
+   return rat.whole + ((_absl(rat.num) > 0 && rat.whole > 0) ? 1 : 0);
 }
 /**********************************************************************/
 Rat_Long RationalRoundDown(const Rational rat)
 {
-   return rat.whole - ((labs(rat.num) > 0 && rat.whole < 0) ? 1 : 0);
+   return rat.whole - ((_absl(rat.num) > 0 && rat.whole < 0) ? 1 : 0);
 }
 /**********************************************************************/
 Rational RationalAbs(Rational rat)
 {
-   rat.whole = labs(rat.whole);
-   rat.num   = labs(rat.num);
+   rat.whole = _absl(rat.whole);
+   rat.num   = _absl(rat.num);
    return rat;
 }
 /**********************************************************************/
@@ -575,6 +577,12 @@ Rational RationalNegate(Rational rat)
    rat.whole = -rat.whole;
    rat.num   = -rat.num;
    return rat;
+}
+/**********************************************************************/
+int ispos_rational(Rational a)
+{
+   _reduce(&a);
+   return (a.whole > 0 || (a.whole == 0 && a.num > 0));
 }
 /**********************************************************************/
 int isequal_rational(Rational a, Rational b)

@@ -51,6 +51,7 @@ Rat_Long RationalRoundUp(const Rational rat);
 Rat_Long RationalRoundDown(const Rational rat);
 Rational RationalAbs(Rational rat);
 Rational RationalNegate(Rational rat);
+int ispos_rational(Rational a);
 int isequal_rational(const Rational a, const Rational b);
 int isless_rational(const Rational a, const Rational b);
 int isgreater_rational(const Rational a, const Rational b);

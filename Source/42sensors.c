@@ -29,7 +29,7 @@
 /*  gravity terms apply equally to A and B[0].  (Assuming gravity-    */
 /*  gradient from non-spherical primary and 3rd-body forces is        */
 /*  negligible.)  Surface forces are included in S->         */
-void AccelerometerModel(struct OrbitType *orbs, struct SCType *S)
+void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
 {
    struct AccelType *A;
    struct BodyType *B;
@@ -59,7 +59,7 @@ void AccelerometerModel(struct OrbitType *orbs, struct SCType *S)
             AccGGB[i] = 0.0;
          if (GGActive) {
             r    = MAGV(S->PosN);
-            Coef = -3.0 * orbs[S->RefOrb].mu / (r * r * r);
+            Coef = -3.0 * orb->mu / (r * r * r);
             CopyUnitV(S->PosN, rhatn);
             MxV(B->CN, rhatn, rhat);
             MxV(B->CN, B->pn, p);
@@ -324,7 +324,7 @@ void FssModel(struct SCType *S)
 }
 /**********************************************************************/
 void StarTrackerModel(struct WorldType *const worlds,
-                      struct OrbitType *const orbs, struct SCType *S)
+                      struct OrbitType *const orb, struct SCType *S)
 {
    struct StarTrackerType *ST;
    struct NodeType *N;
@@ -356,7 +356,7 @@ void StarTrackerModel(struct WorldType *const worlds,
          if (BoS > ST->CosSunExclAng)
             ST->Valid = FALSE;
          /* Earth Occultation? (Generalized to whatever world we're orbiting) */
-         W       = &worlds[orbs[S->RefOrb].World];
+         W       = &worlds[orb->World];
          OrbRad  = MAGV(S->PosN);
          LimbAng = asin(W->rad / OrbRad);
          MxV(S->B[0].CN, S->CLN[2], NadirVecB);
@@ -365,7 +365,7 @@ void StarTrackerModel(struct WorldType *const worlds,
             ST->Valid = FALSE;
          /* Moon Occultation? (Only worked out if orbiting Earth.  Customize as
           * needed)*/
-         if ((ST->Valid == TRUE) && (orbs[S->RefOrb].World == EARTH)) {
+         if ((ST->Valid == TRUE) && (orb->World == EARTH)) {
             for (i = 0; i < 3; i++)
                mvn[i] = worlds[LUNA].eph.PosN[i] - S->PosN[i];
             MoonDist = UNITV(mvn);
@@ -397,7 +397,7 @@ void StarTrackerModel(struct WorldType *const worlds,
    }
 }
 /**********************************************************************/
-void GpsModel(struct WorldType *const worlds, struct OrbitType *const orbs,
+void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
               struct SCType *S)
 {
    struct GpsType *GPS;
@@ -414,7 +414,7 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orbs,
       GpsNoise   = CreateRandomProcess(2);
    }
 
-   if (orbs[S->RefOrb].World == EARTH) {
+   if (orb->World == EARTH) {
       for (Ig = 0; Ig < S->Ngps; Ig++) {
          GPS = &S->GPS[Ig];
 
@@ -623,7 +623,7 @@ void FgsModel(struct SCType *S)
 /**********************************************************************/
 /*  This function is called at the simulation rate.  Sub-sampling of  */
 /*  sensors should be done on a case-by-case basis.                   */
-void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
+void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
              struct SCType *S)
 {
 
@@ -643,7 +643,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
 
    /* Accelerometer */
    if (S->Nacc > 0) {
-      AccelerometerModel(orbs, S);
+      AccelerometerModel(orb, S);
    }
 
    /* Gyro */
@@ -656,7 +656,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
    }
 
    /* Magnetometer */
-   if (orbs[S->RefOrb].World == EARTH) {
+   if (orb->World == EARTH) {
       AC->MagValid = TRUE;
       if (S->Nmag == 0) {
          for (i = 0; i < 3; i++)
@@ -694,7 +694,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
       Q2C(AC->qbn, AC->CBN);
    }
    else {
-      StarTrackerModel(worlds, orbs, S);
+      StarTrackerModel(worlds, orb, S);
    }
 
    /* GPS Receiver (or ephem model) */
@@ -706,7 +706,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
       }
    }
    else {
-      GpsModel(worlds, orbs, S);
+      GpsModel(worlds, orb, S);
    }
 
    /* Earth Sensor */

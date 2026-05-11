@@ -2090,7 +2090,8 @@ void FindPVelc(struct SCType *S)
    }
 }
 /**********************************************************************/
-void KaneNBodyConstraints(struct SCType *S)
+void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
+                          double *a, double *uf, double *xf)
 {
    struct DynType *D;
    struct BodyType *B;
@@ -2104,7 +2105,7 @@ void KaneNBodyConstraints(struct SCType *S)
 
    D = &S->Dyn;
 
-   MapStateVectorToBodyStates(D->u, D->x, D->h, D->a, D->uf, D->xf, S);
+   MapStateVectorToBodyStates(u, x, h, a, uf, xf, S);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -2215,7 +2216,7 @@ void KaneNBodyConstraints(struct SCType *S)
    }
 }
 /**********************************************************************/
-void FindBodyAccelerations(struct SCType *S)
+void FindBodyAccelerations(struct SCType *S, double *du)
 {
    struct DynType *D;
    struct BodyType *B;
@@ -2229,11 +2230,123 @@ void FindBodyAccelerations(struct SCType *S)
          B->alpha[i] = B->AlphaR[i];
          B->accel[i] = S->FrcN[i] / S->mass + B->AccR[i];
          for (j = 0; j < D->Nu; j++) {
-            B->alpha[i] += D->PAngVel[3 * Ib + i][j] * D->du[j];
-            B->accel[i] += D->PVel[3 * Ib + i][j] * D->du[j];
+            B->alpha[i] += D->PAngVel[3 * Ib + i][j] * du[j];
+            B->accel[i] += D->PVel[3 * Ib + i][j] * du[j];
          }
       }
    }
+}
+/**********************************************************************/
+void KaneNBodyEOM_RK(struct SCType *S, double *const x_in,
+                     double *const xdot_out)
+{
+   struct DynType *D;
+   struct JointType *G;
+   double *u, *du;
+   double *x, *dx;
+   double *h, *dh;
+   double *a, *da;
+   double *uf, *duf;
+   double *xf, *dxf;
+   long i, iu, Ig;
+   long Nu, Nx, Nw, Nf;
+
+   /* Save some typing (and dereferencing) */
+   D  = &S->Dyn;
+   Nu = D->Nu;
+   Nx = D->Nx;
+   Nw = S->Nw;
+   Nf = D->Nf;
+
+   long offset = 0;
+
+   u       = &x_in[offset];
+   offset += Nu;
+   x       = &x_in[offset];
+   offset += Nx;
+   h       = &x_in[offset];
+   offset += Nw;
+   a       = &x_in[offset];
+   offset += Nw;
+   uf      = &x_in[offset];
+   offset += Nf;
+   xf      = &x_in[offset];
+
+   du  = D->du;
+   dx  = D->dx;
+   dh  = D->dh;
+   da  = D->da;
+   duf = D->duf;
+   dxf = D->dxf;
+
+   /* State vector initialized in InitKaneNBody() */
+
+   /* .. Check for Locked Joint DOFs */
+   for (i = 0; i < 3; i++)
+      D->ActiveStateIdx[i] = i; /* Body 0 angular DOF never locked */
+   D->Ns = 3;
+   iu    = 3;
+   for (Ig = 0; Ig < S->Ng; Ig++) {
+      G               = &S->G[Ig];
+      G->ActiveRotu0  = D->Ns;
+      G->ActiveRotDOF = 0;
+      for (i = 0; i < G->RotDOF; i++) {
+         if (!G->RotLocked[i]) {
+            G->ActiveRotDOF++;
+            D->ActiveStateIdx[D->Ns] = iu;
+            D->Ns++;
+         }
+         else {
+            u[iu] = 0.0;
+         }
+         iu++;
+      }
+      G->ActiveTrnu0  = D->Ns;
+      G->ActiveTrnDOF = 0;
+      for (i = 0; i < G->TrnDOF; i++) {
+         if (!G->TrnLocked[i]) {
+            G->ActiveTrnDOF++;
+            D->ActiveStateIdx[D->Ns] = iu;
+            D->Ns++;
+         }
+         else {
+            u[iu] = 0.0;
+         }
+         iu++;
+      }
+   }
+   for (i = 0; i < 3; i++) { /* Body 0 translational DOF never locked */
+      D->ActiveStateIdx[D->Ns] = iu;
+      D->Ns++;
+      iu++;
+   }
+   D->SomeJointsLocked  = ((D->Ns == D->Nu) ? 0 : 1);
+   D->Ns               += D->Nf;
+
+   /*  Calculate the eom */
+   KaneNBodyEOM(u, x, h, a, uf, xf, du, dx, dh, da, duf, dxf, S);
+
+   // TODO: in the original version, this is only called once after the first
+   // eom call
+   /* This call must be made here, so that du is taken at the */
+   /* same instant as all the other configuration variables */
+   if (S->ConstraintsRequested) {
+      KaneNBodyConstraints(S, u, x, h, a, uf, xf);
+   }
+   FindBodyAccelerations(S, du);
+
+   offset = 0;
+   CopyVG(&xdot_out[offset], du, Nu);
+   offset += Nu;
+   CopyVG(&xdot_out[offset], dx, Nx);
+   offset += Nx;
+   CopyVG(&xdot_out[offset], dh, Nw);
+   offset += Nw;
+   CopyVG(&xdot_out[offset], da, Nw);
+   offset += Nw;
+   CopyVG(&xdot_out[offset], duf, Nf);
+   offset += Nf;
+   CopyVG(&xdot_out[offset], dxf, Nf);
 }
 /**********************************************************************/
 void KaneNBodyRK4(struct SCType *S)
@@ -2356,9 +2469,9 @@ void KaneNBodyRK4(struct SCType *S)
    /* This call must be made here, so that du is taken at the */
    /* same instant as all the other configuration variables */
    if (S->ConstraintsRequested) {
-      KaneNBodyConstraints(S);
+      KaneNBodyConstraints(S, D->u, D->x, D->h, D->a, D->uf, D->xf);
    }
-   FindBodyAccelerations(S);
+   FindBodyAccelerations(S, D->du);
 
    /* Second Call */
    KaneNBodyEOM(uu, xx, hh, aa, uuf, xxf, du, dx, dh, da, duf, dxf, S);
@@ -3401,6 +3514,112 @@ void OrderNMultiBodyEOM(struct SCType *S)
    }
 }
 /******************************************************************************/
+void OrderNMultiBodyEOM_RK(struct SCType *S, double *const x_in,
+                           double *const xdot_out)
+{
+   struct DynType *D; /* Copy to/from D->u, D->x */
+   struct BodyType *B;
+   struct JointType *G;
+   struct WhlType *W;
+   long i, Ig, Iw, Ib;
+
+   /* Copy states from Dyn */
+   D = &S->Dyn;
+   G = &S->GN;
+
+   long offset = 0;
+
+   CopyVG(D->u, &xdot_out[offset], D->Nu);
+   offset += D->Nu;
+   CopyVG(D->x, &xdot_out[offset], D->Nx);
+   offset += D->Nx;
+   CopyVG(D->h, &xdot_out[offset], S->Nw);
+
+   /* Set up for First Call */
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
+      for (i = 0; i < 3; i++) {
+         B->SpatFrc[i]     = B->Trq[i];
+         B->SpatFrc[3 + i] = B->FrcB[i];
+      }
+   }
+
+   for (i = 0; i < 3; i++) {
+      G->AngRate[i] = D->u[i];
+      G->PosRate[i] = D->u[D->Nu - 3 + i];
+      G->Pos[i]     = D->x[D->Nx - 3 + i];
+   }
+   for (i = 0; i < 4; i++) {
+      G->q[i] = D->x[i];
+   }
+
+   for (Ig = 0; Ig < S->Ng; Ig++) {
+      G = &S->G[Ig];
+      for (i = 0; i < G->RotDOF; i++) {
+         G->AngRate[i] = D->u[G->Rotu0 + i];
+      }
+      for (i = 0; i < G->TrnDOF; i++) {
+         G->PosRate[i] = D->u[G->Trnu0 + i];
+         G->Pos[i]     = D->x[G->Trnx0 + i];
+      }
+      if (G->IsSpherical) {
+         for (i = 0; i < 4; i++) {
+            G->q[i] = D->x[G->Rotx0 + i];
+         }
+      }
+      else {
+         for (i = 0; i < G->RotDOF; i++) {
+            G->Ang[i] = D->x[G->Rotx0 + i];
+         }
+      }
+   }
+
+   for (Iw = 0; Iw < S->Nw; Iw++) {
+      W    = &S->Whl[Iw];
+      W->H = D->h[Iw];
+      W->w = W->H / W->J;
+   }
+
+   /*  Call the EOM */
+   OrderNMultiBodyEOM(S);
+
+   /*  Extract the data */
+   G      = &S->GN;
+   offset = 0;
+   for (i = 0; i < 3; i++) {
+      xdot_out[offset + i]             = G->udot[i];
+      xdot_out[offset + D->Nu - 3 + i] = G->udot[3 + i];
+   }
+   offset += D->Nu;
+   for (i = 0; i < 4; i++)
+      xdot_out[offset + i] = G->qdot[i];
+   for (i = 0; i < 3; i++)
+      xdot_out[offset + D->Nx - 3 + i] = G->xdot[i];
+
+   for (Ig = 0; Ig < S->Ng; Ig++) {
+      G = &S->G[Ig];
+      for (i = 0; i < G->RotDOF; i++)
+         xdot_out[G->Rotu0 + i] = G->udot[i];
+      for (i = 0; i < G->TrnDOF; i++) {
+         xdot_out[G->Trnu0 + i]         = G->udot[G->RotDOF + i];
+         xdot_out[D->Nu + G->Trnx0 + i] = G->xdot[i];
+      }
+      if (G->IsSpherical) {
+         for (i = 0; i < 4; i++)
+            xdot_out[D->Nu + G->Rotx0 + i] = G->qdot[i];
+      }
+      else {
+         for (i = 0; i < G->RotDOF; i++)
+            xdot_out[D->Nu + G->Rotx0 + i] = G->qdot[i];
+      }
+   }
+   for (Iw = 0; Iw < S->Nw; Iw++) {
+      W = &S->Whl[Iw];
+
+      xdot_out[D->Nu + D->Nx + Iw] = W->Hdot;
+   }
+}
+/******************************************************************************/
 void OrderNMultiBodyRK4(struct SCType *S)
 {
    struct DynType *D; /* Copy to/from D->u, D->x */
@@ -3891,24 +4110,21 @@ void EnckeEOM(double u[6], double udot[6], double R[3], double muR3,
 /**********************************************************************/
 /* Integration of orbital equations of motion                         */
 /* by 4th order Runge-Kutta                                           */
-void EnckeRK4(struct OrbitType *orbs, struct SCType *S)
+void EnckeRK4(struct OrbitType *orb, struct SCType *S)
 {
    double accel[3], R[3], magr, muR3;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
-   struct OrbitType *O;
-
-   O = &orbs[S->RefOrb];
 
    accel[0] = S->FrcN[0] / S->mass;
    accel[1] = S->FrcN[1] / S->mass;
    accel[2] = S->FrcN[2] / S->mass;
-   R[0]     = O->PosN[0];
-   R[1]     = O->PosN[1];
-   R[2]     = O->PosN[2];
+   R[0]     = orb->PosN[0];
+   R[1]     = orb->PosN[1];
+   R[2]     = orb->PosN[2];
 
    magr = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
-   muR3 = O->mu / (magr * magr * magr);
+   muR3 = orb->mu / (magr * magr * magr);
 
    u[0] = S->PosR[0];
    u[1] = S->PosR[1];
@@ -3957,7 +4173,7 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass,
 /**********************************************************************/
 void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
                    double Frc[3], struct WorldType *const worlds,
-                   struct OrbitType *const orbs, struct SCType *S, double RKFdt)
+                   struct OrbitType *const orb, struct SCType *S, double RKFdt)
 {
    double r_vec[3]       = {0};
    double gravpertFrc[3] = {0};
@@ -3971,7 +4187,7 @@ void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
 
    /* .. Gravity Perturbation Forces */
    if (GravPertActive)
-      GravPertForceRK4(worlds, orbs, S, u, gravpertFrc, RKFdt);
+      GravPertForceRK4(worlds, orb, S, u, gravpertFrc, RKFdt);
 
    udot[0] = u[3];
    udot[1] = u[4];
@@ -3983,15 +4199,12 @@ void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
 /**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
-void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orbs,
+void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orb,
                    struct SCType *S)
 {
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    double dt0, dt1, dt2, dt3;
    long j;
-   struct OrbitType *O;
-
-   O = &orbs[S->RefOrb];
 
    u[0] = S->PosN[0];
    u[1] = S->PosN[1];
@@ -4006,16 +4219,16 @@ void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orbs,
    dt3 = DTSIM;
 
    /* .. 4th Order Runga-Kutta Integration */
-   CowellEOMMrk2(u, m1, O->mu, S->mass, S->FrcN, worlds, orbs, S, dt0);
+   CowellEOMMrk2(u, m1, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt0);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + dt1 * m1[j];
-   CowellEOMMrk2(uu, m2, O->mu, S->mass, S->FrcN, worlds, orbs, S, dt1);
+   CowellEOMMrk2(uu, m2, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt1);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + dt2 * m2[j];
-   CowellEOMMrk2(uu, m3, O->mu, S->mass, S->FrcN, worlds, orbs, S, dt2);
+   CowellEOMMrk2(uu, m3, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt2);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + dt3 * m3[j];
-   CowellEOMMrk2(uu, m4, O->mu, S->mass, S->FrcN, worlds, orbs, S, dt3);
+   CowellEOMMrk2(uu, m4, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt3);
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
@@ -4027,15 +4240,19 @@ void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orbs,
    S->VelN[2] = u[5];
 }
 /**********************************************************************/
+void CowellEOM_RK(struct OrbitType *const orb, struct SCType *S, double *x,
+                  double *xdot)
+{
+   /* .. 4th Order Runga-Kutta Integration */
+   CowellEOM(x, xdot, orb->mu, S->mass, S->FrcN);
+}
+/**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
-void CowellRK4(struct OrbitType *const orbs, struct SCType *S)
+void CowellRK4(struct OrbitType *const orb, struct SCType *S)
 {
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
-   struct OrbitType *O;
-
-   O = &orbs[S->RefOrb];
 
    u[0] = S->PosN[0];
    u[1] = S->PosN[1];
@@ -4045,16 +4262,16 @@ void CowellRK4(struct OrbitType *const orbs, struct SCType *S)
    u[5] = S->VelN[2];
 
    /* .. 4th Order Runga-Kutta Integration */
-   CowellEOM(u, m1, O->mu, S->mass, S->FrcN);
+   CowellEOM(u, m1, orb->mu, S->mass, S->FrcN);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   CowellEOM(uu, m2, O->mu, S->mass, S->FrcN);
+   CowellEOM(uu, m2, orb->mu, S->mass, S->FrcN);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   CowellEOM(uu, m3, O->mu, S->mass, S->FrcN);
+   CowellEOM(uu, m3, orb->mu, S->mass, S->FrcN);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + DTSIM * m3[j];
-   CowellEOM(uu, m4, O->mu, S->mass, S->FrcN);
+   CowellEOM(uu, m4, orb->mu, S->mass, S->FrcN);
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
@@ -4077,21 +4294,39 @@ void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
    udot[5] = GravAcc[2] + Frc[2] / mass;
 }
 /**********************************************************************/
-/* Integration of orbital equations of motion using Cowell's method   */
-/* by 4th order Runge-Kutta                                           */
-void PolyhedronCowellRK4(struct WorldType *const worlds,
-                         struct OrbitType *const orbs, struct SCType *S)
+void PolyhedronCowellEOM_RK(struct WorldType *const world,
+                            struct OrbitType *const orb, struct SCType *S,
+                            double *x, double *xdot)
 {
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   long j;
-   struct OrbitType *O;
-   struct WorldType *W;
+   double u[6];
    struct GeomType *G;
    double GravAccN[3];
 
-   O = &orbs[S->RefOrb];
-   W = &worlds[O->World];
-   G = &Geom[W->GeomTag];
+   G = &Geom[world->GeomTag];
+
+   u[0] = x[0];
+   u[1] = x[1];
+   u[2] = x[2];
+   u[3] = x[3];
+   u[4] = x[4];
+   u[5] = x[5];
+
+   /* .. 4th Order Runga-Kutta Integration */
+   PolyhedronGravAcc(G, world->Density, u, world->CWN, GravAccN);
+   PolyhedronCowellEOM(u, xdot, S->mass, GravAccN, S->FrcN);
+}
+/**********************************************************************/
+/* Integration of orbital equations of motion using Cowell's method   */
+/* by 4th order Runge-Kutta                                           */
+void PolyhedronCowellRK4(struct WorldType *const world,
+                         struct OrbitType *const orb, struct SCType *S)
+{
+   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
+   long j;
+   struct GeomType *G;
+   double GravAccN[3];
+
+   G = &Geom[world->GeomTag];
 
    u[0] = S->PosN[0];
    u[1] = S->PosN[1];
@@ -4101,22 +4336,22 @@ void PolyhedronCowellRK4(struct WorldType *const worlds,
    u[5] = S->VelN[2];
 
    /* .. 4th Order Runga-Kutta Integration */
-   PolyhedronGravAcc(G, W->Density, u, W->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, u, world->CWN, GravAccN);
    PolyhedronCowellEOM(u, m1, S->mass, GravAccN, S->FrcN);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m1[j];
 
-   PolyhedronGravAcc(G, W->Density, uu, W->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uu, world->CWN, GravAccN);
    PolyhedronCowellEOM(uu, m2, S->mass, GravAccN, S->FrcN);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m2[j];
 
-   PolyhedronGravAcc(G, W->Density, uu, W->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uu, world->CWN, GravAccN);
    PolyhedronCowellEOM(uu, m3, S->mass, GravAccN, S->FrcN);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + DTSIM * m3[j];
 
-   PolyhedronGravAcc(G, W->Density, uu, W->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uu, world->CWN, GravAccN);
    PolyhedronCowellEOM(uu, m4, S->mass, GravAccN, S->FrcN);
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
@@ -4163,30 +4398,29 @@ void ThreeBodyEnckeEOM(double u[6], double udot[6], double R1[3], double muR13,
 /* Integration of equations of perturbed motion from three-body orbit */
 /* by 4th order Runge-Kutta                                           */
 void ThreeBodyEnckeRK4(struct WorldType *const worlds,
-                       struct OrbitType *const orbs, struct SCType *S)
+                       struct OrbitType *const orb, struct SCType *S)
 {
    double accel[3], R1[3], MagR1, muR13, R2[3], MagR2, muR23;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
-   struct OrbitType *O, *E;
+   struct OrbitType *E;
 
-   O = &orbs[S->RefOrb];
-   E = &worlds[O->Body2].eph;
+   E = &worlds[orb->Body2].eph;
 
    accel[0] = S->FrcN[0] / S->mass;
    accel[1] = S->FrcN[1] / S->mass;
    accel[2] = S->FrcN[2] / S->mass;
-   R1[0]    = O->PosN[0];
-   R1[1]    = O->PosN[1];
-   R1[2]    = O->PosN[2];
+   R1[0]    = orb->PosN[0];
+   R1[1]    = orb->PosN[1];
+   R1[2]    = orb->PosN[2];
    R2[0]    = R1[0] - E->PosN[0];
    R2[1]    = R1[1] - E->PosN[1];
    R2[2]    = R1[2] - E->PosN[2];
 
    MagR1 = sqrt(R1[0] * R1[0] + R1[1] * R1[1] + R1[2] * R1[2]);
-   muR13 = O->mu1 / (MagR1 * MagR1 * MagR1);
+   muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
    MagR2 = sqrt(R2[0] * R2[0] + R2[1] * R2[1] + R2[2] * R2[2]);
-   muR23 = O->mu2 / (MagR2 * MagR2 * MagR2);
+   muR23 = orb->mu2 / (MagR2 * MagR2 * MagR2);
 
    u[0] = S->PosR[0];
    u[1] = S->PosR[1];
@@ -4229,18 +4463,12 @@ void EulHillEOM(double u[6], double udot[6], double n, double a[3])
    udot[5] = a[2] - 2.0 * n * u[3] + 3.0 * n * n * u[2];
 }
 /**********************************************************************/
-/* Integration of orbital equations of motion                         */
-/* by 4th order Runge-Kutta                                           */
-/* State u[0:2] = r, u[3:5] = v                                       */
-void EulHillRK4(struct OrbitType *orbs, struct SCType *S)
+void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
+                   double *xdot)
 {
    double accelN[3], accel[3];
-   double CLprop[3][3], CLN[3][3];
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
+   double u[6], m1[6];
    long j;
-   struct OrbitType *O;
-
-   O = &orbs[S->RefOrb];
 
    accelN[0] = S->FrcN[0] / S->mass;
    accelN[1] = S->FrcN[1] / S->mass;
@@ -4249,25 +4477,49 @@ void EulHillRK4(struct OrbitType *orbs, struct SCType *S)
       u[j]     = S->PosEH[j];
       u[3 + j] = S->VelEH[j];
    }
-   MxV(O->CLN, accelN, accel);
+   MxV(orb->CLN, accelN, accel);
 
    /* .. 4th Order Runga-Kutta Integration */
-   EulHillEOM(u, m1, O->MeanMotion, accel);
+   EulHillEOM(u, m1, orb->MeanMotion, accel);
+   // TODO: this will be something
+}
+/**********************************************************************/
+/* Integration of orbital equations of motion                         */
+/* by 4th order Runge-Kutta                                           */
+/* State u[0:2] = r, u[3:5] = v                                       */
+void EulHillRK4(struct OrbitType *orb, struct SCType *S)
+{
+   double accelN[3], accel[3];
+   double CLprop[3][3], CLN[3][3];
+   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
+   long j;
+
+   accelN[0] = S->FrcN[0] / S->mass;
+   accelN[1] = S->FrcN[1] / S->mass;
+   accelN[2] = S->FrcN[2] / S->mass;
+   for (j = 0; j < 3; j++) {
+      u[j]     = S->PosEH[j];
+      u[3 + j] = S->VelEH[j];
+   }
+   MxV(orb->CLN, accelN, accel);
+
+   /* .. 4th Order Runga-Kutta Integration */
+   EulHillEOM(u, m1, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   SimpRot(O->CLN[1], -O->MeanMotion * 0.5 * DTSIM, CLprop);
-   MxM(O->CLN, CLprop, CLN);
+   SimpRot(orb->CLN[1], -orb->MeanMotion * 0.5 * DTSIM, CLprop);
+   MxM(orb->CLN, CLprop, CLN);
    MxV(CLN, accelN, accel);
-   EulHillEOM(uu, m2, O->MeanMotion, accel);
+   EulHillEOM(uu, m2, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   EulHillEOM(uu, m3, O->MeanMotion, accel);
+   EulHillEOM(uu, m3, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + DTSIM * m3[j];
-   SimpRot(O->CLN[1], -O->MeanMotion * DTSIM, CLprop);
-   MxM(O->CLN, CLprop, CLN);
+   SimpRot(orb->CLN[1], -orb->MeanMotion * DTSIM, CLprop);
+   MxM(orb->CLN, CLprop, CLN);
    MxV(CLN, accelN, accel);
-   EulHillEOM(uu, m4, O->MeanMotion, accel);
+   EulHillEOM(uu, m4, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
@@ -4276,7 +4528,8 @@ void EulHillRK4(struct OrbitType *orbs, struct SCType *S)
       S->VelEH[j] = u[3 + j];
    }
 
-   EHRV2RelRV(O->SMA, O->MeanMotion, CLN, S->PosEH, S->VelEH, S->PosR, S->VelR);
+   EHRV2RelRV(orb->SMA, orb->MeanMotion, CLN, S->PosEH, S->VelEH, S->PosR,
+              S->VelR);
 }
 /**********************************************************************/
 void ThreeBodyOrbitEOM(double mu1, double mu2, double p[3], double u[6],
@@ -4310,53 +4563,49 @@ void ThreeBodyOrbitEOM(double mu1, double mu2, double p[3], double u[6],
 /************************************************************/
 /*  Propagates motion of Reference Orbit under              */
 /*  gravitational attraction of two large bodies.           */
-void ThreeBodyOrbitRK4(struct WorldType *worlds, struct OrbitType *O)
+void ThreeBodyOrbitRK4(struct WorldType *worlds, struct OrbitType *orb)
 {
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
-   u[0] = O->PosN[0];
-   u[1] = O->PosN[1];
-   u[2] = O->PosN[2];
-   u[3] = O->VelN[0];
-   u[4] = O->VelN[1];
-   u[5] = O->VelN[2];
+   u[0] = orb->PosN[0];
+   u[1] = orb->PosN[1];
+   u[2] = orb->PosN[2];
+   u[3] = orb->VelN[0];
+   u[4] = orb->VelN[1];
+   u[5] = orb->VelN[2];
 
    /* .. 4th Order Runga-Kutta Integration */
-   ThreeBodyOrbitEOM(O->mu1, O->mu2, worlds[O->Body2].eph.PosN, u, m1);
+   ThreeBodyOrbitEOM(orb->mu1, orb->mu2, worlds[orb->Body2].eph.PosN, u, m1);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   ThreeBodyOrbitEOM(O->mu1, O->mu2, worlds[O->Body2].eph.PosN, uu, m2);
+   ThreeBodyOrbitEOM(orb->mu1, orb->mu2, worlds[orb->Body2].eph.PosN, uu, m2);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   ThreeBodyOrbitEOM(O->mu1, O->mu2, worlds[O->Body2].eph.PosN, uu, m3);
+   ThreeBodyOrbitEOM(orb->mu1, orb->mu2, worlds[orb->Body2].eph.PosN, uu, m3);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + DTSIM * m3[j];
-   ThreeBodyOrbitEOM(O->mu1, O->mu2, worlds[O->Body2].eph.PosN, uu, m4);
+   ThreeBodyOrbitEOM(orb->mu1, orb->mu2, worlds[orb->Body2].eph.PosN, uu, m4);
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   O->PosN[0] = u[0];
-   O->PosN[1] = u[1];
-   O->PosN[2] = u[2];
-   O->VelN[0] = u[3];
-   O->VelN[1] = u[4];
-   O->VelN[2] = u[5];
+   orb->PosN[0] = u[0];
+   orb->PosN[1] = u[1];
+   orb->PosN[2] = u[2];
+   orb->VelN[0] = u[3];
+   orb->VelN[1] = u[4];
+   orb->VelN[2] = u[5];
 }
 /**********************************************************************/
-void FixedOrbitPosition(struct OrbitType *orbs, struct SCType *S)
+void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,
+                        struct SCType *S)
 {
-   struct OrbitType *O;
-   struct FormationType *Fr;
-
-   O  = &orbs[S->RefOrb];
-   Fr = &Frm[S->RefOrb];
-   if (Fr->FixedInFrame == 'L') {
+   if (frm->FixedInFrame == 'L') {
       /* TODO: This misbehaves for hyperbolic orbit.  Investigate */
-      MxV(O->CLN, S->PosEH, S->PosR);
+      MxV(orb->CLN, S->PosEH, S->PosR);
    }
    else {
-      MTxV(O->CLN, S->PosR, S->PosEH);
+      MTxV(orb->CLN, S->PosR, S->PosEH);
    }
 }
 /**********************************************************************/
@@ -4392,13 +4641,103 @@ void PartitionForces(struct SCType *S)
    }
 }
 /**********************************************************************/
-void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
-              struct SCType *S)
+void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
 {
-   struct OrbitType *O;
+   // x ENDS with posn & veln
+   SCRKParams *scparams = (SCRKParams *)params;
 
-   O = &orbs[S->RefOrb];
+   const long dim = params->dim;
 
+   struct SCType *S                  = scparams->sc;
+   struct OrbitType *orb             = &scparams->orb;
+   struct WorldType *world           = scparams->worlds;
+   struct RegionType *rgn            = scparams->rgn;
+   struct LagrangeSystemType *lagsys = scparams->lagsys;
+
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &t);
+
+   WorldEphemerides(t, world, rgn, lagsys);
+   SCEphemerides(t, S, &world[orb->World], orb);
+
+   ZeroFrcTrq(S);
+
+   Environment(t, world, orb, S);
+   Perturbations(world, orb, S);
+
+   // TODO: set environment and do ephems
+
+   switch (S->DynMethod) {
+      case DYN_GAUSS_ELIM:
+         KaneNBodyEOM_RK(S, x, xdot);
+         break;
+      case DYN_ORDER_N:
+         OrderNMultiBodyEOM_RK(S, x, xdot);
+         break;
+      default:
+         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+
+   double *x_trn    = &x[dim - 6];
+   double *xdot_trn = &xdot[dim - 6];
+
+   struct WorldType *W = &world[orb->World];
+   switch (orb->Regime) {
+      case ORB_ZERO:
+      case ORB_FLIGHT:
+         if (orb->PolyhedronGravityEnabled) {
+            PolyhedronCowellEOM_RK(W, orb, S, x_trn, xdot_trn);
+         }
+         else
+            CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
+         break;
+      case ORB_CENTRAL:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               // TODO: this one isn't done. maybe do the EH transform outside
+               // of RK, then transform back after?
+               EulHillEOM_RK(orb, S, x_trn, xdot_trn);
+               break;
+            case ORBDOF_COWELL:
+               CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
+               break;
+            default:
+               break;
+         }
+         break;
+      case ORB_N_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_COWELL:
+               CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
+               break;
+            default:
+               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+               exit(1);
+         }
+         break;
+      case ORB_THREE_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               break;
+            case ORBDOF_COWELL:
+               CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
+               break;
+            default:
+         }
+         break;
+      default:
+         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+}
+/**********************************************************************/
+void Dynamics(struct WorldType *const worlds, struct OrbitType *const orb,
+              struct FormationType *const frm, struct SCType *S)
+{
    // if (S->Nb > 1) {
    switch (S->DynMethod) {
       case DYN_GAUSS_ELIM:
@@ -4414,34 +4753,35 @@ void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
    //}
    // else OneBodyRK4(S);
 
-   switch (O->Regime) {
+   struct WorldType *W = &worlds[orb->World];
+   switch (orb->Regime) {
       case ORB_ZERO:
       case ORB_FLIGHT:
-         if (O->PolyhedronGravityEnabled) {
-            PolyhedronCowellRK4(worlds, orbs, S);
+         if (orb->PolyhedronGravityEnabled) {
+            PolyhedronCowellRK4(W, orb, S);
          }
          else
-            CowellRK4(orbs, S);
+            CowellRK4(orb, S);
          break;
       case ORB_CENTRAL:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
-               FixedOrbitPosition(orbs, S);
+               FixedOrbitPosition(orb, frm, S);
                break;
             case ORBDOF_EULER_HILL:
-               EulHillRK4(orbs, S);
+               EulHillRK4(orb, S);
                break;
             case ORBDOF_COWELL:
-               CowellRK4(orbs, S);
+               CowellRK4(orb, S);
                break;
             default:
-               EnckeRK4(orbs, S);
+               EnckeRK4(orb, S);
          }
          break;
       case ORB_N_BODY:
          switch (S->OrbDOF) {
             case ORBDOF_COWELL:
-               CowellRK4Mrk2(worlds, orbs, S);
+               CowellRK4Mrk2(worlds, orb, S);
                break;
             default:
                printf("ERROR: MUST USE COWELLS METHOD!!! \n");
@@ -4451,16 +4791,16 @@ void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
       case ORB_THREE_BODY:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
-               FixedOrbitPosition(orbs, S);
+               FixedOrbitPosition(orb, frm, S);
                break;
             case ORBDOF_EULER_HILL:
-               EulHillRK4(orbs, S);
+               EulHillRK4(orb, S);
                break;
             case ORBDOF_COWELL:
-               CowellRK4(orbs, S);
+               CowellRK4(orb, S);
                break;
             default:
-               ThreeBodyEnckeRK4(worlds, orbs, S);
+               ThreeBodyEnckeRK4(worlds, orb, S);
          }
          break;
       default:

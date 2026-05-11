@@ -146,7 +146,7 @@
             "-o",
             "${workspaceFolder}/Missions/DSM_NAV_DEMO/blah",
             "-g",
-            "1"
+            "0"
          ],
          "stopAtEntry": false,
          "cwd": "${workspaceFolder}",

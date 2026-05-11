@@ -397,7 +397,8 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
 #undef THREEBODY_TO_CENTRAL2
 }
 /**********************************************************************/
-void SplineToPosVel(struct OrbitType *O, const double dyntime)
+void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
+                    const double dyntime)
 {
    DateType NodeDate;
    char newline;
@@ -458,11 +459,11 @@ void SplineToPosVel(struct OrbitType *O, const double dyntime)
       O->tp += SimTime;
    }
    else if (O->Regime == ORB_THREE_BODY) {
-      MTxV(LagSys[O->Sys].CLN, x, xn);
-      MTxV(LagSys[O->Sys].CLN, v, vn);
+      MTxV(lagsys[O->Sys].CLN, x, xn);
+      MTxV(lagsys[O->Sys].CLN, v, vn);
       for (j = 0; j < 3; j++) {
-         O->PosN[j] = xn[j] + LagSys[O->Sys].LP[O->LP].PosN[j];
-         O->VelN[j] = vn[j] + LagSys[O->Sys].LP[O->LP].VelN[j];
+         O->PosN[j] = xn[j] + lagsys[O->Sys].LP[O->LP].PosN[j];
+         O->VelN[j] = vn[j] + lagsys[O->Sys].LP[O->LP].VelN[j];
       }
    }
    else {
@@ -471,11 +472,11 @@ void SplineToPosVel(struct OrbitType *O, const double dyntime)
    }
 }
 /**********************************************************************/
-void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
-                 double dyntime)
+void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys, struct OrbitType *const orb,
+                 struct FormationType *const frm, double dyntime)
 {
-   long Iorb, i, j;
-   struct OrbitType *O;
+   long i, j;
    struct RegionType *R;
 
 #if 0
@@ -492,82 +493,233 @@ void OrbitMotion(struct WorldType *const worlds, struct OrbitType *const orbs,
       }
 #endif
 
-   for (Iorb = 0; Iorb < Norb; Iorb++) {
-      O = &orbs[Iorb];
-      if (O->Exists) {
-         if (O->Regime == ORB_THREE_BODY) {
-            if (O->LagDOF == LAGDOF_MODES) {
-               LagModes2RV(dyntime, &LagSys[O->Sys], O, O->PosN, O->VelN);
-            }
-            else if (O->LagDOF == LAGDOF_COWELL) {
-               ThreeBodyOrbitRK4(worlds, O);
-               RV2LagModes(dyntime, &LagSys[O->Sys], O);
-               O->Epoch = dyntime;
-            }
-            else if (O->LagDOF == LAGDOF_SPLINE) {
-               SplineToPosVel(O, dyntime);
-            }
+   if (orb->Exists) {
+      if (orb->Regime == ORB_THREE_BODY) {
+         if (orb->LagDOF == LAGDOF_MODES) {
+            LagModes2RV(dyntime, &lagsys[orb->Sys], orb, orb->PosN, orb->VelN);
          }
-         else if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
-            if (O->SplineActive)
-               SplineToPosVel(O, dyntime);
-            else if (O->J2DriftEnabled)
-               MeanEph2RV(O, dyntime);
-            else {
-               Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
-                      dyntime - O->tp, O->PosN, O->VelN, &O->anom);
-            }
+         else if (orb->LagDOF == LAGDOF_COWELL) {
+            ThreeBodyOrbitRK4(worlds, orb);
+            RV2LagModes(dyntime, &lagsys[orb->Sys], orb);
+            orb->Epoch = dyntime;
          }
-         /* Else is ORB_ZERO or ORB_FLIGHT, and no action required */
-
-         /* Update CLN */
-         switch (O->Regime) {
-            case ORB_ZERO:
-               /* L is aligned with N, wln is zero */
-               for (i = 0; i < 3; i++) {
-                  for (j = 0; j < 3; j++)
-                     O->CLN[i][j] = 0.0;
-                  O->CLN[i][i] = 1.0;
-                  O->wln[i]    = 0.0;
-               }
-               break;
-            case ORB_FLIGHT:
-               /* L is East-North-Up */
-               R = &Rgn[O->Region];
-               for (i = 0; i < 3; i++) {
-                  O->PosN[i] = R->PosN[i];
-                  O->VelN[i] = R->VelN[i];
-               }
-               FindENU(O->PosN, worlds[O->World].w, O->CLN, O->wln);
-               break;
-            case ORB_N_BODY:
-            case ORB_CENTRAL:
-               /* L is LVLH */
-               FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
-               break;
-            case ORB_THREE_BODY:
-               /* L is Rotating Frame XYZ? */
-               FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
-               break;
-            default:
-               fprintf(stderr,
-                       "Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
-               exit(EXIT_FAILURE);
+         else if (orb->LagDOF == LAGDOF_SPLINE) {
+            SplineToPosVel(lagsys, orb, dyntime);
          }
-
-         /* Update Formation Frame */
-         if (Frm[Iorb].FixedInFrame == 'L') {
-            MxM(Frm[Iorb].CL, O->CLN, Frm[Iorb].CN);
-         }
+      }
+      else if (orb->Regime == ORB_CENTRAL || orb->Regime == ORB_N_BODY) {
+         if (orb->SplineActive)
+            SplineToPosVel(lagsys, orb, dyntime);
+         else if (orb->J2DriftEnabled)
+            MeanEph2RV(orb, dyntime);
          else {
-            MxMT(Frm[Iorb].CN, O->CLN, Frm[Iorb].CL);
+            Eph2RV(orb->mu, orb->SLR, orb->ecc, orb->inc, orb->RAAN, orb->ArgP,
+                   dyntime - orb->tp, orb->PosN, orb->VelN, &orb->anom);
          }
+      }
+      /* Else is ORB_ZERO or ORB_FLIGHT, and no action required */
+
+      /* Update CLN */
+      switch (orb->Regime) {
+         case ORB_ZERO:
+            /* L is aligned with N, wln is zero */
+            for (i = 0; i < 3; i++) {
+               for (j = 0; j < 3; j++)
+                  orb->CLN[i][j] = 0.0;
+               orb->CLN[i][i] = 1.0;
+               orb->wln[i]    = 0.0;
+            }
+            break;
+         case ORB_FLIGHT:
+            /* L is East-North-Up */
+            R = &rgn[orb->Region];
+            for (i = 0; i < 3; i++) {
+               orb->PosN[i] = R->PosN[i];
+               orb->VelN[i] = R->VelN[i];
+            }
+            FindENU(orb->PosN, worlds[orb->World].w, orb->CLN, orb->wln);
+            break;
+         case ORB_N_BODY:
+         case ORB_CENTRAL:
+            /* L is LVLH */
+            FindCLN(orb->PosN, orb->VelN, orb->CLN, orb->wln);
+            break;
+         case ORB_THREE_BODY:
+            /* L is Rotating Frame XYZ? */
+            FindCLN(orb->PosN, orb->VelN, orb->CLN, orb->wln);
+            break;
+         default:
+            fprintf(stderr,
+                    "Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
+            exit(EXIT_FAILURE);
+      }
+
+      /* Update Formation Frame */
+      if (frm->FixedInFrame == 'L') {
+         MxM(frm->CL, orb->CLN, frm->CN);
+      }
+      else {
+         MxMT(frm->CN, orb->CLN, frm->CL);
       }
    }
 }
 /**********************************************************************/
-void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
-                 struct OrbitType *const orbs, const JDType jd)
+void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
+                      struct RegionType *rgn, struct LagrangeSystemType *lagsys)
+{
+   struct WorldType *W;
+   struct RegionType *R;
+   double ptn[10][3], vtn[10][3], ptw[3];
+   struct LagrangeSystemType *LS;
+   long i, j, Ir;
+
+   UpdateEphems(EphemOption, jd, &JplHeader, worlds);
+
+   const double jd2000_tt_sec = JDToDynTime(jd);
+
+   /* .. Locate Lagrange Points in N of LagSys Body 1 */
+   /* Updates some Lagrange point parameters, can help get a more accurate CLN
+      but can sometimes cause UnitV errors that make plotting more difficult*/
+
+   // // Updating Lagrange Points may help with plotting, needs further testing
+   // UpdateLagrangePoints();
+   for (i = 0; i < 3; i++) {
+      LS = &lagsys[i];
+      if (LS->Exists) {
+         for (j = 0; j < 5; j++) {
+            FindLagPtPosVel(jd2000_tt_sec, LS, j, LS->LP[j].PosN,
+                            LS->LP[j].VelN, LS->CLN);
+         }
+      }
+   }
+
+   /* .. Regions */
+   for (Ir = 0; Ir < Nrgn; Ir++) {
+      R = &rgn[Ir];
+      W = &worlds[R->World];
+      MTxV(W->CWN, R->PosW, R->PosN);
+      R->VelN[0] = -W->w * R->PosN[1];
+      R->VelN[1] = W->w * R->PosN[0];
+      R->VelN[2] = 0.0;
+      MxM(R->CW, W->CWN, R->CN);
+   }
+
+   // TODO: Tdrs global
+   /* .. TDRS Spacecraft */
+   TDRSPosVel(worlds[EARTH].PriMerAng, jd2000_tt_sec, ptn, vtn);
+   for (i = 0; i < 10; i++) {
+      MxV(worlds[EARTH].CWN, ptn[i], Tdrs[i].rw);
+      for (j = 0; j < 3; j++) {
+         Tdrs[i].PosN[j] = ptn[i][j];
+         Tdrs[i].VelN[j] = vtn[i][j];
+      }
+      CopyUnitV(Tdrs[i].rw, ptw);
+      Tdrs[i].lat = asin(ptw[2]);
+      Tdrs[i].lng = atan2(ptw[1], ptw[0]);
+   }
+}
+/**********************************************************************/
+void SCEphemerides(const JDType jd, struct SCType *sc,
+                   struct WorldType *const world, struct OrbitType *const orb)
+{
+   double svh[3], p, pvn[3], SoP, Rp;
+   long i, j;
+   double MagR1, MeanMotion;
+
+   if (sc->Exists) {
+      /* Local-vertical frame tied to SC */
+      if (orb->Regime == ORB_ZERO) {
+         for (i = 0; i < 3; i++) {
+            sc->PosR[i] = sc->PosN[i] - orb->PosN[i];
+            sc->VelR[i] = sc->VelN[i] - orb->VelN[i];
+            for (j = 0; j < 3; j++)
+               sc->CLN[i][j] = 0.0;
+            sc->CLN[i][i] = 1.0;
+            sc->wln[i]    = 0.0;
+         }
+      }
+      else if (orb->Regime == ORB_FLIGHT) {
+         for (j = 0; j < 3; j++) {
+            sc->PosR[j] = sc->PosN[j] - orb->PosN[j];
+            sc->VelR[j] = sc->VelN[j] - orb->VelN[j];
+         }
+         FindENU(sc->PosN, world->w, sc->CLN, sc->wln);
+      }
+      else if (orb->Regime == ORB_CENTRAL || orb->Regime == ORB_N_BODY) {
+         if (sc->OrbDOF == ORBDOF_COWELL) {
+            for (j = 0; j < 3; j++) {
+               sc->PosR[j] = sc->PosN[j] - orb->PosN[j];
+               sc->VelR[j] = sc->VelN[j] - orb->VelN[j];
+            }
+         }
+         else {
+            for (j = 0; j < 3; j++) {
+               sc->PosN[j] = orb->PosN[j] + sc->PosR[j];
+               sc->VelN[j] = orb->VelN[j] + sc->VelR[j];
+            }
+         }
+         FindCLN(sc->PosN, sc->VelN, sc->CLN, sc->wln);
+         RelRV2EHRV(orb->SMA, orb->MeanMotion, orb->CLN, sc->PosR, sc->VelR,
+                    sc->PosEH, sc->VelEH);
+      }
+      else { /* ORB_THREE_BODY */
+         for (j = 0; j < 3; j++) {
+            sc->PosN[j] = orb->PosN[j] + sc->PosR[j];
+            sc->VelN[j] = orb->VelN[j] + sc->VelR[j];
+         }
+         MagR1      = MAGV(orb->PosN);
+         MeanMotion = sqrt(orb->mu1 / (MagR1 * MagR1 * MagR1));
+         RelRV2EHRV(MagR1, MeanMotion, orb->CLN, sc->PosR, sc->VelR, sc->PosEH,
+                    sc->VelEH);
+         FindCLN(sc->PosN, sc->VelN, sc->CLN, sc->wln);
+      }
+      /* Equatorial Frame: e1 = n3, e2 = East, e3 points to World axis */
+      FindCEN(sc->PosN, sc->CEN);
+
+      /* Locate Spacecraft in H frame */
+      MTxV(world->CNH, sc->PosN, sc->PosH);
+      MTxV(world->CNH, sc->VelN, sc->VelH);
+      for (j = 0; j < 3; j++) {
+         sc->PosH[j] += world->PosH[j];
+         sc->VelH[j] += world->VelH[j];
+      }
+
+      /* Sun unit vector */
+      for (j = 0; j < 3; j++)
+         svh[j] = -world->PosH[j];
+      MxV(world->CNH, svh, sc->svn);
+      for (j = 0; j < 3; j++)
+         sc->svn[j] -= sc->PosN[j];
+      UNITV(sc->svn);
+      MxV(sc->B[0].CN, sc->svn, sc->svb);
+
+      /* Eclipse Flag */
+      if (world->Type == SUN)
+         sc->Eclipse = FALSE;
+      else {
+         p = MAGV(sc->PosN);
+         for (j = 0; j < 3; j++)
+            pvn[j] = -sc->PosN[j];
+         UNITV(pvn);
+         SoP         = VoV(sc->svn, pvn);
+         sc->Eclipse = FALSE;
+         if (SoP > 0.0) {
+            Rp = world->rad / p;
+            if (Rp * Rp > 1.0 - SoP * SoP) {
+               sc->Eclipse = TRUE;
+            }
+         }
+      }
+
+      /* S/C relationship to its Formation */
+      FindSCinFormation(sc);
+   }
+}
+/**********************************************************************/
+void Ephemerides(const JDType jd, struct SCType *scs,
+                 struct WorldType *const worlds, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys,
+                 struct OrbitType *const orbs)
 {
    struct OrbitType *O;
    struct WorldType *W;
@@ -590,7 +742,7 @@ void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
    // // Updating Lagrange Points may help with plotting, needs further testing
    // UpdateLagrangePoints();
    for (i = 0; i < 3; i++) {
-      LS = &LagSys[i];
+      LS = &lagsys[i];
       if (LS->Exists) {
          for (j = 0; j < 5; j++) {
             FindLagPtPosVel(jd2000_tt_sec, LS, j, LS->LP[j].PosN,
@@ -601,7 +753,7 @@ void Ephemerides(struct SCType *scs, struct WorldType *const worlds,
 
    /* .. Regions */
    for (Ir = 0; Ir < Nrgn; Ir++) {
-      R = &Rgn[Ir];
+      R = &rgn[Ir];
       W = &worlds[R->World];
       MTxV(W->CWN, R->PosW, R->PosN);
       R->VelN[0] = -W->w * R->PosN[1];

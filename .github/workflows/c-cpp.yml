@@ -10,12 +10,12 @@ on:
     branches: [main]
 
 jobs:
-  build-ubuntu:
-    # Ubuntu build in various conditions
+  test-build:
+    # Ubuntu and MacOS build in various conditions
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         compiler: [gcc, clang]
         glut: ["GLUT", "GLFW"]
         spice: ["ON", "OFF"]
@@ -25,16 +25,25 @@ jobs:
             spice: "ON"
           - glut: "GLFW"
             build: "debug"
+          # gcc not normally present on mac, unless installed from e.g. homebrew
+          - os: "macos-latest"
+            compiler: "gcc"
 
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - name: install dep
+      - name: install linux dep
         if: ${{ contains(matrix.os, 'ubuntu') }}
         run: sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev
-      - name: get GLFW
+      - name: install macos dep
+        if: ${{ contains(matrix.os, 'macos') }}
+        run: brew install pkgconfig libfyaml freeglut mesa-glu
+      - name: get linux GLFW
         if: ${{ (matrix.glut ==  'GLFW') && (contains(matrix.os, 'ubuntu')) }}
         run: sudo apt-get -y install libglfw3-dev
+      - name: get macos GLFW
+        if: ${{ (matrix.glut ==  'GLFW') && (contains(matrix.os, 'macos')) }}
+        run: brew install glfw
       - name: get cspice
         if: ${{ matrix.spice == 'ON' }}
         run: ./download_spice.sh

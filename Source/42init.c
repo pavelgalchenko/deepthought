@@ -1362,7 +1362,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                            exit(EXIT_FAILURE);
                         }
                      }
-                     SplineToPosVel(O, j2000_tt);
+                     SplineToPosVel(LagSys, O, j2000_tt);
                   } break;
                   default:
                      fprintf(stderr,
@@ -1559,7 +1559,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                            exit(EXIT_FAILURE);
                         }
                      }
-                     SplineToPosVel(O, j2000_tt);
+                     SplineToPosVel(LagSys, O, j2000_tt);
                   }
 
                   break;
@@ -2769,6 +2769,75 @@ void InitOrderNDynamics(struct SCType *S)
          }
       }
    }
+}
+/**********************************************************************/
+static long _sc_state_dim(struct SCType *const S, const struct OrbitType *orb)
+{
+   long ret_val = 0;
+   switch (S->DynMethod) {
+      case DYN_GAUSS_ELIM: {
+         struct DynType *D = &S->Dyn;
+
+         ret_val = D->Nu + D->Nx + 2 * (D->Nf + S->Nw);
+      } break;
+      case DYN_ORDER_N: {
+         ret_val = 9 + 4;
+         for (int Ig = 0; Ig < S->Ng; Ig++) {
+            struct JointType *G = &S->G[Ig];
+
+            ret_val += G->RotDOF;
+            ret_val += 2 * G->TrnDOF;
+            if (G->IsSpherical)
+               ret_val += 4;
+            else
+               ret_val += G->RotDOF;
+         }
+      } break;
+      default:
+         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+   switch (orb->Regime) {
+      case ORB_ZERO:
+      case ORB_FLIGHT:
+         ret_val += 6;
+      case ORB_CENTRAL:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+            case ORBDOF_COWELL:
+            default:
+               ret_val += 6;
+         }
+         break;
+      case ORB_N_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_COWELL:
+               ret_val += 6;
+               break;
+            default:
+               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+               exit(EXIT_FAILURE);
+         }
+         break;
+      case ORB_THREE_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+            case ORBDOF_COWELL:
+            default:
+               ret_val += 6;
+               break;
+         }
+         break;
+      default:
+         fprintf(stderr,
+                 "Unknown Orbit Regime in _sc_state_dim.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+   return ret_val;
 }
 /**********************************************************************/
 void InitSpacecraft(struct SCType *S)
@@ -4033,6 +4102,23 @@ void InitSpacecraft(struct SCType *S)
       S->Thr[It].Delay = NULL;
    }
    fy_document_destroy(fyd);
+
+   /* Set up the propagator */
+   S->rkparams.sc     = S;
+   S->rkparams.worlds = World_dupe;
+   S->rkparams.rgn    = malloc(Nrgn * sizeof(struct RegionType));
+   for (i = 0; i < Nrgn; i++)
+      memcpy(&S->rkparams.rgn[i], &Rgn[i], sizeof(struct RegionType));
+   CloneOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
+   for (i = 0; i < NLAGSYS; i++)
+      memcpy(&S->rkparams.lagsys[i], &LagSys[i],
+             sizeof(struct LagrangeSystemType));
+   memcpy(&S->rkparams.frm, &Frm[S->RefOrb], sizeof(struct FormationType));
+
+   S->rkparams.base.dim = _sc_state_dim(S, &Orb[S->RefOrb]);
+   // TODO: need ode for this to function
+   S->RKIntegrator = GetRungeKutta(RK89_RK, 0, 0, S->rkparams.base.dim, 0.001,
+                                   DTSIM, NULL, NULL);
 }
 /*********************************************************************/
 void LoadTdrs(void)
@@ -4242,6 +4328,7 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->eph.alpha = 0.0;
    W->eph.SLR   = 0.0;
    W->eph.rmin  = 0.0;
+   W->eph.Ncheb = 0;
 
    /* Graphical Properties */
    W->Atmo.Exists = FALSE;
@@ -4505,6 +4592,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       W->Parent         = SOL;
       W->eph.World      = SOL;
       W->eph.mu         = World[SOL].mu;
+      W->eph.Ncheb      = 0;
       W->DipoleMoment   = DipoleMoment[i];
       for (j = 0; j < 3; j++) {
          W->DipoleAxis[j]   = DipoleAxis[i][j];
@@ -5285,6 +5373,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             E->inc         = inc * D2R;
             E->RAAN        = raan * D2R;
             E->ArgP        = omg * D2R;
+            E->Ncheb       = 0;
 
             M->PriMerAngJ2000 = primerang_j2000 * D2R;
 
@@ -5392,8 +5481,9 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
    for (Ib = 0; Ib < Nmb; Ib++) {
       DateType EpochDate = {0};
 
-      W = &worlds[MINORBODY_0 + Ib];
-      E = &W->eph;
+      W        = &worlds[MINORBODY_0 + Ib];
+      E        = &W->eph;
+      E->Ncheb = 0;
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
       W->Exists = DecodeString(response);
@@ -5496,6 +5586,16 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
       }
    }
    fclose(infile);
+}
+/**********************************************************************/
+void CloneWorld(struct WorldType *const destWorld,
+                const struct WorldType srcWorld)
+{
+   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
+   CloneOrbit(&destWorld->eph, srcWorld.eph);
+   // TODO: should deep copy more, but all other pointers in WorldType (e.g.,
+   // WorldType::GraveModel::C) are not modified after initial world
+   // configuration.
 }
 /**********************************************************************/
 void LoadRegions(void)
@@ -7385,6 +7485,10 @@ void InitSim(int argc, char **argv)
    /* .. Regions */
    LoadRegions();
 
+   // make duplicate of main World for use in propagators
+   for (i = 0; i < NWORLD; i++)
+      CloneWorld(&World_dupe[i], World[i]);
+
    /* .. Galactic Frame */
    Q2C(qjh, CJH);
    MxM(CGJ, CJH, CGH);
@@ -7421,7 +7525,8 @@ void InitSim(int argc, char **argv)
       if (Orb[Iorb].Exists)
          InitOrbit(&Orb[Iorb], JD_TDB_MJD);
    }
-   OrbitMotion(World, Orb, DynTime);
+   for (Iorb = 0; Iorb < Norb; Iorb++)
+      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          InitSpacecraft(&SC[Isc]);

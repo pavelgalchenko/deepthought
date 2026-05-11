@@ -35,10 +35,6 @@
 #define DIR_CW  0
 #define DIR_CCW 1
 
-#define EARTHMOON  0
-#define SUNEARTH   1
-#define SUNJUPITER 2
-
 #define LAGPT_L1 0
 #define LAGPT_L2 1
 #define LAGPT_L3 2

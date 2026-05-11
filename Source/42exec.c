@@ -92,7 +92,10 @@ static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
    GpsTimeToGpsDate(*gps_time, gps_rollover, gps_wk, gps_sec);
 }
 /**********************************************************************/
-long AdvanceTime(void)
+long AdvanceTime(JDType *jd_tt_mjd, JDType *jd_tdb_mjd, DateType *tt,
+                 DateType *tdb, DateType *utc, double *simtime, double *dyntime,
+                 double *atomictime, double *gpstime, double *civiltime,
+                 long *gpsrollover, long *gpsweek, double *gpssecond)
 {
    static long itime    = 0;
    static long PrevTick = 0;
@@ -115,10 +118,10 @@ long AdvanceTime(void)
          // TODO: this implementation will eventually get notable floating point
          // errors if SimTime gets sufficiently large
          itime++;
-         SimTime = ((double)itime) * DTSIM;
+         *simtime = ((double)itime) * DTSIM;
 
-         JD_TT_MJD = JDAddMultRatSecs(JD_TT_MJD_0, itime, DTSIM_RAT);
-         UTC       = JDToDate(JD_TT_MJD, UTC_TIME);
+         *jd_tt_mjd = JDAddMultRatSecs(JD_TT_MJD_0, itime, DTSIM_RAT);
+         *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
       } break;
       case EXTERNAL_TIME: {
          while (CurrTick == PrevTick) {
@@ -126,27 +129,27 @@ long AdvanceTime(void)
          }
          PrevTick = CurrTick;
          itime++;
-         SimTime = ((double)itime) * DTSIM;
-         UTC     = RealSystemTime();
+         *simtime = ((double)itime) * DTSIM;
+         *utc     = RealSystemTime();
 
-         JD_TT_MJD = Date2JD(UTC, GMAT_MJD_EPOCH);
-         JDChangeSystem(TT_TIME, &JD_TT_MJD);
-         JD_TT_MJD_0 = JDSubSeconds(JD_TT_MJD, SimTime);
+         *jd_tt_mjd = Date2JD(*utc, GMAT_MJD_EPOCH);
+         JDChangeSystem(TT_TIME, jd_tt_mjd);
+         JD_TT_MJD_0 = JDSubSeconds(*jd_tt_mjd, *simtime);
       } break;
       case NOS3_TIME: {
          const Rational tick_time = NOS3Time(DTSIM_RAT);
-         SimTime                  = rational2double(tick_time);
+         *simtime                 = rational2double(tick_time);
 
-         JD_TT_MJD = JDAddRationalSeconds(JD_TT_MJD_0, tick_time);
-         UTC       = JDToDate(JD_TT_MJD, UTC_TIME);
+         *jd_tt_mjd = JDAddRationalSeconds(JD_TT_MJD_0, tick_time);
+         *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
       } break;
    }
-   CivilTime = Date2Time(UTC); /* UTC "clock" time */
-   _ttjd2others(JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &DynTime, &AtomicTime,
-                &GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
+   *civiltime = Date2Time(*utc); /* UTC "clock" time */
+   _ttjd2others(*jd_tt_mjd, jd_tdb_mjd, tt, tdb, dyntime, atomictime, gpstime,
+                gpsrollover, gpsweek, gpssecond);
 
    /* Check for end of run */
-   if (SimTime > STOPTIME)
+   if (*simtime > STOPTIME)
       Done = 1;
    else
       Done = 0;
@@ -287,7 +290,7 @@ long SimStep(void)
       ManageFlags(&nout, &GLnout, &set_nout);
 
       /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-      Ephemerides(SC, World, Orb, JD_TDB_MJD);
+      Ephemerides(JD_TDB_MJD, SC, World, Rgn, LagSys, Orb);
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
@@ -297,10 +300,12 @@ long SimStep(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
+            struct OrbitType *O = &Orb[S->RefOrb];
             /* Magnetic Field, Atmospheric Density */
-            Environment(JD_TDB_MJD, World, Orb, S);
-            Perturbations(World, Orb, S); /* Environmental Forces and Torques */
-            Sensors(World, Orb, S);
+            Environment(JD_TDB_MJD, World, O, S);
+            Perturbations(World, O, S); /* Environmental Forces and Torques */
+            SCContactFrcTrq(Orb, SC, Isc);
+            Sensors(World, O, S);
             FlightSoftWare(S);
             Actuators(S);
             PartitionForces(S); /* Orbit-affecting and "internal" */
@@ -325,17 +330,20 @@ long SimStep(void)
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists)
-         Dynamics(World, Orb, &SC[Isc]);
+         Dynamics(World, &Orb[SC[Isc].RefOrb], &Frm[SC[Isc].RefOrb], &SC[Isc]);
    }
-   SimComplete = AdvanceTime();
-   OrbitMotion(World, Orb, DynTime);
+   SimComplete = AdvanceTime(&JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC, &SimTime,
+                             &DynTime, &AtomicTime, &GpsTime, &CivilTime,
+                             &GpsRollover, &GpsWeek, &GpsSecond);
+   for (long Iorb = 0; Iorb < Norb; Iorb++)
+      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
 
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
 
    InterProcessComm(); /* Send and receive from external processes */
    /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-   Ephemerides(SC, World, Orb, JD_TDB_MJD);
+   Ephemerides(JD_TDB_MJD, SC, World, Rgn, LagSys, Orb);
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
@@ -345,10 +353,12 @@ long SimStep(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
+         struct OrbitType *O = &Orb[S->RefOrb];
          /* Magnetic Field, Atmospheric Density */
-         Environment(JD_TDB_MJD, World, Orb, S);
-         Perturbations(World, Orb, S); /* Environmental Forces and Torques */
-         Sensors(World, Orb, S);
+         Environment(JD_TDB_MJD, World, O, S);
+         Perturbations(World, O, S); /* Environmental Forces and Torques */
+         SCContactFrcTrq(Orb, SC, Isc);
+         Sensors(World, O, S);
          FlightSoftWare(S);
          Actuators(S);
          PartitionForces(S); /* Orbit-affecting and "internal" */

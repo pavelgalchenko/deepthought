@@ -135,6 +135,13 @@ enum orbitInputType {
    INP_SPLINE,
 };
 
+typedef enum LagrangeSystem {
+   EARTHMOON = 0,
+   SUNEARTH,
+   SUNJUPITER,
+   NLAGSYS,
+} LagrangeSystem;
+
 struct LagrangePointType {
    /*~ Internal Variables ~*/
    double PosN[3]; /* Pos wrt N frame of Body 1 (larger grav center), [[m]] */
@@ -309,7 +316,7 @@ struct OrbitType {
 };
 
 /*~ Prototypes ~*/
-struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb);
+void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 double MeanAnomToTrueAnom(double MeanAnom, double ecc);
 double TrueAnomaly(double mu, double p, double e, double t);
 double atanh(double x);

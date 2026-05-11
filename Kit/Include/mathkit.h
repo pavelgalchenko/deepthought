@@ -18,6 +18,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*
 ** #ifdef __cplusplus
@@ -87,12 +88,15 @@ void Legendre(const long N, const long M, const double x,
 void SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
                         double **C, double **S, double **Norm, double gradV[3]);
-void MxMG(double **A, double **B, double **C, const int N, const int K,
-          const int M);
+void MxMG(double **A, double **B, double **C, const long N, const long K,
+          const long M);
 void MxMTG(double **A, double **B, double **C, const long N, const long K,
            const long M);
 void MTxMG(double **A, double **B, double **C, const long N, const long K,
            const long M);
+void CopyVG(double *dest, double *src, const long n);
+void SxVG(const double S, const double *V, double *W, const long n);
+void axpy(const double a, const double *const x, double *const y, const long n);
 void MxVG(double **M, double *v, double *w, const long n, const long m);
 void SxMG(double s, double **A, double **B, const long N, const long M);
 void MINVG(double **A, double **AI, const long N);

@@ -830,8 +830,8 @@ void SphericalHarmonics(const long N, const long M, const double r,
 }
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
-void MxMG(double **A, double **B, double **C, const int N, const int K,
-          const int M)
+void MxMG(double **A, double **B, double **C, const long N, const long K,
+          const long M)
 {
 
    // transpose B for better cache locality
@@ -881,6 +881,24 @@ void MTxMG(double **A, double **B, double **C, const long N, const long K,
          }
       }
    }
+}
+/**********************************************************************/
+void CopyVG(double *dest, double *src, const long n)
+{
+   memcpy(dest, src, n * sizeof(double));
+}
+/**********************************************************************/
+void SxVG(const double S, const double *V, double *W, const long n)
+{
+   for (long i = 0; i < n; i++)
+      W[i] = S * V[i];
+}
+/**********************************************************************/
+void axpy(const double a, const double *const x, double *const y, const long n)
+{
+   // the operation y := a * x + y for an n-dimensional vec
+   for (long i = 0; i < n; i++)
+      y[i] += a * x[i];
 }
 /**********************************************************************/
 void MxVG(double **M, double *v, double *w, const long n, const long m)

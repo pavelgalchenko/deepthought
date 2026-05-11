@@ -14,50 +14,69 @@
 #ifndef __RKKIT_H__
 #define __RKKIT_H__
 
+#include "jdkit.h"
+#include "mathkit.h"
+#include <string.h>
+
 /* #ifdef __cplusplus
 ** namespace Kit {
 ** #endif
 */
 
+/*  Methods for integration of odes using explicit Runge Kutta forms */
+
 // doing this in an attempt to make a potential later change easier
 // TODO: different t type? JDType, or just Rational?
-typedef double RKIndType; // independent variable data type
+typedef JDType RKIndType; // independent variable data type
 
 // used to initialized the RungeKutta Struct
 typedef enum RKType {
-   THE_RK4_RK, // classic RK44
-   RK4_RK,     // 3/8-rule RK4
-   RK89_RK,    // RK8(9)
+   EULER_RK = 0, // Euler Integration
+   THE_RK4_RK,   // classic RK44
+   RK4_RK,       // 3/8-rule RK4
+   RK89_RK,      // RK8(9)
 } RKType;
-// RK8(9) coeffs from "Explicit Runge-Kutta Methods with Estimates of the Local
-// Truncation Error", SIAM Journal on Numerical Analysis, vol 15, no 4, 1978
 
-typedef enum TolType {
-   REL_TOL,
-   ABS_TOL,
-} TolType;
+typedef struct RKParams {
+   long dim;
+} RKParams;
 
 // TODO: starting from somewhere similar to GMAT's implementation
 typedef struct RungeKutta {
    // TODO: add a placeholder void * params object?
-   void (*ode)(RKIndType t, double *x, double *xdot);
+   void (*ode)(RKIndType t, double *x, RKParams *const params, double *xdot);
+   double (*errorCalc)(const double *const errEst,
+                       const double *const candState, const double *cur_state,
+                       const double relErrThreshold, const long dim);
 
    RKIndType t;
-   double *x;
+   double *inState;
+   double *outState;
+   double *stateDot;
+   double *stageState;
+   double *candidateState;
+   double *errorEsts;
+   RKParams params;
 
    int stages;
    int order;
    int dim;
 
    double **ki;
-   double *ai;
-   double **bij;
-   double *cj;
+   double *ci;
+   double **aij;
+   double *bj;
 
    double *ee;
 
    double tol;
-   TolType tolType;
+   double relErrThreshold;
+   double decPower;
+   double incPower;
+
+   RKIndType curTime;
+   RKIndType stepSize;
+   RKIndType smallestTime;
 
    RKIndType minStep;
    RKIndType maxStep;
@@ -67,9 +86,24 @@ typedef struct RungeKutta {
 
    int hasErrorControl;
    int isInitialized;
+   double sigma;
 } RungeKutta;
 
-double estimateError(RungeKutta rk);
+RungeKutta GetRungeKutta(
+    RKType type, const double tol, const double relErrThresh,
+    const int dimension, const double minStep, const double maxStep,
+    void (*const ode)(RKIndType t, double *x, RKParams *const params,
+                      double *xdot),
+    double (*const errorCalc)(const double *const errEst,
+                              const double *const candState,
+                              const double *cur_state,
+                              const double relErrThreshold, const long dim));
+void RungeKuttaStep(RungeKutta *const rk, RKIndType t0, double dt_seconds,
+                    double *x);
+double RKErrorCalc(const double *const errEst, const double *const candState,
+                   const double *cur_state, const double relErrThreshold,
+                   const long dim);
+
 /*
 ** #ifdef __cplusplus
 ** }
