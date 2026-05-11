@@ -51,7 +51,7 @@ jobs:
         run: export CC=$(which ${{ matrix.compiler }})
       - name: cmake
         run: cmake --preset default_${{ matrix.build }} -DSPICE=${{ matrix.spice }} -DGLUT_OR_GLFW=${{ matrix.glut }} .
-      - name: cmake
+      - name: add homebrew to cmake path
         if: ${{ matrix.glut == 'GLFW' && contains(matrix.os, 'macos') }}
         run: cmake -DCMAKE_PREFIX_PATH=$(brew --prefix) .
       - name: make

@@ -53,20 +53,21 @@ _Static_assert(0, "Configuration does not support rationalkit. Unable to find "
 #endif
 
 #define CONCAT_PRIMATIVE(a, b) a##b
+#define CONCAT_EXPAND(a, b)    CONCAT_PRIMATIVE(a, b)
 #if defined(__INT64_C)
 #define INT64_MACRO __INT64_C
 #elif defined(__INT64_C_SUFFIX__)
-#define INT64_MACRO(c) CONCAT_PRIMATIVE(c, __INT64_C_SUFFIX__)
+#define INT64_MACRO(c) CONCAT_EXPAND(c, __INT64_C_SUFFIX__)
 #else
-#define INT64_MACRO(c) CONCAT_PRIMATIVE(c, L)
+#define INT64_MACRO(c) CONCAT_EXPAND(c, L)
 #endif
 
 #if defined(__UINT64_C)
 #define UINT64_MACRO __UINT64_C
 #elif defined(__UINT64_C_SUFFIX__)
-#define UINT64_MACRO(c) CONCAT_PRIMATIVE(c, __UINT64_C_SUFFIX__)
+#define UINT64_MACRO(c) CONCAT_EXPAND(c, __UINT64_C_SUFFIX__)
 #else
-#define UINT64_MACRO(c) CONCAT_PRIMATIVE(c, UL)
+#define UINT64_MACRO(c) CONCAT_EXPAND(c, UL)
 #endif
 
 #ifdef __has_builtin
