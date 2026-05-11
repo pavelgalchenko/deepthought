@@ -1,10 +1,14 @@
 {
-    "version": 8,
+    "version": 10,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 19
+    },
     "configurePresets": [
         {
             "name": "default_debug",
-            "displayName": "Custom configure preset",
-            "description": "Sets Make generator, build and install directory",
+            "displayName": "Default Debug configure preset",
+            "description": "Sets Make generator, build, and install directory for debug build.",
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}",
             "cacheVariables": {
@@ -17,16 +21,13 @@
         },
         {
             "name": "default_release",
-            "displayName": "Custom configure preset",
-            "description": "Sets Make generator, build and install directory",
+            "inherits": "default_debug",
+            "displayName": "Default Release configure preset",
+            "description": "Sets Make generator, build, and install directory for release build",
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "DEBUG_DATA": "OFF",
-                "SPICE": "ON",
-                "GUI": "ON",
-                "SANITIZER": "OFF"
+                "CMAKE_BUILD_TYPE": "Release"
             }
         }
     ]

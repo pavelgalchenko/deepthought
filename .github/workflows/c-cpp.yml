@@ -50,6 +50,9 @@ jobs:
       - name: set compiler
         run: export CC=$(which ${{ matrix.compiler }})
       - name: cmake
-        run: cmake -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DSPICE=${{ matrix.spice }} -DGLUT_OR_GLFW=${{ matrix.glut }} .
+        run: cmake --preset default_${{ matrix.build }} -DSPICE=${{ matrix.spice }} -DGLUT_OR_GLFW=${{ matrix.glut }} .
+      - name: cmake
+        if: ${{ matrix.glut == 'GLFW' && contains(matrix.os, 'macos') }}
+        run: cmake -DCMAKE_PREFIX_PATH=$(brew --prefix) .
       - name: make
         run: make -sj

@@ -26,15 +26,15 @@
 
 // Use 'long long int' if its larger than 'long int'. If not use int128 if we
 // have it
-#ifdef __SIZEOF_INT128__
-typedef __int128_t Rat_LongLong;
-typedef __uint128_t Rat_ULongLong;
-#define _SIZEOF_RATLONGLONG_ (__SIZEOF_INT128__)
-#elif (__SIZEOF_LONG_LONG__ > __SIZEOF_RATLONG__)
+#if (__SIZEOF_LONG_LONG__ > __SIZEOF_RATLONG__)
 typedef signed long long int Rat_LongLong;
 typedef unsigned long long int Rat_ULongLong;
 #define _SIZEOF_RATLONGLONG_ (__SIZEOF_LONG_LONG__)
 #define _absll               (llabs)
+#elif defined(__SIZEOF_INT128__)
+typedef __int128_t Rat_LongLong;
+typedef __uint128_t Rat_ULongLong;
+#define _SIZEOF_RATLONGLONG_ (__SIZEOF_INT128__)
 #else
 _Static_assert(
     0, "Configuration does not support rationalkit. Two different sizes of "
@@ -50,6 +50,23 @@ typedef unsigned int Rat_Dbl_Cmp;
 #else
 _Static_assert(0, "Configuration does not support rationalkit. Unable to find "
                   "an integer type the same size as double.");
+#endif
+
+#define CONCAT_PRIMATIVE(a, b) a##b
+#if defined(__INT64_C)
+#define INT64_MACRO __INT64_C
+#elif defined(__INT64_C_SUFFIX__)
+#define INT64_MACRO(c) CONCAT_PRIMATIVE(c, __INT64_C_SUFFIX__)
+#else
+#define INT64_MACRO(c) CONCAT_PRIMATIVE(c, L)
+#endif
+
+#if defined(__UINT64_C)
+#define UINT64_MACRO __UINT64_C
+#elif defined(__UINT64_C_SUFFIX__)
+#define UINT64_MACRO(c) CONCAT_PRIMATIVE(c, __UINT64_C_SUFFIX__)
+#else
+#define UINT64_MACRO(c) CONCAT_PRIMATIVE(c, UL)
 #endif
 
 #ifdef __has_builtin
@@ -482,11 +499,11 @@ Rational RationalSub(Rational a, Rational b)
 #define DBL_FRAC_BITS (__DBL_MANT_DIG__ - 1)
 
 // Masks derived portably
-#define DBL_FRAC_MASK ((__UINT64_C(1) << DBL_FRAC_BITS) - 1)
-#define DBL_IMPLICIT  (__UINT64_C(1) << DBL_FRAC_BITS)
+#define DBL_FRAC_MASK ((UINT64_MACRO(1) << DBL_FRAC_BITS) - 1)
+#define DBL_IMPLICIT  (UINT64_MACRO(1) << DBL_FRAC_BITS)
 #define DBL_EXP_BIAS  (__DBL_MAX_EXP__ - 1)
 #define DBL_EXP_SHIFT DBL_FRAC_BITS
-#define DBL_EXP_MASK  ((__UINT64_C(1) << (64 - DBL_FRAC_BITS - 1)) - 1)
+#define DBL_EXP_MASK  ((UINT64_MACRO(1) << (64 - DBL_FRAC_BITS - 1)) - 1)
 
 Rational double2rational(const double val)
 {
@@ -525,7 +542,7 @@ Rational double2rational(const double val)
    }
    else if (-exponent <= 62) {
       out.num = mantissa;
-      out.den = __INT64_C(1) << (-exponent);
+      out.den = INT64_MACRO(1) << (-exponent);
       _reduce_by_gcd(&out.num, &out.den);
    }
    else {
@@ -539,7 +556,7 @@ Rational double2rational(const double val)
       else {
          // Best approximation: scale both down to fit in int64_t
          out.num = mantissa >> excess;
-         out.den = __INT64_C(1) << 62;
+         out.den = INT64_MACRO(1) << 62;
       }
    }
    out.num   = (sign) ? -out.num : out.num;
