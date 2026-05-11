@@ -78,7 +78,10 @@ target_compile_definitions(42kit PRIVATE $<$<BOOL:${IGNORE_LONG}>:_IGNORE_LONG_>
 
 # set include directories
 target_include_directories(42kit PUBLIC Include)
-target_include_directories(42kit PUBLIC ../Include)
+if(APPLE)
+    # several symbols will be provided by deepthought at runtime
+    target_link_options(42kit PRIVATE "-undefined" "dynamic_lookup")
+endif()
 
 add_compile_definitions($<$<BOOL:${REPORT_RESIDUALS}>:_REPORT_RESIDUALS_>)
 
