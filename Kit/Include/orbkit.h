@@ -273,6 +273,7 @@ struct OrbitType {
    double RAANdot; /* Due to average J2 effect, rad/sec */
    double ArgPdot; /* Due to average J2 effect, rad/sec */
    double J2Rw2bya;
+   char SplineFileName[1050];
    FILE *SplineFile;
 
    /*~ Internal Variables ~*/
@@ -317,6 +318,7 @@ struct OrbitType {
 
 /*~ Prototypes ~*/
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
+void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 double MeanAnomToTrueAnom(double MeanAnom, double ecc);
 double TrueAnomaly(double mu, double p, double e, double t);
 double atanh(double x);

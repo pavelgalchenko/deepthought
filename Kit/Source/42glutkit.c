@@ -82,7 +82,7 @@ void Idle(void)
       if (TimerHasExpired) {
          TimerHasExpired = 0;
          glutTimerFunc(TimerDuration, TimerHandler, 0);
-         Done = SimStep();
+         Done = SimStep_Old();
          if (GLOutFlag) {
             glutSetWindow(CamWindow);
             CamRenderExec();

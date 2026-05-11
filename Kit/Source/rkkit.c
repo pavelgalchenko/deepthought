@@ -397,7 +397,7 @@ static void _rawstep(RungeKutta *const rk)
             axpy(rk->aij[i][j], rk->stageState, rk->ki[j], rk->dim);
          }
       }
-      rk->ode(time, rk->stageState, &rk->params, rk->stateDot);
+      rk->ode(time, rk->stageState, rk->params, rk->stateDot);
 
       SxVG(JDToSeconds(rk->stepSize), rk->stateDot, rk->ki[i], rk->dim);
    }
@@ -488,6 +488,7 @@ void RungeKuttaStep(RungeKutta *const rk, RKIndType t0, double dt_seconds,
 RungeKutta GetRungeKutta(
     RKType type, const double tol, const double relErrThreshold,
     const int dimension, const double minStep, const double maxStep,
+    RKParams *params,
     void (*const ode)(RKIndType t, double *x, RKParams *const params,
                       double *xdot),
     double (*const errorCalc)(const double *const errEst,
@@ -517,7 +518,13 @@ RungeKutta GetRungeKutta(
    }
    rk.minStep = JDFromSeconds(fabs(minStep), TT_TIME, GMAT_MJD_EPOCH);
    rk.maxStep = JDFromSeconds(fabs(maxStep), TT_TIME, GMAT_MJD_EPOCH);
-   rk.ode     = ode;
+   if (ode == NULL) {
+      fprintf(
+          stderr,
+          "The ode input to GetRungeKutta is required to be set. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   rk.ode = ode;
    if (errorCalc != NULL)
       rk.errorCalc = errorCalc;
    if (tol > 0)
@@ -525,6 +532,7 @@ RungeKutta GetRungeKutta(
    if (relErrThreshold > 0)
       rk.relErrThreshold = relErrThreshold;
    rk.isInitialized = 1;
+   rk.params        = params; //
    return rk;
 }
 

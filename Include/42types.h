@@ -991,6 +991,7 @@ struct SCType {
    /*~ Structures ~*/
    RungeKutta RKIntegrator;
    SCRKParams rkparams;
+   double *rk_state;
    struct AcType AC;
    struct DSMType DSM;
    struct BodyType *B;  /* [*Nb*] */

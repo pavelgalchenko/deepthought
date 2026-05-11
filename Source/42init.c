@@ -1180,7 +1180,8 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                     "Exiting...\n");
             exit(EXIT_FAILURE);
          }
-         inputType = DecodeString(response);
+         O->SplineFile = NULL;
+         inputType     = DecodeString(response);
          switch (inputType) {
             case INP_KEPLER: {
                if (fy_node_scanf(node,
@@ -1328,6 +1329,8 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                      }
                   } break;
                   case INP_SPLINE: {
+                     strcpy(O->SplineFileName, InOutPath);
+                     strcat(O->SplineFileName, elementFileName);
                      O->SplineFile = FileOpen(InOutPath, elementFileName, "rt");
                      O->SplineActive   = TRUE;
                      DateType NodeDate = {0};
@@ -1528,6 +1531,8 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                      }
                   } break;
                   case INP_SPLINE: {
+                     strcpy(O->SplineFileName, InOutPath);
+                     strcat(O->SplineFileName, elementFileName);
                      O->SplineFile = FileOpen(InOutPath, elementFileName, "rt");
                      O->SplineActive   = TRUE;
                      DateType NodeDate = {0};
@@ -2773,25 +2778,14 @@ void InitOrderNDynamics(struct SCType *S)
 /**********************************************************************/
 static long _sc_state_dim(struct SCType *const S, const struct OrbitType *orb)
 {
-   long ret_val = 0;
+   long ret_val      = 0;
+   struct DynType *D = &S->Dyn;
    switch (S->DynMethod) {
       case DYN_GAUSS_ELIM: {
-         struct DynType *D = &S->Dyn;
-
          ret_val = D->Nu + D->Nx + 2 * (D->Nf + S->Nw);
       } break;
       case DYN_ORDER_N: {
-         ret_val = 9 + 4;
-         for (int Ig = 0; Ig < S->Ng; Ig++) {
-            struct JointType *G = &S->G[Ig];
-
-            ret_val += G->RotDOF;
-            ret_val += 2 * G->TrnDOF;
-            if (G->IsSpherical)
-               ret_val += 4;
-            else
-               ret_val += G->RotDOF;
-         }
+         ret_val = D->Nu + D->Nx + S->Nw;
       } break;
       default:
          fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
@@ -4109,6 +4103,7 @@ void InitSpacecraft(struct SCType *S)
    S->rkparams.rgn    = malloc(Nrgn * sizeof(struct RegionType));
    for (i = 0; i < Nrgn; i++)
       memcpy(&S->rkparams.rgn[i], &Rgn[i], sizeof(struct RegionType));
+   S->rkparams.orb.SplineFile = NULL;
    CloneOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
    for (i = 0; i < NLAGSYS; i++)
       memcpy(&S->rkparams.lagsys[i], &LagSys[i],
@@ -4116,9 +4111,10 @@ void InitSpacecraft(struct SCType *S)
    memcpy(&S->rkparams.frm, &Frm[S->RefOrb], sizeof(struct FormationType));
 
    S->rkparams.base.dim = _sc_state_dim(S, &Orb[S->RefOrb]);
-   // TODO: need ode for this to function
+   S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
+
    S->RKIntegrator = GetRungeKutta(RK89_RK, 0, 0, S->rkparams.base.dim, 0.001,
-                                   DTSIM, NULL, NULL);
+                                   DTSIM, &S->rkparams, SCOde, NULL);
 }
 /*********************************************************************/
 void LoadTdrs(void)
@@ -4316,19 +4312,20 @@ void LoadSun(const ephemType ephem, const JDType jd,
 #endif
 
    /* Ephemeris */
-   W->eph.World = 0;
-   W->eph.mu    = W->mu;
-   W->eph.SMA   = 0.0;
-   W->eph.ecc   = 0.0;
-   W->eph.inc   = 0.0;
-   W->eph.RAAN  = 0.0;
-   W->eph.ArgP  = 0.0;
-   W->eph.tp    = 0.0;
-   W->eph.anom  = 0.0;
-   W->eph.alpha = 0.0;
-   W->eph.SLR   = 0.0;
-   W->eph.rmin  = 0.0;
-   W->eph.Ncheb = 0;
+   W->eph.World      = 0;
+   W->eph.mu         = W->mu;
+   W->eph.SMA        = 0.0;
+   W->eph.ecc        = 0.0;
+   W->eph.inc        = 0.0;
+   W->eph.RAAN       = 0.0;
+   W->eph.ArgP       = 0.0;
+   W->eph.tp         = 0.0;
+   W->eph.anom       = 0.0;
+   W->eph.alpha      = 0.0;
+   W->eph.SLR        = 0.0;
+   W->eph.rmin       = 0.0;
+   W->eph.Ncheb      = 0;
+   W->eph.SplineFile = NULL;
 
    /* Graphical Properties */
    W->Atmo.Exists = FALSE;
@@ -4593,6 +4590,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       W->eph.World      = SOL;
       W->eph.mu         = World[SOL].mu;
       W->eph.Ncheb      = 0;
+      W->eph.SplineFile = NULL;
       W->DipoleMoment   = DipoleMoment[i];
       for (j = 0; j < 3; j++) {
          W->DipoleAxis[j]   = DipoleAxis[i][j];
@@ -5374,6 +5372,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             E->RAAN        = raan * D2R;
             E->ArgP        = omg * D2R;
             E->Ncheb       = 0;
+            E->SplineFile  = NULL;
 
             M->PriMerAngJ2000 = primerang_j2000 * D2R;
 
@@ -5481,9 +5480,10 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
    for (Ib = 0; Ib < Nmb; Ib++) {
       DateType EpochDate = {0};
 
-      W        = &worlds[MINORBODY_0 + Ib];
-      E        = &W->eph;
-      E->Ncheb = 0;
+      W             = &worlds[MINORBODY_0 + Ib];
+      E             = &W->eph;
+      E->Ncheb      = 0;
+      E->SplineFile = NULL;
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
       W->Exists = DecodeString(response);
@@ -5596,6 +5596,13 @@ void CloneWorld(struct WorldType *const destWorld,
    // TODO: should deep copy more, but all other pointers in WorldType (e.g.,
    // WorldType::GraveModel::C) are not modified after initial world
    // configuration.
+}
+/**********************************************************************/
+void CopyWorld(struct WorldType *const destWorld,
+               const struct WorldType srcWorld)
+{
+   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
+   CopyOrbit(&destWorld->eph, srcWorld.eph);
 }
 /**********************************************************************/
 void LoadRegions(void)

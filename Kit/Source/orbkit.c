@@ -21,9 +21,26 @@
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
 {
    memcpy(destOrb, &srcOrb, sizeof(struct OrbitType));
+   if (destOrb->SplineFile)
+      destOrb->SplineFile = fopen(destOrb->SplineFileName, "rt");
 
    if (srcOrb.Ncheb) {
       destOrb->Cheb = malloc(srcOrb.Ncheb * sizeof(struct Cheb3DType));
+      for (int i = 0; i < destOrb->Ncheb; i++)
+         memcpy(&destOrb->Cheb[i], &srcOrb.Cheb[i], sizeof(struct Cheb3DType));
+   }
+}
+/**********************************************************************/
+void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
+{
+   if (destOrb->SplineFile)
+      fclose(destOrb->SplineFile);
+
+   memcpy(destOrb, &srcOrb, sizeof(struct OrbitType));
+   if (destOrb->SplineFile)
+      destOrb->SplineFile = fopen(destOrb->SplineFileName, "rt");
+
+   if (srcOrb.Ncheb) {
       for (int i = 0; i < destOrb->Ncheb; i++)
          memcpy(&destOrb->Cheb[i], &srcOrb.Cheb[i], sizeof(struct Cheb3DType));
    }

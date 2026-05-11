@@ -75,7 +75,7 @@ void MainLoop(void)
          POV.w[0] = 0.0;
          POV.w[1] = 0.0;
          POV.w[2] = 0.0;
-         Done     = SimStep();
+         Done     = SimStep_Old();
          if (GLOutFlag) {
             glfwMakeContextCurrent(CamWindow);
             CamRenderExec();

@@ -43,7 +43,6 @@ typedef struct RKParams {
 
 // TODO: starting from somewhere similar to GMAT's implementation
 typedef struct RungeKutta {
-   // TODO: add a placeholder void * params object?
    void (*ode)(RKIndType t, double *x, RKParams *const params, double *xdot);
    double (*errorCalc)(const double *const errEst,
                        const double *const candState, const double *cur_state,
@@ -56,7 +55,7 @@ typedef struct RungeKutta {
    double *stageState;
    double *candidateState;
    double *errorEsts;
-   RKParams params;
+   RKParams *params;
 
    int stages;
    int order;
@@ -92,6 +91,7 @@ typedef struct RungeKutta {
 RungeKutta GetRungeKutta(
     RKType type, const double tol, const double relErrThresh,
     const int dimension, const double minStep, const double maxStep,
+    RKParams *params,
     void (*const ode)(RKIndType t, double *x, RKParams *const params,
                       double *xdot),
     double (*const errorCalc)(const double *const errEst,

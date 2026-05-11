@@ -205,9 +205,10 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
                     double trgtPosH[3], double *trgtPriMerAng,
                     double trgtCNH[3][3]);
 
-long SimStep(void);
+long SimStep_Old(void);
 void ZeroFrcTrq(struct SCType *S);
 void CloneWorld(struct WorldType *const dest, const struct WorldType src);
+void CopyWorld(struct WorldType *const dest, const struct WorldType src);
 void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
                       struct RegionType *rgn,
                       struct LagrangeSystemType *lagsys);
@@ -243,6 +244,9 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
                                 double *uf, double *xf, struct SCType *S);
 void BodyStatesToNodeStates(struct SCType *S);
 void PartitionForces(struct SCType *S);
+void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot);
+void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,
+                        struct SCType *S);
 void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
               struct FormationType *const frm, struct SCType *S);
 void Cleanup(void);
