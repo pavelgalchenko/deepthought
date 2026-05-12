@@ -192,6 +192,13 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
+void StateVectorToJoints(double *u, double *x, const long Nu, const long Nx,
+                         struct JointType *GN, struct JointType *GList,
+                         const long Ng);
+void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S);
+void SToRKState(const struct OrbitType *const orb, struct SCType *S,
+                double *x_rk);
+
 void GravPertForceRK4(struct WorldType *const worlds,
                       struct OrbitType *const orbs, struct SCType *S,
                       double u[6], double FrcN[3], double RKFdt);
@@ -205,6 +212,7 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
                     double trgtPosH[3], double *trgtPriMerAng,
                     double trgtCNH[3][3]);
 
+long SimStep_New(void);
 long SimStep_Old(void);
 void ZeroFrcTrq(struct SCType *S);
 void CloneWorld(struct WorldType *const dest, const struct WorldType src);

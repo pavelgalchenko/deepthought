@@ -393,9 +393,8 @@ static void _rawstep(RungeKutta *const rk)
       RKIndType time = rk->curTime;
       if (i > 0) {
          time = JDaxpy(rk->ci[i], rk->stepSize, time);
-         for (int j = 0; j < i; j++) {
-            axpy(rk->aij[i][j], rk->stageState, rk->ki[j], rk->dim);
-         }
+         for (int j = 0; j < i; j++)
+            axpy(rk->aij[i][j], rk->ki[j], rk->stageState, rk->dim);
       }
       rk->ode(time, rk->stageState, rk->params, rk->stateDot);
 
@@ -502,7 +501,7 @@ RungeKutta GetRungeKutta(
       case EULER_RK:
          _initeuler(&rk, dimension);
          break;
-      case THE_RK4_RK:
+      case THERK4_RK:
          _inittherk4(&rk, dimension);
          break;
       case RK4_RK:
@@ -516,8 +515,8 @@ RungeKutta GetRungeKutta(
                  "Unknown Runge Kutta type in GetRungeKutta(). Exiting...\n");
          exit(EXIT_FAILURE);
    }
-   rk.minStep = JDFromSeconds(fabs(minStep), TT_TIME, GMAT_MJD_EPOCH);
-   rk.maxStep = JDFromSeconds(fabs(maxStep), TT_TIME, GMAT_MJD_EPOCH);
+   rk.minStep = JDFromSeconds(fabs(minStep), TT_TIME, ZERO_EPOCH);
+   rk.maxStep = JDFromSeconds(fabs(maxStep), TT_TIME, ZERO_EPOCH);
    if (ode == NULL) {
       fprintf(
           stderr,

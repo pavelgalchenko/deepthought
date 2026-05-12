@@ -4097,6 +4097,7 @@ void InitSpacecraft(struct SCType *S)
    }
    fy_document_destroy(fyd);
 
+#ifndef OLD_INTEGRATOR
    /* Set up the propagator */
    S->rkparams.sc     = S;
    S->rkparams.worlds = World_dupe;
@@ -4113,8 +4114,10 @@ void InitSpacecraft(struct SCType *S)
    S->rkparams.base.dim = _sc_state_dim(S, &Orb[S->RefOrb]);
    S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
 
-   S->RKIntegrator = GetRungeKutta(RK89_RK, 0, 0, S->rkparams.base.dim, 0.001,
-                                   DTSIM, &S->rkparams, SCOde, NULL);
+   S->RKIntegrator =
+       GetRungeKutta(THERK4_RK, 0, 0, S->rkparams.base.dim, 0.001, DTSIM,
+                     (RKParams *)&S->rkparams, SCOde, NULL);
+#endif
 }
 /*********************************************************************/
 void LoadTdrs(void)

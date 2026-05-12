@@ -3591,9 +3591,9 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    Nav->steps++;
-   Nav->Date = Nav->Date0;
+   Nav->jd_tt_mjd = JDAddMultRatSecs(Nav->jd_tt_mjd_0, Nav->steps, Nav->DT_RAT);
+   Nav->Date      = JDToDate(Nav->jd_tt_mjd, TT_TIME);
 
-   updateTime(&Nav->Date, Nav->DT * Nav->steps);
    Nav->ccsds_time = date2ccsds(Nav->Date);
    configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb,
                      1.0 - Nav->refLerpAlpha, TRUE);

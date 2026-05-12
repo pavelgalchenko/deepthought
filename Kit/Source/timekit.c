@@ -91,6 +91,16 @@ CCSDSTime seconds2ccsds(const double sec)
    return ccsds;
 }
 /**********************************************************************/
+CCSDSTime jd2ccsds(JDType jd)
+{
+   CCSDSTime out = {0};
+   JDChangeSystemEpoch(TAI_TIME, CCSDS_EPOCH, &jd);
+   out.coarse       = jd.whole_days * SEC_PER_DAY + jd.seconds.whole;
+   jd.seconds.whole = 0;
+   out.fine         = rational2double(jd.seconds) * CCSDS_FINE_MAX + 0.5;
+   return out;
+}
+/**********************************************************************/
 int isequal_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
 {
    return (a_ccsds.fine == b_ccsds.fine) && (a_ccsds.coarse == b_ccsds.coarse);

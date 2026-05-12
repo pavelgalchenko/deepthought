@@ -2237,8 +2237,7 @@ void FindBodyAccelerations(struct SCType *S, double *du)
    }
 }
 /**********************************************************************/
-void KaneNBodyEOM_RK(struct SCType *S, double *const x_in,
-                     double *const xdot_out)
+void KaneNBodyEOM_RK(struct SCType *S, double *const xdot_out)
 {
    struct DynType *D;
    struct JointType *G;
@@ -2258,19 +2257,12 @@ void KaneNBodyEOM_RK(struct SCType *S, double *const x_in,
    Nw = S->Nw;
    Nf = D->Nf;
 
-   long offset = 0;
-
-   u       = &x_in[offset];
-   offset += Nu;
-   x       = &x_in[offset];
-   offset += Nx;
-   h       = &x_in[offset];
-   offset += Nw;
-   a       = &x_in[offset];
-   offset += Nw;
-   uf      = &x_in[offset];
-   offset += Nf;
-   xf      = &x_in[offset];
+   u  = D->u;
+   x  = D->x;
+   h  = D->h;
+   a  = D->a;
+   uf = D->uf;
+   xf = D->xf;
 
    du  = D->du;
    dx  = D->dx;
@@ -2335,7 +2327,7 @@ void KaneNBodyEOM_RK(struct SCType *S, double *const x_in,
    }
    FindBodyAccelerations(S, du);
 
-   offset = 0;
+   long offset = 0;
    CopyVG(&xdot_out[offset], du, Nu);
    offset += Nu;
    CopyVG(&xdot_out[offset], dx, Nx);
@@ -3514,8 +3506,34 @@ void OrderNMultiBodyEOM(struct SCType *S)
    }
 }
 /******************************************************************************/
-void OrderNMultiBodyEOM_RK(struct SCType *S, double *const x_in,
-                           double *const xdot_out)
+void StateVectorToJoints(double *u, double *x, const long Nu, const long Nx,
+                         struct JointType *GN, struct JointType *GList,
+                         const long Ng)
+{
+   for (int i = 0; i < 3; i++) {
+      GN->AngRate[i] = u[i];
+      GN->PosRate[i] = u[Nu - 3 + i];
+      GN->Pos[i]     = x[Nx - 3 + i];
+   }
+   for (int i = 0; i < 4; i++) {
+      GN->q[i] = x[i];
+   }
+
+   for (int Ig = 0; Ig < Ng; Ig++) {
+      struct JointType *G = &GList[Ig];
+      for (int i = 0; i < G->RotDOF; i++) {
+         G->AngRate[i] = u[G->Rotu0 + i];
+      }
+      for (int i = 0; i < G->TrnDOF; i++) {
+         G->PosRate[i] = u[G->Trnu0 + i];
+         G->Pos[i]     = x[G->Trnx0 + i];
+      }
+      for (int i = 0; i < ((G->IsSpherical) ? 4 : G->RotDOF); i++)
+         G->q[i] = x[G->Rotx0 + i];
+   }
+}
+/******************************************************************************/
+void OrderNMultiBodyEOM_RK(struct SCType *S, double *const xdot_out)
 {
    struct DynType *D; /* Copy to/from D->u, D->x */
    struct BodyType *B;
@@ -3527,14 +3545,6 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const x_in,
    D = &S->Dyn;
    G = &S->GN;
 
-   long offset = 0;
-
-   CopyVG(D->u, &xdot_out[offset], D->Nu);
-   offset += D->Nu;
-   CopyVG(D->x, &xdot_out[offset], D->Nx);
-   offset += D->Nx;
-   CopyVG(D->h, &xdot_out[offset], S->Nw);
-
    /* Set up for EOM Call */
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
@@ -3544,35 +3554,7 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const x_in,
       }
    }
 
-   for (i = 0; i < 3; i++) {
-      G->AngRate[i] = D->u[i];
-      G->PosRate[i] = D->u[D->Nu - 3 + i];
-      G->Pos[i]     = D->x[D->Nx - 3 + i];
-   }
-   for (i = 0; i < 4; i++) {
-      G->q[i] = D->x[i];
-   }
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->AngRate[i] = D->u[G->Rotu0 + i];
-      }
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = D->u[G->Trnu0 + i];
-         G->Pos[i]     = D->x[G->Trnx0 + i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->q[i] = D->x[G->Rotx0 + i];
-         }
-      }
-      else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->Ang[i] = D->x[G->Rotx0 + i];
-         }
-      }
-   }
+   StateVectorToJoints(D->u, D->x, D->Nu, D->Nx, &S->GN, S->G, S->Ng);
 
    for (Iw = 0; Iw < S->Nw; Iw++) {
       W    = &S->Whl[Iw];
@@ -3584,17 +3566,14 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const x_in,
    OrderNMultiBodyEOM(S);
 
    /*  Extract the data */
-   G      = &S->GN;
-   offset = 0;
+   G = &S->GN;
    for (i = 0; i < 3; i++) {
-      xdot_out[offset + i]             = G->udot[i];
-      xdot_out[offset + D->Nu - 3 + i] = G->udot[3 + i];
+      xdot_out[i]                     = G->udot[i];
+      xdot_out[D->Nu - 3 + i]         = G->udot[3 + i];
+      xdot_out[D->Nu + D->Nx - 3 + i] = G->xdot[i];
    }
-   offset += D->Nu;
    for (i = 0; i < 4; i++)
-      xdot_out[offset + i] = G->qdot[i];
-   for (i = 0; i < 3; i++)
-      xdot_out[offset + D->Nx - 3 + i] = G->xdot[i];
+      xdot_out[D->Nu + i] = G->qdot[i];
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3604,14 +3583,8 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const x_in,
          xdot_out[G->Trnu0 + i]         = G->udot[G->RotDOF + i];
          xdot_out[D->Nu + G->Trnx0 + i] = G->xdot[i];
       }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            xdot_out[D->Nu + G->Rotx0 + i] = G->qdot[i];
-      }
-      else {
-         for (i = 0; i < G->RotDOF; i++)
-            xdot_out[D->Nu + G->Rotx0 + i] = G->qdot[i];
-      }
+      for (i = 0; i < ((G->IsSpherical) ? 4 : G->RotDOF); i++)
+         xdot_out[D->Nu + G->Rotx0 + i] = G->qdot[i];
    }
    for (Iw = 0; Iw < S->Nw; Iw++) {
       W = &S->Whl[Iw];
@@ -4495,7 +4468,6 @@ void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
                    double *xdot)
 {
    double accelN[3], accel[3];
-   long j;
 
    accelN[0] = S->FrcN[0] / S->mass;
    accelN[1] = S->FrcN[1] / S->mass;
@@ -4684,6 +4656,7 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    struct LagrangeSystemType *lagsys = scparams->lagsys;
    struct FormationType *frm         = &scparams->frm;
 
+   RKStateToS(orb, x, S);
    JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &t);
 
    double *x_trn    = NULL;
@@ -4709,10 +4682,10 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
 
    switch (S->DynMethod) {
       case DYN_GAUSS_ELIM:
-         KaneNBodyEOM_RK(S, x, xdot);
+         KaneNBodyEOM_RK(S, xdot);
          break;
       case DYN_ORDER_N:
-         OrderNMultiBodyEOM_RK(S, x, xdot);
+         OrderNMultiBodyEOM_RK(S, xdot);
          break;
       default:
          fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");

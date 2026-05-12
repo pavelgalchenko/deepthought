@@ -272,16 +272,82 @@ void ZeroFrcTrq(struct SCType *S)
    }
 }
 /**********************************************************************/
-void MapSToRKState(const struct OrbitType *const orb, struct SCType *S,
-                   double *x_rk)
+void SToRKState(const struct OrbitType *const orb, struct SCType *S,
+                double *x_rk)
 {
    double *x_trn  = NULL;
    const long dim = S->rkparams.base.dim;
 
+   struct DynType *D = &S->Dyn;
    switch (S->DynMethod) {
-      case DYN_GAUSS_ELIM: { // TODO
+      case DYN_GAUSS_ELIM: {
+         /* .. Check for Locked Joint DOFs */
+         for (int i = 0; i < 3; i++)
+            D->ActiveStateIdx[i] = i; /* Body 0 angular DOF never locked */
+         D->Ns  = 3;
+         int iu = 3;
+         for (int Ig = 0; Ig < S->Ng; Ig++) {
+            struct JointType *G = &S->G[Ig];
+            G->ActiveRotu0      = D->Ns;
+            G->ActiveRotDOF     = 0;
+            for (int i = 0; i < G->RotDOF; i++) {
+               if (!G->RotLocked[i]) {
+                  G->ActiveRotDOF++;
+                  D->ActiveStateIdx[D->Ns] = iu;
+                  D->Ns++;
+               }
+               else {
+                  D->u[iu] = 0.0;
+               }
+               iu++;
+            }
+            G->ActiveTrnu0  = D->Ns;
+            G->ActiveTrnDOF = 0;
+            for (int i = 0; i < G->TrnDOF; i++) {
+               if (!G->TrnLocked[i]) {
+                  G->ActiveTrnDOF++;
+                  D->ActiveStateIdx[D->Ns] = iu;
+                  D->Ns++;
+               }
+               else {
+                  D->u[iu] = 0.0;
+               }
+               iu++;
+            }
+         }
+         for (int i = 0; i < 3;
+              i++) { /* Body 0 translational DOF never locked */
+            D->ActiveStateIdx[D->Ns] = iu;
+            D->Ns++;
+            iu++;
+         }
+         D->SomeJointsLocked  = ((D->Ns == D->Nu) ? 0 : 1);
+         D->Ns               += D->Nf;
+         long offset          = 0;
+         CopyVG(&x_rk[offset], D->u, D->Nu);
+         offset += D->Nu;
+         CopyVG(&x_rk[offset], D->x, D->Nx);
+         offset += D->Nx;
+         CopyVG(&x_rk[offset], D->h, S->Nw);
+         offset += S->Nw;
+         CopyVG(&x_rk[offset], D->a, S->Nw);
+         offset += S->Nw;
+         CopyVG(&x_rk[offset], D->uf, D->Nf);
+         offset += D->Nf;
+         CopyVG(&x_rk[offset], D->xf, D->Nf);
       } break;
-      case DYN_ORDER_N: { // TODO
+      case DYN_ORDER_N: {
+         long offset = 0;
+         CopyVG(&x_rk[offset], D->u, D->Nu);
+         offset += D->Nu;
+         CopyVG(&x_rk[offset], D->x, D->Nx);
+         offset += D->Nx;
+         CopyVG(&x_rk[offset], D->h, S->Nw);
+         for (int Iw = 0; Iw < S->Nw; Iw++) {
+            struct WhlType *W = &S->Whl[Iw];
+
+            x_rk[D->Nu + D->Nx + Iw] = W->H;
+         }
       } break;
       default:
          fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
@@ -351,71 +417,41 @@ void MapSToRKState(const struct OrbitType *const orb, struct SCType *S,
    }
 }
 /**********************************************************************/
-void MapRKStateToS(const struct OrbitType *const orb, struct SCType *S,
-                   double *x_rk)
+void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
 {
    double *x_trn  = NULL;
    const long dim = S->rkparams.base.dim;
 
+   struct DynType *D = &S->Dyn;
+   long offset       = 0;
    switch (S->DynMethod) {
-      case DYN_GAUSS_ELIM: {
-         struct DynType *D = &S->Dyn;
-         double *u, *x, *h, *a, *uf, *xf;
-         long offset  = 0;
-         u            = &x_rk[offset];
-         offset      += D->Nu;
-         x            = &x_rk[offset];
-         offset      += D->Nx;
-         h            = &x_rk[offset];
-         offset      += S->Nw;
-         a            = &x_rk[offset];
-         offset      += S->Nw;
-         uf           = &x_rk[offset];
-         offset      += D->Nf;
-         xf           = &x_rk[offset];
-         CopyVG(D->u, u, D->Nu);
-         CopyVG(D->x, x, D->Nx);
-         CopyVG(D->h, h, S->Nw);
-         CopyVG(D->a, a, S->Nw);
-         CopyVG(D->uf, uf, D->Nf);
-         CopyVG(D->xf, xf, D->Nf);
-         MapStateVectorToBodyStates(u, x, h, a, uf, xf, S);
-         MotionConstraints(S);
-         BodyStatesToNodeStates(S);
-         SCMassProps(S);
-         FindTotalAngMom(S);
-      } break;
-      case DYN_ORDER_N: {
-         struct DynType *D = &S->Dyn;
-         double *u, *x, *h, *a, *uf, *xf;
-         long offset  = 0;
-         u            = &x_rk[offset];
-         offset      += D->Nu;
-         x            = &x_rk[offset];
-         offset      += D->Nx;
-         h            = &x_rk[offset];
-         offset      += S->Nw;
-         a            = &x_rk[offset];
-         offset      += S->Nw;
-         uf           = &x_rk[offset];
-         offset      += D->Nf;
-         xf           = &x_rk[offset];
-         CopyVG(D->u, u, D->Nu);
-         CopyVG(D->x, x, D->Nx);
-         CopyVG(D->h, h, S->Nw);
-         CopyVG(D->a, a, S->Nw);
-         CopyVG(D->uf, uf, D->Nf);
-         CopyVG(D->xf, xf, D->Nf);
-         MapStateVectorToBodyStates(u, x, h, a, uf, xf, S);
-         MotionConstraints(S);
-         BodyStatesToNodeStates(S);
-         SCMassProps(S);
-         FindTotalAngMom(S);
-      } break;
+      case DYN_GAUSS_ELIM:
+         offset  = 0;
+         offset += D->Nu;
+         offset += D->Nx;
+         offset += S->Nw;
+         CopyVG(D->a, &x_rk[offset], S->Nw);
+         offset += S->Nw;
+         CopyVG(D->uf, &x_rk[offset], D->Nf);
+         offset += D->Nf;
+         CopyVG(D->xf, &x_rk[offset], D->Nf);
+      case DYN_ORDER_N:
+         offset = 0;
+         CopyVG(D->u, &x_rk[offset], D->Nu);
+         offset += D->Nu;
+         CopyVG(D->x, &x_rk[offset], D->Nx);
+         offset += D->Nx;
+         CopyVG(D->h, &x_rk[offset], S->Nw);
+         break;
       default:
          fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
+   MapStateVectorToBodyStates(D->u, D->x, D->h, D->a, D->uf, D->xf, S);
+   MotionConstraints(S);
+   BodyStatesToNodeStates(S);
+   SCMassProps(S);
+   FindTotalAngMom(S);
 
    switch (orb->Regime) {
       case ORB_ZERO:
@@ -475,6 +511,9 @@ void MapRKStateToS(const struct OrbitType *const orb, struct SCType *S,
                CopyVG(S->VelN, &x_trn[3], 3);
                break;
             default:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosR, x_trn, 3);
+               CopyVG(S->VelR, &x_trn[3], 3);
                break;
          }
          break;
@@ -501,11 +540,16 @@ long SimStep_New(void)
       RealRunTime(&TotalRunTime, DTSIM);
       ManageFlags(&nout, &GLnout, &set_nout);
 
-      /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-      Ephemerides(JD_TDB_MJD, SC, World, Rgn, LagSys, Orb);
+      /* Sun, Moon, Planets, Useful Auxiliary Frames */
+      WorldEphemerides(JD_TT_MJD, World, Rgn, LagSys);
+      for (long Iorb = 0; Iorb < Norb; Iorb++)
+         OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
+
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
+            /* Spacecraft */
+            SCEphemerides(JD_TDB_MJD, S, World, Orb);
             ZeroFrcTrq(S);
          }
       }
@@ -539,33 +583,45 @@ long SimStep_New(void)
    /* Read and Interpret Command Script File */
    CmdInterpreter();
 
-   JDType jd_f = JDAddRationalSeconds(JD_TT_MJD, DTSIM_RAT);
+   // JDType jd_f = JDAddRationalSeconds(JD_TT_MJD, DTSIM_RAT);
 
-   SCContactFrcTrq(Orb, SC, Isc);
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists)
+         SCContactFrcTrq(Orb, S, Isc); // TODO: this is zero'd in the sceom
+   }
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {
-      if (SC[Isc].Exists) {
-         // Clean up World_dupe for the next integration
-         for (int i = 0; i < NWORLD; i++)
-            CopyWorld(&World_dupe[i], World[i]);
-         CopyOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
+      S = &SC[Isc];
+      if (S->Exists) {
+         if (S->OrbDOF == ORBDOF_FIXED) {
+            FixedOrbitPosition(&Orb[S->RefOrb], &Frm[S->RefOrb], S);
+         }
+         else {
+            // Clean up World_dupe for the next integration
+            for (int i = 0; i < NWORLD; i++)
+               CopyWorld(&World_dupe[i], World[i]);
+            CopyOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
 
-         MapSToRKState(&S->rkparams.orb, S, S->rk_state);
-         RungeKuttaStep(&S->RKIntegrator, JD_TT_MJD, DTSIM, S->rk_state);
+            SToRKState(&S->rkparams.orb, S, S->rk_state);
+            RungeKuttaStep(&S->RKIntegrator, JD_TT_MJD, DTSIM, S->rk_state);
 
-         // TODO: assuming that the last call in RungeKutta got us to the
-         // current time. Otherwise:
-         // WorldEphemerides(jd_f, World_dupe, S->rkparams.rgn,
-         //                  S->rkparams.lagsys);
-         // OrbitMotion(World_dupe, S->rkparams.rgn, S->rkparams.lagsys,
-         //             &S->rkparams.orb, &S->rkparams.frm, JDToDynTime(jd_f));
-         MapRKStateToS(&S->rkparams.orb, S, S->rk_state);
+            // TODO: assuming that the last call in RungeKutta got us to the
+            // current time. Otherwise:
+            // WorldEphemerides(jd_f, World_dupe, S->rkparams.rgn,
+            //                  S->rkparams.lagsys);
+            // OrbitMotion(World_dupe, S->rkparams.rgn, S->rkparams.lagsys,
+            //             &S->rkparams.orb, &S->rkparams.frm,
+            //             JDToDynTime(jd_f));
+            RKStateToS(&S->rkparams.orb, S->rk_state, S);
+         }
       }
    }
    SimComplete = AdvanceTime(&JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC, &SimTime,
                              &DynTime, &AtomicTime, &GpsTime, &CivilTime,
                              &GpsRollover, &GpsWeek, &GpsSecond);
 
+   /* Sun, Moon, Planets, Useful Auxiliary Frames */
    WorldEphemerides(JD_TT_MJD, World, Rgn, LagSys);
    for (long Iorb = 0; Iorb < Norb; Iorb++)
       OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
@@ -574,14 +630,26 @@ long SimStep_New(void)
    ManageBoundingBoxes();
 
    InterProcessComm(); /* Send and receive from external processes */
-   /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-   SCEphemerides(JD_TDB_MJD, SC, World, Orb);
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists) {
+         /* Spacecraft */
+         SCEphemerides(JD_TDB_MJD, S, World, Orb);
+         ZeroFrcTrq(S);
+      }
+   }
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
          struct OrbitType *O = &Orb[S->RefOrb];
+         /* Magnetic Field, Atmospheric Density */
+         Environment(JD_TDB_MJD, World, O, S);
+         Perturbations(World, O, S); /* Environmental Forces and Torques */
+         SCContactFrcTrq(Orb, S, Isc);
          Sensors(World, O, S);
          FlightSoftWare(S);
+         Actuators(S);
+         PartitionForces(S); /* Orbit-affecting and "internal" */
       }
    }
    for (Isc = 0; Isc < Nsc; Isc++) {

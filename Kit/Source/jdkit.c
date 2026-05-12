@@ -787,8 +787,16 @@ JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
    return jd;
 }
 
-JDType JDAdd(const JDType a, const JDType b)
+JDType JDAdd(JDType a, JDType b)
 {
+   EpochTT out_epoch = a.epoch;
+   if (a.epoch == ZERO_EPOCH && b.epoch != ZERO_EPOCH)
+      out_epoch = b.epoch;
+   if ((a.epoch == ZERO_EPOCH) != (b.epoch == ZERO_EPOCH)) {
+      a.epoch = out_epoch;
+      b.epoch = out_epoch;
+   }
+
    _error_epoch_system(a, b, "JDAdd");
    JDType jdout      = a;
    jdout.whole_days += b.whole_days;
@@ -827,8 +835,16 @@ JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat)
    return JDAdd(jd, jdb);
 }
 
-JDType JDSub(const JDType a, const JDType b)
+JDType JDSub(JDType a, JDType b)
 {
+   EpochTT out_epoch = a.epoch;
+   if (a.epoch == ZERO_EPOCH && b.epoch != ZERO_EPOCH)
+      out_epoch = b.epoch;
+   if ((a.epoch == ZERO_EPOCH) != (b.epoch == ZERO_EPOCH)) {
+      a.epoch = out_epoch;
+      b.epoch = out_epoch;
+   }
+
    _error_epoch_system(a, b, "JDSub");
 
    JDType jdout      = a;

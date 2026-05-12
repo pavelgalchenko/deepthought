@@ -211,14 +211,15 @@ void InitDSM(struct SCType *S)
    Nav->ccsds_time.coarse = 0;
    Nav->ccsds_time.fine   = 0;
    Nav->steps             = 0;
-   Nav->Date0.Year        = 0;
-   Nav->Date0.Month       = 0;
-   Nav->Date0.Day         = 0;
-   Nav->Date0.doy         = 0;
-   Nav->Date0.Hour        = 0;
-   Nav->Date0.Minute      = 0;
-   Nav->Date0.Second      = RATIONAL_ZERO;
-   Nav->Date              = Nav->Date0;
+   Nav->jd_tt_mjd_0       = JD_ZERO;
+   Nav->jd_tt_mjd         = JD_ZERO;
+   Nav->Date.Year         = 0;
+   Nav->Date.Month        = 0;
+   Nav->Date.Day          = 0;
+   Nav->Date.doy          = 0;
+   Nav->Date.Hour         = 0;
+   Nav->Date.Minute       = 0;
+   Nav->Date.Second       = RATIONAL_ZERO;
 
    FOR_STATES(i)
    {
@@ -1625,10 +1626,9 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                startInd = Nav->stateInd[state];
                switch (state) {
                   case TIME_STATE: {
-                     JDType jd =
-                         JDFromDays(dataDest[startInd], TT_TIME, J2000_EPOCH);
-                     Nav->Date0 = JDToDate(jd, TT_TIME);
-                     Nav->Date  = Nav->Date0;
+                     Nav->jd_tt_mjd_0 = JDFromDays(dataDest[startInd], TT_TIME,
+                                                   GMAT_MJD_EPOCH);
+                     Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
                   } break;
                   case ROTMAT_STATE:
                   case QUAT_STATE: {
@@ -1717,20 +1717,21 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
                              senSetNode != NULL && statesNode != NULL;
 
    if (NavigationCmdProcessed == TRUE) {
-      Nav->DT = DSM->DT;
+      Nav->DT     = DSM->DT;
+      Nav->DT_RAT = double2rational(Nav->DT);
       // round to nearest ccsds step
       Nav->subStepSteps = DTSIM * CCSDS_FINE_MAX + 0.5;
       Nav->subStepSize  = DTSIM;
       Nav->steps        = 0;
       const double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
 
-      Nav->Date0 = TimeToDate(t0, TT_TIME);
-      Nav->Date0.doy =
-          MD2DOY(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day);
-      updateTime(&Nav->Date0, -Nav->DT);
-      Nav->ccsds_time = date2ccsds(Nav->Date0);
+      Nav->jd_tt_mjd_0 = JDFromSeconds(t0, TT_TIME, J2000_EPOCH);
+      JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &Nav->jd_tt_mjd_0);
+      Nav->jd_tt_mjd_0 = JDSubRationalSeconds(Nav->jd_tt_mjd_0, Nav->DT_RAT);
+      Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
+      Nav->ccsds_time  = jd2ccsds(Nav->jd_tt_mjd_0);
 
-      Nav->Date = Nav->Date0;
+      Nav->Date = JDToDate(Nav->jd_tt_mjd_0, TT_TIME);
 
       Nav->Init             = FALSE;
       Nav->reportConfigured = FALSE;

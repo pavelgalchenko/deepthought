@@ -32,7 +32,7 @@ typedef JDType RKIndType; // independent variable data type
 // used to initialized the RungeKutta Struct
 typedef enum RKType {
    EULER_RK = 0, // Euler Integration
-   THE_RK4_RK,   // classic RK44
+   THERK4_RK,    // classic RK44
    RK4_RK,       // 3/8-rule RK4
    RK89_RK,      // RK8(9)
 } RKType;

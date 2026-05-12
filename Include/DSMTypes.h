@@ -360,9 +360,11 @@ struct DSMNavType {
    long navSize[FIN_STATE + 1];
    long stateInd[FIN_STATE + 1];
    long navInd[FIN_STATE + 1];
-   DateType Date0; // TT
-   DateType Date;  // TT
+   JDType jd_tt_mjd_0; // TT
+   JDType jd_tt_mjd;   // TT
+   DateType Date;      // TT
    double DT;
+   Rational DT_RAT;
    double **P; // Estimation Error Covariance, used only as scratch for
                // reporting and graphics
    double **S; // Lower-triangular Cholesky factorization of P
