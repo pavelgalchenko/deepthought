@@ -20,6 +20,9 @@ option(DEBUG_DATA "Enable outputing model debug data" OFF)
 # Compile enabling residual reporting -DREPORT_RESIUALS=ON
 option(REPORT_RESIDUALS "Enable navigation measurement residual reporting" OFF)
 
+# Compile enabling profiling -pg flags -DPROFILE=ON
+option(PROFILE "Enable address sanitizer in debug build" OFF)
+
 # For graphics interface, choose GLUT or GLFW GUI libraries
 # GLUT is well known, but GLFW is better for newer Mac's hires displays
 # -DGLUT_OR_GLFW=GLFW
@@ -53,7 +56,13 @@ set(KIT_SOURCES
     ${KIT}/rkkit.c
     )
 
-add_library(42kit SHARED ${KIT_SOURCES})
+add_library(42kit STATIC ${KIT_SOURCES})
+
+if (PROFILE)
+    target_compile_options(42kit PRIVATE -pg)
+    target_link_options(42kit PRIVATE -pg)
+endif()
+
 
 target_compile_definitions(42kit PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
 
@@ -123,8 +132,8 @@ if(SPICE)
     endif()
     add_compile_definitions(_ENABLE_SPICE_)
     
-    target_link_libraries(42kit PUBLIC optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
-    target_include_directories(42kit PUBLIC ${CSPICE_INCLUDE_DIR})
+    target_link_libraries(42kit PRIVATE optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
+    target_include_directories(42kit PRIVATE ${CSPICE_INCLUDE_DIR})
 endif()
 
 # Configure 42kit with libfyaml publicly to share with targets

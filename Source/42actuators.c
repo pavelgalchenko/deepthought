@@ -289,7 +289,7 @@ void Actuators(struct SCType *S)
    /* Thrusters */
    for (i = 0; i < S->Nthr; i++) {
       Thr = &S->Thr[i];
-      ThrModel(Thr, S, DTSIM);
+      ThrModel(Thr, S, DTSIM); // TODO: can't have this with the new integrator
       MTxV(S->B[Thr->Body].CN, Thr->Frc, FrcN);
       for (j = 0; j < 3; j++) {
          S->B[Thr->Body].Trq[j]  += Thr->Trq[j];

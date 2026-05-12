@@ -32,6 +32,9 @@ option(STANDALONE "Compile AcApp as standalone" OFF)
 # Compile enabling address sanitizer -DSANITIZER=ON
 option(SANITIZER "Enable address sanitizer in debug build" OFF)
 
+# Compile enabling profiling -pg flags -DPROFILE=ON
+option(PROFILE "Enable address sanitizer in debug build" OFF)
+
 # take note of the buid options in Kit/CMakeLists.txt as well
 ################################################################################
 ################################################################################
@@ -46,6 +49,11 @@ endif()
 
 add_executable(deepthought)
 add_executable(Test EXCLUDE_FROM_ALL)
+
+if (PROFILE)
+    target_compile_options(deepthought PRIVATE -pg)
+    target_link_options(deepthought PRIVATE -pg)
+endif()
 
 target_compile_definitions(deepthought PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
 
@@ -133,8 +141,8 @@ if(SPICE)
     endif()
     add_compile_definitions(_ENABLE_SPICE_)
     
-    target_link_libraries(deepthought PUBLIC optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
-    target_include_directories(deepthought PUBLIC ${CSPICE_INCLUDE_DIR})
+    target_link_libraries(deepthought PRIVATE optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
+    target_include_directories(deepthought PRIVATE ${CSPICE_INCLUDE_DIR})
 endif()
 
 # Copy World and Model Directories, if building out of source

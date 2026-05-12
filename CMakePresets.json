@@ -16,7 +16,8 @@
                 "DEBUG_DATA": "OFF",
                 "SPICE": "ON",
                 "GUI": "ON",
-                "SANITIZER": "OFF"
+                "SANITIZER": "OFF",
+                "PROFILE": "OFF"
             }
         },
         {
@@ -28,6 +29,18 @@
             "binaryDir": "${sourceDir}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "profile_release",
+            "inherits": "default_debug",
+            "displayName": "Default Release configure preset",
+            "description": "Sets Make generator, build, and install directory for release build",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "PROFILE": "ON"
             }
         }
     ]

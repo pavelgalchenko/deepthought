@@ -2325,7 +2325,7 @@ void KaneNBodyEOM_RK(struct SCType *S, double *const xdot_out)
    if (S->ConstraintsRequested) {
       KaneNBodyConstraints(S, u, x, h, a, uf, xf);
    }
-   FindBodyAccelerations(S, du);
+   // FindBodyAccelerations(S, du); terms calculated here are not used anywhere
 
    long offset = 0;
    CopyVG(&xdot_out[offset], du, Nu);
@@ -4060,7 +4060,6 @@ double EnckeFQ(double r[3], double delta[3])
 /*  See Battin, p. 449                                                */
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
-
 void EnckeEOM(double u[6], double udot[6], double R[3], double muR3,
               double a[3])
 {
@@ -4079,6 +4078,25 @@ void EnckeEOM(double u[6], double udot[6], double R[3], double muR3,
    udot[3] = a[0] - muR3 * (u[0] + fq * r[0]);
    udot[4] = a[1] - muR3 * (u[1] + fq * r[1]);
    udot[5] = a[2] - muR3 * (u[2] + fq * r[2]);
+}
+/**********************************************************************/
+void EnckeEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
+                 double *xdot)
+{
+   double accel[3], R[3], magr, muR3;
+
+   accel[0] = S->FrcN[0] / S->mass;
+   accel[1] = S->FrcN[1] / S->mass;
+   accel[2] = S->FrcN[2] / S->mass;
+   R[0]     = orb->PosN[0];
+   R[1]     = orb->PosN[1];
+   R[2]     = orb->PosN[2];
+
+   magr = MAGV(R);
+   muR3 = orb->mu / (magr * magr * magr);
+
+   /* .. EOM Call */
+   EnckeEOM(x, xdot, R, muR3, accel);
 }
 /**********************************************************************/
 /* Integration of orbital equations of motion                         */
@@ -4216,7 +4234,7 @@ void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orb,
 void CowellEOM_RK(struct OrbitType *const orb, struct SCType *S, double *x,
                   double *xdot)
 {
-   /* .. 4th Order Runga-Kutta Integration */
+   /* .. EOM Call */
    CowellEOM(x, xdot, orb->mu, S->mass, S->FrcN);
 }
 /**********************************************************************/
@@ -4284,7 +4302,7 @@ void PolyhedronCowellEOM_RK(struct WorldType *const world,
    u[4] = x[4];
    u[5] = x[5];
 
-   /* .. 4th Order Runga-Kutta Integration */
+   /* .. EOM Call */
    PolyhedronGravAcc(G, world->Density, u, world->CWN, GravAccN);
    PolyhedronCowellEOM(u, xdot, S->mass, GravAccN, S->FrcN);
 }
@@ -4392,7 +4410,7 @@ void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
    MagR2 = sqrt(R2[0] * R2[0] + R2[1] * R2[1] + R2[2] * R2[2]);
    muR23 = orb->mu2 / (MagR2 * MagR2 * MagR2);
 
-   /* .. 4th Order Runga-Kutta Integration */
+   /* .. EOM Call */
    ThreeBodyEnckeEOM(x, xdot, R1, muR13, R2, muR23, accel);
 }
 /**********************************************************************/
@@ -4656,7 +4674,6 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    struct LagrangeSystemType *lagsys = scparams->lagsys;
    struct FormationType *frm         = &scparams->frm;
 
-   RKStateToS(orb, x, S);
    JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &t);
 
    double *x_trn    = NULL;
@@ -4665,11 +4682,14 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    WorldEphemerides(t, world, rgn, lagsys);
    const double sec_tt_j2000 = JDToDynTime(t);
    OrbitMotion(world, rgn, lagsys, orb, frm, sec_tt_j2000);
+   RKStateToS(orb, x, S);
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
       x_trn = &x[dim - 6];
       EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, x_trn, &x_trn[3], S->PosR,
                  S->VelR);
    }
+   if (S->OrbDOF == ORBDOF_FIXED)
+      FixedOrbitPosition(orb, frm, S);
    SCEphemerides(t, S, &world[orb->World], orb);
 
    ZeroFrcTrq(S);
@@ -4719,6 +4739,9 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
                CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
                break;
             default:
+               x_trn    = &x[dim - 6];
+               xdot_trn = &xdot[dim - 6];
+               EnckeEOM_RK(orb, S, x_trn, xdot_trn);
                break;
          }
          break;
@@ -4741,7 +4764,6 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
             case ORBDOF_EULER_HILL:
                x_trn    = &x[dim - 6];
                xdot_trn = &xdot[dim - 6];
-               // assumes incoming x_trn is already in Euler-Hill frame
                EulHillEOM_RK(orb, S, x_trn, xdot_trn);
                break;
             case ORBDOF_COWELL:

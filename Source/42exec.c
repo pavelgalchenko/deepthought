@@ -548,8 +548,9 @@ long SimStep_New(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
+            struct OrbitType *O = &Orb[S->RefOrb];
             /* Spacecraft */
-            SCEphemerides(JD_TDB_MJD, S, World, Orb);
+            SCEphemerides(JD_TDB_MJD, S, &World[O->World], O);
             ZeroFrcTrq(S);
          }
       }
@@ -560,11 +561,12 @@ long SimStep_New(void)
             /* Magnetic Field, Atmospheric Density */
             Environment(JD_TDB_MJD, World, O, S);
             Perturbations(World, O, S); /* Environmental Forces and Torques */
-            SCContactFrcTrq(Orb, SC, Isc);
-            Sensors(World, O, S);
-            FlightSoftWare(S);
+            if (ContactActive)
+               SCContactFrcTrq(Orb, SC, Isc);
             Actuators(S);
             PartitionForces(S); /* Orbit-affecting and "internal" */
+            Sensors(World, O, S);
+            FlightSoftWare(S);
          }
       }
       for (Isc = 0; Isc < Nsc; Isc++) {
@@ -585,36 +587,28 @@ long SimStep_New(void)
 
    // JDType jd_f = JDAddRationalSeconds(JD_TT_MJD, DTSIM_RAT);
 
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (S->Exists)
-         SCContactFrcTrq(Orb, S, Isc); // TODO: this is zero'd in the sceom
+   if (ContactActive) {
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists)
+            SCContactFrcTrq(Orb, SC, Isc); // TODO: this is zero'd in the sceom
+      }
    }
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
-         if (S->OrbDOF == ORBDOF_FIXED) {
-            FixedOrbitPosition(&Orb[S->RefOrb], &Frm[S->RefOrb], S);
-         }
-         else {
-            // Clean up World_dupe for the next integration
-            for (int i = 0; i < NWORLD; i++)
-               CopyWorld(&World_dupe[i], World[i]);
-            CopyOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
+         // Clean up World_dupe for the next integration
+         // for (int i = 0; i < NWORLD; i++)
+         //    CopyWorld(&World_dupe[i], World[i]);
+         // CopyOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
 
-            SToRKState(&S->rkparams.orb, S, S->rk_state);
-            RungeKuttaStep(&S->RKIntegrator, JD_TT_MJD, DTSIM, S->rk_state);
+         SToRKState(&S->rkparams.orb, S, S->rk_state);
+         RungeKuttaStep(&S->RKIntegrator, JD_TT_MJD, DTSIM, S->rk_state);
 
-            // TODO: assuming that the last call in RungeKutta got us to the
-            // current time. Otherwise:
-            // WorldEphemerides(jd_f, World_dupe, S->rkparams.rgn,
-            //                  S->rkparams.lagsys);
-            // OrbitMotion(World_dupe, S->rkparams.rgn, S->rkparams.lagsys,
-            //             &S->rkparams.orb, &S->rkparams.frm,
-            //             JDToDynTime(jd_f));
-            RKStateToS(&S->rkparams.orb, S->rk_state, S);
-         }
+         // TODO: assuming that the last call in RungeKutta got us to the
+         // current time. So far working out
+         RKStateToS(&S->rkparams.orb, S->rk_state, S);
       }
    }
    SimComplete = AdvanceTime(&JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC, &SimTime,
@@ -629,27 +623,20 @@ long SimStep_New(void)
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
 
-   InterProcessComm(); /* Send and receive from external processes */
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (S->Exists) {
-         /* Spacecraft */
-         SCEphemerides(JD_TDB_MJD, S, World, Orb);
-         ZeroFrcTrq(S);
-      }
-   }
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
          struct OrbitType *O = &Orb[S->RefOrb];
-         /* Magnetic Field, Atmospheric Density */
-         Environment(JD_TDB_MJD, World, O, S);
-         Perturbations(World, O, S); /* Environmental Forces and Torques */
-         SCContactFrcTrq(Orb, S, Isc);
+         SCEphemerides(JD_TDB_MJD, S, &World[O->World], O);
+      }
+   }
+   InterProcessComm(); /* Send and receive from external processes */
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists) {
+         struct OrbitType *O = &Orb[S->RefOrb];
          Sensors(World, O, S);
          FlightSoftWare(S);
-         Actuators(S);
-         PartitionForces(S); /* Orbit-affecting and "internal" */
       }
    }
    for (Isc = 0; Isc < Nsc; Isc++) {
@@ -704,7 +691,8 @@ long SimStep_Old(void)
             /* Magnetic Field, Atmospheric Density */
             Environment(JD_TDB_MJD, World, O, S);
             Perturbations(World, O, S); /* Environmental Forces and Torques */
-            SCContactFrcTrq(Orb, SC, Isc);
+            if (ContactActive)
+               SCContactFrcTrq(Orb, SC, Isc);
             Sensors(World, O, S);
             FlightSoftWare(S);
             Actuators(S);
@@ -757,7 +745,8 @@ long SimStep_Old(void)
          /* Magnetic Field, Atmospheric Density */
          Environment(JD_TDB_MJD, World, O, S);
          Perturbations(World, O, S); /* Environmental Forces and Torques */
-         SCContactFrcTrq(Orb, SC, Isc);
+         if (ContactActive)
+            SCContactFrcTrq(Orb, SC, Isc);
          Sensors(World, O, S);
          FlightSoftWare(S);
          Actuators(S);
