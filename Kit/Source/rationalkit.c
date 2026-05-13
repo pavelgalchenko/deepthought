@@ -26,7 +26,7 @@
 
 // Use 'long long int' if its larger than 'long int'. If not use int128 if we
 // have it
-#if (__SIZEOF_LONG_LONG__ > __SIZEOF_RATLONG__)
+#if (__SIZEOF_LONG_LONG__ > _SIZEOF_RATLONG_)
 typedef signed long long int Rat_LongLong;
 typedef unsigned long long int Rat_ULongLong;
 #define _SIZEOF_RATLONGLONG_ (__SIZEOF_LONG_LONG__)
@@ -94,7 +94,7 @@ static unsigned int _ctzl(__uint64_t v)
    }
    else {
       c = 1;
-#if __SIZEOF_RATLONG__ > 4
+#if _SIZEOF_RATLONG_ > 4
       if ((v & 0xffffffff) == 0) {
          v >>= 32;
          c  += 32;
@@ -181,7 +181,7 @@ static Rat_ULongLong _absll(Rat_LongLong x)
 }
 #endif
 
-#if __SIZEOF_RATLONG__ != __SIZEOF_LONG__
+#if _SIZEOF_RATLONG_ != __SIZEOF_LONG__
 static Rat_ULong _absl(Rat_Long x)
 {
    if (x >= 0)
@@ -259,21 +259,6 @@ static Rat_Long _gcdl(Rat_Long a, Rat_Long b)
    return a << shift;
 }
 /**********************************************************************/
-/*  Find the Least Common Multiple of two integers by the identity    */
-/*  lcm = (a * b) / gcd(a, b)                                         */
-static Rat_Long _lcml(Rat_Long a, Rat_Long b)
-{
-   const Rat_Long gcd = _gcdl(a, b);
-   if (gcd) {
-      if (b > a)
-         b /= gcd;
-      else
-         a /= gcd;
-      return (a * b);
-   }
-   return 0;
-}
-/**********************************************************************/
 /*  Reduce two longs by their greatest common divisor                 */
 static void _reduce_by_gcd(Rat_Long *const a, Rat_Long *const b)
 {
@@ -322,6 +307,58 @@ static void _cleanup(Rational *const rat)
    _positive_denom(rat);
    _reduce_by_gcd(&rat->num, &rat->den);
    _reduce(rat);
+}
+/**********************************************************************/
+/*  Limit the size of the denomiator of the fraction p/q. Checks if   */
+/*  solution is the convergent or the semiconvergent of the below     */
+/*  process.                                                          */
+/*  Taken from python's fraction.Fraction.limit_denominator().        */
+#define RAT_MAX_DEN (_RATLONG_MAX_ >> 16)
+static Rational _limit_denominator(const Rat_LongLong p, const Rat_LongLong q)
+{
+   const Rat_Long max_den = RAT_MAX_DEN;
+
+   if (q <= max_den)
+      return (Rational){.whole = p / q, .num = p % q, .den = q};
+
+   Rat_LongLong p0 = 0, q0 = 1, p1 = 1, q1 = 0;
+   Rat_LongLong n = p, d = q;
+
+   _reduce_by_gcdll(&n, &d);
+   if (d <= max_den)
+      return (Rational){.whole = n / d, .num = n % d, .den = d};
+
+   Rat_LongLong t1 = 0, t2 = 0;
+   while (1) {
+      Rat_LongLong a = n / d;
+      if ((n ^ d) < 0)
+         a--;
+      Rat_LongLong q2 = q0 + a * q1;
+      if (q2 > max_den)
+         break;
+      t1 = p0;
+      p0 = p1;
+      p1 = t1 + a * p1;
+      q0 = q1;
+      q1 = q2;
+
+      t1 = n;
+      n  = d;
+      d  = t1 - a * d;
+   }
+   t1             = (max_den - q0);
+   Rat_LongLong k = t1 / q1;
+   if ((t1 ^ q1) < 0)
+      k--;
+
+   t1 = 2 * d * (q0 + k * q1);
+   if (t1 <= q)
+      return (Rational){.whole = p1 / q1, .num = p1 % q1, .den = q1};
+   else {
+      t1 = p0 + k * p1;
+      t2 = q0 + k * q1;
+      return (Rational){.whole = t1 / t2, .num = t1 % t2, .den = t2};
+   }
 }
 /**********************************************************************/
 Rational InitRational(const Rat_Long whole, const Rat_Long num,
@@ -408,10 +445,7 @@ Rational RationalMult(Rational a, Rational b)
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   Rat_LongLong product = num_a * num_b;
-   out.whole            = (Rat_Long)(product / den);
-   out.num              = (Rat_Long)(product % den);
-   out.den              = (Rat_Long)den;
+   out = _limit_denominator(num_a * num_b, den);
    _cleanup(&out);
    return out;
 }
@@ -429,8 +463,7 @@ Rational RationalDivide(Rational a, Rational b)
    Rat_LongLong den_b = (Rat_LongLong)b.den;
    _reduce_by_gcdll(&num_a, &num_b);
    _reduce_by_gcdll(&den_a, &den_b);
-   out.num = (Rat_Long)(num_a * den_b);
-   out.den = (Rat_Long)(den_a * num_b);
+   out = _limit_denominator(num_a * den_b, den_a * num_b);
    _cleanup(&out);
    return out;
 }
@@ -459,10 +492,7 @@ Rational RationalAdd(Rational a, Rational b)
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   Rat_LongLong sum  = num_a + num_b;
-   out.whole        += (Rat_Long)(sum / den);
-   out.num           = (Rat_Long)(sum % den);
-   out.den           = (Rat_Long)den;
+   out = _limit_denominator(num_a + num_b, den);
    _cleanup(&out);
    return out;
 }
@@ -485,10 +515,7 @@ Rational RationalSub(Rational a, Rational b)
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   Rat_LongLong diff  = num_a - num_b;
-   out.whole         += (Rat_Long)(diff / den);
-   out.num            = (Rat_Long)(diff % den);
-   out.den            = (Rat_Long)den;
+   out = _limit_denominator(num_a - num_b, den);
    _cleanup(&out);
    return out;
 }
@@ -560,9 +587,7 @@ Rational double2rational(const double val)
          out.den = INT64_MACRO(1) << 62;
       }
    }
-   out.num   = (sign) ? -out.num : out.num;
-   out.whole = out.num / out.den;
-   out.num   = out.num % out.den;
+   out = _limit_denominator((sign) ? -out.num : out.num, out.den);
    _cleanup(&out);
    return out;
 }
@@ -612,22 +637,24 @@ int isequal_rational(Rational a, Rational b)
 /**********************************************************************/
 int isless_rational(Rational a, Rational b)
 {
-   _cleanup(&a);
-   _cleanup(&b);
-   const Rat_Long lcm  = _lcml(a.den, b.den);
-   a.num              *= (lcm / a.den);
-   b.num              *= (lcm / b.den);
-   return (a.whole < b.whole) || ((a.whole == b.whole) && (a.num < b.num));
+   _reduce(&a);
+   _reduce(&b);
+   Rat_Long a_whole = a.whole, b_whole = b.whole;
+   a.whole = 0;
+   b.whole = 0;
+   return (a_whole < b_whole) ||
+          ((a_whole == b_whole) && (rational2double(a) < rational2double(b)));
 }
 /**********************************************************************/
 int isgreater_rational(Rational a, Rational b)
 {
-   _cleanup(&a);
-   _cleanup(&b);
-   const Rat_Long lcm  = _lcml(a.den, b.den);
-   a.num              *= (lcm / a.den);
-   b.num              *= (lcm / b.den);
-   return (a.whole > b.whole) || ((a.whole == b.whole) && (a.num > b.num));
+   _reduce(&a);
+   _reduce(&b);
+   Rat_Long a_whole = a.whole, b_whole = b.whole;
+   a.whole = 0;
+   b.whole = 0;
+   return (a_whole > b_whole) ||
+          ((a_whole == b_whole) && (rational2double(a) > rational2double(b)));
 }
 
 /* #ifdef __cplusplus

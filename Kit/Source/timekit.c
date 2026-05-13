@@ -480,7 +480,7 @@ DateType RealSystemTime()
 #endif
 }
 /**********************************************************************/
-double RealRunTime(double *RealTimeDT, double LSB)
+double RealRunTime(double *RealTimeDT)
 {
    static double RunTime = 0.0;
    static long First     = 1;

@@ -83,6 +83,11 @@ void ThrProcessingMinPower(struct AcType *AC)
          distDotCmd += AC->Thr[i].DistVec[j] * cmdVec[j];
       AC->Thr[i].PulseWidthCmd  = Limit(distDotCmd * AC->DT, 0.0, AC->DT);
       AC->Thr[i].ThrustLevelCmd = Limit(distDotCmd, 0.0, 1.0);
+      if (AC->Thr[i].PulseWidthCmd > 0)
+         AC->Thr[i].PulseWidthFinTimeStamp =
+             JDAddSeconds(JD_TT_MJD, AC->Thr[i].PulseWidthCmd);
+      else
+         AC->Thr[i].PulseWidthFinTimeStamp.system = TAI_TIME;
    }
 }
 //-------------------------- Initialize Thruster Info --------------------------
@@ -2248,8 +2253,10 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
    // desired
    if (AC->Nthr > 0) {
       for (i = 0; i < AC->Nthr; i++) {
-         AC->Thr[i].PulseWidthCmd  = 0.0;
-         AC->Thr[i].ThrustLevelCmd = 0.0;
+         AC->Thr[i].PulseWidthFinTimeStamp        = JD_ZERO;
+         AC->Thr[i].PulseWidthFinTimeStamp.system = TAI_TIME;
+         AC->Thr[i].PulseWidthCmd                 = 0.0;
+         AC->Thr[i].ThrustLevelCmd                = 0.0;
       }
    }
 
@@ -2355,9 +2362,8 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    // Process ActuatorCmd
-   for (i = 0; i < Cmd->ActNumCmds;
-        i++) // loops through stored Actuator commands
-   {
+   // loops through stored Actuator commands
+   for (i = 0; i < Cmd->ActNumCmds; i++) {
       if (Cmd->ActTypes[i] == WHL_TYPE) {
          AC->Whl[Cmd->ActInds[i]].Tcmd =
              AC->Whl[i].Tmax * Cmd->ActDuties[i] / 100;
@@ -2365,6 +2371,8 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
       else if (Cmd->ActTypes[i] == THR_TYPE) {
          AC->Thr[Cmd->ActInds[i]].PulseWidthCmd =
              Cmd->ActDuties[i] / 100 * AC->DT;
+         AC->Thr[Cmd->ActInds[i]].PulseWidthFinTimeStamp =
+             JDAddSeconds(JD_TT_MJD, AC->Thr[Cmd->ActInds[i]].PulseWidthCmd);
          AC->Thr[Cmd->ActInds[i]].ThrustLevelCmd = Cmd->ActDuties[i] / 100;
       }
       else if (Cmd->ActTypes[i] == MTB_TYPE) {

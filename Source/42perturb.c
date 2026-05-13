@@ -1090,12 +1090,12 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
    MxV(Ba->CN, FrcN, FrcA);
    MxV(Bb->CN, FrcN, FrcB);
    for (i = 0; i < 3; i++) {
-      Ba->FrcN[i] += FrcN[i];
-      Ba->FrcB[i] += FrcA[i];
-      Ba->Trq[i]  += TrqA[i];
-      Bb->FrcN[i] -= FrcN[i];
-      Bb->FrcB[i] += FrcB[i];
-      Bb->Trq[i]  -= TrqB[i];
+      Ba->SCContactFrcN[i] += FrcN[i];
+      Ba->SCContactFrcB[i] += FrcA[i];
+      Ba->SCContactTrq[i]  += TrqA[i];
+      Bb->SCContactFrcN[i] -= FrcN[i];
+      Bb->SCContactFrcB[i] += FrcB[i];
+      Bb->SCContactTrq[i]  -= TrqB[i];
    }
 }
 /**********************************************************************/
@@ -1146,7 +1146,7 @@ void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
             for (i = 0; i < 3; i++)
                dx[i] = (S->PosN[i] + Bi->pn[i] - cmni[i]) -
                        (Sc->PosN[i] + Bj->pn[i] - cmnj[i]);
-            if (MAGV(dx) > Gi->BBox.radius + Gj->BBox.radius)
+            if (MAGV(dx) > (Gi->BBox.radius + Gj->BBox.radius))
                continue;
             BodyBodyContactFrcTrq(S, Ib, Sc, Jb);
          }
@@ -1269,8 +1269,13 @@ void Perturbations(struct WorldType *const worlds, struct OrbitType *const O,
       ResidualDipoleTrq(S);
 
    /* .. Contact Forces and Torques */
-   if (ContactActive)
+   if (ContactActive) {
       NonSCContactFrcTrq(O, S);
+      // Since Perturbations() is called inside the integrator, we don't want to
+      // actually calculate the spacecraft/spacecraft contact forces inside the
+      // integrator
+      AddSCContactFrcTrq(S);
+   }
 
    /* .. CFD Slosh Forces and Torques */
 #ifdef _ENABLE_CFD_SLOSH_

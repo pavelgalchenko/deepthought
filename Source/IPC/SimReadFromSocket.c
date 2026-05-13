@@ -137,6 +137,10 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
       if (sscanf(line, "SC[%ld].AC.Thr[%ld].PulseWidthCmd = %le", &Isc, &i,
                  &DbleVal[0]) == 3) {
          SC[Isc].AC.Thr[i].PulseWidthCmd = DbleVal[0];
+         SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp =
+             JDAddSeconds(JD_TT_MJD, DbleVal[0]);
+         if (RequestTimeRefresh)
+            SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp.system = TAI_TIME;
       }
 
       if (sscanf(line, "SC[%ld].AC.Thr[%ld].ThrustLevelCmd = %le", &Isc, &i,
@@ -972,6 +976,13 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
             D = &S->Dyn;
             MapStateVectorToBodyStates(D->u, D->x, D->h, D->a, D->uf, D->xf, S);
             MotionConstraints(S);
+
+            for (Isc = 0; Isc < Nsc; Isc++)
+               for (i = 0; i < SC[Isc].Nthr; i++)
+                  if (SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp.system ==
+                      TAI_TIME)
+                     SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp = JDAddSeconds(
+                         JD_TT_MJD, SC[Isc].AC.Thr[i].PulseWidthCmd);
          }
       }
    }

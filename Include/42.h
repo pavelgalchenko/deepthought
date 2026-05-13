@@ -214,6 +214,7 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
 
 long SimStep_New(void);
 long SimStep_Old(void);
+void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);
 void CloneWorld(struct WorldType *const dest, const struct WorldType src);
 void CopyWorld(struct WorldType *const dest, const struct WorldType src);
@@ -240,7 +241,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
 void SensorDriver(struct SCType *S);
 void FlightSoftWare(struct SCType *S);
 void ActuatorDriver(struct SCType *S);
-void Actuators(struct SCType *S);
+void Actuators(const int smoothing, struct SCType *S, JDType jd);
 void CmdInterpreter(void);
 void Report(void);
 void DrawScene(void);
@@ -251,6 +252,7 @@ void MapJointStatesToStateVector(struct SCType *S);
 void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
                                 double *uf, double *xf, struct SCType *S);
 void BodyStatesToNodeStates(struct SCType *S);
+void AddSCContactFrcTrq(struct SCType *S);
 void PartitionForces(struct SCType *S);
 void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot);
 void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,

@@ -431,7 +431,7 @@ static void _step(RungeKutta *const rk)
       rk->stepSize =
           (ispos_jd(rk->stepSize) ? rk->maxStep : JDNegate(rk->maxStep));
 
-   int goodStep = -1;
+   int goodStep = 0;
    do {
       _rawstep(rk);
       rk->StepTaken = rk->stepSize;

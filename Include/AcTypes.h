@@ -14,6 +14,8 @@
 #ifndef __ACTYPES_H__
 #define __ACTYPES_H__
 
+#include "jdkit.h"
+
 /*
 ** #ifdef __cplusplus
 ** namespace _42 {
@@ -235,6 +237,7 @@ struct AcThrType {
 
    /*~ Internal Variables ~*/
    double Fcmd;
+   JDType PulseWidthFinTimeStamp;
    double PulseWidthCmd;  /* for PULSED [[sec]] [~<~] */
    double ThrustLevelCmd; /* for PROPORTIONAL [[None]] [~<~] */
 };

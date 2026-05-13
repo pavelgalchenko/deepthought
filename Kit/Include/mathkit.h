@@ -45,6 +45,7 @@ int any_int(const long n, const int *vec);
 int all_int(const long n, const int *vec);
 double signum(const double x);
 double sinc(const double x);
+double smootherstep(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
 void MxMT(const double A[3][3], const double B[3][3], double C[3][3]);
 void MTxM(const double A[3][3], const double B[3][3], double C[3][3]);

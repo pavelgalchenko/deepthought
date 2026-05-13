@@ -4621,6 +4621,17 @@ void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,
    }
 }
 /**********************************************************************/
+void AddSCContactFrcTrq(struct SCType *S)
+{
+   for (long Ib = 0; Ib < S->Nb; Ib++) {
+      for (long i = 0; i < 3; i++) {
+         S->B[Ib].FrcN[i] += S->B[Ib].SCContactFrcN[i];
+         S->B[Ib].FrcB[i] += S->B[Ib].SCContactFrcB[i];
+         S->B[Ib].Trq[i]  += S->B[Ib].SCContactTrq[i];
+      }
+   }
+}
+/**********************************************************************/
 /*   Divide acting forces into two components:                        */
 /*   The external component perturbs the orbit and the internal       */
 /*   (differential) component affects only attitude motion (for       */
@@ -4668,13 +4679,13 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    const long dim = params->dim;
 
    struct SCType *S                  = scparams->sc;
-   struct OrbitType *orb             = &scparams->orb;
+   struct OrbitType *orb             = scparams->orb;
    struct WorldType *world           = scparams->worlds;
    struct RegionType *rgn            = scparams->rgn;
    struct LagrangeSystemType *lagsys = scparams->lagsys;
-   struct FormationType *frm         = &scparams->frm;
+   struct FormationType *frm         = scparams->frm;
 
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &t);
+   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &t);
 
    double *x_trn    = NULL;
    double *xdot_trn = NULL;
@@ -4692,12 +4703,12 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
       FixedOrbitPosition(orb, frm, S);
    SCEphemerides(t, S, &world[orb->World], orb);
 
-   ZeroFrcTrq(S);
+   ZeroNonSCContactFrcTrq(S);
 
    /* Magnetic Field, Atmospheric Density */
    Environment(t, world, orb, S);
    Perturbations(world, orb, S);
-   Actuators(S);
+   Actuators(TRUE, S, t);
    PartitionForces(S); /* Orbit-affecting and "internal" */
 
    switch (S->DynMethod) {

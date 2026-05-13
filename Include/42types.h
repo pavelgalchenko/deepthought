@@ -146,9 +146,11 @@ struct BodyType {
    double qn[4]; /* [~=~] */
    double vn[3]; /* velocity of B ref pt expressed in N frame */
    double pn[3]; /* position of B ref pt in N frame expressed in N frame */
-   double CN[3][3]; /* Direction Cosine of B frame in N frame */
-   double Trq[3];   /* expressed in B */
-   double FrcN[3];  /* expressed in N */
+   double CN[3][3];         /* Direction Cosine of B frame in N frame */
+   double Trq[3];           /* expressed in B */
+   double SCContactTrq[3];  /* expressed in B */
+   double FrcN[3];          /* expressed in N */
+   double SCContactFrcN[3]; /* expressed in N */
    double alpha[3]; /* Angular acceleration of B wrt N, expressed in B */
    double accel[3]; /* Linear acceleration of B wrt N, expressed in N */
    char GeomFileName[40];
@@ -175,8 +177,9 @@ struct BodyType {
    double H[3];
    double RemInertiaFrc[6];
    double WhlMom[3];
-   double FrcB[3];    /* Expressed in B */
-   double SpatFrc[6]; /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
+   double FrcB[3];          /* Expressed in B */
+   double SCContactFrcB[3]; /* Expressed in B */
+   double SpatFrc[6];       /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
 
    double AccU[6];
 
@@ -402,7 +405,8 @@ struct ThrType {
    double F;
    long Body; /* Body that thruster is mounted on */
    long Node;
-   double A[3];             /* Axis vector wrt Body 0 */
+   double A[3]; /* Axis vector wrt Body 0 */
+   JDType PulseWidthFinTimeStamp;
    double PulseWidthCmd;    /* [[sec]], for THR_PULSED */
    double ThrustLevelCmd;   /* [{0.0:1.0}], for THR_PROPORTIONAL */
    double Frc[3];           /* Force exerted */
@@ -874,11 +878,11 @@ typedef struct SCRKParams {
    // TODO: a full allocation of the World array is 126620 bytes and this stores
    // a copy for each sc. maybe just a global level allocation of a backup
    // array, and then the below item just shares the pointer between the SCs.
-   struct WorldType *worlds;                  // duplicate of the global World
-   struct RegionType *rgn;                    // duplicate of the global Rgn
-   struct LagrangeSystemType lagsys[NLAGSYS]; // duplicate of all lagsystems
-   struct OrbitType orb;                      // duplicate of sc's orbit
-   struct FormationType frm;                  // duplicate of sc's formation
+   struct WorldType *worlds;          // duplicate of the global World
+   struct RegionType *rgn;            // duplicate of the global Rgn
+   struct LagrangeSystemType *lagsys; // duplicate of all lagsystems
+   struct OrbitType *orb;             // duplicate of sc's orbit
+   struct FormationType *frm;         // duplicate of sc's formation
    struct SCType *sc;
 } SCRKParams;
 

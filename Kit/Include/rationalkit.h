@@ -18,7 +18,8 @@
 #include <stdlib.h>
 
 typedef signed long int Rat_Long;
-#define __SIZEOF_RATLONG__ (__SIZEOF_LONG__)
+#define _SIZEOF_RATLONG_ (__SIZEOF_LONG__)
+#define _RATLONG_MAX_    (__LONG_MAX__)
 
 // represents a number using the form "whole + (num/denom)"
 typedef struct Rational {

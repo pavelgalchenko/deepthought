@@ -92,10 +92,11 @@ static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
    GpsTimeToGpsDate(*gps_time, gps_rollover, gps_wk, gps_sec);
 }
 /**********************************************************************/
-long AdvanceTime(JDType *jd_tt_mjd, JDType *jd_tdb_mjd, DateType *tt,
-                 DateType *tdb, DateType *utc, double *simtime, double *dyntime,
-                 double *atomictime, double *gpstime, double *civiltime,
-                 long *gpsrollover, long *gpsweek, double *gpssecond)
+long AdvanceTime(double dtsim, Rational dtsim_rat, JDType *jd_tt_mjd,
+                 JDType *jd_tdb_mjd, DateType *tt, DateType *tdb, DateType *utc,
+                 double *simtime, double *dyntime, double *atomictime,
+                 double *gpstime, double *civiltime, long *gpsrollover,
+                 long *gpsweek, double *gpssecond)
 {
    static long itime    = 0;
    static long PrevTick = 0;
@@ -118,18 +119,18 @@ long AdvanceTime(JDType *jd_tt_mjd, JDType *jd_tdb_mjd, DateType *tt,
          // TODO: this implementation will eventually get notable floating point
          // errors if SimTime gets sufficiently large
          itime++;
-         *simtime = ((double)itime) * DTSIM;
+         *simtime = ((double)itime) * dtsim;
 
-         *jd_tt_mjd = JDAddMultRatSecs(JD_TT_MJD_0, itime, DTSIM_RAT);
+         *jd_tt_mjd = JDAddMultRatSecs(JD_TT_MJD_0, itime, dtsim_rat);
          *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
       } break;
       case EXTERNAL_TIME: {
          while (CurrTick == PrevTick) {
-            CurrTick = (long)(1.0E-6 * usec() / DTSIM);
+            CurrTick = (long)(1.0E-6 * usec() / dtsim);
          }
          PrevTick = CurrTick;
          itime++;
-         *simtime = ((double)itime) * DTSIM;
+         *simtime = ((double)itime) * dtsim;
          *utc     = RealSystemTime();
 
          *jd_tt_mjd = Date2JD(*utc, GMAT_MJD_EPOCH);
@@ -137,7 +138,7 @@ long AdvanceTime(JDType *jd_tt_mjd, JDType *jd_tdb_mjd, DateType *tt,
          JD_TT_MJD_0 = JDSubSeconds(*jd_tt_mjd, *simtime);
       } break;
       case NOS3_TIME: {
-         const Rational tick_time = NOS3Time(DTSIM_RAT);
+         const Rational tick_time = NOS3Time(dtsim_rat);
          *simtime                 = rational2double(tick_time);
 
          *jd_tt_mjd = JDAddRationalSeconds(JD_TT_MJD_0, tick_time);
@@ -224,51 +225,69 @@ void ManageBoundingBoxes(void)
 }
 /**********************************************************************/
 /* Zero forces and torques                                            */
-void ZeroFrcTrq(struct SCType *S)
+void ZeroNonSCContactFrcTrq(struct SCType *S)
 {
    struct BodyType *B;
    struct JointType *G;
    struct NodeType *FN;
-   long Isc, Ib, Ig, In;
+   long Ib, Ig, In;
 
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S->FrcN[0] = 0.0;
-      S->FrcN[1] = 0.0;
-      S->FrcN[2] = 0.0;
+   S->FrcN[0] = 0.0;
+   S->FrcN[1] = 0.0;
+   S->FrcN[2] = 0.0;
 
-      for (Ib = 0; Ib < S->Nb; Ib++) {
-         B          = &S->B[Ib];
-         B->FrcN[0] = 0.0;
-         B->FrcN[1] = 0.0;
-         B->FrcN[2] = 0.0;
-         B->FrcB[0] = 0.0;
-         B->FrcB[1] = 0.0;
-         B->FrcB[2] = 0.0;
-         B->Trq[0]  = 0.0;
-         B->Trq[1]  = 0.0;
-         B->Trq[2]  = 0.0;
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B          = &S->B[Ib];
+      B->FrcN[0] = 0.0;
+      B->FrcN[1] = 0.0;
+      B->FrcN[2] = 0.0;
+      B->FrcB[0] = 0.0;
+      B->FrcB[1] = 0.0;
+      B->FrcB[2] = 0.0;
+      B->Trq[0]  = 0.0;
+      B->Trq[1]  = 0.0;
+      B->Trq[2]  = 0.0;
+   }
+   for (Ig = 0; Ig < S->Ng; Ig++) {
+      G         = &S->G[Ig];
+      G->Frc[0] = 0.0;
+      G->Frc[1] = 0.0;
+      G->Frc[2] = 0.0;
+      G->Trq[0] = 0.0;
+      G->Trq[1] = 0.0;
+      G->Trq[2] = 0.0;
+   }
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
+      for (In = 0; In < B->NumNodes; In++) {
+         FN         = &B->Node[In];
+         FN->Frc[0] = 0.0;
+         FN->Frc[1] = 0.0;
+         FN->Frc[2] = 0.0;
+         FN->Trq[0] = 0.0;
+         FN->Trq[1] = 0.0;
+         FN->Trq[2] = 0.0;
       }
-      for (Ig = 0; Ig < S->Ng; Ig++) {
-         G         = &S->G[Ig];
-         G->Frc[0] = 0.0;
-         G->Frc[1] = 0.0;
-         G->Frc[2] = 0.0;
-         G->Trq[0] = 0.0;
-         G->Trq[1] = 0.0;
-         G->Trq[2] = 0.0;
-      }
-      for (Ib = 0; Ib < S->Nb; Ib++) {
-         B = &S->B[Ib];
-         for (In = 0; In < B->NumNodes; In++) {
-            FN         = &B->Node[In];
-            FN->Frc[0] = 0.0;
-            FN->Frc[1] = 0.0;
-            FN->Frc[2] = 0.0;
-            FN->Trq[0] = 0.0;
-            FN->Trq[1] = 0.0;
-            FN->Trq[2] = 0.0;
-         }
-      }
+   }
+}
+/**********************************************************************/
+void ZeroFrcTrq(struct SCType *S)
+{
+   struct BodyType *B;
+   long Ib;
+   ZeroNonSCContactFrcTrq(S);
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
+
+      B->SCContactFrcN[0] = 0.0;
+      B->SCContactFrcN[1] = 0.0;
+      B->SCContactFrcN[2] = 0.0;
+      B->SCContactFrcB[0] = 0.0;
+      B->SCContactFrcB[1] = 0.0;
+      B->SCContactFrcB[2] = 0.0;
+      B->SCContactTrq[0]  = 0.0;
+      B->SCContactTrq[1]  = 0.0;
+      B->SCContactTrq[2]  = 0.0;
    }
 }
 /**********************************************************************/
@@ -537,7 +556,7 @@ long SimStep_New(void)
       First   = 0;
       SimTime = 0.0;
       /* First call just initializes timer */
-      RealRunTime(&TotalRunTime, DTSIM);
+      RealRunTime(&TotalRunTime);
       ManageFlags(&nout, &GLnout, &set_nout);
 
       /* Sun, Moon, Planets, Useful Auxiliary Frames */
@@ -560,10 +579,10 @@ long SimStep_New(void)
             struct OrbitType *O = &Orb[S->RefOrb];
             /* Magnetic Field, Atmospheric Density */
             Environment(JD_TDB_MJD, World, O, S);
-            Perturbations(World, O, S); /* Environmental Forces and Torques */
             if (ContactActive)
                SCContactFrcTrq(Orb, SC, Isc);
-            Actuators(S);
+            Perturbations(World, O, S); /* Environmental Forces and Torques */
+            Actuators(FALSE, S, JD_TT_MJD);
             PartitionForces(S); /* Orbit-affecting and "internal" */
             Sensors(World, O, S);
             FlightSoftWare(S);
@@ -587,11 +606,16 @@ long SimStep_New(void)
 
    // JDType jd_f = JDAddRationalSeconds(JD_TT_MJD, DTSIM_RAT);
 
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists)
+         ZeroFrcTrq(S);
+   }
    if (ContactActive) {
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists)
-            SCContactFrcTrq(Orb, SC, Isc); // TODO: this is zero'd in the sceom
+            SCContactFrcTrq(Orb, SC, Isc);
       }
    }
    /* Update Dynamics to next Timestep */
@@ -603,33 +627,34 @@ long SimStep_New(void)
          //    CopyWorld(&World_dupe[i], World[i]);
          // CopyOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
 
-         SToRKState(&S->rkparams.orb, S, S->rk_state);
+         SToRKState(S->rkparams.orb, S, S->rk_state);
          RungeKuttaStep(&S->RKIntegrator, JD_TT_MJD, DTSIM, S->rk_state);
 
          // TODO: assuming that the last call in RungeKutta got us to the
          // current time. So far working out
-         RKStateToS(&S->rkparams.orb, S->rk_state, S);
+         RKStateToS(S->rkparams.orb, S->rk_state, S);
       }
    }
-   SimComplete = AdvanceTime(&JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC, &SimTime,
-                             &DynTime, &AtomicTime, &GpsTime, &CivilTime,
-                             &GpsRollover, &GpsWeek, &GpsSecond);
+   SimComplete =
+       AdvanceTime(DTSIM, DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC,
+                   &SimTime, &DynTime, &AtomicTime, &GpsTime, &CivilTime,
+                   &GpsRollover, &GpsWeek, &GpsSecond);
 
    /* Sun, Moon, Planets, Useful Auxiliary Frames */
-   WorldEphemerides(JD_TT_MJD, World, Rgn, LagSys);
-   for (long Iorb = 0; Iorb < Norb; Iorb++)
-      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
+   // WorldEphemerides(JD_TT_MJD, World, Rgn, LagSys);
+   // for (long Iorb = 0; Iorb < Norb; Iorb++)
+   //    OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
 
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
 
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (S->Exists) {
-         struct OrbitType *O = &Orb[S->RefOrb];
-         SCEphemerides(JD_TDB_MJD, S, &World[O->World], O);
-      }
-   }
+   // for (Isc = 0; Isc < Nsc; Isc++) {
+   //    S = &SC[Isc];
+   //    if (S->Exists) {
+   //       struct OrbitType *O = &Orb[S->RefOrb];
+   //       SCEphemerides(JD_TDB_MJD, S, &World[O->World], O);
+   //    }
+   // }
    InterProcessComm(); /* Send and receive from external processes */
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
@@ -651,7 +676,7 @@ long SimStep_New(void)
    /* Exit when Stoptime is reached */
    if (SimComplete) {
       if (TimeMode == FAST_TIME) {
-         RealRunTime(&TotalRunTime, DTSIM);
+         RealRunTime(&TotalRunTime);
          printf("     Total Run Time = %9.2lf sec\n", TotalRunTime);
          printf("     Sim Speed = %8.2lf x Real\n", STOPTIME / TotalRunTime);
       }
@@ -673,7 +698,7 @@ long SimStep_Old(void)
       First   = 0;
       SimTime = 0.0;
       /* First call just initializes timer */
-      RealRunTime(&TotalRunTime, DTSIM);
+      RealRunTime(&TotalRunTime);
       ManageFlags(&nout, &GLnout, &set_nout);
 
       /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
@@ -690,12 +715,12 @@ long SimStep_Old(void)
             struct OrbitType *O = &Orb[S->RefOrb];
             /* Magnetic Field, Atmospheric Density */
             Environment(JD_TDB_MJD, World, O, S);
-            Perturbations(World, O, S); /* Environmental Forces and Torques */
             if (ContactActive)
                SCContactFrcTrq(Orb, SC, Isc);
+            Perturbations(World, O, S); /* Environmental Forces and Torques */
             Sensors(World, O, S);
             FlightSoftWare(S);
-            Actuators(S);
+            Actuators(FALSE, S, JD_TT_MJD);
             PartitionForces(S); /* Orbit-affecting and "internal" */
          }
       }
@@ -720,9 +745,10 @@ long SimStep_Old(void)
       if (SC[Isc].Exists)
          Dynamics(World, &Orb[SC[Isc].RefOrb], &Frm[SC[Isc].RefOrb], &SC[Isc]);
    }
-   SimComplete = AdvanceTime(&JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC, &SimTime,
-                             &DynTime, &AtomicTime, &GpsTime, &CivilTime,
-                             &GpsRollover, &GpsWeek, &GpsSecond);
+   SimComplete =
+       AdvanceTime(DTSIM, DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC,
+                   &SimTime, &DynTime, &AtomicTime, &GpsTime, &CivilTime,
+                   &GpsRollover, &GpsWeek, &GpsSecond);
    for (long Iorb = 0; Iorb < Norb; Iorb++)
       OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
 
@@ -744,12 +770,12 @@ long SimStep_Old(void)
          struct OrbitType *O = &Orb[S->RefOrb];
          /* Magnetic Field, Atmospheric Density */
          Environment(JD_TDB_MJD, World, O, S);
-         Perturbations(World, O, S); /* Environmental Forces and Torques */
          if (ContactActive)
             SCContactFrcTrq(Orb, SC, Isc);
+         Perturbations(World, O, S); /* Environmental Forces and Torques */
          Sensors(World, O, S);
          FlightSoftWare(S);
-         Actuators(S);
+         Actuators(FALSE, S, JD_TT_MJD);
          PartitionForces(S); /* Orbit-affecting and "internal" */
       }
    }
@@ -765,7 +791,7 @@ long SimStep_Old(void)
    /* Exit when Stoptime is reached */
    if (SimComplete) {
       if (TimeMode == FAST_TIME) {
-         RealRunTime(&TotalRunTime, DTSIM);
+         RealRunTime(&TotalRunTime);
          printf("     Total Run Time = %9.2lf sec\n", TotalRunTime);
          printf("     Sim Speed = %8.2lf x Real\n", STOPTIME / TotalRunTime);
       }

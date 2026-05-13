@@ -122,7 +122,7 @@ void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
 double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond);
 double usec(void);
 DateType RealSystemTime();
-double RealRunTime(double *RealTimeDT, double LSB);
+double RealRunTime(double *RealTimeDT);
 void updateTime(DateType *Time, const double dSeconds);
 
 /*

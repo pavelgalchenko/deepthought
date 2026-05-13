@@ -141,6 +141,10 @@ void ReadFromGmsec(GMSEC_ConnectionMgr ConnMgr, GMSEC_Status status,
       if (sscanf(line, "SC[%ld].AC.Thr[%ld].PulseWidthCmd = %le", &Isc, &i,
                  &DbleVal[0]) == 3) {
          SC[Isc].AC.Thr[i].PulseWidthCmd = DbleVal[0];
+         SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp =
+             JDAddSeconds(JD_TT_MJD, DbleVal[0]);
+         if (RequestTimeRefresh)
+            SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp.system = TAI_TIME;
       }
 
       if (sscanf(line, "SC[%ld].AC.Thr[%ld].ThrustLevelCmd = %le", &Isc, &i,
@@ -938,7 +942,7 @@ void ReadFromGmsec(GMSEC_ConnectionMgr ConnMgr, GMSEC_Status status,
       GpsTime    = AtomicTime - 19.0;
       DynTime    = AtomicTime + 32.184;
       // TT.JulDay  = TimeToJD(DynTime);
-      TT         = TimeToDate(DynTime, TT_TIME, DTSIM);
+      TT         = TimeToDate(DynTime, TT_TIME);
       TT.doy     = MD2DOY(TT.Year, TT.Month, TT.Day);
       JD_TT_MJD  = Date2JD(TT, GMAT_MJD_EPOCH);
       JD_TDB_MJD = JD_TT_MJD;
@@ -947,6 +951,12 @@ void ReadFromGmsec(GMSEC_ConnectionMgr ConnMgr, GMSEC_Status status,
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
       SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
+
+      for (Isc = 0; Isc < Nsc; Isc++)
+         for (i = 0; i < SC[Isc].Nthr; i++)
+            if (SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp.system == TAI_TIME)
+               SC[Isc].AC.Thr[i].PulseWidthFinTimeStamp =
+                   JDAddSeconds(JD_TT_MJD, SC[Isc].AC.Thr[i].PulseWidthCmd);
    }
 
    /* .. Refresh SC states that depend on inputs */

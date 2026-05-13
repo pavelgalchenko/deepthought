@@ -4099,23 +4099,17 @@ void InitSpacecraft(struct SCType *S)
 
 #ifndef OLD_INTEGRATOR
    /* Set up the propagator */
-   S->rkparams.sc     = S;
-   S->rkparams.worlds = World_dupe;
-   S->rkparams.rgn    = malloc(Nrgn * sizeof(struct RegionType));
-   for (i = 0; i < Nrgn; i++)
-      memcpy(&S->rkparams.rgn[i], &Rgn[i], sizeof(struct RegionType));
-   S->rkparams.orb.SplineFile = NULL;
-   CloneOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
-   for (i = 0; i < NLAGSYS; i++)
-      memcpy(&S->rkparams.lagsys[i], &LagSys[i],
-             sizeof(struct LagrangeSystemType));
-   memcpy(&S->rkparams.frm, &Frm[S->RefOrb], sizeof(struct FormationType));
-
+   S->rkparams.worlds   = World;
+   S->rkparams.rgn      = Rgn;
+   S->rkparams.lagsys   = LagSys;
+   S->rkparams.orb      = &Orb[S->RefOrb];
+   S->rkparams.frm      = &Frm[S->RefOrb];
+   S->rkparams.sc       = S;
    S->rkparams.base.dim = _sc_state_dim(S, &Orb[S->RefOrb]);
    S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
 
    S->RKIntegrator =
-       GetRungeKutta(THERK4_RK, 0, 0, S->rkparams.base.dim, 0.001, DTSIM,
+       GetRungeKutta(RK89_RK, 1.0e-6, 0, S->rkparams.base.dim, 1.0e-6, DTSIM,
                      (RKParams *)&S->rkparams, SCOde, NULL);
 #endif
 }
