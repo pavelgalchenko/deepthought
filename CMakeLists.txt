@@ -107,7 +107,8 @@ target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SO
 
 if(SPICE)
     # Copy  cspice directory if building out of source
-    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL
+    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+        file(COPY 
             "${CMAKE_CURRENT_SOURCE_DIR}/cspice" 
             DESTINATION
             "${CMAKE_CURRENT_BINARY_DIR}")
