@@ -48,19 +48,19 @@
             "label": "release build",
             "type": "cmake",
             "command": "workflow",
-            "preset": "build-release",
+            "preset": "build-Release",
         },
         {
             "label": "relwithdebinfo build",
             "type": "cmake",
             "command": "workflow",
-            "preset": "build-relwithdebinfo",
+            "preset": "build-RelWithDebInfo",
         },
         {
             "label": "debug build",
             "type": "cmake",
             "command": "workflow",
-            "preset": "build-debug",
+            "preset": "build-Debug",
         },
         {
             "label": "start criterion test",

@@ -236,6 +236,8 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add_test)
                  ToRational(RationalAdd(ToRationalLL(*b), ToRationalLL(*a)))),
              "(%s) + (%s) != (%s) + (%s)", a_str, b_str, b_str, a_str);
 
+   // TODO: limit_denominator means isequal won't work in general
+   // addition inversion
    Rational rat_check = ToRational(RationalAdd(
        RationalSub(ToRationalLL(*a), ToRationalLL(*b)), ToRationalLL(*b)));
    if (ABS(a_red.den) > (_RATLONG_MAX_ >> 8) ||
@@ -403,8 +405,7 @@ ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl_test)
    }
 
    // not all tested numbers are exact for doubles in the first place
-   int eps_val      = 1;
-   double thresh    = eps_val * (nextafter(val->dbl, INFINITY) - val->dbl);
+   double thresh    = ULP_THRESH * (nextafter(val->dbl, INFINITY) - val->dbl);
    Rational dbl_rat = double2rational(val->dbl);
    double dbl_conv  = rational2double(dbl_rat);
    Rational ratchk =
@@ -416,12 +417,12 @@ ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl_test)
       cr_assert(epsilon_eq(dbl, check, 0, thresh),
                 "double2rational(%le) - %s has an error of %s (%le), larger "
                 "than the threshold of %le (%i eps) when it should be smaller.",
-                val->dbl, ratstr, ratchk_str, fabs(check), thresh, eps_val);
+                val->dbl, ratstr, ratchk_str, fabs(check), thresh, ULP_THRESH);
    }
    else {
       cr_assert(epsilon_ne(dbl, check, 0, thresh),
                 "double2rational(%le) - %s has an error of %s (%le), smaller "
                 "than the threshold of %le (%i eps) when it should be larger.",
-                val->dbl, ratstr, ratchk_str, fabs(check), thresh, eps_val);
+                val->dbl, ratstr, ratchk_str, fabs(check), thresh, ULP_THRESH);
    }
 }

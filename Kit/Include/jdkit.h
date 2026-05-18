@@ -96,7 +96,10 @@ JDType JDFromDays(const double days, const TimeSystem system,
                   const EpochTT new_epoch);
 JDType JDFromSeconds(const double seconds, const TimeSystem system,
                      const EpochTT new_epoch);
+JDType JDFromRationalSeconds(const Rational seconds, const TimeSystem system,
+                             const EpochTT new_epoch);
 double JDToSeconds(JDType jd);
+Rational JDToRationalSeconds(JDType jd);
 double JDToTime(JDType jd);
 double JDToDynTime(JDType JD);
 

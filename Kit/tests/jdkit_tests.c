@@ -42,35 +42,35 @@
        &JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),                        \
        &JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),                        \
                                                                                \
-       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),          \
-       &JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),       \
-       &JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),  \
-       &JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),           \
-       &JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
-       &JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),      \
-       &JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
-       &JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
+       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),            \
+       &JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),         \
+       &JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),    \
+       &JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),             \
+       &JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
+       &JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),        \
+       &JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
+       &JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
                                                                                \
-       &JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
-       &JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
-       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),          \
-       &JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
-       &JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 184, 1000)),         \
+       &JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
+       &JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
+       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),            \
+       &JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
+       &JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),           \
                                                                                \
-       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),          \
-       &JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),       \
-       &JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),  \
-       &JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),           \
-       &JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
-       &JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),      \
-       &JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
-       &JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
+       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),            \
+       &JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),         \
+       &JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),    \
+       &JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),             \
+       &JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
+       &JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),        \
+       &JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
+       &JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
                                                                                \
-       &JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
-       &JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
-       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),          \
-       &JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
-       &JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 184, 1000)),         \
+       &JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
+       &JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
+       &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),            \
+       &JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
+       &JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),           \
                                                                                \
        &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(19, 0, 1)),               \
        &JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_NGCD(19, 0, 1)),            \
@@ -87,113 +87,113 @@
        &JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(19, 0, 1)),              \
        &JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(19, 0, 1)),              \
                                                                                \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 0.0),                                  \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 1721013.5),                            \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 2443144.5),                            \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 2400000.5),                            \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 2415019.5),                            \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 2430000.0),                            \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 2436204.5),                            \
-       &JD_NREDUCE(ZERO_EPOCH, TT_TIME, 2451545.0),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0),                                  \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5),                            \
+       &JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0),                            \
                                                                                \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 0.0),                                 \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 1721013.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 2443144.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 2400000.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 2415019.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 2430000.0),                           \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 2436204.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, UTC_TIME, 2451545.0),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2451545.0),                           \
                                                                                \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 0.0),                                 \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 1721013.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 2443144.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 2400000.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 2415019.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 2430000.0),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 2436204.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TAI_TIME, 2451545.0),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(TAI_TIME, ZERO_EPOCH, 2451545.0),                           \
                                                                                \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 0.0),                                 \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 1721013.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 2443144.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 2400000.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 2415019.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 2430000.0),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 2436204.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TCB_TIME, 2451545.0),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(TCB_TIME, ZERO_EPOCH, 2451545.0),                           \
                                                                                \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 0.0),                                 \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 1721013.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 2443144.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 2400000.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 2415019.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 2430000.0),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 2436204.5),                           \
-       &JD_NREDUCE(ZERO_EPOCH, TDB_TIME, 2451545.0),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(TDB_TIME, ZERO_EPOCH, 2451545.0),                           \
                                                                                \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 0.0),                               \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 1721013.5),                         \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 2443144.5),                         \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 2400000.5),                         \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 2415019.5),                         \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 2430000.0),                         \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 2436204.5),                         \
-       &JD_NREDUCE(GD_CONV_EPOCH, TT_TIME, 2451545.0),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 0.0),                               \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 1721013.5),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 2443144.5),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 2400000.5),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 2415019.5),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 2430000.0),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 2436204.5),                         \
+       &JD_NREDUCE(TT_TIME, GD_CONV_EPOCH, 2451545.0),                         \
                                                                                \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 0.0),                          \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 1721013.5),                    \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 2443144.5),                    \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 2400000.5),                    \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 2415019.5),                    \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 2430000.0),                    \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 2436204.5),                    \
-       &JD_NREDUCE(TCB_TDB_CONV_EPOCH, TT_TIME, 2451545.0),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 0.0),                          \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 1721013.5),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 2443144.5),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 2400000.5),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 2415019.5),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 2430000.0),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 2436204.5),                    \
+       &JD_NREDUCE(TT_TIME, TCB_TDB_CONV_EPOCH, 2451545.0),                    \
                                                                                \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 0.0),                                   \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 1721013.5),                             \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 2443144.5),                             \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 2400000.5),                             \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 2415019.5),                             \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 2430000.0),                             \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 2436204.5),                             \
-       &JD_NREDUCE(MJD_EPOCH, TT_TIME, 2451545.0),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 0.0),                                   \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 1721013.5),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 2443144.5),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 2400000.5),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 2415019.5),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 2430000.0),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 2436204.5),                             \
+       &JD_NREDUCE(TT_TIME, MJD_EPOCH, 2451545.0),                             \
                                                                                \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 0.0),                                 \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 1721013.5),                           \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 2443144.5),                           \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 2400000.5),                           \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 2415019.5),                           \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 2430000.0),                           \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 2436204.5),                           \
-       &JD_NREDUCE(J1900_EPOCH, TT_TIME, 2451545.0),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(TT_TIME, J1900_EPOCH, 2451545.0),                           \
                                                                                \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 0.0),                              \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 1721013.5),                        \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 2443144.5),                        \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 2400000.5),                        \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 2415019.5),                        \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 2430000.0),                        \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 2436204.5),                        \
-       &JD_NREDUCE(GMAT_MJD_EPOCH, TT_TIME, 2451545.0),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 0.0),                              \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 1721013.5),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 2443144.5),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 2400000.5),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 2415019.5),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 2430000.0),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 2436204.5),                        \
+       &JD_NREDUCE(TT_TIME, GMAT_MJD_EPOCH, 2451545.0),                        \
                                                                                \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 0.0),                                 \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 1721013.5),                           \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 2443144.5),                           \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 2400000.5),                           \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 2415019.5),                           \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 2430000.0),                           \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 2436204.5),                           \
-       &JD_NREDUCE(CCSDS_EPOCH, TT_TIME, 2451545.0),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(TT_TIME, CCSDS_EPOCH, 2451545.0),                           \
                                                                                \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 0.0),                                 \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 1721013.5),                           \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 2443144.5),                           \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 2400000.5),                           \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 2415019.5),                           \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 2430000.0),                           \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 2436204.5),                           \
-       &JD_NREDUCE(J2000_EPOCH, TT_TIME, 2451545.0), )
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 0.0),                                 \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 1721013.5),                           \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2443144.5),                           \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2400000.5),                           \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2415019.5),                           \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2430000.0),                           \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2436204.5),                           \
+       &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2451545.0), )
 
 // define needed globals
 //      path of model directory relative to executable
@@ -227,7 +227,7 @@ Theory((JDType * a), SUITE_NAME, jd2str_test)
                  a->whole_days == jd_test.whole_days,
              "jddays2str() whole part error");
    if (sec == 0) {
-      cr_assert(epsilon_eq(dbl, sec, rational2double(a->seconds), ULP_THRESH),
+      cr_assert(epsilon_eq(dbl, sec, rational2double(a->seconds), DBL_THRESH),
                 "jddays2str() second error near zero");
    }
    else {
@@ -236,7 +236,7 @@ Theory((JDType * a), SUITE_NAME, jd2str_test)
    }
 
    jd2str(*a, jd_str);
-   sscanf(jd_str, "JD %li days, (%s) seconds, %s, Epoch %s",
+   sscanf(jd_str, "JD %li days, (%[0-9 +()/]) seconds, %s, Epoch %s",
           &jd_test.whole_days, sec_str, system_str, epoch_str);
    jd_test.system = str2system(system_str);
    jd_test.epoch  = str2epoch(epoch_str);
@@ -248,10 +248,10 @@ Theory((JDType * a), SUITE_NAME, jd2str_test)
                  a->seconds.whole == jd_test.seconds.whole &&
                  a->seconds.num == jd_test.seconds.num &&
                  a->seconds.den == jd_test.seconds.den,
-             "jd2str() error");
+             "jd2str() error for string: %s", jd_str);
 }
 
-/* Test Conditionals */
+/* Test Conditionals                                                  */
 struct jdcond_tuple {
    JDType a;
    JDType b;
@@ -260,7 +260,7 @@ struct jdcond_tuple {
 
 ParameterizedTestParameters(SUITE_NAME, conditional_test)
 {
-#define SIZE 13
+#define SIZE 31
    static int first                         = 0;
    static struct jdcond_tuple vals[SIZE]    = {0};
    const struct jdcond_tuple vals_nstatic[] = {
@@ -371,13 +371,266 @@ ParameterizedTest(struct jdcond_tuple *val, SUITE_NAME, conditional_test)
                 b_str);
 }
 
-/* Test math operation properties */
-//*** Addition
+/* Test math operation properties                                     */
+//*** JD Addition
 TheoryDataPoints(SUITE_NAME, add_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
 
-Theory((JDType * a, JDType *b), SUITE_NAME, add_test) {}
+Theory((JDType * a, JDType *b), SUITE_NAME, add_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+   jd2str(*b, b_str);
 
-//*** Multiplication
-TheoryDataPoints(SUITE_NAME, mult_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+   // addition inversion
+   cr_assume((b->epoch == ZERO_EPOCH || a->epoch == b->epoch) &&
+             (a->system == b->system));
+   cr_assert(isequal_jd(*a, JDAdd(JDSub(*a, *b), *b)),
+             "JDAdd is not invertable (a: (%s); b: (%s))", a_str, b_str);
 
-Theory((JDType * a, JDType *b), SUITE_NAME, mult_test) {}
+   // commutative addition
+   cr_assert(isequal_jd(JDAdd(*a, *b), JDAdd(*b, *a)),
+             "JDAdd is not commutative (a: (%s); b:( %s))", a_str, b_str);
+}
+
+//*** conversion to days
+TheoryDataPoints(SUITE_NAME, jd2dayinv_test) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, jd2dayinv_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   double jdday  = JDToDays(*a);
+   double thresh = 1 * (nextafter(jdday, INFINITY) - jdday);
+   cr_assert(
+       epsilon_eq(dbl,
+                  JDToDays(JDSub(*a, JDFromDays(jdday, a->system, a->epoch))),
+                  0, thresh),
+       "JDToDays/JDFromDays is not invertible (a: (%s))", a_str);
+}
+
+//*** JD Addition with days
+TheoryDataPoints(SUITE_NAME, dayadd_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+
+Theory((JDType * a, JDType *b), SUITE_NAME, dayadd_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+   jd2str(*b, b_str);
+
+   double a_days = JDToDays(*a);
+   double b_days = JDToDays(*b);
+
+   // addition day inversion
+   cr_assert(
+       isequal_jd(*a, JDAddDays(JDSubDays(*a, b_days), b_days)),
+       "JDAddDays is not invertable with JDSubDays (a: (%s); b:( %s), %lf)",
+       a_str, b_str, b_days);
+
+   // commutative day addition
+   cr_assume((a->epoch == b->epoch || a->epoch == ZERO_EPOCH ||
+              b->epoch == ZERO_EPOCH) &&
+             a->system == b->system);
+   double thresh = MAX(nextafter(a_days, INFINITY) - a_days,
+                       nextafter(b_days, INFINITY) - b_days);
+   cr_assert(epsilon_eq(
+                 dbl, JDSubToDays(JDAddDays(*a, b_days), JDAddDays(*b, a_days)),
+                 0, thresh),
+             "JDAddDays is not commutative (a: (%s), %lf; b:( %s), %lf)", a_str,
+             a_days, b_str, b_days);
+}
+
+//*** conversion to seconds
+TheoryDataPoints(SUITE_NAME, jd2secinv_test) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, jd2secinv_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   double jdsec  = JDToSeconds(*a);
+   double thresh = 1 * (nextafter(jdsec, INFINITY) - jdsec);
+   cr_assert(
+       epsilon_eq(dbl,
+                  JDSubToSeconds(*a, JDFromSeconds(jdsec, a->system, a->epoch)),
+                  0, thresh),
+       "JDToSeconds/JDFromSeconds is not invertible (a: (%s))", a_str);
+}
+
+//*** JD Addition with seconds
+TheoryDataPoints(SUITE_NAME, secadd_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+
+Theory((JDType * a, JDType *b), SUITE_NAME, secadd_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+   jd2str(*b, b_str);
+
+   double a_sec = JDToSeconds(*a);
+   double b_sec = JDToSeconds(*b);
+
+   // addition second inversion
+   cr_assert(isequal_jd(*a, JDAddSeconds(JDSubSeconds(*a, b_sec), b_sec)),
+             "JDAddSeconds is not invertable with JDSubSeconds (a: (%s); b:( "
+             "%s), %lf)",
+             a_str, b_str, b_sec);
+
+   cr_assume((a->epoch == b->epoch || a->epoch == ZERO_EPOCH ||
+              b->epoch == ZERO_EPOCH) &&
+             a->system == b->system);
+   double thresh = MAX(nextafter(a_sec, INFINITY) - a_sec,
+                       nextafter(b_sec, INFINITY) - b_sec);
+   // commutative second addition
+   cr_assert(epsilon_eq(dbl,
+                        JDSubToSeconds(JDAddSeconds(*a, b_sec),
+                                       JDAddSeconds(*b, a_sec)),
+                        0, thresh),
+             "JDAddSeconds is not commutative (a: (%s), %lf; b:( %s), %lf)",
+             a_str, a_sec, b_str, b_sec);
+}
+
+//*** conversion to rational seconds
+TheoryDataPoints(SUITE_NAME, jd2ratsecinv_test) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, jd2ratsecinv_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   Rational jdratsec = JDToRationalSeconds(*a);
+   cr_assert(
+       isequal_jd(*a, JDFromRationalSeconds(jdratsec, a->system, a->epoch)),
+       "JDToSeconds/JDFromSeconds is not invertible (a: (%s))", a_str);
+}
+
+//*** JD Addition with Rational seconds
+TheoryDataPoints(SUITE_NAME, secratadd_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+
+Theory((JDType * a, JDType *b), SUITE_NAME, secratadd_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+   jd2str(*b, b_str);
+
+   Rational a_sec_rat = JDToRationalSeconds(*a);
+   Rational b_sec_rat = JDToRationalSeconds(*b);
+
+   // addition rational second inversion
+   cr_assert(
+       isequal_jd(*a, JDAddRationalSeconds(JDSubRationalSeconds(*a, b_sec_rat),
+                                           b_sec_rat)),
+       "JDAddRationalSeconds is not invertable with JDSubRationalSeconds "
+       "(a: (%s); b:( %s))",
+       a_str, b_str);
+
+   // commutative rational second addition
+   cr_assume(a->epoch == b->epoch && a->system == b->system);
+   cr_assert(isequal_jd(JDAddRationalSeconds(*a, b_sec_rat),
+                        JDAddRationalSeconds(*b, a_sec_rat)),
+             "JDAddRationalSeconds is not commutative (a: (%s); b:( %s))",
+             a_str, b_str);
+}
+
+/* Epoch/System Conversion                                            */
+
+//*** Epoch conversions
+TheoryDataPoints(SUITE_NAME, epoch_test) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, epoch_test)
+{
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   EpochTT new_epoch = (a->epoch + 2) % (J2000_EPOCH + 1);
+
+   // ensure epoch changes are reversible
+   JDType jd = *a;
+   JDChangeEpoch(new_epoch, &jd);
+   JDChangeEpoch(a->epoch, &jd);
+
+   cr_assert(isequal_jd(*a, jd),
+             "Converting to different epoch and back did not preserve %s",
+             a_str);
+}
+
+//*** System conversions
+TheoryDataPoints(SUITE_NAME, system_test) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, system_test)
+{
+   // converting out of TCB is not implemented
+   cr_assume(a->system != TCB_TIME);
+   // TDB2TCB algorithm is approximate, ESPECIALLY when going back and forth
+   cr_assume(a->system != TDB_TIME);
+
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   TimeSystem new_system = (a->system + 2) % (TDB_TIME + 1);
+   while (new_system == TCB_TIME || new_system == TDB_TIME)
+      new_system = (new_system + 1) % (TDB_TIME + 1);
+
+   // ensure system changes are approximately reversible
+   JDType jd = *a;
+   JDChangeSystem(new_system, &jd);
+   double sec_tmp = JDToSeconds(jd);
+   JDChangeSystem(a->system, &jd);
+
+   const double a_sec  = JDToSeconds(*a);
+   const double jd_sec = JDToSeconds(jd);
+
+   if (a_sec == 0) {
+
+      cr_assert(epsilon_eq(dbl, jd_sec, a_sec, DBL_THRESH),
+                "Converting to different system and back did not preserve %s",
+                a_str);
+   }
+   else {
+      cr_assert(ieee_ulp_eq(dbl, jd_sec, a_sec, ULP_THRESH),
+                "Converting to different system and back did not preserve %s",
+                a_str);
+   }
+}
+
+//*** both together
+TheoryDataPoints(SUITE_NAME, epochsystem_test) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, epochsystem_test)
+{
+   // converting out of TCB is not implemented
+   cr_assume(a->system != TCB_TIME);
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   EpochTT new_epoch     = (a->epoch + 2) % (J2000_EPOCH + 1);
+   TimeSystem new_system = (a->system + 2) % (TDB_TIME + 1);
+
+   // check system/epoch changes work in either order
+   JDType epsys_test = *a;
+   JDChangeEpoch(new_epoch, &epsys_test);
+   JDChangeSystem(new_system, &epsys_test);
+
+   JDType sysep_test = *a;
+   JDChangeSystem(new_system, &sysep_test);
+   JDChangeEpoch(new_epoch, &sysep_test);
+
+   cr_assert(isequal_jd(epsys_test, sysep_test),
+             "Switching the order of changing system/epoch matters for %s",
+             a_str);
+
+   // test that the combined function also stays the same
+   JDType combined_test = *a;
+   JDChangeSystemEpoch(new_system, new_epoch, &combined_test);
+   cr_assert(
+       isequal_jd(epsys_test, combined_test) &&
+           isequal_jd(sysep_test, combined_test),
+       "The combined function does not match epoch->system changing for %s",
+       a_str);
+}
+
+// TODO: test GetLeapSec
+// TODO: test JDaxpy (atleast that it works for whats needed in rkkit (maybe
+//       move it to rkkit?))
+// TODO: test JDAddMultRatSecs since its used as the core timing
+// TODO: test epoch/system change results are correct (this one will take a bit
+//       of work)

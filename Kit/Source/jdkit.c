@@ -712,6 +712,19 @@ JDType JDFromDays(const double days, const TimeSystem system,
    return jd;
 }
 /**********************************************************************/
+/*  Converts rational seconds since 'epoch' in 'system' to a JDType   */
+/*  format                                                            */
+JDType JDFromRationalSeconds(const Rational seconds, const TimeSystem system,
+                             const EpochTT new_epoch)
+{
+   JDType jd     = {0};
+   jd.epoch      = new_epoch;
+   jd.system     = system;
+   jd.whole_days = seconds.whole / sec_per_day;
+   jd.seconds =
+       RATIONAL_NGCD(seconds.whole % sec_per_day, seconds.num, seconds.den);
+   return jd;
+} /**********************************************************************/
 /*  Converts seconds since 'epoch' in 'system' to a JDType format     */
 JDType JDFromSeconds(const double seconds, const TimeSystem system,
                      const EpochTT new_epoch)
@@ -730,6 +743,21 @@ JDType JDFromSeconds(const double seconds, const TimeSystem system,
 double JDToSeconds(JDType jd)
 {
    return ((double)jd.whole_days * sec_per_day + rational2double(jd.seconds));
+}
+Rational JDToRationalSeconds(JDType jd)
+{
+   // this will be ~292,271,023,045 years for a 64-bit system
+   const Rat_Long max_days = _RATLONG_MAX_ / sec_per_day;
+   if (jd.whole_days > max_days) {
+      fprintf(stderr,
+              "How in goodness name do you have Julian Days > %li in "
+              "JDToRationalSeconds!?! Exiting...\n",
+              max_days);
+      exit(EXIT_FAILURE);
+   }
+   Rational out  = jd.seconds;
+   out.whole    += jd.whole_days * sec_per_day;
+   return out;
 }
 double JDToTime(JDType jd)
 {
@@ -847,7 +875,6 @@ JDType JDSub(JDType a, JDType b)
    }
 
    _error_epoch_system(a, b, "JDSub");
-
    JDType jdout      = a;
    jdout.whole_days -= b.whole_days;
    jdout.seconds     = ToRational(
@@ -1094,8 +1121,8 @@ void jddays2str(JDType jd, char str[JD_STR_LEN])
    Rational rat_jd_pod            = ToRational(
        RationalDivide(ToRationalLL(jd.seconds), ToRationalLL(rat_sec_per_day)));
    const double jd_pod = rational2double(rat_jd_pod);
-   char sec_str[16]    = {'\0'};
-   snprintf(sec_str, 16, "%.8lf", jd_pod);
+   char sec_str[28]    = {'\0'};
+   snprintf(sec_str, 28, "%.20lf", jd_pod);
    snprintf(str, JD_STR_LEN, jdday_str_fmt, jd.whole_days, &sec_str[2],
             system_str, epoch_str);
 }
