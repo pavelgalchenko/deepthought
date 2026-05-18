@@ -106,6 +106,13 @@ target_include_directories(deepthought PRIVATE Kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
 
 if(SPICE)
+    # Copy  cspice directory if building out of source
+    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL
+            "${CMAKE_CURRENT_SOURCE_DIR}/cspice" 
+            DESTINATION
+            "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+
     # Based on similar section in GMAT cmake
     set(CSPICE_TEMP_DIR ${CMAKE_SOURCE_DIR}/cspice)
 
@@ -142,12 +149,11 @@ if(SPICE)
     target_include_directories(deepthought PRIVATE ${CSPICE_INCLUDE_DIR})
 endif()
 
-# Copy World, Model, and cspice Directories if building out of source
+# Copy World and Model Directories if building out of source
 if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     file(COPY 
         "${CMAKE_CURRENT_SOURCE_DIR}/Model" 
         "${CMAKE_CURRENT_SOURCE_DIR}/World" 
-        "${CMAKE_CURRENT_SOURCE_DIR}/cspice" 
         DESTINATION
         "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
