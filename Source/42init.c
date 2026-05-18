@@ -782,7 +782,7 @@ TimeSystem GetTimeSystem(const char *s)
 DateType ReadDateFromYaml(struct fy_node *node, const char *f_name)
 {
    // TODO: convert input "/Time/Second" to be only accepting of ints
-   Rational millisec     = (Rational){.whole = 0, .num = 0, .den = 1000};
+   Rational millisec     = RATIONAL_NGCD(0, 0, 1000);
    double sec            = 0;
    DateType date         = {0};
    date.system           = UTC_TIME;
@@ -803,7 +803,8 @@ DateType ReadDateFromYaml(struct fy_node *node, const char *f_name)
       exit(EXIT_FAILURE);
    }
    date.Second = double2rational(sec);
-   date.Second = RationalAdd(date.Second, millisec);
+   date.Second = ToRational(
+       RationalAdd(ToRationalLL(date.Second), ToRationalLL(millisec)));
 
    date.doy = MD2DOY(date.Year, date.Month, date.doy);
 
@@ -4109,7 +4110,7 @@ void InitSpacecraft(struct SCType *S)
    S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
 
    S->RKIntegrator =
-       GetRungeKutta(RK89_RK, 1.0e-6, 0, S->rkparams.base.dim, 1.0e-6, DTSIM,
+       GetRungeKutta(RK89_RK, 0, 0, S->rkparams.base.dim, 1.0e-6, DTSIM,
                      (RKParams *)&S->rkparams, SCOde, NULL);
 #endif
 }
@@ -4848,7 +4849,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *mean_anom = MeanAnoms[Im];
          *epoch_date =
              DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],
-                          EpochHours[Im], 0, (Rational){0});
+                          EpochHours[Im], 0, RATIONAL_ZERO);
       } break;
       case MARS: {
          const char Names[][40]            = {"Phobos", "Deimos"};
@@ -4891,7 +4892,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, (Rational){0});
+                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
       } break;
       case JUPITER: {
          const char Names[][40] = {
@@ -4983,7 +4984,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, (Rational){0});
+                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
       } break;
       case SATURN: {
          const char Names[][40] = {
@@ -5070,7 +5071,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, (Rational){0});
+                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
       } break;
       case URANUS: {
          const char Names[][40] = {"Ariel", "Umbriel", "Titania", "Oberon",
@@ -5116,7 +5117,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, (Rational){0});
+                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
       } break;
       case NEPTUNE: {
          const char Names[][40]            = {"Triton", "Nereid"};
@@ -5159,7 +5160,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *omg        = omgs[Im];
          *mean_anom  = MeanAnoms[Im];
          *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, (Rational){0});
+                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
       } break;
       case PLUTO: {
          const char Names[][40]            = {"Charon"};
@@ -5204,7 +5205,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          *mean_anom = MeanAnoms[Im];
          *epoch_date =
              DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],
-                          EpochHours[Im], 0, (Rational){0});
+                          EpochHours[Im], 0, RATIONAL_ZERO);
       } break;
       default: {
          fprintf(

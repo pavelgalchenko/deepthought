@@ -30,10 +30,10 @@ option(SPICE "Compile with SPICE" ON)
 option(STANDALONE "Compile AcApp as standalone" OFF)
 
 # Compile enabling address sanitizer -DSANITIZER=ON
-option(SANITIZER "Enable address sanitizer in debug build" OFF)
+option(SANITIZER "Enable address sanitizer" OFF)
 
 # Compile enabling profiling -pg flags -DPROFILE=ON
-option(PROFILE "Enable address sanitizer in debug build" OFF)
+option(PROFILE "Enable profiling flags" OFF)
 
 # take note of the buid options in Kit/CMakeLists.txt as well
 ################################################################################
@@ -48,14 +48,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 add_executable(deepthought)
-add_executable(Test EXCLUDE_FROM_ALL)
 
 if (PROFILE)
     target_compile_options(deepthought PRIVATE -pg)
     target_link_options(deepthought PRIVATE -pg)
 endif()
-
-target_compile_definitions(deepthought PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
 
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
@@ -66,7 +63,7 @@ target_compile_options(deepthought PRIVATE $<$<CONFIG:Debug>:-O0 -pg -ggdb -fno-
 
 # addresssanitizer
 target_compile_options(deepthought PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
-target_link_options(deepthought BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=undefined -fsanitize=address>)
+target_link_options(deepthought BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
 
 target_compile_options(deepthought PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS}>:-Wno-unused-local-typedefs>)
 
@@ -145,7 +142,7 @@ if(SPICE)
     target_include_directories(deepthought PRIVATE ${CSPICE_INCLUDE_DIR})
 endif()
 
-# Copy World and Model Directories, if building out of source
+# Copy World, Model, and cspice Directories if building out of source
 if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
     file(COPY 
         "${CMAKE_CURRENT_SOURCE_DIR}/Model" 
@@ -155,23 +152,16 @@ if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
         "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
-# Configure Test Target
-target_include_directories(Test PRIVATE Kit/Include Include)
-target_sources(Test
-    PRIVATE
-    Tests/tests.c
-    Tests/mathkit_tests.c
-    # Tests/navkit_tests.c
-    Tests/test_lib.c
-    ${42_SOURCES}
-    ${SIM_IPC_SOURCES}
-)
+# testing configuration
+if (PROJECT_IS_TOP_LEVEL)
+    enable_testing()
+endif()
+# add_subdirectory(tests) #TODO: get tests here
 
 # link 42kit
 add_subdirectory(Kit)
 target_include_directories(42kit PUBLIC Include)
 target_link_libraries(deepthought PRIVATE 42kit)
-target_link_libraries(Test PRIVATE 42kit)
 # Configure Sources
 #   TODO: trying to separate this out, but its here for now for AC_SOURCES and GUI reasons
 set(KIT Kit/Source)
@@ -209,7 +199,6 @@ if(STANDALONE)
     target_compile_definitions(deepthought PRIVATE _AC_STANDALONE_)
 else()
     target_sources(deepthought ${AC_SOURCES})
-    target_sources(Test ${AC_SOURCES})
 endif()
 
 # configure GUI

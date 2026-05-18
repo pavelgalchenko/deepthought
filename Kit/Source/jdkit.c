@@ -66,7 +66,8 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
    }
 
    // determine part of day value
-   *part_of_day = RationalSub(_epoch_pod_seconds(a), _epoch_pod_seconds(b));
+   *part_of_day = ToRational(RationalSub(ToRationalLL(_epoch_pod_seconds(a)),
+                                         ToRationalLL(_epoch_pod_seconds(b))));
    *part_of_day = RationalAbs(*part_of_day);
 
    if (b == ZERO_EPOCH)
@@ -305,10 +306,8 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
    }
 }
 
-#define _jd_tt2tai(x)                                                          \
-   JDSubRationalSeconds((x), (Rational){.whole = 32, .num = 23, .den = 125})
-#define _jd_tai2tt(x)                                                          \
-   JDAddRationalSeconds((x), (Rational){.whole = 32, .num = 23, .den = 125})
+#define _jd_tt2tai(x) JDSubRationalSeconds((x), RATIONAL_NGCD(32, 23, 125))
+#define _jd_tai2tt(x) JDAddRationalSeconds((x), RATIONAL_NGCD(32, 23, 125))
 
 /**********************************************************************/
 //  time system low level conversion helpers
@@ -709,7 +708,7 @@ JDType JDFromDays(const double days, const TimeSystem system,
    jd.system               = system;
    jd.whole_days           = days;
    const Rational part_day = double2rational(days - jd.whole_days);
-   jd.seconds              = IntegerRationalMult(sec_per_day, part_day);
+   jd.seconds = IntegerRationalMult(sec_per_day, ToRationalLL(part_day));
    return jd;
 }
 /**********************************************************************/
@@ -800,7 +799,8 @@ JDType JDAdd(JDType a, JDType b)
    _error_epoch_system(a, b, "JDAdd");
    JDType jdout      = a;
    jdout.whole_days += b.whole_days;
-   jdout.seconds     = RationalAdd(jdout.seconds, b.seconds);
+   jdout.seconds     = ToRational(
+       RationalAdd(ToRationalLL(jdout.seconds), ToRationalLL(b.seconds)));
    _reduce(&jdout);
    return jdout;
 }
@@ -830,7 +830,8 @@ JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat)
 {
    JDType jdb = jd;
 
-   jdb.seconds = IntegerRationalMultMod(mul, rat, sec_per_day, &jdb.whole_days);
+   jdb.seconds = IntegerRationalMultMod(mul, ToRationalLL(rat), sec_per_day,
+                                        &jdb.whole_days);
 
    return JDAdd(jd, jdb);
 }
@@ -849,7 +850,8 @@ JDType JDSub(JDType a, JDType b)
 
    JDType jdout      = a;
    jdout.whole_days -= b.whole_days;
-   jdout.seconds     = RationalSub(jdout.seconds, b.seconds);
+   jdout.seconds     = ToRational(
+       RationalSub(ToRationalLL(jdout.seconds), ToRationalLL(b.seconds)));
    _reduce(&jdout);
    return jdout;
 }
@@ -883,7 +885,8 @@ JDType JDaxpy(const double a, JDType x, JDType y)
    // TODO: this is quite hacky to "just work" for its usage in rkkit
    x.whole_days   *= a;
    Rational a_rat  = double2rational(a);
-   x.seconds       = RationalMult(a_rat, x.seconds);
+   x.seconds =
+       ToRational(RationalMult(ToRationalLL(a_rat), ToRationalLL(x.seconds)));
 
    x.epoch  = y.epoch;
    x.system = y.system;

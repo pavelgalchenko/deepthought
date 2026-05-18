@@ -76,7 +76,7 @@ Rational NOS3Time(const Rational tick_sec)
       exit(3);
    }
    ticks = NE_bus_get_time(Bus);
-   return IntegerRationalMult(ticks, tick_sec);
+   return IntegerRationalMult(ticks, ToRationalLL(tick_sec));
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
    fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");

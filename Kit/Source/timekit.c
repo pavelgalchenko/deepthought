@@ -318,7 +318,7 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
    date.Hour      = trunc(tmp);
    date.Minute    = trunc((tmp - date.Hour) * 60);
    Rational hours = double2rational(tmp - date.Hour - (double)date.Minute / 60);
-   date.Second    = IntegerRationalMult(3600, hours);
+   date.Second    = IntegerRationalMult(3600, ToRationalLL(hours));
    return date;
 }
 /**********************************************************************/
@@ -539,7 +539,8 @@ void updateTime(DateType *Time, const double dSeconds)
    if (fabs(dSeconds) > 0.0) {
       Rational rat_dseconds = double2rational(dSeconds);
 
-      Time->Second  = RationalAdd(Time->Second, rat_dseconds);
+      Time->Second = ToRational(
+          RationalAdd(ToRationalLL(Time->Second), ToRationalLL(rat_dseconds)));
       long quotient = RationalIntMod(&Time->Second, 60);
       if (Time->Second.whole < 0) {
          Time->Second.whole += 60;

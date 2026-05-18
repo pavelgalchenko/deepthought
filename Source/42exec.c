@@ -54,8 +54,10 @@ void ManageFlags(long *const nout, long *const GLnout, int *set_nout)
 
    if (!*set_nout) {
       *set_nout = TRUE;
-      *nout     = RationalRoundUp(RationalDivide(DTOUT_RAT, DTSIM_RAT));
-      *GLnout   = RationalRoundUp(RationalDivide(DTOUTGL_RAT, DTSIM_RAT));
+      *nout     = RationalRoundUp(ToRational(
+          RationalDivide(ToRationalLL(DTOUT_RAT), ToRationalLL(DTSIM_RAT))));
+      *GLnout   = RationalRoundUp(ToRational(
+          RationalDivide(ToRationalLL(DTOUTGL_RAT), ToRationalLL(DTSIM_RAT))));
    }
 
    iout++;

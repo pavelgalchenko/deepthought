@@ -6,12 +6,13 @@
     },
     "configurePresets": [
         {
-            "name": "default_debug",
-            "displayName": "Default Debug configure preset",
+            "name": "Debug",
+            "displayName": "Debug configure preset",
             "description": "Sets Make generator, build, and install directory for debug build.",
             "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}",
+            "binaryDir": "${sourceDir}/build/${presetName}",
             "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_BUILD_TYPE": "Debug",
                 "DEBUG_DATA": "OFF",
                 "SPICE": "ON",
@@ -21,27 +22,152 @@
             }
         },
         {
-            "name": "default_release",
-            "inherits": "default_debug",
-            "displayName": "Default Release configure preset",
+            "name": "Release",
+            "inherits": "Debug",
+            "displayName": "Release configure preset",
             "description": "Sets Make generator, build, and install directory for release build",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
-            "name": "profile_release",
-            "inherits": "default_debug",
-            "displayName": "Default Release configure preset",
+            "name": "RelWithDebInfo",
+            "inherits": "Debug",
+            "displayName": "RelWithDebInfo configure preset",
             "description": "Sets Make generator, build, and install directory for release build",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "Profile_Release",
+            "inherits": "Release",
+            "displayName": "Profile Release configure preset",
+            "description": "Sets Make generator, build, and install directory for release build with profiling",
+            "cacheVariables": {
                 "PROFILE": "ON"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "Debug-build",
+            "configurePreset": "Debug",
+            "jobs": 0
+        },
+        {
+            "name": "RelWithDebInfo-build",
+            "configurePreset": "RelWithDebInfo",
+            "inherits": [
+                "Debug-build"
+            ]
+        },
+        {
+            "name": "Release-build",
+            "configurePreset": "Release",
+            "inherits": [
+                "Debug-build"
+            ]
+        },
+        {
+            "name": "profile-release-build",
+            "configurePreset": "Profile_Release",
+            "inherits": [
+                "Debug-build"
+            ]
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "test-Debug",
+            "configurePreset": "Debug",
+            "description": "Runs all tests for the debug build",
+            "execution": {
+                "jobs": 0
+            }
+        },
+        {
+            "name": "test-Release",
+            "configurePreset": "Release",
+            "description": "Runs all tests for the release build",
+            "execution": {
+                "jobs": 0
+            }
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "build-Debug",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "Debug"
+                },
+                {
+                    "type": "build",
+                    "name": "Debug-build"
+                }
+            ]
+        },
+        {
+            "name": "build-Release",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "Release"
+                },
+                {
+                    "type": "build",
+                    "name": "Release-build"
+                }
+            ]
+        },
+        {
+            "name": "build-RelWithDebInfo",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "RelWithDebInfo"
+                },
+                {
+                    "type": "build",
+                    "name": "RelWithDebInfo-build"
+                }
+            ]
+        },
+        {
+            "name": "test-Debug",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "Debug"
+                },
+                {
+                    "type": "build",
+                    "name": "Debug-build"
+                },
+                {
+                    "type": "test",
+                    "name": "test-Debug"
+                }
+            ]
+        },
+        {
+            "name": "test-Release",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "Release"
+                },
+                {
+                    "type": "build",
+                    "name": "Release-build"
+                },
+                {
+                    "type": "test",
+                    "name": "test-Release"
+                }
+            ]
         }
     ]
 }

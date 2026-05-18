@@ -63,24 +63,33 @@ if (PROFILE)
     target_link_options(42kit PRIVATE -pg)
 endif()
 
+# Copy Shaders Directory if building out of source
+if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
+    file(COPY 
+        "${CMAKE_CURRENT_SOURCE_DIR}/Shaders"
+        DESTINATION
+        "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
 
-target_compile_definitions(42kit PRIVATE CMAKE_EXPORT_COMPILE_COMMANDS=1)
+# testing configuration
+if (PROJECT_IS_TOP_LEVEL)
+    enable_testing()
+endif()
+add_subdirectory(tests)
 
 target_link_libraries(42kit PUBLIC m)
 
-target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion)
+target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion -Wno-format-extra-args)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Release>:-O2>)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Debug>:-fno-omit-frame-pointer>)
 
 # addresssanitizer
 target_compile_options(42kit PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
-target_link_options(42kit BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=undefined -fsanitize=address>)
+target_link_options(42kit BEFORE PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
 
 target_compile_options(42kit PRIVATE $<$<BOOL:${C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS}>:-Wno-unused-local-typedefs>)
 
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${SHADERS}>:_USE_SHADERS_>)
-
-target_compile_definitions(42kit PRIVATE $<$<BOOL:${IGNORE_LONG}>:_IGNORE_LONG_>)
 
 # set_target_properties(42kit PROPERTIES VERSION ${PROJECT_VERSION})
 # set_target_properties(42kit PROPERTIES PUBLIC_HEADER )

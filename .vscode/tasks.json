@@ -1,6 +1,6 @@
 {
     "version": "2.0.0",
-    "command": "bash",
+    // "command": "bash",
     "presentation": {
         "echo": true,
         "reveal": "always",
@@ -13,82 +13,115 @@
         "cwd": "${workspaceRoot}",
         "environment": [],
     },
-    "args": [
-        "-c"
+    // "args": [
+    //     "-c"
+    // ],
+    "inputs": [
+        {
+            "id": "missionName",
+            "description": "Choose Mission to run",
+            "type": "pickString",
+            "options": [
+                "Demo",
+                "DSM_DEMO",
+                "DSM_NAV_DEMO"
+            ],
+            "default": "DSM_DEMO"
+        },
+        {
+            "id": "testTarget",
+            "description": "Choose test target to run",
+            "type": "pickString",
+            "options": [
+                "Kit/tests/kit_tests",
+            ],
+            "default": "Kit/tests/kit_tests"
+        },
+        {
+            "id": "testLabel",
+            "description": "Choose test to run, empty for all ([suite]/[test])",
+            "type": "promptString",
+        },
     ],
     "tasks": [
         {
-            "label": "make project",
+            "label": "release build",
+            "type": "cmake",
+            "command": "workflow",
+            "preset": "build-release",
+        },
+        {
+            "label": "relwithdebinfo build",
+            "type": "cmake",
+            "command": "workflow",
+            "preset": "build-relwithdebinfo",
+        },
+        {
+            "label": "debug build",
+            "type": "cmake",
+            "command": "workflow",
+            "preset": "build-debug",
+        },
+        {
+            "label": "start criterion test",
             "type": "shell",
-            "group": "build",
-            "args": [
-                "make",
-                "clean",
-                "--build"
+            "command": [
+                "env",
+                "-i",
+                "bash",
+                "--login",
+                "-c",
+                "'${workspaceFolder}/build/Debug/${input:testTarget} --debug --color=always --filter=${input:testLabel}'"
+            ],
+            "isBackground": true,
+            "problemMatcher": [
+                // From https://stackoverflow.com/questions/44242048/how-can-i-prevent-vs-code-from-waiting-for-a-prelaunchtask-to-finish
+                // This does nothing, but it is needed to let the calling launch task keep going
+                // Thanks vscode.
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".",
+                        "endsPattern": ".",
+                    }
+                }
             ]
         },
         {
-            "label": "make project opt",
-            "type": "shell",
-            "group": "build",
-            "args": [
-                "make",
-                "clean",
-                "--build"
-            ]
-        },
-        {
-            "label": "profile build project",
-            "type": "shell",
-            "group": "build",
-            "args": [
-                "cmake",
-                "-DCMAKE_BUILD_TYPE=DEBUG",
-                // "-DCMAKE_CXX_FLAGS=-pg",
-                // "-DCMAKE_EXE_LINKER_FLAGS=-pg",
-                // "-DCMAKE_SHARED_LINKER_FLAGS=-pg",
-                // "-S",
-                // "-B",
-                "${workspaceFolder}",
-                "&&",
-                "make",
-                "-j"
-                // "--build"
-            ]
-        },
-        {
-            "label": "analyze project",
-            "type": "shell",
-            "args": [
-                "echo",
-                "${env:LD_PROFILE}",
-                "&&",
-                "gprof",
-                "./deepthought",
-                "gmon.out",
-                ">",
-                "dt_analysis.txt",
-                "&&",
-                "sprof",
-                "./Kit/${config:LD_PROFILE}",
-                "${config:LD_PROFILE}.profile",
-                ">",
-                "kit_analysis.txt"
-            ]
-        },
-        {
-            "label": "test project",
-            "type": "shell",
-            "group": "build",
-            "args": [
-                "make",
-                "clean",
-                "&&",
-                "make",
-                "-j",
-                "Test",
-                "GUIFLAG="
-            ]
-        },
+            "label": "build and start criterion test",
+            "dependsOn": [
+                "debug build",
+                "start criterion test"
+            ],
+            "dependsOrder": "sequence",
+        }
+        // {
+        //     "label": "analyze project",
+        //     "type": "shell",
+        //     "args": [
+        //         "echo",
+        //         "${env:LD_PROFILE}",
+        //         "&&",
+        //         "gprof",
+        //         "./deepthought",
+        //         "gmon.out",
+        //         ">",
+        //         "dt_analysis.txt",
+        //         "&&",
+        //         "sprof",
+        //         "./Kit/${config:LD_PROFILE}",
+        //         "${config:LD_PROFILE}.profile",
+        //         ">",
+        //         "kit_analysis.txt"
+        //     ]
+        // },
     ]
 }

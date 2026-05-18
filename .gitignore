@@ -16,6 +16,8 @@ CMakeFiles
 Makefile
 CMakeCache.txt
 cmake_install.cmake
+CTestTestfile.cmake
 *.tar*
 **/*42kit*
 AcApp
+build

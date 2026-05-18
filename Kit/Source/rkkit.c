@@ -66,11 +66,10 @@ static void _initcommonrk(RungeKutta *const rk)
    rk->errorCalc       = RKErrorCalc;
    rk->maxStepAttempts = 50;
    rk->stepAttempts    = 0;
-   rk->smallestTime =
-       InitJD(JD_ZERO.system, JD_ZERO.epoch, 0,
-              (Rational){.whole = 0, .num = 1, .den = 1000000000000});
-   rk->incPower = 1.0 / rk->order;
-   rk->decPower = 1.0 / (rk->order - 1);
+   rk->smallestTime    = InitJD(JD_ZERO.system, JD_ZERO.epoch, 0,
+                                RATIONAL_NGCD(0, 1, 1000000000000));
+   rk->incPower        = 1.0 / rk->order;
+   rk->decPower        = 1.0 / (rk->order - 1);
    _allocrk(rk);
 }
 
