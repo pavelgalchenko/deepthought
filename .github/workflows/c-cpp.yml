@@ -74,7 +74,7 @@ jobs:
       
       - name: add homebrew to cmake path
         if: ${{ matrix.glut == 'GLFW' && contains(matrix.platform.os, 'macos') }}
-        run: cmake -DCMAKE_PREFIX_PATH=$(brew --prefix) -S . -B build
+        run: cmake -DCMAKE_PREFIX_PATH=$(brew --prefix) -S . -B build/${{ matrix.build }}
 
       - name: Build
         run: cmake --build --preset ${{ matrix.build }}-build --clean-first
