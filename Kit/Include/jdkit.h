@@ -36,6 +36,10 @@
 /**********************************************************************/
 /**********************************************************************/
 
+#define JD_STR_LEN       (138)
+#define JDEPOCH_STR_LEN  (19)
+#define JDSYSTEM_STR_LEN (4)
+
 typedef enum EpochTT {
    ZERO_EPOCH = 0,     // Jan  1, -4712, 12:00:00
    GD_CONV_EPOCH,      // Nov 18, -0001, 00:00:00, in GD->JD
@@ -70,11 +74,14 @@ typedef struct JDType {
    Rational seconds;
 } JDType;
 
-#define JD_ZERO                                                                \
-   ((JDType){.system     = TT_TIME,                                            \
-             .epoch      = ZERO_EPOCH,                                         \
-             .whole_days = 0,                                                  \
-             .seconds    = RATIONAL_ZERO})
+#define JD_RAW(sys, epc, day, sec)                                             \
+   ((JDType){.system     = (sys),                                              \
+             .epoch      = (epc),                                              \
+             .whole_days = (day),                                              \
+             .seconds    = (sec)})
+#define JD_ZERO JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO)
+#define JD_NREDUCE(sys, epc, day)                                              \
+   JD_RAW(sys, epc, day, RATIONAL_NGCD((day - ((long)day)) * 86400.0, 0, 1))
 
 JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
               const Rational seconds);
@@ -117,6 +124,13 @@ int isless_jd(const JDType a, const JDType b);
 int islessequal_jd(const JDType a, const JDType b);
 int isgreater_jd(const JDType a, const JDType b);
 int isgreaterequal_jd(const JDType a, const JDType b);
+
+EpochTT str2epoch(char str[JDEPOCH_STR_LEN]);
+TimeSystem str2system(char str[JDSYSTEM_STR_LEN]);
+void epoch2str(EpochTT epoch, char str[JDEPOCH_STR_LEN]);
+void system2str(TimeSystem system, char str[JDSYSTEM_STR_LEN]);
+void jd2str(JDType jd, char str[JD_STR_LEN]);
+void jddays2str(JDType jd, char str[JD_STR_LEN]);
 
 /*
 ** #ifdef __cplusplus

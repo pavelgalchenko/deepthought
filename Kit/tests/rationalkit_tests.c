@@ -78,7 +78,7 @@ Theory((Rational * a), SUITE_NAME, rat2str_test)
              a->whole, a->num, a->den, a_str);
 }
 
-/* Test conditionals */
+/* Test conditionals                                                  */
 struct ratcond_tuple {
    Rational a;
    Rational b;

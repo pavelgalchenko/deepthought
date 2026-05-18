@@ -839,8 +839,8 @@ int isgreater_rational(Rational a, Rational b)
 /* Stringify Rational WITHOUT REDUCING                                */
 void rat2str(Rational rat, char str[RATIONAL_STR_LEN])
 {
-   snprintf(str, RATIONAL_STR_LEN, "%ld + (%ld/%ld)", rat.whole, rat.num,
-            rat.den);
+   const char *rat_str_fmt = "%ld + (%ld/%ld)";
+   snprintf(str, RATIONAL_STR_LEN, rat_str_fmt, rat.whole, rat.num, rat.den);
 }
 /**********************************************************************/
 Rational ToRational(const RationalLL rat_ll)

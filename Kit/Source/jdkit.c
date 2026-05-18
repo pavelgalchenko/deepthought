@@ -23,11 +23,11 @@
 // TODO: do we want these in the header?
 #define _ZERO_EPOCH_TT     (0.0)       // Jan  1, -4712, 12:00:00
 #define _GD_JD_EPOCH_TT    (1721013.5) // Nov 18, -0001, 00:00:00, in GD->JD
-#define _TCB_TDB_EPOCH_TT  (2443144.5) // Jan  1,  1977, 00:00:00, in tcb->tdb
 #define _MJD_EPOCH_TT      (2400000.5) // Nov 17,  1858, 00:00:00
 #define _J1900_EPOCH_TT    (2415019.5) // Dec 31,  1899, 00:00:00, in JD->GD
 #define _GMAT_MJD_EPOCH_TT (2430000.0) // Jan  5,  1941, 12:00:00
 #define _CCSDS_EPOCH_TT    (2436204.5) // Jan 1,   1958, 00:00:00
+#define _TCB_TDB_EPOCH_TT  (2443144.5) // Jan  1,  1977, 00:00:00, in tcb->tdb
 #define _J2000_EPOCH_TT    (2451545.0) // Jan 1 ,  2000, 12:00:00, J2000 epoch
 
 // Make sure that we covered everything EXPLICITLY
@@ -941,8 +941,8 @@ JDType JDNegate(JDType jd)
 
 int isequal_jd(const JDType a, const JDType b)
 {
-   _error_epoch_system(a, b, "isequal_jd");
-   return ((a.whole_days == b.whole_days) &&
+   return ((a.system == b.system) && (a.epoch == b.epoch) &&
+           (a.whole_days == b.whole_days) &&
            isequal_rational(a.seconds, b.seconds));
 }
 
@@ -974,6 +974,130 @@ int isgreaterequal_jd(const JDType a, const JDType b)
 {
    _error_epoch_system(a, b, "isgreaterequal_jd");
    return isequal_jd(a, b) || isgreater_jd(a, b);
+}
+
+EpochTT str2epoch(char str[JDEPOCH_STR_LEN])
+{
+
+   if (!strncmp(str, "Zero", 5))
+      return ZERO_EPOCH;
+   else if (!strncmp(str, "GD Conversion", 14))
+      return GD_CONV_EPOCH;
+   else if (!strncmp(str, "TCB/TDB Conversion", 19))
+      return TCB_TDB_CONV_EPOCH;
+   else if (!strncmp(str, "MJD", 4))
+      return MJD_EPOCH;
+   else if (!strncmp(str, "J1900", 6))
+      return J1900_EPOCH;
+   else if (!strncmp(str, "GMAT MJD", 9))
+      return GMAT_MJD_EPOCH;
+   else if (!strncmp(str, "CCSDS", 6))
+      return CCSDS_EPOCH;
+   else if (!strncmp(str, "J2000", 6))
+      return J2000_EPOCH;
+
+   fprintf(stderr, "Invalid string in str2epoch. Exiting...\n");
+   exit(EXIT_FAILURE);
+}
+
+TimeSystem str2system(char str[JDSYSTEM_STR_LEN])
+{
+   if (!strncmp(str, "UTC", 4))
+      return UTC_TIME;
+   else if (!strncmp(str, "TAI", 4))
+      return TAI_TIME;
+   else if (!strncmp(str, "TT", 3))
+      return TT_TIME;
+   else if (!strncmp(str, "TCB", 4))
+      return TCB_TIME;
+   else if (!strncmp(str, "TDB", 4))
+      return TDB_TIME;
+
+   fprintf(stderr, "Invalid string in str2system. Exiting...\n");
+   exit(EXIT_FAILURE);
+}
+
+void epoch2str(EpochTT epoch, char str[JDEPOCH_STR_LEN])
+{
+   switch (epoch) {
+      case ZERO_EPOCH:
+         strcpy(str, "Zero");
+         break;
+      case GD_CONV_EPOCH:
+         strcpy(str, "GD Conversion");
+         break;
+      case TCB_TDB_CONV_EPOCH:
+         strcpy(str, "TCB/TDB Conversion");
+         break;
+      case MJD_EPOCH:
+         strcpy(str, "MJD");
+         break;
+      case J1900_EPOCH:
+         strcpy(str, "J1900");
+         break;
+      case GMAT_MJD_EPOCH:
+         strcpy(str, "GMAT MJD");
+         break;
+      case CCSDS_EPOCH:
+         strcpy(str, "CCSDS");
+         break;
+      case J2000_EPOCH:
+         strcpy(str, "J2000");
+         break;
+   }
+}
+
+void system2str(TimeSystem system, char str[JDSYSTEM_STR_LEN])
+{
+   switch (system) {
+      case UTC_TIME:
+         strcpy(str, "UTC");
+         break;
+      case TAI_TIME:
+         strcpy(str, "TAI");
+         break;
+      case TT_TIME:
+         strcpy(str, "TT");
+         break;
+      case TCB_TIME:
+         strcpy(str, "TCB");
+         break;
+      case TDB_TIME:
+         strcpy(str, "TDB");
+         break;
+   }
+}
+
+void jd2str(JDType jd, char str[JD_STR_LEN])
+{
+   const char *jdday_str_fmt       = "JD %li days, (%s) seconds, %s, Epoch %s";
+   char epoch_str[JDEPOCH_STR_LEN] = {'\0'};
+   char system_str[JDSYSTEM_STR_LEN] = {'\0'};
+   epoch2str(jd.epoch, epoch_str);
+   system2str(jd.system, system_str);
+
+   char sec_str[RATIONAL_STR_LEN] = {'\0'};
+   rat2str(jd.seconds, sec_str);
+   snprintf(str, JD_STR_LEN, jdday_str_fmt, jd.whole_days, sec_str, system_str,
+            epoch_str);
+}
+
+void jddays2str(JDType jd, char str[JD_STR_LEN])
+{
+   const char *jdday_str_fmt         = "JD %li.%s %s, Epoch %s";
+   char epoch_str[JDEPOCH_STR_LEN]   = {'\0'};
+   char system_str[JDSYSTEM_STR_LEN] = {'\0'};
+   epoch2str(jd.epoch, epoch_str);
+   system2str(jd.system, system_str);
+
+   const Rational rat_sec_per_day = RATIONAL_NGCD(sec_per_day, 0, 1);
+   Rational rat_jd_pod            = ToRational(
+       RationalDivide(ToRationalLL(jd.seconds), ToRationalLL(rat_sec_per_day)));
+   const double jd_pod = rational2double(rat_jd_pod);
+   char sec_str[16]    = {'\0'};
+   snprintf(sec_str, 16, "%.8lf", jd_pod);
+   snprintf(str, JD_STR_LEN, jdday_str_fmt, jd.whole_days, &sec_str[2],
+            system_str, epoch_str);
 }
 
 #pragma GCC diagnostic pop
