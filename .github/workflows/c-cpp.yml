@@ -15,7 +15,7 @@ env:
     sudo apt-get -y install pkg-config libfyaml-dev libglu1-mesa-dev freeglut3-dev mesa-common-dev libcriterion-dev
   setup-macos: &setup-macos |
     brew update
-    brew install pkgconfig libfyaml freeglut mesa-glu
+    brew install pkgconfig libfyaml freeglut mesa-glu criterion
   setup-ubuntu-glfw: &setup-ubuntu-glfw |
     sudo apt-get -y install libglfw3-dev
   setup-macos-glfw: &setup-macos-glfw |

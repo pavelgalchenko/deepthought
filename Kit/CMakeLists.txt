@@ -78,6 +78,7 @@ endif()
 add_subdirectory(tests)
 
 target_link_libraries(42kit PUBLIC m)
+# target_include_directories(42kit PUBLIC $<$<STREQUAL:GLUT_OR_GLFW,"GLFW">:../Include>)
 
 target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion -Wno-format-extra-args)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Release>:-O2>)
@@ -188,7 +189,7 @@ if (GUI)
         target_link_libraries(42kit PUBLIC glfw)
         target_link_libraries(42kit PRIVATE ${GLFW_LIBRARIES})
         set(GLFW_SOURCES
-            PUBLIC
+            PRIVATE
             ${KIT}/42glfwkit.c
             )
         target_sources(42kit ${GLFW_SOURCES})
