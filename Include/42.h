@@ -40,6 +40,7 @@
 #include "sigkit.h"
 #include "sphkit.h"
 #include "timekit.h"
+#include "utilkit.h"
 
 #define BUFSIZE 1000 // Default buffer size for chars.
 

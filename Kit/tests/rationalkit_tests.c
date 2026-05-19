@@ -63,9 +63,9 @@
        &RATIONAL_RAW(-42, -1, 42))
 
 /* Test rat2str                                                       */
-TheoryDataPoints(SUITE_NAME, rat2str_test) = {RATIONAL_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, rat2str) = {RATIONAL_DATAPOINTS};
 
-Theory((Rational * a), SUITE_NAME, rat2str_test)
+Theory((Rational * a), SUITE_NAME, rat2str)
 {
    char a_str[RATIONAL_STR_LEN];
    rat2str(*a, a_str);
@@ -85,7 +85,7 @@ struct ratcond_tuple {
    int iscond; // 0=equal, -1=isless, 1=isgreater
 };
 
-ParameterizedTestParameters(SUITE_NAME, conditional_test)
+ParameterizedTestParameters(SUITE_NAME, conditional)
 {
    // static is required as each element of val is passed as a
    // pointer to ParameterizedTest
@@ -158,43 +158,43 @@ ParameterizedTestParameters(SUITE_NAME, conditional_test)
    return cr_make_param_array(struct ratcond_tuple, vals, size);
 }
 
-ParameterizedTest(struct ratcond_tuple *val, SUITE_NAME, conditional_test)
+ParameterizedTest(struct ratcond_tuple *val, SUITE_NAME, conditional)
 {
    char a_str[RATIONAL_STR_LEN] = {'\0'}, b_str[RATIONAL_STR_LEN] = {'\0'};
    rat2str(val->a, a_str);
    rat2str(val->b, b_str);
 
    if (val->iscond == 0)
-      cr_assert(isequal_rational(val->a, val->b),
+      cr_expect(isequal_rational(val->a, val->b),
                 "(%s != %s) when they should be equal", a_str, b_str);
    else
-      cr_assert(not(isequal_rational(val->a, val->b)),
+      cr_expect(not(isequal_rational(val->a, val->b)),
                 "(%s == %s) when they should not be equal", a_str, b_str);
 
    if (val->iscond == -1)
-      cr_assert(isless_rational(val->a, val->b),
+      cr_expect(isless_rational(val->a, val->b),
                 "(%s < %s) is not true, when it should be false.", a_str,
                 b_str);
    else
-      cr_assert(not(isless_rational(val->a, val->b)),
+      cr_expect(not(isless_rational(val->a, val->b)),
                 "(%s < %s) is not false, when it should be true.", a_str,
                 b_str);
 
    if (val->iscond == 1)
-      cr_assert(isgreater_rational(val->a, val->b),
+      cr_expect(isgreater_rational(val->a, val->b),
                 "(%s > %s) is not true, when it should be false.", a_str,
                 b_str);
    else
-      cr_assert(not(isgreater_rational(val->a, val->b)),
+      cr_expect(not(isgreater_rational(val->a, val->b)),
                 "(%s > %s) is not false, when it should be true.", a_str,
                 b_str);
 }
 
 /* Test math operation properties */
 //*** Reduction
-TheoryDataPoints(SUITE_NAME, reduce_test) = {RATIONAL_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, reduce) = {RATIONAL_DATAPOINTS};
 
-Theory((Rational * a), SUITE_NAME, reduce_test)
+Theory((Rational * a), SUITE_NAME, reduce)
 {
    char a_str[RATIONAL_STR_LEN] = {'\0'};
    rat2str(*a, a_str);
@@ -207,15 +207,14 @@ Theory((Rational * a), SUITE_NAME, reduce_test)
    memcpy(&c, a, sizeof(Rational));
    ReduceRational(&c);
    rat2str(c, c_str);
-   cr_assert(isequal_rational(*a, c), "reducing %s to %c is not equal", a_str,
+   cr_expect(isequal_rational(*a, c), "reducing %s to %s is not equal", a_str,
              c_str);
 }
 
 //*** Addition
-TheoryDataPoints(SUITE_NAME, add_test) = {RATIONAL_DATAPOINTS,
-                                          RATIONAL_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, add) = {RATIONAL_DATAPOINTS, RATIONAL_DATAPOINTS};
 
-Theory((Rational * a, Rational *b), SUITE_NAME, add_test)
+Theory((Rational * a, Rational *b), SUITE_NAME, add)
 {
    char a_str[RATIONAL_STR_LEN] = {'\0'}, b_str[RATIONAL_STR_LEN] = {'\0'};
    rat2str(*a, a_str);
@@ -230,8 +229,12 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add_test)
    ReduceRational(&a_red);
    ReduceRational(&b_red);
 
+   cr_assert(isequal_rational(*a, a_red) && isequal_rational(*b, b_red),
+             "reducing %s and %s is not equal did not preserve them", a_str,
+             b_str);
+
    // commutative addition
-   cr_assert(isequal_rational(
+   cr_expect(isequal_rational(
                  ToRational(RationalAdd(ToRationalLL(*a), ToRationalLL(*b))),
                  ToRational(RationalAdd(ToRationalLL(*b), ToRationalLL(*a)))),
              "(%s) + (%s) != (%s) + (%s)", a_str, b_str, b_str, a_str);
@@ -244,13 +247,13 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add_test)
        ABS(b_red.den) > (_RATLONG_MAX_ >> 8)) {
       double check = rational2double(rat_check);
       if (a_dbl == 0 || check == 0) {
-         cr_assert(epsilon_eq(dbl, a_dbl, check, DBL_THRESH),
+         cr_expect(epsilon_eq(dbl, a_dbl, check, DBL_THRESH),
                    "Rational addition is not approximately invertable (a=(%s), "
                    "b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
       }
       else {
-         cr_assert(ieee_ulp_eq(dbl, a_dbl, check, ULP_THRESH),
+         cr_expect(ieee_ulp_eq(dbl, a_dbl, check, ULP_THRESH),
                    "Rational addition is not approximately invertable (a=(%s), "
                    "b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
@@ -258,7 +261,7 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add_test)
    }
    else {
       double error = a_dbl - rational2double(rat_check);
-      cr_assert(isequal_rational(*a, rat_check),
+      cr_expect(isequal_rational(*a, rat_check),
                 "Rational addition is not invertable (a=(%s), "
                 "b=(%s), err=%le)",
                 a_str, b_str, fabs(error));
@@ -266,10 +269,9 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add_test)
 }
 
 //*** Multiplication
-TheoryDataPoints(SUITE_NAME, mult_test) = {RATIONAL_DATAPOINTS,
-                                           RATIONAL_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, mult) = {RATIONAL_DATAPOINTS, RATIONAL_DATAPOINTS};
 
-Theory((Rational * a, Rational *b), SUITE_NAME, mult_test)
+Theory((Rational * a, Rational *b), SUITE_NAME, mult)
 {
    char a_str[RATIONAL_STR_LEN] = {'\0'}, b_str[RATIONAL_STR_LEN] = {'\0'};
    rat2str(*a, a_str);
@@ -284,8 +286,12 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult_test)
    ReduceRational(&a_red);
    ReduceRational(&b_red);
 
+   cr_assert(isequal_rational(*a, a_red) && isequal_rational(*b, b_red),
+             "reducing %s and %s is not equal did not preserve them", a_str,
+             b_str);
+
    // commutative multiplication
-   cr_assert(isequal_rational(
+   cr_expect(isequal_rational(
                  ToRational(RationalMult(ToRationalLL(*a), ToRationalLL(*b))),
                  ToRational(RationalMult(ToRationalLL(*b), ToRationalLL(*a)))),
              "(%s) * (%s) != (%s) * (%s)", a_str, b_str, b_str, a_str);
@@ -300,13 +306,13 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult_test)
        ABS(b_red.whole) > (_RATLONG_MAX_ >> 8)) {
       double check = rational2double(rat_check);
       if (a_dbl == 0 || check == 0) {
-         cr_assert(epsilon_eq(dbl, a_dbl, check, DBL_THRESH),
+         cr_expect(epsilon_eq(dbl, a_dbl, check, DBL_THRESH),
                    "Rational multiplication is not approximately invertable "
                    "(a=(%s), b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
       }
       else {
-         cr_assert(ieee_ulp_eq(dbl, a_dbl, check, ULP_THRESH),
+         cr_expect(ieee_ulp_eq(dbl, a_dbl, check, ULP_THRESH),
                    "Rational multiplication is not approximately invertable "
                    "(a=(%s), b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
@@ -314,7 +320,7 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult_test)
    }
    else {
       double error = a_dbl - rational2double(rat_check);
-      cr_assert(isequal_rational(*a, rat_check),
+      cr_expect(isequal_rational(*a, rat_check),
                 "Rational multiplication is not invertable (a=(%s), "
                 "b=(%s), err=%le)",
                 a_str, b_str, fabs(error));
@@ -322,9 +328,9 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult_test)
 }
 
 //*** rational2double inverse of double2rational
-TheoryDataPoints(SUITE_NAME, ratdblinv_test) = {RATIONAL_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, ratdblinv) = {RATIONAL_DATAPOINTS};
 
-Theory((Rational * a), SUITE_NAME, ratdblinv_test)
+Theory((Rational * a), SUITE_NAME, ratdblinv)
 {
    char a_str[RATIONAL_STR_LEN] = {'\0'}, ret_str[RATIONAL_STR_LEN] = {'\0'};
    rat2str(*a, a_str);
@@ -338,13 +344,13 @@ Theory((Rational * a), SUITE_NAME, ratdblinv_test)
    double err = rational2double(rat_err);
 
    if (isequal_rational(returned, RATIONAL_ZERO)) {
-      cr_assert(epsilon_eq(dbl, a_dbl, ret_dbl, DBL_EPSILON),
+      cr_expect(epsilon_eq(dbl, a_dbl, ret_dbl, DBL_EPSILON),
                 "double2rational does not approximately invert rational2double "
                 "for %s (double: %le, returned: %s, err: %le)",
                 a_str, a_dbl, ret_str, err);
    }
    else {
-      cr_assert(ieee_ulp_eq(dbl, a_dbl, ret_dbl, ULP_THRESH),
+      cr_expect(ieee_ulp_eq(dbl, a_dbl, ret_dbl, ULP_THRESH),
                 "double2rational does not approximately invert rational2double "
                 "for %s (double: %le, returned: %s, err: %le)",
                 a_str, a_dbl, ret_str, err);
@@ -358,7 +364,7 @@ struct ratdbl_tuple {
    int isequal;
 };
 
-ParameterizedTestParameters(SUITE_NAME, dbl_test)
+ParameterizedTestParameters(SUITE_NAME, dbl)
 {
    static struct ratdbl_tuple vals[] = {
        {RATIONAL_NGCD(0, 0, 1), 0, 1},
@@ -382,7 +388,7 @@ ParameterizedTestParameters(SUITE_NAME, dbl_test)
    return cr_make_param_array(struct ratdbl_tuple, vals, size);
 }
 
-ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl_test)
+ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl)
 {
    char ratstr[RATIONAL_STR_LEN] = {'\0'};
    rat2str(val->rat, ratstr);
@@ -390,14 +396,14 @@ ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl_test)
 
    double check = val->dbl - rational2double(val->rat);
    if (val->isequal) {
-      cr_assert(
+      cr_expect(
           ieee_ulp_eq(dbl, val->dbl, rational2double(val->rat), ULP_THRESH),
           "%le - rational2double(%s) has an error of %le, larger than "
           "the threshold of %i ULP when it should be smaller.",
           val->dbl, ratstr, fabs(check), ULP_THRESH);
    }
    else {
-      cr_assert(
+      cr_expect(
           ieee_ulp_ne(dbl, val->dbl, rational2double(val->rat), ULP_THRESH),
           "%le - rational2double(%s) has an error of %le, smaller than "
           "the threshold of %i ULP when it should be larger.",
@@ -414,13 +420,13 @@ ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl_test)
    rat2str(ratchk, ratchk_str);
    check = rational2double(ratchk);
    if (val->isequal) {
-      cr_assert(epsilon_eq(dbl, check, 0, thresh),
+      cr_expect(epsilon_eq(dbl, check, 0, thresh),
                 "double2rational(%le) - %s has an error of %s (%le), larger "
                 "than the threshold of %le (%i eps) when it should be smaller.",
                 val->dbl, ratstr, ratchk_str, fabs(check), thresh, ULP_THRESH);
    }
    else {
-      cr_assert(epsilon_ne(dbl, check, 0, thresh),
+      cr_expect(epsilon_ne(dbl, check, 0, thresh),
                 "double2rational(%le) - %s has an error of %s (%le), smaller "
                 "than the threshold of %le (%i eps) when it should be larger.",
                 val->dbl, ratstr, ratchk_str, fabs(check), thresh, ULP_THRESH);

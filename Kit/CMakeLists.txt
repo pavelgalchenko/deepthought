@@ -54,6 +54,7 @@ set(KIT_SOURCES
     ${KIT}/dsmkit.c
     ${KIT}/navkit.c
     ${KIT}/rkkit.c
+    ${KIT}/utilkit.c
     )
 
 add_library(42kit STATIC ${KIT_SOURCES})

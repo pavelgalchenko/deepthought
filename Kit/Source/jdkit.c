@@ -552,27 +552,32 @@ static int isLineBlank(char *const line)
 // returns the number of leap seconds for specified JD
 double GetLeapSec(const JDType jd)
 {
-   // TODO: this and other functions does not handle the time being *during* a
+   struct LeapSecFileEntry {
+      JDType jd_mjd_utc; // JD in UTC with MJD epoch
+
+      // TAI-UTC = offset_1 + (MJD - offset_2) x offset_3
+      double offset_1;
+      double offset_2;
+      double offset_3;
+   };
+   static struct LeapSecFileTbl {
+      long n_entries;
+      struct LeapSecFileEntry *entries;
+   } leapSecTbl = {.n_entries = 0, .entries = NULL};
+
+   // TODO: this and other functions do not handle the time being *during* a
    // leap second
 
    // TODO: use spice instead if available?
 
    // ensure jd is UTC with MJD epoch
-   // dug through GMAT source code, JD in tai-utc.dat is UTC
+   // dug through GMAT source code, JD in 'tai-utc.dat' is UTC
    JDType jd_mjd_utc = _jdutc(jd);
-   JDChangeEpoch(MJD_EPOCH,
-                 &jd_mjd_utc); // TODO: this causes infinite recursion due to
-                               // the conversion to TT_TIME embeded within
+   // TODO: this causes infinite recursion due to the conversion to TT_TIME
+   // embeded within
+   JDChangeEpoch(MJD_EPOCH, &jd_mjd_utc);
 
-   static long n_entries          = 0;
-   static JDType *jd_list_mjd_utc = NULL; // list of JD in UTC with MJD epoch
-
-   // TAI-UTC = offset_1 + (MJD - offset_2) x offset_3
-   static double *offset_1 = NULL;
-   static double *offset_2 = NULL;
-   static double *offset_3 = NULL;
-
-   if (n_entries == 0) {
+   if (leapSecTbl.n_entries == 0) {
       // initalize data
       extern char ModelPath[1000];
       char f_path[1064] = {'\0'};
@@ -589,29 +594,29 @@ double GetLeapSec(const JDType jd)
       char line[512] = {'\0'};
       while (fgets(line, 512, file))
          if (!isLineBlank(line))
-            n_entries++;
-      // use number of nonempty lines to allocate that data locations
-      jd_list_mjd_utc = malloc(n_entries * sizeof(JDType));
-      offset_1        = calloc(n_entries, sizeof(double));
-      offset_2        = calloc(n_entries, sizeof(double));
-      offset_3        = calloc(n_entries, sizeof(double));
+            leapSecTbl.n_entries++;
+
+      // use number of nonempty lines to allocate the data locations
+      leapSecTbl.entries =
+          calloc(leapSecTbl.n_entries, sizeof(struct LeapSecFileEntry));
 
       // rewind file and start parsing for the actual data
       rewind(file);
       int i = 0;
       while (fgets(line, 512, file)) {
+         struct LeapSecFileEntry *const entry = &leapSecTbl.entries[i];
          int y, d;
          char mon[16]           = {'\0'};
          double jd_mjd_utc_days = 0;
          int sscanf_check       = sscanf(
              line, "%i %s %i =JD %lf TAI-UTC= %lf S + (MJD - %lf) X %lf S", &y,
-             mon, &d, &jd_mjd_utc_days, &offset_1[i], &offset_2[i],
-             &offset_3[i]);
+             mon, &d, &jd_mjd_utc_days, &entry->offset_1, &entry->offset_2,
+             &entry->offset_3);
 
          if (sscanf_check) {
-            jd_list_mjd_utc[i] =
+            entry->jd_mjd_utc =
                 JDFromDays(jd_mjd_utc_days, UTC_TIME, ZERO_EPOCH);
-            JDChangeEpoch(MJD_EPOCH, &jd_list_mjd_utc[i]);
+            JDChangeEpoch(MJD_EPOCH, &entry->jd_mjd_utc);
 
             i++;
          }
@@ -619,12 +624,13 @@ double GetLeapSec(const JDType jd)
       fclose(file);
    }
 
-   // TODO: double check
-   for (int i = n_entries - 1; i >= 0; i--)
-      if (isgreaterequal_jd(jd_mjd_utc, jd_list_mjd_utc[i]))
-         return offset_1[i] +
-                ((JDToDays(jd_mjd_utc) - offset_2[i]) * offset_3[i]);
-
+   const double jd_mjd_utc_days = JDToDays(jd_mjd_utc);
+   for (int i = leapSecTbl.n_entries - 1; i >= 0; i--) {
+      const struct LeapSecFileEntry *entry = &leapSecTbl.entries[i];
+      if (isgreaterequal_jd(jd_mjd_utc, entry->jd_mjd_utc))
+         return entry->offset_1 +
+                ((jd_mjd_utc_days - entry->offset_2) * entry->offset_3);
+   }
    return 0;
 }
 

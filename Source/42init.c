@@ -6923,46 +6923,10 @@ void InitSim(int argc, char **argv)
    if (argc > 2)
       sprintf(ModelPath, "./%s/", argv[2]);
 
-   char *ret;
    DIR *OutDir;
    DIR *ModelDir;
 
-#ifdef __linux__
-   char *real_path = realpath("/proc/self/exe", NULL);
-   strcpy(ExeDir, real_path);
-   ret = strrchr(ExeDir, '/');
-   free(real_path);
-#elif defined __MINGW32__
-   char tempargs[BUFSIZE];
-   GetModuleFileName(NULL, tempargs, sizeof(tempargs));
-   _fullpath(ExeDir, tempargs, sizeof(tempargs));
-   ret = strrchr(ExeDir, '\\');
-#elif defined _WIN32
-   char tempargs[BUFSIZE];
-   GetModuleFileName(NULL, tempargs, sizeof(tempargs));
-   _fullpath(ExeDir, tempargs, sizeof(tempargs));
-   ret = strrchr(ExeDir, '\\');
-#elif defined _WIN64
-   char tempargs[BUFSIZE];
-   GetModuleFileName(NULL, tempargs, sizeof(tempargs));
-   _fullpath(ExeDir, tempargs, sizeof(tempargs));
-   ret = strrchr(ExeDir, '\\');
-#elif defined __APPLE__
-   char tempargs[BUFSIZE];
-   uint32_t bytes;
-   bytes = 1000;
-   bytes = sizeof("/0");
-   _NSGetExecutablePath("/0", &bytes);
-   _NSGetExecutablePath(tempargs, &bytes);
-   realpath(tempargs, ExeDir);
-   ret = strrchr(ExeDir, '/');
-#endif
-
-   if (ret != NULL)
-      *ret = '\0';
-   ret = strrchr(ExeDir, '.');
-   if (ret != NULL)
-      *ret = '\0';
+   GetExecDir(ExeDir);
 
    strcpy(ModelPath, ExeDir);
    strcat(ModelPath, "/Model/");

@@ -81,7 +81,8 @@ typedef struct JDType {
              .seconds    = (sec)})
 #define JD_ZERO JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO)
 #define JD_NREDUCE(sys, epc, day)                                              \
-   JD_RAW(sys, epc, day, RATIONAL_NGCD((day - ((long)day)) * 86400.0, 0, 1))
+   JD_RAW((sys), (epc), (day),                                                 \
+          RATIONAL_NGCD(((day) - ((long)(day))) * 86400.0, 0, 1))
 
 JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
               const Rational seconds);

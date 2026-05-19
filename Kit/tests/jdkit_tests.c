@@ -12,6 +12,7 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "jdkit.h"
+#include "utilkit.h"
 #include <criterion/criterion.h>
 #include <criterion/new/assert.h>
 #include <criterion/parameterized.h>
@@ -195,14 +196,24 @@
        &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2436204.5),                           \
        &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2451545.0), )
 
+/* Configure Suite                                                    */
 // define needed globals
 //      path of model directory relative to executable
-const char ModelPath[1000] = "Model/";
+char ModelPath[1000] = {'\0'};
+void modelpath_init(void)
+{
+   // configure ModelPath
+   GetExecDir(ModelPath);
+   const char *rel_model_path = "/../../Model/\0";
+   strcat(ModelPath, rel_model_path);
+}
+
+TestSuite(SUITE_NAME, .init = modelpath_init);
 
 /* Test jd2str funcs */
-TheoryDataPoints(SUITE_NAME, jd2str_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, jd2str) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, jd2str_test)
+Theory((JDType * a), SUITE_NAME, jd2str)
 {
    char jd_str[JD_STR_LEN]           = {'\0'};
    char epoch_str[JDEPOCH_STR_LEN]   = {'\0'};
@@ -227,11 +238,11 @@ Theory((JDType * a), SUITE_NAME, jd2str_test)
                  a->whole_days == jd_test.whole_days,
              "jddays2str() whole part error");
    if (sec == 0) {
-      cr_assert(epsilon_eq(dbl, sec, rational2double(a->seconds), DBL_THRESH),
+      cr_expect(epsilon_eq(dbl, sec, rational2double(a->seconds), DBL_THRESH),
                 "jddays2str() second error near zero");
    }
    else {
-      cr_assert(ieee_ulp_eq(dbl, sec, rational2double(a->seconds), ULP_THRESH),
+      cr_expect(ieee_ulp_eq(dbl, sec, rational2double(a->seconds), ULP_THRESH),
                 "jddays2str() second error");
    }
 
@@ -243,7 +254,7 @@ Theory((JDType * a), SUITE_NAME, jd2str_test)
    sscanf(sec_str, "%ld + (%ld/%ld)", &jd_test.seconds.whole,
           &jd_test.seconds.num, &jd_test.seconds.den);
 
-   cr_assert(a->epoch == jd_test.epoch && a->system == jd_test.system &&
+   cr_expect(a->epoch == jd_test.epoch && a->system == jd_test.system &&
                  a->whole_days == jd_test.whole_days &&
                  a->seconds.whole == jd_test.seconds.whole &&
                  a->seconds.num == jd_test.seconds.num &&
@@ -255,127 +266,134 @@ Theory((JDType * a), SUITE_NAME, jd2str_test)
 struct jdcond_tuple {
    JDType a;
    JDType b;
-   int iscond; // 0=equal, -1=isless, 1=isgreater
+   int isequal; // 1 = equal
+   int islegr;  // -1 = isless, 1 = isgreater
 };
 
-ParameterizedTestParameters(SUITE_NAME, conditional_test)
+ParameterizedTestParameters(SUITE_NAME, conditional)
 {
 #define SIZE 31
    static int first                         = 0;
    static struct jdcond_tuple vals[SIZE]    = {0};
    const struct jdcond_tuple vals_nstatic[] = {
-       {JD_ZERO, JD_ZERO, 0},
+       {JD_ZERO, JD_ZERO, 1, 0},
        {JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_ZERO), 0},
+        JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_ZERO), 1, 0},
        {JD_RAW(TT_TIME, GD_CONV_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_ZERO), 0},
+        JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, TCB_TDB_CONV_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, MJD_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, J1900_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, GMAT_MJD_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, CCSDS_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, J2000_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0},
+        JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 1, 0},
        {JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0},
+        JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TAI_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TCB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 1},
+        JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_RAW(TDB_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO),
-        JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 1},
-       {JD_RAW(TT_TIME, ZERO_EPOCH, 0.0, RATIONAL_ZERO),
-        JD_RAW(TT_TIME, ZERO_EPOCH, 1721013.5, RATIONAL_ZERO), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0), -1},
-       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0), 1},
+        JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0, 0},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0), -1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0), 1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5), 1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5), 1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5), 1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0), 1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5), 1},
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0), 0, -1},
        {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0),
-        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5), 1},
-
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0), 0, -1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 0.0), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 1721013.5), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2400000.5), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2415019.5), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2430000.0), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2436204.5), 0, 1},
+       {JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2451545.0),
+        JD_NREDUCE(TT_TIME, ZERO_EPOCH, 2443144.5), 0, 1},
    };
    if (!first) {
       first = 1;
-      for (size_t i = 0; i < SIZE; i++) {
-         vals[i] = vals[i];
-      }
+      for (size_t i = 0; i < SIZE; i++)
+         vals[i] = vals_nstatic[i];
    }
    return cr_make_param_array(struct jdcond_tuple, vals, SIZE);
 #undef SIZE
 }
 
-ParameterizedTest(struct jdcond_tuple *val, SUITE_NAME, conditional_test)
+ParameterizedTest(struct jdcond_tuple *val, SUITE_NAME, conditional)
 {
    char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
    jd2str(val->a, a_str);
    jd2str(val->b, b_str);
 
-   if (val->iscond == 0)
-      cr_assert(isequal_jd(val->a, val->b),
+   if (val->isequal == 1) {
+      cr_expect(isequal_jd(val->a, val->b),
                 "(%s != %s) when they should be equal", a_str, b_str);
+      cr_expect(islessequal_jd(val->a, val->b),
+                "(%s <= %s) is not true, when it should be false.", a_str,
+                b_str);
+      cr_expect(isgreaterequal_jd(val->a, val->b),
+                "(%s >= %s) is not true, when it should be false.", a_str,
+                b_str);
+   }
    else
-      cr_assert(not(isequal_jd(val->a, val->b)),
+      cr_expect(not(isequal_jd(val->a, val->b)),
                 "(%s == %s) when they should not be equal", a_str, b_str);
 
    // TODO: make conditionals only need the same system
-   cr_assume(val->a.system == val->b.system && val->a.epoch == val->b.epoch);
-   if (val->iscond == -1)
-      cr_assert(isless_jd(val->a, val->b),
-                "(%s < %s) is not true, when it should be false.", a_str,
-                b_str);
-   else
-      cr_assert(isgreaterequal_jd(val->a, val->b),
-                "(%s >= %s) is not true, when it should be false.", a_str,
-                b_str);
+   if (val->a.system == val->b.system && val->a.epoch == val->b.epoch) {
+      if (val->islegr == -1) {
+         cr_expect(isless_jd(val->a, val->b),
+                   "(%s < %s) is not true, when it should be false.", a_str,
+                   b_str);
+         cr_expect(islessequal_jd(val->a, val->b),
+                   "(%s <= %s) is not true, when it should be false.", a_str,
+                   b_str);
+      }
 
-   if (val->iscond == 1)
-      cr_assert(isgreater_jd(val->a, val->b),
-                "(%s > %s) is not true, when it should be false.", a_str,
-                b_str);
-   else
-      cr_assert(islessequal_jd(val->a, val->b),
-                "(%s <= %s) is not true, when it should be false.", a_str,
-                b_str);
+      if (val->islegr == 1) {
+         cr_expect(isgreater_jd(val->a, val->b),
+                   "(%s > %s) is not true, when it should be false.", a_str,
+                   b_str);
+         cr_expect(isgreaterequal_jd(val->a, val->b),
+                   "(%s >= %s) is not true, when it should be false.", a_str,
+                   b_str);
+      }
+   }
 }
 
 /* Test math operation properties                                     */
 //*** JD Addition
-TheoryDataPoints(SUITE_NAME, add_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, add) = {JD_DATAPOINTS, JD_DATAPOINTS};
 
-Theory((JDType * a, JDType *b), SUITE_NAME, add_test)
+Theory((JDType * a, JDType *b), SUITE_NAME, add)
 {
    char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
@@ -384,7 +402,7 @@ Theory((JDType * a, JDType *b), SUITE_NAME, add_test)
    // addition inversion
    cr_assume((b->epoch == ZERO_EPOCH || a->epoch == b->epoch) &&
              (a->system == b->system));
-   cr_assert(isequal_jd(*a, JDAdd(JDSub(*a, *b), *b)),
+   cr_expect(isequal_jd(*a, JDAdd(JDSub(*a, *b), *b)),
              "JDAdd is not invertable (a: (%s); b: (%s))", a_str, b_str);
 
    // commutative addition
@@ -393,16 +411,16 @@ Theory((JDType * a, JDType *b), SUITE_NAME, add_test)
 }
 
 //*** conversion to days
-TheoryDataPoints(SUITE_NAME, jd2dayinv_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, jd2dayinv) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, jd2dayinv_test)
+Theory((JDType * a), SUITE_NAME, jd2dayinv)
 {
    char a_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
 
    double jdday  = JDToDays(*a);
    double thresh = 1 * (nextafter(jdday, INFINITY) - jdday);
-   cr_assert(
+   cr_expect(
        epsilon_eq(dbl,
                   JDToDays(JDSub(*a, JDFromDays(jdday, a->system, a->epoch))),
                   0, thresh),
@@ -410,9 +428,9 @@ Theory((JDType * a), SUITE_NAME, jd2dayinv_test)
 }
 
 //*** JD Addition with days
-TheoryDataPoints(SUITE_NAME, dayadd_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, dayadd) = {JD_DATAPOINTS, JD_DATAPOINTS};
 
-Theory((JDType * a, JDType *b), SUITE_NAME, dayadd_test)
+Theory((JDType * a, JDType *b), SUITE_NAME, dayadd)
 {
    char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
@@ -422,7 +440,7 @@ Theory((JDType * a, JDType *b), SUITE_NAME, dayadd_test)
    double b_days = JDToDays(*b);
 
    // addition day inversion
-   cr_assert(
+   cr_expect(
        isequal_jd(*a, JDAddDays(JDSubDays(*a, b_days), b_days)),
        "JDAddDays is not invertable with JDSubDays (a: (%s); b:( %s), %lf)",
        a_str, b_str, b_days);
@@ -441,16 +459,16 @@ Theory((JDType * a, JDType *b), SUITE_NAME, dayadd_test)
 }
 
 //*** conversion to seconds
-TheoryDataPoints(SUITE_NAME, jd2secinv_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, jd2secinv) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, jd2secinv_test)
+Theory((JDType * a), SUITE_NAME, jd2secinv)
 {
    char a_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
 
    double jdsec  = JDToSeconds(*a);
    double thresh = 1 * (nextafter(jdsec, INFINITY) - jdsec);
-   cr_assert(
+   cr_expect(
        epsilon_eq(dbl,
                   JDSubToSeconds(*a, JDFromSeconds(jdsec, a->system, a->epoch)),
                   0, thresh),
@@ -458,9 +476,9 @@ Theory((JDType * a), SUITE_NAME, jd2secinv_test)
 }
 
 //*** JD Addition with seconds
-TheoryDataPoints(SUITE_NAME, secadd_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, secadd) = {JD_DATAPOINTS, JD_DATAPOINTS};
 
-Theory((JDType * a, JDType *b), SUITE_NAME, secadd_test)
+Theory((JDType * a, JDType *b), SUITE_NAME, secadd)
 {
    char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
@@ -470,7 +488,7 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secadd_test)
    double b_sec = JDToSeconds(*b);
 
    // addition second inversion
-   cr_assert(isequal_jd(*a, JDAddSeconds(JDSubSeconds(*a, b_sec), b_sec)),
+   cr_expect(isequal_jd(*a, JDAddSeconds(JDSubSeconds(*a, b_sec), b_sec)),
              "JDAddSeconds is not invertable with JDSubSeconds (a: (%s); b:( "
              "%s), %lf)",
              a_str, b_str, b_sec);
@@ -490,23 +508,23 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secadd_test)
 }
 
 //*** conversion to rational seconds
-TheoryDataPoints(SUITE_NAME, jd2ratsecinv_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, jd2ratsecinv) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, jd2ratsecinv_test)
+Theory((JDType * a), SUITE_NAME, jd2ratsecinv)
 {
    char a_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
 
    Rational jdratsec = JDToRationalSeconds(*a);
-   cr_assert(
+   cr_expect(
        isequal_jd(*a, JDFromRationalSeconds(jdratsec, a->system, a->epoch)),
        "JDToSeconds/JDFromSeconds is not invertible (a: (%s))", a_str);
 }
 
 //*** JD Addition with Rational seconds
-TheoryDataPoints(SUITE_NAME, secratadd_test) = {JD_DATAPOINTS, JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, secratadd) = {JD_DATAPOINTS, JD_DATAPOINTS};
 
-Theory((JDType * a, JDType *b), SUITE_NAME, secratadd_test)
+Theory((JDType * a, JDType *b), SUITE_NAME, secratadd)
 {
    char a_str[JD_STR_LEN] = {'\0'}, b_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
@@ -516,7 +534,7 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secratadd_test)
    Rational b_sec_rat = JDToRationalSeconds(*b);
 
    // addition rational second inversion
-   cr_assert(
+   cr_expect(
        isequal_jd(*a, JDAddRationalSeconds(JDSubRationalSeconds(*a, b_sec_rat),
                                            b_sec_rat)),
        "JDAddRationalSeconds is not invertable with JDSubRationalSeconds "
@@ -534,9 +552,9 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secratadd_test)
 /* Epoch/System Conversion                                            */
 
 //*** Epoch conversions
-TheoryDataPoints(SUITE_NAME, epoch_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, epoch) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, epoch_test)
+Theory((JDType * a), SUITE_NAME, epoch)
 {
    char a_str[JD_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
@@ -548,15 +566,15 @@ Theory((JDType * a), SUITE_NAME, epoch_test)
    JDChangeEpoch(new_epoch, &jd);
    JDChangeEpoch(a->epoch, &jd);
 
-   cr_assert(isequal_jd(*a, jd),
+   cr_expect(isequal_jd(*a, jd),
              "Converting to different epoch and back did not preserve %s",
              a_str);
 }
 
 //*** System conversions
-TheoryDataPoints(SUITE_NAME, system_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, system) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, system_test)
+Theory((JDType * a), SUITE_NAME, system)
 {
    // converting out of TCB is not implemented
    cr_assume(a->system != TCB_TIME);
@@ -581,21 +599,21 @@ Theory((JDType * a), SUITE_NAME, system_test)
 
    if (a_sec == 0) {
 
-      cr_assert(epsilon_eq(dbl, jd_sec, a_sec, DBL_THRESH),
+      cr_expect(epsilon_eq(dbl, jd_sec, a_sec, DBL_THRESH),
                 "Converting to different system and back did not preserve %s",
                 a_str);
    }
    else {
-      cr_assert(ieee_ulp_eq(dbl, jd_sec, a_sec, ULP_THRESH),
+      cr_expect(ieee_ulp_eq(dbl, jd_sec, a_sec, ULP_THRESH),
                 "Converting to different system and back did not preserve %s",
                 a_str);
    }
 }
 
 //*** both together
-TheoryDataPoints(SUITE_NAME, epochsystem_test) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, epochsystem) = {JD_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, epochsystem_test)
+Theory((JDType * a), SUITE_NAME, epochsystem)
 {
    // converting out of TCB is not implemented
    cr_assume(a->system != TCB_TIME);
@@ -614,21 +632,83 @@ Theory((JDType * a), SUITE_NAME, epochsystem_test)
    JDChangeSystem(new_system, &sysep_test);
    JDChangeEpoch(new_epoch, &sysep_test);
 
-   cr_assert(isequal_jd(epsys_test, sysep_test),
+   cr_expect(isequal_jd(epsys_test, sysep_test),
              "Switching the order of changing system/epoch matters for %s",
              a_str);
 
    // test that the combined function also stays the same
    JDType combined_test = *a;
    JDChangeSystemEpoch(new_system, new_epoch, &combined_test);
-   cr_assert(
-       isequal_jd(epsys_test, combined_test) &&
-           isequal_jd(sysep_test, combined_test),
-       "The combined function does not match epoch->system changing for %s",
-       a_str);
+   cr_assert(isequal_jd(epsys_test, combined_test) &&
+                 isequal_jd(sysep_test, combined_test),
+             "The combined function does not match individual epoch/system "
+             "changing behavior for %s",
+             a_str);
 }
 
-// TODO: test GetLeapSec
+/* Leap Seconds                                                       */
+struct leapsec_tuple {
+   JDType jd;
+   double leapsec;
+};
+
+ParameterizedTestParameters(SUITE_NAME, leapsec)
+{
+#define SIZE 29
+   static int first                          = 0;
+   static struct leapsec_tuple vals[SIZE]    = {0};
+   const struct leapsec_tuple vals_nstatic[] = {
+       {JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441317.5 + 0.5), 10.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441499.5 + 0.5), 11.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441683.5 + 0.5), 12.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2442048.5 + 0.5), 13.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2442413.5 + 0.5), 14.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2442778.5 + 0.5), 15.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443144.5 + 0.5), 16.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443509.5 + 0.5), 17.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443874.5 + 0.5), 18.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2444239.5 + 0.5), 19.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2444786.5 + 0.5), 20.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2445151.5 + 0.5), 21.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2445516.5 + 0.5), 22.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2446247.5 + 0.5), 23.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2447161.5 + 0.5), 24.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2447892.5 + 0.5), 25.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2448257.5 + 0.5), 26.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2448804.5 + 0.5), 27.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2449169.5 + 0.5), 28.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2449534.5 + 0.5), 29.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2450083.5 + 0.5), 30.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2450630.5 + 0.5), 31.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2451179.5 + 0.5), 32.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2453736.5 + 0.5), 33.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2454832.5 + 0.5), 34.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2456109.5 + 0.5), 35.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2457204.5 + 0.5), 36.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2457754.5 + 0.5), 37.0},
+   };
+   if (!first) {
+      first = 1;
+      for (size_t i = 0; i < SIZE; i++)
+         vals[i] = vals_nstatic[i];
+   }
+   return cr_make_param_array(struct leapsec_tuple, vals, SIZE);
+#undef SIZE
+}
+
+ParameterizedTest(struct leapsec_tuple *a, SUITE_NAME, leapsec)
+{
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(a->jd, a_str);
+
+   double calc_leapsec = GetLeapSec(a->jd);
+
+   cr_expect(calc_leapsec == a->leapsec,
+             "GetLeapSec(%s) = %lf sec did not match expected value of %lf sec",
+             a->jd, calc_leapsec, a->leapsec);
+}
+
 // TODO: test JDaxpy (atleast that it works for whats needed in rkkit (maybe
 //       move it to rkkit?))
 // TODO: test JDAddMultRatSecs since its used as the core timing
