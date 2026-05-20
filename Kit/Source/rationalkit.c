@@ -483,7 +483,7 @@ void ReduceRational(Rational *const rat)
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
 /*  Rational fractional part                                          */
-Rational IntegerRationalMult(const Rat_Long mul, RationalLL rat)
+Rational IntegerRationalMult(const Rat_LongLong mul, RationalLL rat)
 {
    _reducell(&rat);
 
@@ -501,7 +501,7 @@ Rational IntegerRationalMult(const Rat_Long mul, RationalLL rat)
 /*  Rational fractional part                                          */
 /*  This version sets:  '*carry = out.whole / mod'                    */
 /*                and:  'out.whole %= mod'                            */
-Rational IntegerRationalMultMod(const Rat_Long mul, RationalLL rat,
+Rational IntegerRationalMultMod(const Rat_LongLong mul, RationalLL rat,
                                 Rat_Long mod, Rat_Long *const carry)
 {
    _reducell(&rat);
@@ -509,9 +509,9 @@ Rational IntegerRationalMultMod(const Rat_Long mul, RationalLL rat,
       mod = 1;
 
    RationalLL out_ll;
-   Rat_LongLong product  = ((Rat_LongLong)mul * rat.num);
+   Rat_LongLong product  = mul * rat.num;
    Rat_LongLong wholea   = product / rat.den;
-   Rat_LongLong wholeb   = (Rat_LongLong)mul * rat.whole;
+   Rat_LongLong wholeb   = mul * rat.whole;
    *carry                = (wholea / mod) + (wholeb / mod);
    out_ll.whole          = (wholea % mod) + (wholeb % mod);
    *carry               += out_ll.whole / mod;

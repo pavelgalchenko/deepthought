@@ -196,6 +196,29 @@
        &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2436204.5),                           \
        &JD_NREDUCE(TT_TIME, J2000_EPOCH, 2451545.0), )
 
+#define JD_SECONDS_DATAPOINTS                                                  \
+   DataPoints(JDType *,                                                        \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(51, 23, 125)),     \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(-51, -23, 125)),   \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(32, 23, 125)),     \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(-32, -23, 125)),   \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(19, 0, 1)),        \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(-19, 0, 1)),       \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 10)),        \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 10)),       \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 50)),        \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 50)),       \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 100)),       \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 100)),      \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 10000)),     \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 10000)),    \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 64)),        \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 64)),       \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 1024)),      \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 1024)),     \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 4096)),      \
+              &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 4096)), )
+
 /* Configure Suite                                                    */
 // define needed globals
 //      path of model directory relative to executable
@@ -503,7 +526,7 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secadd)
                         JDSubToSeconds(JDAddSeconds(*a, b_sec),
                                        JDAddSeconds(*b, a_sec)),
                         0, thresh),
-             "JDAddSeconds is not commutative (a: (%s), %lf; b:( %s), %lf)",
+             "JDAddSeconds is not commutative (a: (%s), %lf; b:(%s), %lf)",
              a_str, a_sec, b_str, b_sec);
 }
 
@@ -537,8 +560,8 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secratadd)
    cr_expect(
        isequal_jd(*a, JDAddRationalSeconds(JDSubRationalSeconds(*a, b_sec_rat),
                                            b_sec_rat)),
-       "JDAddRationalSeconds is not invertable with JDSubRationalSeconds "
-       "(a: (%s); b:( %s))",
+       "JDAddRationalSeconds is not invertable with JDSubRationalSeconds (a: "
+       "(%s); b:( %s))",
        a_str, b_str);
 
    // commutative rational second addition
@@ -646,6 +669,124 @@ Theory((JDType * a), SUITE_NAME, epochsystem)
              a_str);
 }
 
+//*** Negation
+TheoryDataPoints(SUITE_NAME, negation) = {JD_DATAPOINTS};
+
+Theory((JDType * a), SUITE_NAME, negation)
+{
+   char a_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+
+   cr_assume(a->whole_days >= -_RATLONG_MAX_ &&
+             a->seconds.whole >= -_RATLONG_MAX_);
+
+   // correct
+   JDType jd             = JDNegate(*a);
+   JDType a_test         = *a;
+   a_test.whole_days    *= -1;
+   a_test.seconds.whole *= -1;
+   a_test.seconds.num   *= -1;
+   cr_expect(isequal_jd(jd, a_test), "JDNegate is not correct for %s", a_str);
+
+   // inversion
+   jd         = JDNegate(*a);
+   JDType jd2 = JDNegate(jd);
+   cr_expect(isequal_jd(*a, jd2), "JDNegate is not its own inverse for %s",
+             a_str);
+}
+
+//*** JDaxpy
+TheoryDataPoints(SUITE_NAME, jdaxpy) = {
+    JD_SECONDS_DATAPOINTS, JD_DATAPOINTS,
+    DataPoints(double, 0, 1, 2, -1, -2, 0.5, -0.5, 1 / 64, -1 / 64, 1 / 1024,
+               -1 / 1024, _RATLONG_MAX_, -_RATLONG_MAX_, _RATLONG_MIN_, 32.184,
+               -32.184, 19, -19, 51.184, -51.184)};
+
+Theory((JDType * x, JDType *y, long a), SUITE_NAME, jdaxpy)
+{
+   char x_str[JD_STR_LEN] = {'\0'}, y_str[JD_STR_LEN] = {'\0'};
+   jd2str(*x, x_str);
+   jd2str(*y, y_str);
+
+   // check
+   JDType z = JDaxpy(a, *x, *y);
+   if (a == 0) {
+      cr_expect(isequal_jd(*y, z), "JDaxpy with a=0 did not preserve %s",
+                y_str);
+   }
+   else {
+      // idk here
+   }
+
+   // commutative
+   JDType zero = JD_ZERO;
+   zero.system = y->system;
+   zero.epoch  = y->epoch;
+   JDType ax   = JDaxpy(a, *x, zero);
+   JDType ypax = JDaxpy(1, *y, ax);
+   cr_expect(
+       isequal_jd(z, ypax),
+       "JDaxpy is not commutative with params:\n\ta = %lf\n\tx = %s\n\ty = %s",
+       a, x_str, y_str);
+
+   // inversion
+   cr_assume(a >= -_RATLONG_MAX_); // -_RATLONG_MIN_ > _RATLONG_MAX_
+   JDType z_inv = JDaxpy(-a, *x, z);
+   cr_expect(
+       isequal_jd(*y, z_inv),
+       "JDaxpy is not invertible with params:\n\ta = %lf\n\tx = %s\n\ty = %s",
+       a, x_str, y_str);
+}
+
+//*** JDAddMultRatSecs
+TheoryDataPoints(SUITE_NAME, addmultratsecs) = {
+    JD_DATAPOINTS, JD_SECONDS_DATAPOINTS,
+    DataPoints(long, 0, 1, 2, -1, -2, _RATLONG_MAX_, -_RATLONG_MAX_,
+               _RATLONG_MAX_ / 2, -_RATLONG_MAX_ / 2, (((Rat_Long)1) << 32),
+               -(((Rat_Long)1) << 32), (((Rat_Long)1) << 48),
+               -(((Rat_Long)1) << 48), (((Rat_Long)1) << 60),
+               -(((Rat_Long)1) << 60), (((Rat_Long)1) << 32) + 1,
+               -(((Rat_Long)1) << 32) - 1, (((Rat_Long)1) << 48) + 1,
+               -(((Rat_Long)1) << 48) - 1, (((Rat_Long)1) << 60) + 1,
+               -(((Rat_Long)1) << 60) - 1, _RATLONG_MIN_)};
+
+Theory((JDType * jd, JDType *jd_secs, long a), SUITE_NAME, addmultratsecs)
+{
+   char jd_str[JD_STR_LEN] = {'\0'}, sec_str[RATIONAL_STR_LEN] = {'\0'};
+   jd2str(*jd, jd_str);
+   Rational seconds = jd_secs->seconds;
+   rat2str(seconds, sec_str);
+
+   // check
+   JDType z = JDAddMultRatSecs(*jd, a, seconds);
+   if (a == 0) {
+      cr_expect(isequal_jd(*jd, z),
+                "JDAddMultRatSecs with a=0 did not preserve %s", jd_str);
+   }
+   else {
+      // idk here
+   }
+
+   // associative
+   JDType zero    = JD_ZERO;
+   zero.system    = jd->system;
+   zero.epoch     = jd->epoch;
+   JDType a_sec   = JDAddMultRatSecs(zero, a, seconds);
+   JDType z_prime = JDAdd(a_sec, *jd);
+   cr_expect(isequal_jd(z_prime, z),
+             "JDAddMultRatSecs is not associative with params:\n\ta   = "
+             "%li\n\tjd  = %s\n\tsec = %s",
+             a, jd_str, sec_str);
+
+   // invertible
+   cr_assume(a >= -_RATLONG_MAX_); // -_RATLONG_MIN_ > _RATLONG_MAX_
+   JDType z_inv = JDAddMultRatSecs(z, -a, seconds);
+   cr_expect(isequal_jd(*jd, z_inv),
+             "JDAddMultRatSecs is not invertible with params:\n\ta   = "
+             "%li\n\tjd  = %s\n\tsec = %s",
+             a, jd_str, sec_str);
+}
+
 /* Leap Seconds                                                       */
 struct leapsec_tuple {
    JDType jd;
@@ -654,11 +795,12 @@ struct leapsec_tuple {
 
 ParameterizedTestParameters(SUITE_NAME, leapsec)
 {
-#define SIZE 29
+#define SIZE 56
    static int first                          = 0;
    static struct leapsec_tuple vals[SIZE]    = {0};
    const struct leapsec_tuple vals_nstatic[] = {
        {JD_RAW(UTC_TIME, ZERO_EPOCH, 0, RATIONAL_ZERO), 0},
+
        {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441317.5 + 0.5), 10.0},
        {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441499.5 + 0.5), 11.0},
        {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441683.5 + 0.5), 12.0},
@@ -687,6 +829,34 @@ ParameterizedTestParameters(SUITE_NAME, leapsec)
        {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2456109.5 + 0.5), 35.0},
        {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2457204.5 + 0.5), 36.0},
        {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2457754.5 + 0.5), 37.0},
+
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441499.5 - 0.5), 10.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2441683.5 - 0.5), 11.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2442048.5 - 0.5), 12.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2442413.5 - 0.5), 13.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2442778.5 - 0.5), 14.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443144.5 - 0.5), 15.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443509.5 - 0.5), 16.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2443874.5 - 0.5), 17.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2444239.5 - 0.5), 18.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2444786.5 - 0.5), 19.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2445151.5 - 0.5), 20.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2445516.5 - 0.5), 21.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2446247.5 - 0.5), 22.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2447161.5 - 0.5), 23.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2447892.5 - 0.5), 24.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2448257.5 - 0.5), 25.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2448804.5 - 0.5), 26.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2449169.5 - 0.5), 27.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2449534.5 - 0.5), 28.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2450083.5 - 0.5), 29.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2450630.5 - 0.5), 30.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2451179.5 - 0.5), 31.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2453736.5 - 0.5), 32.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2454832.5 - 0.5), 33.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2456109.5 - 0.5), 34.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2457204.5 - 0.5), 35.0},
+       {JD_NREDUCE(UTC_TIME, ZERO_EPOCH, 2457754.5 - 0.5), 36.0},
    };
    if (!first) {
       first = 1;
@@ -705,12 +875,10 @@ ParameterizedTest(struct leapsec_tuple *a, SUITE_NAME, leapsec)
    double calc_leapsec = GetLeapSec(a->jd);
 
    cr_expect(calc_leapsec == a->leapsec,
-             "GetLeapSec(%s) = %lf sec did not match expected value of %lf sec",
+             "GetLeapSec(%s) = %lf sec did not match expected "
+             "value of %lf sec",
              a->jd, calc_leapsec, a->leapsec);
 }
 
-// TODO: test JDaxpy (atleast that it works for whats needed in rkkit (maybe
-//       move it to rkkit?))
-// TODO: test JDAddMultRatSecs since its used as the core timing
 // TODO: test epoch/system change results are correct (this one will take a bit
 //       of work)

@@ -795,7 +795,8 @@ static void _error_epoch_system(const JDType a, const JDType b,
 static void _reduce(JDType *const jd)
 {
    jd->whole_days += RationalIntMod(&jd->seconds, sec_per_day);
-   if (jd->whole_days * jd->seconds.whole < 0) {
+   if ((jd->whole_days ^ jd->seconds.whole) < 0 && jd->whole_days != 0 &&
+       jd->seconds.whole != 0) {
       if (jd->whole_days > 0) {
          jd->seconds.whole += sec_per_day;
          jd->whole_days--;
@@ -864,8 +865,9 @@ JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat)
 {
    JDType jdb = jd;
 
-   jdb.seconds = IntegerRationalMultMod(mul, ToRationalLL(rat), sec_per_day,
-                                        &jdb.whole_days);
+   jdb.whole_days = 0;
+   jdb.seconds    = IntegerRationalMultMod(mul, ToRationalLL(rat), sec_per_day,
+                                           &jdb.whole_days);
 
    return JDAdd(jd, jdb);
 }
@@ -965,7 +967,6 @@ int ispos_jd(JDType jd)
 
 JDType JDNegate(JDType jd)
 {
-   JDChangeEpoch(ZERO_EPOCH, &jd);
    _reduce(&jd);
    jd.whole_days = -jd.whole_days;
    jd.seconds    = RationalNegate(jd.seconds);

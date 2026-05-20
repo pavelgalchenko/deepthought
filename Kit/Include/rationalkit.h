@@ -76,8 +76,8 @@ Rational InitRational(const Rat_Long whole, const Rat_Long num,
                       const Rat_Long den);
 Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod);
 void ReduceRational(Rational *const);
-Rational IntegerRationalMult(const Rat_Long mul, RationalLL rat);
-Rational IntegerRationalMultMod(const Rat_Long mul, RationalLL rat,
+Rational IntegerRationalMult(const Rat_LongLong mul, RationalLL rat);
+Rational IntegerRationalMultMod(const Rat_LongLong mul, RationalLL rat,
                                 Rat_Long mod, Rat_Long *const carry);
 RationalLL RationalMult(RationalLL a, RationalLL b);
 RationalLL RationalDivide(RationalLL a, RationalLL b);
