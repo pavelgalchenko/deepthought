@@ -68,6 +68,7 @@ long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
                            long dest[]);
 long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq);
 
+int FileExists(const char *Path, const char *File);
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode);
 void ByteSwapDouble(double *A);
 int FileToString(const char *file_name, char **result_string,

@@ -187,7 +187,8 @@ static Rat_ULong _absl(Rat_Long x)
 #define RATIONALLL_RAW(whl, n, d)                                              \
    ((RationalLL){.whole = (whl), .num = (n), .den = (d)})
 #define RATIONALLL_NGCD(whl, n, d)                                             \
-   RATIONALLL_RAW((whl) + (n) / (d), SIGN(d) * (n) % (d), MAX(1, ABS(d)))
+   RATIONALLL_RAW((whl) + SIGN(d) * ((n) / MAX(1, ABS(d))),                    \
+                  SIGN(d) * ((n) % MAX(1, ABS(d))), MAX(1, ABS(d)))
 
 /**********************************************************************/
 static RationalLL _rationalll_negate(RationalLL rat)

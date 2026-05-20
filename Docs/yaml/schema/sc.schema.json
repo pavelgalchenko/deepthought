@@ -279,6 +279,15 @@
                 "Drag Coefficient": {
                     "type": "number",
                     "minimum": 0
+                },
+                "Integration Method": {
+                    "type": "string",
+                    "enum": [
+                        "Euler",
+                        "The RK4",
+                        "3/8ths Rule RK4",
+                        "RK89"
+                    ]
                 }
             },
             "required": [

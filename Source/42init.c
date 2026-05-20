@@ -2981,6 +2981,23 @@ void InitSpacecraft(struct SCType *S)
       exit(EXIT_FAILURE);
    }
 
+   static int rk_warn = 0;
+   if (!fy_node_scanf(node, "/Integration Method %49s", dummy)) {
+      char s[RK_STR_LEN]   = {'\0'};
+      S->RKIntegrator.type = DEFAULT_RK_TYPE;
+      RKType2String(S->RKIntegrator.type, s);
+      if (!rk_warn) {
+         rk_warn = 1;
+         fprintf(stdout,
+                 "Could not locate '/Dynamics Flags/Integration Method' in "
+                 "'%s'; defaulting to '%s'.\n\tThis warning will be surpressed "
+                 "for other spacecraft.\n\n",
+                 S->FileName, s);
+      }
+   }
+   else
+      S->RKIntegrator.type = GetRKType(dummy);
+
    S->ConstraintsRequested =
        getYAMLBool(fy_node_by_path_def(node, "/Compute Constraints"));
    S->FlexActive = getYAMLBool(fy_node_by_path_def(node, "/Flex Active"));
@@ -4110,8 +4127,8 @@ void InitSpacecraft(struct SCType *S)
    S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
 
    S->RKIntegrator =
-       GetRungeKutta(RK89_RK, 0, 0, S->rkparams.base.dim, 1.0e-6, DTSIM,
-                     (RKParams *)&S->rkparams, SCOde, NULL);
+       GetRungeKutta(S->RKIntegrator.type, 0, 0, S->rkparams.base.dim, 1.0e-6,
+                     DTSIM, (RKParams *)&S->rkparams, SCOde, NULL);
 #endif
 }
 /*********************************************************************/
@@ -5466,8 +5483,14 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
    double CNJ[3][3], PoleRA, PoleDec, Epoch;
    const double ZAxis[3] = {0.0, 0.0, 1.0};
    char GravFileName[32] = {0};
+   const char *f_name    = "MinorBodies.txt";
 
-   infile = FileOpen(ModelPath, "MinorBodies.txt", "r");
+   // Prefer a MinorBodies.txt in the InOut path
+   if (FileExists(InOutPath, f_name))
+      infile = FileOpen(InOutPath, f_name, "r");
+   else
+      infile = FileOpen(ModelPath, f_name, "r");
+
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
    fscanf(infile, "%ld %[^\n] %[\n]", &Nmb, junk, &newline);
    if (Nmb > 10) {

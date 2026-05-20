@@ -495,8 +495,10 @@ RungeKutta GetRungeKutta(
                               const double relErrThreshold, const long dim))
 {
    RungeKutta rk;
+   rk.type = type;
+
    rk.isInitialized = 0;
-   switch (type) {
+   switch (rk.type) {
       case EULER_RK:
          _initeuler(&rk, dimension);
          break;
@@ -550,6 +552,41 @@ double RKErrorCalc(const double *const errEst,
          retval = err;
    }
    return retval;
+}
+
+RKType GetRKType(const char *s)
+{
+   if (!strncmp(s, "Euler", 6))
+      return EULER_RK;
+   else if (!strncmp(s, "The RK4", 8))
+      return THERK4_RK;
+   else if (!strncmp(s, "3/8ths Rule RK4", 16))
+      return RK4_RK;
+   else if (!strncmp(s, "RK89", 5))
+      return RK89_RK;
+   fprintf(stderr, "Invalid string in GetRKType. Exiting...\n");
+   exit(EXIT_FAILURE);
+}
+
+void RKType2String(RKType rk_type, char s[RK_STR_LEN])
+{
+   switch (rk_type) {
+      case EULER_RK: {
+         strcpy(s, "Euler");
+      } break;
+      case THERK4_RK: {
+         strcpy(s, "The RK4");
+      } break;
+      case RK4_RK: {
+         strcpy(s, "3/8ths Rule RK4");
+      } break;
+      case RK89_RK: {
+         strcpy(s, "RK89");
+      } break;
+      default:
+         fprintf(stderr, "Unknown RKType in RKType2String. Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
 }
 
 /* #ifdef __cplusplus

@@ -69,7 +69,8 @@ typedef struct RationalLL {
 #define RATIONAL_RAW(whl, n, d)                                                \
    ((Rational){.whole = (whl), .num = (n), .den = (d)})
 #define RATIONAL_NGCD(whl, n, d)                                               \
-   RATIONAL_RAW((whl) + (n) / (d), SIGN(d) * (n) % (d), MAX(1, ABS(d)))
+   RATIONAL_RAW((whl) + SIGN(d) * ((n) / MAX(1, ABS(d))),                      \
+                SIGN(d) * ((n) % MAX(1, ABS(d))), MAX(1, ABS(d)))
 #define RATIONAL_ZERO RATIONAL_RAW(0, 0, 1)
 
 Rational InitRational(const Rat_Long whole, const Rat_Long num,

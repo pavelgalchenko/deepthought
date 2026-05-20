@@ -37,6 +37,9 @@ typedef enum RKType {
    RK89_RK,      // RK8(9)
 } RKType;
 
+#define DEFAULT_RK_TYPE (RK4_RK)
+#define RK_STR_LEN      (16)
+
 typedef struct RKParams {
    long dim;
 } RKParams;
@@ -48,6 +51,7 @@ typedef struct RungeKutta {
                        const double *const candState, const double *cur_state,
                        const double relErrThreshold, const long dim);
 
+   RKType type;
    RKIndType t;
    double *inState;
    double *outState;
@@ -103,6 +107,9 @@ void RungeKuttaStep(RungeKutta *const rk, RKIndType t0, double dt_seconds,
 double RKErrorCalc(const double *const errEst, const double *const candState,
                    const double *cur_state, const double relErrThreshold,
                    const long dim);
+
+RKType GetRKType(const char *s);
+void RKType2String(RKType rk_type, char s[RK_STR_LEN]);
 
 /*
 ** #ifdef __cplusplus

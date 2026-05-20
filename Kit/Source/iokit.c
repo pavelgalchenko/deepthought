@@ -155,6 +155,23 @@ long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq)
    return (i);
 }
 /**********************************************************************/
+int FileExists(const char *Path, const char *File)
+{
+   FILE *FilePtr;
+   char FileName[1024];
+   int exists = 0;
+
+   strcpy(FileName, Path);
+   strcat(FileName, File);
+
+   FilePtr = fopen(FileName, "r");
+   if (FilePtr != NULL)
+      exists = 1;
+   fclose(FilePtr);
+
+   return exists;
+}
+/**********************************************************************/
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
 {
    FILE *FilePtr;
