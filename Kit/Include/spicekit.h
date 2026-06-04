@@ -40,6 +40,7 @@ typedef const char ConstSpiceChar;
 
 #define SPICETRUE     (1)
 #define SPICEFALSE    (0)
+#define errprt_c(...) _NO_SPICE_WARN_
 #define furnsh_c(...) _NO_SPICE_WARN_
 #define bodvcd_c(...) _NO_SPICE_WARN_
 #define dtpool_c(...) _NO_SPICE_WARN_
