@@ -44,3 +44,4 @@ EXTERN GLFWwindow *SphereWindow;
 ** }
 ** #endif
 */
+#endif /* __42GLFWKIT_H__ */
