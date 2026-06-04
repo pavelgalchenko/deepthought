@@ -39,6 +39,7 @@
 #include "rkkit.h"
 #include "sigkit.h"
 #include "sphkit.h"
+#include "spicekit.h"
 #include "timekit.h"
 #include "utilkit.h"
 
@@ -133,10 +134,10 @@ EXTERN double SchattenTable[5][1009]; /* JD TT GMAT MJD, +2sig F10.7, Nom F10.7,
                                          +2sig Kp, Nom Kp */
 
 EXTERN struct WorldType World[NWORLD];
-EXTERN struct WorldType World_dupe[NWORLD];
 EXTERN struct LagrangeSystemType LagSys[NLAGSYS];
 
 /* Galactic Coordinate Frame */
+EXTERN double CGJ[3][3];
 EXTERN double CGH[3][3];
 
 /* J2000 to Heliocentric Ecliptic */
@@ -208,33 +209,29 @@ void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
 void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *const worlds,
                   double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
                   double trgtCNH[3][3]);
-void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
-                    struct WorldType *const worlds, double trgtPosN[3],
-                    double trgtPosH[3], double *trgtPriMerAng,
-                    double trgtCNH[3][3]);
-
 long SimStep_New(void);
 long SimStep_Old(void);
 void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);
 void CloneWorld(struct WorldType *const dest, const struct WorldType src);
 void CopyWorld(struct WorldType *const dest, const struct WorldType src);
-void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
-                      struct RegionType *rgn,
+ephemType GetEphemType(const char *s);
+void WorldEphemerides(const JDType jd, ephemType ephem,
+                      struct WorldType *const worlds, struct RegionType *rgn,
                       struct LagrangeSystemType *lagsys);
 void SCEphemerides(const JDType jd, struct SCType *sc,
                    struct WorldType *const world, struct OrbitType *const orb);
-void Ephemerides(const JDType jd, struct SCType *scs,
+void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
                  struct WorldType *const worlds, struct RegionType *rgn,
                  struct LagrangeSystemType *lagsys,
                  struct OrbitType *const orbs);
 void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
                  struct LagrangeSystemType *lagsys, struct OrbitType *const O,
-                 struct FormationType *const frm, double dyntime);
+                 struct FormationType *const frm, JDType jd);
 void Environment(JDType jd, struct WorldType *const worlds,
                  struct OrbitType *const orbs, struct SCType *S);
-void Perturbations(struct WorldType *const worlds, struct OrbitType *const orbs,
-                   struct SCType *S);
+void Perturbations(JDType jd, struct WorldType *const worlds,
+                   struct OrbitType *const orbs, struct SCType *S);
 void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
                      const long sc_id);
 void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
@@ -295,27 +292,32 @@ void InitSpacecraft(struct SCType *S);
 void LoadPlanets(const ephemType ephem, const JDType jd,
                  const JPLHeaderType *const jpl_hdr,
                  struct WorldType *const worlds);
-/* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
-long LoadSpiceKernels(char SpicePath[80]);
+/* handler for initializing ephem data */
+long LoadEphems(const ephemType ephem, const JDType jd,
+                JPLHeaderType *const jpl_hdr, struct WorldType *const worlds);
 /* handler to determine which Update*Ephems() subfunction to call */
 long UpdateEphems(const ephemType ephem, const JDType jd,
                   const JPLHeaderType *const jpl_hdr,
                   struct WorldType *const worlds);
-/* Update celestial body locations at TT.JulDay using SPICE*/
-long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds);
+/* read JPLHeaderType to get data from the 1041 header */
+double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
+                           const char *grp_1040_name);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
-long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
-                   const JDType jd, struct WorldType *const worlds);
+long LoadJplEphems(ephemType ephem, char EphemPath[128],
+                   JPLHeaderType *const jpl_hdr, const JDType jd,
+                   struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
 long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
                      struct WorldType *const worlds);
 /* Update celestial body locations using MEAN method */
 long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
-long UpdateMinorBodies(const JDType jd, struct WorldType *const worlds);
+long UpdateMinorBodies(const JDType jd, struct WorldType *const worlds,
+                       const double earth_CNH[3][3]);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
-long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds);
+long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
+                         const double earth_CNH[3][3]);
 long DecodeString(char *s);
 WorldID GetWorldID(const char *s);
 void InitFSW(struct SCType *S);

@@ -1566,7 +1566,7 @@ void IssFSW(struct SCType *S)
    long Ig, i, j;
    struct AcType *AC;
    struct AcIssCtrlType *C;
-   double Identity[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double Identity[3][3] = EYE3_MAT;
    double Zvec[3]        = {0.0, 0.0, 1.0};
    double GimCmd[3];
    double AngErr;

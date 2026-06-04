@@ -18,6 +18,154 @@
 */
 
 /**********************************************************************/
+void CloneWorld(struct WorldType *const destWorld,
+                const struct WorldType srcWorld)
+{
+   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
+   CloneOrbit(&destWorld->eph, srcWorld.eph);
+   // TODO: should deep copy more, but all other pointers in WorldType (e.g.,
+   // WorldType::GravModel::C) are not modified after initial world
+   // configuration.
+}
+/**********************************************************************/
+void CopyWorld(struct WorldType *const destWorld,
+               const struct WorldType srcWorld)
+{
+   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
+   CopyOrbit(&destWorld->eph, srcWorld.eph);
+}
+/**********************************************************************/
+double GetWorldW(JDType jd, const struct WorldType *const world)
+{
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+   const double day_tdb_j2000              = JDToDays(jd);
+   const struct AngDataType *const pm_data = &world->ang_data[0];
+
+   return (pm_data->ang[1] + 2.0 * pm_data->ang[2] * day_tdb_j2000) /
+          SEC_PER_DAY * D2R;
+}
+/**********************************************************************/
+void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3])
+{
+   wln[0] = 0.0;
+   wln[1] = 0.0;
+   wln[2] = GetWorldW(jd, world);
+}
+/**********************************************************************/
+void CopyAngData(struct AngDataType *const dest,
+                 const struct AngDataType *const src)
+{
+   dest->ang_char = src->ang_char;
+   CopyVG(dest->ang, src->ang, 3);
+   dest->n_ang = src->n_ang;
+   dest->n_E   = src->n_E;
+
+   dest->nut_prec_E   = calloc(dest->n_E, sizeof(double[2]));
+   dest->nut_prec_ang = calloc(dest->n_ang, sizeof(double));
+   CopyVG(dest->nut_prec_E[0], src->nut_prec_E[0], 2 * dest->n_E);
+   CopyVG(dest->nut_prec_ang, src->nut_prec_ang, dest->n_ang);
+}
+/**********************************************************************/
+double GetWorldAng(JDType jd, const struct AngDataType *const ang_data)
+{
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+
+   const double day_tdb_j2000 = JDToDays(jd);
+   const double cen_tdb_j2000 = day_tdb_j2000 / JDDAY_PER_CENTURY;
+
+   double angle   = 0;
+   double d       = 1;
+   double day_mul = cen_tdb_j2000;
+   if (ang_data->ang_char == 'P')
+      day_mul = day_tdb_j2000;
+
+   for (int i = 0; i < 3; i++) {
+      angle += ang_data->ang[i] * d;
+      d     *= day_mul;
+   }
+
+   if (ang_data->n_E && ang_data->n_ang) {
+      double E[ang_data->n_E];
+      double (*s_func)(double) = sin;
+      if (ang_data->ang_char == 'D')
+         s_func = cos;
+
+      for (int i = 0; i < ang_data->n_E; i++) {
+         E[i] = ang_data->nut_prec_E[i][0] +
+                ang_data->nut_prec_E[i][1] * cen_tdb_j2000;
+         E[i] = fmod(E[i], 360.0);
+         if (E[i] < 0)
+            E[i] += 360.0;
+         E[i] *= D2R;
+      }
+
+      for (int i = 0; i < ang_data->n_ang; i++)
+         angle += ang_data->nut_prec_ang[i] * s_func(E[i]);
+   }
+
+   angle = fmod(angle, 360.0);
+   if (angle < 0)
+      angle += 360.0;
+
+   return angle * D2R;
+}
+/**********************************************************************/
+double GetWorldCWN(JDType jd, const struct AngDataType *const ang_data,
+                   double CWN[3][3])
+{
+   const double z_axis[3] = {0.0, 0.0, 1.0};
+
+   const struct AngDataType *pm_data = NULL;
+   for (int i = 0; i < 3; i++) {
+      if (ang_data[i].ang_char == 'P') {
+         pm_data = &ang_data[i];
+         break;
+      }
+   }
+   if (pm_data == NULL) {
+      fprintf(stderr,
+              "Expected a 'P'rime Merdian angle in GetWorldCWN, got '%c', "
+              "'%c', and '%c'. Exiting...\n",
+              ang_data[0].ang_char, ang_data[1].ang_char, ang_data[2].ang_char);
+      exit(EXIT_FAILURE);
+   }
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+
+   const double pri_mer_ang = GetWorldAng(jd, pm_data);
+   SimpRot(z_axis, pri_mer_ang, CWN);
+
+   return pri_mer_ang;
+}
+/**********************************************************************/
+void GetWorldCNJ(JDType jd, const struct AngDataType *const ang_data,
+                 double CNJ[3][3])
+{
+   const struct AngDataType *ra_data  = NULL;
+   const struct AngDataType *dec_data = NULL;
+   for (int i = 0; i < 3; i++) {
+      if (ang_data[i].ang_char == 'R') {
+         ra_data = &ang_data[i];
+      }
+      else if (ang_data[i].ang_char == 'D') {
+         dec_data = &ang_data[i];
+      }
+      if (ra_data != NULL && dec_data != NULL)
+         break;
+   }
+   if (ra_data == NULL || dec_data == NULL) {
+      fprintf(stderr,
+              "Expected both a 'R'ight Ascension angle and a 'D'eclination "
+              "angle in GetWorldCNJ, got '%c', '%c', and '%c'. Exiting...\n",
+              ang_data[0].ang_char, ang_data[1].ang_char, ang_data[2].ang_char);
+      exit(EXIT_FAILURE);
+   }
+
+   const double ra  = GetWorldAng(jd, ra_data);
+   const double dec = GetWorldAng(jd, dec_data);
+
+   A2C(312, (ra + HALFPI), (HALFPI - dec), 0.0, CNJ);
+}
+/**********************************************************************/
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
 {
    memcpy(destOrb, &srcOrb, sizeof(struct OrbitType));
@@ -43,6 +191,307 @@ void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
    if (srcOrb.Ncheb) {
       for (int i = 0; i < destOrb->Ncheb; i++)
          memcpy(&destOrb->Cheb[i], &srcOrb.Cheb[i], sizeof(struct Cheb3DType));
+   }
+}
+/**********************************************************************/
+WorldID GetWorldID(const char *s)
+{
+   unsigned long i;
+   if (!strcmp(s, "SOL") || !strcmp(s, "SUN"))
+      return SOL;
+   else if (!strcmp(s, "MERCURY"))
+      return MERCURY;
+   else if (!strcmp(s, "VENUS"))
+      return VENUS;
+   else if (!strcmp(s, "EARTH"))
+      return EARTH;
+   else if (!strcmp(s, "MARS"))
+      return MARS;
+   else if (!strcmp(s, "JUPITER"))
+      return JUPITER;
+   else if (!strcmp(s, "SATURN"))
+      return SATURN;
+   else if (!strcmp(s, "URANUS"))
+      return URANUS;
+   else if (!strcmp(s, "NEPTUNE"))
+      return NEPTUNE;
+   else if (!strcmp(s, "PLUTO"))
+      return PLUTO;
+   else if (!strcmp(s, "LUNA"))
+      return LUNA;
+   else if (!strcmp(s, "PHOBOS"))
+      return PHOBOS;
+   else if (!strcmp(s, "DEIMOS"))
+      return DEIMOS;
+   else if (!strcmp(s, "IO"))
+      return IO;
+   else if (!strcmp(s, "EUROPA"))
+      return EUROPA;
+   else if (!strcmp(s, "GANYMEDE"))
+      return GANYMEDE;
+   else if (!strcmp(s, "CALLISTO"))
+      return CALLISTO;
+   else if (!strcmp(s, "AMALTHEA"))
+      return AMALTHEA;
+   else if (!strcmp(s, "HIMALIA"))
+      return HIMALIA;
+   else if (!strcmp(s, "ELARA"))
+      return ELARA;
+   else if (!strcmp(s, "PASIPHAE"))
+      return PASIPHAE;
+   else if (!strcmp(s, "SINOPE"))
+      return SINOPE;
+   else if (!strcmp(s, "LYSITHEA"))
+      return LYSITHEA;
+   else if (!strcmp(s, "CARME"))
+      return CARME;
+   else if (!strcmp(s, "ANANKE"))
+      return ANANKE;
+   else if (!strcmp(s, "LEDA"))
+      return LEDA;
+   else if (!strcmp(s, "THEBE"))
+      return THEBE;
+   else if (!strcmp(s, "ADRASTEA"))
+      return ADRASTEA;
+   else if (!strcmp(s, "METIS"))
+      return METIS;
+   else if (!strcmp(s, "MIMAS"))
+      return MIMAS;
+   else if (!strcmp(s, "ENCELADUS"))
+      return ENCELADUS;
+   else if (!strcmp(s, "TETHYS"))
+      return TETHYS;
+   else if (!strcmp(s, "DIONE"))
+      return DIONE;
+   else if (!strcmp(s, "RHEA"))
+      return RHEA;
+   else if (!strcmp(s, "TITAN"))
+      return TITAN;
+   else if (!strcmp(s, "HYPERION"))
+      return HYPERION;
+   else if (!strcmp(s, "IAPETUS"))
+      return IAPETUS;
+   else if (!strcmp(s, "PHOEBE"))
+      return PHOEBE;
+   else if (!strcmp(s, "JANUS"))
+      return JANUS;
+   else if (!strcmp(s, "EPIMETHEUS"))
+      return EPIMETHEUS;
+   else if (!strcmp(s, "HELENE"))
+      return HELENE;
+   else if (!strcmp(s, "TELESTO"))
+      return TELESTO;
+   else if (!strcmp(s, "CALYPSO"))
+      return CALYPSO;
+   else if (!strcmp(s, "ATLAS"))
+      return ATLAS;
+   else if (!strcmp(s, "PROMETHEUS"))
+      return PROMETHEUS;
+   else if (!strcmp(s, "PANDORA"))
+      return PANDORA;
+   else if (!strcmp(s, "PAN"))
+      return PAN;
+   else if (!strcmp(s, "ARIEL"))
+      return ARIEL;
+   else if (!strcmp(s, "UMBRIEL"))
+      return UMBRIEL;
+   else if (!strcmp(s, "TITANIA"))
+      return TITANIA;
+   else if (!strcmp(s, "OBERON"))
+      return OBERON;
+   else if (!strcmp(s, "MIRANDA"))
+      return MIRANDA;
+   else if (!strcmp(s, "TRITON"))
+      return TRITON;
+   else if (!strcmp(s, "NEREID"))
+      return NEREID;
+   else if (!strcmp(s, "CHARON"))
+      return CHARON;
+   else if (sscanf(s, "MINORBODY_%lu", &i) == 1)
+      return (NMAJORWORLD + i);
+   fprintf(stderr, "Bogus input %s in GetWorldID (42init.c:%d)\n", s, __LINE__);
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+void WorldID2String(WorldID w_id, char w_str[32])
+{
+   // Returns the NAIF names of the celestial bodies
+   switch (w_id) {
+      case SOL:
+         strcpy(w_str, "SUN");
+         break;
+      case MERCURY:
+         strcpy(w_str, "MERCURY");
+         break;
+      case VENUS:
+         strcpy(w_str, "VENUS");
+         break;
+      case EARTH:
+         strcpy(w_str, "EARTH");
+         break;
+      case MARS:
+         strcpy(w_str, "MARS");
+         break;
+      case JUPITER:
+         strcpy(w_str, "JUPITER");
+         break;
+      case SATURN:
+         strcpy(w_str, "SATURN");
+         break;
+      case URANUS:
+         strcpy(w_str, "URANUS");
+         break;
+      case NEPTUNE:
+         strcpy(w_str, "NEPTUNE");
+         break;
+      case PLUTO:
+         strcpy(w_str, "PLUTO");
+         break;
+      case LUNA:
+         strcpy(w_str, "MOON");
+         break;
+      case PHOBOS:
+         strcpy(w_str, "PHOBOS");
+         break;
+      case DEIMOS:
+         strcpy(w_str, "DEIMOS");
+         break;
+      case IO:
+         strcpy(w_str, "IO");
+         break;
+      case EUROPA:
+         strcpy(w_str, "EUROPA");
+         break;
+      case GANYMEDE:
+         strcpy(w_str, "GANYMEDE");
+         break;
+      case CALLISTO:
+         strcpy(w_str, "CALLISTO");
+         break;
+      case AMALTHEA:
+         strcpy(w_str, "AMALTHEA");
+         break;
+      case HIMALIA:
+         strcpy(w_str, "HIMALIA");
+         break;
+      case ELARA:
+         strcpy(w_str, "ELARA");
+         break;
+      case PASIPHAE:
+         strcpy(w_str, "PASIPHAE");
+         break;
+      case SINOPE:
+         strcpy(w_str, "SINOPE");
+         break;
+      case LYSITHEA:
+         strcpy(w_str, "LYSITHEA");
+         break;
+      case CARME:
+         strcpy(w_str, "CARME");
+         break;
+      case ANANKE:
+         strcpy(w_str, "ANANKE");
+         break;
+      case LEDA:
+         strcpy(w_str, "LEDA");
+         break;
+      case THEBE:
+         strcpy(w_str, "THEBE");
+         break;
+      case ADRASTEA:
+         strcpy(w_str, "ADRASTEA");
+         break;
+      case METIS:
+         strcpy(w_str, "METIS");
+         break;
+      case MIMAS:
+         strcpy(w_str, "MIMAS");
+         break;
+      case ENCELADUS:
+         strcpy(w_str, "ENCELADUS");
+         break;
+      case TETHYS:
+         strcpy(w_str, "TETHYS");
+         break;
+      case DIONE:
+         strcpy(w_str, "DIONE");
+         break;
+      case RHEA:
+         strcpy(w_str, "RHEA");
+         break;
+      case TITAN:
+         strcpy(w_str, "TITAN");
+         break;
+      case HYPERION:
+         strcpy(w_str, "HYPERION");
+         break;
+      case IAPETUS:
+         strcpy(w_str, "IAPETUS");
+         break;
+      case PHOEBE:
+         strcpy(w_str, "PHOEBE");
+         break;
+      case JANUS:
+         strcpy(w_str, "JANUS");
+         break;
+      case EPIMETHEUS:
+         strcpy(w_str, "EPIMETHEUS");
+         break;
+      case HELENE:
+         strcpy(w_str, "HELENE");
+         break;
+      case TELESTO:
+         strcpy(w_str, "TELESTO");
+         break;
+      case CALYPSO:
+         strcpy(w_str, "CALYPSO");
+         break;
+      case ATLAS:
+         strcpy(w_str, "ATLAS");
+         break;
+      case PROMETHEUS:
+         strcpy(w_str, "PROMETHEUS");
+         break;
+      case PANDORA:
+         strcpy(w_str, "PANDORA");
+         break;
+      case PAN:
+         strcpy(w_str, "PAN");
+         break;
+      case ARIEL:
+         strcpy(w_str, "ARIEL");
+         break;
+      case UMBRIEL:
+         strcpy(w_str, "UMBRIEL");
+         break;
+      case TITANIA:
+         strcpy(w_str, "TITANIA");
+         break;
+      case OBERON:
+         strcpy(w_str, "OBERON");
+         break;
+      case MIRANDA:
+         strcpy(w_str, "MIRANDA");
+         break;
+      case TRITON:
+         strcpy(w_str, "TRITON");
+         break;
+      case NEREID:
+         strcpy(w_str, "NEREID");
+         break;
+      case CHARON:
+         strcpy(w_str, "CHARON");
+         break;
+      default:
+         if (w_id >= NMAJORWORLD) {
+            sprintf(w_str, "MINORBODY_%u", w_id - NMAJORWORLD);
+            break;
+         }
+         else {
+            fprintf(stderr,
+                    "Unknown WorldID %u in WorldID2String. Exiting...\n", w_id);
+            exit(EXIT_FAILURE);
+         }
    }
 }
 /**********************************************************************/
@@ -215,7 +664,6 @@ void RV02RV(double mu, double xr0[3], double xv0[3], double anom, double xr[3],
 /**********************************************************************/
 /* Compute position and velocity given orbital elements.  Works for   */
 /* circular, elliptical, parabolic and hyperbolic orbits.             */
-
 void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
             double dt, double r[3], double v[3], double *anom)
 {
@@ -265,7 +713,6 @@ void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
 /**********************************************************************/
 /* Compute orbital elements, given position and velocity.  Works for  */
 /* for all eccentricities.                                            */
-
 void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
             double *e, double *i, double *RAAN, double *ArgP, double *th,
             double *tp, double *SLR, double *alpha, double *rmin,
@@ -1165,6 +1612,64 @@ void LunaPosition(const JDType jd, double r[3])
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
+int LoadLunarNutPrecAngle(int *n_E, double (**nut_prec_E)[2])
+{
+   const double nut_prec_ang_data[26] = {
+       125.045, -0.0529921, 250.089, -0.1059842, 260.008, 13.0120009,
+       176.625, 13.3407154, 357.529, 0.9856003,  311.589, 26.4057084,
+       134.963, 13.0649930, 276.617, 0.3287146,  34.226,  1.7484877,
+       15.134,  -0.1589763, 119.743, 0.0036096,  239.961, 0.1643573,
+       25.053,  12.9590088};
+   *n_E        = 13;
+   *nut_prec_E = calloc(*n_E, sizeof(double[2]));
+
+   for (int i = 0; i < *n_E; i++) {
+      for (int j = 0; j < 2; j++) {
+         (*nut_prec_E)[i][j] = nut_prec_ang_data[j + 2 * i];
+      }
+      (*nut_prec_E)[i][1] *= JDDAY_PER_CENTURY;
+   }
+   return 1;
+}
+/**********************************************************************/
+/*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
+/*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
+/*  Finds Lunar Inertial Frame wrt J2000                              */
+int LoadLunaInertialFrameData(struct AngDataType *const ang_data)
+{
+   const double ra_dat[3]  = {269.9949, 0.0031, 0.0};
+   const double dec_dat[3] = {66.5392, 0.0130, 0.0};
+
+   const double nut_prec_ra[13]  = {-3.8787, -0.1204, 0.0700, -0.0172, 0.0,
+                                    0.0072,  0.0,     0.0,    0.0,     -0.0052,
+                                    0.0,     0.0,     0.0043};
+   const double nut_prec_dec[13] = {1.5419,  0.0239, -0.0278, 0.0068, 0.0,
+                                    -0.0029, 0.0009, 0.0,     0.0,    0.0008,
+                                    0.0,     0.0,    -0.0009};
+
+   struct AngDataType *const ra_data  = &ang_data[1];
+   struct AngDataType *const dec_data = &ang_data[2];
+
+   ra_data->ang_char  = 'R';
+   dec_data->ang_char = 'D';
+
+   CopyVG(ra_data->ang, ra_dat, 3);
+   CopyVG(dec_data->ang, dec_dat, 3);
+
+   LoadLunarNutPrecAngle(&ra_data->n_E, &ra_data->nut_prec_E);
+   LoadLunarNutPrecAngle(&dec_data->n_E, &dec_data->nut_prec_E);
+
+   ra_data->n_ang         = 13;
+   dec_data->n_ang        = 13;
+   ra_data->nut_prec_ang  = calloc(ra_data->n_ang, sizeof(double));
+   dec_data->nut_prec_ang = calloc(dec_data->n_ang, sizeof(double));
+   CopyVG(ra_data->nut_prec_ang, nut_prec_ra, ra_data->n_ang);
+   CopyVG(dec_data->nut_prec_ang, nut_prec_dec, dec_data->n_ang);
+   return 1;
+}
+/**********************************************************************/
+/*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
+/*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
 void LunaInertialFrame(const JDType jd, double CNJ[3][3])
 {
@@ -1242,6 +1747,25 @@ void LunaInertialFrame(const JDType jd, double CNJ[3][3])
       CNJ[1][i] = YVec[i];
       CNJ[2][i] = PoleVec[i];
    }
+}
+/**********************************************************************/
+/*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
+/*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
+int LoadLunaPriMerAngData(struct AngDataType *const ang_data)
+{
+   const double pm_dat[3]        = {38.3213, 13.17635815, -1.4E-12};
+   const double nut_prec_dat[13] = {3.5610,  0.1208,  -0.0642, 0.0158, 0.0252,
+                                    -0.0066, -0.0047, -0.0046, 0.0028, 0.0052,
+                                    0.0040,  0.0019,  -0.0044};
+
+   struct AngDataType *const pm_data = &ang_data[0];
+   pm_data->ang_char                 = 'P';
+   CopyVG(pm_data->ang, pm_dat, 3);
+   LoadLunarNutPrecAngle(&pm_data->n_E, &pm_data->nut_prec_E);
+   pm_data->n_ang        = 13;
+   pm_data->nut_prec_ang = calloc(pm_data->n_ang, sizeof(double));
+   CopyVG(pm_data->nut_prec_ang, nut_prec_dat, pm_data->n_ang);
+   return 1;
 }
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */

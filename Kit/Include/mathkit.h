@@ -15,6 +15,7 @@
 #define __MATHKIT_H__
 
 #include "42constants.h"
+#include "defineskit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,24 +27,13 @@
 ** #endif
 */
 
-#ifndef __MINGW32__
-#ifdef WIN32
-#ifndef isnan(x)
-#define isnan(x) ((x) != (x))
-#endif
-#endif
-#endif
-
-#ifndef MIN
-#define MIN(x, y) ((x) > (y) ? (y) : (x))
-#endif
-#ifndef MAX
-#define MAX(x, y) ((x) < (y) ? (y) : (x))
-#endif
+#define EYE3_MAT {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}
 
 int any_int(const long n, const int *vec);
 int all_int(const long n, const int *vec);
 double signum(const double x);
+double sin_deg(double x);
+double cos_deg(double x);
 double sinc(const double x);
 double smootherstep(const double x);
 void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
@@ -95,7 +85,7 @@ void MxMTG(double **A, double **B, double **C, const long N, const long K,
            const long M);
 void MTxMG(double **A, double **B, double **C, const long N, const long K,
            const long M);
-void CopyVG(double *dest, double *src, const long n);
+void CopyVG(double *const dest, const double *const src, const long n);
 void SxVG(const double S, const double *V, double *W, const long n);
 void axpy(const double a, const double *const x, double *const y, const long n);
 void MxVG(double **M, double *v, double *w, const long n, const long m);
@@ -138,6 +128,8 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(double A[3], double *lng, double *lat);
 double WrapTo2Pi(double OrbVar);
+double BrentsMethod(double a, double b, const double tol,
+                    double (*f)(const double, double *), double *params);
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
                      long breakOnZero,
                      void (*fdf)(const double, double *, double *, double *),

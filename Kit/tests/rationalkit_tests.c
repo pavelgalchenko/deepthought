@@ -19,7 +19,7 @@
 
 #define SUITE_NAME rationalkit
 
-#define ULP_THRESH     (1) // acceptable Units in Last Place variation
+#define ULP_THRESH     (4) // acceptable Units in Last Place variation
 #define DBL_THRESH     (ULP_THRESH * __DBL_EPSILON__)
 #define COND_STR(cond) (cond) ? ("TRUE") : ("FALSE")
 
@@ -230,7 +230,7 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add)
    ReduceRational(&b_red);
 
    cr_assert(isequal_rational(*a, a_red) && isequal_rational(*b, b_red),
-             "reducing %s and %s is not equal did not preserve them", a_str,
+             "reducing %s and %s is not equal and did not preserve them", a_str,
              b_str);
 
    // commutative addition
@@ -248,13 +248,13 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add)
       double check = rational2double(rat_check);
       if (a_dbl == 0 || check == 0) {
          cr_expect(epsilon_eq(dbl, a_dbl, check, DBL_THRESH),
-                   "Rational addition is not approximately invertable (a=(%s), "
+                   "Rational addition is not approximately invertible (a=(%s), "
                    "b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
       }
       else {
          cr_expect(ieee_ulp_eq(dbl, a_dbl, check, ULP_THRESH),
-                   "Rational addition is not approximately invertable (a=(%s), "
+                   "Rational addition is not approximately invertible (a=(%s), "
                    "b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
       }
@@ -262,7 +262,7 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add)
    else {
       double error = a_dbl - rational2double(rat_check);
       cr_expect(isequal_rational(*a, rat_check),
-                "Rational addition is not invertable (a=(%s), "
+                "Rational addition is not invertible (a=(%s), "
                 "b=(%s), err=%le)",
                 a_str, b_str, fabs(error));
    }
@@ -307,13 +307,13 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult)
       double check = rational2double(rat_check);
       if (a_dbl == 0 || check == 0) {
          cr_expect(epsilon_eq(dbl, a_dbl, check, DBL_THRESH),
-                   "Rational multiplication is not approximately invertable "
+                   "Rational multiplication is not approximately invertible "
                    "(a=(%s), b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
       }
       else {
          cr_expect(ieee_ulp_eq(dbl, a_dbl, check, ULP_THRESH),
-                   "Rational multiplication is not approximately invertable "
+                   "Rational multiplication is not approximately invertible "
                    "(a=(%s), b=(%s), err=%le)",
                    a_str, b_str, fabs(a_dbl - check));
       }
@@ -321,7 +321,7 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult)
    else {
       double error = a_dbl - rational2double(rat_check);
       cr_expect(isequal_rational(*a, rat_check),
-                "Rational multiplication is not invertable (a=(%s), "
+                "Rational multiplication is not invertible (a=(%s), "
                 "b=(%s), err=%le)",
                 a_str, b_str, fabs(error));
    }

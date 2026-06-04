@@ -22,7 +22,9 @@
 
 #define AU2m 149597870000.0
 
+#ifndef ABS
 #define ABS(X) ((X) > 0 ? (X) : (-X))
+#endif
 
 #define IDX2(x, y, Ny)        ((x) * (Ny) + (y))
 #define IDX3(x, y, z, Ny, Nz) (((x) * (Ny) + (y)) * (Nz) + (z))

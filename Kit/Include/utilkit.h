@@ -20,8 +20,9 @@
 #ifndef __UTILKIT_H__
 #define __UTILKIT_H__
 
+#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
-// #include <stdlib.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -29,6 +30,11 @@
 */
 
 void GetExecDir(char exec_dir[1000]);
+void tolower_str(size_t n, char *str);
+void toupper_str(size_t n, char *str);
+void CapitalizeFirst(size_t n, char *str);
+char *replace_char(char *str, const char find, const char replace);
+long is_line_empty(const char *s);
 
 /*
 ** #ifdef __cplusplus

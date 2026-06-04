@@ -64,7 +64,7 @@ static void _initcommonrk(RungeKutta *const rk)
    rk->tol             = 1.0e-11;
    rk->relErrThreshold = 0.1;
    rk->errorCalc       = RKErrorCalc;
-   rk->maxStepAttempts = 50;
+   rk->maxStepAttempts = 1000;
    rk->stepAttempts    = 0;
    rk->smallestTime    = InitJD(JD_ZERO.system, JD_ZERO.epoch, 0,
                                 RATIONAL_NGCD(0, 1, 1000000000000));
@@ -423,9 +423,7 @@ static int _adaptstep(RungeKutta *const rk, const double maxErr)
 
 static void _step(RungeKutta *const rk)
 {
-   if ((isless_jd(JDAbs(rk->stepSize), rk->minStep)))
-      rk->stepSize =
-          (ispos_jd(rk->stepSize) ? rk->minStep : JDNegate(rk->minStep));
+   // don't check for rk->minStep in case need less to finish
    if (isgreater_jd(JDAbs(rk->stepSize), rk->maxStep))
       rk->stepSize =
           (ispos_jd(rk->stepSize) ? rk->maxStep : JDNegate(rk->maxStep));
@@ -451,8 +449,8 @@ static void _step(RungeKutta *const rk)
    rk->curTime = JDaxpy(1.0, rk->StepTaken, rk->curTime);
 }
 
-void RungeKuttaStep(RungeKutta *const rk, RKIndType t0, double dt_seconds,
-                    double *x)
+void RungeKuttaStep(RungeKutta *const rk, const int use_last_step, RKIndType t0,
+                    double dt_seconds, double *x)
 {
    int stepFinished = 0;
    RKIndType timeLeft =
@@ -472,7 +470,12 @@ void RungeKuttaStep(RungeKutta *const rk, RKIndType t0, double dt_seconds,
          exit(EXIT_FAILURE);
       }
 
-      rk->stepSize = timeLeft;
+      if (!use_last_step || isequal_jd(rk->stepSize, JD_ZERO))
+         rk->stepSize = timeLeft;
+      else
+         rk->stepSize =
+             (isless_jd(rk->stepSize, timeLeft)) ? rk->stepSize : timeLeft;
+
       _step(rk);
       JDType time_diff_abs = JDAbs(JDSub(timeLeft, rk->StepTaken));
       if (islessequal_jd(time_diff_abs, rk->smallestTime))
@@ -532,10 +535,13 @@ RungeKutta GetRungeKutta(
    if (relErrThreshold > 0)
       rk.relErrThreshold = relErrThreshold;
    rk.isInitialized = 1;
-   rk.params        = params; //
+   rk.params        = params;
+   rk.stepSize      = JD_ZERO;
    return rk;
 }
 
+// TODO: a structure describing the allocation of RungeKutta::inState, etc, to
+// do vector-wise, quaternion-wise, or other error calculations
 double RKErrorCalc(const double *const errEst,
                    const double *const candidateState, const double *cur_state,
                    const double relErrThreshold, const long dim)
@@ -558,13 +564,13 @@ RKType GetRKType(const char *s)
 {
    if (!strncmp(s, "Euler", 6))
       return EULER_RK;
-   else if (!strncmp(s, "The RK4", 8))
+   else if (!strncmp(s, "The_RK4", 8))
       return THERK4_RK;
-   else if (!strncmp(s, "3/8ths Rule RK4", 16))
+   else if (!strncmp(s, "3/8ths_Rule_RK4", 16))
       return RK4_RK;
    else if (!strncmp(s, "RK89", 5))
       return RK89_RK;
-   fprintf(stderr, "Invalid string in GetRKType. Exiting...\n");
+   fprintf(stderr, "Invalid string %s in GetRKType. Exiting...\n", s);
    exit(EXIT_FAILURE);
 }
 
@@ -575,10 +581,10 @@ void RKType2String(RKType rk_type, char s[RK_STR_LEN])
          strcpy(s, "Euler");
       } break;
       case THERK4_RK: {
-         strcpy(s, "The RK4");
+         strcpy(s, "The_RK4");
       } break;
       case RK4_RK: {
-         strcpy(s, "3/8ths Rule RK4");
+         strcpy(s, "3/8ths_Rule_RK4");
       } break;
       case RK89_RK: {
          strcpy(s, "RK89");

@@ -957,7 +957,7 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    double Val1, Val2, Val3;
    char response[40];
    long Seq;
-   double RotM[3][3]  = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double RotM[3][3]  = EYE3_MAT;
    double TransVec[3] = {0.0, 0.0, 0.0};
    double Vr[3];
    long FirstUse;

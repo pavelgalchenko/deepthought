@@ -14,6 +14,7 @@
 #ifndef __RKKIT_H__
 #define __RKKIT_H__
 
+#include "defineskit.h"
 #include "jdkit.h"
 #include "mathkit.h"
 #include <string.h>
@@ -102,8 +103,8 @@ RungeKutta GetRungeKutta(
                               const double *const candState,
                               const double *cur_state,
                               const double relErrThreshold, const long dim));
-void RungeKuttaStep(RungeKutta *const rk, RKIndType t0, double dt_seconds,
-                    double *x);
+void RungeKuttaStep(RungeKutta *const rk, const int use_last_step, RKIndType t0,
+                    double dt_seconds, double *x);
 double RKErrorCalc(const double *const errEst, const double *const candState,
                    const double *cur_state, const double relErrThreshold,
                    const long dim);

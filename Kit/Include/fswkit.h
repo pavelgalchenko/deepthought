@@ -13,6 +13,7 @@
 
 #include "42constants.h"
 #include "dcmkit.h"
+#include "defineskit.h"
 #include "mathkit.h"
 #include <math.h>
 #include <stdio.h>

@@ -11,10 +11,11 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#include "42defines.h"
+// #include "42defines.h"
 #include "AcTypes.h"
 #include "DSMTypes.h"
 #include "dcmkit.h"
+#include "defineskit.h"
 #include "fswkit.h"
 #include "mathkit.h"
 

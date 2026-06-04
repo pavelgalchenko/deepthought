@@ -33,9 +33,11 @@
             "description": "Choose test target to run",
             "type": "pickString",
             "options": [
-                "Kit/tests/kit_tests",
+                "Kit/tests/jdkit_tests",
+                "Kit/tests/jdkit_dbl_tests",
+                "Kit/tests/rationalkit_tests",
             ],
-            "default": "Kit/tests/kit_tests"
+            "default": "Kit/tests/jdkit_tests"
         },
         {
             "id": "testLabel",
@@ -47,20 +49,20 @@
         {
             "label": "release build",
             "type": "cmake",
-            "command": "workflow",
-            "preset": "build-Release",
+            "command": "build",
+            "preset": "Release-build",
         },
         {
             "label": "relwithdebinfo build",
             "type": "cmake",
-            "command": "workflow",
-            "preset": "build-RelWithDebInfo",
+            "command": "build",
+            "preset": "RelWithDebInfo-build",
         },
         {
             "label": "debug build",
             "type": "cmake",
-            "command": "workflow",
-            "preset": "build-Debug",
+            "command": "build",
+            "preset": "Debug-build",
         },
         {
             "label": "start criterion test",

@@ -438,8 +438,10 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
             MxV(worlds[EARTH].CWN, GPS->PosN, GPS->PosW);
             MxV(worlds[EARTH].CWN, GPS->VelN, GPS->VelW);
             /* Subtract Earth rotation velocity */
-            GPS->VelW[0] -= -worlds[EARTH].w * PosW[1];
-            GPS->VelW[1] -= worlds[EARTH].w * PosW[0];
+            const double W_w = GetWorldW(JD_TDB_MJD, &worlds[EARTH]);
+
+            GPS->VelW[0] -= -W_w * PosW[1];
+            GPS->VelW[1] -= W_w * PosW[0];
 
             MagPosW  = MAGV(GPS->PosW);
             GPS->Lng = atan2(GPS->PosW[1], GPS->PosW[0]);

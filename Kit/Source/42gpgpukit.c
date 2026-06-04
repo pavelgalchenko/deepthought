@@ -145,7 +145,7 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
    /* E is "eye" frame, F is "face" frame */
    /* Faces are faces of a cube centered on Eye */
    double CEF[5][3][3] = {/* Ceiling */
-                          {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}},
+                          EYE3_MAT,
                           /* North Wall */
                           {{1.0, 0.0, 0.0}, {0.0, 0.0, -1.0}, {0.0, 1.0, 0.0}},
                           /* South Wall */

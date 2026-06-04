@@ -14,6 +14,7 @@
 #ifndef __42GLUTKIT_H__
 #define __42GLUTKIT_H__
 
+#include "defineskit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

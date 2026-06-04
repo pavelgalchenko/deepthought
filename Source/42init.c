@@ -13,9 +13,8 @@
 
 #include "42.h"
 #include <ctype.h>
-#include <glob.h>
 #include <stdint.h>
-#include <unistd.h>
+// #include <unistd.h>
 
 #if defined __MINGW32__
 #include <Windows.h>
@@ -34,10 +33,6 @@
 #include <errno.h>
 #include <strings.h>
 
-#ifdef _ENABLE_SPICE_
-#include "SpiceUsr.h"
-#endif
-
 /* #ifdef __cplusplus
 ** namespace _42 {
 ** using namespace Kit;
@@ -47,11 +42,7 @@
 /**********************************************************************/
 long DecodeString(char *s)
 {
-
-   unsigned long i;
-
-   for (i = 0; i < strlen(s); i++)
-      s[i] = toupper(s[i]);
+   toupper_str(0, s);
 
    if (!strcmp(s, "FALSE"))
       return FALSE;
@@ -360,423 +351,6 @@ long DecodeString(char *s)
               __LINE__);
       exit(EXIT_FAILURE);
    }
-}
-/**********************************************************************/
-WorldID GetWorldID(const char *s)
-{
-   unsigned long i;
-   if (!strcmp(s, "SOL") || !strcmp(s, "SUN"))
-      return SOL;
-   else if (!strcmp(s, "MERCURY"))
-      return MERCURY;
-   else if (!strcmp(s, "VENUS"))
-      return VENUS;
-   else if (!strcmp(s, "EARTH"))
-      return EARTH;
-   else if (!strcmp(s, "MARS"))
-      return MARS;
-   else if (!strcmp(s, "JUPITER"))
-      return JUPITER;
-   else if (!strcmp(s, "SATURN"))
-      return SATURN;
-   else if (!strcmp(s, "URANUS"))
-      return URANUS;
-   else if (!strcmp(s, "NEPTUNE"))
-      return NEPTUNE;
-   else if (!strcmp(s, "PLUTO"))
-      return PLUTO;
-   else if (!strcmp(s, "LUNA"))
-      return LUNA;
-   else if (!strcmp(s, "PHOBOS"))
-      return PHOBOS;
-   else if (!strcmp(s, "DEIMOS"))
-      return DEIMOS;
-   else if (!strcmp(s, "IO"))
-      return IO;
-   else if (!strcmp(s, "EUROPA"))
-      return EUROPA;
-   else if (!strcmp(s, "GANYMEDE"))
-      return GANYMEDE;
-   else if (!strcmp(s, "CALLISTO"))
-      return CALLISTO;
-   else if (!strcmp(s, "AMALTHEA"))
-      return AMALTHEA;
-   else if (!strcmp(s, "HIMALIA"))
-      return HIMALIA;
-   else if (!strcmp(s, "ELARA"))
-      return ELARA;
-   else if (!strcmp(s, "PASIPHAE"))
-      return PASIPHAE;
-   else if (!strcmp(s, "SINOPE"))
-      return SINOPE;
-   else if (!strcmp(s, "LYSITHEA"))
-      return LYSITHEA;
-   else if (!strcmp(s, "CARME"))
-      return CARME;
-   else if (!strcmp(s, "ANANKE"))
-      return ANANKE;
-   else if (!strcmp(s, "LEDA"))
-      return LEDA;
-   else if (!strcmp(s, "THEBE"))
-      return THEBE;
-   else if (!strcmp(s, "ADRASTEA"))
-      return ADRASTEA;
-   else if (!strcmp(s, "METIS"))
-      return METIS;
-   else if (!strcmp(s, "MIMAS"))
-      return MIMAS;
-   else if (!strcmp(s, "ENCELADUS"))
-      return ENCELADUS;
-   else if (!strcmp(s, "TETHYS"))
-      return TETHYS;
-   else if (!strcmp(s, "DIONE"))
-      return DIONE;
-   else if (!strcmp(s, "RHEA"))
-      return RHEA;
-   else if (!strcmp(s, "TITAN"))
-      return TITAN;
-   else if (!strcmp(s, "HYPERION"))
-      return HYPERION;
-   else if (!strcmp(s, "IAPETUS"))
-      return IAPETUS;
-   else if (!strcmp(s, "PHOEBE"))
-      return PHOEBE;
-   else if (!strcmp(s, "JANUS"))
-      return JANUS;
-   else if (!strcmp(s, "EPIMETHEUS"))
-      return EPIMETHEUS;
-   else if (!strcmp(s, "HELENE"))
-      return HELENE;
-   else if (!strcmp(s, "TELESTO"))
-      return TELESTO;
-   else if (!strcmp(s, "CALYPSO"))
-      return CALYPSO;
-   else if (!strcmp(s, "ATLAS"))
-      return ATLAS;
-   else if (!strcmp(s, "PROMETHEUS"))
-      return PROMETHEUS;
-   else if (!strcmp(s, "PANDORA"))
-      return PANDORA;
-   else if (!strcmp(s, "PAN"))
-      return PAN;
-   else if (!strcmp(s, "ARIEL"))
-      return ARIEL;
-   else if (!strcmp(s, "UMBRIEL"))
-      return UMBRIEL;
-   else if (!strcmp(s, "TITANIA"))
-      return TITANIA;
-   else if (!strcmp(s, "OBERON"))
-      return OBERON;
-   else if (!strcmp(s, "MIRANDA"))
-      return MIRANDA;
-   else if (!strcmp(s, "TRITON"))
-      return TRITON;
-   else if (!strcmp(s, "NEREID"))
-      return NEREID;
-   else if (!strcmp(s, "CHARON"))
-      return CHARON;
-   else if (sscanf(s, "MINORBODY_%lu", &i) == 1)
-      return (MINORBODY_0 + i);
-   fprintf(stderr, "Bogus input %s in GetWorldID (42init.c:%d)\n", s, __LINE__);
-   exit(EXIT_FAILURE);
-}
-/**********************************************************************/
-void WorldID2String(WorldID w_id, char w_str[32])
-{
-   // Returns the NAIF names of the celestial bodies
-   switch (w_id) {
-      case SOL:
-         strcpy(w_str, "SUN");
-         break;
-      case MERCURY:
-         strcpy(w_str, "MERCURY");
-         break;
-      case VENUS:
-         strcpy(w_str, "VENUS");
-         break;
-      case EARTH:
-         strcpy(w_str, "EARTH");
-         break;
-      case MARS:
-         strcpy(w_str, "MARS");
-         break;
-      case JUPITER:
-         strcpy(w_str, "JUPITER");
-         break;
-      case SATURN:
-         strcpy(w_str, "SATURN");
-         break;
-      case URANUS:
-         strcpy(w_str, "URANUS");
-         break;
-      case NEPTUNE:
-         strcpy(w_str, "NEPTUNE");
-         break;
-      case PLUTO:
-         strcpy(w_str, "PLUTO");
-         break;
-      case LUNA:
-         strcpy(w_str, "LUNA");
-         break;
-      case PHOBOS:
-         strcpy(w_str, "PHOBOS");
-         break;
-      case DEIMOS:
-         strcpy(w_str, "DEIMOS");
-         break;
-      case IO:
-         strcpy(w_str, "IO");
-         break;
-      case EUROPA:
-         strcpy(w_str, "EUROPA");
-         break;
-      case GANYMEDE:
-         strcpy(w_str, "GANYMEDE");
-         break;
-      case CALLISTO:
-         strcpy(w_str, "CALLISTO");
-         break;
-      case AMALTHEA:
-         strcpy(w_str, "AMALTHEA");
-         break;
-      case HIMALIA:
-         strcpy(w_str, "HIMALIA");
-         break;
-      case ELARA:
-         strcpy(w_str, "ELARA");
-         break;
-      case PASIPHAE:
-         strcpy(w_str, "PASIPHAE");
-         break;
-      case SINOPE:
-         strcpy(w_str, "SINOPE");
-         break;
-      case LYSITHEA:
-         strcpy(w_str, "LYSITHEA");
-         break;
-      case CARME:
-         strcpy(w_str, "CARME");
-         break;
-      case ANANKE:
-         strcpy(w_str, "ANANKE");
-         break;
-      case LEDA:
-         strcpy(w_str, "LEDA");
-         break;
-      case THEBE:
-         strcpy(w_str, "THEBE");
-         break;
-      case ADRASTEA:
-         strcpy(w_str, "ADRASTEA");
-         break;
-      case METIS:
-         strcpy(w_str, "METIS");
-         break;
-      case MIMAS:
-         strcpy(w_str, "MIMAS");
-         break;
-      case ENCELADUS:
-         strcpy(w_str, "ENCELADUS");
-         break;
-      case TETHYS:
-         strcpy(w_str, "TETHYS");
-         break;
-      case DIONE:
-         strcpy(w_str, "DIONE");
-         break;
-      case RHEA:
-         strcpy(w_str, "RHEA");
-         break;
-      case TITAN:
-         strcpy(w_str, "TITAN");
-         break;
-      case HYPERION:
-         strcpy(w_str, "HYPERION");
-         break;
-      case IAPETUS:
-         strcpy(w_str, "IAPETUS");
-         break;
-      case PHOEBE:
-         strcpy(w_str, "PHOEBE");
-         break;
-      case JANUS:
-         strcpy(w_str, "JANUS");
-         break;
-      case EPIMETHEUS:
-         strcpy(w_str, "EPIMETHEUS");
-         break;
-      case HELENE:
-         strcpy(w_str, "HELENE");
-         break;
-      case TELESTO:
-         strcpy(w_str, "TELESTO");
-         break;
-      case CALYPSO:
-         strcpy(w_str, "CALYPSO");
-         break;
-      case ATLAS:
-         strcpy(w_str, "ATLAS");
-         break;
-      case PROMETHEUS:
-         strcpy(w_str, "PROMETHEUS");
-         break;
-      case PANDORA:
-         strcpy(w_str, "PANDORA");
-         break;
-      case PAN:
-         strcpy(w_str, "PAN");
-         break;
-      case ARIEL:
-         strcpy(w_str, "ARIEL");
-         break;
-      case UMBRIEL:
-         strcpy(w_str, "UMBRIEL");
-         break;
-      case TITANIA:
-         strcpy(w_str, "TITANIA");
-         break;
-      case OBERON:
-         strcpy(w_str, "OBERON");
-         break;
-      case MIRANDA:
-         strcpy(w_str, "MIRANDA");
-         break;
-      case TRITON:
-         strcpy(w_str, "TRITON");
-         break;
-      case NEREID:
-         strcpy(w_str, "NEREID");
-         break;
-      case CHARON:
-         strcpy(w_str, "CHARON");
-         break;
-      default:
-         if (w_id >= MINORBODY_0) {
-            sprintf(w_str, "MINORBODY_%u", w_id - MINORBODY_0);
-            break;
-         }
-         else {
-            fprintf(stderr,
-                    "Unknown WorldID %u in WorldID2String. Exiting...\n", w_id);
-            exit(EXIT_FAILURE);
-         }
-   }
-}
-/**********************************************************************/
-#ifdef _ENABLE_SPICE_
-// Do some preconfiguration to interact with spice easier
-SpiceInt WorldID2NAIFID(WorldID w_id)
-{
-   static int first                          = 0;
-   static SpiceInt naif_id_list[MINORBODY_0] = {0};
-   if (w_id >= MINORBODY_0) {
-      fprintf(stderr, "WorldID2NAIFID() is not configured to handle the "
-                      "user configured minor bodies. Exiting...\n");
-      exit(EXIT_FAILURE);
-   }
-   if (!first) {
-      first = 1;
-      for (WorldID Iw = SOL; Iw < MINORBODY_0; Iw++) {
-         char world_name[32];
-         WorldID2String(Iw, world_name);
-         SpiceBoolean found = FALSE;
-         bodn2c_c(world_name, &naif_id_list[Iw], &found);
-         if (!found) {
-            fprintf(stderr, "Could not find NAIF ID for body %s. Exiting...\n",
-                    world_name);
-            exit(EXIT_FAILURE);
-         }
-      }
-   }
-   return naif_id_list[w_id];
-}
-/**********************************************************************/
-void WorldID2IAUFrame(WorldID w_id, char iau_frame[25])
-{
-   static int first                            = 0;
-   static char iau_frame_list[MINORBODY_0][25] = {{'\0'}};
-   if (w_id >= MINORBODY_0) {
-      fprintf(stderr, "WorldID2OrientationNAIFID() is not configured to handle "
-                      "the user configured minor bodies. Exiting...\n");
-      exit(EXIT_FAILURE);
-   }
-   if (!first) {
-      // Some smaller moons do not have valid orientation data.
-      // We replace these with the orientation of their planet
-      // Substitutions:
-      // HIMALIA, ELARA, PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA ->
-      // JUPITER HYPERION -> SATURN NEREID -> NEPTUNE
-      first = 1;
-      for (WorldID Iw = SOL; Iw < MINORBODY_0; Iw++) {
-         char world_name[32];
-         WorldID id = Iw;
-         switch (Iw) {
-            case HIMALIA:
-            case ELARA:
-            case PASIPHAE:
-            case SINOPE:
-            case LYSITHEA:
-            case CARME:
-            case ANANKE:
-            case LEDA:
-               id = JUPITER;
-               break;
-            case HYPERION:
-               id = SATURN;
-               break;
-            case NEREID:
-               id = NEPTUNE;
-               break;
-            default:
-               break;
-         }
-         WorldID2String(id, world_name);
-         strcpy(iau_frame_list[Iw], "IAU_");
-         strcat(iau_frame_list[Iw], world_name);
-      }
-   }
-   strcpy(iau_frame, iau_frame_list[w_id]);
-}
-#endif
-/**********************************************************************/
-ephemType GetEphemType(const char *s)
-{
-   if (!strcmp(s, "MEAN"))
-      return EPH_MEAN;
-   else if (!strcmp(s, "DE421"))
-      return EPH_DE421;
-   else if (!strcmp(s, "DE424"))
-      return EPH_DE424;
-   else if (!strcmp(s, "DE430"))
-      return EPH_DE430;
-   else if (!strcmp(s, "DE440"))
-      return EPH_DE440;
-   else if (!strcmp(s, "GMAT421"))
-      return EPH_GMAT421;
-   else if (!strcmp(s, "GMAT424"))
-      return EPH_GMAT424;
-   else if (!strcmp(s, "SPICE"))
-      return EPH_SPICE;
-   fprintf(stderr, "Bogus input %s in GetEphemType (42init.c:%d)\n", s,
-           __LINE__);
-   exit(EXIT_FAILURE);
-}
-/**********************************************************************/
-TimeSystem GetTimeSystem(const char *s)
-{
-   if (!strncmp(s, "UTC", 3))
-      return UTC_TIME;
-   else if (!strncmp(s, "TAI", 3))
-      return TAI_TIME;
-   else if (!strncmp(s, "TCB", 3))
-      return TCB_TIME;
-   else if (!strncmp(s, "TDB", 3))
-      return TDB_TIME;
-   else if (!strncmp(s, "TT", 2))
-      return TT_TIME;
-   fprintf(stderr, "Bogus input %s in GetTimeSystem (42init.c:%d)\n", s,
-           __LINE__);
-   exit(EXIT_FAILURE);
 }
 /**********************************************************************/
 DateType ReadDateFromYaml(struct fy_node *node, const char *f_name)
@@ -1150,9 +724,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
             for (k = 0; k < 3; k++)
                O->CLN[j][k] = R->CN[j][k];
          }
-         O->wln[0] = 0.0;
-         O->wln[1] = 0.0;
-         O->wln[2] = World[O->World].w;
+         GetWorldWln(jd, &World[O->World], O->wln);
          O->PolyhedronGravityEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
@@ -2846,6 +2418,8 @@ void InitSpacecraft(struct SCType *S)
    if (typeStr != NULL)
       strcpy(typeStr, ".yaml");
 
+   double rk_rel_tol_thresh = 0, rk_tol = 0;
+
    struct fy_document *fyd =
        fy_document_build_and_check(NULL, InOutPath, fileName);
 
@@ -2997,6 +2571,12 @@ void InitSpacecraft(struct SCType *S)
    }
    else
       S->RKIntegrator.type = GetRKType(dummy);
+
+   if (!fy_node_scanf(node, "/Tolerance %lf", &rk_tol))
+      rk_tol = 0;
+   if (!fy_node_scanf(node, "/Relative Tolerance Threshold %lf",
+                      &rk_rel_tol_thresh))
+      rk_rel_tol_thresh = 0;
 
    S->ConstraintsRequested =
        getYAMLBool(fy_node_by_path_def(node, "/Compute Constraints"));
@@ -4027,7 +3607,7 @@ void InitSpacecraft(struct SCType *S)
    MTxV(World[O->World].CNH, S->VelN, vh);
    for (j = 0; j < 3; j++) {
       S->PosH[j] = World[O->World].PosH[j] + rh[j];
-      S->PosH[j] = World[O->World].VelH[j] + vh[j];
+      S->VelH[j] = World[O->World].VelH[j] + vh[j];
    }
 
    if (O->Regime == ORB_ZERO) {
@@ -4039,7 +3619,8 @@ void InitSpacecraft(struct SCType *S)
       }
    }
    else if (O->Regime == ORB_FLIGHT) {
-      FindENU(S->PosN, World[O->World].w, S->CLN, S->wln);
+      FindENU(S->PosN, GetWorldW(JD_TDB_MJD, &World[O->World]) / SEC_PER_DAY,
+              S->CLN, S->wln);
    }
    else {
       FindCLN(S->PosN, S->VelN, S->CLN, S->wln);
@@ -4120,14 +3701,15 @@ void InitSpacecraft(struct SCType *S)
    S->rkparams.worlds   = World;
    S->rkparams.rgn      = Rgn;
    S->rkparams.lagsys   = LagSys;
+   S->rkparams.ephem    = EphemOption;
    S->rkparams.orb      = &Orb[S->RefOrb];
    S->rkparams.frm      = &Frm[S->RefOrb];
    S->rkparams.sc       = S;
    S->rkparams.base.dim = _sc_state_dim(S, &Orb[S->RefOrb]);
    S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
-
+   // TODO: merge into one integrator??? ESPECIALLY with spice
    S->RKIntegrator =
-       GetRungeKutta(S->RKIntegrator.type, 0, 0, S->rkparams.base.dim, 1.0e-6,
+       GetRungeKutta(S->RKIntegrator.type, 0, 0, S->rkparams.base.dim, 1.0e-11,
                      DTSIM, (RKParams *)&S->rkparams, SCOde, NULL);
 #endif
 }
@@ -4225,30 +3807,16 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
       }
    }
 }
-/******************************************************************************/
-double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
-                           const char *grp_1040_name)
-{
-   // Get data from group 1040/1041 in JPL DE header
-   for (int i = 0; i < hdr_data->n_data; i++) {
-      if (!strncmp(hdr_data->group_1040[i], grp_1040_name, 9))
-         return hdr_data->group_1041[i];
-   }
-   fprintf(stderr, "Could not find `%s` in group 1040 of file %s. Exiting...\n",
-           grp_1040_name, hdr_data->hdr_name);
-   exit(EXIT_FAILURE);
-}
 /*********************************************************************/
 void LoadSun(const ephemType ephem, const JDType jd,
              const JPLHeaderType *const jpl_hdr, struct WorldType *const worlds)
 {
-   const double Zaxis[3] = {0.0, 0.0, 1.0};
    /* Rumor is, Sun's magfield is highly variable, poorly modeled */
    /* by simple dipole.                                           */
-   double DipoleAxis[3]    = {0.0, 0.0, 1.0};
-   double SunColor[3]      = {1.0, 1.0, 0.9};
-   unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x66, 0x42,
-                              0x99, 0x99, 0x42, 0x66, 0x18, 0x00, 0x00};
+   const double DipoleAxis[3]    = {0.0, 0.0, 1.0};
+   const float SunColor[3]       = {1.0, 1.0, 0.9};
+   const unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x66, 0x42,
+                                    0x99, 0x99, 0x42, 0x66, 0x18, 0x00, 0x00};
    long i, j;
    struct WorldType *W;
 
@@ -4257,7 +3825,7 @@ void LoadSun(const ephemType ephem, const JDType jd,
    /* Relationships */
    W->Exists = TRUE;
    W->Type   = SUN;
-   W->Parent = 0;
+   W->Parent = -1; // if was zero, would just be self-referential
 
    W->Nsat = 9;
    W->Sat  = (WorldID *)calloc(W->Nsat, sizeof(long));
@@ -4286,20 +3854,31 @@ void LoadSun(const ephemType ephem, const JDType jd,
          // handle the DE lookup cases here
          GM    = getDEHeader1041Data(jpl_hdr, "GMS");
          W->mu = GM * AUd2ms; // 1.3271244004193938E20;
-         if (ephem == EPH_DE440) {
+         if (ephem == EPH_DE440)
             W->rad = 6.95700E8;
-         }
-         else {
+         else
             W->rad = 6.96000E8;
-         }
          break;
    }
 
    /* Default Pyhsical Parameters */
-   W->w              = 2.69E-6;
-   W->PriMerAngJ2000 = 84.176 * D2R;
    W->RadOfInfluence = 2.0E13; /* Beyond Pluto's Orbit */
    W->DipoleMoment   = 0.0;
+   W->J2             = 0.0;
+
+   W->OrientWorld = TRUE;
+
+   W->ang_data[0]          = (struct AngDataType){0};
+   W->ang_data[0].ang_char = 'P';
+   W->ang_data[0].ang[0]   = 84.176;
+   W->ang_data[0].ang[1]   = 2.69E-6 * SEC_PER_DAY * R2D;
+
+   W->ang_data[1]          = (struct AngDataType){0};
+   W->ang_data[1].ang_char = 'R';
+
+   W->ang_data[2]          = (struct AngDataType){0};
+   W->ang_data[2].ang_char = 'D';
+
    for (j = 0; j < 3; j++) {
       W->DipoleAxis[j]   = DipoleAxis[j];
       W->DipoleOffset[j] = 0.0;
@@ -4307,24 +3886,20 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->RingInner = 0.0;
    W->RingOuter = 0.0;
 
-#ifdef _ENABLE_SPICE_
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-                                   // hardcoded values with SPICE values
-      double tmp_holder     = 0;
-      double tmp_holder3[3] = {0};
-      int dim               = 0;
+   if (ephem == EPH_SPICE) { // If we are using SPICE, replace the
+                             // hardcoded values with SPICE values
+      int dim = 1;
+      if (SpiceCheckAndGetDbl(SOL, "GM", 0, &dim, &W->mu))
 
-      bodvrd_c("Sun", "GM", 1, &dim, &tmp_holder);
-      W->mu = tmp_holder * 1E9;
-      bodvrd_c("Sun", "RADII", 3, &dim, tmp_holder3);
-      W->rad = tmp_holder3[0] * 1e3;
+         W->mu *= 1E9;
+      dim = 1;
+      if (SpiceCheckAndGetDbl(SOL, "RADII", 0, &dim, &W->rad))
+         W->rad *= 1e3;
 
-      bodvrd_c("SUN", "PM", 3, &dim, tmp_holder3);
-      W->PriMerAngJ2000 = tmp_holder3[0] * D2R;
-      W->w = tmp_holder3[1] * D2R /
-             spd_c(); // converts the prime meridian rate in deg/day to rad/s
+      SpiceGetAngData(SOL, "PM", &W->ang_data[0]);
+      SpiceGetAngData(SOL, "RA", &W->ang_data[1]);
+      SpiceGetAngData(SOL, "DEC", &W->ang_data[2]);
    }
-#endif
 
    /* Ephemeris */
    W->eph.World      = 0;
@@ -4339,7 +3914,6 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->eph.alpha      = 0.0;
    W->eph.SLR        = 0.0;
    W->eph.rmin       = 0.0;
-   W->eph.Ncheb      = 0;
    W->eph.SplineFile = NULL;
 
    /* Graphical Properties */
@@ -4361,18 +3935,14 @@ void LoadSun(const ephemType ephem, const JDType jd,
    for (i = 0; i < 3; i++) {
       W->eph.PosN[i] = 0.0;
       W->eph.VelN[i] = 0.0;
-      for (j = 0; j < 3; j++)
-         W->CNH[i][j] = 0.0;
-      W->CNH[i][i] = 1.0;
-      W->qnh[i]    = 0.0;
    }
-   W->qnh[3] = 1.0;
-   QxQT(W->qnh, qjh, W->qnj);
-
-   const double j2000sec_tt = JDToDynTime(jd);
-   W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * j2000sec_tt, TwoPi);
-   SimpRot(Zaxis, W->PriMerAng, W->CWN);
+   W->PriMerAng = GetWorldCWN(JD_TDB_MJD, W->ang_data, W->CWN);
    C2Q(W->CWN, W->qwn);
+
+   GetWorldCNJ(JD_TDB_MJD, W->ang_data, W->CNJ);
+   C2Q(W->CNJ, W->qnj);
+   QxQ(W->qnj, worlds[EARTH].qnh, W->qnh);
+   Q2C(W->qnh, W->CNH);
 }
 /*********************************************************************/
 void LoadPlanets(const ephemType ephem, const JDType jd,
@@ -4384,82 +3954,85 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    double GMST;
    double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
 
-   char PlanetName[10][20]  = {"Sun",     "Mercury", "Venus",  "Earth",
-                               "Mars",    "Jupiter", "Saturn", "Uranus",
-                               "Neptune", "Pluto"};
-   char MapFileName[10][20] = {
-       "NONE",        "Rockball",   "Venus.ppm",  "Earth.ppm",   "Mars.ppm",
-       "Jupiter.ppm", "Saturn.ppm", "Uranus.ppm", "Neptune.ppm", "Iceball"};
-   const char GravFileName[10][20] = {"", "", "", "EGM08.txt", "GMM2B.txt",
-                                      "", "", "", "",          ""};
-   double Mu_mean[10] = {1.32715E20, 2.18E13,  3.2485E14, 3.986004E14, 4.293E13,
-                         1.2761E17,  3.792E16, 5.788E15,  6.8E15,      3.2E14};
-   double Rad_mean[10] = {6.98E8, 2.42E6, 6.1E6,  6.378145E6, 3.41E6,
-                          7.14E7, 6.04E7, 2.35E7, 2.23E7,     7.0E6};
-   double Rad_421[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.37814E6, 3.39619E6,
-                          7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,  1.195E6};
-   double Rad_424[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.37814E6, 3.39619E6,
-                          7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,  1.195E6};
-   double Rad_430[10]  = {6.96000E8, 2.4397E6, 6.0518E6, 6.3781366E6, 3.39619E6,
-                          7.1492E7,  6.0268E7, 2.5559E7, 2.4764E7,    1.195E6};
-   double Rad_440[10] = {6.95700E8, 2.44053E6, 6.0518E6, 6.3781366E6, 3.39619E6,
-                         7.1492E7,  6.0268E7,  2.5559E7, 2.4764E7,    1.1883E6};
-   double Mu_GMAT[10] = {1.3271244001799E20, 2.2032080486418E13,
-                         3.2485859882646E14, 3.986004415E14,
-                         4.2828314258067E13, 1.2671276785780E17,
-                         3.7940626061137E16, 5.7945490070719E15,
-                         6.8365340638793E15, 9.8160088770700E11};
-   double Rad_GMAT[10] = {6.95990E8, 2.4397E6, 6.0519E6, 6.3781363E6, 3.397E6,
-                          7.1492E7,  6.0268E7, 2.5559E7, 2.5269E7,    1.162E6};
+   char PlanetName[N_PLANETS][20]  = {"Mercury", "Venus",   "Earth",
+                                      "Mars",    "Jupiter", "Saturn",
+                                      "Uranus",  "Neptune", "Pluto"};
+   char MapFileName[N_PLANETS][25] = {"Rockball",   "Venus.ppm",   "Earth.ppm",
+                                      "Mars.ppm",   "Jupiter.ppm", "Saturn.ppm",
+                                      "Uranus.ppm", "Neptune.ppm", "Iceball"};
+   const char GravFileName[N_PLANETS][20] = {
+       "", "", "EGM08.txt", "GMM2B.txt", "", "", "", "", ""};
+   double Mu_mean[N_PLANETS]  = {2.18E13,  3.2485E14, 3.986004E14,
+                                 4.293E13, 1.2761E17, 3.792E16,
+                                 5.788E15, 6.8E15,    3.2E14};
+   double Rad_mean[N_PLANETS] = {2.42E6, 6.1E6,  6.378145E6, 3.41E6, 7.14E7,
+                                 6.04E7, 2.35E7, 2.23E7,     7.0E6};
+   double Rad_421[N_PLANETS]  = {2.4397E6,  6.0518E6, 6.37814E6,
+                                 3.39619E6, 7.1492E7, 6.0268E7,
+                                 2.5559E7,  2.4764E7, 1.195E6};
+   double Rad_424[N_PLANETS]  = {2.4397E6,  6.0518E6, 6.37814E6,
+                                 3.39619E6, 7.1492E7, 6.0268E7,
+                                 2.5559E7,  2.4764E7, 1.195E6};
+   double Rad_430[N_PLANETS]  = {2.4397E6,  6.0518E6, 6.3781366E6,
+                                 3.39619E6, 7.1492E7, 6.0268E7,
+                                 2.5559E7,  2.4764E7, 1.195E6};
+   double Rad_440[N_PLANETS]  = {2.44053E6, 6.0518E6, 6.3781366E6,
+                                 3.39619E6, 7.1492E7, 6.0268E7,
+                                 2.5559E7,  2.4764E7, 1.1883E6};
+   double Mu_GMAT[N_PLANETS]  = {
+       2.2032080486418E13, 3.2485859882646E14, 3.986004415E14,
+       4.2828314258067E13, 1.2671276785780E17, 3.7940626061137E16,
+       5.7945490070719E15, 6.8365340638793E15, 9.8160088770700E11};
+   double Rad_GMAT[N_PLANETS] = {2.4397E6, 6.0519E6, 6.3781363E6,
+                                 3.397E6,  7.1492E7, 6.0268E7,
+                                 2.5559E7, 2.5269E7, 1.162E6};
 
-   double Mu[10], Rad[10];
+   double Mu[N_PLANETS], Rad[N_PLANETS];
    /* Physical Properties */
    switch (ephem) {
       case EPH_MEAN:
-         for (int i = 0; i < 10; ++i)
-            Mu[i] = Mu_mean[i];
-         for (int i = 0; i < 10; ++i)
+         for (int i = 0; i < N_PLANETS; ++i) {
+            Mu[i]  = Mu_mean[i];
             Rad[i] = Rad_mean[i];
+         }
          break;
       case EPH_GMAT421:
       case EPH_GMAT424:
-         for (int i = 0; i < 10; ++i)
-            Mu[i] = Mu_GMAT[i];
-         for (int i = 0; i < 10; ++i)
+         for (int i = 0; i < N_PLANETS; ++i) {
+            Mu[i]  = Mu_GMAT[i];
             Rad[i] = Rad_GMAT[i];
+         }
          break;
       case EPH_SPICE:
          break;
       default: {
          // handle the DE lookup cases here
-         for (WorldID i = SOL + 1; i <= PLUTO; i++) {
+         int i = 0;
+         for (WorldID Iw = MERCURY; Iw <= PLUTO; Iw++, i++) {
             char gm_str[6] = {'\0'};
-            if (i == SOL)
-               strcpy(gm_str, "GMS");
-            if (i == EARTH)
+            if (Iw == EARTH)
                strcpy(gm_str, "GMB");
             else
-               sprintf(gm_str, "GM%u", i);
+               sprintf(gm_str, "GM%u", Iw);
 
             Mu[i] = getDEHeader1041Data(jpl_hdr, gm_str) * AUd2ms;
          }
-         Mu[EARTH] = Mu[EARTH] / (1.0 + 1.0 / EMRAT);
-
+         Mu[EARTH] /= 1.0 + 1.0 / EMRAT;
          switch (ephem) {
             case EPH_DE421:
-               for (int i = 0; i < 10; ++i)
+               for (i = 0; i < N_PLANETS; i++)
                   Rad[i] = Rad_421[i];
                break;
             case EPH_DE424:
-               for (int i = 0; i < 10; ++i)
+               for (i = 0; i < N_PLANETS; i++)
                   Rad[i] = Rad_424[i];
                break;
             case EPH_DE430:
-               for (int i = 0; i < 10; ++i)
+               for (i = 0; i < N_PLANETS; i++)
                   Rad[i] = Rad_430[i];
                break;
             case EPH_DE440:
-               for (int i = 0; i < 10; ++i)
+               for (i = 0; i < N_PLANETS; i++)
                   Rad[i] = Rad_440[i];
                break;
             default:
@@ -4469,104 +4042,45 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    }
 
    /* Default Pyhsical Parameters */
-   double J2[10]     = {0.0, 0.0, 0.0, 1.08263E-3, 1.96045E-3,
-                        0.0, 0.0, 0.0, 0.0,        0.0};
-   double AngVel[10] = {2.69E-6,   1.23E-6,   2.94E-7,  7.292115E-5, 7.0882E-5,
-                        1.7659E-4, 1.6728E-4, 1.631E-4, 1.105E-4,    0.0};
+   double J2[N_PLANETS]     = {0.0, 0.0, 1.08263E-3, 1.96045E-3, 0.0,
+                               0.0, 0.0, 0.0,        0.0};
+   double AngVel[N_PLANETS] = {1.23E-6,   2.94E-7,   7.292115E-5,
+                               7.0882E-5, 1.7659E-4, 1.6728E-4,
+                               1.631E-4,  1.105E-4,  0.0};
 
-   double PoleRA[10]         = {0.0,     281.008, 272.758, 0.0,     317.683,
-                                268.057, 40.587,  257.313, 299.333, 133.046};
-   double PoleDec[10]        = {90.0,   61.45,  67.16,   0.0,   52.8865,
-                                64.496, 83.537, -15.175, 42.95, -6.145};
-   double PriMerAngJ2000[10] = {0.0,    329.71, 160.26, 190.16, 176.868,
-                                284.95, 38.90,  203.81, 253.18, 236.77};
+   double PoleRA[N_PLANETS]  = {281.008, 272.758, 0.0,     317.683, 268.057,
+                                40.587,  257.313, 299.333, 133.046};
+   double PoleDec[N_PLANETS] = {61.45,  67.16,   0.0,   52.8865, 64.496,
+                                83.537, -15.175, 42.95, -6.145};
+   double PriMerAngJ2000[N_PLANETS] = {329.71, 160.26, 190.16, 176.868, 284.95,
+                                       38.90,  203.81, 253.18, 236.77};
 
-   double grav_r_ref[10];
-   for (int i = 0; i < 10; i++) {
-      switch (i) {
-         case EARTH:
-            grav_r_ref[i] = 6378136.3;
-            break;
-         default:
-            grav_r_ref[i] = Rad[i];
-            break;
-      }
-   }
-
-#ifdef _ENABLE_SPICE_
-   if (EphemOption == EPH_SPICE) { // If we are using SPICE, replace the
-      // hardcoded values with SPICE values
-      const char OrientationName[10][20] = {
-          "SUN",     "MERCURY", "VENUS",  "EARTH",   "MARS",
-          "JUPITER", "SATURN",  "URANUS", "NEPTUNE", "PLUTO"};
-      double tmp_holder     = 0;
-      double tmp_holder3[3] = {0};
-      int dim               = 0;
-      for (int i = SOL; i <= PLUTO; i++) {
-         bodvrd_c(PlanetName[i], "GM", 1, &dim, &tmp_holder);
-         Mu[i] = tmp_holder * 1E9;
-
-         if ((!strcmp(PlanetName[i], "Pluto")) ||
-             (!strcmp(PlanetName[i], "Sun"))) { // Pluto/Sun J2 is not defined
-            J2[i] = 0.0;
-         }
-         else {
-            bodvrd_c(PlanetName[i], "J2", 1, &dim, &tmp_holder);
-            J2[i] = tmp_holder;
-         }
-
-         bodvrd_c(PlanetName[i], "RADII", 3, &dim, tmp_holder3);
-         Rad[i] = tmp_holder3[0] * 1e3;
-
-         bodvrd_c(OrientationName[i], "PM", 3, &dim, tmp_holder3);
-         PriMerAngJ2000[i] = tmp_holder3[0];
-         AngVel[i] =
-             tmp_holder3[1] * D2R /
-             spd_c(); // converts the prime meridian rate in deg/day to rad/s
-
-         bodvrd_c(OrientationName[i], "POLE_RA", 3, &dim, tmp_holder3);
-         PoleRA[i] = tmp_holder3[0];
-
-         bodvrd_c(OrientationName[i], "POLE_DEC", 3, &dim, tmp_holder3);
-         PoleDec[i] = tmp_holder3[0];
-      }
-   }
-#endif
-
-   double CNJ[3][3];
    /* Magnetic Field Dipole Strength, Wb-m */
-   const double DipoleMoment[10] = {0.0, 0.0, 0.0, 7.943E15, 0.0,
-                                    0.0, 0.0, 0.0, 0.0,      0.0};
+   const double DipoleMoment[N_PLANETS] = {0.0, 0.0, 7.943E15, 0.0, 0.0,
+                                           0.0, 0.0, 0.0,      0.0};
    /* Magnetic Field Dipole Axis Unit Vector */
-   const double DipoleAxis[10][3] = {
-       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
-       {0.0, 0.0, 1.0}, {-6.53286E-2, 0.186549, -0.980271},
-       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
-       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
-       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0}};
+   const double DipoleAxis[N_PLANETS][3] = {
+       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0}, {-6.53286E-2, 0.186549, -0.980271},
+       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0},
+       {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0}, {0.0, 0.0, 1.0}};
    /* Magnetic Field Dipole Offset from Center, m */
-   const double DipoleOffset[10][3] = {
-       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
-       {0.0, 0.0, 0.0}, {-3.74461E5, 2.44108E5, -1.58291E5},
-       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
-       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
-       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
+   const double DipoleOffset[N_PLANETS][3] = {
+       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {-3.74461E5, 2.44108E5, -1.58291E5},
+       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0},
+       {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
 
-   const float Color[11][3] = {{1.0f, 1.0f, 0.9f},                 /* Sun */
-                               {0.400318f, 0.347338f, 0.253973f},  /* Mercury */
-                               {0.716824f, 0.676952f, 0.623907f},  /* Venus */
-                               {0.212f, 0.293502f, 0.522072f},     /* Earth */
-                               {0.687493f, 0.454481f, 0.365368f},  /* Mars */
-                               {0.793131f, 0.627618f, 0.477430f},  /* Jupiter */
-                               {0.705187f, 0.677713f, 0.620916f},  /* Saturn */
-                               {0.486074f, 0.584573f, 0.769742f},  /* Uranus */
-                               {0.187558f, 0.243884f, 0.413025f},  /* Neptune */
-                               {0.268063f, 0.268183f, 0.268204f},  /* Pluto */
-                               {0.440417f, 0.441343f, 0.441084f}}; /* Luna */
+   const float Color[N_PLANETS][3] = {
+       {0.400318f, 0.347338f, 0.253973f},  /* Mercury */
+       {0.716824f, 0.676952f, 0.623907f},  /* Venus */
+       {0.212f, 0.293502f, 0.522072f},     /* Earth */
+       {0.687493f, 0.454481f, 0.365368f},  /* Mars */
+       {0.793131f, 0.627618f, 0.477430f},  /* Jupiter */
+       {0.705187f, 0.677713f, 0.620916f},  /* Saturn */
+       {0.486074f, 0.584573f, 0.769742f},  /* Uranus */
+       {0.187558f, 0.243884f, 0.413025f},  /* Neptune */
+       {0.268063f, 0.268183f, 0.268204f}}; /* Pluto */
 
-   const unsigned char Glyph[11][14] = {
-       {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x66, 0x42, 0x99, 0x99, 0x42, 0x66, 0x18,
-        0x00, 0x00}, /* Sun */
+   const unsigned char Glyph[N_PLANETS][14] = {
        {0xc0, 0xc0, 0x00, 0x10, 0x7c, 0x10, 0x38, 0x44, 0x82, 0x82, 0x44, 0x38,
         0x44, 0x82}, /* Mercury */
        {0xc0, 0xc0, 0x00, 0x10, 0x10, 0x7c, 0x10, 0x38, 0x44, 0x82, 0x82, 0x44,
@@ -4584,38 +4098,103 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
        {0xc0, 0xc0, 0x00, 0x10, 0xfe, 0x10, 0x38, 0x54, 0x92, 0x92, 0xd6, 0x92,
         0x00, 0x00}, /* Neptune */
        {0xc0, 0xc0, 0x00, 0x00, 0xf8, 0x80, 0x80, 0xf0, 0x88, 0x88, 0xf0, 0x00,
-        0x00, 0x00}, /* Pluto */
-       {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60, 0xe0, 0xe0, 0x60, 0x70, 0x18,
-        0x00, 0x00}}; /* Luna */
-   const long HasAtmo[11] = {0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0};
-   long i, j;
+        0x00, 0x00}}; /* Pluto */
+   const long HasAtmo[N_PLANETS] = {0, 0, 1, 1, 0, 0, 0, 0, 0};
 
-   for (i = MERCURY; i <= PLUTO; i++) {
-      struct WorldType *W = &worlds[i];
+   int i      = 0;
+   WorldID Iw = 0;
+   for (Iw = MERCURY, i = 0; Iw <= PLUTO; Iw++, i++) {
+      struct WorldType *W = &worlds[Iw];
       strcpy(W->Name, PlanetName[i]);
       strcpy(W->MapFileName, MapFileName[i]);
       strcpy(W->ColTexFileName, "NONE");
       strcpy(W->BumpTexFileName, "NONE");
-      W->mu             = Mu[i];
       W->J2             = J2[i];
       W->rad            = Rad[i];
-      W->w              = AngVel[i];
-      W->PriMerAngJ2000 = PriMerAngJ2000[i] * D2R;
       W->Parent         = SOL;
       W->eph.World      = SOL;
       W->eph.mu         = World[SOL].mu;
-      W->eph.Ncheb      = 0;
       W->eph.SplineFile = NULL;
       W->DipoleMoment   = DipoleMoment[i];
-      for (j = 0; j < 3; j++) {
+      for (int j = 0; j < 3; j++) {
          W->DipoleAxis[j]   = DipoleAxis[i][j];
          W->DipoleOffset[j] = DipoleOffset[i][j];
          W->Color[j]        = Color[i][j];
       }
       W->Color[3] = 1.0;
-      for (j = 0; j < 14; j++)
+      for (int j = 0; j < 14; j++)
          W->Glyph[j] = Glyph[i][j];
       W->Atmo.Exists = HasAtmo[i];
+
+      W->OrientWorld = TRUE;
+
+      W->ang_data[0]          = (struct AngDataType){0};
+      W->ang_data[0].ang_char = 'P';
+      W->ang_data[0].ang[0]   = PriMerAngJ2000[i];
+      W->ang_data[0].ang[1]   = AngVel[i] * SEC_PER_DAY * R2D;
+
+      W->ang_data[1]          = (struct AngDataType){0};
+      W->ang_data[1].ang_char = 'R';
+      W->ang_data[1].ang[0]   = PoleRA[i];
+
+      W->ang_data[2]          = (struct AngDataType){0};
+      W->ang_data[2].ang_char = 'D';
+      W->ang_data[2].ang[0]   = PoleDec[i];
+
+      if (ephem == EPH_SPICE) {
+         int found[3] = {0};
+         // If we are using SPICE, replace the hardcoded values with SPICE
+         // values
+         int dim = 1;
+         if (SpiceCheckAndGetDbl(Iw, "GM", 0, &dim, &Mu[i]))
+            Mu[i] *= 1E9;
+
+         dim = 1;
+         SpiceCheckAndGetDbl(Iw, "J2", 0, &dim, &W->J2);
+         dim = 1;
+         if (SpiceCheckAndGetDbl(Iw, "RADII", 0, &dim, &W->rad)) {
+            W->rad *= 1e3;
+            Rad[i]  = W->rad;
+         }
+
+         found[0] = SpiceGetAngData(Iw, "PM", &W->ang_data[0]);
+         found[1] = SpiceGetAngData(Iw, "RA", &W->ang_data[1]);
+         found[2] = SpiceGetAngData(Iw, "DEC", &W->ang_data[2]);
+
+         // If we found nothing from spice, go to default
+         // If we found *something*, zero out everything else
+         if (any_int(3, found)) {
+            for (int j = 0; j < 3; j++)
+               if (!found[j]) {
+                  W->ang_data[j] = (struct AngDataType){0};
+                  switch (j) {
+                     case 0:
+                        W->ang_data[j].ang_char = 'P';
+                        break;
+                     case 1:
+                        W->ang_data[j].ang_char = 'R';
+                        break;
+                     case 2:
+                        W->ang_data[j].ang_char = 'D';
+                        break;
+                  }
+               }
+         }
+      }
+
+      double grav_r_ref = 0.0;
+      switch (Iw) {
+         case EARTH:
+            grav_r_ref = 6378136.3;
+            break;
+         default:
+            grav_r_ref = Rad[i];
+            break;
+      }
+
+      // reassign if not overriden from Inp_Sim
+      if (W->mu == 0)
+         W->mu = Mu[i];
 
       if (GravPertActive) {
          /* Gravitation Model */
@@ -4637,7 +4216,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          LoadGravModel(ModelPath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
-               gravModel->r_ref = grav_r_ref[i];
+               gravModel->r_ref = grav_r_ref;
             W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
          }
       }
@@ -4689,14 +4268,38 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       /* Would it be worthwhile to transform to J2000? */
    }
 
-   for (i = MERCURY; i <= PLUTO; i++) {
-      struct WorldType *W = &worlds[i];
-      if (i != EARTH) {
-         A2C(312, (PoleRA[i] + 90.0) * D2R, (90.0 - PoleDec[i]) * D2R, 0.0,
-             CNJ);
-         MxM(CNJ, worlds[EARTH].CNH, W->CNH);
-         C2Q(W->CNH, W->qnh);
-         QxQT(W->qnh, qjh, W->qnj);
+   struct WorldType *earth = &worlds[EARTH];
+   if (ephem == EPH_SPICE)
+      SpiceSetOrientation(jd, EARTH, earth, earth->CNH);
+
+   for (Iw = MERCURY, i = 0; Iw <= PLUTO; Iw++, i++) {
+      struct WorldType *W = &worlds[Iw];
+      if (W->Exists) {
+         if (ephem != EPH_SPICE) {
+            if (Iw == EARTH) {
+               /* .. Earth rotation is a special case */
+               GMST         = JD2GMST(jd_tt_j2000);
+               W->PriMerAng = TwoPi * GMST;
+               HiFiEarthPrecNute(jd_tt_j2000, C_TEME_TETE, C_TETE_J2000);
+               SimpRot(Zaxis, W->PriMerAng, C_W_TETE);
+               MxM(C_W_TETE, C_TETE_J2000, W->CWN);
+            }
+            else {
+               W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
+               GetWorldCNJ(jd, W->ang_data, W->CNJ);
+               MxM(W->CNJ, worlds[EARTH].CNH, W->CNH);
+               C2Q(W->CNJ, W->qnj);
+            }
+            C2Q(W->CWN, W->qwn);
+            C2Q(W->CNH, W->qnh);
+         }
+         else {
+            SpiceSetOrientation(jd, Iw, W, earth->CNH);
+            if (Iw == EARTH) {
+               MxM(CGJ, W->CNH, CGH);
+               C2Q(W->CNH, qjh);
+            }
+         }
       }
    }
 
@@ -4705,14 +4308,14 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    worlds[SATURN].RingInner = 67258.0E3;
    worlds[SATURN].RingOuter = 181328.0E3;
 
-   for (i = MERCURY; i <= PLUTO; i++) {
-      struct WorldType *W = &worlds[i];
+   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
+      struct WorldType *W = &worlds[Iw];
       W->RadOfInfluence   = RadiusOfInfluence(W->eph.mu, W->mu, W->eph.SMA);
       W->Type             = PLANET;
    }
 
    TimeSystem ephem_sys = TT_TIME;
-   switch (EphemOption) {
+   switch (ephem) {
       case EPH_MEAN:
       default:
          ephem_sys = TT_TIME;
@@ -4728,28 +4331,20 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          break;
    }
 
-   for (i = MERCURY; i <= PLUTO; i++) {
-      struct WorldType *W = &worlds[i];
+   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
+      struct WorldType *W = &worlds[Iw];
+      Eph                 = &W->eph;
       if (W->Exists) {
-         Eph = &W->eph;
-
          Eph->EphemSystem = ephem_sys;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                 j2000sec_tt - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-         for (j = 0; j < 3; j++)
-            W->PosH[j] = Eph->PosN[j];
-         W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * j2000sec_tt, TwoPi);
-         SimpRot(Zaxis, W->PriMerAng, W->CWN);
-         C2Q(W->CWN, W->qwn);
+         CopyVG(W->PosH, Eph->PosN, 3);
+      }
+      else {
+         Eph            = FALSE;
+         W->Atmo.Exists = FALSE;
       }
    }
-   /* .. Earth rotation is a special case */
-   GMST                    = JD2GMST(jd_tt_j2000);
-   worlds[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(jd_tt_j2000, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(Zaxis, worlds[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, worlds[EARTH].CWN);
-   C2Q(worlds[EARTH].CWN, worlds[EARTH].qwn);
 
    strcpy(worlds[EARTH].BumpTexFileName, "EarthBump.ppm");
 }
@@ -4757,11 +4352,6 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
 void NMoon(const WorldID planet, long *const n_moon, WorldID *const first_moon)
 {
    switch (planet) {
-      case MERCURY:
-      case VENUS:
-         *n_moon     = 0;
-         *first_moon = 0;
-         break;
       case EARTH:
          *n_moon     = 1;
          *first_moon = LUNA;
@@ -4790,25 +4380,47 @@ void NMoon(const WorldID planet, long *const n_moon, WorldID *const first_moon)
          *n_moon     = 1;
          *first_moon = CHARON;
          break;
+      case MERCURY:
+      case VENUS:
       default: {
-         char w_name[32] = {'\0'};
-         WorldID2String(planet, w_name);
-         fprintf(stderr, "Planet %s with id %u has no moons. Exiting...\n",
-                 w_name, planet);
-         exit(EXIT_FAILURE);
+         *n_moon     = 0;
+         *first_moon = 0;
       }
    }
 }
 /*********************************************************************/
+#define ASSIGN_MOON_DATA                                                       \
+   do {                                                                        \
+      strcat(name, Names[Im]);                                                 \
+      strcat(map_file_name, MapFileNames[Im]);                                 \
+      strcat(grav_file_name, GravFileNames[Im]);                               \
+      strcat(geom_file_name, GeomFileNames[Im]);                               \
+                                                                               \
+      *j2        = j2s[Im];                                                    \
+      *mu        = mus[Im];                                                    \
+      *rad       = rads[Im];                                                   \
+      *w         = ws[Im];                                                     \
+      *pole_ra   = PoleRAs[Im];                                                \
+      *pole_dec  = PoleDecs[Im];                                               \
+      *sma       = SMAs[Im];                                                   \
+      *ecc       = eccs[Im];                                                   \
+      *inc       = incs[Im];                                                   \
+      *raan      = RAANs[Im];                                                  \
+      *omg       = omgs[Im];                                                   \
+      *mean_anom = MeanAnoms[Im];                                              \
+      *epoch_date =                                                            \
+          DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],  \
+                       EpochHours[Im], 0, RATIONAL_ZERO);                      \
+   } while (0);
+
 void MoonDefaultData(const WorldID planet, const long Im, char name[40],
                      char map_file_name[30], char grav_file_name[20],
-                     char geom_file_name[20], char ori_name[40],
-                     double *const j2, double *const mu, double *const rad,
-                     double *const w, double *const pole_ra,
-                     double *const pole_dec, double *const sma,
-                     double *const ecc, double *const inc, double *const raan,
-                     double *const omg, double *const mean_anom,
-                     DateType *const epoch_date)
+                     char geom_file_name[20], double *const j2,
+                     double *const mu, double *const rad, double *const w,
+                     double *const pole_ra, double *const pole_dec,
+                     double *const sma, double *const ecc, double *const inc,
+                     double *const raan, double *const omg,
+                     double *const mean_anom, DateType *const epoch_date)
 {
    char p_name[32] = {'\0'};
    WorldID2String(planet, p_name);
@@ -4824,92 +4436,52 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
    }
    switch (planet) {
       case EARTH: {
-         const char Names[][40]            = {"Luna"};
-         const char MapFileNames[][40]     = {"Rockball"};
-         const char GravFileNames[][20]    = {""};
-         const char GeomFileNames[][20]    = {"Phobos.obj"};
-         const char OrientationNames[][40] = {"PHOBOS"};
-         const double mus[]                = {7.158E5};
-         const double rads[]               = {11.1E3};
-         const double ws[]                 = {2.66E-6};
-         const double j2s[]                = {2.027E-4};
-         const double PoleRAs[]            = {0.0};
-         const double PoleDecs[]           = {0.0};
-         const double SMAs[]               = {384400000.0};
-         const double eccs[]               = {0.0549};
-         const double incs[]               = {0.0};
-         const double RAANs[]              = {0.0};
-         const double omgs[]               = {0.0};
-         const double MeanAnoms[]          = {0.0};
-         const long EpochYears[]           = {2000};
-         const long EpochMons[]            = {1};
-         const long EpochDays[]            = {1};
-         const long EpochHours[]           = {12};
+         const char Names[][40]         = {"Luna"};
+         const char MapFileNames[][40]  = {"Luna.ppm"};
+         const char GravFileNames[][20] = {"GLGM2.txt"};
+         const char GeomFileNames[][20] = {""};
+         const double mus[]             = {4.902801E12};
+         const double rads[]            = {1.738E6};
+         const double ws[]              = {2.66E-6};
+         const double j2s[]             = {2.027E-4};
+         const double PoleRAs[]         = {0.0};
+         const double PoleDecs[]        = {0.0};
+         const double SMAs[]            = {384400000.0};
+         const double eccs[]            = {0.0549};
+         const double incs[]            = {0.0};
+         const double RAANs[]           = {0.0};
+         const double omgs[]            = {0.0};
+         const double MeanAnoms[]       = {0.0};
+         const long EpochYears[]        = {2000};
+         const long EpochMons[]         = {1};
+         const long EpochDays[]         = {1};
+         const long EpochHours[]        = {12};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2        = j2s[Im];
-         *mu        = mus[Im];
-         *rad       = rads[Im];
-         *w         = ws[Im];
-         *pole_ra   = PoleRAs[Im];
-         *pole_dec  = PoleDecs[Im];
-         *sma       = SMAs[Im];
-         *ecc       = eccs[Im];
-         *inc       = incs[Im];
-         *raan      = RAANs[Im];
-         *omg       = omgs[Im];
-         *mean_anom = MeanAnoms[Im];
-         *epoch_date =
-             DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],
-                          EpochHours[Im], 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       case MARS: {
-         const char Names[][40]            = {"Phobos", "Deimos"};
-         const char MapFileNames[][40]     = {"Rockball", "Rockball"};
-         const char GravFileNames[][20]    = {"", ""};
-         const char GeomFileNames[][20]    = {"Phobos.obj", ""};
-         const char OrientationNames[][40] = {"PHOBOS", "DEIMOS"};
-         const double mus[]                = {7.158E5, 9.8E4};
-         const double rads[]               = {11.1E3, 6.2E3};
-         const double ws[]                 = {0.0, 0.0};
-         const double j2s[]                = {0.0, 0.0};
-         const double PoleRAs[]            = {0.0, 0.0};
-         const double PoleDecs[]           = {0.0, 0.0};
-         const double SMAs[]               = {9380.0E3, 23460.0E3};
-         const double eccs[]               = {0.0151, 0.0002};
-         const double incs[]               = {1.075, 1.793};
-         const double RAANs[]              = {164.931, 339.600};
-         const double omgs[]               = {150.247, 290.496};
-         const double MeanAnoms[]          = {92.474, 296.230};
-         const long EpochYears[]           = {1950, 1950};
-         const long EpochMons[]            = {1, 1};
-         const long EpochDays[]            = {1, 1};
+         const char Names[][40]         = {"Phobos", "Deimos"};
+         const char MapFileNames[][40]  = {"Rockball", "Rockball"};
+         const char GravFileNames[][20] = {"", ""};
+         const char GeomFileNames[][20] = {"Phobos.obj", ""};
+         const double mus[]             = {7.158E5, 9.8E4};
+         const double rads[]            = {11.1E3, 6.2E3};
+         const double ws[]              = {0.0, 0.0};
+         const double j2s[]             = {0.0, 0.0};
+         const double PoleRAs[]         = {0.0, 0.0};
+         const double PoleDecs[]        = {0.0, 0.0};
+         const double SMAs[]            = {9380.0E3, 23460.0E3};
+         const double eccs[]            = {0.0151, 0.0002};
+         const double incs[]            = {1.075, 1.793};
+         const double RAANs[]           = {164.931, 339.600};
+         const double omgs[]            = {150.247, 290.496};
+         const double MeanAnoms[]       = {92.474, 296.230};
+         const long EpochYears[]        = {1950, 1950};
+         const long EpochMons[]         = {1, 1};
+         const long EpochDays[]         = {1, 1};
+         const long EpochHours[]        = {0, 0};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       case JUPITER: {
          const char Names[][40] = {
@@ -4919,15 +4491,10 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          const char MapFileNames[][40] = {
              "NONE", "Iceball", "NONE", "NONE", "NONE", "NONE", "NONE", "NONE",
              "NONE", "NONE",    "NONE", "NONE", "NONE", "NONE", "NONE", "NONE"};
-         const char GravFileNames[][20]    = {"", "", "", "", "", "", "", "",
-                                              "", "", "", "", "", "", "", ""};
-         const char GeomFileNames[][20]    = {"", "", "", "", "", "", "", "",
-                                              "", "", "", "", "", "", "", ""};
-         const char OrientationNames[][40] = {
-             "IO",       "EUROPA",  "GANYMEDE", "CALLISTO",
-             "AMALTHEA", "JUPITER", "JUPITER",  "JUPITER",
-             "JUPITER",  "JUPITER", "JUPITER",  "JUPITER",
-             "JUPITER",  "THEBE",   "ADRASTEA", "METIS"};
+         const char GravFileNames[][20] = {"", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", ""};
+         const char GeomFileNames[][20] = {"", "", "", "", "", "", "", "",
+                                           "", "", "", "", "", "", "", ""};
          const double mus[]  = {5.959E9, 3202.739E9, 9887.834E9, 7179.289E9,
                                 1.38E8,  4.5E8,      5.8E7,      2.0E7,
                                 5.0E6,   4.2E6,      8.8E6,      2.0E6,
@@ -4977,31 +4544,14 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
                                      1, 1, 1, 1, 1, 1, 1, 1};
          const long EpochDays[]   = {16, 16, 16, 16, 16, 1,  1,  1,
                                      1,  1,  1,  1,  1,  16, 16, 16};
+         const long EpochHours[]  = {0, 0, 0, 0, 0, 0, 0, 0,
+                                     0, 0, 0, 0, 0, 0, 0, 0};
          const double MeanAnoms[] = {342.021, 171.016, 317.54,  181.408,
                                      185.194, 68.721,  332.962, 280.193,
                                      168.397, 329.121, 234.027, 248.793,
                                      228.076, 135.956, 135.673, 276.047};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       case SATURN: {
          const char Names[][40] = {
@@ -5017,12 +4567,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
                                            "", "", "", "", "", "", "", "", ""};
          const char GeomFileNames[][20] = {"", "", "", "", "", "", "", "", "",
                                            "", "", "", "", "", "", "", "", ""};
-         const char OrientationNames[][40] = {
-             "MIMAS",      "ENCELADUS", "TETHYS",  "DIONE",   "RHEA",
-             "TITAN",      "SATURN",    "IAPETUS", "PHOEBE",  "JANUS",
-             "EPIMETHEUS", "HELENE",    "TELESTO", "CALYPSO", "ATLAS",
-             "PROMETHEUS", "PANDORA",   "PAN"};
-         const double mus[] = {
+         const double mus[]             = {
              2.53E9, 7.21E9,   4.121E10, 7.3113E10, 1.5407E11, 8.97819E12,
              3.7E8,  1.205E11, 5.531E8,  1.266E8,   3.51E7,    1.7E6,
              4.8E5,  2.4E5,    1.4E5,    1.246E7,   9.95E6,    3.3E5};
@@ -5064,31 +4609,14 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
                                      1, 1, 1, 1, 1, 1, 1, 1, 1};
          const long EpochDays[]   = {1, 1, 1, 1, 1, 1, 1, 1, 1,
                                      1, 1, 1, 1, 1, 1, 1, 1, 1};
+         const long EpochHours[]  = {0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                     0, 0, 0, 0, 0, 0, 0, 0, 0};
          const double MeanAnoms[] = {
              255.312, 197.047, 189.003, 65.99,   311.551, 15.154,
              295.906, 356.029, 287.593, 242.754, 308.322, 134.07,
              200.143, 101.961, 157.738, 242.224, 202.697, 246.065};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       case URANUS: {
          const char Names[][40] = {"Ariel", "Umbriel", "Titania", "Oberon",
@@ -5111,118 +4639,58 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
          const long EpochYears[] = {1980, 1980, 1980, 1980, 1980};
          const long EpochMons[]  = {1, 1, 1, 1, 1};
          const long EpochDays[]  = {1, 1, 1, 1, 1};
+         const long EpochHours[] = {0, 0, 0, 0, 0};
          const double MeanAnoms[] = {39.481, 12.469, 24.614, 283.088, 311.33};
-         const char OrientationNames[][40] = {"ARIEL", "UMBRIEL", "TITANIA",
-                                              "OBERON", "MIRANDA"};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       case NEPTUNE: {
-         const char Names[][40]            = {"Triton", "Nereid"};
-         const char MapFileNames[][40]     = {"NONE", "NONE"};
-         const char GravFileNames[][20]    = {"", ""};
-         const char GeomFileNames[][20]    = {"", ""};
-         const double mus[]                = {1427.9E9, 2.06E9};
-         const double rads[]               = {1353.4E3, 170.0E3};
-         const double ws[]                 = {0.0, 0.0};
-         const double j2s[]                = {0.0, 0.0};
-         const double PoleRAs[]            = {0.0, 0.0};
-         const double PoleDecs[]           = {0.0, 0.0};
-         const double SMAs[]               = {3.548E8, 5.5134E9};
-         const double eccs[]               = {0.0, 0.7512};
-         const double incs[]               = {156.834, 7.232};
-         const double RAANs[]              = {172.431, 334.762};
-         const double omgs[]               = {344.046, 280.83};
-         const long EpochYears[]           = {1989, 1989};
-         const long EpochMons[]            = {8, 8};
-         const long EpochDays[]            = {25, 25};
-         const double MeanAnoms[]          = {264.775, 359.341};
-         const char OrientationNames[][40] = {"TRITON", "NEPTUNE"};
+         const char Names[][40]         = {"Triton", "Nereid"};
+         const char MapFileNames[][40]  = {"NONE", "NONE"};
+         const char GravFileNames[][20] = {"", ""};
+         const char GeomFileNames[][20] = {"", ""};
+         const double mus[]             = {1427.9E9, 2.06E9};
+         const double rads[]            = {1353.4E3, 170.0E3};
+         const double ws[]              = {0.0, 0.0};
+         const double j2s[]             = {0.0, 0.0};
+         const double PoleRAs[]         = {0.0, 0.0};
+         const double PoleDecs[]        = {0.0, 0.0};
+         const double SMAs[]            = {3.548E8, 5.5134E9};
+         const double eccs[]            = {0.0, 0.7512};
+         const double incs[]            = {156.834, 7.232};
+         const double RAANs[]           = {172.431, 334.762};
+         const double omgs[]            = {344.046, 280.83};
+         const long EpochYears[]        = {1989, 1989};
+         const long EpochMons[]         = {8, 8};
+         const long EpochDays[]         = {25, 25};
+         const long EpochHours[]        = {0, 0};
+         const double MeanAnoms[]       = {264.775, 359.341};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2         = j2s[Im];
-         *mu         = mus[Im];
-         *rad        = rads[Im];
-         *w          = ws[Im];
-         *pole_ra    = PoleRAs[Im];
-         *pole_dec   = PoleDecs[Im];
-         *sma        = SMAs[Im];
-         *ecc        = eccs[Im];
-         *inc        = incs[Im];
-         *raan       = RAANs[Im];
-         *omg        = omgs[Im];
-         *mean_anom  = MeanAnoms[Im];
-         *epoch_date = DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im],
-                                    EpochDays[Im], 0, 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       case PLUTO: {
-         const char Names[][40]            = {"Charon"};
-         const char MapFileNames[][40]     = {"Iceball"};
-         const char GravFileNames[][20]    = {""};
-         const char GeomFileNames[][20]    = {""};
-         const double mus[]                = {108.0E9};
-         const double rads[]               = {593.0E3};
-         const double ws[]                 = {0.0};
-         const double j2s[]                = {0.0};
-         const double PoleRAs[]            = {0.0};
-         const double PoleDecs[]           = {0.0};
-         const double SMAs[]               = {1.7536E7};
-         const double eccs[]               = {0.0022};
-         const double incs[]               = {0.001};
-         const double RAANs[]              = {85.187};
-         const double omgs[]               = {71.255};
-         const long EpochYears[]           = {2000};
-         const long EpochMons[]            = {1};
-         const long EpochDays[]            = {1};
-         const long EpochHours[]           = {12};
-         const double MeanAnoms[]          = {147.848};
-         const char OrientationNames[][40] = {"CHARON"};
+         const char Names[][40]         = {"Charon"};
+         const char MapFileNames[][40]  = {"Iceball"};
+         const char GravFileNames[][20] = {""};
+         const char GeomFileNames[][20] = {""};
+         const double mus[]             = {108.0E9};
+         const double rads[]            = {593.0E3};
+         const double ws[]              = {0.0};
+         const double j2s[]             = {0.0};
+         const double PoleRAs[]         = {0.0};
+         const double PoleDecs[]        = {0.0};
+         const double SMAs[]            = {1.7536E7};
+         const double eccs[]            = {0.0022};
+         const double incs[]            = {0.001};
+         const double RAANs[]           = {85.187};
+         const double omgs[]            = {71.255};
+         const long EpochYears[]        = {2000};
+         const long EpochMons[]         = {1};
+         const long EpochDays[]         = {1};
+         const long EpochHours[]        = {12};
+         const double MeanAnoms[]       = {147.848};
 
-         strcat(name, Names[Im]);
-         strcat(map_file_name, MapFileNames[Im]);
-         strcat(grav_file_name, GravFileNames[Im]);
-         strcat(geom_file_name, GeomFileNames[Im]);
-         strcat(ori_name, OrientationNames[Im]);
-
-         *j2        = j2s[Im];
-         *mu        = mus[Im];
-         *rad       = rads[Im];
-         *w         = ws[Im];
-         *pole_ra   = PoleRAs[Im];
-         *pole_dec  = PoleDecs[Im];
-         *sma       = SMAs[Im];
-         *ecc       = eccs[Im];
-         *inc       = incs[Im];
-         *raan      = RAANs[Im];
-         *omg       = omgs[Im];
-         *mean_anom = MeanAnoms[Im];
-         *epoch_date =
-             DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],
-                          EpochHours[Im], 0, RATIONAL_ZERO);
+         ASSIGN_MOON_DATA
       } break;
       default: {
          fprintf(
@@ -5240,25 +4708,28 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 {
    // TODO: wrapping in LoadPlanets() into this function? a lot of what is done
    // in LoadPlanets is in here too
+
+   JDType jd_tdb_j2000 = jd;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
    for (WorldID p_id = MERCURY; p_id <= PLUTO; p_id++) {
+      char p_name[32] = {'\0'};
+      WorldID2String(p_id, p_name);
+
       struct WorldType *P = &worlds[p_id];
+
+      long n_moon = 0;
+      WorldID first_moon;
+      NMoon(p_id, &n_moon, &first_moon);
+      P->Nsat = n_moon;
+
+      P->Sat = (WorldID *)calloc(n_moon, sizeof(long));
+      if (P->Sat == NULL) {
+         fprintf(stderr, "%s P->Sat calloc returned null pointer. Exiting...\n",
+                 p_name);
+         exit(EXIT_FAILURE);
+      }
+
       if (P->Exists) {
-         long n_moon = 0;
-         WorldID first_moon;
-         NMoon(p_id, &n_moon, &first_moon);
-
-         char p_name[32] = {'\0'};
-         WorldID2String(p_id, p_name);
-
-         P->Nsat = n_moon;
-         P->Sat  = (WorldID *)calloc(n_moon, sizeof(long));
-         if (P->Sat == NULL) {
-            fprintf(stderr,
-                    "%s P->Sat calloc returned null pointer. Exiting...\n",
-                    p_name);
-            exit(EXIT_FAILURE);
-         }
-
          for (long im = 0; im < n_moon; im++) {
             const WorldID m_id  = im + first_moon;
             struct WorldType *M = &worlds[m_id];
@@ -5267,61 +4738,99 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             unsigned char glyph[14] = {'\0'};
             char name[40] = {'\0'}, map_file_name[30] = {'\0'},
                  grav_file_name[20] = {'\0'}, geom_file_name[20] = {'\0'},
-                 ori_name[40] = {'\0'}, col_tex_f_name[40] = {"NONE"},
-                 bmp_tex_f_name[40] = {"NONE"};
+                 col_tex_f_name[40] = {"NONE"}, bmp_tex_f_name[40] = {"NONE"};
             double j2, mu, rad, w, pole_ra, pole_dec, sma, ecc, inc, raan, omg,
                 mean_anom;
             DateType epoch_date;
             MoonDefaultData(p_id, im, name, map_file_name, grav_file_name,
-                            geom_file_name, ori_name, &j2, &mu, &rad, &w,
-                            &pole_ra, &pole_dec, &sma, &ecc, &inc, &raan, &omg,
+                            geom_file_name, &j2, &mu, &rad, &w, &pole_ra,
+                            &pole_dec, &sma, &ecc, &inc, &raan, &omg,
                             &mean_anom, &epoch_date);
             double primerang_j2000 = 0.0;
-#ifdef _ENABLE_SPICE_
-            if (EphemOption == EPH_SPICE) {
+
+            P->Sat[im] = m_id;
+
+            M->Exists = TRUE;
+            M->Parent = p_id;
+
+            M->OrientWorld = TRUE;
+
+            M->ang_data[0]          = (struct AngDataType){0};
+            M->ang_data[0].ang_char = 'P';
+            M->ang_data[0].ang[0]   = primerang_j2000;
+            M->ang_data[0].ang[1]   = w * SEC_PER_DAY * R2D;
+
+            M->ang_data[1]          = (struct AngDataType){0};
+            M->ang_data[1].ang_char = 'R';
+            M->ang_data[1].ang[0]   = pole_ra;
+
+            M->ang_data[2]          = (struct AngDataType){0};
+            M->ang_data[2].ang_char = 'D';
+            M->ang_data[2].ang[0]   = pole_dec;
+
+            if (ephem == EPH_SPICE) {
                // If we are using SPICE, replace the hardcoded values with SPICE
                // values
-               int dim;
-               double tmp_3[3];
-               bodvrd_c(name, "GM", 1, &dim, &mu);
-               mu = mu * 1E9;
+               int dim = 1;
+               if (SpiceCheckAndGetDbl(m_id, "GM", 0, &dim, &mu))
+                  mu *= 1E9;
 
-               if (m_id == LUNA)
-                  bodvrd_c("Moon", "J2", 1, &dim, &j2);
+               dim = 1;
+               // grab J2 from the kernels if its there, only a possibility with
+               //    Luna and thats probably from Gravity.tpc
+               SpiceCheckAndGetDbl(m_id, "J2", 0, &dim, &j2);
 
-               bodvrd_c(name, "RADII", 3, &dim, tmp_3);
-               rad = tmp_3[0] * 1e3;
+               dim = 1;
+               if (SpiceCheckAndGetDbl(m_id, "RADII", 0, &dim, &rad))
+                  rad *= 1e3;
 
-               bodvrd_c(ori_name, "PM", 3, &dim, tmp_3);
-               primerang_j2000 = tmp_3[0];
-               w               = tmp_3[1] * D2R / spd_c();
-               // converts the prime meridian rate in deg/day to rad/s
-               bodvrd_c(ori_name, "POLE_RA", 3, &dim, tmp_3);
-               pole_ra = tmp_3[0];
-
-               bodvrd_c(ori_name, "POLE_DEC", 3, &dim, tmp_3);
-               pole_dec = tmp_3[0];
+               int found[3]   = {0};
+               WorldID chk_id = m_id;
+               // check if particular moon has at least the core orientation
+               // angles, else use its parent
+               //    (if that doesn't either, use *its* parent and so on)
+               do {
+                  found[0] = SpiceGetAngData(chk_id, "PM", &M->ang_data[0]);
+                  found[1] = SpiceGetAngData(chk_id, "RA", &M->ang_data[1]);
+                  found[2] = SpiceGetAngData(chk_id, "DEC", &M->ang_data[2]);
+                  chk_id   = worlds[chk_id].Parent;
+               } while (!any_int(3, found) && chk_id >= 0);
+               if (any_int(3, found)) {
+                  for (int j = 0; j < 3; j++)
+                     if (!found[j]) {
+                        M->ang_data[j] = (struct AngDataType){0};
+                        switch (j) {
+                           case 0:
+                              M->ang_data[j].ang_char = 'P';
+                              break;
+                           case 1:
+                              M->ang_data[j].ang_char = 'R';
+                              break;
+                           case 2:
+                              M->ang_data[j].ang_char = 'D';
+                              break;
+                        }
+                     }
+               }
             }
-#endif
+
+            M->PriMerAng = 0.0;
             if (m_id == LUNA) {
                // LUNA has a lot of special cases for its parameters
                switch (ephem) {
-                  case EPH_MEAN:
-                     mu  = 4.902801E12;
-                     rad = 1.738E6;
-                     break;
                   case EPH_GMAT421:
                   case EPH_GMAT424:
                      mu  = 4.9028005821478E12;
                      rad = 1.7382E6;
                      break;
+                  case EPH_MEAN:
                   case EPH_SPICE:
                      break;
                   default:
                      // handle the DE cases here
-                     mu  = getDEHeader1041Data(jpl_hdr, "GMB");
-                     mu  = (mu / (1.0 + EMRAT)) * AUd2ms;
-                     rad = 1.7374E6;
+                     mu   = getDEHeader1041Data(jpl_hdr, "GMB");
+                     mu  *= AUd2ms / (1.0 + EMRAT);
+                     rad  = 1.7374E6;
                      break;
                }
                strcpy(col_tex_f_name, "LunaCol.ppm");
@@ -5333,28 +4842,27 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                const unsigned char luna_glyph[14] = {
                    0xc0, 0xc0, 0x00, 0x00, 0x18, 0x70, 0x60,
                    0xe0, 0xe0, 0x60, 0x70, 0x18, 0x00, 0x00};
-
                for (int i = 0; i < 4; i++)
                   color[i] = luna_color[i];
                for (int i = 0; i < 14; i++)
                   glyph[i] = luna_glyph[i];
+
+               if (ephem != EPH_SPICE) {
+                  LoadLunaPriMerAngData(M->ang_data);
+                  LoadLunaInertialFrameData(M->ang_data);
+               }
             }
 
             struct OrbitType *E = &M->eph;
 
-            P->Sat[im] = m_id;
-
-            M->Exists = TRUE;
-            M->Parent = p_id;
             strcpy(M->Name, name);
             strcpy(M->MapFileName, map_file_name);
             strcpy(M->ColTexFileName, col_tex_f_name);
             strcpy(M->BumpTexFileName, bmp_tex_f_name);
 
-            TimeSystem ephem_sys = TT_TIME;
-            switch (EphemOption) {
+            TimeSystem ephem_sys = TDB_TIME;
+            switch (ephem) {
                case EPH_MEAN:
-               default:
                   ephem_sys = TT_TIME;
                   break;
                case EPH_DE430:
@@ -5365,17 +4873,19 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                case EPH_GMAT424:
                   if (m_id != LUNA) {
                      ephem_sys = TT_TIME;
-                     break;
                   }
+                  break;
                case EPH_SPICE:
-                  ephem_sys = TDB_TIME;
+               default:
                   break;
             }
 
-            M->mu          = mu;
+            // reassign if not overriden from Inp_Sim
+            if (M->mu == 0)
+               M->mu = mu;
+
+            M->J2          = j2;
             M->rad         = rad;
-            M->w           = w;
-            M->PriMerAng   = 0.0;
             E->Exists      = TRUE;
             E->EphemSystem = ephem_sys;
             E->Regime      = ORB_CENTRAL;
@@ -5383,13 +4893,13 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             E->mu          = P->mu;
             E->SMA         = sma;
             E->ecc         = ecc;
-            E->inc         = inc * D2R;
-            E->RAAN        = raan * D2R;
-            E->ArgP        = omg * D2R;
-            E->Ncheb       = 0;
             E->SplineFile  = NULL;
 
-            M->PriMerAngJ2000 = primerang_j2000 * D2R;
+            // When there were multiple LoadMoons functions, only Mars and
+            // Jupiter converted to radians
+            E->inc  = inc * D2R;
+            E->RAAN = raan * D2R;
+            E->ArgP = omg * D2R;
 
             double epoch_j2000_sec = Date2Time(epoch_date);
             E->MeanMotion          = sqrt(E->mu / (E->SMA * E->SMA * E->SMA));
@@ -5408,23 +4918,18 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             E->anom = TrueAnomaly(E->mu, E->SLR, E->ecc, j2000sec_tt - E->tp);
             M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
-            if (EphemOption != EPH_SPICE) {
-               /* CNH assumed to be same as parent planet */
-               for (int i = 0; i < 3; i++) {
-                  for (int j = 0; j < 3; j++)
-                     M->CNH[i][j] = P->CNH[i][j];
-               }
-            }
-            else {
-               double CNJ[3][3];
-               A2C(312, (pole_ra + 90.0) * D2R, (90.0 - pole_dec) * D2R, 0.0,
-                   CNJ);
-               MxM(CNJ, worlds[EARTH].CNH, M->CNH);
+            if (ephem != EPH_SPICE) {
+               M->PriMerAng = GetWorldCWN(jd, M->ang_data, M->CWN);
+               // TODO: double check that CNH tends to reflect the parent body
+               GetWorldCNJ(jd, M->ang_data, M->CNJ);
+               MxM(M->CNJ, worlds[EARTH].CNH, M->CNH);
+               C2Q(M->CNJ, M->qnj);
+               C2Q(M->CWN, M->qwn);
                C2Q(M->CNH, M->qnh);
             }
+            else
+               SpiceSetOrientation(jd, m_id, M, worlds[EARTH].CNH);
 
-            C2Q(M->CNH, M->qnh);
-            QxQT(M->qnh, qjh, M->qnj);
             for (int i = 0; i < 4; i++)
                M->Color[i] = color[i];
             for (int i = 0; i < 14; i++)
@@ -5465,6 +4970,15 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             }
          }
       }
+      else {
+         for (long im = 0; im < n_moon; im++) {
+            const WorldID m_id  = im + first_moon;
+            struct WorldType *M = &worlds[m_id];
+            M->Exists           = FALSE;
+            M->eph.Exists       = FALSE;
+            M->Atmo.Exists      = FALSE;
+         }
+      }
    }
 }
 /*********************************************************************/
@@ -5481,7 +4995,6 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
    char junk[120], newline, response[120];
    long Ib, i;
    double CNJ[3][3], PoleRA, PoleDec, Epoch;
-   const double ZAxis[3] = {0.0, 0.0, 1.0};
    char GravFileName[32] = {0};
    const char *f_name    = "MinorBodies.txt";
 
@@ -5501,10 +5014,18 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
    for (Ib = 0; Ib < Nmb; Ib++) {
       DateType EpochDate = {0};
 
-      W             = &worlds[MINORBODY_0 + Ib];
-      E             = &W->eph;
-      E->Ncheb      = 0;
-      E->SplineFile = NULL;
+      W                       = &worlds[NMAJORWORLD + Ib];
+      E                       = &W->eph;
+      E->SplineFile           = NULL;
+      W->ang_data[0]          = (struct AngDataType){0};
+      W->ang_data[0].ang_char = 'P';
+      W->ang_data[1]          = (struct AngDataType){0};
+      W->ang_data[1].ang_char = 'R';
+      W->ang_data[2]          = (struct AngDataType){0};
+      W->ang_data[2].ang_char = 'D';
+
+      W->OrientWorld = TRUE;
+
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
       W->Exists = DecodeString(response);
@@ -5521,12 +5042,14 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
          W->mu = mu;
       fscanf(infile, "%lf %[^\n] %[\n]", &W->rad, junk, &newline);
       fscanf(infile, "%s %[^\n] %[\n]", GravFileName, junk, &newline);
-      fscanf(infile, "%lf %[^\n] %[\n]", &W->w, junk, &newline);
+      fscanf(infile, "%lf %[^\n] %[\n]", &W->ang_data[0].ang[1], junk,
+             &newline);
+      W->ang_data[0].ang[1] *= SEC_PER_DAY;
       fscanf(infile, "%lf %lf %[^\n] %[\n]", &PoleRA, &PoleDec, junk, &newline);
       A2C(312, (PoleRA + 90.0) * D2R, (90.0 - PoleDec) * D2R, 0.0, CNJ);
       MxM(CNJ, worlds[EARTH].CNH, W->CNH);
       C2Q(W->CNH, W->qnh);
-      QxQT(W->qnh, qjh, W->qnj);
+      QxQT(W->qnh, worlds[EARTH].qnh, W->qnj);
       E->Exists      = TRUE;
       E->EphemSystem = TT_TIME;
       E->Regime      = ORB_CENTRAL;
@@ -5575,8 +5098,7 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
          W->PosH[i] = E->PosN[i];
          W->VelH[i] = E->VelN[i];
       }
-      W->PriMerAng = fmod(W->w * j2000sec_tt, TwoPi);
-      SimpRot(ZAxis, W->PriMerAng, W->CWN);
+      GetWorldCWN(JD_TDB_MJD, W->ang_data, W->CWN);
       C2Q(W->CWN, W->qwn);
 
       /* Gravitation Model */
@@ -5607,23 +5129,6 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
       }
    }
    fclose(infile);
-}
-/**********************************************************************/
-void CloneWorld(struct WorldType *const destWorld,
-                const struct WorldType srcWorld)
-{
-   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
-   CloneOrbit(&destWorld->eph, srcWorld.eph);
-   // TODO: should deep copy more, but all other pointers in WorldType (e.g.,
-   // WorldType::GraveModel::C) are not modified after initial world
-   // configuration.
-}
-/**********************************************************************/
-void CopyWorld(struct WorldType *const destWorld,
-               const struct WorldType srcWorld)
-{
-   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
-   CopyOrbit(&destWorld->eph, srcWorld.eph);
 }
 /**********************************************************************/
 void LoadRegions(void)
@@ -5690,12 +5195,14 @@ void LoadRegions(void)
          MTxV(W->CWN, R->PosW, R->PosN);
          MxM(R->CW, W->CWN, R->CN);
       }
-      R->VelN[0] = -W->w * R->PosN[1];
-      R->VelN[1] = W->w * R->PosN[0];
+      const double W_w = GetWorldW(JD_TDB_MJD, W);
+
+      R->VelN[0] = -W_w * R->PosN[1];
+      R->VelN[1] = W_w * R->PosN[0];
       R->VelN[2] = 0.0;
       R->wn[0]   = 0.0;
-      R->wn[1]   = W->w * cos(R->Lat);
-      R->wn[2]   = W->w * sin(R->Lat);
+      R->wn[1]   = W_w * cos(R->Lat);
+      R->wn[2]   = W_w * sin(R->Lat);
       Geom = LoadWingsObjFile(ModelPath, R->GeomFileName, &Matl, &Nmatl, Geom,
                               &Ngeom, &R->GeomTag, TRUE);
 
@@ -5787,483 +5294,6 @@ void UpdateLagrangePoints(void)
       }
    }
 }
-/******************************************************************************/
-char *replace_char(char *str, const char find, const char replace)
-{
-   char *current_pos = strchr(str, find);
-   while (current_pos) {
-      *current_pos = replace;
-      current_pos  = strchr(current_pos, find);
-   }
-   return str;
-}
-/******************************************************************************/
-long is_line_empty(const char *s)
-{
-   while (*s) {
-      if (!isspace(*s))
-         return 0;
-      s++;
-   }
-   return 1;
-}
-/******************************************************************************/
-long InitJplHeader(const ephemType ephem, const char eph_path[128],
-                   JPLHeaderType *hdr_data)
-{
-   // read the header file
-#define buf_size 512
-   // holds flag if NCOEFF and each group of 1030, 1040, 1041, and 1050 are
-   // found
-   int grp_found[5] = {0};
-
-   hdr_data->eph = ephem;
-   strcpy(hdr_data->eph_path, eph_path);
-
-   strcpy(hdr_data->hdr_name, "header.");
-   switch (ephem) {
-      case EPH_DE421:
-      case EPH_GMAT421: {
-         strcpy(hdr_data->eph_str, "421");
-      } break;
-      case EPH_DE424:
-      case EPH_GMAT424: {
-         strcpy(hdr_data->eph_str, "424");
-      } break;
-      case EPH_DE430: {
-         strcpy(hdr_data->eph_str, "430");
-      } break;
-      case EPH_DE440: {
-         strcpy(hdr_data->eph_str, "440");
-      } break;
-      default:
-         fprintf(stderr, "Unknown ephem type in InitJplHeader(). Exiting...\n");
-         exit(EXIT_FAILURE);
-   }
-   strcat(hdr_data->hdr_name, hdr_data->eph_str);
-
-   FILE *const hdr_file =
-       FileOpen(hdr_data->eph_path, hdr_data->hdr_name, "rt");
-
-   long grp_num        = 0;
-   char line[buf_size] = {"\0"};
-   while (fgets(line, buf_size, hdr_file)) {
-      if (sscanf(line, "KSIZE=%ld NCOEFF=%ld", &grp_num, &hdr_data->n_coeff) ==
-          2) {
-         grp_found[0] = 1;
-         break;
-      }
-   }
-   hdr_data->blk_len   = hdr_data->n_coeff + 2;
-   hdr_data->blk_lines = hdr_data->blk_len / 3;
-
-   const char *tok_check = " \n\0";
-
-   while (!grp_found[4] && fgets(line, buf_size, hdr_file)) {
-      const int sscanf_check = sscanf(line, "GROUP %ld", &grp_num) == 1;
-      if (sscanf_check && grp_num == 1030) {
-         while (fgets(line, buf_size, hdr_file)) {
-            double jd_days[2] = {0};
-            if (sscanf(line, "%lf %lf %lf", &jd_days[0], &jd_days[1],
-                       &hdr_data->n_days) == 3) {
-               grp_found[1] = 1;
-               for (int i = 0; i < 2; i++)
-                  hdr_data->jd_range[i] =
-                      JDFromDays(jd_days[i], TDB_TIME, MJD_EPOCH);
-               break;
-            }
-         }
-      }
-      else if (sscanf_check && grp_num == 1040) {
-         grp_found[2] = 1;
-         while (fgets(line, buf_size, hdr_file)) {
-            if (sscanf(line, "%ld", &hdr_data->n_data) == 1) {
-               break;
-            }
-         }
-         hdr_data->group_1040 = malloc(hdr_data->n_data * sizeof(char[10]));
-         char (*const group_1040_start)[10] = hdr_data->group_1040;
-
-         // Assuming data names in group 1040 start immediately after n_data
-         while (fgets(line, buf_size, hdr_file)) {
-            const char *tok = strtok(line, tok_check);
-            if (!tok)
-               break;
-            while (tok != NULL) {
-               strcpy(*hdr_data->group_1040, tok);
-               hdr_data->group_1040++;
-               tok = strtok(NULL, tok_check);
-            }
-         }
-         hdr_data->group_1040 = group_1040_start;
-      }
-      else if (sscanf_check && grp_num == 1041) {
-         grp_found[3] = 1;
-         while (fgets(line, buf_size, hdr_file)) {
-            long n_group_1041 = 0;
-            if (sscanf(line, "%ld", &n_group_1041) == 1) {
-               // assuming group 1041 is AFTER group 1040
-               if (n_group_1041 != hdr_data->n_data) {
-                  fprintf(stderr,
-                          "The data length for groups 1040 and 1041 in DE "
-                          "header file '%s' do not match.  Exiting...\n\tGroup "
-                          "1040 dimension: %ld\n\tGroup 1040 dimension: %ld",
-                          hdr_data->hdr_name, hdr_data->n_data, n_group_1041);
-                  exit(EXIT_FAILURE);
-               }
-               break;
-            }
-         }
-         hdr_data->group_1041 = calloc(hdr_data->n_data, sizeof(double));
-         double *const group_1041_start = hdr_data->group_1041;
-
-         // assuming  group 1041 data is immediately after
-         while (fgets(line, buf_size, hdr_file)) {
-            replace_char(line, 'D', 'E');
-            const char *tok = strtok(line, tok_check);
-            if (!tok)
-               break;
-            while (tok != NULL) {
-               *hdr_data->group_1041 = atof(tok);
-               hdr_data->group_1041++;
-               tok = strtok(NULL, tok_check);
-            }
-         }
-         hdr_data->group_1041 = group_1041_start;
-      }
-      else if (sscanf_check && grp_num == 1050) {
-         grp_found[4] = 1;
-         while (fgets(line, buf_size, hdr_file)) {
-            if (is_line_empty(line))
-               continue;
-
-            for (int i = 0; i < 3; i++) {
-               const char *tok = strtok(line, tok_check);
-               for (int j = 0; j < 11; j++) {
-                  hdr_data->group_1050[j][i] = atoi(tok);
-                  tok                        = strtok(NULL, tok_check);
-               }
-               fgets(line, buf_size, hdr_file);
-            }
-            break;
-         }
-      }
-   }
-#undef buf_size
-   fclose(hdr_file);
-   return (all_int(5, grp_found));
-}
-/******************************************************************************/
-void FilesMatchingFmt(const char path[128], const char fmt[10],
-                      char (*f_names)[256], long *const n_match)
-{
-   // search for files files in `path` matching glob format `fmt`.
-   //  returns the list of matching file names in `f_names`, and the number of
-   //  them in `n_files`
-   // run once with *n_match=0 to get the number of matches, then run again
-   //  after allocating f_names
-   // NOTE: f_names will be returned with 'path'
-   // TODO: REMOVE 'path' FROM 'f_names'
-   // BEWARE, THIS IS ONLY FOR POSIX SYSTEMS
-   *n_match             = 0;
-   char search_fmt[256] = {0};
-   strcpy(search_fmt, path);
-   strcat(search_fmt, "/");
-   strcat(search_fmt, fmt);
-
-   glob_t results;
-   if (glob(search_fmt, 0, NULL, &results) == 0) {
-      *n_match = results.gl_pathc;
-      if (f_names != NULL)
-         for (long i = 0; i < *n_match; i++) {
-            strcpy(f_names[i], results.gl_pathv[i]);
-         }
-   }
-   else
-      f_names = NULL;
-   globfree(&results);
-}
-/******************************************************************************/
-long LoadJplEphems(char EphemPath[128], JPLHeaderType *const jpl_hdr,
-                   const JDType jd, struct WorldType *const worlds)
-{
-   static FILE *infile = NULL;
-   long BlockNum, NumEntries;
-   long FoundBlock;
-   char line[512];
-   JDType jd_block[2];
-   long i, n, Ic, Iw;
-   long Nseg, Start, N;
-   struct Cheb3DType *Cheb;
-
-   JDType jd_tdb_mjd = jd, jd_tdb_z = jd;
-   JDChangeSystemEpoch(TDB_TIME, MJD_EPOCH, &jd_tdb_mjd);
-   JDChangeSystemEpoch(TDB_TIME, ZERO_EPOCH, &jd_tdb_z);
-
-   if (jpl_hdr->n_data == 0)
-      InitJplHeader(EphemOption, EphemPath, jpl_hdr);
-
-   // search for the list of file to use with this EphemOption
-   // only need to do this once and keep it around
-   static char (*f_names)[256]  = NULL;
-   static JDType(*jd_ranges)[2] = NULL;
-   static long n_match          = 0;
-   if (f_names == NULL) {
-      char search_fmt[20] = "ascp*.";
-      strcat(search_fmt, jpl_hdr->eph_str);
-      FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
-      if (!n_match) {
-         fprintf(stderr,
-                 "Could not find any files in directory '%s' for DE type '%s' "
-                 "matching glob format '%s'. Exiting...\n",
-                 jpl_hdr->eph_path, jpl_hdr->eph_str, search_fmt);
-         exit(EXIT_FAILURE);
-      }
-      f_names = calloc(n_match, sizeof(char[256]));
-      FilesMatchingFmt(EphemPath, search_fmt, f_names, &n_match);
-      jd_ranges             = malloc(n_match * sizeof(JDType[2]));
-      double jd_rng_days[2] = {0.0};
-
-      // preload the jd ranges for each file for the chosen DE
-      for (i = 0; i < n_match; i++) {
-         int first_block = 0;
-         double dummy[2] = {0.0};
-
-         infile = FileOpen("", f_names[i], "rt");
-         while (fgets(line, 512, infile)) {
-            if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
-               fgets(line, 512, infile);
-               if (sscanf(line, "%lf %lf %lf", &dummy[0], &jd_rng_days[1],
-                          &dummy[1]) == 3)
-                  if (!first_block) {
-                     first_block    = 1;
-                     jd_rng_days[0] = dummy[0];
-                  }
-            }
-         }
-         // convert to desired Epoch
-         for (int j = 0; j < 2; j++) {
-            jd_ranges[i][j] = JDFromDays(jd_rng_days[j], TDB_TIME, ZERO_EPOCH);
-            JDChangeEpoch(GMAT_MJD_EPOCH, &jd_ranges[i][j]);
-         }
-         fclose(infile);
-      }
-   }
-
-   // Make sure the chosen JD is covered by desired DE
-   if (isless_jd(jd_tdb_mjd, jpl_hdr->jd_range[0]) ||
-       isgreater_jd(jd_tdb_mjd, jpl_hdr->jd_range[1])) {
-      fprintf(stderr,
-              "JD is not contained in DE%s ephem files.  Falling back to "
-              "lower-precision planetary ephemerides.\n",
-              jpl_hdr->eph_str);
-      return (1); // TODO: what do we actually do in this case?
-   }
-
-   // Figure out which jd range desired JD is in
-   int cur_file = -1;
-   for (i = 0; i < n_match; i++) {
-      if (isgreaterequal_jd(jd_tdb_mjd, jd_ranges[i][0]) &&
-          isless_jd(jd_tdb_mjd, jd_ranges[i][1])) {
-         cur_file = i;
-         break;
-      }
-   }
-   if (cur_file == -1) {
-      fprintf(stderr,
-              "Could not find any files in directory '%s' for DE type '%s' "
-              "that Julian Date %lf is contained within. Exiting...\n",
-              jpl_hdr->eph_path, jpl_hdr->eph_str, JDToDays(jd_tdb_z));
-      exit(EXIT_FAILURE);
-   }
-
-   // Search found file for block containing chosen JD
-   const long blk_len = jpl_hdr->n_coeff + 2;
-   double Block[blk_len];
-
-   FoundBlock = 0;
-   infile     = FileOpen("", f_names[cur_file], "rt");
-   while (!FoundBlock) {
-      fgets(line, 512, infile);
-      if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
-         fgets(line, 512, infile);
-         if (sscanf(line, "%lf %lf %lf", &Block[0], &Block[1], &Block[2]) ==
-             3) {
-            jd_block[0] = JDFromDays(Block[0], TDB_TIME, ZERO_EPOCH);
-            jd_block[1] = JDFromDays(Block[1], TDB_TIME, ZERO_EPOCH);
-            if (isgreaterequal_jd(jd_tdb_z, jd_block[0]) &&
-                isless_jd(jd_tdb_z, jd_block[1])) {
-               FoundBlock = 1;
-
-               for (i = 0; i < 2; i++)
-                  JDChangeEpoch(GMAT_MJD_EPOCH, &jd_block[i]);
-            }
-         }
-      }
-   }
-
-   /* .. Load block */
-   for (i = 1; i < jpl_hdr->blk_lines; i++) {
-      fgets(line, 512, infile);
-      sscanf(line, "%lf %lf %lf", &Block[3 * i], &Block[3 * i + 1],
-             &Block[3 * i + 2]);
-   }
-   fclose(infile);
-
-   /* .. Distribute to Worlds [Starting Entry (1-based), Order, Number of
-    * Segments] */
-   // Note that the data for 'EARTH' is Earth-Moon barycenter and 'MOON' is the
-   // geocentric position of the Moon
-   // the order of bodies is the order of columns in block 1050
-   static int bodies[11] = {MERCURY, VENUS,   EARTH, MARS, JUPITER, SATURN,
-                            URANUS,  NEPTUNE, PLUTO, LUNA, SOL};
-   for (int j = 0; j < 11; j++) {
-      Iw    = bodies[j];
-      Nseg  = jpl_hdr->group_1050[j][2];
-      Start = jpl_hdr->group_1050[j][0] - 1;
-      N     = jpl_hdr->group_1050[j][1];
-
-      worlds[Iw].eph.Ncheb = Nseg;
-      worlds[Iw].eph.Cheb =
-          (struct Cheb3DType *)calloc(Nseg, sizeof(struct Cheb3DType));
-      for (Ic = 0; Ic < Nseg; Ic++) {
-         Cheb                    = &worlds[Iw].eph.Cheb[Ic];
-         double jd_blk_diff_days = JDSubToDays(jd_block[0], jd_block[1]);
-         Cheb->JD1 = JDAddDays(jd_block[0], ((double)Ic) * (jd_blk_diff_days) /
-                                                ((double)Nseg));
-         Cheb->JD2 =
-             JDSubDays(jd_block[1], ((double)(Nseg - 1 - Ic)) *
-                                        (jd_blk_diff_days) / ((double)Nseg));
-         Cheb->N = N;
-         for (n = 0; n < N; n++) {
-            for (i = 0; i < 3; i++) {
-               Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
-            }
-         }
-      }
-   }
-
-   /* Specific Earth-Moon Mass Ratio and AU  Definitions */
-   EMRAT = getDEHeader1041Data(jpl_hdr, "EMRAT"); // Earth/Moon Mass Ratio
-   AU    = getDEHeader1041Data(jpl_hdr, "AU");    // Kilometers per 1 AU
-
-   // Conversion of GM from AU^3/day^2 to m^3/s^2 using DE appropriate values
-   AUd2ms = (ipow(AU, 3) / ipow(SEC_PER_DAY, 2)) * 1.0e9;
-
-   return (0);
-}
-/**********************************************************************/
-long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
-                     struct WorldType *const worlds)
-{
-   long i, Ic, Iw;
-   struct Cheb3DType *Cheb;
-   struct OrbitType *Eph;
-   struct WorldType *W;
-   double u, dudJD, T[20], U[20], P, dPdu;
-   double rh[3], vh[3];
-   double EarthMoonBaryPosH[3], EarthMoonBaryVelH[3];
-   double ZAxis[3] = {0.0, 0.0, 1.0};
-   double PosJ[3], VelJ[3], CNJ[3][3];
-   double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
-          C_TETE_J2000[3][3] = {{0.0}};
-
-   double GMST = JD2GMST(jd);
-
-   JDType jd_tt_j2000 = jd, jd_tdb_mjd = jd;
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
-   JDType jd_tdb_j2000 = jd_tdb_mjd;
-   JDChangeSystem(TDB_TIME, &jd_tdb_j2000);
-   const double j2000_sec = JDToDynTime(jd_tt_j2000);
-
-   /* .. Initialize Planetary Pos/Vel */
-   for (Iw = SOL; Iw <= LUNA; Iw++) {
-      W   = &worlds[Iw];
-      Eph = &W->eph;
-      /* Determine segment */
-      Ic = 0;
-      while (isgreater_jd(jd_tdb_mjd, Eph->Cheb[Ic].JD2))
-         Ic++;
-      /* Apply Chebyshev polynomials */
-      Cheb  = &Eph->Cheb[Ic];
-      dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
-      u     = JDSubToDays(jd_tdb_mjd, Cheb->JD1) * dudJD - 1.0;
-      ChebyPolys(u, Cheb->N, T, U);
-      for (i = 0; i < 3; i++) {
-         ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-         PosJ[i] = 1000.0 * P;
-         VelJ[i] = 1000.0 * dPdu * dudJD / SEC_PER_DAY;
-      }
-      QTxV(qjh, PosJ, Eph->PosN);
-      QTxV(qjh, VelJ, Eph->VelN);
-   }
-   /* Adjust for barycenters */
-   /* Move planets from barycentric to Sun-centered */
-   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      W = &worlds[Iw];
-      for (i = 0; i < 3; i++) {
-         W->eph.PosN[i] -= worlds[SOL].eph.PosN[i];
-         W->eph.VelN[i] -= worlds[SOL].eph.VelN[i];
-         W->PosH[i]      = W->eph.PosN[i];
-         W->VelH[i]      = W->eph.VelN[i];
-      }
-      /* Calculate PriMerAng for Planets */
-      W->PriMerAng = fmod(W->w * j2000_sec, TwoPi);
-      SimpRot(ZAxis, W->PriMerAng, W->CWN);
-   }
-   /* Calculate PriMerAng for Sun */
-   worlds[SOL].PriMerAng =
-       fmod(worlds[SOL].PriMerAngJ2000 + worlds[SOL].w * j2000_sec, TwoPi);
-   SimpRot(ZAxis, worlds[SOL].PriMerAng, worlds[SOL].CWN);
-   C2Q(worlds[SOL].CWN, worlds[SOL].qwn);
-   /* Move Sun to origin */
-   for (i = 0; i < 3; i++) {
-      worlds[SOL].PosH[i]     = 0.0;
-      worlds[SOL].VelH[i]     = 0.0;
-      worlds[SOL].eph.PosN[i] = 0.0;
-      worlds[SOL].eph.VelN[i] = 0.0;
-   }
-   /* Adjust Earth from Earth-Moon barycenter */
-   /* (Moon PosVel is geocentric, not from barycenter) */
-   for (i = 0; i < 3; i++) {
-      EarthMoonBaryPosH[i]       = worlds[LUNA].eph.PosN[i] / (1.0 + EMRAT);
-      EarthMoonBaryVelH[i]       = worlds[LUNA].eph.VelN[i] / (1.0 + EMRAT);
-      worlds[EARTH].eph.PosN[i] -= EarthMoonBaryPosH[i];
-      worlds[EARTH].eph.VelN[i] -= EarthMoonBaryVelH[i];
-      worlds[EARTH].PosH[i]      = worlds[EARTH].eph.PosN[i];
-      worlds[EARTH].VelH[i]      = worlds[EARTH].eph.VelN[i];
-   }
-   for (i = 0; i < 3; i++) {
-      rh[i]                = worlds[LUNA].eph.PosN[i];
-      vh[i]                = worlds[LUNA].eph.VelN[i];
-      worlds[LUNA].PosH[i] = worlds[EARTH].PosH[i] + worlds[LUNA].eph.PosN[i];
-      worlds[LUNA].VelH[i] = worlds[EARTH].VelH[i] + worlds[LUNA].eph.VelN[i];
-   }
-   /* Rotate Moon into ECI */
-   QxV(qjh, rh, worlds[LUNA].eph.PosN);
-   QxV(qjh, vh, worlds[LUNA].eph.VelN);
-   worlds[LUNA].PriMerAng = LunaPriMerAng(jd_tdb_j2000);
-   SimpRot(ZAxis, worlds[LUNA].PriMerAng, worlds[LUNA].CWN);
-   LunaInertialFrame(jd_tdb_j2000, CNJ);
-   MxM(CNJ, worlds[EARTH].CNH, worlds[LUNA].CNH);
-   C2Q(worlds[LUNA].CNH, worlds[LUNA].qnh);
-   QxQT(worlds[LUNA].qnh, qjh, worlds[LUNA].qnj);
-
-   /* .. Earth rotation is a special case */
-   worlds[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(jd, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, worlds[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, worlds[EARTH].CWN);
-
-   for (Iw = MERCURY; Iw <= LUNA; Iw++) {
-      Eph = &worlds[Iw].eph;
-      RV2Eph(j2000_sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
-             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
-   }
-   return (0);
-}
 /**********************************************************************/
 void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
                   double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
@@ -6279,7 +5309,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
    double earthPosH[3], lunaPosH[3], otherPosH[3];
    double CNJ[3][3] = {0};
    long WRLD[2]     = {EARTH, LUNA}, otherJPL;
-   double GMST, timeTT;
+   double GMST;
    double CNH[3][3] = {0};
 
    // TODO: premake some of the other jd types that are needed
@@ -6301,7 +5331,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
       ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
       PosJ[i] = 1000.0 * P;
    }
-   QTxV(qjh, PosJ, systemBC);
+   QTxV(worlds[EARTH].qnh, PosJ, systemBC);
 
    /* Determine which ephemerides math needed */
    otherJPL = (trgtWORLD != SOL && trgtWORLD != EARTH && trgtWORLD != LUNA &&
@@ -6328,7 +5358,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
             ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
             PosJ[i] = 1000.0 * P;
          }
-         QTxV(qjh, PosJ, PosN);
+         QTxV(worlds[EARTH].qnh, PosJ, PosN);
          if (Iw == EARTH) {
             for (i = 0; i < 3; i++)
                earthPosN[i] = PosN[i];
@@ -6353,7 +5383,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          lunaPosH[i] = earthPosH[i] + lunaPosN[i];
       }
       /* Rotate Moon into ECI */
-      QxV(qjh, rh, lunaPosN);
+      QxV(worlds[EARTH].qnh, rh, lunaPosN);
    }
    else if (otherJPL) {
       /* .. Initialize Pos for other planet in JPL ephemerides */
@@ -6372,7 +5402,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
          PosJ[i] = 1000.0 * P;
       }
-      QTxV(qjh, PosJ, PosN);
+      QTxV(worlds[EARTH].qnh, PosJ, PosN);
       /* Move planet from barycentric to Sun-centered */
       for (i = 0; i < 3; i++) {
          otherPosN[i]  = PosN[i];
@@ -6388,9 +5418,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          trgtPosH[i] = 0.0;
       }
       /* Calculate PriMerAng for Sun */
-      timeTT = JDToDynTime(jd);
-      *trgtPriMerAng =
-          fmod(worlds[SOL].PriMerAngJ2000 + worlds[SOL].w * timeTT, TwoPi);
+      *trgtPriMerAng = GetWorldAng(jd, &worlds[SOL].ang_data[0]);
    }
    else if (trgtWORLD == EARTH) {
       for (i = 0; i < 3; i++) {
@@ -6416,10 +5444,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          trgtPosH[i] = otherPosH[i];
       }
       /* Calculate PriMerAng for Sun */
-      timeTT = JDToDynTime(jd);
-      *trgtPriMerAng =
-          fmod(worlds[trgtWORLD].PriMerAngJ2000 + worlds[trgtWORLD].w * timeTT,
-               TwoPi);
+      *trgtPriMerAng = GetWorldAng(jd, &worlds[trgtWORLD].ang_data[0]);
    }
    else {
       /* Use original position for non JPL epemerides bodies */
@@ -6448,385 +5473,6 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
       }
    }
 }
-/**********************************************************************/
-long LoadEphems(const ephemType ephem, const JDType jd,
-                JPLHeaderType *const jpl_hdr, struct WorldType *const worlds)
-{
-   /* Preload Ephemeris Kernels/Definitions */
-   switch (EphemOption) {
-      case EPH_MEAN: // No Ephem to Load
-         break;
-      case EPH_DE430:
-      case EPH_DE440:
-      case EPH_DE421:
-      case EPH_DE424:
-      case EPH_GMAT421:
-      case EPH_GMAT424:
-         return LoadJplEphems(ModelPath, jpl_hdr, jd, worlds);
-         break;
-      case EPH_SPICE:
-#ifdef _ENABLE_SPICE_
-         // Load SPICE to get SPICE-provided values for mu, J2, etc
-         return LoadSpiceKernels(ModelPath);
-#endif
-         break;
-      default:
-         fprintf(stderr, "Unknown Ephem Type. Exiting...\n");
-         exit(EXIT_FAILURE);
-   }
-   return (0);
-}
-/**********************************************************************/
-// this is done the same way every time, might as well do it this way
-long UpdateEphems(const ephemType ephem, const JDType jd,
-                  const JPLHeaderType *const jpl_hdr,
-                  struct WorldType *const worlds)
-{
-   JDType jd_tdb_mjd = jd;
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
-
-   long main_ephem_check = 0;
-   switch (ephem) {
-      case EPH_MEAN: {
-         /* If EPH_MEAN, update planets/luna to get higher fidelity model for
-          * LUNA */
-         main_ephem_check = UpdateMeanEphems(jd, worlds);
-      } break;
-      case EPH_DE430:
-      case EPH_DE440:
-      case EPH_DE421:
-      case EPH_DE424:
-      case EPH_GMAT421:
-      case EPH_GMAT424: {
-         if (isgreater_jd(jd_tdb_mjd, worlds[SOL].eph.Cheb[1].JD2))
-            LoadJplEphems(ModelPath, &JplHeader, jd_tdb_mjd, worlds);
-         /* Load Planetary/Luna ephems */
-         main_ephem_check = UpdateJplEphems(jd_tdb_mjd, jpl_hdr, worlds);
-      } break;
-      case EPH_SPICE: {
-#ifdef _ENABLE_SPICE_
-         main_ephem_check = UpdateSpiceEphems(jd_tdb_mjd, worlds);
-#endif
-      } break;
-      default:
-         fprintf(stderr, "Uknown Ephem Type. Exiting...\n");
-         exit(EXIT_FAILURE);
-         // return 1;  ?
-   }
-
-   /* .. Minor Bodies */
-
-   main_ephem_check |= UpdateMinorBodies(jd_tdb_mjd, &worlds[MINORBODY_0]);
-   /* .. Other planets' moons */
-   if (EphemOption != EPH_SPICE)
-      main_ephem_check |= UpdateNonEphemMoons(jd_tdb_mjd, worlds);
-   return main_ephem_check;
-}
-/**********************************************************************/
-long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
-{
-   struct OrbitType *Eph;
-   struct WorldType *W;
-
-   const double GMST     = JD2GMST(jd);
-   const double j2000sec = JDToDynTime(jd);
-   double r1[3], rh[3], vh[3];
-   const double ZAxis[3] = {0.0, 0.0, 1.0};
-   long j, Ip;
-   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
-
-   for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
-      if (worlds[Ip].Exists) {
-         W = &worlds[Ip];
-         /* Call PlanetEphemerides again only for
-            ridiculously high accuracy or rather long sims (years) */
-         /*PlanetEphemerides(i,JulDay,... */
-         Eph = &W->eph;
-         Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                j2000sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-         for (j = 0; j < 3; j++) {
-            W->PosH[j] = Eph->PosN[j];
-            W->VelH[j] = Eph->VelN[j];
-         }
-         W->PriMerAng = fmod(W->PriMerAngJ2000 + W->w * j2000sec, TwoPi);
-         SimpRot(ZAxis, W->PriMerAng, W->CWN);
-      }
-   }
-   if (worlds[LUNA].Exists) {
-      Eph = &worlds[LUNA].eph;
-      /* Meeus computes Luna Position in geocentric ecliptic */
-      JDType jd_tdb_z = jd;
-      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_z);
-
-      worlds[LUNA].PriMerAng = LunaPriMerAng(jd_tdb_z);
-      LunaPosition(jd_tdb_z, rh);
-      jd_tdb_z = JDAddDays(jd_tdb_z, 0.01);
-      LunaPosition(jd_tdb_z, r1);
-      for (j = 0; j < 3; j++)
-         vh[j] = (r1[j] - rh[j]) / (864.0);
-      /* Convert to Earth's N frame */
-      MxV(worlds[EARTH].CNH, rh, Eph->PosN);
-      MxV(worlds[EARTH].CNH, vh, Eph->VelN);
-      /* Find Luna's osculating elements */
-      RV2Eph(j2000sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
-             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
-      SimpRot(ZAxis, worlds[LUNA].PriMerAng, worlds[LUNA].CWN);
-      for (j = 0; j < 3; j++) {
-         worlds[LUNA].PosH[j] = rh[j] + worlds[EARTH].PosH[j];
-         worlds[LUNA].VelH[j] = vh[j] + worlds[EARTH].VelH[j];
-      }
-   }
-   /* .. Earth rotation is a special case */
-   worlds[EARTH].PriMerAng = TwoPi * GMST;
-   HiFiEarthPrecNute(jd, C_TEME_TETE, C_TETE_J2000);
-   SimpRot(ZAxis, worlds[EARTH].PriMerAng, C_W_TETE);
-   MxM(C_W_TETE, C_TETE_J2000, worlds[EARTH].CWN);
-   return (0);
-}
-/**********************************************************************/
-long UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds)
-{
-   struct OrbitType *Eph;
-   struct WorldType *W;
-   double ZAxis[3] = {0.0, 0.0, 1.0};
-   long j, Imb;
-
-   const double j2000_sec = JDToDynTime(jd);
-
-   /* .. Locate Asteroids and Comets */
-   for (Imb = 0; Imb < Nmb; Imb++) {
-      if (minor_worlds[Imb].Exists) {
-         W   = &minor_worlds[Imb];
-         Eph = &W->eph;
-         Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-         for (j = 0; j < 3; j++) {
-            W->PosH[j] = Eph->PosN[j];
-            W->VelH[j] = Eph->VelN[j];
-         }
-         W->PriMerAng = fmod(W->w * j2000_sec, TwoPi);
-         SimpRot(ZAxis, W->PriMerAng, W->CWN);
-      }
-   }
-   return (0);
-}
-/**********************************************************************/
-long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds)
-{
-   struct OrbitType *Eph;
-   double rh[3], vh[3];
-   double ZAxis[3] = {0.0, 0.0, 1.0};
-   long i, Ip, Iw;
-
-   const double j2000_sec = JDToDynTime(jd);
-
-   /* .. Other planets' moons */
-   for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
-      if (Ip != EARTH && worlds[Ip].Exists) {
-         for (long Im = 0; Im < worlds[Ip].Nsat; Im++) {
-            Iw  = worlds[Ip].Sat[Im];
-            Eph = &worlds[Iw].eph;
-            Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                   j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-            worlds[Iw].PriMerAng = fmod(worlds[Iw].w * j2000_sec, TwoPi);
-            SimpRot(ZAxis, worlds[Iw].PriMerAng, worlds[Iw].CWN);
-            C2Q(worlds[Iw].CWN, worlds[Iw].qwn);
-            MTxV(worlds[Ip].CNH, Eph->PosN, rh);
-            MTxV(worlds[Ip].CNH, Eph->VelN, vh);
-            for (i = 0; i < 3; i++) {
-               worlds[Iw].PosH[i] = rh[i] + worlds[Ip].PosH[i];
-               worlds[Iw].VelH[i] = vh[i] + worlds[Ip].VelH[i];
-            }
-         }
-      }
-   }
-   return (0);
-}
-/**********************************************************************/
-#ifdef _ENABLE_SPICE_
-long LoadSpiceKernels(char SpicePath[80])
-{
-   char MetaKernelPath[80];
-   strcpy(MetaKernelPath, SpicePath);
-   strcat(MetaKernelPath, "spice_kernels/kernels.txt");
-
-   furnsh_c(MetaKernelPath);
-   return (0);
-}
-long UpdateSpiceEphems(const JDType jd, struct WorldType *const worlds)
-{
-   WorldID Iw, Ip, Im;
-   int i;
-   double CNJ[3][3];
-
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   const double JS       = JDToDays(jd_tdb_j2000) * SEC_PER_DAY;
-   const double j2000sec = JDToDynTime(jd_tdb_j2000);
-
-   struct OrbitType *Eph;
-   struct WorldType *W;
-   double Nstate[6], Hstate[6];
-   double light_time;
-   double ang[3] = {0.0};
-
-   double CWJ[3][3];
-
-   // Read all planets
-   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      if (worlds[Iw].Exists) {
-         W   = &worlds[Iw];
-         Eph = &W->eph;
-         spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
-                 WorldID2NAIFID(0), Nstate,
-                 &light_time); // State of major bodies in J2000 wrt Sun center
-
-         for (i = 0; i < 3; i++) {
-            Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
-            W->PosH[i] =
-                Nstate[i] *
-                1e3; // Assign suncentric positions = inertial position (m)
-
-            Eph->VelN[i] =
-                Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
-            W->VelH[i] =
-                Nstate[i + 3] *
-                1e3; // Assign suncentric velocity = inertial velocity (m/s)
-         }
-         char frame_name[25] = {'\0'};
-         WorldID2IAUFrame(Iw, frame_name);
-
-         // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-         MxMT(worlds[Iw].CNH, worlds[EARTH].CNH, CNJ);
-
-         pxform_c("J2000", frame_name, JS, CWJ);
-
-         // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-         MxMT(CWJ, CNJ, worlds[Iw].CWN);
-         C2Q(worlds[Iw].CWN, worlds[Iw].qwn);
-         logso3(worlds[Iw].CWN, ang);
-         worlds[Iw].PriMerAng = ang[2];
-      }
-   }
-
-   // Read all moons
-   for (Ip = EARTH; Ip <= PLUTO; Ip++) {
-      if (worlds[Ip].Exists) {
-         for (Im = 0; Im < worlds[Ip].Nsat; Im++) {
-            Iw  = worlds[Ip].Sat[Im];
-            W   = &worlds[Iw];
-            Eph = &W->eph;
-
-            spkez_c(
-                WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
-                WorldID2NAIFID(SOL), Hstate,
-                &light_time); // State of major bodies in J2000 wrt Sun center
-
-            spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
-                    WorldID2NAIFID(Ip), Nstate,
-                    &light_time); // State of major bodies in J2000 wrt Planet
-                                  // center
-
-            for (i = 0; i < 3; i++) {
-               Eph->PosN[i] = Nstate[i] * 1e3; // Assign inertial positions (m)
-               W->PosH[i]   = Hstate[i] * 1e3;
-
-               Eph->VelN[i] =
-                   Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
-               W->VelH[i] = Hstate[i + 3] * 1e3;
-            }
-
-            if (Iw == LUNA) {
-               spkez_c(WorldID2NAIFID(Iw), JS, "J2000", "NONE",
-                       WorldID2NAIFID(Ip), Nstate,
-                       &light_time); // State of major bodies in J2000 wrt
-                                     // Planet center
-               for (i = 0; i < 3; i++) {
-                  Eph->PosN[i] =
-                      Nstate[i] * 1e3; // Assign inertial positions (m)
-                  Eph->VelN[i] =
-                      Nstate[i + 3] * 1e3; // Assign inertial velocity (m/s)
-               }
-            }
-
-            char frame_name[25] = {'\0'};
-            WorldID2IAUFrame(Iw, frame_name);
-
-            pxform_c("J2000", frame_name, JS,
-                     CWJ); // matrix from J2000 (ICRF) -> body fixed
-
-            // CNJ @ EarthCNH = CNH -> CNJ = CNH @ EarthCNH^T
-            MxMT(worlds[Iw].CNH, worlds[EARTH].CNH, CNJ);
-
-            pxform_c("J2000", frame_name, JS,
-                     CWJ); // matrix from J2000 (ICRF) -> body fixed
-
-            // CWN @ CNJ = CWJ -> CWN = CWJ @ CNJ^T
-            MxMT(CWJ, CNJ, worlds[Iw].CWN);
-            C2Q(worlds[Iw].CWN, worlds[Iw].qwn);
-            logso3(worlds[Iw].CWN, ang);
-            worlds[Iw].PriMerAng = ang[2];
-         }
-      }
-   }
-
-   for (Iw = MERCURY; Iw <= LUNA; Iw++) {
-      Eph = &worlds[Iw].eph;
-      RV2Eph(j2000sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
-             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
-   }
-
-   return (0);
-}
-void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
-                    struct WorldType *const worlds, double trgtPosN[3],
-                    double trgtPosH[3], double *trgtPriMerAng,
-                    double trgtCNH[3][3])
-{
-   // TODO: this idea will take some doing, but should maybe make some wrappers
-   // for the spice stuff, that way we don't need to do things like append
-   // "IAU_" every time and just need to call the wrapper with our WorldID.
-   // would also be nice to have #include "SpiceUsr.h" in one place
-   double CNH[3][3];
-   double Nstate[6], Hstate[6];
-   double light_time;
-   char trgtCNH_STRING[25] = {'\0'};
-   int i, j;
-
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
-   const double jd_tdb_j2000_sec = JDToTime(jd);
-
-   SpiceInt tgt_world_naif = WorldID2NAIFID(trgtWORLD);
-   WorldID2IAUFrame(trgtWORLD, trgtCNH_STRING);
-
-   if (trgtWORLD == LUNA) {
-      spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "ECLIPJ2000", "NONE",
-              WorldID2NAIFID(SOL), Hstate, &light_time);
-      spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "J2000", "NONE",
-              WorldID2NAIFID(EARTH), Nstate, &light_time);
-      for (i = 0; i < 3; i++) {
-         trgtPosH[i] = Hstate[i] * 1e3;
-         trgtPosN[i] = Nstate[i] * 1e3;
-      }
-   }
-   else {
-      spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "ECLIPJ2000", "NONE",
-              WorldID2NAIFID(SOL), Nstate, &light_time);
-      for (i = 0; i < 3; i++) {
-         trgtPosH[i] = Nstate[i] * 1e3;
-         trgtPosN[i] = Nstate[i] * 1e3;
-      }
-   }
-   pxform_c("J2000", trgtCNH_STRING, jd_tdb_j2000_sec, CNH);
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++) {
-         trgtCNH[i][j] = CNH[i][j];
-      }
-   }
-}
-#endif
 /**********************************************************************/
 void LoadConstellations(void)
 {
@@ -6900,11 +5546,14 @@ void InitSim(int argc, char **argv)
    WorldID Iw;
    long MinorBodiesExist;
    long JunkTag;
-   double CGJ[3][3] = {
+   const double CGJ_tmp[3][3] = {
        {-0.054873956175539, -0.873437182224835, -0.483835031431981},
        {0.494110775064704, -0.444828614979805, 0.746981957785302},
        {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
    double CJH[3][3];
+
+   for (i = 0; i < 3; i++)
+      CopyVG(CGJ[i], CGJ_tmp[i], 3);
 
    Pi          = PI;
    TwoPi       = TWOPI;
@@ -6925,6 +5574,7 @@ void InitSim(int argc, char **argv)
    World[EARTH].CNH[2][0] = 0.0;
    World[EARTH].CNH[2][1] = 0.397777155914121383;
    World[EARTH].CNH[2][2] = 0.917482062076895741;
+
    C2Q(World[EARTH].CNH, World[EARTH].qnh);
    C2Q(World[EARTH].CNH, qjh);
 
@@ -6935,8 +5585,12 @@ void InitSim(int argc, char **argv)
    // A2C(123, ecliptic * D2R, 0.0, 0.0, World[EARTH].CNH);
    // C2Q(World[EARTH].CNH, World[EARTH].qnh);
    // C2Q(World[EARTH].CNH, qjh);
-   for (i = 0; i < 3; i++)
+   for (i = 0; i < 3; i++) {
       World[EARTH].qnj[i] = 0.0;
+      for (int j = 0; j < 3; j++)
+         World[EARTH].CNJ[i][j] = 0.0;
+      World[EARTH].CNJ[i][i] = 1.0;
+   }
    World[EARTH].qnj[3] = 1.0;
 
    sprintf(InOutPath, "./InOut/");
@@ -7057,6 +5711,8 @@ void InitSim(int argc, char **argv)
    }
    DTSIM_RAT = double2rational(DTSIM);
    DTOUT_RAT = double2rational(DTOUT);
+   DTSIM     = rational2double(DTSIM_RAT);
+   DTOUT     = rational2double(DTOUT_RAT);
    TimeMode  = DecodeString(response);
    GLEnable  = getYAMLBool(fy_node_by_path_def(node, "/Enable Graphics"));
 
@@ -7350,32 +6006,24 @@ void InitSim(int argc, char **argv)
       exit(EXIT_FAILURE);
    }
    EphemOption = GetEphemType(response);
-#ifndef _ENABLE_SPICE_
-   if (EphemOption == EPH_SPICE) {
-      fprintf(stderr, "You must compile DeepThought with SPICE in order to use "
-                      "SPICE ephemerides. Exiting...\n");
-      exit(EXIT_FAILURE);
-   }
-#endif
+
    node = fy_node_by_path_def(root, "/Celestial Bodies");
-   // I wish this was more programmatic, but it doesn't really need to be
-   // I guess
-   World[MERCURY].Exists = getYAMLBool(fy_node_by_path_def(node, "/Mercury"));
-   World[VENUS].Exists   = getYAMLBool(fy_node_by_path_def(node, "/Venus"));
-   World[EARTH].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Earth and Luna"));
-   World[MARS].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Mars and its moons"));
-   World[JUPITER].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Jupiter and its moons"));
-   World[SATURN].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Saturn and its moons"));
-   World[URANUS].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Uranus and its moons"));
-   World[NEPTUNE].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Neptune and its moons"));
-   World[PLUTO].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Pluto and its moons"));
+
+   // TODO: allow for enabling/disabling particular moons
+   //       E.g, ee may want to know the position of Jupiter,
+   //       but may not need its moon Ananke
+   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
+      char search_str[64] = {'\0'};
+      search_str[0]       = '/';
+      WorldID2String(Iw, &search_str[1]);
+      CapitalizeFirst(63, &search_str[1]);
+      if (Iw == EARTH)
+         strcat(search_str, " and Luna");
+      else if (Iw >= MARS)
+         strcat(search_str, " and its moons");
+
+      World[Iw].Exists = getYAMLBool(fy_node_by_path_def(node, search_str));
+   }
    MinorBodiesExist =
        getYAMLBool(fy_node_by_path_def(node, "/Asteroids and Comets"));
 
@@ -7463,6 +6111,13 @@ void InitSim(int argc, char **argv)
 
    LoadEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
 
+   // overwrite with spice, if we have it and want it
+   if (EphemOption == EPH_SPICE) {
+      SpiceSetOrientation(JD_TDB_MJD, EARTH, &World[EARTH], World[EARTH].CNH);
+      C2Q(World[EARTH].CNH, World[EARTH].qnh);
+      C2Q(World[EARTH].CNH, qjh);
+   }
+
    /* .. Load Sun and Planets */
    LoadSun(EphemOption, JD_TDB_MJD, &JplHeader, World);
    LoadPlanets(EphemOption, JD_TDB_MJD, &JplHeader, World);
@@ -7480,10 +6135,6 @@ void InitSim(int argc, char **argv)
 
    /* .. Regions */
    LoadRegions();
-
-   // make duplicate of main World for use in propagators
-   for (i = 0; i < NWORLD; i++)
-      CloneWorld(&World_dupe[i], World[i]);
 
    /* .. Galactic Frame */
    Q2C(qjh, CJH);
@@ -7522,7 +6173,7 @@ void InitSim(int argc, char **argv)
          InitOrbit(&Orb[Iorb], JD_TDB_MJD);
    }
    for (Iorb = 0; Iorb < Norb; Iorb++)
-      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
+      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          InitSpacecraft(&SC[Isc]);
@@ -7550,6 +6201,7 @@ void InitSim(int argc, char **argv)
 
    LoadSchatten();
 }
+/**********************************************************************/
 
 /* #ifdef __cplusplus
 ** }

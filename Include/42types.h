@@ -56,18 +56,6 @@ enum fswType {
    DSM_FSW,
 };
 
-struct SphereHarmType {
-   /*~ Internal Variables ~*/
-   char modelFile[40];
-   long Type;
-   long N;
-   long M;
-   double **Norm;
-   double **C;
-   double **S;
-   double r_ref;
-};
-
 struct FormationType {
    /*~ Internal Variables ~*/
    char FixedInFrame;
@@ -791,99 +779,16 @@ struct RegionType {
    float ModelMatrix[16]; /* For OpenGL */
 };
 
-struct AtmoType {
-   /*~ Internal Variables ~*/
-   long Exists;
-   float GasColor[3];
-   float DustColor[3];
-   float RayScat[3];
-   float MieScat;
-   float RayScaleHt;
-   float MieScaleHt;
-   float MieG;
-   double MaxHt;
-   double rad;
-};
-
-struct WorldType {
-   /*~ Parameters ~*/
-
-   /* Relationships */
-   long Exists;
-   long Type; /* STAR, PLANET, MOON, ASTEROID, COMET */
-   long Parent;
-   long Nsat;
-   WorldID *Sat; /* [*Nsat*] */
-
-   /* Physical Properties */
-   double mu;              /* Gravitation constant  */
-   double J2;              /* Gravitation oblateness parameter */
-   double rad;             /* Radius */
-   double w;               /* Spin Rate */
-   double PriMerAngJ2000;  /* Prime Meridian Angle at J2000 epoch, rad */
-   double RadOfInfluence;  /* Radius of Sphere of Influence */
-   double DipoleMoment;    /* Magnetic Field Dipole Moment, Wb-m */
-   double DipoleAxis[3];   /* Magnetic Field Dipole Axis */
-   double DipoleOffset[3]; /* Dipole Offset, m */
-   double RingInner, RingOuter;
-   double Density; /* For minor bodies, polyhedron gravity */
-   struct SphereHarmType GravModel;
-
-   /* Graphical Properties */
-   long HasRing;
-   char Name[20];
-   char MapFileName[40];
-   char GeomFileName[40];
-   char ColTexFileName[40];
-   char BumpTexFileName[40];
-   float Color[4];
-   unsigned char Glyph[14];
-   unsigned int TexTag;
-   unsigned int MapTexTag;
-   unsigned int ColTexTag;
-   unsigned int BumpTexTag;
-   unsigned int ColCubeTag;
-   unsigned int BumpCubeTag;
-   unsigned int CloudGlossCubeTag;
-   long GeomTag;
-   unsigned int RingTexTag;
-   double NearExtent, FarExtent;
-
-   double CNH[3][3]; /* DCM from heliocentric ecliptic frame
-                        to world-centric equatorial inertial frame */
-   double qnh[4];    /* ~*/
-   double CNJ[3][3]; /* DCM from J2000 frame to world-centric equatorial
-                        inertial frame */
-   double qnj[4];
-
-   /*~ Internal Variables ~*/
-
-   double PosH[3];   /* Position in H frame [~=~] */
-   double VelH[3];   /* Velocity in H frame */
-   double PriMerAng; /* Angle from N1 to prime meridian */
-   double CWN[3][3]; /* DCM from world-centric inertial frame
-                        to world-centric rotating frame */
-   double qwn[4];    /* ~*/
-   long Visibility;  /* Too small to see, point-sized, or shows disk */
-   float ModelMatrix[16];
-
-   /*~ Structures ~*/
-   struct OrbitType eph; /* Ephemeris */
-   struct AtmoType Atmo;
-};
-
 struct SCType;
 typedef struct SCRKParams {
    RKParams base;
-   // TODO: a full allocation of the World array is 126620 bytes and this stores
-   // a copy for each sc. maybe just a global level allocation of a backup
-   // array, and then the below item just shares the pointer between the SCs.
-   struct WorldType *worlds;          // duplicate of the global World
-   struct RegionType *rgn;            // duplicate of the global Rgn
-   struct LagrangeSystemType *lagsys; // duplicate of all lagsystems
-   struct OrbitType *orb;             // duplicate of sc's orbit
-   struct FormationType *frm;         // duplicate of sc's formation
-   struct SCType *sc;
+   struct WorldType *worlds;          // pointer to the global World
+   struct RegionType *rgn;            // pointer to the global Rgn
+   struct LagrangeSystemType *lagsys; // pointer to all lagsystems
+   struct OrbitType *orb;             // pointer to sc's orbit
+   struct FormationType *frm;         // pointer to sc's formation
+   struct SCType *sc;                 // pointer to sc itself
+   ephemType ephem;
 } SCRKParams;
 
 struct SCType {

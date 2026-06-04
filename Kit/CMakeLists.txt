@@ -55,14 +55,10 @@ set(KIT_SOURCES
     ${KIT}/navkit.c
     ${KIT}/rkkit.c
     ${KIT}/utilkit.c
+    ${KIT}/spicekit.c
     )
 
 add_library(42kit STATIC ${KIT_SOURCES})
-
-if (PROFILE)
-    target_compile_options(42kit PRIVATE -pg)
-    target_link_options(42kit PRIVATE -pg)
-endif()
 
 # Copy Shaders Directory if building out of source
 if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
@@ -79,11 +75,12 @@ endif()
 add_subdirectory(tests)
 
 target_link_libraries(42kit PUBLIC m)
-# target_include_directories(42kit PUBLIC $<$<STREQUAL:GLUT_OR_GLFW,"GLFW">:../Include>)
 
 target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion -Wno-format-extra-args)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Release>:-O2>)
-target_compile_options(42kit PRIVATE $<$<CONFIG:Debug>:-fno-omit-frame-pointer>)
+target_compile_options(42kit PRIVATE $<$<CONFIG:Debug>:-O0 -ggdb -fno-omit-frame-pointer>)
+target_compile_options(42kit PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)
+target_link_options(42kit PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)
 
 # addresssanitizer
 target_compile_options(42kit PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
@@ -106,9 +103,8 @@ endif()
 add_compile_definitions($<$<BOOL:${REPORT_RESIDUALS}>:_REPORT_RESIDUALS_>)
 
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${GSFC}>:_USE_GSFC_WATERMARK_>)
-
 target_compile_definitions(42kit PRIVATE $<$<BOOL:${DEBUG_DATA}>:_DEBUG_GRAV_ _DEBUG_MAG_>)
-
+target_compile_definitions(42kit PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:DEBUG_MODE>)
 
 if(SPICE)
     # Based on similar section in GMAT cmake

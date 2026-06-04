@@ -49,17 +49,14 @@ endif()
 
 add_executable(deepthought)
 
-if (PROFILE)
-    target_compile_options(deepthought PRIVATE -pg)
-    target_link_options(deepthought PRIVATE -pg)
-endif()
-
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
 
 target_compile_options(deepthought PRIVATE -fpic -Wall -Wshadow -Wno-deprecated)
 target_compile_options(deepthought PRIVATE $<$<CONFIG:Release>:-O2>)
-target_compile_options(deepthought PRIVATE $<$<CONFIG:Debug>:-O0 -pg -ggdb -fno-omit-frame-pointer>)
+target_compile_options(deepthought PRIVATE $<$<CONFIG:Debug>:-O0 -ggdb -fno-omit-frame-pointer>)
+target_compile_options(deepthought PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)
+target_link_options(deepthought PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)
 
 # addresssanitizer
 target_compile_options(deepthought PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)
@@ -104,51 +101,6 @@ set(42_SOURCES
 
 target_include_directories(deepthought PRIVATE Kit/Include Include)
 target_sources(deepthought PRIVATE ${SOURCE}/42main.c ${42_SOURCES} ${SIM_IPC_SOURCES})
-
-if(SPICE)
-    # Copy  cspice directory if building out of source
-    if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
-        file(COPY 
-            "${CMAKE_CURRENT_SOURCE_DIR}/cspice" 
-            DESTINATION
-            "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-
-    # Based on similar section in GMAT cmake
-    set(CSPICE_TEMP_DIR ${CMAKE_SOURCE_DIR}/cspice)
-
-    find_path(CSPICE_DIR
-        NAMES include/SpiceUsr.h
-        PATHS 
-            ${CSPICE_TEMP_DIR}
-        DOC "Path to CSpice root directory (containing include/, lib/, etc.)"
-        NO_DEFAULT_PATH
-        )
-
-    # Make sure CSPICE exists
-    if(CSPICE_DIR)
-        MESSAGE(STATUS "Found CSPICE: " ${CSPICE_DIR})
-
-        # Set CSPICE library files
-        # if(WIN32)
-        #     SET(CSPICE_EXT "lib")
-        # else()
-        SET(CSPICE_EXT "a")
-        # endif()
-        SET(CSPICE_LIB "${CSPICE_DIR}/lib/cspice.${CSPICE_EXT}")
-        # SET(CSPICE_LIB_DEBUG "${CSPICE_DIR}/lib/cspiced.${CSPICE_EXT}")
-        SET(CSPICE_INCLUDE_DIR "${CSPICE_DIR}/include")
-        if(NOT EXISTS ${CSPICE_LIB_DEBUG})
-            SET(CSPICE_LIB_DEBUG ${CSPICE_LIB})
-        endif()
-    else()
-        MESSAGE(ERROR "CSPICE NOT FOUND. Set CSPICE_DIR to path to include/SpiceUsr.h and re-configure.")
-    endif()
-    add_compile_definitions(_ENABLE_SPICE_)
-    
-    target_link_libraries(deepthought PRIVATE optimized ${CSPICE_LIB} debug ${CSPICE_LIB_DEBUG})
-    target_include_directories(deepthought PRIVATE ${CSPICE_INCLUDE_DIR})
-endif()
 
 # Copy World and Model Directories if building out of source
 if (NOT "${CMAKE_CURRENT_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")

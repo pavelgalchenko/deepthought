@@ -40,6 +40,16 @@ double signum(const double x)
    return (x >= 0 ? 1.0 : -1.0);
 }
 /**********************************************************************/
+double sin_deg(double x)
+{
+   return sin(x * D2R);
+}
+/**********************************************************************/
+double cos_deg(double x)
+{
+   return cos(x * D2R);
+}
+/**********************************************************************/
 /* sinc(x) = sin(x)/x                                                 */
 /*  Series expansion: sinc(x) = 1 - x^2/3! + x^4/5! - x^6/7!...       */
 /*  Enough terms kept to be within 2E-10 for x in [-pi:pi]            */
@@ -887,7 +897,7 @@ void MTxMG(double **A, double **B, double **C, const long N, const long K,
    }
 }
 /**********************************************************************/
-void CopyVG(double *dest, double *src, const long n)
+void CopyVG(double *const dest, const double *const src, const long n)
 {
    memcpy(dest, src, n * sizeof(double));
 }
@@ -2029,7 +2039,108 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
    } while ((!breakOnZeroF || fabs(f) > tol) && fabs(dx) > tol && k++ < nMax);
    return x;
 }
+/******************************************************************************/
+/* Helper for Brent's Method                                                  */
+static double _inv_quad_int(double a, double fa, double fb, double fc)
+{
+   return a * fb * fc / ((fa - fb) * (fa - fc));
+}
+/******************************************************************************/
+/* Find root for function f in the domain [a0, b0] by Brent's Method          */
+double BrentsMethod(double a, double b, const double tol,
+                    double (*f)(const double, double *), double *params)
+{
+   if (a == b)
+      return a;
 
+   const double tol_abs = fabs(tol);
+
+   double fa = f(a, params);
+   double fb = f(b, params);
+
+   if (fa * fb >= 0) {
+      // fa and fb are same sign (or zero)
+      //    return the value associated with the smaller one
+      if (fa == 0)
+         return fa;
+      if (fb == 0)
+         return fb;
+      const double mag_fa = fabs(fa);
+      const double mag_fb = fabs(fb);
+      if (mag_fa < mag_fb)
+         return a;
+      else
+         return b;
+   }
+
+   if (fabs(fa) < fabs(fb)) {
+      double t = a;
+      a        = b;
+      b        = t;
+
+      t  = fa;
+      fa = fb;
+      fb = t;
+   }
+
+   double c = a, d = 0.0;
+   double fc = fa;
+   int mflag = 1;
+
+   double err = fabs(b - a);
+   while (fb != 0 && err > tol_abs) {
+      double s = 0;
+      if (fa != fc && fb != fc)
+         // inverse quadratic interpolation
+         s = _inv_quad_int(a, fa, fb, fc) + _inv_quad_int(b, fb, fc, fa) +
+             _inv_quad_int(c, fc, fa, fb);
+      else
+         // secant method
+         s = b - fb * (b - a) / (fb - fa);
+
+      const double tmp = (3.0 * a + b) / 4.0;
+      const int cond_1 = !((tmp > b) ? (b < s && s < tmp) : (tmp < s && s < b));
+      const int cond_2 = (mflag) && (fabs(s - b) >= (fabs(b - c) / 2.0));
+      const int cond_3 = (!mflag) && (fabs(s - b) >= (fabs(c - d) / 2.0));
+      const int cond_4 = (mflag) && (fabs(b - c) < tol_abs);
+      const int cond_5 = (!mflag) && (fabs(c - d) < tol_abs);
+      if (cond_1 || cond_2 || cond_3 || cond_4 || cond_5) {
+         // bisection method
+         s     = (a + b) / 2;
+         mflag = 1;
+      }
+      else
+         mflag = 0;
+
+      d  = c;
+      c  = b;
+      fc = fb;
+      // determine what sign fs is, and replace one of the brackets with it
+      double fs = f(s, params);
+      if (fa * fs < 0) {
+         b  = s;
+         fb = fs;
+      }
+      else {
+         a  = s;
+         fa = fs;
+      }
+      if (fabs(fa) < fabs(fb)) {
+         double t = a;
+         a        = b;
+         b        = t;
+
+         t  = fa;
+         fa = fb;
+         fb = t;
+      }
+
+      err = fabs(b - a);
+      if (fabs(a) > __DBL_EPSILON__)
+         err /= a;
+   }
+   return b;
+}
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */

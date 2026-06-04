@@ -15,6 +15,7 @@
 #define __TIMEKIT_H__
 
 #include "42constants.h"
+#include "defineskit.h"
 #include "jdkit.h"
 #include <math.h>
 #include <stdint.h>
@@ -61,8 +62,6 @@ typedef uint16_t ccsdsFine;
 ** #endif
 */
 
-#define SEC_PER_DAY (86400.0)
-
 typedef struct CCSDSTime {
    ccsdsCoarse coarse;
    ccsdsFine fine;
@@ -73,10 +72,12 @@ CCSDSTime CCSDSAdd(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time);
 CCSDSTime CCSDSAddSeconds(const CCSDSTime time, const double dt);
 double ccsds2seconds(const CCSDSTime ccsds);
 CCSDSTime seconds2ccsds(const double);
-CCSDSTime jd2ccsds(JDType jd);
 double ccsds2time(const CCSDSTime ccsds_time);
 int isequal_ccsds(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time);
 int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds);
+
+JDType ccsds2jd(const CCSDSTime ccsds_time);
+CCSDSTime jd2ccsds(JDType jd);
 
 typedef struct {
    TimeSystem system;

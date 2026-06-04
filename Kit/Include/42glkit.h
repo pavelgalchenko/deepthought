@@ -14,11 +14,11 @@
 #ifndef __42GLKIT_H__
 #define __42GLKIT_H__
 
+#include "defineskit.h"
+#include "glkit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "glkit.h"
 
 /*
 ** #ifdef __cplusplus
@@ -47,16 +47,16 @@ enum CAM_MENU {
    NAV_STATE,
    MILKY_WAY,
    FERMI_SKY,
+   CAM_MENU_SIZE
 };
-#define CAM_MENU_SIZE (FERMI_SKY + 1)
 
 enum MAP_MENU {
    MAP_CLOCK = 0,
    MAP_TLM_CLOCK,
    MAP_CREDITS,
    MAP_NIGHT,
+   MAP_MENU_SIZE
 };
-#define MAP_MENU_SIZE (MAP_NIGHT + 1)
 
 #define MONOCULAR 0
 #define LEFTEYE   1

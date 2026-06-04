@@ -14,6 +14,7 @@
 #ifndef __42GLFWKIT_H__
 #define __42GLFWKIT_H__
 
+#include "defineskit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,5 +44,3 @@ EXTERN GLFWwindow *SphereWindow;
 ** }
 ** #endif
 */
-
-#endif /* __42GLFWKIT_H__ */

@@ -474,7 +474,7 @@ void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
 /**********************************************************************/
 void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
                  struct LagrangeSystemType *lagsys, struct OrbitType *const orb,
-                 struct FormationType *const frm, double dyntime)
+                 struct FormationType *const frm, JDType jd)
 {
    long i, j;
    struct RegionType *R;
@@ -492,6 +492,7 @@ void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
          }
       }
 #endif
+   const double dyntime = JDToDynTime(jd);
 
    if (orb->Exists) {
       if (orb->Regime == ORB_THREE_BODY) {
@@ -537,7 +538,8 @@ void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
                orb->PosN[i] = R->PosN[i];
                orb->VelN[i] = R->VelN[i];
             }
-            FindENU(orb->PosN, worlds[orb->World].w, orb->CLN, orb->wln);
+            FindENU(orb->PosN, GetWorldW(jd, &worlds[orb->World]), orb->CLN,
+                    orb->wln);
             break;
          case ORB_N_BODY:
          case ORB_CENTRAL:
@@ -564,8 +566,703 @@ void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
    }
 }
 /**********************************************************************/
-void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
-                      struct RegionType *rgn, struct LagrangeSystemType *lagsys)
+ephemType GetEphemType(const char *s)
+{
+   if (!strcmp(s, "MEAN"))
+      return EPH_MEAN;
+   else if (!strcmp(s, "DE421"))
+      return EPH_DE421;
+   else if (!strcmp(s, "DE424"))
+      return EPH_DE424;
+   else if (!strcmp(s, "DE430"))
+      return EPH_DE430;
+   else if (!strcmp(s, "DE440"))
+      return EPH_DE440;
+   else if (!strcmp(s, "GMAT421"))
+      return EPH_GMAT421;
+   else if (!strcmp(s, "GMAT424"))
+      return EPH_GMAT424;
+   else if (!strcmp(s, "SPICE"))
+      return EPH_SPICE;
+   fprintf(stderr, "Bogus input %s in GetEphemType (42init.c:%d)\n", s,
+           __LINE__);
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+long LoadEphems(const ephemType ephem, const JDType jd,
+                JPLHeaderType *const jpl_hdr, struct WorldType *const worlds)
+{
+   /* Preload Ephemeris Kernels/Definitions */
+   switch (ephem) {
+      case EPH_MEAN: // No Ephem to Load
+         break;
+      case EPH_DE430:
+      case EPH_DE440:
+      case EPH_DE421:
+      case EPH_DE424:
+      case EPH_GMAT421:
+      case EPH_GMAT424:
+         return LoadJplEphems(ephem, ModelPath, jpl_hdr, jd, worlds);
+         break;
+      case EPH_SPICE:
+         // Load up Spice kernels
+         return SpiceLoadKernels(ModelPath);
+         break;
+      default:
+         fprintf(stderr, "Unknown Ephem Type. Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
+   return (0);
+}
+/**********************************************************************/
+long InitJplHeader(const ephemType ephem, const char eph_path[128],
+                   JPLHeaderType *hdr_data)
+{
+   // read the header file
+#define buf_size 512
+   // holds flag if NCOEFF and each group of 1030, 1040, 1041, and 1050 are
+   // found
+   int grp_found[5] = {0};
+
+   hdr_data->eph = ephem;
+   strcpy(hdr_data->eph_path, eph_path);
+
+   const TimeSystem cheb_system = TDB_TIME;
+   const TimeSystem cheb_epoch  = GMAT_MJD_EPOCH;
+
+   switch (ephem) {
+      case EPH_DE421:
+      case EPH_GMAT421: {
+         strcpy(hdr_data->eph_str, "421");
+      } break;
+      case EPH_DE424:
+      case EPH_GMAT424: {
+         strcpy(hdr_data->eph_str, "424");
+      } break;
+      case EPH_DE430: {
+         strcpy(hdr_data->eph_str, "430");
+      } break;
+      case EPH_DE440: {
+         strcpy(hdr_data->eph_str, "440");
+      } break;
+      default:
+         fprintf(stderr, "Unknown ephem type in InitJplHeader(). Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
+   strcpy(hdr_data->hdr_name, "header.");
+   strcat(hdr_data->hdr_name, hdr_data->eph_str);
+
+   FILE *const hdr_file =
+       FileOpen(hdr_data->eph_path, hdr_data->hdr_name, "rt");
+
+   long grp_num        = 0;
+   char line[buf_size] = {"\0"};
+   while (fgets(line, buf_size, hdr_file)) {
+      if (sscanf(line, "KSIZE=%ld NCOEFF=%ld", &grp_num, &hdr_data->n_coeff) ==
+          2) {
+         grp_found[0] = 1;
+         break;
+      }
+   }
+   hdr_data->blk_len   = hdr_data->n_coeff + 2;
+   hdr_data->blk_lines = ((double)hdr_data->blk_len) / 3.0 + 0.5;
+
+   const char *tok_check = " \n\0";
+
+   while (!all_int(4, &grp_found[1]) && fgets(line, buf_size, hdr_file)) {
+      const int sscanf_check = sscanf(line, "GROUP %ld", &grp_num) == 1;
+      switch ((sscanf_check) ? grp_num : -1) {
+         case 1030: {
+            while (fgets(line, buf_size, hdr_file)) {
+               double jd_days[2] = {0};
+               if (sscanf(line, "%lf %lf %lf", &jd_days[0], &jd_days[1],
+                          &hdr_data->n_days) == 3) {
+                  grp_found[1] = 1;
+                  for (int i = 0; i < 2; i++) {
+                     hdr_data->jd_range[i] =
+                         JDFromDays(jd_days[i], cheb_system, ZERO_EPOCH);
+                     JDChangeEpoch(cheb_epoch, &hdr_data->jd_range[i]);
+                  }
+                  break;
+               }
+            }
+         } break;
+         case 1040: {
+            grp_found[2] = 1;
+            while (fgets(line, buf_size, hdr_file)) {
+               if (sscanf(line, "%ld", &hdr_data->n_data) == 1) {
+                  break;
+               }
+            }
+            hdr_data->group_1040 = malloc(hdr_data->n_data * sizeof(char[10]));
+            char (*const group_1040_start)[10] = hdr_data->group_1040;
+
+            // Assuming data names in group 1040 start immediately after
+            // n_data
+            while (fgets(line, buf_size, hdr_file)) {
+               const char *tok = strtok(line, tok_check);
+               if (!tok)
+                  break;
+               while (tok != NULL) {
+                  strcpy(*hdr_data->group_1040, tok);
+                  hdr_data->group_1040++;
+                  tok = strtok(NULL, tok_check);
+               }
+            }
+            hdr_data->group_1040 = group_1040_start;
+         } break;
+         case 1041: {
+            grp_found[3] = 1;
+            while (fgets(line, buf_size, hdr_file)) {
+               long n_group_1041 = 0;
+               if (sscanf(line, "%ld", &n_group_1041) == 1) {
+                  // assuming group 1041 is AFTER group 1040
+                  if (n_group_1041 != hdr_data->n_data) {
+                     fprintf(stderr,
+                             "The data length for groups 1040 and 1041 in DE "
+                             "header file '%s' do not match.  "
+                             "Exiting...\n\tGroup "
+                             "1040 dimension: %ld\n\tGroup 1040 dimension: %ld",
+                             hdr_data->hdr_name, hdr_data->n_data,
+                             n_group_1041);
+                     exit(EXIT_FAILURE);
+                  }
+                  break;
+               }
+            }
+            hdr_data->group_1041 = calloc(hdr_data->n_data, sizeof(double));
+            double *const group_1041_start = hdr_data->group_1041;
+
+            // assuming  group 1041 data is immediately after
+            while (fgets(line, buf_size, hdr_file)) {
+               replace_char(line, 'D', 'E');
+               const char *tok = strtok(line, tok_check);
+               if (!tok)
+                  break;
+               while (tok != NULL) {
+                  *hdr_data->group_1041 = atof(tok);
+                  hdr_data->group_1041++;
+                  tok = strtok(NULL, tok_check);
+               }
+            }
+            hdr_data->group_1041 = group_1041_start;
+         } break;
+         case 1050: {
+            grp_found[4] = 1;
+            while (fgets(line, buf_size, hdr_file)) {
+               if (is_line_empty(line))
+                  continue;
+
+               for (int i = 0; i < 3; i++) {
+                  const char *tok = strtok(line, tok_check);
+                  for (int j = 0; j < 11; j++) {
+                     hdr_data->group_1050[j][i] = atoi(tok);
+                     tok                        = strtok(NULL, tok_check);
+                  }
+                  fgets(line, buf_size, hdr_file);
+               }
+               break;
+            }
+         } break;
+         default:
+            break;
+      }
+   }
+#undef buf_size
+   fclose(hdr_file);
+   return (all_int(5, grp_found));
+}
+/******************************************************************************/
+double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
+                           const char *grp_1040_name)
+{
+   // Get data from group 1040/1041 in JPL DE header
+   for (int i = 0; i < hdr_data->n_data; i++) {
+      if (!strncmp(hdr_data->group_1040[i], grp_1040_name, 9))
+         return hdr_data->group_1041[i];
+   }
+   fprintf(stderr, "Could not find `%s` in group 1040 of file %s. Exiting...\n",
+           grp_1040_name, hdr_data->hdr_name);
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+long LoadJplEphems(ephemType ephem, char EphemPath[128],
+                   JPLHeaderType *const jpl_hdr, const JDType jd,
+                   struct WorldType *const worlds)
+{
+   FILE *infile = NULL;
+   long BlockNum, NumEntries;
+   long FoundBlock;
+   char line[512];
+   JDType jd_block[2];
+   long i, n, Ic, Iw;
+   long Nseg, Start, N;
+   struct Cheb3DType *Cheb;
+
+   const TimeSystem cheb_system = TDB_TIME;
+   const TimeSystem cheb_epoch  = GMAT_MJD_EPOCH;
+
+   JDType jd_cheb = jd, jd_cheb_z = jd;
+   JDChangeSystemEpoch(cheb_system, cheb_epoch, &jd_cheb);
+   JDChangeSystemEpoch(cheb_system, ZERO_EPOCH, &jd_cheb_z);
+
+   if (jpl_hdr->n_data == 0)
+      InitJplHeader(ephem, EphemPath, jpl_hdr);
+
+   // search for the list of file to use with this ephemType
+   // only need to do this once and keep it around
+   static char (*f_names)[256]  = NULL;
+   static JDType(*jd_ranges)[2] = NULL;
+   static long n_match          = 0;
+   if (f_names == NULL) {
+      char search_fmt[20] = "ascp*.";
+      strcat(search_fmt, jpl_hdr->eph_str);
+      FilesMatchingFmt(EphemPath, search_fmt, &f_names, &n_match);
+      if (!n_match) {
+         fprintf(stderr,
+                 "Could not find any files in directory '%s' for DE type '%s' "
+                 "matching glob format '%s'. Exiting...\n",
+                 jpl_hdr->eph_path, jpl_hdr->eph_str, search_fmt);
+         exit(EXIT_FAILURE);
+      }
+      jd_ranges             = malloc(n_match * sizeof(JDType[2]));
+      double jd_rng_days[2] = {0.0};
+
+      // preload the jd ranges for each file for the chosen DE
+      for (i = 0; i < n_match; i++) {
+         int first_block = 0;
+         double dummy[2] = {0.0};
+
+         infile = FileOpen("", f_names[i], "rt");
+         while (fgets(line, 512, infile)) {
+            if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
+               fgets(line, 512, infile);
+               if (sscanf(line, "%lf %lf %lf", &dummy[0], &jd_rng_days[1],
+                          &dummy[1]) == 3)
+                  if (!first_block) {
+                     first_block    = 1;
+                     jd_rng_days[0] = dummy[0];
+                  }
+            }
+         }
+         // convert to desired Epoch
+         for (int j = 0; j < 2; j++) {
+            jd_ranges[i][j] =
+                JDFromDays(jd_rng_days[j], cheb_system, ZERO_EPOCH);
+            JDChangeEpoch(cheb_epoch, &jd_ranges[i][j]);
+         }
+         fclose(infile);
+      }
+   }
+
+   // Make sure the chosen JD is covered by desired DE
+   if (isless_jd(jd_cheb, jpl_hdr->jd_range[0]) ||
+       isgreater_jd(jd_cheb, jpl_hdr->jd_range[1])) {
+      fprintf(stderr,
+              "JD is not contained in DE%s ephem files.  Falling back to "
+              "lower-precision planetary ephemerides.\n",
+              jpl_hdr->eph_str);
+      return (1); // TODO: what do we actually do in this case?
+   }
+
+   // Figure out which jd range desired JD is in
+   int cur_file = -1;
+   for (i = 0; i < n_match; i++) {
+      if (isgreaterequal_jd(jd_cheb, jd_ranges[i][0]) &&
+          isless_jd(jd_cheb, jd_ranges[i][1])) {
+         cur_file = i;
+         break;
+      }
+   }
+   if (cur_file == -1) {
+      fprintf(stderr,
+              "Could not find any files in directory '%s' for DE type '%s' "
+              "that Julian Date %lf is contained within. Exiting...\n",
+              jpl_hdr->eph_path, jpl_hdr->eph_str, JDToDays(jd_cheb_z));
+      exit(EXIT_FAILURE);
+   }
+
+   // Search found file for block containing chosen JD
+   const long blk_len = jpl_hdr->n_coeff + 2;
+   double Block[blk_len];
+
+   FoundBlock = 0;
+   infile     = FileOpen("", f_names[cur_file], "rt");
+   while (!FoundBlock) {
+      fgets(line, 512, infile);
+      if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
+         fgets(line, 512, infile);
+         if (sscanf(line, "%lf %lf %lf", &Block[0], &Block[1], &Block[2]) ==
+             3) {
+            jd_block[0] = JDFromDays(Block[0], cheb_system, ZERO_EPOCH);
+            jd_block[1] = JDFromDays(Block[1], cheb_system, ZERO_EPOCH);
+            if (isgreaterequal_jd(jd_cheb_z, jd_block[0]) &&
+                isless_jd(jd_cheb_z, jd_block[1])) {
+               FoundBlock = 1;
+
+               for (i = 0; i < 2; i++)
+                  JDChangeEpoch(GMAT_MJD_EPOCH, &jd_block[i]);
+            }
+         }
+      }
+   }
+
+   /* .. Load block */
+   for (i = 1; i < jpl_hdr->blk_lines; i++) {
+      fgets(line, 512, infile);
+      sscanf(line, "%lf %lf %lf", &Block[3 * i], &Block[3 * i + 1],
+             &Block[3 * i + 2]);
+   }
+   fclose(infile);
+
+   /* .. Distribute to Worlds [Starting Entry (1-based), Order, Number of
+    * Segments] */
+   // Note that the data for 'EARTH' is Earth-Moon barycenter and 'MOON' is the
+   // geocentric position of the Moon
+   // the order of bodies is the order of columns in block 1050
+   static int bodies[11] = {MERCURY, VENUS,   EARTH, MARS, JUPITER, SATURN,
+                            URANUS,  NEPTUNE, PLUTO, LUNA, SOL};
+   for (int j = 0; j < 11; j++) {
+      Iw    = bodies[j];
+      Nseg  = jpl_hdr->group_1050[j][2];
+      Start = jpl_hdr->group_1050[j][0] - 1;
+      N     = jpl_hdr->group_1050[j][1];
+
+      worlds[Iw].eph.Ncheb = Nseg;
+      worlds[Iw].eph.Cheb  = (struct Cheb3DType *)realloc(
+          worlds[Iw].eph.Cheb, Nseg * sizeof(struct Cheb3DType));
+      JDType jd_blk_diff_days = JDSub(jd_block[1], jd_block[0]);
+      for (Ic = 0; Ic < Nseg; Ic++) {
+         Cheb           = &worlds[Iw].eph.Cheb[Ic];
+         Rational mul_1 = InitRational(0, Ic, Nseg);
+         Rational mul_2 = InitRational(0, Nseg - 1 - Ic, Nseg);
+         Cheb->JD1 = JDAddRationalMult(jd_block[0], mul_1, jd_blk_diff_days);
+         Cheb->JD2 = JDSubRationalMult(jd_block[1], mul_2, jd_blk_diff_days);
+         Cheb->N   = N;
+         for (n = 0; n < N; n++)
+            for (i = 0; i < 3; i++)
+               Cheb->Coef[i][n] = Block[Start + N * 3 * Ic + N * i + n];
+      }
+   }
+
+   /* Specific Earth-Moon Mass Ratio and AU  Definitions */
+   EMRAT = getDEHeader1041Data(jpl_hdr, "EMRAT"); // Earth/Moon Mass Ratio
+   AU    = getDEHeader1041Data(jpl_hdr, "AU");    // Kilometers per 1 AU
+
+   // Conversion of GM from AU^3/day^2 to m^3/s^2 using DE appropriate values
+   AUd2ms = (ipow(AU, 3) / ipow(SEC_PER_DAY, 2)) * 1.0e9;
+
+   return (0);
+}
+//**********************************************************************/
+long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
+                     struct WorldType *const worlds)
+{
+   long i, Iw;
+   struct Cheb3DType *Cheb;
+   struct OrbitType *Eph;
+   struct WorldType *W;
+   double u, dudJD, T[20], U[20], P, dPdu;
+   double rh[3], vh[3];
+   double EarthMoonBaryPosH[3], EarthMoonBaryVelH[3];
+   double ZAxis[3] = {0.0, 0.0, 1.0};
+   double PosJ[3], VelJ[3];
+   double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
+          C_TETE_J2000[3][3] = {{0.0}};
+
+   double GMST = JD2GMST(jd);
+
+   JDType jd_tt_j2000 = jd, jd_tdb_j2000 = jd_tt_j2000;
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   const double j2000_sec = JDToDynTime(jd_tt_j2000);
+
+   struct WorldType *const sol = &worlds[SOL];
+   JDType jd_sol_cheb          = jd;
+   JDChangeSystemEpoch(sol->eph.Cheb->JD1.system, sol->eph.Cheb->JD1.epoch,
+                       &jd_sol_cheb);
+
+   /* .. Initialize Planetary Pos/Vel */
+   for (Iw = SOL; Iw <= LUNA; Iw++) {
+      W   = &worlds[Iw];
+      Eph = &W->eph;
+      /* Determine segment */
+      Cheb = &Eph->Cheb[0];
+
+      // Cheb jd will be TDB_TIME and GMAT_MJD_EPOCH, lets just make sure,
+      // in case we do something different later
+      JDType jd_cheb = jd_sol_cheb;
+      JDChangeSystemEpoch(Cheb->JD1.system, Cheb->JD1.epoch, &jd_cheb);
+      while (isgreater_jd(jd_cheb, Cheb->JD2))
+         Cheb++;
+      /* Apply Chebyshev polynomials */
+      dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
+      u     = JDSubToDays(jd_cheb, Cheb->JD1) * dudJD - 1.0;
+      ChebyPolys(u, Cheb->N, T, U);
+      for (i = 0; i < 3; i++) {
+         ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
+         PosJ[i] = 1000.0 * P;
+         VelJ[i] = 1000.0 * dPdu * dudJD / SEC_PER_DAY;
+      }
+      QTxV(worlds[EARTH].qnh, PosJ, Eph->PosN);
+      QTxV(worlds[EARTH].qnh, VelJ, Eph->VelN);
+   }
+
+   /* Adjust for barycenters */
+   /* Move planets from barycentric to Sun-centered */
+   for (Iw = PLUTO; Iw >= SOL && Iw <= PLUTO; Iw--) {
+      W = &worlds[Iw];
+      for (i = 0; i < 3; i++) {
+         W->eph.PosN[i] -= sol->eph.PosN[i];
+         W->eph.VelN[i] -= sol->eph.VelN[i];
+         W->PosH[i]      = W->eph.PosN[i];
+         W->VelH[i]      = W->eph.VelN[i];
+      }
+      /* Calculate PriMerAng for Planets */
+      W->PriMerAng = GetWorldCWN(jd_tdb_j2000, W->ang_data, W->CWN);
+      C2Q(W->CWN, W->qwn);
+   }
+
+   /* Adjust Earth from Earth-Moon barycenter */
+   /* (Moon PosVel is geocentric, not from barycenter) */
+   for (i = 0; i < 3; i++) {
+      EarthMoonBaryPosH[i]       = worlds[LUNA].eph.PosN[i] / (1.0 + EMRAT);
+      EarthMoonBaryVelH[i]       = worlds[LUNA].eph.VelN[i] / (1.0 + EMRAT);
+      worlds[EARTH].eph.PosN[i] -= EarthMoonBaryPosH[i];
+      worlds[EARTH].eph.VelN[i] -= EarthMoonBaryVelH[i];
+      worlds[EARTH].PosH[i]      = worlds[EARTH].eph.PosN[i];
+      worlds[EARTH].VelH[i]      = worlds[EARTH].eph.VelN[i];
+   }
+   for (i = 0; i < 3; i++) {
+      rh[i]                = worlds[LUNA].eph.PosN[i];
+      vh[i]                = worlds[LUNA].eph.VelN[i];
+      worlds[LUNA].PosH[i] = worlds[EARTH].PosH[i] + worlds[LUNA].eph.PosN[i];
+      worlds[LUNA].VelH[i] = worlds[EARTH].VelH[i] + worlds[LUNA].eph.VelN[i];
+   }
+   /* Rotate Moon into ECI */
+   QxV(worlds[EARTH].qnh, rh, worlds[LUNA].eph.PosN);
+   QxV(worlds[EARTH].qnh, vh, worlds[LUNA].eph.VelN);
+
+   for (Iw = SOL; Iw <= LUNA; Iw++) {
+      if (Iw == EARTH) {
+         /* .. Earth rotation is a special case */
+         W->PriMerAng = TwoPi * GMST;
+         HiFiEarthPrecNute(jd_tt_j2000, C_TEME_TETE, C_TETE_J2000);
+         SimpRot(ZAxis, W->PriMerAng, C_W_TETE);
+         MxM(C_W_TETE, C_TETE_J2000, W->CWN);
+      }
+      else {
+         W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
+         GetWorldCNJ(jd, W->ang_data, W->CNJ);
+         MxM(W->CNJ, worlds[EARTH].CNH, W->CNH);
+         C2Q(W->CNJ, W->qnj);
+      }
+      C2Q(W->CWN, W->qwn);
+      C2Q(W->CNH, W->qnh);
+   }
+
+   for (Iw = MERCURY; Iw <= LUNA; Iw++) {
+      Eph = &worlds[Iw].eph;
+      RV2Eph(j2000_sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
+             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
+             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
+   }
+   return (0);
+}
+/**********************************************************************/
+long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
+{
+   struct OrbitType *Eph;
+   struct WorldType *W;
+
+   const double GMST     = JD2GMST(jd);
+   const double j2000sec = JDToDynTime(jd);
+   double r1[3], rh[3], vh[3];
+   const double ZAxis[3] = {0.0, 0.0, 1.0};
+   long j, Ip;
+   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
+
+   for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
+      W = &worlds[Ip];
+      if (W->Exists) {
+         Eph = &W->eph;
+         Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
+                j2000sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+         for (j = 0; j < 3; j++) {
+            W->PosH[j] = Eph->PosN[j];
+            W->VelH[j] = Eph->VelN[j];
+         }
+      }
+   }
+   if (worlds[LUNA].Exists) {
+      Eph = &worlds[LUNA].eph;
+      /* Meeus computes Luna Position in geocentric ecliptic */
+      JDType jd_tdb_z = jd;
+      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_z);
+
+      LunaPosition(jd_tdb_z, rh);
+      jd_tdb_z = JDAddDays(jd_tdb_z, 0.01);
+      LunaPosition(jd_tdb_z, r1);
+      for (j = 0; j < 3; j++)
+         vh[j] = (r1[j] - rh[j]) / (864.0);
+      /* Convert to Earth's N frame */
+      MxV(worlds[EARTH].CNH, rh, Eph->PosN);
+      MxV(worlds[EARTH].CNH, vh, Eph->VelN);
+      /* Find Luna's osculating elements */
+      RV2Eph(j2000sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
+             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
+             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
+      for (j = 0; j < 3; j++) {
+         worlds[LUNA].PosH[j] = rh[j] + worlds[EARTH].PosH[j];
+         worlds[LUNA].VelH[j] = vh[j] + worlds[EARTH].VelH[j];
+      }
+   }
+
+   for (Ip = SOL; Ip <= PLUTO; Ip++) {
+      W = &worlds[Ip];
+      if (W->Exists) {
+         if (Ip == EARTH) {
+            /* .. Earth rotation is a special case */
+            W->PriMerAng = TwoPi * GMST;
+            HiFiEarthPrecNute(jd, C_TEME_TETE, C_TETE_J2000);
+            SimpRot(ZAxis, W->PriMerAng, C_W_TETE);
+            MxM(C_W_TETE, C_TETE_J2000, W->CWN);
+         }
+         else {
+            W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
+         }
+         C2Q(W->CWN, W->qwn);
+      }
+   }
+
+   return (0);
+}
+/**********************************************************************/
+long UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds,
+                       const double earth_CNH[3][3])
+{
+   struct OrbitType *Eph;
+   struct WorldType *W;
+   long j, Imb;
+
+   const double j2000_sec = JDToDynTime(jd);
+
+   /* .. Locate Asteroids and Comets */
+   for (Imb = 0; Imb < Nmb; Imb++) {
+      W = &minor_worlds[Imb];
+      if (W->Exists) {
+         Eph = &W->eph;
+         Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
+                j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+         for (j = 0; j < 3; j++) {
+            W->PosH[j] = Eph->PosN[j];
+            W->VelH[j] = Eph->VelN[j];
+         }
+
+         W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
+         GetWorldCNJ(jd, W->ang_data, W->CNJ);
+         MxM(W->CNJ, earth_CNH, W->CNH);
+         C2Q(W->CNJ, W->qnj);
+         C2Q(W->CWN, W->qwn);
+         C2Q(W->CNH, W->qnh);
+      }
+   }
+   return (0);
+}
+/**********************************************************************/
+long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
+                         const double earth_CNH[3][3])
+{
+   struct OrbitType *Eph;
+   struct WorldType *W, *M;
+   double rh[3], vh[3];
+   long i;
+   WorldID Ip, Iw;
+
+   const double j2000_sec = JDToDynTime(jd);
+
+   /* .. Other planets' moons */
+   for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
+      W = &worlds[Ip];
+      if (Ip != EARTH && W->Exists) {
+         for (long Im = 0; Im < W->Nsat; Im++) {
+            Iw  = W->Sat[Im];
+            M   = &worlds[Iw];
+            Eph = &M->eph;
+            Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
+                   j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
+            GetWorldCNJ(jd, M->ang_data, M->CNJ);
+            MxM(M->CNJ, earth_CNH, M->CNH);
+            MTxV(W->CNH, Eph->PosN, rh);
+            MTxV(W->CNH, Eph->VelN, vh);
+            for (i = 0; i < 3; i++) {
+               M->PosH[i] = rh[i] + W->PosH[i];
+               M->VelH[i] = vh[i] + W->VelH[i];
+            }
+
+            M->PriMerAng = GetWorldCWN(jd, M->ang_data, M->CWN);
+            C2Q(M->CNJ, M->qnj);
+            C2Q(M->CWN, M->qwn);
+            C2Q(M->CNH, M->qnh);
+         }
+      }
+   }
+   return (0);
+}
+/**********************************************************************/
+long UpdateEphems(const ephemType ephem, const JDType jd,
+                  const JPLHeaderType *const jpl_hdr,
+                  struct WorldType *const worlds)
+{
+   JDType jd_tdb_mjd = jd;
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
+
+   long main_ephem_check = 0;
+   switch (ephem) {
+      case EPH_MEAN: {
+         main_ephem_check = UpdateMeanEphems(jd, worlds);
+      } break;
+      case EPH_DE430:
+      case EPH_DE440:
+      case EPH_DE421:
+      case EPH_DE424:
+      case EPH_GMAT421:
+      case EPH_GMAT424: {
+         // variable time step integrator can go back and forth
+         // -> check both directions
+         JDType jd_cheb = jd_tdb_mjd;
+         JDChangeSystemEpoch(worlds[SOL].eph.Cheb[0].JD1.system,
+                             worlds[SOL].eph.Cheb[0].JD1.epoch, &jd_cheb);
+         if (isgreaterequal_jd(jd_cheb, worlds[SOL].eph.Cheb[1].JD2) ||
+             isless_jd(jd_cheb, worlds[SOL].eph.Cheb[0].JD1))
+            LoadJplEphems(ephem, ModelPath, &JplHeader, jd_cheb, worlds);
+         /* Load Planetary/Luna ephems */
+         main_ephem_check = UpdateJplEphems(jd_tdb_mjd, jpl_hdr, worlds);
+      } break;
+      case EPH_SPICE: {
+         main_ephem_check = SpiceUpdateEphems(jd_tdb_mjd, worlds);
+         MxM(CGJ, World[EARTH].CNH, CGH);
+         C2Q(World[EARTH].CNH, qjh); // TODO: burn qjh
+      } break;
+      default:
+         fprintf(stderr, "Uknown Ephem Type. Exiting...\n");
+         exit(EXIT_FAILURE);
+   }
+
+   /* .. Minor Bodies */
+   main_ephem_check |=
+       UpdateMinorBodies(jd_tdb_mjd, &worlds[NMAJORWORLD], worlds[EARTH].CNH);
+   /* .. Other planets' moons */
+   if (ephem != EPH_SPICE)
+      main_ephem_check |=
+          UpdateNonEphemMoons(jd_tdb_mjd, worlds, worlds[EARTH].CNH);
+
+   return main_ephem_check;
+}
+/**********************************************************************/
+void WorldEphemerides(const JDType jd, ephemType ephem,
+                      struct WorldType *const worlds, struct RegionType *rgn,
+                      struct LagrangeSystemType *lagsys)
 {
    struct WorldType *W;
    struct RegionType *R;
@@ -573,7 +1270,7 @@ void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
    struct LagrangeSystemType *LS;
    long i, j, Ir;
 
-   UpdateEphems(EphemOption, jd, &JplHeader, worlds);
+   UpdateEphems(ephem, jd, &JplHeader, worlds);
 
    const double jd2000_tt_sec = JDToDynTime(jd);
 
@@ -585,12 +1282,10 @@ void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
    // UpdateLagrangePoints();
    for (i = 0; i < 3; i++) {
       LS = &lagsys[i];
-      if (LS->Exists) {
-         for (j = 0; j < 5; j++) {
+      if (LS->Exists)
+         for (j = 0; j < 5; j++)
             FindLagPtPosVel(jd2000_tt_sec, LS, j, LS->LP[j].PosN,
                             LS->LP[j].VelN, LS->CLN);
-         }
-      }
    }
 
    /* .. Regions */
@@ -598,9 +1293,10 @@ void WorldEphemerides(const JDType jd, struct WorldType *const worlds,
       R = &rgn[Ir];
       W = &worlds[R->World];
       MTxV(W->CWN, R->PosW, R->PosN);
-      R->VelN[0] = -W->w * R->PosN[1];
-      R->VelN[1] = W->w * R->PosN[0];
-      R->VelN[2] = 0.0;
+      const double W_w = GetWorldW(jd, W);
+      R->VelN[0]       = -W_w * R->PosN[1];
+      R->VelN[1]       = W_w * R->PosN[0];
+      R->VelN[2]       = 0.0;
       MxM(R->CW, W->CWN, R->CN);
    }
 
@@ -643,7 +1339,7 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
             sc->PosR[j] = sc->PosN[j] - orb->PosN[j];
             sc->VelR[j] = sc->VelN[j] - orb->VelN[j];
          }
-         FindENU(sc->PosN, world->w, sc->CLN, sc->wln);
+         FindENU(sc->PosN, GetWorldW(jd, world), sc->CLN, sc->wln);
       }
       else if (orb->Regime == ORB_CENTRAL || orb->Regime == ORB_N_BODY) {
          if (sc->OrbDOF == ORBDOF_COWELL) {
@@ -716,12 +1412,12 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
    }
 }
 /**********************************************************************/
-void Ephemerides(const JDType jd, struct SCType *scs,
+void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
                  struct WorldType *const worlds, struct RegionType *rgn,
                  struct LagrangeSystemType *lagsys,
                  struct OrbitType *const orbs)
 {
-   WorldEphemerides(jd, worlds, rgn, lagsys);
+   WorldEphemerides(jd, ephem, worlds, rgn, lagsys);
    for (int i = 0; i < Nsc; i++)
       SCEphemerides(jd, &scs[i], worlds, &orbs[scs[i].RefOrb]);
 }

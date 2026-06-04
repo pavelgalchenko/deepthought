@@ -21,14 +21,13 @@
 
 /**********************************************************************/
 void SphericalHarmGravForce(const long N, const long M,
-                            const struct WorldType *W, const double PriMerAng,
+                            const struct WorldType *W, double CWN[3][3],
                             const double mass, const double pbn[3],
                             double FgeoN[3])
 {
-   double CEN[3][3], cth, sth, cph, sph, pbe[3], gradV[3];
+   double cth, sth, cph, sph, pbw[3], gradV[3];
    double r, Fr, Fth, Fph, Fe[3];
    const struct SphereHarmType *GravModel = &W->GravModel;
-   const double AXIS[3]                   = {0.0, 0.0, 1.0};
 
 #ifdef _DEBUG_GRAV_
    // print out gravitational acceleration vector field to a file for debugging
@@ -36,6 +35,7 @@ void SphericalHarmGravForce(const long N, const long M,
    static int reporting  = 0;
    static FILE *gravFile = NULL;
    static double theta, phi;
+   double eye3[3][3] = EYE3_MAT;
    if (!first && !strcmp(W->Name, "Earth")) {
       first = 1;
       extern char OutPath[1000];
@@ -53,7 +53,7 @@ void SphericalHarmGravForce(const long N, const long M,
             rvec[1]        = r * sth * sph;
             rvec[2]        = r * cth;
             double out[3]  = {0.0};
-            SphericalHarmGravForce(N, M, W, 0, mass, rvec, out);
+            SphericalHarmGravForce(N, M, W, eye3, mass, rvec, out);
          }
       }
       reporting = 0;
@@ -64,11 +64,9 @@ void SphericalHarmGravForce(const long N, const long M,
    for (int i = 0; i < 3; i++)
       FgeoN[i] = 0.0;
    if (GravModel->C != NULL && GravModel->N >= 2) {
-      SimpRot(AXIS, PriMerAng, CEN);
-
       /*    Transform p to spherical coords in World frame */
-      MxV(CEN, pbn, pbe);
-      getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+      MxV(CWN, pbn, pbw);
+      getTrigSphericalCoords(pbw, &cth, &sth, &cph, &sph, &r);
       const double trigs[4] = {cth, sth, cph, sph};
 
       SphericalHarmonics(N, M, r, trigs, GravModel->r_ref,
@@ -80,9 +78,11 @@ void SphericalHarmGravForce(const long N, const long M,
 
 #ifdef _DEBUG_GRAV_
       if (reporting) {
+         // double th[3] = {0};
+         // logso3(CWN, th);
          fprintf(gravFile,
                  "%lf, %lf, %18.36le, %18.36le, %18.36le, %18.36le \n", theta,
-                 phi - PriMerAng, r, gradV[0], gradV[1], gradV[2]);
+                 phi, r, gradV[0], gradV[1], gradV[2]);
       }
 #endif
 
@@ -91,7 +91,7 @@ void SphericalHarmGravForce(const long N, const long M,
       Fe[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
       Fe[2] = Fr * cth - Fth * sth;
 
-      MTxV(CEN, Fe, FgeoN);
+      MTxV(CWN, Fe, FgeoN);
    }
 }
 /**********************************************************************/
@@ -603,9 +603,6 @@ void HiFiEarthPrecNute(JDType jd, double C_TEME_TETE[3][3],
 {
 
    double P[3][3], N[3][3];
-   static long First = 1;
-   static double Al, Bl, Alp, Blp, AF, BF, AD, BD, AOm, BOm;
-   static double A2R;
    long i;
    double T, zeta, z, theta;
    double cos_zeta, sin_zeta, cos_theta, sin_theta, cos_z, sin_z;
@@ -613,40 +610,40 @@ void HiFiEarthPrecNute(JDType jd, double C_TEME_TETE[3][3],
    double cos_e, sin_e, cos_ep, sin_ep, cos_dpsi, sin_dpsi;
    double dR, cos_dR, sin_dR;
 
-   static double pl[106] = {
+   const static double pl[106] = {
        0, 0,  -2, 2,  -2, 1,  0,  2, 0,  0,  0,  0,  0, 2,  0,  0,  0, 0,
        0, -2, 0,  2,  0,  1,  2,  0, 0,  0,  -1, 0,  0, 1,  0,  1,  1, -1,
        0, 1,  -1, -1, 1,  0,  2,  1, 2,  0,  -1, -1, 1, -1, 1,  0,  0, 1,
        1, 2,  0,  0,  1,  0,  1,  2, 0,  1,  0,  1,  1, 1,  -1, -2, 3, 0,
        1, -1, 2,  1,  3,  0,  -1, 1, -2, -1, 2,  1,  1, -2, -1, 1,  2, 2,
        1, 0,  3,  1,  0,  -1, 0,  0, 0,  1,  0,  1,  1, 2,  0,  0};
-   static double plp[106] = {
+   const static double plp[106] = {
        0,  0, 0,  0, 0, -1, -2, 0, 0, 1, 1,  -1, 0, 0,  0,  2,  1,  2,
        -1, 0, -1, 0, 1, 0,  1,  0, 1, 1, 0,  1,  0, 0,  0,  0,  0,  0,
        0,  0, 0,  0, 0, 0,  0,  0, 0, 0, 0,  0,  0, 0,  1,  1,  -1, 0,
        0,  0, 0,  0, 0, 0,  -1, 0, 1, 0, 0,  1,  0, -1, -1, 0,  0,  -1,
        1,  0, 0,  0, 0, 0,  0,  0, 0, 0, 0,  1,  0, 0,  0,  -1, 0,  0,
        0,  0, 0,  0, 1, -1, 0,  0, 1, 0, -1, 1,  0, 0,  0,  1};
-   static double pD[106] = {
+   const static double pD[106] = {
        0, 0, 2, -2, 2,  0, 2, -2, 2,  0, 2, 2,  2, 0, 2,  0, 0, 2, 0, 0,  2, 0,
        2, 0, 0, -2, -2, 0, 0, 2,  2,  0, 2, 2,  0, 2, 0,  0, 0, 2, 2, 2,  0, 2,
        2, 2, 2, 0,  0,  2, 0, 2,  2,  2, 0, 2,  0, 2, 2,  0, 0, 2, 0, -2, 0, 0,
        2, 2, 2, 0,  2,  2, 2, 2,  0,  0, 0, 2,  0, 0, 2,  2, 0, 2, 2, 2,  4, 0,
        2, 2, 0, 4,  2,  2, 2, 0,  -2, 2, 0, -2, 2, 0, -2, 0, 2, 0};
-   static double pF[106] = {
+   const static double pF[106] = {
        0, 0,  0,  0,  0,  -1, -2, 0,  -2, 0,  -2, -2, -2, -2, -2, 0,  0,  -2,
        0, 2,  -2, -2, -2, -1, -2, 2,  2,  0,  1,  -2, 0,  0,  0,  0,  -2, 0,
        2, 0,  0,  2,  0,  2,  0,  -2, 0,  0,  0,  2,  -2, 2,  -2, 0,  0,  2,
        0, -2, 2,  2,  -2, -2, 0,  0,  -2, 0,  1,  0,  0,  0,  2,  0,  0,  2,
        0, -2, 0,  0,  0,  1,  0,  -4, 2,  4,  -4, -2, 2,  4,  0,  -2, -2, 2,
        2, -2, -2, -2, 0,  2,  0,  -1, 2,  -2, 0,  -2, 2,  2,  4,  1};
-   static double pOm[106] = {
+   const static double pOm[106] = {
        1, 2, 1, 0, 2, 0, 1, 1, 2, 0, 2, 2, 1, 0, 0, 0, 1, 2, 1, 1, 1, 1,
        1, 0, 0, 1, 0, 2, 1, 0, 2, 0, 1, 2, 0, 2, 0, 1, 1, 2, 1, 2, 0, 2,
        2, 0, 1, 1, 1, 1, 0, 2, 2, 2, 0, 2, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0,
        0, 2, 2, 1, 2, 2, 2, 1, 1, 2, 0, 2, 2, 0, 2, 2, 0, 2, 1, 2, 2, 0,
        1, 2, 1, 2, 2, 0, 1, 1, 1, 2, 0, 0, 1, 1, 0, 0, 2, 0};
-   static double dp0[106] = {
+   const static double dp0[106] = {
        -171996, 2062, 46,  11,  -3,  -3,  -2,    1,   -13187, 1426, -517, 217,
        129,     48,   -22, 17,  -15, -16, -12,   -6,  -5,     4,    4,    -4,
        1,       1,    -1,  1,   1,   -1,  -2274, 712, -386,   -301, -158, 123,
@@ -656,11 +653,11 @@ void HiFiEarthPrecNute(JDType jd, double C_TEME_TETE[3][3],
        2,       -2,   2,   -2,  2,   2,   1,     -1,  1,      -2,   -1,   1,
        -1,      -1,   1,   1,   1,   -1,  -1,    1,   1,      -1,   1,    1,
        -1,      -1,   -1,  -1,  -1,  -1,  -1,    1,   -1,     1};
-   static double dp1[40]  = {-174.2, 0.2,  0,    0, 0, 0,    0, 0,   -1.6, -3.4,
-                             1.2,    -0.5, 0.1,  0, 0, -0.1, 0, 0.1, 0,    0,
-                             0,      0,    0,    0, 0, 0,    0, 0,   0,    0,
-                             -0.2,   0.1,  -0.4, 0, 0, 0,    0, 0.1, -0.1, 0};
-   static double de0[106] = {
+   const static double dp1[40] = {
+       -174.2, 0.2,  0,    0,   0,    0, 0, 0, -1.6, -3.4, 1.2,  -0.5, 0.1, 0,
+       0,      -0.1, 0,    0.1, 0,    0, 0, 0, 0,    0,    0,    0,    0,   0,
+       0,      0,    -0.2, 0.1, -0.4, 0, 0, 0, 0,    0.1,  -0.1, 0};
+   const static double de0[106] = {
        92025, -895, -24, 0,  1,   0,   1,  0,   5736, 54,  224, -95, -70, 1,
        0,     0,    9,   7,  6,   3,   3,  -2,  -2,   0,   0,   0,   0,   0,
        0,     0,    977, -7, 200, 129, -1, -53, -2,   -33, 32,  26,  27,  16,
@@ -669,25 +666,22 @@ void HiFiEarthPrecNute(JDType jd, double C_TEME_TETE[3][3],
        1,     1,    -1,  1,  -1,  1,   0,  -1,  -1,   0,   -1,  1,   0,   -1,
        1,     1,    0,   0,  -1,  0,   0,  0,   0,    0,   0,   0,   0,   0,
        0,     0,    0,   0,  0,   0,   0,  0};
-   static double de1[40] = {8.9,  0.5, 0, 0,    0, 0, 0, 0, -3.1, -0.1,
-                            -0.6, 0.3, 0, 0,    0, 0, 0, 0, 0,    0,
-                            0,    0,   0, 0,    0, 0, 0, 0, 0,    0,
-                            -0.5, 0,   0, -0.1, 0, 0, 0, 0, 0,    0};
+   const static double de1[40] = {8.9,  0.5, 0, 0,    0, 0, 0, 0, -3.1, -0.1,
+                                  -0.6, 0.3, 0, 0,    0, 0, 0, 0, 0,    0,
+                                  0,    0,   0, 0,    0, 0, 0, 0, 0,    0,
+                                  -0.5, 0,   0, -0.1, 0, 0, 0, 0, 0,    0};
 
-   if (First) {
-      First = 0;
-      A2R   = D2R / 3600.0;
-      Al    = 134.0 * 3600.0 + 57.0 * 60.0 + 46.733;
-      Bl    = 477198.0 * 3600.0 + 52 * 60.0 + 2.633;
-      Alp   = 357.0 * 3600.0 + 31.0 * 60.0 + 39.804;
-      Blp   = 35999.0 * 3600.0 + 3.0 * 60.0 + 1.224;
-      AF    = 93.0 * 3600.0 + 16.0 * 60.0 + 18.877;
-      BF    = 483202.0 * 3600.0 + 1.0 * 60.0 + 3.137;
-      AD    = 297.0 * 3600.0 + 51.0 * 60.0 + 1.307;
-      BD    = 445267.0 * 3600.0 + 6.0 * 60.0 + 41.328;
-      AOm   = 125.0 * 3600.0 + 2.0 * 60 + 40.280;
-      BOm   = -(1934.0 * 3600.0 + 8.0 * 60.0 + 10.539);
-   }
+   const static double A2R = D2R / 3600.0;
+   const static double Al  = 134.0 * 3600.0 + 57.0 * 60.0 + 46.733;
+   const static double Bl  = 477198.0 * 3600.0 + 52 * 60.0 + 2.633;
+   const static double Alp = 357.0 * 3600.0 + 31.0 * 60.0 + 39.804;
+   const static double Blp = 35999.0 * 3600.0 + 3.0 * 60.0 + 1.224;
+   const static double AF  = 93.0 * 3600.0 + 16.0 * 60.0 + 18.877;
+   const static double BF  = 483202.0 * 3600.0 + 1.0 * 60.0 + 3.137;
+   const static double AD  = 297.0 * 3600.0 + 51.0 * 60.0 + 1.307;
+   const static double BD  = 445267.0 * 3600.0 + 6.0 * 60.0 + 41.328;
+   const static double AOm = 125.0 * 3600.0 + 2.0 * 60 + 40.280;
+   const static double BOm = -(1934.0 * 3600.0 + 8.0 * 60.0 + 10.539);
 
    JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
 

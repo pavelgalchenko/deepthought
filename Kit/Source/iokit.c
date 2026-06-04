@@ -155,6 +155,44 @@ long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq)
    return (i);
 }
 /**********************************************************************/
+void FilesMatchingFmt(const char path[128], const char fmt[10],
+                      char (**f_names)[256], long *const n_match)
+{
+   // search for files files in `path` matching glob format `fmt`.
+   //  returns the list of matching file names in `f_names`, and the number of
+   //  them in `n_files`
+   // NOTE: f_names will be returned with 'path'
+   // TODO: REMOVE 'path' FROM 'f_names'
+   // BEWARE, THIS IS ONLY FOR POSIX SYSTEMS
+   *n_match             = 0;
+   char search_fmt[256] = {0};
+   strcpy(search_fmt, path);
+   strcat(search_fmt, "/");
+   strcat(search_fmt, fmt);
+
+#if defined(_POSIX_VERSION)
+   glob_t results;
+   if (glob(search_fmt, 0, NULL, &results) == 0) {
+      *n_match = results.gl_pathc;
+      free(*f_names); // MAKE SURE YOU INITIALIZE PTRS TO NULL
+      *f_names = calloc(*n_match, sizeof(char[256]));
+      if (*f_names != NULL) {
+         for (long i = 0; i < *n_match; i++) {
+            strcpy((*f_names)[i], results.gl_pathv[i]);
+         }
+      }
+      else {
+         fprintf(stderr, "Error in allocation of f_names in FilesMatchingFmt. "
+                         "Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+   }
+   else
+      f_names = NULL;
+   globfree(&results);
+#endif
+}
+/**********************************************************************/
 int FileExists(const char *Path, const char *File)
 {
    FILE *FilePtr;

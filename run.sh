@@ -17,6 +17,4 @@ elif [ -f     "./build/Debug/$EXEC_NAME" ]; then
     EXEC_PATH="./build/Debug/$EXEC_NAME"
 fi
 
-echo "$EXEC_PATH"
-
 $EXEC_PATH -d $1 -o $1/$2 -g $3

@@ -11,7 +11,7 @@
          "options": [
             "Demo",
             "DSM_DEMO",
-            "DSM_NAV_DEMO"
+            "DSM_NAV_DEMO",
          ],
          "default": "DSM_DEMO"
       },
@@ -20,9 +20,11 @@
          "description": "Choose test target to run",
          "type": "pickString",
          "options": [
-            "Kit/tests/kit_tests",
+            "Kit/tests/jdkit_tests",
+            "Kit/tests/jdkit_dbl_tests",
+            "Kit/tests/rationalkit_tests",
          ],
-         "default": "Kit/tests/kit_tests"
+         "default": "Kit/tests/jdkit_tests"
       },
       {
          "id": "testLabel",

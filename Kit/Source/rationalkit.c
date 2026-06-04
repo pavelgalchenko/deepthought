@@ -18,11 +18,9 @@
 ** #endif
 */
 
-// TODO: ensure den <= __LONG_MAX__
-//   plan: if den gets too large, find closest representable rational
+typedef unsigned long int Rat_ULong;
 
-#define STR2(x) #x
-#define STR(X)  STR2(X)
+#define RAT_MAX_DEN (_RATLONG_MAX_ >> 4)
 
 // Use 'long long int' if its larger than 'long int'. If not use int128 if we
 // have it
@@ -44,28 +42,7 @@ _Static_assert(0, "Configuration does not support rationalkit. Unable to find "
                   "an integer type the same size as double.");
 #endif
 
-#define CONCAT_PRIMATIVE(a, b) a##b
-#define CONCAT_EXPAND(a, b)    CONCAT_PRIMATIVE(a, b)
-#if defined(__INT64_C)
-#define INT64_MACRO __INT64_C
-#elif defined(__INT64_C_SUFFIX__)
-#define INT64_MACRO(c) CONCAT_EXPAND(c, __INT64_C_SUFFIX__)
-#else
-#define INT64_MACRO(c) CONCAT_EXPAND(c, L)
-#endif
-
-#if defined(__UINT64_C)
-#define UINT64_MACRO __UINT64_C
-#elif defined(__UINT64_C_SUFFIX__)
-#define UINT64_MACRO(c) CONCAT_EXPAND(c, __UINT64_C_SUFFIX__)
-#else
-#define UINT64_MACRO(c) CONCAT_EXPAND(c, UL)
-#endif
-
 #ifdef __has_builtin
-#if __has_builtin(__builtin_ctzl)
-#define _ctzl (__builtin_ctzl)
-#endif
 #if (_SIZEOF_RATLONGLONG_) == (__SIZEOF_LONG_LONG__) &&                        \
     __has_builtin(__builtin_ctzll)
 #define _ctzll (__builtin_ctzll)
@@ -165,21 +142,11 @@ static unsigned int _ctzll(Rat_ULongLong v)
 #endif
 
 #ifndef _absll
-static Rat_ULongLong _absll(Rat_LongLong x)
-{
-   if (x >= 0)
-      return x;
-   return -x;
-}
+#define _absll ABS
 #endif
 
 #if _SIZEOF_RATLONG_ != __SIZEOF_LONG__
-static Rat_ULong _absl(Rat_Long x)
-{
-   if (x >= 0)
-      return x;
-   return -x;
-}
+#define _absl ABS
 #else
 #define _absl (labs)
 #endif
@@ -187,8 +154,8 @@ static Rat_ULong _absl(Rat_Long x)
 #define RATIONALLL_RAW(whl, n, d)                                              \
    ((RationalLL){.whole = (whl), .num = (n), .den = (d)})
 #define RATIONALLL_NGCD(whl, n, d)                                             \
-   RATIONALLL_RAW((whl) + SIGN(d) * ((n) / MAX(1, ABS(d))),                    \
-                  SIGN(d) * ((n) % MAX(1, ABS(d))), MAX(1, ABS(d)))
+   RATIONALLL_RAW((whl) + ((SIGN(d) * (n)) / MAX_ABS_ONE(d)),                  \
+                  ((SIGN(d) * (n)) % MAX_ABS_ONE(d)), MAX_ABS_ONE(d))
 
 /**********************************************************************/
 static RationalLL _rationalll_negate(RationalLL rat)
@@ -206,26 +173,45 @@ static void _positive_denom(Rational *const rat)
    }
 }
 /**********************************************************************/
+/* returns the largest power of 2 that divides both a and b           */
+static void _reduce_by_gcd2ll(Rat_LongLong *const a, Rat_LongLong *const b)
+{
+   if (*a == 0L || *b == 0L)
+      return;
+
+   Rat_ULongLong au = _absll(*a);
+   Rat_ULongLong bu = _absll(*b);
+
+   const int shift   = _ctzll(au | bu);
+   au              >>= shift;
+   bu              >>= shift;
+
+   *a = (*a > 0) ? au : -au;
+   *b = (*b > 0) ? bu : -bu;
+}
+/**********************************************************************/
 static Rat_LongLong _gcdll(Rat_LongLong a, Rat_LongLong b)
 {
    if (a == 0L)
       return b;
    if (b == 0L)
       return a;
-   a = _absll(a);
-   b = _absll(b);
+   Rat_ULongLong au = _absll(a);
+   Rat_ULongLong bu = _absll(b);
+   if (au < RAT_MAX_DEN && bu < RAT_MAX_DEN)
+      return 1;
 
-   const int shift   = _ctzll(a | b);
-   a               >>= _ctzll(a);
+   const int shift   = _ctzll(au | bu);
+   au              >>= _ctzll(au);
    do {
-      b >>= _ctzll(b);
-      if (a > b) {
-         Rat_LongLong t = a;
-         a              = b;
-         b              = t;
+      bu >>= _ctzll(bu);
+      if (au > bu) {
+         Rat_ULongLong t = au;
+         au              = bu;
+         bu              = t;
       }
-   } while (b -= a);
-   return a << shift;
+   } while (bu -= au);
+   return au << shift;
 }
 /**********************************************************************/
 /*  From Stack Overflow user Maxim Egorushkin                         */
@@ -237,27 +223,29 @@ static Rat_Long _gcdl(Rat_Long a, Rat_Long b)
       return b;
    if (b == 0L)
       return a;
-   a = _absl(a);
-   b = _absl(b);
+   Rat_ULong au = _absl(a);
+   Rat_ULong bu = _absl(b);
+   if (au < RAT_MAX_DEN && bu < RAT_MAX_DEN)
+      return 1;
 
-   const int shift   = _ctzl(a | b);
-   a               >>= _ctzl(a);
+   const int shift   = _ctzl(au | bu);
+   au              >>= _ctzl(au);
    do {
-      b >>= _ctzl(b);
-      if (a > b) {
-         Rat_Long t = a;
-         a          = b;
-         b          = t;
+      bu >>= _ctzl(bu);
+      if (au > bu) {
+         Rat_ULong t = au;
+         au          = bu;
+         bu          = t;
       }
-   } while (b -= a);
-   return a << shift;
+   } while (bu -= au);
+   return au << shift;
 }
 /**********************************************************************/
 /*  Reduce two longs by their greatest common divisor                 */
-static void _reduce_by_gcdl(Rat_Long *const a, Rat_Long *const b)
+static void _reduce_by_gcd(Rat_Long *const a, Rat_Long *const b)
 {
    const Rat_Long gcd = _gcdl(*a, *b);
-   if (gcd > 0) {
+   if (gcd > 1) {
       *a = *a / gcd;
       *b = *b / gcd;
    }
@@ -267,7 +255,7 @@ static void _reduce_by_gcdl(Rat_Long *const a, Rat_Long *const b)
 static void _reduce_by_gcdll(Rat_LongLong *const a, Rat_LongLong *const b)
 {
    const Rat_LongLong gcd = _gcdll(*a, *b);
-   if (gcd > 0) {
+   if (gcd > 1) {
       *a = *a / gcd;
       *b = *b / gcd;
    }
@@ -279,7 +267,7 @@ static void _validate(Rational *const rat)
       rat->den = 1;
 }
 /**********************************************************************/
-static void _reduce(Rational *const rat)
+static void _reduce_rat(Rational *const rat)
 {
    _positive_denom(rat);
    _validate(rat);
@@ -301,8 +289,8 @@ static void _reduce(Rational *const rat)
 /**********************************************************************/
 static void _cleanup(Rational *const rat)
 {
-   _reduce(rat);
-   _reduce_by_gcdl(&rat->num, &rat->den);
+   _reduce_rat(rat);
+   _reduce_by_gcd(&rat->num, &rat->den);
 }
 /**********************************************************************/
 static void _positive_denomll(RationalLL *const rat)
@@ -347,8 +335,10 @@ static void _cleanupll(RationalLL *const rat)
 /**********************************************************************/
 static Rat_LongLong _rounddown_div(const Rat_LongLong a, const Rat_LongLong b)
 {
-   Rat_LongLong c = a / b;
-   if (c <= 0 && a % b < 0)
+   const Rat_LongLong p = (b < 0) ? -a : a;
+   const Rat_LongLong q = (b < 0) ? -b : b;
+   Rat_LongLong c       = p / q;
+   if ((c <= 0) && ((p % q) < 0))
       c--;
    return c;
 }
@@ -357,17 +347,40 @@ static Rat_LongLong _rounddown_div(const Rat_LongLong a, const Rat_LongLong b)
 /*  solution is the convergent or the semiconvergent of the below     */
 /*  process.                                                          */
 /*  Taken from python's fraction.Fraction.limit_denominator().        */
-#define RAT_MAX_DEN (_RATLONG_MAX_ >> 8)
+static void _lim_denom_helper(Rat_LongLong *n, Rat_LongLong *d,
+                              Rat_LongLong *p0, Rat_LongLong *q0,
+                              Rat_LongLong *p1, Rat_LongLong *q1)
+{
+   const Rat_Long max_den = RAT_MAX_DEN;
+   *p0 = 0, *q0 = 1, *p1 = 1, *q1 = 0;
+   Rat_LongLong t1 = 0;
+   while (1) {
+      Rat_LongLong a        = _rounddown_div(*n, *d);
+      const Rat_LongLong q2 = (*q0) + a * (*q1);
+      if (q2 > max_den)
+         break;
+      t1  = *p0;
+      *p0 = *p1;
+      *p1 = t1 + a * (*p1);
+      *q0 = *q1;
+      *q1 = q2;
+
+      t1 = *n;
+      *n = *d;
+      *d = t1 - a * (*d);
+   }
+}
 Rational _limit_denominator(Rat_LongLong p, Rat_LongLong q)
 {
    const Rat_Long max_den = RAT_MAX_DEN;
    if (p == 0)
       return RATIONAL_ZERO;
 
-   const int sign_q = SIGN(q);
+   Rat_LongLong g = _gcdll(p, q);
 
-   p *= sign_q;
-   q *= sign_q;
+   g  = (q < 0) ? -g : g;
+   p /= g;
+   q /= g;
 
    if (q <= max_den)
       return RATIONAL_NGCD(p / q, p % q, q);
@@ -375,34 +388,15 @@ Rational _limit_denominator(Rat_LongLong p, Rat_LongLong q)
    Rat_LongLong p0 = 0, q0 = 1, p1 = 1, q1 = 0;
    Rat_LongLong n = p, d = q;
 
-   _reduce_by_gcdll(&n, &d);
-   if (d <= max_den)
-      return RATIONAL_NGCD(n / d, n % d, d);
-
-   Rat_LongLong t1 = 0, t2 = 0;
-   while (1) {
-      Rat_LongLong a  = _rounddown_div(n, d);
-      Rat_LongLong q2 = q0 + a * q1;
-      if (q2 > max_den)
-         break;
-      t1 = p0;
-      p0 = p1;
-      p1 = t1 + a * p1;
-      q0 = q1;
-      q1 = q2;
-
-      t1 = n;
-      n  = d;
-      d  = t1 - a * d;
-   }
+   _lim_denom_helper(&n, &d, &p0, &q0, &p1, &q1);
    Rat_LongLong k = _rounddown_div(max_den - q0, q1);
 
-   t1 = 2 * d * (q0 + k * q1);
+   Rat_LongLong t1 = 2 * d * (q0 + k * q1);
    if (t1 <= q)
       return RATIONAL_NGCD(p1 / q1, p1 % q1, q1);
    else {
-      t1 = p0 + k * p1;
-      t2 = q0 + k * q1;
+      t1              = p0 + k * p1;
+      Rat_LongLong t2 = q0 + k * q1;
       return RATIONAL_NGCD(t1 / t2, t1 % t2, t2);
    }
 }
@@ -415,48 +409,30 @@ RationalLL _limit_denominator_ll(Rat_LongLong p, Rat_LongLong q)
 {
    const Rat_Long max_den = RAT_MAX_DEN;
    if (p == 0)
-      return RATIONALLL_NGCD(0, 0, 1);
+      return RATIONALLL_RAW(0, 0, 1);
 
-   const int sign_q = SIGN(q);
+   Rat_LongLong g = _gcdll(p, q);
 
-   p *= sign_q;
-   q *= sign_q;
+   g  = (q < 0) ? -g : g;
+   p /= g;
+   q /= g;
 
    if (q <= max_den)
-      return RATIONALLL_NGCD(p / q, p % q, q);
+      return RATIONALLL_RAW(p / q, p % q, q);
 
    Rat_LongLong p0 = 0, q0 = 1, p1 = 1, q1 = 0;
    Rat_LongLong n = p, d = q;
 
-   _reduce_by_gcdll(&n, &d);
-   if (d <= max_den)
-      return RATIONALLL_NGCD(n / d, n % d, d);
-
-   Rat_LongLong t1 = 0, t2 = 0;
-   while (1) {
-      Rat_LongLong a  = _rounddown_div(n, d);
-      Rat_LongLong q2 = q0 + a * q1;
-      if (q2 > max_den)
-         break;
-      t1 = p0;
-      p0 = p1;
-      p1 = t1 + a * p1;
-      q0 = q1;
-      q1 = q2;
-
-      t1 = n;
-      n  = d;
-      d  = t1 - a * d;
-   }
+   _lim_denom_helper(&n, &d, &p0, &q0, &p1, &q1);
    Rat_LongLong k = _rounddown_div(max_den - q0, q1);
 
-   t1 = 2 * d * (q0 + k * q1);
+   Rat_LongLong t1 = 2 * d * (q0 + k * q1);
    if (t1 <= q)
-      return RATIONALLL_NGCD(p1 / q1, p1 % q1, q1);
+      return RATIONALLL_RAW(p1 / q1, p1 % q1, q1);
    else {
-      t1 = p0 + k * p1;
-      t2 = q0 + k * q1;
-      return RATIONALLL_NGCD(t1 / t2, t1 % t2, t2);
+      t1              = p0 + k * p1;
+      Rat_LongLong t2 = q0 + k * q1;
+      return RATIONALLL_RAW(t1 / t2, t1 % t2, t2);
    }
 }
 /**********************************************************************/
@@ -477,9 +453,17 @@ Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod)
    return old_whole / mod;
 }
 /**********************************************************************/
+Rat_LongLong RationalIntMod_ll(RationalLL *const rat, const Rat_LongLong mod)
+{
+   Rat_LongLong old_whole  = rat->whole;
+   rat->whole             %= mod;
+   return old_whole / mod;
+}
+/**********************************************************************/
 void ReduceRational(Rational *const rat)
 {
-   _cleanup(rat);
+   _reduce_rat(rat);
+   _reduce_by_gcd(&rat->num, &rat->den);
 }
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
@@ -523,13 +507,14 @@ Rational IntegerRationalMultMod(const Rat_LongLong mul, RationalLL rat,
    return ToRational(out_ll);
 }
 /**********************************************************************/
+/*  Compute a * b where a and b are both Rationals                    */
 RationalLL RationalMult(RationalLL a, RationalLL b)
 {
    _reducell(&a);
    _reducell(&b);
 
-   _reduce_by_gcdll(&a.num, &a.den);
-   _reduce_by_gcdll(&b.num, &b.den);
+   if ((a.whole == 0 && a.num == 0) || (b.whole == 0 && b.num == 0))
+      return RATIONALLL_RAW(0, 0, 1);
 
    RationalLL out;
    Rat_LongLong num_a = a.whole * a.den + a.num;
@@ -537,19 +522,9 @@ RationalLL RationalMult(RationalLL a, RationalLL b)
    Rat_LongLong num_b = b.whole * b.den + b.num;
    Rat_LongLong den_b = b.den;
 
-   // TODO: shouldn't need to do this step if a and b are already reduced
    _reduce_by_gcdll(&num_a, &den_b);
    _reduce_by_gcdll(&num_b, &den_a);
-
-   Rat_LongLong den           = den_a * den_b;
-   const Rat_LongLong a_gcd   = _gcdll(num_a, den);
-   const Rat_LongLong com_gcd = _gcdll(a_gcd, num_b);
-   if (com_gcd > 0) {
-      num_a /= com_gcd;
-      num_b /= com_gcd;
-      den   /= com_gcd;
-   }
-   out = RATIONALLL_NGCD(0, num_a * num_b, den);
+   out = RATIONALLL_RAW(0, num_a * num_b, den_a * den_b);
    _cleanupll(&out);
    return out;
 }
@@ -560,17 +535,15 @@ RationalLL RationalDivide(RationalLL a, RationalLL b)
    _reducell(&a);
    _reducell(&b);
 
-   _reduce_by_gcdll(&a.num, &a.den);
-   _reduce_by_gcdll(&b.num, &b.den);
-
    RationalLL out     = {0};
    Rat_LongLong num_a = a.whole * a.den + a.num;
    Rat_LongLong den_a = a.den;
    Rat_LongLong num_b = b.whole * b.den + b.num;
    Rat_LongLong den_b = b.den;
+
    _reduce_by_gcdll(&num_a, &num_b);
    _reduce_by_gcdll(&den_a, &den_b);
-   out = RATIONALLL_NGCD(0, num_a * den_b, den_a * num_b);
+   out = RATIONALLL_RAW(0, num_a * den_b, den_a * num_b);
    _cleanupll(&out);
    return out;
 }
@@ -579,9 +552,6 @@ RationalLL RationalAdd(RationalLL a, RationalLL b)
 {
    _reducell(&a);
    _reducell(&b);
-
-   _reduce_by_gcdll(&a.num, &a.den);
-   _reduce_by_gcdll(&b.num, &b.den);
 
    if (a.whole == 0 && a.num == 0)
       return b;
@@ -593,15 +563,17 @@ RationalLL RationalAdd(RationalLL a, RationalLL b)
    Rat_LongLong num_a = a.num * b.den;
    Rat_LongLong num_b = b.num * a.den;
 
-   const Rat_LongLong a_gcd   = _gcdll(num_a, den);
-   const Rat_LongLong com_gcd = _gcdll(a_gcd, num_b);
-   if (com_gcd > 0) {
+   const Rat_LongLong a_gcd = _gcdll(num_a, den);
+   Rat_LongLong com_gcd     = 1;
+   if (a_gcd != 1)
+      com_gcd = _gcdll(a_gcd, num_b);
+   if (com_gcd > 1) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   out        = _limit_denominator_ll(num_a + num_b, den);
-   out.whole += a.whole + b.whole;
+
+   out = RATIONALLL_RAW(a.whole + b.whole, num_a + num_b, den);
    _cleanupll(&out);
    return out;
 }
@@ -610,9 +582,6 @@ RationalLL RationalSub(RationalLL a, RationalLL b)
 {
    _reducell(&a);
    _reducell(&b);
-
-   _reduce_by_gcdll(&a.num, &a.den);
-   _reduce_by_gcdll(&b.num, &b.den);
 
    if (a.whole == 0 && a.num == 0)
       return _rationalll_negate(b);
@@ -624,15 +593,21 @@ RationalLL RationalSub(RationalLL a, RationalLL b)
    Rat_LongLong num_a = a.num * b.den;
    Rat_LongLong num_b = b.num * a.den;
 
-   const Rat_LongLong a_gcd   = _gcdll(num_a, den);
-   const Rat_LongLong com_gcd = _gcdll(a_gcd, num_b);
-   if (_absll(com_gcd) > 0) {
+   const Rat_LongLong a_gcd = _gcdll(num_a, den);
+   Rat_LongLong com_gcd     = 1;
+   if (a_gcd != 1)
+      com_gcd = _gcdll(a_gcd, num_b);
+   if (com_gcd > 1) {
       num_a /= com_gcd;
       num_b /= com_gcd;
       den   /= com_gcd;
    }
-   out        = _limit_denominator_ll(num_a - num_b, den);
+
+   Rat_LongLong num = num_a - num_b;
+   _reduce_by_gcdll(&num, &den);
+   out        = _limit_denominator_ll(num, den);
    out.whole += a.whole - b.whole;
+
    _cleanupll(&out);
    return out;
 }
@@ -652,39 +627,33 @@ typedef union {
    Rat_Dbl_Cmp bits;
 } DoubleBits;
 
-static Rat_Long _get_mantissa(double val)
+static Rat_Long _get_mantissa(DoubleBits u)
 {
-   DoubleBits u;
-   u.x = val;
    return (u.bits & DBL_FRAC_MASK) | DBL_IMPLICIT;
 }
 
-static int _get_exponent(double val)
+static int _get_exponent(DoubleBits u)
 {
-   DoubleBits u;
-   u.x = val;
    return ((u.bits >> DBL_EXP_SHIFT) & DBL_EXP_MASK) - DBL_EXP_BIAS -
           DBL_FRAC_BITS;
 }
 
-static int _get_clear_sign(double *val)
+static int _get_clear_sign(DoubleBits *u)
 {
    // grab sign bit (need to do it this way due to -0)
-   DoubleBits u;
-   u.x      = *val;
-   int sign = (u.bits >> 63) & 1;
-   u.x      = (sign) ? -u.x : u.x;
-   *val     = u.x;
+   const int sign_bit = (u->bits >> 63) & 1;
+   u->x               = (sign_bit) ? -u->x : u->x;
 
-   return sign;
+   return sign_bit;
 }
 
 static void _decomp_dbl(double x, int *sign, Rat_Long *mantissa, int *exponent)
 {
-   *sign = _get_clear_sign(&x);
-
-   *mantissa = _get_mantissa(x);
-   *exponent = _get_exponent(x);
+   DoubleBits u;
+   u.x       = x;
+   *sign     = _get_clear_sign(&u);
+   *mantissa = _get_mantissa(u);
+   *exponent = _get_exponent(u);
 }
 /**********************************************************************/
 /*  Convert a double precision value to an exact rational             */
@@ -750,7 +719,7 @@ Rational double2rational(double val)
    else if (-exponent <= 126) {
       num = (Rat_LongLong)mantissa;
       den = ((Rat_LongLong)1) << (-exponent);
-      _reduce_by_gcdl(&out.num, &out.den);
+      _reduce_by_gcd2ll(&num, &den);
    }
    else {
       // -exponent > 127: num would overflow
@@ -774,7 +743,7 @@ Rational double2rational(double val)
 /**********************************************************************/
 double rational2double(Rational rat)
 {
-   _reduce(&rat);
+   _reduce_rat(&rat);
    return ((double)rat.num / rat.den) + (double)rat.whole;
 }
 /**********************************************************************/
@@ -804,21 +773,20 @@ Rational RationalNegate(Rational rat)
 /**********************************************************************/
 int ispos_rational(Rational a)
 {
-   _reduce(&a);
+   _reduce_rat(&a);
    return (a.whole > 0 || (a.whole == 0 && a.num > 0));
 }
 /**********************************************************************/
 int isequal_rational(Rational a, Rational b)
 {
-   _cleanup(&a);
-   _cleanup(&b);
-   return ((a.whole == b.whole) && (a.num == b.num) && (a.den == b.den));
+   // just going to do this the easy way to help avoid reduction
+   return (rational2double(a) == rational2double(b));
 }
 /**********************************************************************/
 int isless_rational(Rational a, Rational b)
 {
-   _reduce(&a);
-   _reduce(&b);
+   _reduce_rat(&a);
+   _reduce_rat(&b);
    Rat_Long a_whole = a.whole, b_whole = b.whole;
    a.whole = 0;
    b.whole = 0;
@@ -828,8 +796,8 @@ int isless_rational(Rational a, Rational b)
 /**********************************************************************/
 int isgreater_rational(Rational a, Rational b)
 {
-   _reduce(&a);
-   _reduce(&b);
+   _reduce_rat(&a);
+   _reduce_rat(&b);
    Rat_Long a_whole = a.whole, b_whole = b.whole;
    a.whole = 0;
    b.whole = 0;
@@ -847,7 +815,7 @@ void rat2str(Rational rat, char str[RATIONAL_STR_LEN])
 Rational ToRational(const RationalLL rat_ll)
 {
    Rational rat            = _limit_denominator(rat_ll.num, rat_ll.den);
-   Rat_LongLong test_whole = rat.whole + rat_ll.whole;
+   Rat_LongLong test_whole = ((Rat_LongLong)rat.whole) + rat_ll.whole;
    if (!(_RATLONG_MIN_ < test_whole && test_whole < _RATLONG_MAX_)) {
       if (test_whole < 0)
          test_whole =

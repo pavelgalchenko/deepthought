@@ -17,6 +17,7 @@
 #include "42constants.h"
 #include "42types.h"
 #include "dcmkit.h"
+#include "defineskit.h"
 #include "geomkit.h"
 #include "iokit.h"
 #include "mathkit.h"
@@ -32,7 +33,7 @@
 */
 
 void SphericalHarmGravForce(const long N, const long M,
-                            const struct WorldType *W, const double PriMerAng,
+                            const struct WorldType *W, double CWN[3][3],
                             const double mass, const double pbn[3],
                             double FgeoN[3]);
 void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,

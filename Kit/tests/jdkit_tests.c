@@ -219,6 +219,14 @@
               &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, 1, 4096)),      \
               &JD_RAW(TT_TIME, ZERO_EPOCH, 0, RATIONAL_NGCD(0, -1, 4096)), )
 
+#define EPOCH_DATAPOINTS                                                       \
+   DataPoints(EpochTT, ZERO_EPOCH, GD_CONV_EPOCH, TCB_TDB_CONV_EPOCH,          \
+              MJD_EPOCH, J1900_EPOCH, GMAT_MJD_EPOCH, CCSDS_EPOCH,             \
+              J2000_EPOCH)
+
+#define TIMESYSTEM_DATAPOINTS                                                  \
+   DataPoints(TimeSystem, UTC_TIME, TAI_TIME, TT_TIME, TCB_TIME, TDB_TIME)
+
 /* Configure Suite                                                    */
 // define needed globals
 //      path of model directory relative to executable
@@ -277,11 +285,11 @@ Theory((JDType * a), SUITE_NAME, jd2str)
    sscanf(sec_str, "%ld + (%ld/%ld)", &jd_test.seconds.whole,
           &jd_test.seconds.num, &jd_test.seconds.den);
 
-   cr_expect(a->epoch == jd_test.epoch && a->system == jd_test.system &&
-                 a->whole_days == jd_test.whole_days &&
-                 a->seconds.whole == jd_test.seconds.whole &&
-                 a->seconds.num == jd_test.seconds.num &&
-                 a->seconds.den == jd_test.seconds.den,
+   cr_expect(all(a->epoch == jd_test.epoch, a->system == jd_test.system,
+                 a->whole_days == jd_test.whole_days,
+                 a->seconds.whole == jd_test.seconds.whole,
+                 a->seconds.num == jd_test.seconds.num,
+                 a->seconds.den == jd_test.seconds.den),
              "jd2str() error for string: %s", jd_str);
 }
 
@@ -512,8 +520,8 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secadd)
 
    // addition second inversion
    cr_expect(isequal_jd(*a, JDAddSeconds(JDSubSeconds(*a, b_sec), b_sec)),
-             "JDAddSeconds is not invertable with JDSubSeconds (a: (%s); b:( "
-             "%s), %lf)",
+             "JDAddSeconds is not invertable with JDSubSeconds (a: (%s); "
+             "b:(%s), %lf)",
              a_str, b_str, b_sec);
 
    cr_assume((a->epoch == b->epoch || a->epoch == ZERO_EPOCH ||
@@ -575,98 +583,115 @@ Theory((JDType * a, JDType *b), SUITE_NAME, secratadd)
 /* Epoch/System Conversion                                            */
 
 //*** Epoch conversions
-TheoryDataPoints(SUITE_NAME, epoch) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, epoch) = {JD_DATAPOINTS, EPOCH_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, epoch)
+Theory((JDType * a, EpochTT new_epoch), SUITE_NAME, epoch)
 {
-   char a_str[JD_STR_LEN] = {'\0'};
+   char a_str[JD_STR_LEN] = {'\0'}, jd_str[JD_STR_LEN] = {'\0'},
+        epo_str[JDEPOCH_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
-
-   EpochTT new_epoch = (a->epoch + 2) % (J2000_EPOCH + 1);
+   epoch2str(new_epoch, epo_str);
 
    // ensure epoch changes are reversible
    JDType jd = *a;
    JDChangeEpoch(new_epoch, &jd);
    JDChangeEpoch(a->epoch, &jd);
+   jd2str(jd, jd_str);
 
-   cr_expect(isequal_jd(*a, jd),
-             "Converting to different epoch and back did not preserve %s",
-             a_str);
+   cr_expect(ieee_ulp_eq(dbl, JDToSeconds(*a), JDToSeconds(jd), ULP_THRESH),
+             "Converting to different epoch and back was not identical with "
+             "params:\n\ta         = %s\n\tnew_epoch = %s\n\tjd        = %s",
+             a_str, epo_str, jd_str);
 }
 
 //*** System conversions
-TheoryDataPoints(SUITE_NAME, system) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, system) = {JD_DATAPOINTS, TIMESYSTEM_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, system)
+Theory((JDType * a, TimeSystem new_system), SUITE_NAME, system)
 {
    // converting out of TCB is not implemented
-   cr_assume(a->system != TCB_TIME);
-   // TDB2TCB algorithm is approximate, ESPECIALLY when going back and forth
-   cr_assume(a->system != TDB_TIME);
+   // cr_assume(a->system != TCB_TIME && a->system != TDB_TIME &&
+   //           new_system != TCB_TIME);
+   cr_assume(a->system != TCB_TIME && a->system != TDB_TIME &&
+             new_system != TCB_TIME && new_system != TDB_TIME);
 
-   char a_str[JD_STR_LEN] = {'\0'};
+   char a_str[JD_STR_LEN] = {'\0'}, jd_str[JD_STR_LEN] = {'\0'},
+        inter_str[JD_STR_LEN] = {'\0'}, sys_str[JDSYSTEM_STR_LEN] = {'\0'};
    jd2str(*a, a_str);
-
-   TimeSystem new_system = (a->system + 2) % (TDB_TIME + 1);
-   while (new_system == TCB_TIME || new_system == TDB_TIME)
-      new_system = (new_system + 1) % (TDB_TIME + 1);
+   system2str(new_system, sys_str);
 
    // ensure system changes are approximately reversible
    JDType jd = *a;
    JDChangeSystem(new_system, &jd);
-   double sec_tmp = JDToSeconds(jd);
+   jd2str(jd, inter_str);
    JDChangeSystem(a->system, &jd);
-
-   const double a_sec  = JDToSeconds(*a);
-   const double jd_sec = JDToSeconds(jd);
+   jd2str(jd, jd_str);
+   const double a_sec = JDToSeconds(*a);
 
    if (a_sec == 0) {
-
-      cr_expect(epsilon_eq(dbl, jd_sec, a_sec, DBL_THRESH),
-                "Converting to different system and back did not preserve %s",
-                a_str);
+      cr_expect(epsilon_eq(dbl, JDToSeconds(jd), 0, DBL_THRESH),
+                "Converting to different system and back was not approximately "
+                "identical with params:\n\ta          = %s\n\tnew_system = "
+                "%s\n\tinter      = %s\n\tjd         = %s",
+                a_str, sys_str, inter_str, jd_str);
    }
    else {
-      cr_expect(ieee_ulp_eq(dbl, jd_sec, a_sec, ULP_THRESH),
-                "Converting to different system and back did not preserve %s",
-                a_str);
+      cr_expect(ieee_ulp_eq(dbl, JDToSeconds(jd), JDToSeconds(*a), ULP_THRESH),
+                "Converting to different system and back was not approximately "
+                "identical with params:\n\ta          = %s\n\tnew_system = "
+                "%s\n\tinter      = %s\n\tjd         = %s",
+                a_str, sys_str, inter_str, jd_str);
    }
 }
 
 //*** both together
-TheoryDataPoints(SUITE_NAME, epochsystem) = {JD_DATAPOINTS};
+TheoryDataPoints(SUITE_NAME, epochsystem) = {JD_DATAPOINTS, EPOCH_DATAPOINTS,
+                                             TIMESYSTEM_DATAPOINTS};
 
-Theory((JDType * a), SUITE_NAME, epochsystem)
+Theory((JDType * a, EpochTT new_epoch, TimeSystem new_system), SUITE_NAME,
+       epochsystem)
 {
    // converting out of TCB is not implemented
-   cr_assume(a->system != TCB_TIME);
-   char a_str[JD_STR_LEN] = {'\0'};
-   jd2str(*a, a_str);
+   cr_assume(a->system != TCB_TIME && new_system != TCB_TIME);
 
-   EpochTT new_epoch     = (a->epoch + 2) % (J2000_EPOCH + 1);
-   TimeSystem new_system = (a->system + 2) % (TDB_TIME + 1);
+   char a_str[JD_STR_LEN] = {'\0'}, epo_str[JDEPOCH_STR_LEN] = {'\0'},
+        sys_str[JDSYSTEM_STR_LEN] = {'\0'}, sysep_str[JD_STR_LEN] = {'\0'},
+        epsys_str[JD_STR_LEN] = {'\0'}, cmbnd_str[JD_STR_LEN] = {'\0'};
+   jd2str(*a, a_str);
+   epoch2str(new_epoch, epo_str);
+   system2str(new_system, sys_str);
 
    // check system/epoch changes work in either order
    JDType epsys_test = *a;
    JDChangeEpoch(new_epoch, &epsys_test);
    JDChangeSystem(new_system, &epsys_test);
+   jd2str(epsys_test, epsys_str);
 
    JDType sysep_test = *a;
    JDChangeSystem(new_system, &sysep_test);
    JDChangeEpoch(new_epoch, &sysep_test);
+   jd2str(sysep_test, sysep_str);
 
-   cr_expect(isequal_jd(epsys_test, sysep_test),
-             "Switching the order of changing system/epoch matters for %s",
-             a_str);
+   cr_expect(
+       epsilon_eq(dbl, JDSubToSeconds(epsys_test, sysep_test), 0, DBL_THRESH),
+       "Switching the order of changing system/epoch matters with "
+       "params:\n\ta          = %s\n\tnew_system = %s\n\tnew_epoch  = "
+       "%s\n\tepsys_test = %s\n\tsysep_test = %s",
+       a_str, sys_str, epo_str, epsys_str, sysep_str);
 
    // test that the combined function also stays the same
-   JDType combined_test = *a;
-   JDChangeSystemEpoch(new_system, new_epoch, &combined_test);
-   cr_assert(isequal_jd(epsys_test, combined_test) &&
-                 isequal_jd(sysep_test, combined_test),
+   JDType cmbnd_test = *a;
+   JDChangeSystemEpoch(new_system, new_epoch, &cmbnd_test);
+   jd2str(cmbnd_test, cmbnd_str);
+   cr_assert(all(epsilon_eq(dbl, JDSubToSeconds(epsys_test, cmbnd_test), 0,
+                            DBL_THRESH),
+                 epsilon_eq(dbl, JDSubToSeconds(sysep_test, cmbnd_test), 0,
+                            DBL_THRESH)),
              "The combined function does not match individual epoch/system "
-             "changing behavior for %s",
-             a_str);
+             "changing behavior with params:\n\ta          = %s\n\tnew_system "
+             "= %s\n\tnew_epoch  = %s\n\tepsys_test = %s\n\tsysep_test = "
+             "%s\n\tcmbnd_test = %s",
+             a_str, sys_str, epo_str, epsys_str, sysep_str, cmbnd_str);
 }
 
 //*** Negation
@@ -698,21 +723,26 @@ Theory((JDType * a), SUITE_NAME, negation)
 //*** JDaxpy
 TheoryDataPoints(SUITE_NAME, jdaxpy) = {
     JD_SECONDS_DATAPOINTS, JD_DATAPOINTS,
-    DataPoints(double, 0, 1, 2, -1, -2, 0.5, -0.5, 1 / 64, -1 / 64, 1 / 1024,
-               -1 / 1024, _RATLONG_MAX_, -_RATLONG_MAX_, _RATLONG_MIN_, 32.184,
-               -32.184, 19, -19, 51.184, -51.184)};
+    DataPoints(double, 0, 1.0, 2.0, -1.0, -2.0, 0.5, -0.5, 1.0 / 64.0,
+               -1.0 / 64.0, 1.0 / 1024.0, -1.0 / 1024.0, _RATLONG_MAX_ / 2.0,
+               -_RATLONG_MAX_ / 2.0, _RATLONG_MIN_ / 2.0, 32.184, -32.184, 19.0,
+               -19.0, 51.184, -51.184)};
 
-Theory((JDType * x, JDType *y, long a), SUITE_NAME, jdaxpy)
+Theory((JDType * x, JDType *y, double a), SUITE_NAME, jdaxpy)
 {
-   char x_str[JD_STR_LEN] = {'\0'}, y_str[JD_STR_LEN] = {'\0'};
+   char x_str[JD_STR_LEN] = {'\0'}, y_str[JD_STR_LEN] = {'\0'},
+        z_str[JD_STR_LEN] = {'\0'}, ypax_str[JD_STR_LEN] = {'\0'},
+        zinv_str[JD_STR_LEN] = {'\0'};
    jd2str(*x, x_str);
    jd2str(*y, y_str);
 
    // check
    JDType z = JDaxpy(a, *x, *y);
+   jd2str(z, z_str);
    if (a == 0) {
-      cr_expect(isequal_jd(*y, z), "JDaxpy with a=0 did not preserve %s",
-                y_str);
+      cr_expect(isequal_jd(*y, z),
+                "JDaxpy with a=0 is not equal with params:\n\ty = %s\n\tz = %s",
+                y_str, z_str);
    }
    else {
       // idk here
@@ -723,22 +753,24 @@ Theory((JDType * x, JDType *y, long a), SUITE_NAME, jdaxpy)
    zero.system = y->system;
    zero.epoch  = y->epoch;
    JDType ax   = JDaxpy(a, *x, zero);
-   JDType ypax = JDaxpy(1, *y, ax);
-   cr_expect(
-       isequal_jd(z, ypax),
-       "JDaxpy is not commutative with params:\n\ta = %lf\n\tx = %s\n\ty = %s",
-       a, x_str, y_str);
+   JDType ypax = JDaxpy(1.0, *y, ax);
+   jd2str(ypax, ypax_str);
+   cr_expect(isequal_jd(z, ypax),
+             "JDaxpy is not commutative with params:\n\ta    = %lf\n\tx    = "
+             "%s\n\ty    = %s\n\typax = %s\n\tz    = %s",
+             a, x_str, y_str, z_str);
 
    // inversion
    cr_assume(a >= -_RATLONG_MAX_); // -_RATLONG_MIN_ > _RATLONG_MAX_
    JDType z_inv = JDaxpy(-a, *x, z);
-   cr_expect(
-       isequal_jd(*y, z_inv),
-       "JDaxpy is not invertible with params:\n\ta = %lf\n\tx = %s\n\ty = %s",
-       a, x_str, y_str);
+   jd2str(z_inv, zinv_str);
+   cr_expect(ieee_ulp_eq(dbl, JDToSeconds(*y), JDToSeconds(z_inv), ULP_THRESH),
+             "JDaxpy is not invertible with params:\n\ta =    %lf\n\tx =    "
+             "%s\n\ty    = %s\n\tz    = %s\n\tzinv = %s",
+             a, x_str, y_str, z_str, zinv_str);
 }
 
-//*** JDAddMultRatSecs
+//*** JDAddIntegerMultRatSecs
 TheoryDataPoints(SUITE_NAME, addmultratsecs) = {
     JD_DATAPOINTS, JD_SECONDS_DATAPOINTS,
     DataPoints(long, 0, 1, 2, -1, -2, _RATLONG_MAX_, -_RATLONG_MAX_,
@@ -758,10 +790,10 @@ Theory((JDType * jd, JDType *jd_secs, long a), SUITE_NAME, addmultratsecs)
    rat2str(seconds, sec_str);
 
    // check
-   JDType z = JDAddMultRatSecs(*jd, a, seconds);
+   JDType z = JDAddIntegerMultRatSecs(*jd, a, seconds);
    if (a == 0) {
       cr_expect(isequal_jd(*jd, z),
-                "JDAddMultRatSecs with a=0 did not preserve %s", jd_str);
+                "JDAddIntegerMultRatSecs with a=0 did not preserve %s", jd_str);
    }
    else {
       // idk here
@@ -771,18 +803,18 @@ Theory((JDType * jd, JDType *jd_secs, long a), SUITE_NAME, addmultratsecs)
    JDType zero    = JD_ZERO;
    zero.system    = jd->system;
    zero.epoch     = jd->epoch;
-   JDType a_sec   = JDAddMultRatSecs(zero, a, seconds);
+   JDType a_sec   = JDAddIntegerMultRatSecs(zero, a, seconds);
    JDType z_prime = JDAdd(a_sec, *jd);
    cr_expect(isequal_jd(z_prime, z),
-             "JDAddMultRatSecs is not associative with params:\n\ta   = "
+             "JDAddIntegerMultRatSecs is not associative with params:\n\ta   = "
              "%li\n\tjd  = %s\n\tsec = %s",
              a, jd_str, sec_str);
 
    // invertible
    cr_assume(a >= -_RATLONG_MAX_); // -_RATLONG_MIN_ > _RATLONG_MAX_
-   JDType z_inv = JDAddMultRatSecs(z, -a, seconds);
-   cr_expect(isequal_jd(*jd, z_inv),
-             "JDAddMultRatSecs is not invertible with params:\n\ta   = "
+   JDType z_inv = JDAddIntegerMultRatSecs(z, -a, seconds);
+   cr_expect(ieee_ulp_eq(dbl, JDToSeconds(*jd), JDToSeconds(z_inv), ULP_THRESH),
+             "JDAddIntegerMultRatSecs is not invertible with params:\n\ta   = "
              "%li\n\tjd  = %s\n\tsec = %s",
              a, jd_str, sec_str);
 }

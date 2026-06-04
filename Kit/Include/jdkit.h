@@ -15,6 +15,8 @@
 #define __JDKIT_H__
 
 #include "42constants.h"
+#include "defineskit.h"
+#include "mathkit.h"
 #include "rationalkit.h"
 #include <ctype.h>
 #include <math.h>
@@ -36,9 +38,10 @@
 /**********************************************************************/
 /**********************************************************************/
 
-#define JD_STR_LEN       (138)
-#define JDEPOCH_STR_LEN  (19)
-#define JDSYSTEM_STR_LEN (4)
+#define JD_STR_LEN        (138)
+#define JDEPOCH_STR_LEN   (19)
+#define JDSYSTEM_STR_LEN  (4)
+#define JDDAY_PER_CENTURY (36525)
 
 typedef enum EpochTT {
    ZERO_EPOCH = 0,     // Jan  1, -4712, 12:00:00
@@ -62,6 +65,8 @@ typedef enum TimeSystem {
    TDB_TIME,     // Barycentric Dynamical Time
    // TODO: add TT(BIPM)? others?
 } TimeSystem;
+
+TimeSystem GetTimeSystem(const char *s);
 
 // some strict typing to enforce correct timing interpretation
 typedef struct JDType {
@@ -108,11 +113,14 @@ JDType JDAdd(const JDType a, const JDType b);
 JDType JDAddDays(const JDType a, const double b);
 JDType JDAddSeconds(const JDType a, const double b);
 JDType JDAddRationalSeconds(const JDType a, const Rational b);
-JDType JDAddMultRatSecs(const JDType jd, const long mul, const Rational rat);
+JDType JDAddIntegerMultRatSecs(const JDType jd, const long mul,
+                               const Rational rat);
+JDType JDAddRationalMult(const JDType a, Rational mul, const JDType b);
 JDType JDSub(const JDType a, const JDType b);
 JDType JDSubDays(const JDType a, const double b);
 JDType JDSubSeconds(const JDType a, const double b);
 JDType JDSubRationalSeconds(const JDType a, const Rational b);
+JDType JDSubRationalMult(const JDType a, Rational mul, const JDType b);
 JDType JDaxpy(const double a, const JDType x, JDType y);
 double JDAddToDays(const JDType a, const JDType b);
 double JDAddToSeconds(const JDType a, const JDType b);

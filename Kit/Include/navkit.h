@@ -18,6 +18,8 @@
 #include "42types.h"
 #include "AcTypes.h"
 #include "DSMTypes.h"
+#include "defineskit.h"
+#include "spicekit.h"
 
 enum matType {
    Q_DAT,

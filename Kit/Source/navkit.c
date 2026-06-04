@@ -13,10 +13,6 @@
 
 #include "navkit.h"
 
-#ifdef _ENABLE_SPICE_
-#include "SpiceUsr.h"
-#endif
-
 /* REQUIRED GLOBALS                                                   */
 /*    WorldType World                                                 */
 /*    long AtmoOption                                                 */
@@ -237,63 +233,38 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
        DaysSinceRollover + daysperRollover * gpsRollover;
    return ((DaysSinceEpoch + gpst0J2000) * secPerDay) + gpsSec + (32.184 + 19);
 }
-
 /**********************************************************************/
-/* Given a time in seconds since J2000 TT, find the Prime Meridian    */
-/* offset angle of a given world.                                     */
-double GetPriMerAng(const long orbCenter, const DateType *date)
+/* Given a time in seconds since J2000 TT, find the orientation of    */
+/* the world fixed frame relative to the world's inertial frame       */
+void NavGetWorldCWN(const long orbCenter, const DateType *date,
+                    double CWN[3][3])
 {
-   // TODO: change for spice
+   // TODO: don't use worlds and getworldCWN directly
    struct WorldType *W = &World[orbCenter];
-   double PriMerAng    = 0.0;
-   const double time   = Date2Time(*date);
    JDType jd           = Date2JD(*date, J2000_EPOCH);
-   JDChangeSystem(TT_TIME, &jd);
 
-   /* This is based on the behavior in Ephemerides() in 42ephem.c */
    switch (orbCenter) {
       case EARTH: {
-         if (EphemOption == EPH_MEAN) {
-            PriMerAng = W->PriMerAngJ2000 + W->w * time;
+         if (EphemOption == EPH_SPICE)
+            SpiceGetCWJ(jd, EARTH, CWN);
+         else {
+            /* .. Earth rotation is a special case */
+            double C_TETE_J2000[3][3], C_W_TETE[3][3];
+            const double ZAxis[3] = {0.0, 0.0, 1.0};
+            JDType jd_tt_j2000    = jd;
+            JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+
+            double PriMerAng = TwoPi * JD2GMST(jd_tt_j2000);
+            HiFiEarthPrecNute(jd_tt_j2000, CWN, C_TETE_J2000);
+            SimpRot(ZAxis, PriMerAng, C_W_TETE);
+            MxM(C_W_TETE, C_TETE_J2000, CWN);
          }
-         else
-            PriMerAng = TwoPi * JD2GMST(jd);
       } break;
-      case LUNA: {
-         PriMerAng = LunaPriMerAng(jd);
-      } break;
-      case SOL: // TODO: SOL does not rotate
-         break;
-      case MERCURY:
-      case VENUS:
-      case JUPITER:
-      case SATURN:
-      case URANUS:
-      case NEPTUNE:
-      case PLUTO:
-         PriMerAng = W->w * time;
-         // TODO: This is from Ephemerides() in 42ephem.c
-         if (EphemOption == EPH_MEAN)
-            PriMerAng += W->PriMerAngJ2000;
-         break;
-      case MINORBODY_0:
-      case MINORBODY_1:
-      case MINORBODY_2:
-      case MINORBODY_3:
-      case MINORBODY_4:
-      case MINORBODY_5:
-      case MINORBODY_6:
-      case MINORBODY_7:
-      case MINORBODY_8:
-      case MINORBODY_9:
       default:
-         PriMerAng = W->w * time;
+         GetWorldCWN(jd, W->ang_data, CWN);
          break;
    }
-   PriMerAng = fmod(PriMerAng, TwoPi);
-   return PriMerAng;
 }
-
 //------------------------------------------------------------------------------
 // Acceleration perturbation functions
 //------------------------------------------------------------------------------
@@ -382,10 +353,10 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
 }
 
 void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
-                               double PriMerAng, double pbn[3],
+                               double CWN[3][3], double pbn[3],
                                double HgeoN[3][3])
 {
-   double CEN[3][3] = {{0.0}}, cth, sth, cph, sph, pbe[3], HV[3][3] = {{0.0}};
+   double cth, sth, cph, sph, pbw[3], HV[3][3] = {{0.0}};
    double r;
    long i, j, k;
    const struct SphereHarmType *GravModel = &W->GravModel;
@@ -393,18 +364,13 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    double gradV[3] = {0.0};
 
    /*    Transform p to ECEF */
-   CEN[0][0] = cos(PriMerAng);
-   CEN[1][1] = CEN[0][0];
-   CEN[2][2] = 1.0;
-   CEN[0][1] = sin(PriMerAng);
-   CEN[1][0] = -CEN[0][1];
-   MxV(CEN, pbn, pbe);
+   MxV(CWN, pbn, pbw);
 
-   const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
-   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
+   const double denom = sqrt(pbw[1] * pbw[1] + pbw[0] * pbw[0]);
+   getTrigSphericalCoords(pbw, &cth, &sth, &cph, &sph, &r);
    const double trigs[4] = {cth, sth, cph, sph};
 
-   const double MSE[3][3] = {{pbe[0] / r, pbe[1] / r, cth},
+   const double MSE[3][3] = {{pbw[0] / r, pbw[1] / r, cth},
                              {cth * cph, cth * sph, -sth},
                              {-sph, cph, 0.0}};
 
@@ -422,7 +388,7 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    sCS[1][0][1] = -sCS[0][1][1]; // 1/r * r / (1*r) = 1/r
    sCS[1][1][0] = sCS[1][0][1];
    sCS[1][2][2] =
-       -pbe[2] / (r * denom);    // -sth*cth * r / (rsth*rsth) = -cth / rsth
+       -pbw[2] / (r * denom);    // -sth*cth * r / (rsth*rsth) = -cth / rsth
    sCS[2][0][2] = sCS[1][0][1];  // 1/r * rsth / (1*rsth) = 1 / r
    sCS[2][1][2] = -sCS[1][2][2]; // cth/sth * rsth / (r*rsth) = cth / rsth
    sCS[2][2][0] = sCS[2][0][2];
@@ -437,7 +403,7 @@ void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
 
    /*    Transform back to cartesian coords in Newtonian frame */
    double CSN[3][3];
-   MxM(MSE, CEN, CSN);
+   MxM(MSE, CWN, CSN);
    AdjointT(CSN, HV, HgeoN);
 }
 
@@ -554,11 +520,12 @@ void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      double PriMerAng = GetPriMerAng(OrbCenter, date);
+      double CWN[3][3] = {{0.0}};
+      NavGetWorldCWN(OrbCenter, date, CWN);
       double fGeoN[3], fGeoR[3], PosN[3];
       MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, PriMerAng,
-                             mass, PosN, fGeoN);
+      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, CWN, mass,
+                             PosN, fGeoN);
       MxV(Nav->refCRN, fGeoN, fGeoR);
       for (j = 0; j < 3; j++)
          VelRdot[j] += fGeoR[j] / mass;
@@ -642,11 +609,12 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      const double PriMerAng = GetPriMerAng(OrbCenter, date);
+      double CWN[3][3] = {{0.0}};
+      NavGetWorldCWN(OrbCenter, date, CWN);
       double HgeoN[3][3] = {{0.0}}, HgeoR[3][3] = {{0.0}}, PosN[3] = {0.0};
       MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter, PriMerAng,
-                                PosN, HgeoN);
+      SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter, CWN, PosN,
+                                HgeoN);
       if (Nav->refFrame != FRAME_N) {
          Adjoint(Nav->refCRN, HgeoN, HgeoR);
          for (i = 0; i < 3; i++)
@@ -1623,7 +1591,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
          double worldWR[3] = {0.0};
          if (AeroActive) {
-            double worldW = World[orbCenter].w;
+            double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
                worldWR[i] = -Nav->refCRN[i][2] * worldW;
             getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
@@ -1885,7 +1853,8 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    double aeroTrq[3] = {0.0}, aeroFrc[3] = {0.0};
    if (AeroActive) {
       const long orbCenter = DSM->refOrb->World;
-      getAeroForceAndTorque(DSM, CRB, PosR, VelR, World[orbCenter].w,
+      getAeroForceAndTorque(DSM, CRB, PosR, VelR,
+                            GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]),
                             AtmoDensity, aeroFrc, aeroTrq);
       for (i = 0; i < 3; i++)
          tmpV2[i] += aeroTrq[i];
@@ -2069,7 +2038,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
          double worldWR[3] = {0.0};
          if (AeroActive) {
-            double worldW = World[orbCenter].w;
+            double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
                worldWR[i] = -Nav->refCRN[i][2] * worldW;
             getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
@@ -2380,7 +2349,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
          double worldWR[3] = {0.0};
          if (AeroActive) {
-            double worldW = World[orbCenter].w;
+            double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
                worldWR[i] = -Nav->refCRN[i][2] * worldW;
             getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
@@ -2901,7 +2870,8 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
    const long orbCenter          = DSM->refOrb->World;
    enum orbitRegime const regime = DSM->refOrb->Regime;
    if (AeroActive && regime == ORB_CENTRAL) {
-      getAeroForceAndTorque(DSM, CRB, PosR, VelR, World[orbCenter].w,
+      getAeroForceAndTorque(DSM, CRB, PosR, VelR,
+                            GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]),
                             AtmoDensity, aeroFrc, aeroTrq);
    }
    getForceAndTorque(AC, Nav, CRB, whlH);
@@ -3041,27 +3011,23 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
          for (i = 0; i < 3; i++)
             PosRWorld[i] = Nav->PosR[i] + Nav->refPos[i];
          for (i = 0; i < 3; i++)
-            worldWR[i] = -Nav->refCRN[i][2] * World[orbCenter].w;
+            worldWR[i] = -Nav->refCRN[i][2] *
+                         GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
          VxV(worldWR, PosRWorld, VrelR);
          for (i = 0; i < 3; i++)
             VrelR[i] += Nav->VelR[i] + Nav->refVel[i];
          MTxV(Nav->refCRN, PosRWorld, PosN);
          if (orbCenter == EARTH) {
-            const double ZAxis[3] = {0.0, 0.0, 1.0};
             double NavFlux10p7, NavGeomagIndex;
             double Alt, PosW[3] = {0.0}, CWN[3][3] = {{0.0}};
-#ifdef _ENABLE_SPICE_
+
             if (EphemOption == 3) {
-               const double dyn_time = ccsds2time(*cur_ccsds);
-               pxform_c("J2000", "IAU_EARTH", dyn_time, CWN);
+               JDType jd = ccsds2jd(*cur_ccsds);
+               SpiceGetCWJ(jd, EARTH, CWN);
             }
-            else {
-#endif
-               const double PriMerAng = GetPriMerAng(orbCenter, &Nav->Date);
-               SimpRot(ZAxis, PriMerAng, CWN);
-#ifdef _ENABLE_SPICE_
-            }
-#endif
+            else
+               NavGetWorldCWN(orbCenter, &Nav->Date, CWN);
+
             MxV(CWN, PosN, PosW);
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
@@ -3591,8 +3557,9 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    Nav->steps++;
-   Nav->jd_tt_mjd = JDAddMultRatSecs(Nav->jd_tt_mjd_0, Nav->steps, Nav->DT_RAT);
-   Nav->Date      = JDToDate(Nav->jd_tt_mjd, TT_TIME);
+   Nav->jd_tt_mjd =
+       JDAddIntegerMultRatSecs(Nav->jd_tt_mjd_0, Nav->steps, Nav->DT_RAT);
+   Nav->Date = JDToDate(Nav->jd_tt_mjd, TT_TIME);
 
    Nav->ccsds_time = date2ccsds(Nav->Date);
    configureRefFrame(Nav, &Nav->refLerpAlpha, DSM->refOrb,

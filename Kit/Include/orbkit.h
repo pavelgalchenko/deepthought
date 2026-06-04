@@ -15,6 +15,8 @@
 #define __ORBKIT_H__
 
 #include "42constants.h"
+#include "dcmkit.h"
+#include "defineskit.h"
 #include "iokit.h"
 #include "mathkit.h"
 #include "timekit.h"
@@ -97,8 +99,10 @@ typedef enum WorldID {
    NEREID,
    /* Pluto's moon */
    CHARON,
+   // set the number of non Minor Bodies
+   NMAJORWORLD,
    /* Minor Bodies */
-   MINORBODY_0,
+   MINORBODY_0 = NMAJORWORLD,
    MINORBODY_1,
    MINORBODY_2,
    MINORBODY_3,
@@ -114,6 +118,10 @@ typedef enum WorldID {
 // TODO: remove minor bodies from this list, make global World list dynamically
 // allocated by counting the number of minor bodies in the minorbody file. Maybe
 // make the minor body file a sim level configuration.
+//    to do this, make NWORLD a global scope variable and init it to
+//    NMAJORWORLD, changing it and reallocing World as needed to handle minor
+//    bodies
+#define N_PLANETS (PLUTO - SOL)
 
 enum orbitRegime {
    ORB_ZERO = 0,
@@ -316,9 +324,136 @@ struct OrbitType {
    struct Cheb3DType *Cheb;
 };
 
+struct SphereHarmType {
+   /*~ Internal Variables ~*/
+   char modelFile[40];
+   long Type;
+   long N;
+   long M;
+   double **Norm;
+   double **C;
+   double **S;
+   double r_ref;
+};
+
+struct AtmoType {
+   /*~ Internal Variables ~*/
+   long Exists;
+   float GasColor[3];
+   float DustColor[3];
+   float RayScat[3];
+   float MieScat;
+   float RayScaleHt;
+   float MieScaleHt;
+   float MieG;
+   double MaxHt;
+   double rad;
+};
+
+/* Contains data for calculating the prime meridian angle             */
+/*    primarily for cspice                                            */
+struct AngDataType {
+   /*~ Internal Variables ~*/
+   char ang_char; // 'P', 'R', or 'D'
+   // for 'P',       t = day
+   // for 'R' & 'D', t = julian century
+   double ang[3]; // deg, deg/t, deg/t^2
+   int n_ang;
+   int n_E;
+   double *nut_prec_ang;    // deg
+   double (*nut_prec_E)[2]; // {deg, deg/(jd century)}
+};
+
+struct WorldType {
+   /*~ Parameters ~*/
+
+   /* Relationships */
+   long Exists;
+   long Type; /* STAR, PLANET, MOON, ASTEROID, COMET */
+   WorldID Parent;
+   long Nsat;
+   WorldID *Sat; /* [*Nsat*] */
+
+   /* Physical Properties */
+   double mu;  /* Gravitation constant  */
+   double J2;  /* Gravitation oblateness parameter */
+   double rad; /* Radius */
+   // double w;               /* Spin Rate */
+   // double PriMerAngJ2000;  /* Prime Meridian Angle at J2000 epoch, rad */
+   double RadOfInfluence;  /* Radius of Sphere of Influence */
+   double DipoleMoment;    /* Magnetic Field Dipole Moment, Wb-m */
+   double DipoleAxis[3];   /* Magnetic Field Dipole Axis */
+   double DipoleOffset[3]; /* Dipole Offset, m */
+   double RingInner, RingOuter;
+   double Density; /* For minor bodies, polyhedron gravity */
+   struct SphereHarmType GravModel;
+
+   /* Graphical Properties */
+   long HasRing;
+   char Name[20];
+   char MapFileName[40];
+   char GeomFileName[40];
+   char ColTexFileName[40];
+   char BumpTexFileName[40];
+   float Color[4];
+   unsigned char Glyph[14];
+   unsigned int TexTag;
+   unsigned int MapTexTag;
+   unsigned int ColTexTag;
+   unsigned int BumpTexTag;
+   unsigned int ColCubeTag;
+   unsigned int BumpCubeTag;
+   unsigned int CloudGlossCubeTag;
+   long GeomTag;
+   unsigned int RingTexTag;
+   double NearExtent, FarExtent;
+
+   long OrientWorld; /* Compute the worlds orientation for this SimStep
+                        (used only with SPICE)*/
+   double CNH[3][3]; /* DCM from heliocentric ecliptic frame
+                        to world-centric equatorial inertial frame */
+   double qnh[4];    /* ~*/
+   double CNJ[3][3]; /* DCM from J2000 frame to world-centric equatorial
+                        inertial frame */
+   double qnj[4];
+
+   /*~ Internal Variables ~*/
+   /* contains information defining prime meridian angle information */
+   /*    order: Prime Meridian, Right Ascension, Declination         */
+   struct AngDataType ang_data[3];
+
+   double PosH[3];   /* Position in H frame [~=~] */
+   double VelH[3];   /* Velocity in H frame */
+   double PriMerAng; /* Angle from N1 to prime meridian */
+   double CWN[3][3]; /* DCM from world-centric inertial frame
+                        to world-centric rotating frame */
+   double qwn[4];    /* ~*/
+   long Visibility;  /* Too small to see, point-sized, or shows disk */
+   float ModelMatrix[16];
+
+   /*~ Structures ~*/
+   struct OrbitType eph; /* Ephemeris */
+   struct AtmoType Atmo;
+};
+
 /*~ Prototypes ~*/
+WorldID GetWorldID(const char *s);
+
+void CloneWorld(struct WorldType *const destWorld,
+                const struct WorldType srcWorld);
+void CopyWorld(struct WorldType *const destWorld,
+               const struct WorldType srcWorld);
+double GetWorldW(JDType jd, const struct WorldType *const world);
+void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3]);
+double GetWorldAng(JDType jd, const struct AngDataType *const ang_data);
+double GetWorldCWN(JDType jd, const struct AngDataType *const ang_data,
+                   double CWN[3][3]);
+void GetWorldCNJ(JDType jd, const struct AngDataType *const ang_data,
+                 double CNJ[3][3]);
+
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
+void WorldID2String(WorldID w_id, char w_str[32]);
 double MeanAnomToTrueAnom(double MeanAnom, double ecc);
 double TrueAnomaly(double mu, double p, double e, double t);
 double atanh(double x);
@@ -343,7 +478,9 @@ void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *anom, double *p, double *alpha, double *rmin,
                        double *MeanMotion, double *Period);
 void LunaPosition(const JDType jd, double r[3]);
+int LoadLunaInertialFrameData(struct AngDataType *const ang_data);
 void LunaInertialFrame(const JDType jd, double CNJ[3][3]);
+int LoadLunaPriMerAngData(struct AngDataType *const ang_data);
 double LunaPriMerAng(JDType JulDay);
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
 void FindCEN(double r[3], double CEN[3][3]);

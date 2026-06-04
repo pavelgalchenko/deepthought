@@ -14,6 +14,7 @@
 #ifndef __RATIONALKIT_H__
 #define __RATIONALKIT_H__
 
+#include "defineskit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,16 +40,6 @@ _Static_assert(
        "integer types are required, preferrably 64-bit/128-bit.");
 #endif
 
-#ifndef MAX
-#define MAX(x, y) (((x) >= (y)) ? (x) : (y))
-#endif
-#ifndef ABS
-#define ABS(x) (((x) >= 0) ? (x) : -(x))
-#endif
-#ifndef SIGN
-#define SIGN(x) (((x) >= 0) ? 1 : -1)
-#endif
-
 // represents a number using the form "whole + (num/denom)"
 typedef struct Rational {
    Rat_Long whole;
@@ -66,16 +57,18 @@ typedef struct RationalLL {
 } RationalLL;
 
 // Create rational without gcd reduction
+#define MAX_ABS_ONE(d) (MAX(1, ABS(d)))
 #define RATIONAL_RAW(whl, n, d)                                                \
    ((Rational){.whole = (whl), .num = (n), .den = (d)})
 #define RATIONAL_NGCD(whl, n, d)                                               \
-   RATIONAL_RAW((whl) + SIGN(d) * ((n) / MAX(1, ABS(d))),                      \
-                SIGN(d) * ((n) % MAX(1, ABS(d))), MAX(1, ABS(d)))
+   RATIONAL_RAW((whl) + ((SIGN(d) * (n)) / MAX_ABS_ONE(d)),                    \
+                ((SIGN(d) * (n)) % MAX_ABS_ONE(d)), MAX_ABS_ONE(d))
 #define RATIONAL_ZERO RATIONAL_RAW(0, 0, 1)
 
 Rational InitRational(const Rat_Long whole, const Rat_Long num,
                       const Rat_Long den);
 Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod);
+Rat_LongLong RationalIntMod_ll(RationalLL *const rat, const Rat_LongLong mod);
 void ReduceRational(Rational *const);
 Rational IntegerRationalMult(const Rat_LongLong mul, RationalLL rat);
 Rational IntegerRationalMultMod(const Rat_LongLong mul, RationalLL rat,

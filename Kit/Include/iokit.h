@@ -33,11 +33,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifndef __unix__
 #include <unistd.h>
+#endif
 
 #ifdef _WIN32
 #include <winsock2.h>
 #else
+#include <glob.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -46,9 +49,6 @@
 #define SOCKET int
 #endif
 /* #include <sys/un.h> */
-
-#define STR2(x) #x
-#define STR(X)  STR2(X)
 
 #define WHILE_FY_ITER(node, iterNode)                                          \
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)
@@ -68,6 +68,8 @@ long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
                            long dest[]);
 long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq);
 
+void FilesMatchingFmt(const char path[128], const char fmt[10],
+                      char (**f_names)[256], long *const n_match);
 int FileExists(const char *Path, const char *File);
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode);
 void ByteSwapDouble(double *A);

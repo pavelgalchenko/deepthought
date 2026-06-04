@@ -91,6 +91,27 @@ CCSDSTime seconds2ccsds(const double sec)
    return ccsds;
 }
 /**********************************************************************/
+JDType ccsds2jd(const CCSDSTime ccsds_time)
+{
+   const long int_sec_per_day = SEC_PER_DAY;
+
+   JDType out     = JD_ZERO;
+   out.system     = TAI_TIME;
+   out.epoch      = CCSDS_EPOCH;
+   out.whole_days = ccsds_time.coarse / int_sec_per_day;
+   out.seconds    = RATIONAL_RAW(ccsds_time.coarse % int_sec_per_day, 0, 1);
+   if (ccsds_time.fine) {
+      // CCSDS_FINE_MAX is a power of two, reduce num and den by largest power
+      // of two dividing both
+      out.seconds.num   = ccsds_time.fine;
+      out.seconds.den   = CCSDS_FINE_MAX;
+      const int shift   = _ctz(out.seconds.num | out.seconds.den);
+      out.seconds.num >>= shift;
+      out.seconds.den >>= shift;
+   }
+   return out;
+}
+/**********************************************************************/
 CCSDSTime jd2ccsds(JDType jd)
 {
    CCSDSTime out = {0};
@@ -394,8 +415,10 @@ double JD2GMST(JDType jd)
    /* .. Convert to days */
    GMST0 /= 360.0;
 
-   GMST  = GMST0 + 1.00273790935 * (JD - JD0);
-   GMST -= (long)GMST;
+   GMST = GMST0 + 1.00273790935 * (JD - JD0);
+   GMST = fmod(GMST, 1.0);
+   if (GMST < 0)
+      GMST += 1.0;
    return (GMST);
 }
 /**********************************************************************/

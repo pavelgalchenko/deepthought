@@ -509,8 +509,8 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                          WCenter->PriMerAng, S->mass, S->PosN, FrcN);
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, WCenter->CWN,
+                          S->mass, S->PosN, FrcN);
    for (j = 0; j < 3; j++)
       S->FrcN[j] += FrcN[j];
 
@@ -538,7 +538,7 @@ void GravPertForceRK4(struct WorldType *const worlds,
    if (EphemOption != EPH_SPICE) {
       if (isgreater_jd(jd_tdb_mjd, worlds[SOL].eph.Cheb[1].JD2)) {
          revertCHEB = 1;
-         LoadJplEphems(ModelPath, &JplHeader, jd_tdb_mjd, worlds);
+         LoadJplEphems(EphemOption, ModelPath, &JplHeader, jd_tdb_mjd, worlds);
       }
    }
 
@@ -546,26 +546,22 @@ void GravPertForceRK4(struct WorldType *const worlds,
    SecCenter = -1; /* Nonsense value */
 
    struct WorldType *WCenter = &worlds[OrbCenter];
-#ifdef _ENABLE_SPICE_
    if (EphemOption == EPH_SPICE) {
       Rk4SpiceEphems(jd_tdb_mjd, OrbCenter, worlds, cntrPosN, cntrPosH,
                      &cntrPriMerAng, cntrCNH);
    }
    else
-#endif
       Rk4JplEphems(jd_tdb_mjd, OrbCenter, worlds, cntrPosN, cntrPosH,
                    &cntrPriMerAng, cntrCNH);
 
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-#ifdef _ENABLE_SPICE_
          if (EphemOption == EPH_SPICE) {
             Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
                            &trgtPriMerAng, trgtCNH);
          }
          else
-#endif
             Rk4JplEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
                          &trgtPriMerAng, trgtCNH);
 
@@ -585,13 +581,11 @@ void GravPertForceRK4(struct WorldType *const worlds,
       for (Im = 0; Im < WCenter->Nsat; Im++) {
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
-#ifdef _ENABLE_SPICE_
             if (EphemOption == EPH_SPICE) {
                Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
                               &trgtPriMerAng, trgtCNH);
             }
             else
-#endif
                Rk4JplEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
                             &trgtPriMerAng, trgtCNH);
 
@@ -607,22 +601,21 @@ void GravPertForceRK4(struct WorldType *const worlds,
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, cntrPriMerAng,
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, WCenter->CWN,
                           S->mass, SCPosN_harm, FrcN_harm);
    for (j = 0; j < 3; j++)
       FrcN[j] += FrcN_harm[j];
 
    if (EphemOption != EPH_SPICE) {
-      if (revertCHEB) {
-         LoadJplEphems(ModelPath, &JplHeader, JD_TDB_MJD, worlds);
-      }
+      if (revertCHEB)
+         LoadJplEphems(EphemOption, ModelPath, &JplHeader, JD_TDB_MJD, worlds);
    }
 
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
-void AeroFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
-                struct SCType *S)
+void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
+                struct OrbitType *const orb, struct SCType *S)
 {
 
    double VrelN[3], WindSpeed, VrelB[3], Area, PolyArea, cp[3];
@@ -644,8 +637,10 @@ void AeroFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
    OrbCenter = orb->World;
 
    /* .. Find Velocity Relative to Atmosphere, expressed in N */
-   VrelN[0]  = S->VelN[0] + worlds[OrbCenter].w * S->PosN[1];
-   VrelN[1]  = S->VelN[1] - worlds[OrbCenter].w * S->PosN[0];
+   const double W_w = GetWorldW(jd, &worlds[OrbCenter]);
+
+   VrelN[0]  = S->VelN[0] + W_w * S->PosN[1];
+   VrelN[1]  = S->VelN[1] - W_w * S->PosN[0];
    VrelN[2]  = S->VelN[2];
    WindSpeed = UNITV(VrelN);
 
@@ -1243,8 +1238,8 @@ void EnvTrq(struct SCType *S)
 /*  as desired to each spacecraft.                                    */
 /*  Remember that torques are expressed in the Body frame, but forces */
 /*  are expressed in the N frame.                                     */
-void Perturbations(struct WorldType *const worlds, struct OrbitType *const O,
-                   struct SCType *S)
+void Perturbations(JDType jd, struct WorldType *const worlds,
+                   struct OrbitType *const O, struct SCType *S)
 {
    // Only need up to 2 of the worlds, and that is only in the case of a 3 body
    // orbit
@@ -1258,7 +1253,7 @@ void Perturbations(struct WorldType *const worlds, struct OrbitType *const O,
 
    /* .. Aerodynamic Forces and Torques */
    if (AeroActive)
-      AeroFrcTrq(worlds, O, S);
+      AeroFrcTrq(jd, worlds, O, S);
 
    /* .. Solar Radiation Pressure Forces and Torques */
    if (SolPressActive)

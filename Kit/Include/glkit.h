@@ -15,6 +15,7 @@
 #define __GLKIT_H__
 
 #include "42constants.h"
+#include "defineskit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

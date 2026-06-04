@@ -1128,7 +1128,7 @@ void DrawFarScene(void)
    double LoS[3];
    GLfloat WorldColor[4]  = {1.0, 1.0, 1.0, 1.0};
    double CLpermute[3][3] = {{0.0, 0.0, 1.0}, {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}};
-   double Identity[3][3]  = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double Identity[3][3]  = EYE3_MAT;
    double C[3][3];
    static long WorldOrder[NWORLD], TempWO;
    double Zdepth[NWORLD], rh[NWORLD][3], TempZ;
@@ -2404,7 +2404,7 @@ void PovTrackTargetMode(void)
    struct TargetType *Host, *Trg;
    double LoS[3], LoSN[3], LoSH[3], pn[3];
    double CosAz, SinAz, CosEl, SinEl, CTH[3][3], CTN[3][3];
-   double Identity[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double Identity[3][3] = EYE3_MAT;
    double Cos1deg        = 0.99985;
    long j, k;
 
@@ -2618,7 +2618,7 @@ void PovFixedInHostMode(void)
 {
    struct TargetType *Host;
    double pn[3];
-   double Identity[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double Identity[3][3] = EYE3_MAT;
    long j, k;
 
    Host = &POV.Host;
@@ -3213,7 +3213,7 @@ void DrawMap(void)
             Eph = &Orb[SC[Isc].RefOrb];
             Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                    DynTime - 3600.0 - Eph->tp, rn, vn, &anom);
-            SimpRot(Zaxis, -3600.0 * W->w, CEW);
+            SimpRot(Zaxis, -3600.0 * GetWorldW(JD_TDB_MJD, W), CEW);
             MxM(CEW, W->CWN, CEN);
             MxV(CEN, rn, re);
             magr   = MAGV(re);
@@ -3223,7 +3223,7 @@ void DrawMap(void)
                dt = ((double)k) * 60.0;
                Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN,
                       Eph->ArgP, DynTime + dt - Eph->tp, rn, vn, &anom);
-               SimpRot(Zaxis, W->w * dt, CEW);
+               SimpRot(Zaxis, GetWorldW(JD_TDB_MJD, W) * dt, CEW);
                MxM(CEW, W->CWN, CEN);
                MxV(CEN, rn, re);
                magr = MAGV(re);
@@ -3297,7 +3297,7 @@ void DrawMap(void)
       Eph = &Orb[POV.Host.RefOrb];
       Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
              DynTime - 3600.0 - Eph->tp, rn, vn, &anom);
-      SimpRot(Zaxis, -3600.0 * W->w, CEW);
+      SimpRot(Zaxis, -3600.0 * GetWorldW(JD_TDB_MJD, W), CEW);
       MxM(CEW, W->CWN, CEN);
       MxV(CEN, rn, re);
       magr   = MAGV(re);
@@ -3307,7 +3307,7 @@ void DrawMap(void)
          dt = ((double)k) * 60.0;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                 DynTime + dt - Eph->tp, rn, vn, &anom);
-         SimpRot(Zaxis, W->w * dt, CEW);
+         SimpRot(Zaxis, GetWorldW(JD_TDB_MJD, W) * dt, CEW);
          MxM(CEW, W->CWN, CEN);
          MxV(CEN, rn, re);
          magr = MAGV(re);
@@ -5327,7 +5327,7 @@ void CreateStarrySkyEnvMap(void)
 
        {{-1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 1.0, 0.0}}, /* PY */
 
-       {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}, /* PZ */
+       EYE3_MAT, /* PZ */
 
        {{0.0, -1.0, 0.0}, {0.0, 0.0, 1.0}, {-1.0, 0.0, 0.0}}, /* MX */
 
@@ -5667,6 +5667,7 @@ void ReadGraphicsInpFile(void)
       exit(EXIT_FAILURE);
    }
    DTOUTGL_RAT = double2rational(DTOUTGL);
+   DTOUTGL     = rational2double(DTOUTGL_RAT);
 
    MapWindowExists = getYAMLBool(fy_node_by_path_def(node, "/Map Exists"));
    OrreryWindowExists =

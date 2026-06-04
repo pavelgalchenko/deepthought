@@ -94,7 +94,7 @@ static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
    GpsTimeToGpsDate(*gps_time, gps_rollover, gps_wk, gps_sec);
 }
 /**********************************************************************/
-long AdvanceTime(double dtsim, Rational dtsim_rat, JDType *jd_tt_mjd,
+long AdvanceTime(const Rational dtsim_rat, JDType *jd_tt_mjd,
                  JDType *jd_tdb_mjd, DateType *tt, DateType *tdb, DateType *utc,
                  double *simtime, double *dyntime, double *atomictime,
                  double *gpstime, double *civiltime, long *gpsrollover,
@@ -103,9 +103,7 @@ long AdvanceTime(double dtsim, Rational dtsim_rat, JDType *jd_tt_mjd,
    static long itime    = 0;
    static long PrevTick = 0;
    static long CurrTick = 1;
-   long Done            = 0;
-
-   // TODO: This is where the real fun is
+   const double dtsim   = rational2double(dtsim_rat);
 
    /* Advance time to next Timestep */
    switch (TimeMode) {
@@ -123,7 +121,7 @@ long AdvanceTime(double dtsim, Rational dtsim_rat, JDType *jd_tt_mjd,
          itime++;
          *simtime = ((double)itime) * dtsim;
 
-         *jd_tt_mjd = JDAddMultRatSecs(JD_TT_MJD_0, itime, dtsim_rat);
+         *jd_tt_mjd = JDAddIntegerMultRatSecs(JD_TT_MJD_0, itime, dtsim_rat);
          *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
       } break;
       case EXTERNAL_TIME: {
@@ -151,13 +149,8 @@ long AdvanceTime(double dtsim, Rational dtsim_rat, JDType *jd_tt_mjd,
    _ttjd2others(*jd_tt_mjd, jd_tdb_mjd, tt, tdb, dyntime, atomictime, gpstime,
                 gpsrollover, gpsweek, gpssecond);
 
-   /* Check for end of run */
-   if (*simtime > STOPTIME)
-      Done = 1;
-   else
-      Done = 0;
-
-   return (Done);
+   /* return if at end of run */
+   return *simtime > STOPTIME;
 }
 /*********************************************************************/
 /* The SC Bounding Box is referred to the origin of B0,              */
@@ -461,6 +454,7 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          CopyVG(D->u, &x_rk[offset], D->Nu);
          offset += D->Nu;
          CopyVG(D->x, &x_rk[offset], D->Nx);
+         UNITQ(D->x);
          offset += D->Nx;
          CopyVG(D->h, &x_rk[offset], S->Nw);
          break;
@@ -544,6 +538,95 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
    }
 }
 /**********************************************************************/
+static long _check_do_world_orientation(
+    const struct WorldType *const w, const long Iw,
+    const struct SCType *const scs, const long n_scs,
+    const struct RegionType *const regions, const long n_rgn,
+    const struct GroundStationType *ground_stations, const long n_gndstn,
+    const struct OrbitType *const orbs, const ephemType ephem_option,
+    const long gui_active, const long grav_pert_active, const long atmo_active)
+{
+   // This is all to avoid more calls to pxform_c if we don't *need* them
+   // we don't need to set the world orientation unless any of:
+   //    a) It is either EARTH or SOL
+   //    b) GUI is enabled and any of:
+   //       1) is a world (orrey can need any of them sometimes, it seems)
+   //       2) world is pov host or target
+   //       3) world has an orbit
+   //       4) world has an active satellite body
+   //       5) world is close enough to show as a disk
+   //    c) it is orbited by a spacecraft and any of:
+   //       1) grav perts are active and it has harmonic grav
+   //       2) certain dsm/fsw routines use world orientation
+   //       3) atmo drag is active and the spacecraft is in the atmo
+   //       4) albedo is active
+   //    d) world is the secondary body for a spacecraft's 3body orbit
+   //    e) world has a Region
+   //    f) world has a GroundStation
+
+   // do the simple ones first
+   if (!w->Exists)
+      return FALSE;
+   if ((ephem_option != EPH_SPICE) || Iw == SOL || Iw == EARTH || gui_active)
+      return TRUE;
+
+   // check SC related conditions
+   for (long Isc = 0; Isc < n_scs; Isc++) {
+      const struct SCType *const sc = &scs[Isc];
+      if (!sc->Exists)
+         continue;
+      const struct OrbitType *const orb = &orbs[sc->RefOrb];
+      switch (orb->Regime) {
+         case ORB_THREE_BODY: {
+            if (Iw == orb->Body2)
+               return TRUE;
+         }
+         case ORB_N_BODY:
+         case ORB_CENTRAL:
+         case ORB_ZERO: {
+            if (Iw == orb->World)
+               return TRUE;
+         }
+         default:
+            // if ORB_FLIGHT, then will be checking regions anyway
+            break;
+      }
+   }
+
+   // check Region related conditions
+   for (long Irgn = 0; Irgn < Nrgn; Irgn++) {
+      const struct RegionType *rgn = &Rgn[Irgn];
+      if (Iw == rgn->World)
+         return TRUE;
+   }
+
+   // check Ground Station related conditions
+   for (long Igndstn = 0; Igndstn < n_gndstn; Igndstn++) {
+      const struct GroundStationType *gndstn = &ground_stations[Igndstn];
+      if (!gndstn->Exists)
+         continue;
+      if (gndstn->World == Iw)
+         return TRUE;
+   }
+   return FALSE;
+}
+/**********************************************************************/
+void CheckDoWorldOrientation(
+    struct WorldType *const world, const struct SCType *const scs,
+    const long n_scs, const struct RegionType *const regions, const long n_rgn,
+    const struct GroundStationType *ground_stations, const long n_gndstn,
+    const struct OrbitType *const orbs, const ephemType ephem_option,
+    const long gui_active, const long grav_pert_active, const long atmo_active)
+{
+   for (WorldID Iw = SOL; Iw < NWORLD; Iw++) {
+      struct WorldType *const w = &world[Iw];
+
+      w->OrientWorld = _check_do_world_orientation(
+          w, Iw, scs, n_scs, regions, n_rgn, ground_stations, n_gndstn, orbs,
+          ephem_option, gui_active, grav_pert_active, atmo_active);
+   }
+}
+/**********************************************************************/
 long SimStep_New(void)
 {
    long Isc;
@@ -561,10 +644,11 @@ long SimStep_New(void)
       RealRunTime(&TotalRunTime);
       ManageFlags(&nout, &GLnout, &set_nout);
 
-      /* Sun, Moon, Planets, Useful Auxiliary Frames */
-      WorldEphemerides(JD_TT_MJD, World, Rgn, LagSys);
       for (long Iorb = 0; Iorb < Norb; Iorb++)
-         OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
+         OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
+
+      /* Sun, Moon, Planets, Useful Auxiliary Frames */
+      WorldEphemerides(JD_TT_MJD, EphemOption, World, Rgn, LagSys);
 
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
@@ -583,9 +667,14 @@ long SimStep_New(void)
             Environment(JD_TDB_MJD, World, O, S);
             if (ContactActive)
                SCContactFrcTrq(Orb, SC, Isc);
-            Perturbations(World, O, S); /* Environmental Forces and Torques */
+
+            /* Environmental Forces and Torques */
+            Perturbations(JD_TDB_MJD, World, O, S);
+
+            /* Orbit-affecting and "internal" */
             Actuators(FALSE, S, JD_TT_MJD);
-            PartitionForces(S); /* Orbit-affecting and "internal" */
+            PartitionForces(S);
+
             Sensors(World, O, S);
             FlightSoftWare(S);
          }
@@ -606,8 +695,6 @@ long SimStep_New(void)
    /* Read and Interpret Command Script File */
    CmdInterpreter();
 
-   // JDType jd_f = JDAddRationalSeconds(JD_TT_MJD, DTSIM_RAT);
-
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists)
@@ -620,44 +707,30 @@ long SimStep_New(void)
             SCContactFrcTrq(Orb, SC, Isc);
       }
    }
+
+   CheckDoWorldOrientation(World, SC, Nsc, Rgn, Nrgn, GroundStation, Ngnd, Orb,
+                           EphemOption, GLEnable, GravPertActive, AeroActive);
+
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
-         // Clean up World_dupe for the next integration
-         // for (int i = 0; i < NWORLD; i++)
-         //    CopyWorld(&World_dupe[i], World[i]);
-         // CopyOrbit(&S->rkparams.orb, Orb[S->RefOrb]);
-
          SToRKState(S->rkparams.orb, S, S->rk_state);
-         RungeKuttaStep(&S->RKIntegrator, JD_TT_MJD, DTSIM, S->rk_state);
-
-         // TODO: assuming that the last call in RungeKutta got us to the
-         // current time. So far working out
+         RungeKuttaStep(&S->RKIntegrator, TRUE, JD_TT_MJD, DTSIM, S->rk_state);
          RKStateToS(S->rkparams.orb, S->rk_state, S);
       }
    }
-   SimComplete =
-       AdvanceTime(DTSIM, DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC,
-                   &SimTime, &DynTime, &AtomicTime, &GpsTime, &CivilTime,
-                   &GpsRollover, &GpsWeek, &GpsSecond);
-
-   /* Sun, Moon, Planets, Useful Auxiliary Frames */
-   // WorldEphemerides(JD_TT_MJD, World, Rgn, LagSys);
-   // for (long Iorb = 0; Iorb < Norb; Iorb++)
-   //    OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
+   SimComplete = AdvanceTime(DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB,
+                             &UTC, &SimTime, &DynTime, &AtomicTime, &GpsTime,
+                             &CivilTime, &GpsRollover, &GpsWeek, &GpsSecond);
 
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
 
-   // for (Isc = 0; Isc < Nsc; Isc++) {
-   //    S = &SC[Isc];
-   //    if (S->Exists) {
-   //       struct OrbitType *O = &Orb[S->RefOrb];
-   //       SCEphemerides(JD_TDB_MJD, S, &World[O->World], O);
-   //    }
-   // }
-   InterProcessComm(); /* Send and receive from external processes */
+   /* Send and receive from external processes */
+   InterProcessComm();
+
+   /* Read sensors and run flight software */
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
@@ -666,6 +739,8 @@ long SimStep_New(void)
          FlightSoftWare(S);
       }
    }
+
+   /* Assign DSM data to comm states */
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists && S->FswTag == DSM_FSW) {
@@ -673,7 +748,8 @@ long SimStep_New(void)
          DSM->CommStateProcessing(&DSM->state, &DSM->commState);
       }
    }
-   Report(); /* File Output */
+   /* File Output */
+   Report();
 
    /* Exit when Stoptime is reached */
    if (SimComplete) {
@@ -704,7 +780,7 @@ long SimStep_Old(void)
       ManageFlags(&nout, &GLnout, &set_nout);
 
       /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-      Ephemerides(JD_TDB_MJD, SC, World, Rgn, LagSys, Orb);
+      Ephemerides(JD_TDB_MJD, EphemOption, SC, World, Rgn, LagSys, Orb);
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
@@ -719,7 +795,8 @@ long SimStep_Old(void)
             Environment(JD_TDB_MJD, World, O, S);
             if (ContactActive)
                SCContactFrcTrq(Orb, SC, Isc);
-            Perturbations(World, O, S); /* Environmental Forces and Torques */
+            Perturbations(JD_TDB_MJD, World, O,
+                          S); /* Environmental Forces and Torques */
             Sensors(World, O, S);
             FlightSoftWare(S);
             Actuators(FALSE, S, JD_TT_MJD);
@@ -747,19 +824,18 @@ long SimStep_Old(void)
       if (SC[Isc].Exists)
          Dynamics(World, &Orb[SC[Isc].RefOrb], &Frm[SC[Isc].RefOrb], &SC[Isc]);
    }
-   SimComplete =
-       AdvanceTime(DTSIM, DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB, &UTC,
-                   &SimTime, &DynTime, &AtomicTime, &GpsTime, &CivilTime,
-                   &GpsRollover, &GpsWeek, &GpsSecond);
+   SimComplete = AdvanceTime(DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB,
+                             &UTC, &SimTime, &DynTime, &AtomicTime, &GpsTime,
+                             &CivilTime, &GpsRollover, &GpsWeek, &GpsSecond);
    for (long Iorb = 0; Iorb < Norb; Iorb++)
-      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], DynTime);
+      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
 
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
 
    InterProcessComm(); /* Send and receive from external processes */
    /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-   Ephemerides(JD_TDB_MJD, SC, World, Rgn, LagSys, Orb);
+   Ephemerides(JD_TDB_MJD, EphemOption, SC, World, Rgn, LagSys, Orb);
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
@@ -774,7 +850,8 @@ long SimStep_Old(void)
          Environment(JD_TDB_MJD, World, O, S);
          if (ContactActive)
             SCContactFrcTrq(Orb, SC, Isc);
-         Perturbations(World, O, S); /* Environmental Forces and Torques */
+         Perturbations(JD_TDB_MJD, World, O,
+                       S); /* Environmental Forces and Torques */
          Sensors(World, O, S);
          FlightSoftWare(S);
          Actuators(FALSE, S, JD_TT_MJD);

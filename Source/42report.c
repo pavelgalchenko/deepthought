@@ -11,9 +11,6 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#ifdef _ENABLE_SPICE_
-#include "SpiceUsr.h"
-#endif
 #include "42.h"
 #include "navkit.h"
 
@@ -279,6 +276,10 @@ void DSM_PlanetEphemReport(void)
    double Lat, Lng;
 
    if (First) {
+      static char ephem_dir[BUFSIZE] = {'\0'};
+      strcat(ephem_dir, OutPath);
+      strcat(ephem_dir, "/ephem/");
+      mkdir(ephem_dir, 0777);
       ephemfile    = (FILE **)calloc(NWORLD, sizeof(FILE *));
       suntrackfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
       for (Iw = 0; Iw < NWORLD; Iw++) {
@@ -297,7 +298,7 @@ void DSM_PlanetEphemReport(void)
       }
       First = 0;
    }
-   for (Iw = 1; Iw < NWORLD; Iw++) { // Skip Sun
+   for (Iw = 0; Iw < NWORLD; Iw++) { // Skip Sun
       if (World[Iw].Exists) {
          fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].PosH[0],
                  World[Iw].PosH[1], World[Iw].PosH[2]);
@@ -305,14 +306,20 @@ void DSM_PlanetEphemReport(void)
                  World[Iw].VelH[1], World[Iw].VelH[2]);
          fprintf(ephemfile[Iw], "\n");
 
-         for (int i = 0; i < 3; i++)
-            svh[i] = -World[Iw].PosH[i];
-         UNITV(svh);
-         MxM(World[Iw].CWN, World[Iw].CNH, CWH);
-         MxV(CWH, svh, svw);
+         if (Iw != 0) {
+            for (int i = 0; i < 3; i++)
+               svh[i] = -World[Iw].PosH[i];
+            UNITV(svh);
+            MxM(World[Iw].CWN, World[Iw].CNH, CWH);
+            MxV(CWH, svh, svw);
 
-         Lng = atan2(svw[1], svw[0]) * R2D;
-         Lat = asin(svw[2]) * R2D;
+            Lng = atan2(svw[1], svw[0]) * R2D;
+            Lat = asin(svw[2]) * R2D;
+         }
+         else {
+            Lng = 0.0;
+            Lat = 0.0;
+         }
 
          fprintf(suntrackfile[Iw], PRNT_DBL PRNT_DBL, Lat, Lng);
          fprintf(suntrackfile[Iw], "\n");
@@ -437,18 +444,18 @@ void DSM_PosHReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
+         GetWorldCNJ(JD_TDB_MJD, World[LUNA].ang_data, CNJ);
+         // LunaInertialFrame(JD_TDB_MJD, CNJ);
          if (Orb[SC[Isc].RefOrb].World == LUNA) {
             for (i = 0; i < 3; ++i) {
                SC_LEI[i] = SC[Isc].PosN[i];
             }
-            LunaInertialFrame(JD_TDB_MJD, CNJ);
             MTxV(CNJ, SC_LEI, SC_LCI);
             for (i = 0; i < 3; ++i) {
                SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
             }
          }
          else if (Orb[SC[Isc].RefOrb].World == EARTH) {
-            LunaInertialFrame(JD_TDB_MJD, CNJ);
             for (i = 0; i < 3; ++i) {
                SC_ECI[i] = SC[Isc].PosN[i];
                SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
@@ -1099,7 +1106,6 @@ void DSM_SVBReport(void)
    }
 }
 /*********************************************************************/
-#ifdef _ENABLE_SPICE_
 void DSM_GroundTrackReport(void)
 {
    static FILE **gtrackfile;
@@ -1108,7 +1114,7 @@ void DSM_GroundTrackReport(void)
    char s[40];
    struct WorldType *W;
    struct SCType *S;
-   double p[3], Lat, Lng, junk;
+   double Lat, Lng, junk;
 
    if (First) {
       gtrackfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -1128,16 +1134,13 @@ void DSM_GroundTrackReport(void)
       if (SC[Isc].Exists) {
          W = &World[Orb[S->RefOrb].World];
 
-         MxV(W->CWN, SC[Isc].PosN, p);
-         reclat_c(p, &junk, &Lng, &Lat);
-
+         SpicePosN2RLngLat(W->CWN, SC[Isc].PosN, &junk, &Lng, &Lat);
          fprintf(gtrackfile[Isc], PRNT_DBL PRNT_DBL, Lat * R2D, Lng * R2D);
          fprintf(gtrackfile[Isc], "\n");
       }
       fflush(gtrackfile[Isc]);
    }
 }
-#endif
 /*********************************************************************/
 void OrbPropReport(void)
 {
@@ -1267,7 +1270,7 @@ void Report(void)
    struct WorldType *W;
    double WorldAngVel[3], wxR[3], VelN[3];
    double PosW[3], VelW[3], PosR[3], VelR[3];
-   double CRL[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double CRL[3][3] = EYE3_MAT;
    // double SMA,ecc,inc,RAAN,ArgP,anom,tp,SLR,alpha,rmin,MeanMotion,Period;
    char s[40];
    // double ZAxis[3] = {0.0,0.0,1.0};
@@ -1379,7 +1382,7 @@ void Report(void)
          W              = &World[Orb[SC[0].RefOrb].World];
          WorldAngVel[0] = 0.0;
          WorldAngVel[1] = 0.0;
-         WorldAngVel[2] = W->w;
+         WorldAngVel[2] = GetWorldW(JD_TDB_MJD, W);
          VxV(WorldAngVel, SC[0].PosN, wxR);
          for (i = 0; i < 3; i++)
             VelN[i] = SC[0].VelN[i] - wxR[i];

@@ -122,6 +122,7 @@ void MapJointStatesToStateVector(struct SCType *S)
    }
    for (i = 0; i < 4; i++)
       D->x[i] = S->B[0].qn[i];
+   UNITQ(D->x);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -132,6 +133,7 @@ void MapJointStatesToStateVector(struct SCType *S)
             D->u[G->Rotu0 + i] = G->AngRate[i];
          for (i = 0; i < 4; i++)
             D->x[G->Rotx0 + i] = qgogi[i];
+         UNITQ(&D->x[G->Rotx0 + i]);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -3515,9 +3517,9 @@ void StateVectorToJoints(double *u, double *x, const long Nu, const long Nx,
       GN->PosRate[i] = u[Nu - 3 + i];
       GN->Pos[i]     = x[Nx - 3 + i];
    }
-   for (int i = 0; i < 4; i++) {
+   for (int i = 0; i < 4; i++)
       GN->q[i] = x[i];
-   }
+   UNITQ(GN->q);
 
    for (int Ig = 0; Ig < Ng; Ig++) {
       struct JointType *G = &GList[Ig];
@@ -3613,6 +3615,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 4; i++) {
       G->RKqm[i] = D->x[i];
    }
+   UNITQ(G->RKqm);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3627,6 +3630,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
          for (i = 0; i < 4; i++) {
             G->RKqm[i] = D->x[G->Rotx0 + i];
          }
+         UNITQ(G->RKqm);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -3657,6 +3661,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 4; i++) {
       G->q[i] = G->RKqm[i];
    }
+   UNITQ(G->q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3671,6 +3676,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i];
          }
+         UNITQ(G->q);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -3744,6 +3750,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 4; i++) {
       G->q[i] = G->RKqm[i] + dt * G->qdot[i];
    }
+   UNITQ(G->q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3758,6 +3765,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i] + dt * G->qdot[i];
          }
+         UNITQ(G->q);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -3832,6 +3840,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 4; i++) {
       G->q[i] = G->RKqm[i] + dt * G->qdot[i];
    }
+   UNITQ(G->q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3846,6 +3855,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i] + dt * G->qdot[i];
          }
+         UNITQ(G->q);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -3920,6 +3930,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 4; i++) {
       G->q[i] = G->RKqm[i] + dt * G->qdot[i];
    }
+   UNITQ(G->RKqm);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3934,6 +3945,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
          for (i = 0; i < 4; i++) {
             G->q[i] = G->RKqm[i] + dt * G->qdot[i];
          }
+         UNITQ(G->RKqm);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -4001,7 +4013,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 4; i++) {
       D->x[i] = G->RKqm[i] + dt * G->RKdq[i];
    }
-   UNITQ(&D->x[0]);
+   UNITQ(D->x);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -4684,22 +4696,24 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    struct RegionType *rgn            = scparams->rgn;
    struct LagrangeSystemType *lagsys = scparams->lagsys;
    struct FormationType *frm         = scparams->frm;
+   ephemType ephem                   = scparams->ephem;
 
    JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &t);
 
    double *x_trn    = NULL;
    double *xdot_trn = NULL;
 
-   WorldEphemerides(t, world, rgn, lagsys);
-   const double sec_tt_j2000 = JDToDynTime(t);
-   OrbitMotion(world, rgn, lagsys, orb, frm, sec_tt_j2000);
+   // TODO: three body orbit is integrated sometimes, so add its states to the
+   // integration
+   WorldEphemerides(t, ephem, world, rgn, lagsys);
+   OrbitMotion(world, rgn, lagsys, orb, frm, t);
    RKStateToS(orb, x, S);
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
       x_trn = &x[dim - 6];
       EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, x_trn, &x_trn[3], S->PosR,
                  S->VelR);
    }
-   if (S->OrbDOF == ORBDOF_FIXED)
+   else if (S->OrbDOF == ORBDOF_FIXED)
       FixedOrbitPosition(orb, frm, S);
    SCEphemerides(t, S, &world[orb->World], orb);
 
@@ -4707,7 +4721,7 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
 
    /* Magnetic Field, Atmospheric Density */
    Environment(t, world, orb, S);
-   Perturbations(world, orb, S);
+   Perturbations(t, world, orb, S);
    Actuators(TRUE, S, t);
    PartitionForces(S); /* Orbit-affecting and "internal" */
 

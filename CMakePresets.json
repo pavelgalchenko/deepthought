@@ -47,6 +47,15 @@
             "cacheVariables": {
                 "PROFILE": "ON"
             }
+        },
+        {
+            "name": "Profile_Debug",
+            "inherits": "Debug",
+            "displayName": "Profile Debug configure preset",
+            "description": "Sets Make generator, build, and install directory for release build with profiling",
+            "cacheVariables": {
+                "PROFILE": "ON"
+            }
         }
     ],
     "buildPresets": [
@@ -70,8 +79,15 @@
             ]
         },
         {
-            "name": "profile-release-build",
+            "name": "Profile_Release-build",
             "configurePreset": "Profile_Release",
+            "inherits": [
+                "Debug-build"
+            ]
+        },
+        {
+            "name": "Profile_Debug-build",
+            "configurePreset": "Profile_Debug",
             "inherits": [
                 "Debug-build"
             ]
@@ -132,6 +148,32 @@
                 {
                     "type": "build",
                     "name": "RelWithDebInfo-build"
+                }
+            ]
+        },
+        {
+            "name": "build-Profile_Release",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "Profile_Release"
+                },
+                {
+                    "type": "build",
+                    "name": "Profile_Release-build"
+                }
+            ]
+        },
+        {
+            "name": "build-Profile_Debug",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "Profile_Debug"
+                },
+                {
+                    "type": "build",
+                    "name": "Profile_Debug-build"
                 }
             ]
         },
