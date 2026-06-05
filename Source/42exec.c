@@ -648,7 +648,7 @@ long SimStep_New(void)
          OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
 
       /* Sun, Moon, Planets, Useful Auxiliary Frames */
-      WorldEphemerides(JD_TT_MJD, EphemOption, World, Rgn, LagSys);
+      WorldEphemerides(JD_TDB_MJD, JD_TT_MJD, EphemOption, World, Rgn, LagSys);
 
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];

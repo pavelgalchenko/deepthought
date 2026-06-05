@@ -955,7 +955,8 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
    return (0);
 }
 //**********************************************************************/
-long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
+long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                     const JPLHeaderType *const jpl_hdr,
                      struct WorldType *const worlds)
 {
    long i, Iw;
@@ -970,21 +971,24 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
    double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
           C_TETE_J2000[3][3] = {{0.0}};
 
-   double GMST = JD2GMST(jd);
-
-   JDType jd_tt_j2000 = jd, jd_tdb_j2000 = jd_tt_j2000;
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_mjd = jd_tdb_j2000;
+   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
    JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+
    const double j2000_sec = JDToDynTime(jd_tt_j2000);
+   const double GMST      = JD2GMST(jd_tt_j2000);
 
    struct WorldType *const sol = &worlds[SOL];
-   JDType jd_sol_cheb          = jd;
+   JDType jd_sol_cheb          = jd_tdb_mjd;
    JDChangeSystemEpoch(sol->eph.Cheb->JD1.system, sol->eph.Cheb->JD1.epoch,
                        &jd_sol_cheb);
 
    /* .. Initialize Planetary Pos/Vel */
    for (Iw = SOL; Iw <= LUNA; Iw++) {
-      W   = &worlds[Iw];
+      W = &worlds[Iw];
+      if (!W->Exists)
+         continue;
       Eph = &W->eph;
       /* Determine segment */
       Cheb = &Eph->Cheb[0];
@@ -1012,6 +1016,8 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
    /* Move planets from barycentric to Sun-centered */
    for (Iw = PLUTO; Iw >= SOL && Iw <= PLUTO; Iw--) {
       W = &worlds[Iw];
+      if (!W->Exists)
+         continue;
       for (i = 0; i < 3; i++) {
          W->eph.PosN[i] -= sol->eph.PosN[i];
          W->eph.VelN[i] -= sol->eph.VelN[i];
@@ -1044,6 +1050,9 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
    QxV(worlds[EARTH].qnh, vh, worlds[LUNA].eph.VelN);
 
    for (Iw = SOL; Iw <= LUNA; Iw++) {
+      W = &worlds[Iw];
+      if (!W->Exists)
+         continue;
       if (Iw == EARTH) {
          /* .. Earth rotation is a special case */
          W->PriMerAng = TwoPi * GMST;
@@ -1052,8 +1061,8 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
          MxM(C_W_TETE, C_TETE_J2000, W->CWN);
       }
       else {
-         W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
-         GetWorldCNJ(jd, W->ang_data, W->CNJ);
+         W->PriMerAng = GetWorldCWN(jd_tdb_j2000, W->ang_data, W->CWN);
+         GetWorldCNJ(jd_tdb_j2000, W->ang_data, W->CNJ);
          MxM(W->CNJ, worlds[EARTH].CNH, W->CNH);
          C2Q(W->CNJ, W->qnj);
       }
@@ -1063,6 +1072,8 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
 
    for (Iw = MERCURY; Iw <= LUNA; Iw++) {
       Eph = &worlds[Iw].eph;
+      if (!worlds[Iw].Exists)
+         continue;
       RV2Eph(j2000_sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
              &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
              &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
@@ -1070,13 +1081,17 @@ long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
    return (0);
 }
 /**********************************************************************/
-long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
+long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                      struct WorldType *const worlds)
 {
    struct OrbitType *Eph;
    struct WorldType *W;
 
-   const double GMST     = JD2GMST(jd);
-   const double j2000sec = JDToDynTime(jd);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   const double j2000sec = JDToDynTime(jd_tt_j2000);
+   const double GMST     = JD2GMST(jd_tt_j2000);
+
    double r1[3], rh[3], vh[3];
    const double ZAxis[3] = {0.0, 0.0, 1.0};
    long j, Ip;
@@ -1097,12 +1112,10 @@ long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
    if (worlds[LUNA].Exists) {
       Eph = &worlds[LUNA].eph;
       /* Meeus computes Luna Position in geocentric ecliptic */
-      JDType jd_tdb_z = jd;
-      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_z);
 
-      LunaPosition(jd_tdb_z, rh);
-      jd_tdb_z = JDAddDays(jd_tdb_z, 0.01);
-      LunaPosition(jd_tdb_z, r1);
+      LunaPosition(jd_tt_j2000, rh);
+      JDType jd_tt_j2000_2 = JDAddDays(jd_tt_j2000, 0.01);
+      LunaPosition(jd_tt_j2000_2, r1);
       for (j = 0; j < 3; j++)
          vh[j] = (r1[j] - rh[j]) / (864.0);
       /* Convert to Earth's N frame */
@@ -1124,12 +1137,12 @@ long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds)
          if (Ip == EARTH) {
             /* .. Earth rotation is a special case */
             W->PriMerAng = TwoPi * GMST;
-            HiFiEarthPrecNute(jd, C_TEME_TETE, C_TETE_J2000);
+            HiFiEarthPrecNute(jd_tt_j2000, C_TEME_TETE, C_TETE_J2000);
             SimpRot(ZAxis, W->PriMerAng, C_W_TETE);
             MxM(C_W_TETE, C_TETE_J2000, W->CWN);
          }
          else {
-            W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
+            W->PriMerAng = GetWorldCWN(jd_tdb_j2000, W->ang_data, W->CWN);
          }
          C2Q(W->CWN, W->qwn);
       }
@@ -1146,6 +1159,8 @@ long UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds,
    long j, Imb;
 
    const double j2000_sec = JDToDynTime(jd);
+   JDType jd_tdb_j2000    = jd;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
 
    /* .. Locate Asteroids and Comets */
    for (Imb = 0; Imb < Nmb; Imb++) {
@@ -1159,8 +1174,8 @@ long UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds,
             W->VelH[j] = Eph->VelN[j];
          }
 
-         W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
-         GetWorldCNJ(jd, W->ang_data, W->CNJ);
+         W->PriMerAng = GetWorldCWN(jd_tdb_j2000, W->ang_data, W->CWN);
+         GetWorldCNJ(jd_tdb_j2000, W->ang_data, W->CNJ);
          MxM(W->CNJ, earth_CNH, W->CNH);
          C2Q(W->CNJ, W->qnj);
          C2Q(W->CWN, W->qwn);
@@ -1170,7 +1185,8 @@ long UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds,
    return (0);
 }
 /**********************************************************************/
-long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
+long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                         struct WorldType *const worlds,
                          const double earth_CNH[3][3])
 {
    struct OrbitType *Eph;
@@ -1179,19 +1195,24 @@ long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
    long i;
    WorldID Ip, Iw;
 
-   const double j2000_sec = JDToDynTime(jd);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_mjd = jd_tdb_j2000;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_mjd);
+   const double j2000_sec = JDToDynTime(jd_tt_j2000);
 
    /* .. Other planets' moons */
    for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
       W = &worlds[Ip];
       if (Ip != EARTH && W->Exists) {
          for (long Im = 0; Im < W->Nsat; Im++) {
-            Iw  = W->Sat[Im];
-            M   = &worlds[Iw];
+            Iw = W->Sat[Im];
+            M  = &worlds[Iw];
+            if (!M->Exists)
+               continue;
             Eph = &M->eph;
             Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                    j2000_sec - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-            GetWorldCNJ(jd, M->ang_data, M->CNJ);
+            GetWorldCNJ(jd_tdb_mjd, M->ang_data, M->CNJ);
             MxM(M->CNJ, earth_CNH, M->CNH);
             MTxV(W->CNH, Eph->PosN, rh);
             MTxV(W->CNH, Eph->VelN, vh);
@@ -1200,7 +1221,7 @@ long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
                M->VelH[i] = vh[i] + W->VelH[i];
             }
 
-            M->PriMerAng = GetWorldCWN(jd, M->ang_data, M->CWN);
+            M->PriMerAng = GetWorldCWN(jd_tdb_mjd, M->ang_data, M->CWN);
             C2Q(M->CNJ, M->qnj);
             C2Q(M->CWN, M->qwn);
             C2Q(M->CNH, M->qnh);
@@ -1210,17 +1231,18 @@ long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
    return (0);
 }
 /**********************************************************************/
-long UpdateEphems(const ephemType ephem, const JDType jd,
-                  const JPLHeaderType *const jpl_hdr,
+long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
+                  JDType jd_tt_j2000, const JPLHeaderType *const jpl_hdr,
                   struct WorldType *const worlds)
 {
-   JDType jd_tdb_mjd = jd;
+   JDType jd_tdb_mjd = jd_tdb_j2000;
    JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
 
    long main_ephem_check = 0;
    switch (ephem) {
       case EPH_MEAN: {
-         main_ephem_check = UpdateMeanEphems(jd, worlds);
+         main_ephem_check = UpdateMeanEphems(jd_tdb_j2000, jd_tt_j2000, worlds);
       } break;
       case EPH_DE430:
       case EPH_DE440:
@@ -1237,7 +1259,8 @@ long UpdateEphems(const ephemType ephem, const JDType jd,
              isless_jd(jd_cheb, worlds[SOL].eph.Cheb[0].JD1))
             LoadJplEphems(ephem, ModelPath, &JplHeader, jd_cheb, worlds);
          /* Load Planetary/Luna ephems */
-         main_ephem_check = UpdateJplEphems(jd_tdb_mjd, jpl_hdr, worlds);
+         main_ephem_check =
+             UpdateJplEphems(jd_tdb_j2000, jd_tt_j2000, jpl_hdr, worlds);
       } break;
       case EPH_SPICE: {
          main_ephem_check = SpiceUpdateEphems(jd_tdb_mjd, worlds);
@@ -1254,25 +1277,28 @@ long UpdateEphems(const ephemType ephem, const JDType jd,
        UpdateMinorBodies(jd_tdb_mjd, &worlds[NMAJORWORLD], worlds[EARTH].CNH);
    /* .. Other planets' moons */
    if (ephem != EPH_SPICE)
-      main_ephem_check |=
-          UpdateNonEphemMoons(jd_tdb_mjd, worlds, worlds[EARTH].CNH);
+      main_ephem_check |= UpdateNonEphemMoons(jd_tdb_mjd, jd_tt_j2000, worlds,
+                                              worlds[EARTH].CNH);
 
    return main_ephem_check;
 }
 /**********************************************************************/
-void WorldEphemerides(const JDType jd, ephemType ephem,
+void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
                       struct WorldType *const worlds, struct RegionType *rgn,
                       struct LagrangeSystemType *lagsys)
 {
+   // BE VERY CAREFUL!! BOTH JDTYPES MUST BE ASSOCIATED WITH THE SAME TIME
    struct WorldType *W;
    struct RegionType *R;
    double ptn[10][3], vtn[10][3], ptw[3];
    struct LagrangeSystemType *LS;
    long i, j, Ir;
 
-   UpdateEphems(ephem, jd, &JplHeader, worlds);
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   UpdateEphems(ephem, jd_tdb_j2000, jd_tt_j2000, &JplHeader, worlds);
 
-   const double jd2000_tt_sec = JDToDynTime(jd);
+   const double jd2000_tt_sec = JDToDynTime(jd_tt_j2000);
 
    /* .. Locate Lagrange Points in N of LagSys Body 1 */
    /* Updates some Lagrange point parameters, can help get a more accurate CLN
@@ -1293,7 +1319,7 @@ void WorldEphemerides(const JDType jd, ephemType ephem,
       R = &rgn[Ir];
       W = &worlds[R->World];
       MTxV(W->CWN, R->PosW, R->PosN);
-      const double W_w = GetWorldW(jd, W);
+      const double W_w = GetWorldW(jd_tdb_j2000, W);
       R->VelN[0]       = -W_w * R->PosN[1];
       R->VelN[1]       = W_w * R->PosN[0];
       R->VelN[2]       = 0.0;
@@ -1302,16 +1328,18 @@ void WorldEphemerides(const JDType jd, ephemType ephem,
 
    // TODO: Tdrs global
    /* .. TDRS Spacecraft */
-   TDRSPosVel(worlds[EARTH].PriMerAng, jd2000_tt_sec, ptn, vtn);
-   for (i = 0; i < 10; i++) {
-      MxV(worlds[EARTH].CWN, ptn[i], Tdrs[i].rw);
-      for (j = 0; j < 3; j++) {
-         Tdrs[i].PosN[j] = ptn[i][j];
-         Tdrs[i].VelN[j] = vtn[i][j];
+   if (worlds[EARTH].Exists) {
+      TDRSPosVel(worlds[EARTH].PriMerAng, jd2000_tt_sec, ptn, vtn);
+      for (i = 0; i < 10; i++) {
+         MxV(worlds[EARTH].CWN, ptn[i], Tdrs[i].rw);
+         for (j = 0; j < 3; j++) {
+            Tdrs[i].PosN[j] = ptn[i][j];
+            Tdrs[i].VelN[j] = vtn[i][j];
+         }
+         CopyUnitV(Tdrs[i].rw, ptw);
+         Tdrs[i].lat = asin(ptw[2]);
+         Tdrs[i].lng = atan2(ptw[1], ptw[0]);
       }
-      CopyUnitV(Tdrs[i].rw, ptw);
-      Tdrs[i].lat = asin(ptw[2]);
-      Tdrs[i].lng = atan2(ptw[1], ptw[0]);
    }
 }
 /**********************************************************************/
@@ -1417,9 +1445,13 @@ void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
                  struct LagrangeSystemType *lagsys,
                  struct OrbitType *const orbs)
 {
-   WorldEphemerides(jd, ephem, worlds, rgn, lagsys);
+   JDType jd_tdb_j2000 = jd;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tt_j2000 = jd;
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   WorldEphemerides(jd_tdb_j2000, jd_tt_j2000, ephem, worlds, rgn, lagsys);
    for (int i = 0; i < Nsc; i++)
-      SCEphemerides(jd, &scs[i], worlds, &orbs[scs[i].RefOrb]);
+      SCEphemerides(jd_tdb_j2000, &scs[i], worlds, &orbs[scs[i].RefOrb]);
 }
 
 /* #ifdef __cplusplus

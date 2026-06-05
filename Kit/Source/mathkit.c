@@ -40,6 +40,16 @@ double signum(const double x)
    return (x >= 0 ? 1.0 : -1.0);
 }
 /**********************************************************************/
+int any_isnan(const long n, const double *v)
+{
+   for (long i = 0; i < n; i++) {
+      if (isnan(v[i]))
+         return 1;
+   }
+
+   return 0;
+}
+/**********************************************************************/
 double sin_deg(double x)
 {
    return sin(x * D2R);

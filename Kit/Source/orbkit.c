@@ -41,8 +41,8 @@ double GetWorldW(JDType jd, const struct WorldType *const world)
    const double day_tdb_j2000              = JDToDays(jd);
    const struct AngDataType *const pm_data = &world->ang_data[0];
 
-   return (pm_data->ang[1] + 2.0 * pm_data->ang[2] * day_tdb_j2000) /
-          SEC_PER_DAY * D2R;
+   return (pm_data->ang[1] + 2.0 * pm_data->ang[2] * day_tdb_j2000) * D2R /
+          SEC_PER_DAY;
 }
 /**********************************************************************/
 void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3])
@@ -160,8 +160,10 @@ void GetWorldCNJ(JDType jd, const struct AngDataType *const ang_data,
       exit(EXIT_FAILURE);
    }
 
-   const double ra  = GetWorldAng(jd, ra_data);
-   const double dec = GetWorldAng(jd, dec_data);
+   JDType jd_tdb_j2000 = jd;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   const double ra  = GetWorldAng(jd_tdb_j2000, ra_data);
+   const double dec = GetWorldAng(jd_tdb_j2000, dec_data);
 
    A2C(312, (ra + HALFPI), (HALFPI - dec), 0.0, CNJ);
 }

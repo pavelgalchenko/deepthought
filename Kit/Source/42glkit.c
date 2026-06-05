@@ -3552,9 +3552,9 @@ void DrawOrrery(void)
 
    /* .. Draw Orbits for Asteroids and Comets */
    for (Ib = 0; Ib < Nmb; Ib++) {
-      if (World[55 + Ib].Exists) {
-         MB = &World[55 + Ib];
-         E  = &MB->eph;
+      MB = &World[NMAJORWORLD + Ib];
+      if (MB->Exists) {
+         E = &MB->eph;
          if (E->SMA > 0.05 * O->Radius) {
             glColor3fv(MinorBodyOrbitColor);
             glBegin(GL_LINE_LOOP);
@@ -3703,9 +3703,9 @@ void DrawOrrery(void)
    /* .. Draw Asteroids and Comets */
    glPointSize(6.0);
    for (Ib = 0; Ib < Nmb; Ib++) {
-      if (World[55 + Ib].Exists) {
-         MB = &World[55 + Ib];
-         E  = &MB->eph;
+      MB = &World[NMAJORWORLD + Ib];
+      if (MB->Exists) {
+         E = &MB->eph;
          if (E->SMA > 0.05 * O->Radius) {
             glColor3fv(WorldColor);
             glPushMatrix();
@@ -5182,8 +5182,8 @@ void LoadCamTextures(void)
       }
    }
    for (Ib = 0; Ib < Nmb; Ib++) {
-      if (World[55 + Ib].Exists) {
-         MB = &World[55 + Ib];
+      MB = &World[NMAJORWORLD + Ib];
+      if (MB->Exists) {
          if (!strcmp(MB->MapFileName, "NONE")) { /* strcmp returns 0 if match */
             MB->TexTag            = NullTexTag;
             MB->ColCubeTag        = NullColCubeTag;

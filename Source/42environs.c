@@ -46,6 +46,9 @@ void Environment(JDType jd, struct WorldType *const worlds,
 
    P = &worlds[orb->World];
 
+   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
+   DateType date_tt = JDToDate(jd, TT_TIME);
+
    /* .. Magnetic Field */
    if (MagModel.Type == DIPOLE) {
       DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset, S->PosN,
@@ -63,9 +66,6 @@ void Environment(JDType jd, struct WorldType *const worlds,
    }
 
    MxV(S->B[0].CN, S->bvn, S->bvb);
-
-   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
-   DateType date_tt = JDToDate(jd, TT_TIME);
 
    /* .. Atmospheric Density */
    if (orb->World == EARTH) {

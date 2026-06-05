@@ -112,7 +112,9 @@ void ThrModel(const int smoothing, struct ThrType *Thr, struct SCType *S,
 
    if (Thr->Mode == THR_PULSED) { /* THR_PULSED */
       // TODO: make this less ad-hoc, or at least make it user configurable
-      if (Thr->PulseWidthFinTimeStamp.system == jd.system && smoothing) {
+      if (smoothing) {
+         JDType jd_thr = Thr->PulseWidthFinTimeStamp;
+         JDChangeSystemEpoch(jd_thr.system, jd_thr.epoch, &jd);
          static double halfInterval = SMOOTH_INTERVAL / 2.0;
          const double timeToEnd =
              JDSubToSeconds(Thr->PulseWidthFinTimeStamp, jd);
@@ -127,8 +129,7 @@ void ThrModel(const int smoothing, struct ThrType *Thr, struct SCType *S,
          else
             Thr->F = 0.0;
       }
-      else if (Thr->PulseWidthFinTimeStamp.system == jd.system &&
-               isgreater_jd(Thr->PulseWidthFinTimeStamp, jd)) {
+      else if (isgreater_jd(Thr->PulseWidthFinTimeStamp, jd)) {
          double thrust_steps =
              JDSubToSeconds(Thr->PulseWidthFinTimeStamp, jd) / DTSIM;
          if (thrust_steps >= 1.0)
@@ -322,6 +323,10 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
    }
 
    /* Thrusters */
+   if (S->Nthr > 0 && S->Thr->Mode == THR_PULSED && smoothing) {
+      JDType jd_thr = S->Thr[0].PulseWidthFinTimeStamp;
+      JDChangeSystemEpoch(jd_thr.system, jd_thr.epoch, &jd);
+   }
    for (i = 0; i < S->Nthr; i++) {
       Thr = &S->Thr[i];
       ThrModel(smoothing, Thr, S, jd);

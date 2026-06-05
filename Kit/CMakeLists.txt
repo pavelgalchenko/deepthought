@@ -81,6 +81,11 @@ target_compile_options(42kit PRIVATE $<$<CONFIG:Release>:-O2>)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Debug>:-O0 -ggdb -fno-omit-frame-pointer>)
 target_compile_options(42kit PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)
 target_link_options(42kit PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)
+if (PROFILE)
+    set(BUILD_SHARED_LIBS OFF)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -g -pg")
+endif()
 
 # addresssanitizer
 target_compile_options(42kit PRIVATE $<$<BOOL:${SANITIZER}>:-fsanitize=address -fsanitize=undefined>)

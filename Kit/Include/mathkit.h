@@ -31,6 +31,7 @@
 
 int any_int(const long n, const int *vec);
 int all_int(const long n, const int *vec);
+int any_isnan(const long n, const double *v);
 double signum(const double x);
 double sin_deg(double x);
 double cos_deg(double x);

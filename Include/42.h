@@ -216,7 +216,7 @@ void ZeroFrcTrq(struct SCType *S);
 void CloneWorld(struct WorldType *const dest, const struct WorldType src);
 void CopyWorld(struct WorldType *const dest, const struct WorldType src);
 ephemType GetEphemType(const char *s);
-void WorldEphemerides(const JDType jd, ephemType ephem,
+void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
                       struct WorldType *const worlds, struct RegionType *rgn,
                       struct LagrangeSystemType *lagsys);
 void SCEphemerides(const JDType jd, struct SCType *sc,
@@ -296,8 +296,8 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
 long LoadEphems(const ephemType ephem, const JDType jd,
                 JPLHeaderType *const jpl_hdr, struct WorldType *const worlds);
 /* handler to determine which Update*Ephems() subfunction to call */
-long UpdateEphems(const ephemType ephem, const JDType jd,
-                  const JPLHeaderType *const jpl_hdr,
+long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
+                  JDType jd_tt_j2000, const JPLHeaderType *const jpl_hdr,
                   struct WorldType *const worlds);
 /* read JPLHeaderType to get data from the 1041 header */
 double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
@@ -308,15 +308,18 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
                    JPLHeaderType *const jpl_hdr, const JDType jd,
                    struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
-long UpdateJplEphems(const JDType jd, const JPLHeaderType *const jpl_hdr,
+long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                     const JPLHeaderType *const jpl_hdr,
                      struct WorldType *const worlds);
 /* Update celestial body locations using MEAN method */
-long UpdateMeanEphems(const JDType jd, struct WorldType *const worlds);
+long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                      struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
 long UpdateMinorBodies(const JDType jd, struct WorldType *const worlds,
                        const double earth_CNH[3][3]);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
-long UpdateNonEphemMoons(const JDType jd, struct WorldType *const worlds,
+long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                         struct WorldType *const worlds,
                          const double earth_CNH[3][3]);
 long DecodeString(char *s);
 WorldID GetWorldID(const char *s);

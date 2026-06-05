@@ -4676,7 +4676,7 @@ void PartitionForces(struct SCType *S)
    }
 }
 /**********************************************************************/
-void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
+void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
 {
    if (params == NULL) {
       fprintf(
@@ -4690,6 +4690,13 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
 
    const long dim = params->dim;
 
+#ifdef DEBUG_MODE
+   if (any_isnan(dim, x)) {
+      fprintf(stderr, "In SCOde, have nan input state. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+#endif
+
    struct SCType *S                  = scparams->sc;
    struct OrbitType *orb             = scparams->orb;
    struct WorldType *world           = scparams->worlds;
@@ -4698,15 +4705,19 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    struct FormationType *frm         = scparams->frm;
    ephemType ephem                   = scparams->ephem;
 
-   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &t);
+   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
+   JDType jd_tt_j2000 = jd_tt_mjd;
+   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDType jd_tdb_j2000 = jd_tt_j2000;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
 
    double *x_trn    = NULL;
    double *xdot_trn = NULL;
 
    // TODO: three body orbit is integrated sometimes, so add its states to the
    // integration
-   WorldEphemerides(t, ephem, world, rgn, lagsys);
-   OrbitMotion(world, rgn, lagsys, orb, frm, t);
+   WorldEphemerides(jd_tdb_j2000, jd_tt_j2000, ephem, world, rgn, lagsys);
+   OrbitMotion(world, rgn, lagsys, orb, frm, jd_tt_mjd);
    RKStateToS(orb, x, S);
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
       x_trn = &x[dim - 6];
@@ -4715,14 +4726,14 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
    }
    else if (S->OrbDOF == ORBDOF_FIXED)
       FixedOrbitPosition(orb, frm, S);
-   SCEphemerides(t, S, &world[orb->World], orb);
+   SCEphemerides(jd_tdb_j2000, S, &world[orb->World], orb);
 
    ZeroNonSCContactFrcTrq(S);
 
    /* Magnetic Field, Atmospheric Density */
-   Environment(t, world, orb, S);
-   Perturbations(t, world, orb, S);
-   Actuators(TRUE, S, t);
+   Environment(jd_tt_mjd, world, orb, S);
+   Perturbations(jd_tdb_j2000, world, orb, S);
+   Actuators(TRUE, S, jd_tt_mjd);
    PartitionForces(S); /* Orbit-affecting and "internal" */
 
    switch (S->DynMethod) {
@@ -4807,6 +4818,13 @@ void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot)
          fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
+
+#ifdef DEBUG_MODE
+   if (any_isnan(dim, xdot)) {
+      fprintf(stderr, "In SCOde, have nan state derivative. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+#endif
 }
 /**********************************************************************/
 void Dynamics(struct WorldType *const worlds, struct OrbitType *const orb,

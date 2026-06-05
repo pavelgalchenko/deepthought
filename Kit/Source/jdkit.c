@@ -55,6 +55,7 @@ TimeSystem GetTimeSystem(const char *s)
 /**********************************************************************/
 static Rational _epoch_pod_seconds(const EpochTT epoch)
 {
+   // either zero or 43200 seconds
    switch (epoch) {
       case ZERO_EPOCH:
       case GMAT_MJD_EPOCH:
@@ -82,9 +83,11 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
    }
 
    // determine part of day value
-   *part_of_day = ToRational(RationalSub(ToRationalLL(_epoch_pod_seconds(a)),
-                                         ToRationalLL(_epoch_pod_seconds(b))));
-   *part_of_day = RationalAbs(*part_of_day);
+   const Rational a_pod = _epoch_pod_seconds(a);
+   const Rational b_pod = _epoch_pod_seconds(b);
+   *part_of_day         = RATIONAL_ZERO;
+   part_of_day->whole   = a_pod.whole - b_pod.whole;
+   *part_of_day         = RationalAbs(*part_of_day);
 
    if (b == ZERO_EPOCH)
       *day = (long)(EpochValueTT(a));
@@ -426,16 +429,15 @@ static JDType _jd_tai2utc(JDType tai_jd)
    //       the conversion and finish
 
    // NEEDED SO THAT GetLeapSec() DOES NOT GET BACK HERE
+   tai_jd.system     = UTC_TIME;
    JDType tai_utc_jd = tai_jd;
-   tai_utc_jd.system = UTC_TIME;
 
    const double leap_sec = GetLeapSec(tai_utc_jd);
-   tai_utc_jd            = JDSubSeconds(tai_utc_jd, leap_sec);
+   tai_utc_jd            = JDSubSeconds(tai_jd, leap_sec);
    const double test_ls  = GetLeapSec(tai_utc_jd);
    if (test_ls != leap_sec)
       tai_utc_jd = JDSubSeconds(tai_jd, test_ls);
 
-   tai_utc_jd.system = UTC_TIME;
    return tai_utc_jd;
 }
 /**********************************************************************/
@@ -656,9 +658,11 @@ double GetLeapSec(const JDType jd)
       fclose(file);
    }
 
-   const double jd_mjd_utc_days = JDToDays(jd_mjd_utc);
-   for (int i = leapSecTbl.n_entries - 1; i >= 0; i--) {
-      const struct LeapSecFileEntry *entry = &leapSecTbl.entries[i];
+   double jd_mjd_utc_days = JDToDays(jd_mjd_utc);
+   struct LeapSecFileEntry *const start_entry =
+       &leapSecTbl.entries[leapSecTbl.n_entries - 1];
+   for (struct LeapSecFileEntry *entry = start_entry;
+        entry >= leapSecTbl.entries; entry--) {
       if (isgreaterequal_jd(jd_mjd_utc, entry->jd_mjd_utc))
          return entry->offset_1 +
                 ((jd_mjd_utc_days - entry->offset_2) * entry->offset_3);
@@ -668,7 +672,7 @@ double GetLeapSec(const JDType jd)
 
 // ensure everything in JDType is reduced, and that if whole_days < 0, then so
 // are seconds.whole and seconds.num, and vice-versa
-static void _reduce_jd(JDType *const jd)
+static void _reduce_jd_no_rational(JDType *const jd)
 {
    const RationalLL rat_day =
        (RationalLL){.whole = SEC_PER_DAY, .num = 0, .den = 1};
@@ -687,6 +691,10 @@ static void _reduce_jd(JDType *const jd)
          jd->whole_days++;
       }
    }
+}
+static void _reduce_jd(JDType *const jd)
+{
+   _reduce_jd_no_rational(jd);
    ReduceRational(&jd->seconds);
 }
 
@@ -735,14 +743,14 @@ void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    // are in UT1 unless otherwise specified
 
    long epoch_diff_l = 0;
-   Rational epoch_diff_pod_s;
+   Rational epoch_diff_pod_s; // either zero or 43200 seconds
    _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_pod_s);
 
    // JDType jd_tt = _jdtt(*jd);
-   *jd       = JDAddDays(*jd, epoch_diff_l);
-   *jd       = JDAddRationalSeconds(*jd, epoch_diff_pod_s);
-   jd->epoch = new_epoch;
-   _reduce_jd(jd);
+   *jd                = JDAddDays(*jd, epoch_diff_l);
+   jd->seconds.whole += epoch_diff_pod_s.whole;
+   jd->epoch          = new_epoch;
+   _reduce_jd_no_rational(jd);
 
    // JDChangeSystem(jd->system, &jd_tt);
    // *jd = jd_tt;

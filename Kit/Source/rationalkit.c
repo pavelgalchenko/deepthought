@@ -330,7 +330,8 @@ static void _reducell(RationalLL *const rat)
 static void _cleanupll(RationalLL *const rat)
 {
    _reducell(rat);
-   _reduce_by_gcdll(&rat->num, &rat->den);
+   if (rat->den > RAT_MAX_DEN)
+      _reduce_by_gcdll(&rat->num, &rat->den);
 }
 /**********************************************************************/
 static Rat_LongLong _rounddown_div(const Rat_LongLong a, const Rat_LongLong b)
@@ -376,14 +377,19 @@ Rational _limit_denominator(Rat_LongLong p, Rat_LongLong q)
    if (p == 0)
       return RATIONAL_ZERO;
 
+   //_gcd* are expensive funcs, dont do unless needed
+   if (q <= max_den)
+      return RATIONAL_NGCD(p / q, p % q, q);
+
    Rat_LongLong g = _gcdll(p, q);
 
    g  = (q < 0) ? -g : g;
    p /= g;
    q /= g;
 
+   // can we get away with just gcd'ing?
    if (q <= max_den)
-      return RATIONAL_NGCD(p / q, p % q, q);
+      return RATIONAL_RAW(p / q, p % q, q);
 
    Rat_LongLong p0 = 0, q0 = 1, p1 = 1, q1 = 0;
    Rat_LongLong n = p, d = q;
@@ -411,12 +417,16 @@ RationalLL _limit_denominator_ll(Rat_LongLong p, Rat_LongLong q)
    if (p == 0)
       return RATIONALLL_RAW(0, 0, 1);
 
+   //_gcd* are expensive funcs, dont do unless needed
+   if (q <= max_den)
+      return RATIONALLL_RAW(p / q, p % q, q);
    Rat_LongLong g = _gcdll(p, q);
 
    g  = (q < 0) ? -g : g;
    p /= g;
    q /= g;
 
+   // can we get away with just gcd'ing?
    if (q <= max_den)
       return RATIONALLL_RAW(p / q, p % q, q);
 
@@ -535,6 +545,14 @@ RationalLL RationalDivide(RationalLL a, RationalLL b)
    _reducell(&a);
    _reducell(&b);
 
+   if (a.whole == 0 && a.num == 0)
+      return RATIONALLL_RAW(0, 0, 1);
+
+   if (b.whole == 0 && b.num == 0) {
+      fprintf(stderr, "Divide by zero in RationalDivide. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+
    RationalLL out     = {0};
    Rat_LongLong num_a = a.whole * a.den + a.num;
    Rat_LongLong den_a = a.den;
@@ -558,22 +576,33 @@ RationalLL RationalAdd(RationalLL a, RationalLL b)
    if (b.whole == 0 && b.num == 0)
       return a;
 
-   RationalLL out;
-   Rat_LongLong den   = a.den * b.den;
-   Rat_LongLong num_a = a.num * b.den;
-   Rat_LongLong num_b = b.num * a.den;
-
-   const Rat_LongLong a_gcd = _gcdll(num_a, den);
-   Rat_LongLong com_gcd     = 1;
-   if (a_gcd != 1)
-      com_gcd = _gcdll(a_gcd, num_b);
-   if (com_gcd > 1) {
-      num_a /= com_gcd;
-      num_b /= com_gcd;
-      den   /= com_gcd;
+   RationalLL out = a;
+   if (a.num == 0) {
+      a   = b;
+      b   = out;
+      out = a;
    }
 
-   out = RATIONALLL_RAW(a.whole + b.whole, num_a + num_b, den);
+   if (b.num != 0) {
+      Rat_LongLong den   = a.den * b.den;
+      Rat_LongLong num_a = a.num * b.den;
+      Rat_LongLong num_b = b.num * a.den;
+
+      const Rat_LongLong a_gcd = _gcdll(num_a, den);
+      Rat_LongLong com_gcd     = 1;
+      if (a_gcd != 1)
+         com_gcd = _gcdll(a_gcd, num_b);
+      if (com_gcd > 1) {
+         num_a /= com_gcd;
+         num_b /= com_gcd;
+         den   /= com_gcd;
+      }
+
+      out = RATIONALLL_RAW(a.whole + b.whole, num_a + num_b, den);
+   }
+   else
+      out.whole += b.whole;
+
    _cleanupll(&out);
    return out;
 }
@@ -588,25 +617,34 @@ RationalLL RationalSub(RationalLL a, RationalLL b)
    if (b.whole == 0 && b.num == 0)
       return a;
 
-   RationalLL out;
-   Rat_LongLong den   = a.den * b.den;
-   Rat_LongLong num_a = a.num * b.den;
-   Rat_LongLong num_b = b.num * a.den;
-
-   const Rat_LongLong a_gcd = _gcdll(num_a, den);
-   Rat_LongLong com_gcd     = 1;
-   if (a_gcd != 1)
-      com_gcd = _gcdll(a_gcd, num_b);
-   if (com_gcd > 1) {
-      num_a /= com_gcd;
-      num_b /= com_gcd;
-      den   /= com_gcd;
+   RationalLL out = a;
+   if (a.num == 0) {
+      a   = (RationalLL){.whole = -b.whole, .num = -b.num, .den = b.den};
+      b   = (RationalLL){.whole = -out.whole, .num = -out.num, .den = out.den};
+      out = a;
    }
 
-   Rat_LongLong num = num_a - num_b;
-   _reduce_by_gcdll(&num, &den);
-   out        = _limit_denominator_ll(num, den);
-   out.whole += a.whole - b.whole;
+   if (b.num != 0) {
+      Rat_LongLong den   = a.den * b.den;
+      Rat_LongLong num_a = a.num * b.den;
+      Rat_LongLong num_b = b.num * a.den;
+
+      const Rat_LongLong a_gcd = _gcdll(num_a, den);
+      Rat_LongLong com_gcd     = 1;
+      if (a_gcd != 1)
+         com_gcd = _gcdll(a_gcd, num_b);
+      if (com_gcd > 1) {
+         num_a /= com_gcd;
+         num_b /= com_gcd;
+         den   /= com_gcd;
+      }
+
+      Rat_LongLong num  = num_a - num_b;
+      out               = _limit_denominator_ll(num, den);
+      out.whole        += a.whole - b.whole;
+   }
+   else
+      out.whole -= b.whole;
 
    _cleanupll(&out);
    return out;

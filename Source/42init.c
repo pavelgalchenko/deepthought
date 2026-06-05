@@ -4105,6 +4105,12 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    WorldID Iw = 0;
    for (Iw = MERCURY, i = 0; Iw <= PLUTO; Iw++, i++) {
       struct WorldType *W = &worlds[Iw];
+      W->OrientWorld      = FALSE;
+      if (!W->Exists)
+         continue;
+
+      W->OrientWorld = TRUE;
+
       strcpy(W->Name, PlanetName[i]);
       strcpy(W->MapFileName, MapFileName[i]);
       strcpy(W->ColTexFileName, "NONE");
@@ -4125,8 +4131,6 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       for (int j = 0; j < 14; j++)
          W->Glyph[j] = Glyph[i][j];
       W->Atmo.Exists = HasAtmo[i];
-
-      W->OrientWorld = TRUE;
 
       W->ang_data[0]          = (struct AngDataType){0};
       W->ang_data[0].ang_char = 'P';
@@ -4254,7 +4258,9 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    worlds[MARS].Atmo.MaxHt        = 8.0 * worlds[MARS].Atmo.RayScaleHt;
    worlds[MARS].Atmo.rad          = worlds[MARS].rad + worlds[MARS].Atmo.MaxHt;
 
-   JDType jd_tt_j2000 = jd;
+   JDType jd_tdb_j2000 = jd;
+   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tt_j2000 = jd_tdb_j2000;
    JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
    const double j2000sec_tt = JDToDynTime(jd_tt_j2000);
    /* .. Load planetary orbit elements for date of interest */
@@ -4285,7 +4291,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                MxM(C_W_TETE, C_TETE_J2000, W->CWN);
             }
             else {
-               W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
+               W->PriMerAng = GetWorldCWN(jd_tdb_j2000, W->ang_data, W->CWN);
                GetWorldCNJ(jd, W->ang_data, W->CNJ);
                MxM(W->CNJ, worlds[EARTH].CNH, W->CNH);
                C2Q(W->CNJ, W->qnj);
@@ -4717,22 +4723,37 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 
       struct WorldType *P = &worlds[p_id];
 
-      long n_moon = 0;
-      WorldID first_moon;
+      long n_moon        = 0;
+      WorldID first_moon = LUNA;
       NMoon(p_id, &n_moon, &first_moon);
-      P->Nsat = n_moon;
-
-      P->Sat = (WorldID *)calloc(n_moon, sizeof(long));
-      if (P->Sat == NULL) {
-         fprintf(stderr, "%s P->Sat calloc returned null pointer. Exiting...\n",
-                 p_name);
-         exit(EXIT_FAILURE);
+      P->Nsat = 0;
+      P->Sat  = NULL;
+      for (WorldID Im = first_moon; Im < (n_moon + first_moon); Im++) {
+         if (worlds[Im].Exists) {
+            P->Nsat++;
+            if (P->Sat == NULL)
+               P->Sat = calloc(P->Nsat, sizeof(long));
+            else
+               P->Sat = realloc(P->Sat, P->Nsat * sizeof(long));
+            P->Sat[P->Nsat - 1] = Im;
+         }
       }
 
-      if (P->Exists) {
-         for (long im = 0; im < n_moon; im++) {
-            const WorldID m_id  = im + first_moon;
+      if (P->Exists && P->Nsat > 0) {
+         if (P->Sat == NULL) {
+            fprintf(stderr,
+                    "%s P->Sat allocation returned null pointer. Exiting...\n",
+                    p_name);
+            exit(EXIT_FAILURE);
+         }
+
+         for (long im = 0; im < P->Nsat; im++) {
+            const WorldID m_id  = P->Sat[im];
             struct WorldType *M = &worlds[m_id];
+            M->Parent           = p_id;
+            M->OrientWorld      = FALSE;
+            if (!M->Exists)
+               continue;
 
             float color[4]          = {1.0};
             unsigned char glyph[14] = {'\0'};
@@ -4747,11 +4768,6 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                             &pole_dec, &sma, &ecc, &inc, &raan, &omg,
                             &mean_anom, &epoch_date);
             double primerang_j2000 = 0.0;
-
-            P->Sat[im] = m_id;
-
-            M->Exists = TRUE;
-            M->Parent = p_id;
 
             M->OrientWorld = TRUE;
 
@@ -4919,7 +4935,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
             if (ephem != EPH_SPICE) {
-               M->PriMerAng = GetWorldCWN(jd, M->ang_data, M->CWN);
+               M->PriMerAng = GetWorldCWN(jd_tdb_j2000, M->ang_data, M->CWN);
                // TODO: double check that CNH tends to reflect the parent body
                GetWorldCNJ(jd, M->ang_data, M->CNJ);
                MxM(M->CNJ, worlds[EARTH].CNH, M->CNH);
@@ -5539,6 +5555,121 @@ void LoadSchatten(void)
    fclose(infile);
 }
 /**********************************************************************/
+void ReadWorldExists(struct WorldType *const worlds,
+                     struct fy_node *celestial_node)
+{
+   for (WorldID Iw = MERCURY; Iw < NMAJORWORLD; Iw++)
+      worlds[Iw].Exists = FALSE;
+
+   worlds[SOL].Exists = TRUE; // Sol must exist
+
+   struct fy_node_pair *iterPairNode = NULL;
+   while (fy_node_mapping_iterate(celestial_node, (void **)&iterPairNode) !=
+          NULL) {
+      struct fy_node *const key_node   = fy_node_pair_key(iterPairNode);
+      struct fy_node *const val_node   = fy_node_pair_value(iterPairNode);
+      const enum fy_node_type val_type = fy_node_get_type(val_node);
+
+      size_t str_len = 0, key_str_len = 0;
+      const char *const key_str_fy = fy_node_get_scalar(key_node, &key_str_len);
+      char key_str[key_str_len + 1];
+      strncpy(key_str, key_str_fy, key_str_len);
+      key_str[key_str_len] = '\0';
+
+      int found = FALSE;
+      for (WorldID Iw = MERCURY; Iw <= PLUTO; Iw++) {
+         char world_name[32] = {'\0'};
+         WorldID2String(Iw, world_name);
+         CapitalizeFirst(31, world_name);
+
+         long n_moon        = 0;
+         WorldID first_moon = LUNA;
+         NMoon(Iw, &n_moon, &first_moon);
+
+         if (strstr(key_str, world_name) != NULL) {
+            switch (val_type) {
+               case FYNT_SCALAR: {
+                  found = TRUE;
+
+                  const int is_enabled = getYAMLBool(val_node);
+                  worlds[Iw].Exists    = is_enabled;
+                  for (WorldID Im = first_moon; Im < n_moon + first_moon; Im++)
+                     worlds[Im].Exists = is_enabled;
+               } break;
+               case FYNT_MAPPING: {
+                  found = TRUE;
+                  worlds[Iw].Exists =
+                      getYAMLBool(fy_node_by_path_def(val_node, "/Exists"));
+                  if (!worlds[Iw].Exists)
+                     break;
+
+                  struct fy_node *const moon_node =
+                      fy_node_by_path_def(val_node, "/Moons");
+                  if (moon_node != NULL) {
+                     const enum fy_node_type moon_type =
+                         fy_node_get_type(moon_node);
+                     switch (moon_type) {
+                        case FYNT_SCALAR: {
+                           // only caring if "ALL" is here
+                           const char *moon_str_fy =
+                               fy_node_get_scalar(moon_node, &str_len);
+                           char moon_str[str_len + 1];
+                           strncpy(moon_str, moon_str_fy, str_len);
+                           moon_str[str_len] = '\0';
+                           toupper_str(str_len, moon_str);
+                           if (!strncmp("ALL", moon_str, MIN(str_len, 3)))
+                              for (WorldID Im = first_moon;
+                                   Im < n_moon + first_moon; Im++)
+                                 worlds[Im].Exists = TRUE;
+                        } break;
+                        case FYNT_SEQUENCE: {
+                           struct fy_node *moon_iter_node = NULL;
+                           WorldID last_moon = first_moon + n_moon - 1;
+                           WHILE_FY_ITER(moon_node, moon_iter_node)
+                           {
+                              const char *moon_name_fy =
+                                  fy_node_get_scalar(moon_iter_node, &str_len);
+                              char moon_name[str_len + 1];
+                              strncpy(moon_name, moon_name_fy, str_len);
+                              toupper_str(str_len, moon_name);
+
+                              moon_name[str_len] = '\0';
+                              WorldID Im         = GetWorldID(moon_name);
+                              if (first_moon <= Im && Im <= last_moon)
+                                 worlds[Im].Exists = TRUE;
+                              else
+                                 fprintf(stdout,
+                                         "The string '%s' is not a valid name "
+                                         "for a moon of %*s. Ignoring...\n",
+                                         moon_name, (int)key_str_len, key_str);
+                           }
+                        } break;
+                        default:
+                           fprintf(stderr,
+                                   "Invalid moon node type in key %.*s. "
+                                   "Ignoring...\n",
+                                   (int)key_str_len, key_str);
+                     }
+                  }
+               } break;
+               default:
+                  fprintf(stderr,
+                          "Invalid node type in key %.*s. Ignoring...\n",
+                          (int)key_str_len, key_str);
+            }
+         }
+
+         if (found)
+            break;
+      }
+   }
+
+   for (WorldID Iw = MERCURY; Iw < NMAJORWORLD; Iw++) {
+      worlds[Iw].eph.Exists  = worlds[Iw].Exists;
+      worlds[Iw].Atmo.Exists = worlds[Iw].Exists;
+   }
+}
+/**********************************************************************/
 void InitSim(int argc, char **argv)
 {
    char response[120], response1[120], response2[120];
@@ -6009,21 +6140,16 @@ void InitSim(int argc, char **argv)
 
    node = fy_node_by_path_def(root, "/Celestial Bodies");
 
-   // TODO: allow for enabling/disabling particular moons
-   //       E.g, ee may want to know the position of Jupiter,
-   //       but may not need its moon Ananke
-   for (Iw = MERCURY; Iw <= PLUTO; Iw++) {
-      char search_str[64] = {'\0'};
-      search_str[0]       = '/';
-      WorldID2String(Iw, &search_str[1]);
-      CapitalizeFirst(63, &search_str[1]);
-      if (Iw == EARTH)
-         strcat(search_str, " and Luna");
-      else if (Iw >= MARS)
-         strcat(search_str, " and its moons");
-
-      World[Iw].Exists = getYAMLBool(fy_node_by_path_def(node, search_str));
+   ReadWorldExists(World, node);
+   if ((World[EARTH].Exists || World[LUNA].Exists) &&
+       !(EphemOption == EPH_SPICE || EphemOption == EPH_MEAN)) {
+      fprintf(stdout, "Due to the way their states are defined for DE ephems, "
+                      "if one of Earth or Luna is enabled, they both must be; "
+                      "Enabling them both...\n");
+      World[EARTH].Exists = TRUE;
+      World[LUNA].Exists  = TRUE;
    }
+
    MinorBodiesExist =
        getYAMLBool(fy_node_by_path_def(node, "/Asteroids and Comets"));
 
@@ -6035,6 +6161,30 @@ void InitSim(int argc, char **argv)
        getYAMLBool(fy_node_by_path_def(node, "/Sun-Earth"));
    LagSys[SUNJUPITER].Exists =
        getYAMLBool(fy_node_by_path_def(node, "/Sun-Jupiter"));
+
+   if (LagSys[EARTHMOON].Exists &&
+       !(World[EARTH].Exists && World[LUNA].Exists)) {
+      fprintf(stdout, "The Earth-Moon 3-Body system was enabled, but one of "
+                      "Earth or Moon was not enabled; Enabling them both...\n");
+      World[EARTH].Exists = TRUE;
+      World[LUNA].Exists  = TRUE;
+   }
+   if (LagSys[SUNEARTH].Exists && !(World[SOL].Exists && World[EARTH].Exists)) {
+      fprintf(stdout, "The Sun-Earth 3-Body system was enabled, but one of Sol "
+                      "or Earth was not enabled; Enabling them both...\n");
+      World[SOL].Exists   = TRUE;
+      World[EARTH].Exists = TRUE;
+      // enable Luna?? probably
+      // World[LUNA].Exists=TRUE;
+   }
+   if (LagSys[SUNJUPITER].Exists &&
+       !(World[SOL].Exists && World[JUPITER].Exists)) {
+      fprintf(stdout,
+              "The Sun-Jupiter 3-Body system was enabled, but one of Sol or "
+              "Jupiter was not enabled; Enabling them both...\n");
+      World[SOL].Exists     = TRUE;
+      World[JUPITER].Exists = TRUE;
+   }
 
    /* .. Ground Stations */
    node          = fy_node_by_path_def(root, "/Ground Stations");
@@ -6131,7 +6281,7 @@ void InitSim(int argc, char **argv)
    else
       Nmb = 0;
 
-   UpdateEphems(EphemOption, JD_TDB_MJD, &JplHeader, World);
+   UpdateEphems(EphemOption, JD_TDB_MJD, JD_TT_MJD, &JplHeader, World);
 
    /* .. Regions */
    LoadRegions();
@@ -6142,9 +6292,9 @@ void InitSim(int argc, char **argv)
 
    /* .. Ground Station Locations */
    for (i = 0; i < Ngnd; i++) {
-      if (GroundStation[i].Exists && !World[GroundStation[i].World].Exists) {
+      if (GroundStation[i].Exists && !World[GroundStation[i].World].Exists)
          printf("Ground Station[%ld].World doesn't exist.\n", i);
-      }
+
       GroundStation[i].PosW[0] = World[GroundStation[i].World].rad *
                                  cos(GroundStation[i].lng * D2R) *
                                  cos(GroundStation[i].lat * D2R);
