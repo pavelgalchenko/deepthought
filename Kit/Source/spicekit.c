@@ -116,11 +116,11 @@ void WorldID2IAUFrame(WorldID w_id, char iau_frame[SPICE_FRM_STR_BUFF_SIZE])
 /**********************************************************************/
 /* Does not modify vals if it is not foudn                            */
 int SpiceCheckAndGetDbl(const WorldID Iw, ConstSpiceChar *item, SpiceInt start,
-                        SpiceInt *n, SpiceDouble *vals)
+                        SpiceInt n, SpiceDouble *vals)
 {
    SpiceBoolean found       = SPICEFALSE;
    SpiceChar check_name[64] = {'\0'};
-   SpiceInt dim             = *n;
+   SpiceInt dim             = n;
    char type                = 0;
 
    SpiceInt naif_id = WorldID2NAIFID(Iw);
@@ -134,8 +134,19 @@ int SpiceCheckAndGetDbl(const WorldID Iw, ConstSpiceChar *item, SpiceInt start,
               check_name, Iw);
       exit(EXIT_FAILURE);
    }
-   if (found != SPICEFALSE)
-      bodvcd_c(naif_id, item, dim, n, vals);
+   if (found != SPICEFALSE) {
+      if ((start + n) > dim) {
+         fprintf(
+             stderr,
+             "In SpiceCheckAndGetDbl, requested %i values starting at index %i "
+             "from item '%s' when its dimension is %i. Exiting...\n",
+             n, start, item, dim);
+         exit(EXIT_FAILURE);
+      }
+      double out[dim];
+      bodvcd_c(naif_id, item, dim, &dim, out);
+      CopyVG(vals, &out[start], n);
+   }
 
    return found;
 }
@@ -237,7 +248,7 @@ AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
    sscanf(lead_char, "%d", &lead_num);
 
    SpiceInt dim = 3;
-   if (SpiceCheckAndGetDbl(world, chk_str, 0, &dim, ang_data.ang) ==
+   if (SpiceCheckAndGetDbl(world, chk_str, 0, dim, ang_data.ang) ==
        SPICEFALSE) {
       ang_data.n_E          = 0;
       ang_data.n_ang        = 0;
@@ -438,8 +449,9 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 }
 /**********************************************************************/
 void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
-                    struct WorldType *const worlds, double trgtPosN[3],
-                    double trgtPosH[3], double *trgtPriMerAng,
+                    struct WorldType *const worlds __attribute__((unused)),
+                    double trgtPosN[3], double trgtPosH[3],
+                    double *trgtPriMerAng __attribute__((unused)),
                     double trgtCNH[3][3])
 {
    double CNH[3][3];

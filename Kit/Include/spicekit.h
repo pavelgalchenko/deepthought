@@ -65,7 +65,7 @@ void WorldID2IAUFrameWorld(WorldID w_id,
 void WorldID2IAUFrame(WorldID w_id,
                       SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 int SpiceCheckAndGetDbl(WorldID Iw, ConstSpiceChar *item, SpiceInt start,
-                        SpiceInt *n, SpiceDouble *vals);
+                        SpiceInt n, SpiceDouble *vals);
 int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3]);
 int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, double CWJ[3][3]);
 int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,

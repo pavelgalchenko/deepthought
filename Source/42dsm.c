@@ -1669,7 +1669,7 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
 
 //------------------------------- NAVIGATION CMD -------------------------------
 long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
-                      struct fy_node *navCmdNode, struct fy_node *dsmRoot)
+                      struct fy_node *navCmdNode)
 {
    char navType[FIELDWIDTH + 1] = {}, batchingType[FIELDWIDTH + 1] = {},
                              refOri[FIELDWIDTH + 1] = {}, refFrame = 0;
@@ -2098,8 +2098,7 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
    }
 }
 //--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
-void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
-                           struct fy_node *dsmRoot)
+void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM)
 {
    struct DSMCmdType *Cmd = &DSM->Cmd;
    struct fy_node *cmdsNode =
@@ -2149,7 +2148,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else if (!strcmp(typeToken, "Navigation")) {
-         if (GetNavigationCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
+         if (GetNavigationCmd(AC, DSM, iterNode) == FALSE) {
             printf("Navigation command cannot be found in Inp_DSM.yaml. "
                    "Exiting...\n");
             exit(EXIT_FAILURE);
@@ -3487,7 +3486,11 @@ void AttitudeNavigation(struct AcType *AC, struct DSMStateType *state)
    AC->qbn[3] = state->qbn[3];
 }
 //------------------------------------------------------------------------------
-void MurAKF(struct AcType *AC, struct DSMStateType *state)
+void MurAKF(struct AcType *AC __attribute__((unused)),
+            struct DSMStateType *state __attribute__((unused)))
+    __attribute__((unused));
+void MurAKF(struct AcType *AC __attribute__((unused)),
+            struct DSMStateType *state __attribute__((unused)))
 {
    /* Propagate quaternion, bias, and error covariance */
    // (Hasnaa uses mag, ST, and FSS data)
@@ -3879,7 +3882,7 @@ void DsmFSW(struct SCType *S)
    }
 
    if (DSM->CmdNum < DSM->CmdCnt && SimTime >= DSM->CmdNextTime) {
-      DsmCmdInterpreterMrk2(AC, DSM, dsmRoot);
+      DsmCmdInterpreterMrk2(AC, DSM);
       DSM->CmdNum++;
       if (DSM->CmdNum < DSM->CmdCnt)
          fy_node_scanf(DSM->CmdArray[DSM->CmdNum], "/Time %lf",

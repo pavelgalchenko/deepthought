@@ -20,7 +20,7 @@
 */
 
 /**********************************************************************/
-void PassiveJoint(struct JointType *G, struct SCType *S)
+void PassiveJoint(struct JointType *G, struct SCType *S __attribute__((unused)))
 {
    long i;
    double a[3];
@@ -46,7 +46,8 @@ void PassiveJoint(struct JointType *G, struct SCType *S)
 }
 /**********************************************************************/
 /* Simple actively-controlled joint.                                  */
-void ActuatedJoint(struct JointType *G, struct SCType *S)
+void ActuatedJoint(struct JointType *G,
+                   struct SCType *S __attribute__((unused)))
 {
    double RateCmd;
    long i;
@@ -64,18 +65,33 @@ void ActuatedJoint(struct JointType *G, struct SCType *S)
    }
 }
 /**********************************************************************/
-void StepperMotorJoint(struct JointType *G, struct SCType *S) {}
+void StepperMotorJoint(struct JointType *G __attribute__((unused)),
+                       struct SCType *S __attribute__((unused)))
+{
+}
 /**********************************************************************/
-void TvcJoint(struct JointType *G, struct SCType *S) {}
+void TvcJoint(struct JointType *G __attribute__((unused)),
+              struct SCType *S __attribute__((unused)))
+{
+}
 /**********************************************************************/
-void VibrationIsolatorJoint(struct JointType *G, struct SCType *S) {}
+void VibrationIsolatorJoint(struct JointType *G __attribute__((unused)),
+                            struct SCType *S __attribute__((unused)))
+{
+}
 /**********************************************************************/
-void SloshJoint(struct JointType *G, struct SCType *S) {}
+void SloshJoint(struct JointType *G __attribute__((unused)),
+                struct SCType *S __attribute__((unused)))
+{
+}
 /**********************************************************************/
-void SteeringMirrorJoint(struct JointType *G, struct SCType *S) {}
+void SteeringMirrorJoint(struct JointType *G __attribute__((unused)),
+                         struct SCType *S __attribute__((unused)))
+{
+}
 /**********************************************************************/
 /* A good place for you to implement a quick-and-dirty model          */
-void AdHocJoint(struct JointType *G, struct SCType *S)
+void AdHocJoint(struct JointType *G, struct SCType *S __attribute__((unused)))
 {
    long i;
 

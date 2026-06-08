@@ -91,7 +91,7 @@ double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
     __attribute__((malloc));
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                           const long sensorNum, double **N)
-    __attribute__((malloc));
+    __attribute__((malloc, unused));
 
 double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
                 const long sensorNum) __attribute__((malloc));
@@ -106,7 +106,8 @@ double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
 double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
                const long sensorNum) __attribute__((malloc));
 double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
-                 const long sensorNum) __attribute__((malloc));
+                 const long sensorNum) __attribute__((malloc))
+__attribute__((unused));
 
 /*--------------------------------------------------------------------*/
 /*                          RIEKF functions                           */

@@ -736,6 +736,7 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
             C2Q(C, Cmd->qrl);
          else
             C2Q(C, Cmd->qrn);
+         [[fallthrough]];
       case PARM_QUATERNION:
          C2Q(S->CLN, qln);
          if (Cmd->Frame == FRAME_L) {

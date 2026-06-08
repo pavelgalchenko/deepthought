@@ -76,7 +76,7 @@ add_subdirectory(tests)
 
 target_link_libraries(42kit PUBLIC m)
 
-target_compile_options(42kit PRIVATE -fpic -Wall -Wshadow -Wno-deprecated -Wenum-conversion -Wno-format-extra-args)
+target_compile_options(42kit PRIVATE -fpic -Wall -Wextra -Wshadow -Wno-deprecated -Wenum-conversion -Wno-format-extra-args)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Release>:-O2>)
 target_compile_options(42kit PRIVATE $<$<CONFIG:Debug>:-O0 -ggdb -fno-omit-frame-pointer>)
 target_compile_options(42kit PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)

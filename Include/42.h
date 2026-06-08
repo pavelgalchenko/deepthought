@@ -296,8 +296,7 @@ long LoadEphems(const ephemType ephem, const JDType jd,
                 JPLHeaderType *const jpl_hdr, struct WorldType *const worlds);
 /* handler to determine which Update*Ephems() subfunction to call */
 long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
-                  JDType jd_tt_j2000, const JPLHeaderType *const jpl_hdr,
-                  struct WorldType *const worlds);
+                  JDType jd_tt_j2000, struct WorldType *const worlds);
 /* read JPLHeaderType to get data from the 1041 header */
 double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
                            const char *grp_1040_name) __attribute__((pure));
@@ -308,7 +307,6 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
                    struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
 long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
-                     const JPLHeaderType *const jpl_hdr,
                      struct WorldType *const worlds);
 /* Update celestial body locations using MEAN method */
 long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,

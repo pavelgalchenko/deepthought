@@ -346,7 +346,7 @@ static JDType _epoch_diff_tt(const EpochTT a, const EpochTT b)
 //  time system low level conversion helpers
 /**********************************************************************/
 #define L_B (1.550505e-8)
-static JDType _jd_tcb2tdb(const JDType tcb_jd)
+static JDType _jd_tcb2tdb(const JDType tcb_jd __attribute__((unused)))
 {
    // JDType jd_tt_conv = _jdtt(tcb_jd);// nope, do not
    // JDChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
@@ -473,10 +473,13 @@ static JDType _jdutc(const JDType jd)
    switch (jd.system) {
       case TCB_TIME:
          jd_out = _jd_tcb2tdb(jd_out);
+         [[fallthrough]];
       case TDB_TIME:
          jd_out = _jd_tdb2tt(jd_out);
+         [[fallthrough]];
       case TT_TIME:
          jd_out = _jd_tt2tai(jd_out);
+         [[fallthrough]];
       case TAI_TIME:
          jd_out = _jd_tai2utc(jd_out);
          break;
@@ -495,10 +498,13 @@ static JDType _jdtai(const JDType jd)
       } break;
       case TCB_TIME:
          jd_out = _jd_tcb2tdb(jd_out);
+         [[fallthrough]];
       case TDB_TIME:
          jd_out = _jd_tdb2tt(jd_out);
+         [[fallthrough]];
       case TT_TIME:
          jd_out = _jd_tt2tai(jd_out);
+         [[fallthrough]];
       case TAI_TIME:
          break;
    }
@@ -511,10 +517,13 @@ static JDType _jdtcb(const JDType jd)
    switch (jd.system) {
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
+         [[fallthrough]];
       case TAI_TIME:
          jd_out = _jd_tai2tt(jd_out);
+         [[fallthrough]];
       case TT_TIME:
          jd_out = _jd_tt2tdb(jd_out);
+         [[fallthrough]];
       case TDB_TIME:
          jd_out = _jd_tdb2tcb(jd_out);
          break;
@@ -530,8 +539,10 @@ static JDType _jdtdb(const JDType jd)
    switch (jd.system) {
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
+         [[fallthrough]];
       case TAI_TIME:
          jd_out = _jd_tai2tt(jd_out);
+         [[fallthrough]];
       case TT_TIME:
          jd_out = _jd_tt2tdb(jd_out);
          break;
@@ -549,11 +560,13 @@ static JDType _jdtt(const JDType jd)
    switch (jd.system) {
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
+         [[fallthrough]];
       case TAI_TIME:
          jd_out = _jd_tai2tt(jd_out);
          break;
       case TCB_TIME:
          jd_out = _jd_tcb2tdb(jd_out);
+         [[fallthrough]];
       case TDB_TIME:
          jd_out = _jd_tdb2tt(jd_out);
          break;
@@ -701,13 +714,11 @@ static JDType _reduce_jd_no_rational(JDType jd)
         (jd.whole_days > 0 && !ispos_rational(jd.seconds))) &&
        jd.whole_days != 0 && !isequal_rational(jd.seconds, RATIONAL_ZERO)) {
       if (jd.whole_days > 0) {
-         jd.seconds =
-             ToRational(RationalAdd(ToRationalLL(jd.seconds), rat_day));
+         jd.seconds = ToRational(RationalAdd(jd.seconds, rat_day));
          jd.whole_days--;
       }
       else if (jd.whole_days < 0) {
-         jd.seconds =
-             ToRational(RationalSub(ToRationalLL(jd.seconds), rat_day));
+         jd.seconds = ToRational(RationalSub(jd.seconds, rat_day));
          jd.whole_days++;
       }
    }
@@ -801,7 +812,7 @@ JDType JDFromDays(const double days, const TimeSystem system,
    jd.system               = system;
    jd.whole_days           = days;
    const Rational part_day = double2rational(days - jd.whole_days);
-   jd.seconds = IntegerRationalMult(SEC_PER_DAY, ToRationalLL(part_day));
+   jd.seconds              = IntegerRationalMult(SEC_PER_DAY, part_day);
    return jd;
 }
 /**********************************************************************/
@@ -894,17 +905,15 @@ JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
 
 static JDType _jd_rational_mult_helper(Rational mul, const JDType jd)
 {
-   JDType jd_out    = jd;
-   RationalLL mulLL = ToRationalLL(mul);
+   JDType jd_out = jd;
 
-   jd_out.seconds = ToRational(RationalMult(mulLL, ToRationalLL(jd.seconds)));
-   Rational jd_whole = IntegerRationalMult(jd.whole_days, mulLL);
+   jd_out.seconds    = ToRational(RationalMult(mul, jd.seconds));
+   Rational jd_whole = IntegerRationalMult(jd.whole_days, mul);
    jd_out.whole_days = jd_whole.whole;
    jd_whole.whole    = 0;
-   Rational jd_secs  = IntegerRationalMult(SEC_PER_DAY, ToRationalLL(jd_whole));
+   Rational jd_secs  = IntegerRationalMult(SEC_PER_DAY, jd_whole);
 
-   jd_out.seconds = ToRational(
-       RationalAdd(ToRationalLL(jd_secs), ToRationalLL(jd_out.seconds)));
+   jd_out.seconds = ToRational(RationalAdd(jd_secs, jd_out.seconds));
 
    return _reduce_jd(jd_out);
 }
@@ -922,8 +931,7 @@ JDType JDAdd(JDType a, JDType b)
    _error_epoch_system(a, b, "JDAdd");
    JDType jdout      = a;
    jdout.whole_days += b.whole_days;
-   jdout.seconds     = ToRational(
-       RationalAdd(ToRationalLL(jdout.seconds), ToRationalLL(b.seconds)));
+   jdout.seconds     = ToRational(RationalAdd(jdout.seconds, b.seconds));
 
    return _reduce_jd(jdout);
 }
@@ -955,8 +963,8 @@ JDType JDAddIntegerMultRatSecs(const JDType jd, const long mul,
    JDType jdb = jd;
 
    jdb.whole_days = 0;
-   jdb.seconds    = IntegerRationalMultMod(mul, ToRationalLL(rat), SEC_PER_DAY,
-                                           &jdb.whole_days);
+   jdb.seconds    = IntegerRationalMultMod(mul, _rat_to_rationalll(rat),
+                                           SEC_PER_DAY, &jdb.whole_days);
 
    return JDAdd(jd, jdb);
 }
@@ -983,8 +991,7 @@ JDType JDSub(JDType a, JDType b)
    _error_epoch_system(a, b, "JDSub");
    JDType jdout      = a;
    jdout.whole_days -= b.whole_days;
-   jdout.seconds     = ToRational(
-       RationalSub(ToRationalLL(jdout.seconds), ToRationalLL(b.seconds)));
+   jdout.seconds     = ToRational(RationalSub(jdout.seconds, b.seconds));
 
    return _reduce_jd(jdout);
 }
@@ -1027,14 +1034,14 @@ JDType JDaxpy(const double a, JDType x, JDType y)
    // TODO: this is quite hacky to "just work" for its usage in rkkit
    const int sign       = (a >= 0) ? 1 : -1;
    const double mult    = fabs(a);
-   RationalLL mult_rat  = ToRationalLL(double2rational(mult));
+   RationalLL mult_rat  = _rat_to_rationalll(double2rational(mult));
    Rational day_mult    = IntegerRationalMult(x.whole_days, mult_rat);
    x.whole_days         = day_mult.whole;
    day_mult.whole       = 0;
    day_mult.num        *= SEC_PER_DAY;
 
-   RationalLL secs = RationalMult(mult_rat, ToRationalLL(x.seconds));
-   x.seconds       = ToRational(RationalAdd(secs, ToRationalLL(day_mult)));
+   RationalLL secs = RationalMult(mult_rat, x.seconds);
+   x.seconds       = ToRational(RationalAdd(secs, day_mult));
 
    x.epoch  = y.epoch;
    x.system = y.system;
@@ -1246,8 +1253,8 @@ void jddays2str(JDType jd, char str[JD_STR_LEN])
    system2str(jd.system, system_str);
 
    const Rational rat_SEC_PER_DAY = RATIONAL_NGCD(SEC_PER_DAY, 0, 1);
-   Rational rat_jd_pod            = ToRational(
-       RationalDivide(ToRationalLL(jd.seconds), ToRationalLL(rat_SEC_PER_DAY)));
+   Rational rat_jd_pod =
+       ToRational(RationalDivide(jd.seconds, rat_SEC_PER_DAY));
    const double jd_pod = rational2double(rat_jd_pod);
    char sec_str[28]    = {'\0'};
    snprintf(sec_str, 28, "%.20lf", jd_pod);

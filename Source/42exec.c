@@ -54,10 +54,9 @@ void ManageFlags(long *const nout, long *const GLnout, int *set_nout)
 
    if (!*set_nout) {
       *set_nout = TRUE;
-      *nout     = RationalRoundUp(ToRational(
-          RationalDivide(ToRationalLL(DTOUT_RAT), ToRationalLL(DTSIM_RAT))));
-      *GLnout   = RationalRoundUp(ToRational(
-          RationalDivide(ToRationalLL(DTOUTGL_RAT), ToRationalLL(DTSIM_RAT))));
+      *nout = RationalRoundUp(ToRational(RationalDivide(DTOUT_RAT, DTSIM_RAT)));
+      *GLnout =
+          RationalRoundUp(ToRational(RationalDivide(DTOUTGL_RAT, DTSIM_RAT)));
    }
 
    iout++;
@@ -109,6 +108,7 @@ long AdvanceTime(const Rational dtsim_rat, JDType *jd_tt_mjd,
    switch (TimeMode) {
       case REAL_TIME:
          usleep(1.0E6 * dtsim);
+         [[fallthrough]];
       case FAST_TIME: {
          // TODO: was thinking about changing it around so that the time is
          // stepped with JD_TDB_MJD = JD_TDB_MJD_0 + SimTime, but that means
@@ -374,6 +374,7 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
          x_trn = &x_rk[dim - 6];
          CopyVG(x_trn, S->PosN, 3);
          CopyVG(&x_trn[3], S->VelN, 3);
+         [[fallthrough]];
       case ORB_CENTRAL:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
@@ -449,6 +450,7 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          CopyVG(D->uf, &x_rk[offset], D->Nf);
          offset += D->Nf;
          CopyVG(D->xf, &x_rk[offset], D->Nf);
+         [[fallthrough]];
       case DYN_ORDER_N:
          offset = 0;
          CopyVG(D->u, &x_rk[offset], D->Nu);
@@ -474,6 +476,7 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          x_trn = &x_rk[dim - 6];
          CopyVG(S->PosN, x_trn, 3);
          CopyVG(S->VelN, &x_trn[3], 3);
+         [[fallthrough]];
       case ORB_CENTRAL:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
@@ -549,10 +552,12 @@ static long _check_do_world_orientation(
 static long _check_do_world_orientation(
     const struct WorldType *const w, const long Iw,
     const struct SCType *const scs, const long n_scs,
-    const struct RegionType *const regions, const long n_rgn,
+    const struct RegionType *const regions __attribute__((unused)),
+    const long n_rgn __attribute__((unused)),
     const struct GroundStationType *ground_stations, const long n_gndstn,
     const struct OrbitType *const orbs, const ephemType ephem_option,
-    const long gui_active, const long grav_pert_active, const long atmo_active)
+    const long gui_active, const long grav_pert_active __attribute__((unused)),
+    const long atmo_active __attribute__((unused)))
 {
    // This is all to avoid more calls to pxform_c if we don't *need* them
    // we don't need to set the world orientation unless any of:
@@ -588,13 +593,13 @@ static long _check_do_world_orientation(
          case ORB_THREE_BODY: {
             if (Iw == orb->Body2)
                return TRUE;
-         }
+         } break;
          case ORB_N_BODY:
          case ORB_CENTRAL:
          case ORB_ZERO: {
             if (Iw == orb->World)
                return TRUE;
-         }
+         } break;
          default:
             // if ORB_FLIGHT, then will be checking regions anyway
             break;

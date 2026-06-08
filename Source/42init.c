@@ -377,8 +377,7 @@ DateType ReadDateFromYaml(struct fy_node *node, const char *f_name)
       exit(EXIT_FAILURE);
    }
    date.Second = double2rational(sec);
-   date.Second = ToRational(
-       RationalAdd(ToRationalLL(date.Second), ToRationalLL(millisec)));
+   date.Second = ToRational(RationalAdd(date.Second, millisec));
 
    date.doy = MD2DOY(date.Year, date.Month, date.doy);
 
@@ -2033,7 +2032,8 @@ void InitNodes(struct BodyType *B)
    }
 }
 /**********************************************************************/
-void InitPassiveJoint(struct JointType *G, struct SCType *S)
+void InitPassiveJoint(struct JointType *G,
+                      struct SCType *S __attribute__((unused)))
 {
    FILE *infile;
    char junk[80], newline;
@@ -2062,7 +2062,8 @@ void InitPassiveJoint(struct JointType *G, struct SCType *S)
    }
 }
 /**********************************************************************/
-void InitActuatedJoint(struct JointType *G, struct SCType *S)
+void InitActuatedJoint(struct JointType *G,
+                       struct SCType *S __attribute__((unused)))
 {
    long i;
 
@@ -2367,6 +2368,7 @@ static long _sc_state_dim(struct SCType *const S, const struct OrbitType *orb)
       case ORB_ZERO:
       case ORB_FLIGHT:
          ret_val += 6;
+         [[fallthrough]];
       case ORB_CENTRAL:
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
@@ -3890,11 +3892,9 @@ void LoadSun(const ephemType ephem, const JDType jd,
    if (ephem == EPH_SPICE) { // If we are using SPICE, replace the
                              // hardcoded values with SPICE values
       int dim = 1;
-      if (SpiceCheckAndGetDbl(SOL, "GM", 0, &dim, &W->mu))
-
+      if (SpiceCheckAndGetDbl(SOL, "GM", 0, dim, &W->mu))
          W->mu *= 1E9;
-      dim = 1;
-      if (SpiceCheckAndGetDbl(SOL, "RADII", 0, &dim, &W->rad))
+      if (SpiceCheckAndGetDbl(SOL, "RADII", 0, dim, &W->rad))
          W->rad *= 1e3;
 
       W->ang_data[0] = SpiceGetAngData(SOL, "PM");
@@ -3937,10 +3937,10 @@ void LoadSun(const ephemType ephem, const JDType jd,
       W->eph.PosN[i] = 0.0;
       W->eph.VelN[i] = 0.0;
    }
-   W->PriMerAng = GetWorldCWN(JD_TDB_MJD, W->ang_data, W->CWN);
+   W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
    C2Q(W->CWN, W->qwn);
 
-   GetWorldCNJ(JD_TDB_MJD, W->ang_data, W->CNJ);
+   GetWorldCNJ(jd, W->ang_data, W->CNJ);
    C2Q(W->CNJ, W->qnj);
    QxQ(W->qnj, worlds[EARTH].qnh, W->qnh);
    Q2C(W->qnh, W->CNH);
@@ -4150,13 +4150,11 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          // If we are using SPICE, replace the hardcoded values with SPICE
          // values
          int dim = 1;
-         if (SpiceCheckAndGetDbl(Iw, "GM", 0, &dim, &Mu[i]))
+         if (SpiceCheckAndGetDbl(Iw, "GM", 0, dim, &Mu[i]))
             Mu[i] *= 1E9;
 
-         dim = 1;
-         SpiceCheckAndGetDbl(Iw, "J2", 0, &dim, &W->J2);
-         dim = 1;
-         if (SpiceCheckAndGetDbl(Iw, "RADII", 0, &dim, &W->rad)) {
+         SpiceCheckAndGetDbl(Iw, "J2", 0, dim, &W->J2);
+         if (SpiceCheckAndGetDbl(Iw, "RADII", 0, dim, &W->rad)) {
             W->rad *= 1e3;
             Rad[i]  = W->rad;
          }
@@ -4785,16 +4783,13 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                // If we are using SPICE, replace the hardcoded values with SPICE
                // values
                int dim = 1;
-               if (SpiceCheckAndGetDbl(m_id, "GM", 0, &dim, &mu))
+               if (SpiceCheckAndGetDbl(m_id, "GM", 0, dim, &mu))
                   mu *= 1E9;
 
-               dim = 1;
                // grab J2 from the kernels if its there, only a possibility with
                //    Luna and thats probably from Gravity.tpc
-               SpiceCheckAndGetDbl(m_id, "J2", 0, &dim, &j2);
-
-               dim = 1;
-               if (SpiceCheckAndGetDbl(m_id, "RADII", 0, &dim, &rad))
+               SpiceCheckAndGetDbl(m_id, "J2", 0, dim, &j2);
+               if (SpiceCheckAndGetDbl(m_id, "RADII", 0, dim, &rad))
                   rad *= 1e3;
 
                WorldID chk_id = m_id;
@@ -4998,8 +4993,9 @@ void LoadMoons(const ephemType ephem, const JDType jd,
    }
 }
 /*********************************************************************/
-void LoadMinorBodies(const ephemType ephem, const JDType jd,
-                     const JPLHeaderType *const jpl_hdr,
+void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
+                     const JDType jd,
+                     const JPLHeaderType *const jpl_hdr __attribute__((unused)),
                      struct WorldType *const worlds)
 {
    // TODO: change minorbodies.txt to yaml
@@ -6279,7 +6275,7 @@ void InitSim(int argc, char **argv)
    else
       Nmb = 0;
 
-   UpdateEphems(EphemOption, JD_TDB_MJD, JD_TT_MJD, &JplHeader, World);
+   UpdateEphems(EphemOption, JD_TDB_MJD, JD_TT_MJD, World);
 
    /* .. Regions */
    LoadRegions();

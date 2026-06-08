@@ -628,7 +628,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
    strcpy(hdr_data->eph_path, eph_path);
 
    const TimeSystem cheb_system = TDB_TIME;
-   const TimeSystem cheb_epoch  = GMAT_MJD_EPOCH;
+   const EpochTT cheb_epoch     = GMAT_MJD_EPOCH;
 
    switch (ephem) {
       case EPH_DE421:
@@ -801,7 +801,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
    struct Cheb3DType *Cheb;
 
    const TimeSystem cheb_system = TDB_TIME;
-   const TimeSystem cheb_epoch  = GMAT_MJD_EPOCH;
+   const EpochTT cheb_epoch     = GMAT_MJD_EPOCH;
 
    JDType jd_cheb   = JDChangeSystemEpoch(cheb_system, cheb_epoch, jd);
    JDType jd_cheb_z = JDChangeSystemEpoch(cheb_system, ZERO_EPOCH, jd);
@@ -956,7 +956,6 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
 }
 //**********************************************************************/
 long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
-                     const JPLHeaderType *const jpl_hdr,
                      struct WorldType *const worlds)
 {
    long i, Iw;
@@ -1230,8 +1229,7 @@ long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
 }
 /**********************************************************************/
 long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
-                  JDType jd_tt_j2000, const JPLHeaderType *const jpl_hdr,
-                  struct WorldType *const worlds)
+                  JDType jd_tt_j2000, struct WorldType *const worlds)
 {
    JDType jd_tdb_mjd =
        JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd_tdb_j2000);
@@ -1257,8 +1255,7 @@ long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
              isless_jd(jd_cheb, worlds[SOL].eph.Cheb[0].JD1))
             LoadJplEphems(ephem, ModelPath, &JplHeader, jd_cheb, worlds);
          /* Load Planetary/Luna ephems */
-         main_ephem_check =
-             UpdateJplEphems(jd_tdb_j2000, jd_tt_j2000, jpl_hdr, worlds);
+         main_ephem_check = UpdateJplEphems(jd_tdb_j2000, jd_tt_j2000, worlds);
       } break;
       case EPH_SPICE: {
          main_ephem_check = SpiceUpdateEphems(jd_tdb_mjd, worlds);
@@ -1294,7 +1291,7 @@ void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
 
    jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tdb_j2000);
    jd_tt_j2000  = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
-   UpdateEphems(ephem, jd_tdb_j2000, jd_tt_j2000, &JplHeader, worlds);
+   UpdateEphems(ephem, jd_tdb_j2000, jd_tt_j2000, worlds);
 
    const double jd2000_tt_sec = JDToDynTime(jd_tt_j2000);
 

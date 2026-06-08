@@ -57,7 +57,7 @@ void tolower_str(size_t n, char *str)
    if (n == 0)
       n = strlen(str);
    char *s = &str[0];
-   for (int i = 0; i < n; i++) {
+   for (size_t i = 0; i < n; i++) {
       if (s[i] == '\0')
          break;
       s[i] = tolower(s[i]);
@@ -69,7 +69,7 @@ void toupper_str(size_t n, char *str)
    if (n == 0)
       n = strlen(str);
    char *s = &str[0];
-   for (int i = 0; i < n; i++) {
+   for (size_t i = 0; i < n; i++) {
       if (s[i] == '\0')
          break;
       s[i] = toupper(s[i]);

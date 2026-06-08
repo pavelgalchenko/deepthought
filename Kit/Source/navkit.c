@@ -628,7 +628,8 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    }
 }
 
-void getAeroForceAndTorque(struct DSMType *const DSM, double const CRB[3][3],
+void getAeroForceAndTorque(struct DSMType *const DSM,
+                           double const CRB[3][3] __attribute__((unused)),
                            double const PosR[3], double const VelR[3],
                            double const worldW, double const AtmoDensity,
                            double frcR[3], double trq[3])
@@ -659,7 +660,8 @@ void getAeroForceAndTorque(struct DSMType *const DSM, double const CRB[3][3],
    }
 }
 
-void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
+void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
+                            double const CRB[3][3] __attribute__((unused)),
                             double const PosR[3], double const VelR[3],
                             double const worldW, double const AtmoDensity,
                             double dAeroFrcdVRel[3][3],
@@ -699,7 +701,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM, double const CRB[3][3],
 //------------------------------------------------------------------------------
 
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long Igyro, double **N)
+                         const long Igyro, double **N __attribute__((unused)))
 {
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -766,7 +768,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Imag, double **N)
+                        const long Imag, double **N __attribute__((unused)))
 {
    double tmp[3] = {0.0}, tmp2[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -821,7 +823,7 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Icss, double **N)
+                        const long Icss, double **N __attribute__((unused)))
 {
    double tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
    static double **B = NULL; // if its static, just need to allocate once,
@@ -874,7 +876,7 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Ifss, double **N)
+                        const long Ifss, double **N __attribute__((unused)))
 {
    double B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
    const struct AcFssType *fss  = &AC->FSS[Ifss];
@@ -972,7 +974,7 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 double **startrackJacobianFun(struct AcType *const AC,
                               struct DSMType *const DSM, const long Ist,
-                              double **N)
+                              double **N __attribute__((unused)))
 {
    double tmpM[3][3]                  = {{0.0}}, CSB[3][3];
    static double **tmpAssign          = NULL;
@@ -1018,8 +1020,9 @@ double **startrackJacobianFun(struct AcType *const AC,
    return (jacobian);
 }
 
-double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long Igps, double **N)
+double **gpsJacobianFun(struct AcType *const AC __attribute__((unused)),
+                        struct DSMType *const DSM, const long Igps,
+                        double **N __attribute__((unused)))
 {
    double tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}}, tmp3[3][3] = {{0.0}},
           tmpX[3][3] = {{0.0}}, tmpV[3] = {0.0};
@@ -1129,8 +1132,10 @@ double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    return (jacobian);
 }
 
-double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long Iaccel, double **N)
+double **accelJacobianFun(struct AcType *const AC __attribute__((unused)),
+                          struct DSMType *const DSM __attribute__((unused)),
+                          const long Iaccel __attribute__((unused)),
+                          double **N __attribute__((unused)))
 {
    const struct DSMNavType *Nav = &DSM->DsmNav;
 
@@ -1261,8 +1266,9 @@ double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
    return (qsnEst);
 }
 
-double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long Igps)
+double *gpsFun(struct AcType *const AC __attribute__((unused)),
+               struct DSMType *const DSM,
+               const long Igps __attribute__((unused)))
 {
    const struct DSMNavType *Nav = &DSM->DsmNav;
    double tmp3V[3], tmpPosN[3], tmpVelN[3];
@@ -1293,8 +1299,9 @@ double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
 }
 
 // don't need this at the moment, WIP
-double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
-                 const long Ia)
+double *accelFun(struct AcType *const AC __attribute__((unused)),
+                 struct DSMType *const DSM __attribute__((unused)),
+                 const long Ia __attribute__((unused)))
 {
    return (NULL);
 } /*{
@@ -1401,10 +1408,10 @@ void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                          const DateType *date, const double CRB[3][3],
-                         const double qbr[4], const double PosR[3],
-                         const double VelR[3], const double wbr[3],
-                         const double whlH[AC->Nwhl], const double AtmoDensity,
-                         double **jacobian)
+                         const double qbr[4] __attribute__((unused)),
+                         const double PosR[3], const double VelR[3],
+                         const double wbr[3], const double whlH[AC->Nwhl],
+                         const double AtmoDensity, double **jacobian)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
@@ -1819,10 +1826,10 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                          const DateType *date, const double CRB[3][3],
-                         const double qbr[4], const double PosR[3],
-                         const double VelR[3], const double wbr[3],
-                         const double whlH[AC->Nwhl], const double AtmoDensity,
-                         double **jacobian)
+                         const double qbr[4] __attribute__((unused)),
+                         const double PosR[3], const double VelR[3],
+                         const double wbr[3], const double whlH[AC->Nwhl],
+                         const double AtmoDensity, double **jacobian)
 {
    double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
           tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
@@ -2685,8 +2692,9 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
 }
 
 void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
-          const double CRB[3][3], const double qbr[4], const double PosR[3],
-          const double VelR[3], const double wbr[3], double **M)
+          const double CRB[3][3], const double qbr[4] __attribute__((unused)),
+          const double PosR[3], const double VelR[3], const double wbr[3],
+          double **M)
 {
    double tmp3x3[3][3] = {{0.0}}, MOIInv[3][3] = {{0.0}};
    long i, j;
@@ -3256,9 +3264,8 @@ void CalcInnovation(const enum SensorType type,
    }
 }
 
-void Underweighting(const long nav_dim, const long meas_err_dim,
-                    const long meas_noise_dim, double **HS, double **NsqrtR,
-                    double **out)
+void Underweighting(const long nav_dim, const long meas_err_dim, double **HS,
+                    double **NsqrtR, double **out)
 {
    long i, j;
    // Compare square of matrix 2-norms for underweighting
@@ -3326,10 +3333,11 @@ void GetMeasBatchParams(const struct DSMMeasListType *const meas_list,
 
 void ParseMeasList(struct AcType *const AC, struct DSMType *const DSM,
                    struct DSMMeasListType *const meas_list, const long nav_dim,
-                   const long meas_err_dim, const long meas_noise_dim,
                    const enum batchType batching, const CCSDSTime meas_ccsds,
-                   const enum SensorType sense_type, double *const innov_time,
-                   long *const innov_exist, double **innovs[FIN_SENSOR + 1],
+                   const enum SensorType sense_type,
+                   double *const innov_time __attribute__((unused)),
+                   long *const __attribute__((unused)),
+                   double **innovs[FIN_SENSOR + 1] __attribute__((unused)),
                    double *big_innov, double **big_H, double **big_N,
                    double *big_sqrtR)
 {
@@ -3433,7 +3441,7 @@ void GetKUk(const long nav_dim, const long meas_err_dim,
          NsqrtR[i][j] = N[i][j] * sqrtR[j];
 
    double **tmp = CreateMatrix(nav_dim + meas_noise_dim, meas_err_dim);
-   Underweighting(nav_dim, meas_err_dim, meas_noise_dim, HS, NsqrtR, tmp);
+   Underweighting(nav_dim, meas_err_dim, HS, NsqrtR, tmp);
    DestroyMatrix(NsqrtR);
 
    Sz         = CreateMatrix(meas_err_dim, meas_err_dim);
@@ -3528,10 +3536,10 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM)
          bigInnov  = calloc(meas_err_dim, sizeof(double));
          big_sqrtR = calloc(meas_noise_dim, sizeof(double));
 
-         ParseMeasList(AC, DSM, measList, Nav->navDim, meas_err_dim,
-                       meas_noise_dim, Nav->batching, meas_ccsds, sense_type,
-                       &Nav->innovationTime, &Nav->innovationsExist,
-                       Nav->innovations, bigInnov, bigH, bigN, big_sqrtR);
+         ParseMeasList(AC, DSM, measList, Nav->navDim, Nav->batching,
+                       meas_ccsds, sense_type, &Nav->innovationTime,
+                       &Nav->innovationsExist, Nav->innovations, bigInnov, bigH,
+                       bigN, big_sqrtR);
 
          double **K  = CreateMatrix(Nav->navDim, meas_err_dim);
          double **Uk = CreateMatrix(Nav->navDim, meas_err_dim);

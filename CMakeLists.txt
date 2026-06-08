@@ -52,7 +52,7 @@ add_executable(deepthought)
 include(CheckCCompilerFlag)
 check_c_compiler_flag(-Wno-unused-local-typedefs C_SUPPORTS_NO_UNUSED_LOCAL_TYPEDEFS)
 
-target_compile_options(deepthought PRIVATE -fpic -Wall -Wshadow -Wno-deprecated)
+target_compile_options(deepthought PRIVATE -fpic -Wall -Wextra -Wshadow -Wno-deprecated)
 target_compile_options(deepthought PRIVATE $<$<CONFIG:Release>:-O2>)
 target_compile_options(deepthought PRIVATE $<$<CONFIG:Debug>:-O0 -ggdb -fno-omit-frame-pointer>)
 target_compile_options(deepthought PRIVATE $<$<BOOL:${PROFILE}>:-g -pg>)

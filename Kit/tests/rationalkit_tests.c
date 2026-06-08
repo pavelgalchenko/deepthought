@@ -234,15 +234,13 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add)
              b_str);
 
    // commutative addition
-   cr_expect(isequal_rational(
-                 ToRational(RationalAdd(ToRationalLL(*a), ToRationalLL(*b))),
-                 ToRational(RationalAdd(ToRationalLL(*b), ToRationalLL(*a)))),
+   cr_expect(isequal_rational(ToRational(RationalAdd(*a, *b)),
+                              ToRational(RationalAdd(*b, *a))),
              "(%s) + (%s) != (%s) + (%s)", a_str, b_str, b_str, a_str);
 
    // TODO: limit_denominator means isequal won't work in general
    // addition inversion
-   Rational rat_check = ToRational(RationalAdd(
-       RationalSub(ToRationalLL(*a), ToRationalLL(*b)), ToRationalLL(*b)));
+   Rational rat_check = ToRational(RationalAdd(RationalSub(*a, *b), *b));
    if (ABS(a_red.den) > (_RATLONG_MAX_ >> 8) ||
        ABS(b_red.den) > (_RATLONG_MAX_ >> 8)) {
       double check = rational2double(rat_check);
@@ -291,16 +289,14 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult)
              b_str);
 
    // commutative multiplication
-   cr_expect(isequal_rational(
-                 ToRational(RationalMult(ToRationalLL(*a), ToRationalLL(*b))),
-                 ToRational(RationalMult(ToRationalLL(*b), ToRationalLL(*a)))),
+   cr_expect(isequal_rational(ToRational(RationalMult(*a, *b)),
+                              ToRational(RationalMult(*b, *a))),
              "(%s) * (%s) != (%s) * (%s)", a_str, b_str, b_str, a_str);
 
    // TODO: limit_denominator means isequal won't work in general
    //  multiplication inversion
    cr_assume(!isequal_rational(*b, RATIONAL_ZERO));
-   Rational rat_check = ToRational(RationalMult(
-       RationalDivide(ToRationalLL(*a), ToRationalLL(*b)), ToRationalLL(*b)));
+   Rational rat_check = ToRational(RationalMult(RationalDivide(*a, *b), *b));
    if (ABS(a_red.den) > (_RATLONG_MAX_ >> 8) ||
        ABS(b_red.num) > (_RATLONG_MAX_ >> 8) ||
        ABS(b_red.whole) > (_RATLONG_MAX_ >> 8)) {
@@ -339,9 +335,8 @@ Theory((Rational * a), SUITE_NAME, ratdblinv)
    Rational returned = double2rational(a_dbl);
    double ret_dbl    = rational2double(returned);
    rat2str(returned, ret_str);
-   Rational rat_err =
-       ToRational(RationalSub(ToRationalLL(*a), ToRationalLL(returned)));
-   double err = rational2double(rat_err);
+   Rational rat_err = ToRational(RationalSub(*a, returned));
+   double err       = rational2double(rat_err);
 
    if (isequal_rational(returned, RATIONAL_ZERO)) {
       cr_expect(epsilon_eq(dbl, a_dbl, ret_dbl, DBL_EPSILON),
@@ -414,8 +409,7 @@ ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl)
    double thresh    = ULP_THRESH * (nextafter(val->dbl, INFINITY) - val->dbl);
    Rational dbl_rat = double2rational(val->dbl);
    double dbl_conv  = rational2double(dbl_rat);
-   Rational ratchk =
-       ToRational(RationalSub(ToRationalLL(dbl_rat), ToRationalLL(val->rat)));
+   Rational ratchk  = ToRational(RationalSub(dbl_rat, val->rat));
    char ratchk_str[RATIONAL_STR_LEN];
    rat2str(ratchk, ratchk_str);
    check = rational2double(ratchk);

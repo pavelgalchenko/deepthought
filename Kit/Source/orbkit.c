@@ -3400,7 +3400,7 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 /*  Will need more iterations for interplanetary-scale applications.  */
 void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
-                         double FuturePos[3])
+                         double FuturePos[3] __attribute__((unused)))
 {
    double Vel[3], anom;
    double RelPos[3], dt;

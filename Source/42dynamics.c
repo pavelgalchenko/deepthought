@@ -3287,7 +3287,7 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
    }
 }
 /******************************************************************************/
-void GatherDynMtx(struct JointType *G, struct SCType *S)
+void GatherDynMtx(struct JointType *G, struct SCType *S __attribute__((unused)))
 {
    double MP[6][6];
    long i, j, k;
@@ -4299,8 +4299,8 @@ void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
 }
 /**********************************************************************/
 void PolyhedronCowellEOM_RK(struct WorldType *const world,
-                            struct OrbitType *const orb, struct SCType *S,
-                            double *x, double *xdot)
+                            struct OrbitType *const orb __attribute__((unused)),
+                            struct SCType *S, double *x, double *xdot)
 {
    double u[6];
    struct GeomType *G;
@@ -4323,7 +4323,8 @@ void PolyhedronCowellEOM_RK(struct WorldType *const world,
 /* Integration of orbital equations of motion using Cowell's method   */
 /* by 4th order Runge-Kutta                                           */
 void PolyhedronCowellRK4(struct WorldType *const world,
-                         struct OrbitType *const orb, struct SCType *S)
+                         struct OrbitType *const orb __attribute__((unused)),
+                         struct SCType *S)
 {
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;

@@ -1678,8 +1678,8 @@ GLuint LoadSkyCube(const char *PathName, const char *FileName, double CGH[3][3],
 /**********************************************************************/
 /* Egret Catalog of Gamma-ray Sources                                 */
 void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
-                      long BuckyNeighbor[32][6], GLuint EgretSourceList[32],
-                      double SkyDistance)
+                      long BuckyNeighbor[32][6] __attribute__((unused)),
+                      GLuint EgretSourceList[32], double SkyDistance)
 {
 #define Nsource 262
 
@@ -1783,8 +1783,8 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
 /**********************************************************************/
 /* Fermi Source Catalog 1FGL                                          */
 void Load1FGL(const char *FileName, double BuckyPf[32][3],
-              long BuckyNeighbor[32][6], GLuint FermiSourceList[32],
-              double SkyDistance)
+              long BuckyNeighbor[32][6] __attribute__((unused)),
+              GLuint FermiSourceList[32], double SkyDistance)
 {
 #define Nsource 1452
 
@@ -2042,8 +2042,8 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
 }
 /**********************************************************************/
 void LoadPulsars(const char *FileName, double BuckyPf[32][3],
-                 long BuckyNeighbor[32][6], GLuint PulsarList[32],
-                 double SkyDistance)
+                 long BuckyNeighbor[32][6] __attribute__((unused)),
+                 GLuint PulsarList[32], double SkyDistance)
 {
 #define Npul 250
 

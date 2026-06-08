@@ -271,8 +271,9 @@ void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
 /*  this routine finds the optimal estimate of qmr, the quaternion    */
 /*  expressing the rotation from the reference frame (where Ref's are */
 /*  given) to the body frame (where Meas's are given).                */
-void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
-                 double memory, double wbn[3], double qmr[4])
+void FilterQuest(long n, double *Weight, double **Ref, double **Meas,
+                 double dt __attribute__((unused)), double memory,
+                 double wbn[3], double qmr[4])
 {
    double *a, **W, **V, rho;
    long i, j, k;

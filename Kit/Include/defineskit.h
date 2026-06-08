@@ -69,4 +69,10 @@
 #define SIGN(x) (((x) >= 0) ? 1 : -1)
 #endif
 
+// Dummy function pointer to allow for resolving types of pair of args at
+// compile type
+#ifndef TWO_ARG_TYPES
+#define TWO_ARG_TYPES(a, b) (void (*)(typeof(a), typeof(b)))0
+#endif
+
 #endif /* __DEFINESKIT_H__ */

@@ -23,7 +23,7 @@ struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
                                                 const char *fileName)
 {
    FILE *f                 = FileOpen(path, fileName, "r");
-   struct fy_document *fyd = fy_document_build_from_fp(NULL, f);
+   struct fy_document *fyd = fy_document_build_from_fp(cfg, f);
    fclose(f);
    if (fy_document_resolve(fyd)) {
       fprintf(stderr, "Unable to resolve links in %127s. Exiting...\n",
@@ -265,7 +265,7 @@ int FileToString(const char *file_name, char **result_string,
       printf("Error reading from file %s\n", file_name);
       return -1;
    }
-   if (ret > file_len) {
+   if (ret > (int)file_len) {
       printf("Error: Number of characters read (%d) exceeds expected file size "
              "(%d) for file %s\n",
              ret, (int)file_len, file_name);

@@ -42,7 +42,7 @@ void SetupViewVolume(int width, int height)
    POV.SinFov = sqrt(1.0 - POV.CosFov * POV.CosFov);
 }
 /**********************************************************************/
-void TimerHandler(int value)
+void TimerHandler(int value __attribute__((unused)))
 {
    TimerHasExpired = 1;
 }
@@ -128,7 +128,8 @@ void Idle(void)
 /**********************************************************************/
 /* Backspace = 0x08, Tab = 0x09, Line Feed = 0x0A */
 /* Carriage Return = 0x0D, Esc = 0x27, Delete = 0x7F */
-void AsciiKeyHandler(unsigned char CharCode, int x, int y)
+void AsciiKeyHandler(unsigned char CharCode, int x __attribute__((unused)),
+                     int y __attribute__((unused)))
 {
 
    static long Refresh = FALSE;
@@ -185,7 +186,8 @@ void AsciiKeyHandler(unsigned char CharCode, int x, int y)
    }
 }
 /**********************************************************************/
-void SpecialKeyHandler(int key, int x, int y)
+void SpecialKeyHandler(int key, int x __attribute__((unused)),
+                       int y __attribute__((unused)))
 {
 
    switch (key) {
@@ -558,7 +560,10 @@ void CamMouseActiveMotionHandler(int x, int y)
    }
 }
 /**********************************************************************/
-void CamMousePassiveMotionHandler(int x, int y) {}
+void CamMousePassiveMotionHandler(int x __attribute__((unused)),
+                                  int y __attribute__((unused)))
+{
+}
 /**********************************************************************/
 void OrreryMouseButtonHandler(int Button, int State, int x, int y)
 {
@@ -755,9 +760,15 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
    }
 }
 /**********************************************************************/
-void OrreryMouseActiveMotionHandler(int x, int y) {}
+void OrreryMouseActiveMotionHandler(int x __attribute__((unused)),
+                                    int y __attribute__((unused)))
+{
+}
 /**********************************************************************/
-void OrreryMousePassiveMotionHandler(int x, int y) {}
+void OrreryMousePassiveMotionHandler(int x __attribute__((unused)),
+                                     int y __attribute__((unused)))
+{
+}
 /**********************************************************************/
 void SphereMouseButtonHandler(int Button, int State, int x, int y)
 {
@@ -951,7 +962,7 @@ void OrreryReshapeHandler(int width, int height)
    O->Radius = ((double)OrreryWidth) / (2.0 * 80.0) * O->Scale[O->Zoom];
 }
 /**********************************************************************/
-void SphereReshapeHandler(int width, int height)
+void SphereReshapeHandler(int width, int height __attribute__((unused)))
 {
    double ymin;
 

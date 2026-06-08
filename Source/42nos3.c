@@ -76,7 +76,7 @@ Rational NOS3Time(const Rational tick_sec)
       exit(3);
    }
    ticks = NE_bus_get_time(Bus);
-   return IntegerRationalMult(ticks, ToRationalLL(tick_sec));
+   return IntegerRationalMult(ticks, tick_sec);
 #else
 #error "Unknown operating system in NOS3Time.  Fix that!"
    fprintf(stderr, "Unknown operating system in NOS3Time.  Bailing out.\n");
@@ -154,7 +154,7 @@ static void InitializeTimeNode(void)
    return;
 }
 
-static void TimeTickCallback(NE_SimTime time)
+static void TimeTickCallback(NE_SimTime time __attribute__((unused)))
 {
    if (sem_post(&sem) == -1) {
       perror("NOS3Time error on sem_post");
