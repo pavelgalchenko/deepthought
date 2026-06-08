@@ -15,6 +15,7 @@
 #include "DSMTypes.h"
 #include "geomkit.h"
 #include "orbkit.h"
+#include "rkkit.h"
 #include "sigkit.h"
 
 #ifndef __42TYPES_H__
@@ -25,6 +26,20 @@
 ** namespace _42 {
 ** #endif
 */
+
+/* Ephem Tags */
+typedef enum ephemType {
+   EPH_NULL = -1, // dummy value for initialization/logging errors
+   EPH_MEAN = 0,
+   EPH_DE430,
+   EPH_DE440,
+   EPH_DE421,
+   EPH_DE424,
+   EPH_GMAT421,
+   EPH_GMAT424,
+   EPH_SPICE,
+} ephemType;
+
 /* FSW Tags */
 enum fswType {
    PASSIVE_FSW = 0,
@@ -41,18 +56,6 @@ enum fswType {
    DSM_FSW,
 };
 
-struct SphereHarmType {
-   /*~ Internal Variables ~*/
-   char modelFile[40];
-   long Type;
-   long N;
-   long M;
-   double **Norm;
-   double **C;
-   double **S;
-   double r_ref;
-};
-
 struct FormationType {
    /*~ Internal Variables ~*/
    char FixedInFrame;
@@ -60,6 +63,23 @@ struct FormationType {
    double CL[3][3];
    double PosR[3]; /* Position of F wrt R, expressed in N */
 };
+
+/* Store information about the JPL DE file by parsing the header file */
+typedef struct JPLHeaderType {
+   char eph_path[80];
+   char eph_str[5];
+   char hdr_name[16];
+   ephemType eph;
+   long n_coeff;
+   long blk_len;
+   long blk_lines;
+   JDType jd_range[2];
+   double n_days;
+   long n_data;
+   char (*group_1040)[10];
+   double *group_1041;
+   int group_1050[11][3];
+} JPLHeaderType;
 
 /* "Analysis" nodes, used both for Flex, ("Force" nodes and "Measurement" nodes)
  */
@@ -114,9 +134,11 @@ struct BodyType {
    double qn[4]; /* [~=~] */
    double vn[3]; /* velocity of B ref pt expressed in N frame */
    double pn[3]; /* position of B ref pt in N frame expressed in N frame */
-   double CN[3][3]; /* Direction Cosine of B frame in N frame */
-   double Trq[3];   /* expressed in B */
-   double FrcN[3];  /* expressed in N */
+   double CN[3][3];         /* Direction Cosine of B frame in N frame */
+   double Trq[3];           /* expressed in B */
+   double SCContactTrq[3];  /* expressed in B */
+   double FrcN[3];          /* expressed in N */
+   double SCContactFrcN[3]; /* expressed in N */
    double alpha[3]; /* Angular acceleration of B wrt N, expressed in B */
    double accel[3]; /* Linear acceleration of B wrt N, expressed in N */
    char GeomFileName[40];
@@ -143,8 +165,9 @@ struct BodyType {
    double H[3];
    double RemInertiaFrc[6];
    double WhlMom[3];
-   double FrcB[3];    /* Expressed in B */
-   double SpatFrc[6]; /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
+   double FrcB[3];          /* Expressed in B */
+   double SCContactFrcB[3]; /* Expressed in B */
+   double SpatFrc[6];       /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
 
    double AccU[6];
 
@@ -370,7 +393,8 @@ struct ThrType {
    double F;
    long Body; /* Body that thruster is mounted on */
    long Node;
-   double A[3];             /* Axis vector wrt Body 0 */
+   double A[3]; /* Axis vector wrt Body 0 */
+   JDType PulseWidthFinTimeStamp;
    double PulseWidthCmd;    /* [[sec]], for THR_PULSED */
    double ThrustLevelCmd;   /* [{0.0:1.0}], for THR_PROPORTIONAL */
    double Frc[3];           /* Force exerted */
@@ -682,6 +706,91 @@ struct EnvTrqType {
    double Hs[3];
 };
 
+struct TargetType {
+   /*~ Internal Variables ~*/
+   long Type;
+   WorldID World;
+   long RefOrb;
+   long SC;
+   long Body;
+   double PosR[3];
+   double PosN[3];
+   double PosH[3];
+   double CN[3][3];
+};
+
+struct POVType {
+   /*~ Internal Variables ~*/
+   long Mode; /* Track Host, Track Target, or Fixed in Host */
+   struct TargetType Host;
+   struct TargetType Target;
+   long View;
+   long Frame;    /* Which frame is POV frame oriented in? (N=0,L=1,F=2,B=3) */
+   long BoreAxis; /* POV boresight axis (out of screen): POS_X, POS_Y, ...,
+                     NEG_Z */
+   long UpAxis;   /* POV axis pointing to top of window: POS_X, ... NEG_Z */
+   double Width;  /* Width of POV Field of View */
+   double Height; /* Height of POV Field of View */
+   double Near, Far; /* Near and Far limits of POV FOV */
+   double CosFov, SinFov;
+   double Angle;          /* Angle subtended in vertical, deg */
+   double AR;             /* Aspect ratio of POV FOV */
+   double PosLeftEye[3];  /* in POV frame, expressed in POV */
+   double PosRightEye[3]; /* in POV frame, expressed in POV */
+   double w[3];           /* Angular velocity */
+   double q[4];           /* Quaternion */
+   double PosB[3];        /* Position wrt Host, expressed in Host B[0] Frame */
+   double Range;
+   double GridSpacing; /* For ProxOps Grid */
+   double wmax[3];
+   double C[3][3];
+   double CN[3][3];
+   double CH[3][3];
+   double CL[3][3];
+   double CF[3][3];
+   double CB[3][3];
+   double PosR[3]; /* Position vector in R, expressed in N */
+   double PosN[3]; /* Position vector in N, expressed in N */
+   double PosH[3]; /* Position vector in H, expressed in H */
+   float ViewMatrix[16];
+   /* For PanZoomPOV */
+   double TimeToGo;
+   long CmdSeq;
+   double CmdAngle[3];
+   double CmdRange;
+   double CmdPermute[3][3];
+};
+
+struct RegionType {
+   /*~ Internal Variables ~*/
+   long Exists;
+   WorldID World;
+   double Lng, Lat, Alt; /* Origin location */
+   double PosW[3];
+   double CW[3][3]; /* Region frame is East-North-Up */
+   double PosN[3];
+   double VelN[3];
+   double CN[3][3];
+   double wn[3]; /* Expressed in R frame */
+   double ElastCoef, DampCoef, FricCoef;
+   char Name[20];
+   char GeomFileName[40];
+   long GeomTag;
+   float ModelMatrix[16]; /* For OpenGL */
+};
+
+struct SCType;
+typedef struct SCRKParams {
+   RKParams base;
+   struct WorldType *worlds;          // pointer to the global World
+   struct RegionType *rgn;            // pointer to the global Rgn
+   struct LagrangeSystemType *lagsys; // pointer to all lagsystems
+   struct OrbitType *orb;             // pointer to sc's orbit
+   struct FormationType *frm;         // pointer to sc's formation
+   struct SCType *sc;                 // pointer to sc itself
+   ephemType ephem;
+} SCRKParams;
+
 struct SCType {
    /*~ Internal Variables ~*/
    long ID; /* SC[x].ID = x */
@@ -789,6 +898,9 @@ struct SCType {
    double LoopDelay;
 
    /*~ Structures ~*/
+   RungeKutta RKIntegrator;
+   SCRKParams rkparams;
+   double *rk_state;
    struct AcType AC;
    struct DSMType DSM;
    struct BodyType *B;  /* [*Nb*] */
@@ -807,160 +919,6 @@ struct SCType {
    struct AccelType *Accel;      /* [*Nacc*] */
    struct FgsType *Fgs;          /* [*Nfgs*] */
    struct ShakerType *Shaker;    /* [*Nsh*] */
-};
-
-struct TargetType {
-   /*~ Internal Variables ~*/
-   long Type;
-   long World;
-   long RefOrb;
-   long SC;
-   long Body;
-   double PosR[3];
-   double PosN[3];
-   double PosH[3];
-   double CN[3][3];
-};
-
-struct POVType {
-   /*~ Internal Variables ~*/
-   long Mode; /* Track Host, Track Target, or Fixed in Host */
-   struct TargetType Host;
-   struct TargetType Target;
-   long View;
-   long Frame;    /* Which frame is POV frame oriented in? (N=0,L=1,F=2,B=3) */
-   long BoreAxis; /* POV boresight axis (out of screen): POS_X, POS_Y, ...,
-                     NEG_Z */
-   long UpAxis;   /* POV axis pointing to top of window: POS_X, ... NEG_Z */
-   double Width;  /* Width of POV Field of View */
-   double Height; /* Height of POV Field of View */
-   double Near, Far; /* Near and Far limits of POV FOV */
-   double CosFov, SinFov;
-   double Angle;          /* Angle subtended in vertical, deg */
-   double AR;             /* Aspect ratio of POV FOV */
-   double PosLeftEye[3];  /* in POV frame, expressed in POV */
-   double PosRightEye[3]; /* in POV frame, expressed in POV */
-   double w[3];           /* Angular velocity */
-   double q[4];           /* Quaternion */
-   double PosB[3];        /* Position wrt Host, expressed in Host B[0] Frame */
-   double Range;
-   double GridSpacing; /* For ProxOps Grid */
-   double wmax[3];
-   double C[3][3];
-   double CN[3][3];
-   double CH[3][3];
-   double CL[3][3];
-   double CF[3][3];
-   double CB[3][3];
-   double PosR[3]; /* Position vector in R, expressed in N */
-   double PosN[3]; /* Position vector in N, expressed in N */
-   double PosH[3]; /* Position vector in H, expressed in H */
-   float ViewMatrix[16];
-   /* For PanZoomPOV */
-   double TimeToGo;
-   long CmdSeq;
-   double CmdAngle[3];
-   double CmdRange;
-   double CmdPermute[3][3];
-};
-
-struct RegionType {
-   /*~ Internal Variables ~*/
-   long Exists;
-   long World;
-   double Lng, Lat, Alt; /* Origin location */
-   double PosW[3];
-   double CW[3][3]; /* Region frame is East-North-Up */
-   double PosN[3];
-   double VelN[3];
-   double CN[3][3];
-   double wn[3]; /* Expressed in R frame */
-   double ElastCoef, DampCoef, FricCoef;
-   char Name[20];
-   char GeomFileName[40];
-   long GeomTag;
-   float ModelMatrix[16]; /* For OpenGL */
-};
-
-struct AtmoType {
-   /*~ Internal Variables ~*/
-   long Exists;
-   float GasColor[3];
-   float DustColor[3];
-   float RayScat[3];
-   float MieScat;
-   float RayScaleHt;
-   float MieScaleHt;
-   float MieG;
-   double MaxHt;
-   double rad;
-};
-
-struct WorldType {
-   /*~ Parameters ~*/
-
-   /* Relationships */
-   long Exists;
-   long Type; /* STAR, PLANET, MOON, ASTEROID, COMET */
-   long Parent;
-   long Nsat;
-   long *Sat; /* [*Nsat*] */
-
-   /* Physical Properties */
-   double mu;              /* Gravitation constant  */
-   double J2;              /* Gravitation oblateness parameter */
-   double rad;             /* Radius */
-   double w;               /* Spin Rate */
-   double PriMerAngJ2000;  /* Prime Meridian Angle at J2000 epoch, rad */
-   double RadOfInfluence;  /* Radius of Sphere of Influence */
-   double DipoleMoment;    /* Magnetic Field Dipole Moment, Wb-m */
-   double DipoleAxis[3];   /* Magnetic Field Dipole Axis */
-   double DipoleOffset[3]; /* Dipole Offset, m */
-   double RingInner, RingOuter;
-   double Density; /* For minor bodies, polyhedron gravity */
-   struct SphereHarmType GravModel;
-
-   /* Graphical Properties */
-   long HasRing;
-   char Name[20];
-   char MapFileName[40];
-   char GeomFileName[40];
-   char ColTexFileName[40];
-   char BumpTexFileName[40];
-   float Color[4];
-   unsigned char Glyph[14];
-   unsigned int TexTag;
-   unsigned int MapTexTag;
-   unsigned int ColTexTag;
-   unsigned int BumpTexTag;
-   unsigned int ColCubeTag;
-   unsigned int BumpCubeTag;
-   unsigned int CloudGlossCubeTag;
-   long GeomTag;
-   unsigned int RingTexTag;
-   double NearExtent, FarExtent;
-
-   double CNH[3][3]; /* DCM from heliocentric ecliptic frame
-                        to world-centric equatorial inertial frame */
-   double qnh[4];    /* ~*/
-   double CNJ[3][3]; /* DCM from J2000 frame to world-centric equatorial
-                        inertial frame */
-   double qnj[4];
-
-   /*~ Internal Variables ~*/
-
-   double PosH[3];   /* Position in H frame [~=~] */
-   double VelH[3];   /* Velocity in H frame */
-   double PriMerAng; /* Angle from N1 to prime meridian */
-   double CWN[3][3]; /* DCM from world-centric inertial frame
-                        to world-centric rotating frame */
-   double qwn[4];    /* ~*/
-   long Visibility;  /* Too small to see, point-sized, or shows disk */
-   float ModelMatrix[16];
-
-   /*~ Structures ~*/
-   struct OrbitType eph; /* Ephemeris */
-   struct AtmoType Atmo;
 };
 
 struct SpotType {
@@ -1019,7 +977,7 @@ struct TdrsType {
 struct GroundStationType {
    /*~ Internal Variables ~*/
    long Exists;
-   long World;
+   WorldID World;
    long Show;
    double lng, lat;
    double PosW[3]; /* Position vector in World frame */
@@ -1050,7 +1008,7 @@ struct OrreryPOVType {
    /*~ Internal Variables ~*/
    long Regime; /* CENTRAL or THREE_BODY */
    long CenterType;
-   long World;
+   WorldID World;
    long LagSys;
    long MinorBody;
    long LP;

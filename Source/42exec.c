@@ -47,17 +47,20 @@ void ReportProgress(void)
    }
 }
 /**********************************************************************/
-void ManageFlags(void)
+void ManageFlags(long *const nout, long *const GLnout, int *set_nout)
 {
-   long nout, GLnout;
    static long iout   = 1000000;
    static long GLiout = 1000000;
 
-   nout   = ((long)(DTOUT / DTSIM + 0.5));
-   GLnout = ((long)(DTOUTGL / DTSIM + 0.5));
+   if (!*set_nout) {
+      *set_nout = TRUE;
+      *nout = RationalRoundUp(ToRational(RationalDivide(DTOUT_RAT, DTSIM_RAT)));
+      *GLnout =
+          RationalRoundUp(ToRational(RationalDivide(DTOUTGL_RAT, DTSIM_RAT)));
+   }
 
    iout++;
-   if (iout >= nout) {
+   if (iout >= *nout) {
       iout    = 0;
       OutFlag = TRUE;
    }
@@ -65,7 +68,7 @@ void ManageFlags(void)
       OutFlag = FALSE;
 
    GLiout++;
-   if (GLiout >= GLnout) {
+   if (GLiout >= *GLnout) {
       GLiout    = 0;
       GLOutFlag = TRUE;
    }
@@ -73,144 +76,81 @@ void ManageFlags(void)
       GLOutFlag = FALSE;
 }
 /**********************************************************************/
-long AdvanceTime(void)
+static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
+                         DateType *const tt, DateType *const tdb,
+                         double *const tt_time, double *const tai_time,
+                         double *const gps_time, long *const gps_rollover,
+                         long *const gps_wk, double *const gps_sec)
+{
+   *tdb_mjd_jd = tt_jd;
+   *tdb_mjd_jd = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, *tdb_mjd_jd);
+   *tt         = JDToDate(tt_jd, TT_TIME);
+   *tdb        = JDToDate(*tdb_mjd_jd, TDB_TIME);
+
+   *tt_time  = JDToDynTime(tt_jd);
+   *tai_time = *tt_time - 32.184;
+   *gps_time = *tai_time - 19.0;
+   GpsTimeToGpsDate(*gps_time, gps_rollover, gps_wk, gps_sec);
+}
+/**********************************************************************/
+long AdvanceTime(const Rational dtsim_rat, JDType *jd_tt_mjd,
+                 JDType *jd_tdb_mjd, DateType *tt, DateType *tdb, DateType *utc,
+                 double *simtime, double *dyntime, double *atomictime,
+                 double *gpstime, double *civiltime, long *gpsrollover,
+                 long *gpsweek, double *gpssecond)
 {
    static long itime    = 0;
    static long PrevTick = 0;
    static long CurrTick = 1;
-   long Done;
+   const double dtsim   = rational2double(dtsim_rat);
 
    /* Advance time to next Timestep */
    switch (TimeMode) {
-      case FAST_TIME:
-         SimTime += DTSIM;
-         itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
-         SimTime  = ((double)itime) * DTSIM;
-         DynTime  = DynTime0 + SimTime;
-
-         AtomicTime = DynTime - 32.184;     /* TAI */
-         CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
-         GpsTime    = AtomicTime - 19.0;
-
-         TT.JulDay = TimeToJD(DynTime);
-         TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
-                    &TT.Second, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         TDB.JulDay  = TTtoTDB_JD(DynTime);
-         TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
-                    &TDB.Minute, &TDB.Second, DTSIM);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC.JulDay = TimeToJD(CivilTime);
-         TimeToDate(CivilTime, &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour,
-                    &UTC.Minute, &UTC.Second, DTSIM);
-         UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-
-         break;
       case REAL_TIME:
-         usleep(1.0E6 * DTSIM);
-         SimTime += DTSIM;
-         itime    = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
-         SimTime  = ((double)itime) * DTSIM;
-         DynTime  = DynTime0 + SimTime;
+         usleep(1.0E6 * dtsim);
+         [[fallthrough]];
+      case FAST_TIME: {
+         // TODO: was thinking about changing it around so that the time is
+         // stepped with JD_TDB_MJD = JD_TDB_MJD_0 + SimTime, but that means
+         // SimTime and other time step info becomes TDB instead of TT
+         // Because of this, do we want to get rid of JD_TDB_MJD in favor of
+         // JD_TT_MJD?
 
-         AtomicTime = DynTime - 32.184;     /* TAI */
-         CivilTime  = AtomicTime - LeapSec; /* UTC "clock" time */
-         GpsTime    = AtomicTime - 19.0;
+         // TODO: this implementation will eventually get notable floating point
+         // errors if SimTime gets sufficiently large
+         itime++;
+         *simtime = ((double)itime) * dtsim;
 
-         TT.JulDay = TimeToJD(DynTime);
-         TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
-                    &TT.Second, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         TDB.JulDay  = TTtoTDB_JD(DynTime);
-         TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
-                    &TDB.Minute, &TDB.Second, DTSIM);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC.JulDay = TimeToJD(CivilTime);
-         TimeToDate(CivilTime, &UTC.Year, &UTC.Month, &UTC.Day, &UTC.Hour,
-                    &UTC.Minute, &UTC.Second, DTSIM);
-         UTC.doy = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-
-         break;
-      case EXTERNAL_TIME:
+         *jd_tt_mjd = JDAddIntegerMultRatSecs(JD_TT_MJD_0, itime, dtsim_rat);
+         *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
+      } break;
+      case EXTERNAL_TIME: {
          while (CurrTick == PrevTick) {
-            CurrTick = (long)(1.0E-6 * usec() / DTSIM);
+            CurrTick = (long)(1.0E-6 * usec() / dtsim);
          }
-         PrevTick  = CurrTick;
-         SimTime  += DTSIM;
-         itime     = (long)((SimTime + 0.5 * DTSIM) / (DTSIM));
-         SimTime   = ((double)itime) * DTSIM;
+         PrevTick = CurrTick;
+         itime++;
+         *simtime = ((double)itime) * dtsim;
+         *utc     = RealSystemTime();
 
-         RealSystemTime(&UTC.Year, &UTC.doy, &UTC.Month, &UTC.Day, &UTC.Hour,
-                        &UTC.Minute, &UTC.Second, DTSIM);
-         CivilTime  = DateToTime(UTC.Year, UTC.Month, UTC.Day, UTC.Hour,
-                                 UTC.Minute, UTC.Second);
-         AtomicTime = CivilTime + LeapSec;
-         DynTime    = AtomicTime + 32.184;
-         GpsTime    = AtomicTime - 19.0;
+         *jd_tt_mjd  = Date2JD(*utc, GMAT_MJD_EPOCH);
+         *jd_tt_mjd  = JDChangeSystem(TT_TIME, *jd_tt_mjd);
+         JD_TT_MJD_0 = JDSubSeconds(*jd_tt_mjd, *simtime);
+      } break;
+      case NOS3_TIME: {
+         const Rational tick_time = NOS3Time(dtsim_rat);
+         *simtime                 = rational2double(tick_time);
 
-         TT.JulDay = TimeToJD(DynTime);
-         TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
-                    &TT.Second, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         TDB.JulDay  = TTtoTDB_JD(DynTime);
-         TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
-                    &TDB.Minute, &TDB.Second, DTSIM);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC.JulDay = TimeToJD(CivilTime);
-         UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-         DynTime0 = DynTime - SimTime;
-
-         break;
-      case NOS3_TIME:
-         NOS3Time(&UTC.Year, &UTC.doy, &UTC.Month, &UTC.Day, &UTC.Hour,
-                  &UTC.Minute, &UTC.Second);
-         CivilTime  = DateToTime(UTC.Year, UTC.Month, UTC.Day, UTC.Hour,
-                                 UTC.Minute, UTC.Second);
-         AtomicTime = CivilTime + LeapSec;
-         DynTime    = AtomicTime + 32.184;
-         GpsTime    = AtomicTime - 19.0;
-
-         TT.JulDay = TimeToJD(DynTime);
-         TimeToDate(DynTime, &TT.Year, &TT.Month, &TT.Day, &TT.Hour, &TT.Minute,
-                    &TT.Second, DTSIM);
-         TT.doy = MD2DOY(TT.Year, TT.Month, TT.Day);
-
-         TDB.JulDay  = TTtoTDB_JD(DynTime);
-         TDB.tdbTime = TTtoTDB_Time(DynTime);
-         TimeToDate(TDB.tdbTime, &TDB.Year, &TDB.Month, &TDB.Day, &TDB.Hour,
-                    &TDB.Minute, &TDB.Second, DTSIM);
-         TDB.doy = MD2DOY(TDB.Year, TDB.Month, TDB.Day);
-
-         UTC.JulDay = TimeToJD(CivilTime);
-         UTC.doy    = MD2DOY(UTC.Year, UTC.Month, UTC.Day);
-
-         GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-         SimTime = DynTime - DynTime0;
-         break;
+         *jd_tt_mjd = JDAddRationalSeconds(JD_TT_MJD_0, tick_time);
+         *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
+      } break;
    }
+   *civiltime = Date2Time(*utc); /* UTC "clock" time */
+   _ttjd2others(*jd_tt_mjd, jd_tdb_mjd, tt, tdb, dyntime, atomictime, gpstime,
+                gpsrollover, gpsweek, gpssecond);
 
-   /* Check for end of run */
-   if (SimTime > STOPTIME)
-      Done = 1;
-   else
-      Done = 0;
-
-   return (Done);
+   /* return if at end of run */
+   return *simtime > STOPTIME;
 }
 /*********************************************************************/
 /* The SC Bounding Box is referred to the origin of B0,              */
@@ -280,83 +220,599 @@ void ManageBoundingBoxes(void)
 }
 /**********************************************************************/
 /* Zero forces and torques                                            */
-void ZeroFrcTrq(void)
+void ZeroNonSCContactFrcTrq(struct SCType *S)
 {
-   struct SCType *S;
    struct BodyType *B;
    struct JointType *G;
    struct NodeType *FN;
-   long Isc, Ib, Ig, In;
+   long Ib, Ig, In;
 
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S          = &SC[Isc];
-      S->FrcN[0] = 0.0;
-      S->FrcN[1] = 0.0;
-      S->FrcN[2] = 0.0;
+   S->FrcN[0] = 0.0;
+   S->FrcN[1] = 0.0;
+   S->FrcN[2] = 0.0;
 
-      for (Ib = 0; Ib < S->Nb; Ib++) {
-         B          = &S->B[Ib];
-         B->FrcN[0] = 0.0;
-         B->FrcN[1] = 0.0;
-         B->FrcN[2] = 0.0;
-         B->FrcB[0] = 0.0;
-         B->FrcB[1] = 0.0;
-         B->FrcB[2] = 0.0;
-         B->Trq[0]  = 0.0;
-         B->Trq[1]  = 0.0;
-         B->Trq[2]  = 0.0;
-      }
-      for (Ig = 0; Ig < S->Ng; Ig++) {
-         G         = &S->G[Ig];
-         G->Frc[0] = 0.0;
-         G->Frc[1] = 0.0;
-         G->Frc[2] = 0.0;
-         G->Trq[0] = 0.0;
-         G->Trq[1] = 0.0;
-         G->Trq[2] = 0.0;
-      }
-      for (Ib = 0; Ib < S->Nb; Ib++) {
-         B = &S->B[Ib];
-         for (In = 0; In < B->NumNodes; In++) {
-            FN         = &B->Node[In];
-            FN->Frc[0] = 0.0;
-            FN->Frc[1] = 0.0;
-            FN->Frc[2] = 0.0;
-            FN->Trq[0] = 0.0;
-            FN->Trq[1] = 0.0;
-            FN->Trq[2] = 0.0;
-         }
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B          = &S->B[Ib];
+      B->FrcN[0] = 0.0;
+      B->FrcN[1] = 0.0;
+      B->FrcN[2] = 0.0;
+      B->FrcB[0] = 0.0;
+      B->FrcB[1] = 0.0;
+      B->FrcB[2] = 0.0;
+      B->Trq[0]  = 0.0;
+      B->Trq[1]  = 0.0;
+      B->Trq[2]  = 0.0;
+   }
+   for (Ig = 0; Ig < S->Ng; Ig++) {
+      G         = &S->G[Ig];
+      G->Frc[0] = 0.0;
+      G->Frc[1] = 0.0;
+      G->Frc[2] = 0.0;
+      G->Trq[0] = 0.0;
+      G->Trq[1] = 0.0;
+      G->Trq[2] = 0.0;
+   }
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
+      for (In = 0; In < B->NumNodes; In++) {
+         FN         = &B->Node[In];
+         FN->Frc[0] = 0.0;
+         FN->Frc[1] = 0.0;
+         FN->Frc[2] = 0.0;
+         FN->Trq[0] = 0.0;
+         FN->Trq[1] = 0.0;
+         FN->Trq[2] = 0.0;
       }
    }
 }
 /**********************************************************************/
-long SimStep(void)
+void ZeroFrcTrq(struct SCType *S)
+{
+   struct BodyType *B;
+   long Ib;
+   ZeroNonSCContactFrcTrq(S);
+   for (Ib = 0; Ib < S->Nb; Ib++) {
+      B = &S->B[Ib];
+
+      B->SCContactFrcN[0] = 0.0;
+      B->SCContactFrcN[1] = 0.0;
+      B->SCContactFrcN[2] = 0.0;
+      B->SCContactFrcB[0] = 0.0;
+      B->SCContactFrcB[1] = 0.0;
+      B->SCContactFrcB[2] = 0.0;
+      B->SCContactTrq[0]  = 0.0;
+      B->SCContactTrq[1]  = 0.0;
+      B->SCContactTrq[2]  = 0.0;
+   }
+}
+/**********************************************************************/
+void SToRKState(const struct OrbitType *const orb, struct SCType *S,
+                double *x_rk)
+{
+   double *x_trn  = NULL;
+   const long dim = S->rkparams.base.dim;
+
+   struct DynType *D = &S->Dyn;
+   switch (S->DynMethod) {
+      case DYN_GAUSS_ELIM: {
+         /* .. Check for Locked Joint DOFs */
+         for (int i = 0; i < 3; i++)
+            D->ActiveStateIdx[i] = i; /* Body 0 angular DOF never locked */
+         D->Ns  = 3;
+         int iu = 3;
+         for (int Ig = 0; Ig < S->Ng; Ig++) {
+            struct JointType *G = &S->G[Ig];
+            G->ActiveRotu0      = D->Ns;
+            G->ActiveRotDOF     = 0;
+            for (int i = 0; i < G->RotDOF; i++) {
+               if (!G->RotLocked[i]) {
+                  G->ActiveRotDOF++;
+                  D->ActiveStateIdx[D->Ns] = iu;
+                  D->Ns++;
+               }
+               else {
+                  D->u[iu] = 0.0;
+               }
+               iu++;
+            }
+            G->ActiveTrnu0  = D->Ns;
+            G->ActiveTrnDOF = 0;
+            for (int i = 0; i < G->TrnDOF; i++) {
+               if (!G->TrnLocked[i]) {
+                  G->ActiveTrnDOF++;
+                  D->ActiveStateIdx[D->Ns] = iu;
+                  D->Ns++;
+               }
+               else {
+                  D->u[iu] = 0.0;
+               }
+               iu++;
+            }
+         }
+         for (int i = 0; i < 3;
+              i++) { /* Body 0 translational DOF never locked */
+            D->ActiveStateIdx[D->Ns] = iu;
+            D->Ns++;
+            iu++;
+         }
+         D->SomeJointsLocked  = ((D->Ns == D->Nu) ? 0 : 1);
+         D->Ns               += D->Nf;
+         long offset          = 0;
+         CopyVG(&x_rk[offset], D->u, D->Nu);
+         offset += D->Nu;
+         CopyVG(&x_rk[offset], D->x, D->Nx);
+         offset += D->Nx;
+         CopyVG(&x_rk[offset], D->h, S->Nw);
+         offset += S->Nw;
+         CopyVG(&x_rk[offset], D->a, S->Nw);
+         offset += S->Nw;
+         CopyVG(&x_rk[offset], D->uf, D->Nf);
+         offset += D->Nf;
+         CopyVG(&x_rk[offset], D->xf, D->Nf);
+      } break;
+      case DYN_ORDER_N: {
+         long offset = 0;
+         CopyVG(&x_rk[offset], D->u, D->Nu);
+         offset += D->Nu;
+         CopyVG(&x_rk[offset], D->x, D->Nx);
+         offset += D->Nx;
+         CopyVG(&x_rk[offset], D->h, S->Nw);
+         for (int Iw = 0; Iw < S->Nw; Iw++) {
+            struct WhlType *W = &S->Whl[Iw];
+
+            x_rk[D->Nu + D->Nx + Iw] = W->H;
+         }
+      } break;
+      default:
+         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+
+   switch (orb->Regime) {
+      case ORB_ZERO:
+      case ORB_FLIGHT:
+         x_trn = &x_rk[dim - 6];
+         CopyVG(x_trn, S->PosN, 3);
+         CopyVG(&x_trn[3], S->VelN, 3);
+         [[fallthrough]];
+      case ORB_CENTRAL:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(x_trn, S->PosEH, 3);
+               CopyVG(&x_trn[3], S->VelEH, 3);
+               break;
+            case ORBDOF_COWELL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(x_trn, S->PosN, 3);
+               CopyVG(&x_trn[3], S->VelN, 3);
+               break;
+            default:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(x_trn, S->PosR, 3);
+               CopyVG(&x_trn[3], S->VelR, 3);
+               break;
+         }
+         break;
+      case ORB_N_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_COWELL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(x_trn, S->PosN, 3);
+               CopyVG(&x_trn[3], S->VelN, 3);
+               break;
+            default:
+               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+               exit(EXIT_FAILURE);
+         }
+         break;
+      case ORB_THREE_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(x_trn, S->PosEH, 3);
+               CopyVG(&x_trn[3], S->VelEH, 3);
+               break;
+            case ORBDOF_COWELL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(x_trn, S->PosN, 3);
+               CopyVG(&x_trn[3], S->VelN, 3);
+               break;
+            default:
+               break;
+         }
+         break;
+      default:
+         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+}
+/**********************************************************************/
+void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
+{
+   double *x_trn  = NULL;
+   const long dim = S->rkparams.base.dim;
+
+   struct DynType *D = &S->Dyn;
+   long offset       = 0;
+   switch (S->DynMethod) {
+      case DYN_GAUSS_ELIM:
+         offset  = 0;
+         offset += D->Nu;
+         offset += D->Nx;
+         offset += S->Nw;
+         CopyVG(D->a, &x_rk[offset], S->Nw);
+         offset += S->Nw;
+         CopyVG(D->uf, &x_rk[offset], D->Nf);
+         offset += D->Nf;
+         CopyVG(D->xf, &x_rk[offset], D->Nf);
+         [[fallthrough]];
+      case DYN_ORDER_N:
+         offset = 0;
+         CopyVG(D->u, &x_rk[offset], D->Nu);
+         offset += D->Nu;
+         CopyVG(D->x, &x_rk[offset], D->Nx);
+         UNITQ(D->x);
+         offset += D->Nx;
+         CopyVG(D->h, &x_rk[offset], S->Nw);
+         break;
+      default:
+         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+   MapStateVectorToBodyStates(D->u, D->x, D->h, D->a, D->uf, D->xf, S);
+   MotionConstraints(S);
+   BodyStatesToNodeStates(S);
+   SCMassProps(S);
+   FindTotalAngMom(S);
+
+   switch (orb->Regime) {
+      case ORB_ZERO:
+      case ORB_FLIGHT:
+         x_trn = &x_rk[dim - 6];
+         CopyVG(S->PosN, x_trn, 3);
+         CopyVG(S->VelN, &x_trn[3], 3);
+         [[fallthrough]];
+      case ORB_CENTRAL:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosEH, x_trn, 3);
+               CopyVG(S->VelEH, &x_trn[3], 3);
+               EHRV2RelRV(orb->SMA, orb->MeanMotion, orb->CLN, S->PosEH,
+                          S->VelEH, S->PosR, S->VelR);
+               break;
+            case ORBDOF_COWELL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosN, x_trn, 3);
+               CopyVG(S->VelN, &x_trn[3], 3);
+               break;
+            default:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosR, x_trn, 3);
+               CopyVG(S->VelR, &x_trn[3], 3);
+               break;
+         }
+         break;
+      case ORB_N_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_COWELL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosN, x_trn, 3);
+               CopyVG(S->VelN, &x_trn[3], 3);
+               break;
+            default:
+               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+               exit(EXIT_FAILURE);
+         }
+         break;
+      case ORB_THREE_BODY:
+         switch (S->OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosEH, x_trn, 3);
+               CopyVG(S->VelEH, &x_trn[3], 3);
+               EHRV2RelRV(orb->SMA, orb->MeanMotion, orb->CLN, S->PosEH,
+                          S->VelEH, S->PosR, S->VelR);
+               break;
+            case ORBDOF_COWELL:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosN, x_trn, 3);
+               CopyVG(S->VelN, &x_trn[3], 3);
+               break;
+            default:
+               x_trn = &x_rk[dim - 6];
+               CopyVG(S->PosR, x_trn, 3);
+               CopyVG(S->VelR, &x_trn[3], 3);
+               break;
+         }
+         break;
+      default:
+         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+}
+/**********************************************************************/
+static long _check_do_world_orientation(
+    const struct WorldType *const w, const long Iw,
+    const struct SCType *const scs, const long n_scs,
+    const struct RegionType *const regions, const long n_rgn,
+    const struct GroundStationType *ground_stations, const long n_gndstn,
+    const struct OrbitType *const orbs, const ephemType ephem_option,
+    const long gui_active, const long grav_pert_active, const long atmo_active)
+    __attribute__((pure));
+static long _check_do_world_orientation(
+    const struct WorldType *const w, const long Iw,
+    const struct SCType *const scs, const long n_scs,
+    const struct RegionType *const regions __attribute__((unused)),
+    const long n_rgn __attribute__((unused)),
+    const struct GroundStationType *ground_stations, const long n_gndstn,
+    const struct OrbitType *const orbs, const ephemType ephem_option,
+    const long gui_active, const long grav_pert_active __attribute__((unused)),
+    const long atmo_active __attribute__((unused)))
+{
+   // This is all to avoid more calls to pxform_c if we don't *need* them
+   // we don't need to set the world orientation unless any of:
+   //    a) It is either EARTH or SOL
+   //    b) GUI is enabled and any of:
+   //       1) is a world (orrey can need any of them sometimes, it seems)
+   //       2) world is pov host or target
+   //       3) world has an orbit
+   //       4) world has an active satellite body
+   //       5) world is close enough to show as a disk
+   //    c) it is orbited by a spacecraft and any of:
+   //       1) grav perts are active and it has harmonic grav
+   //       2) certain dsm/fsw routines use world orientation
+   //       3) atmo drag is active and the spacecraft is in the atmo
+   //       4) albedo is active
+   //    d) world is the secondary body for a spacecraft's 3body orbit
+   //    e) world has a Region
+   //    f) world has a GroundStation
+
+   // do the simple ones first
+   if (!w->Exists)
+      return FALSE;
+   if ((ephem_option != EPH_SPICE) || Iw == SOL || Iw == EARTH || gui_active)
+      return TRUE;
+
+   // check SC related conditions
+   for (long Isc = 0; Isc < n_scs; Isc++) {
+      const struct SCType *const sc = &scs[Isc];
+      if (!sc->Exists)
+         continue;
+      const struct OrbitType *const orb = &orbs[sc->RefOrb];
+      switch (orb->Regime) {
+         case ORB_THREE_BODY: {
+            if (Iw == orb->Body2)
+               return TRUE;
+         } break;
+         case ORB_N_BODY:
+         case ORB_CENTRAL:
+         case ORB_ZERO: {
+            if (Iw == orb->World)
+               return TRUE;
+         } break;
+         default:
+            // if ORB_FLIGHT, then will be checking regions anyway
+            break;
+      }
+   }
+
+   // check Region related conditions
+   for (long Irgn = 0; Irgn < Nrgn; Irgn++) {
+      const struct RegionType *rgn = &Rgn[Irgn];
+      if (Iw == rgn->World)
+         return TRUE;
+   }
+
+   // check Ground Station related conditions
+   for (long Igndstn = 0; Igndstn < n_gndstn; Igndstn++) {
+      const struct GroundStationType *gndstn = &ground_stations[Igndstn];
+      if (!gndstn->Exists)
+         continue;
+      if (gndstn->World == Iw)
+         return TRUE;
+   }
+   return FALSE;
+}
+/**********************************************************************/
+void CheckDoWorldOrientation(
+    struct WorldType *const world, const struct SCType *const scs,
+    const long n_scs, const struct RegionType *const regions, const long n_rgn,
+    const struct GroundStationType *ground_stations, const long n_gndstn,
+    const struct OrbitType *const orbs, const ephemType ephem_option,
+    const long gui_active, const long grav_pert_active, const long atmo_active)
+{
+   for (WorldID Iw = SOL; Iw < NWORLD; Iw++) {
+      struct WorldType *const w = &world[Iw];
+
+      w->OrientWorld = _check_do_world_orientation(
+          w, Iw, scs, n_scs, regions, n_rgn, ground_stations, n_gndstn, orbs,
+          ephem_option, gui_active, grav_pert_active, atmo_active);
+   }
+}
+/**********************************************************************/
+long SimStep_New(void)
 {
    long Isc;
    static long First = 1;
    struct SCType *S;
    long SimComplete;
    double TotalRunTime;
+   static long nout = 0, GLnout = 0;
+   static int set_nout = FALSE;
 
    if (First) {
       First   = 0;
       SimTime = 0.0;
       /* First call just initializes timer */
-      RealRunTime(&TotalRunTime, DTSIM);
-      ManageFlags();
+      RealRunTime(&TotalRunTime);
+      ManageFlags(&nout, &GLnout, &set_nout);
 
-      Ephemerides(); /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames
-                      */
+      for (long Iorb = 0; Iorb < Norb; Iorb++)
+         OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
 
-      ZeroFrcTrq();
+      /* Sun, Moon, Planets, Useful Auxiliary Frames */
+      WorldEphemerides(JD_TDB_MJD, JD_TT_MJD, EphemOption, World, Rgn, LagSys);
+
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
-            Environment(S);   /* Magnetic Field, Atmospheric Density */
-            Perturbations(S); /* Environmental Forces and Torques */
-            Sensors(S);
+            struct OrbitType *O = &Orb[S->RefOrb];
+            /* Spacecraft */
+            SCEphemerides(JD_TDB_MJD, S, &World[O->World], O);
+            ZeroFrcTrq(S);
+         }
+      }
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists) {
+            struct OrbitType *O = &Orb[S->RefOrb];
+            /* Magnetic Field, Atmospheric Density */
+            Environment(JD_TDB_MJD, World, O, S);
+            if (ContactActive)
+               SCContactFrcTrq(Orb, SC, Isc);
+
+            /* Environmental Forces and Torques */
+            Perturbations(JD_TDB_MJD, World, O, S);
+
+            /* Orbit-affecting and "internal" */
+            Actuators(FALSE, S, JD_TT_MJD);
+            PartitionForces(S);
+
+            Sensors(World, O, S);
             FlightSoftWare(S);
-            Actuators(S);
+         }
+      }
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists && S->FswTag == DSM_FSW) {
+            struct DSMType *DSM = &S->DSM;
+            DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+         }
+      }
+      Report(); /* File Output */
+   }
+
+   ReportProgress();
+   ManageFlags(&nout, &GLnout, &set_nout);
+
+   /* Read and Interpret Command Script File */
+   CmdInterpreter();
+
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists)
+         ZeroFrcTrq(S);
+   }
+   if (ContactActive) {
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists)
+            SCContactFrcTrq(Orb, SC, Isc);
+      }
+   }
+
+   CheckDoWorldOrientation(World, SC, Nsc, Rgn, Nrgn, GroundStation, Ngnd, Orb,
+                           EphemOption, GLEnable, GravPertActive, AeroActive);
+
+   /* Update Dynamics to next Timestep */
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists) {
+         SToRKState(S->rkparams.orb, S, S->rk_state);
+         RungeKuttaStep(&S->RKIntegrator, TRUE, JD_TT_MJD, DTSIM, S->rk_state);
+         RKStateToS(S->rkparams.orb, S->rk_state, S);
+      }
+   }
+   SimComplete = AdvanceTime(DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB,
+                             &UTC, &SimTime, &DynTime, &AtomicTime, &GpsTime,
+                             &CivilTime, &GpsRollover, &GpsWeek, &GpsSecond);
+
+   /* Update SC Bounding Boxes occasionally */
+   ManageBoundingBoxes();
+
+   /* Send and receive from external processes */
+   InterProcessComm();
+
+   /* Read sensors and run flight software */
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists) {
+         struct OrbitType *O = &Orb[S->RefOrb];
+         Sensors(World, O, S);
+         FlightSoftWare(S);
+      }
+   }
+
+   /* Assign DSM data to comm states */
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists && S->FswTag == DSM_FSW) {
+         struct DSMType *DSM = &S->DSM;
+         DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+      }
+   }
+   /* File Output */
+   Report();
+
+   /* Exit when Stoptime is reached */
+   if (SimComplete) {
+      if (TimeMode == FAST_TIME) {
+         RealRunTime(&TotalRunTime);
+         printf("     Total Run Time = %9.2lf sec\n", TotalRunTime);
+         printf("     Sim Speed = %8.2lf x Real\n", STOPTIME / TotalRunTime);
+      }
+   }
+   return (SimComplete);
+}
+/**********************************************************************/
+long SimStep_Old(void)
+{
+   long Isc;
+   static long First = 1;
+   struct SCType *S;
+   long SimComplete;
+   double TotalRunTime;
+   static long nout = 0, GLnout = 0;
+   static int set_nout = FALSE;
+
+   if (First) {
+      First   = 0;
+      SimTime = 0.0;
+      /* First call just initializes timer */
+      RealRunTime(&TotalRunTime);
+      ManageFlags(&nout, &GLnout, &set_nout);
+
+      /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
+      Ephemerides(JD_TDB_MJD, EphemOption, SC, World, Rgn, LagSys, Orb);
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists) {
+            ZeroFrcTrq(S);
+         }
+      }
+      for (Isc = 0; Isc < Nsc; Isc++) {
+         S = &SC[Isc];
+         if (S->Exists) {
+            struct OrbitType *O = &Orb[S->RefOrb];
+            /* Magnetic Field, Atmospheric Density */
+            Environment(JD_TDB_MJD, World, O, S);
+            if (ContactActive)
+               SCContactFrcTrq(Orb, SC, Isc);
+            Perturbations(JD_TDB_MJD, World, O,
+                          S); /* Environmental Forces and Torques */
+            Sensors(World, O, S);
+            FlightSoftWare(S);
+            Actuators(FALSE, S, JD_TT_MJD);
             PartitionForces(S); /* Orbit-affecting and "internal" */
          }
       }
@@ -371,7 +827,7 @@ long SimStep(void)
    }
 
    ReportProgress();
-   ManageFlags();
+   ManageFlags(&nout, &GLnout, &set_nout);
 
    /* Read and Interpret Command Script File */
    CmdInterpreter();
@@ -379,25 +835,39 @@ long SimStep(void)
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists)
-         Dynamics(&SC[Isc]);
+         Dynamics(World, &Orb[SC[Isc].RefOrb], &Frm[SC[Isc].RefOrb], &SC[Isc]);
    }
-   SimComplete = AdvanceTime();
-   OrbitMotion(DynTime);
+   SimComplete = AdvanceTime(DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB,
+                             &UTC, &SimTime, &DynTime, &AtomicTime, &GpsTime,
+                             &CivilTime, &GpsRollover, &GpsWeek, &GpsSecond);
+   for (long Iorb = 0; Iorb < Norb; Iorb++)
+      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
 
    /* Update SC Bounding Boxes occasionally */
    ManageBoundingBoxes();
 
    InterProcessComm(); /* Send and receive from external processes */
-   Ephemerides(); /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-   ZeroFrcTrq();
+   /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
+   Ephemerides(JD_TDB_MJD, EphemOption, SC, World, Rgn, LagSys, Orb);
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
-         Environment(S);   /* Magnetic Field, Atmospheric Density */
-         Perturbations(S); /* Environmental Forces and Torques */
-         Sensors(S);
+         ZeroFrcTrq(S);
+      }
+   }
+   for (Isc = 0; Isc < Nsc; Isc++) {
+      S = &SC[Isc];
+      if (S->Exists) {
+         struct OrbitType *O = &Orb[S->RefOrb];
+         /* Magnetic Field, Atmospheric Density */
+         Environment(JD_TDB_MJD, World, O, S);
+         if (ContactActive)
+            SCContactFrcTrq(Orb, SC, Isc);
+         Perturbations(JD_TDB_MJD, World, O,
+                       S); /* Environmental Forces and Torques */
+         Sensors(World, O, S);
          FlightSoftWare(S);
-         Actuators(S);
+         Actuators(FALSE, S, JD_TT_MJD);
          PartitionForces(S); /* Orbit-affecting and "internal" */
       }
    }
@@ -413,7 +883,7 @@ long SimStep(void)
    /* Exit when Stoptime is reached */
    if (SimComplete) {
       if (TimeMode == FAST_TIME) {
-         RealRunTime(&TotalRunTime, DTSIM);
+         RealRunTime(&TotalRunTime);
          printf("     Total Run Time = %9.2lf sec\n", TotalRunTime);
          printf("     Sim Speed = %8.2lf x Real\n", STOPTIME / TotalRunTime);
       }
@@ -445,13 +915,21 @@ int exec(int argc, char **argv)
    }
    else {
       while (!Done) {
-         Done = SimStep();
+#ifdef OLD_INTEGRATOR
+         Done = SimStep_Old();
+#else
+         Done = SimStep_New();
+#endif
       }
    }
 #else
    /* Crunch numbers till done */
    while (!Done) {
-      Done = SimStep();
+#ifdef OLD_INTEGRATOR
+      Done = SimStep_Old();
+#else
+      Done = SimStep_New();
+#endif
    }
 #endif
 

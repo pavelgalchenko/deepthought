@@ -912,7 +912,8 @@ void Minv4f(float A[16], float Ai[16])
    Ai[15] = b44 / DetA;
 }
 /**********************************************************************/
-void BuildModelMatrix(double CBN[3][3], double pbn[3], float ModelMatrix[16])
+void BuildModelMatrix(const double CBN[3][3], const double pbn[3],
+                      float ModelMatrix[16])
 {
    long i, j;
 
@@ -926,7 +927,8 @@ void BuildModelMatrix(double CBN[3][3], double pbn[3], float ModelMatrix[16])
    ModelMatrix[15] = 1.0f;
 }
 /**********************************************************************/
-void BuildViewMatrix(double CEN[3][3], double pen[3], float ViewMatrix[16])
+void BuildViewMatrix(const double CEN[3][3], const double pen[3],
+                     float ViewMatrix[16])
 {
    double pene[3];
    long i, j;
@@ -1676,8 +1678,8 @@ GLuint LoadSkyCube(const char *PathName, const char *FileName, double CGH[3][3],
 /**********************************************************************/
 /* Egret Catalog of Gamma-ray Sources                                 */
 void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
-                      long BuckyNeighbor[32][6], GLuint EgretSourceList[32],
-                      double SkyDistance)
+                      long BuckyNeighbor[32][6] __attribute__((unused)),
+                      GLuint EgretSourceList[32], double SkyDistance)
 {
 #define Nsource 262
 
@@ -1781,8 +1783,8 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
 /**********************************************************************/
 /* Fermi Source Catalog 1FGL                                          */
 void Load1FGL(const char *FileName, double BuckyPf[32][3],
-              long BuckyNeighbor[32][6], GLuint FermiSourceList[32],
-              double SkyDistance)
+              long BuckyNeighbor[32][6] __attribute__((unused)),
+              GLuint FermiSourceList[32], double SkyDistance)
 {
 #define Nsource 1452
 
@@ -2040,8 +2042,8 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
 }
 /**********************************************************************/
 void LoadPulsars(const char *FileName, double BuckyPf[32][3],
-                 long BuckyNeighbor[32][6], GLuint PulsarList[32],
-                 double SkyDistance)
+                 long BuckyNeighbor[32][6] __attribute__((unused)),
+                 GLuint PulsarList[32], double SkyDistance)
 {
 #define Npul 250
 

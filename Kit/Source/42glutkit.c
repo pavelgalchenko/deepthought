@@ -13,10 +13,10 @@
 
 #include "42.h"
 #define EXTERN extern
-#include "42gl.h"
+#include "42glkit.h"
 #undef EXTERN
 #define EXTERN
-#include "42glut.h"
+#include "42glutkit.h"
 #undef EXTERN
 
 /* #ifdef __cplusplus
@@ -42,7 +42,7 @@ void SetupViewVolume(int width, int height)
    POV.SinFov = sqrt(1.0 - POV.CosFov * POV.CosFov);
 }
 /**********************************************************************/
-void TimerHandler(int value)
+void TimerHandler(int value __attribute__((unused)))
 {
    TimerHasExpired = 1;
 }
@@ -82,7 +82,11 @@ void Idle(void)
       if (TimerHasExpired) {
          TimerHasExpired = 0;
          glutTimerFunc(TimerDuration, TimerHandler, 0);
-         Done = SimStep();
+#ifdef OLD_INTEGRATOR
+         Done = SimStep_Old();
+#else
+         Done = SimStep_New();
+#endif
          if (GLOutFlag) {
             glutSetWindow(CamWindow);
             CamRenderExec();
@@ -124,7 +128,8 @@ void Idle(void)
 /**********************************************************************/
 /* Backspace = 0x08, Tab = 0x09, Line Feed = 0x0A */
 /* Carriage Return = 0x0D, Esc = 0x27, Delete = 0x7F */
-void AsciiKeyHandler(unsigned char CharCode, int x, int y)
+void AsciiKeyHandler(unsigned char CharCode, int x __attribute__((unused)),
+                     int y __attribute__((unused)))
 {
 
    static long Refresh = FALSE;
@@ -181,7 +186,8 @@ void AsciiKeyHandler(unsigned char CharCode, int x, int y)
    }
 }
 /**********************************************************************/
-void SpecialKeyHandler(int key, int x, int y)
+void SpecialKeyHandler(int key, int x __attribute__((unused)),
+                       int y __attribute__((unused)))
 {
 
    switch (key) {
@@ -554,7 +560,10 @@ void CamMouseActiveMotionHandler(int x, int y)
    }
 }
 /**********************************************************************/
-void CamMousePassiveMotionHandler(int x, int y) {}
+void CamMousePassiveMotionHandler(int x __attribute__((unused)),
+                                  int y __attribute__((unused)))
+{
+}
 /**********************************************************************/
 void OrreryMouseButtonHandler(int Button, int State, int x, int y)
 {
@@ -751,9 +760,15 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
    }
 }
 /**********************************************************************/
-void OrreryMouseActiveMotionHandler(int x, int y) {}
+void OrreryMouseActiveMotionHandler(int x __attribute__((unused)),
+                                    int y __attribute__((unused)))
+{
+}
 /**********************************************************************/
-void OrreryMousePassiveMotionHandler(int x, int y) {}
+void OrreryMousePassiveMotionHandler(int x __attribute__((unused)),
+                                     int y __attribute__((unused)))
+{
+}
 /**********************************************************************/
 void SphereMouseButtonHandler(int Button, int State, int x, int y)
 {
@@ -943,11 +958,11 @@ void OrreryReshapeHandler(int width, int height)
    OrreryHeight = height;
    glutReshapeWindow(width, height);
    glViewport(0, 0, width, height);
-   InitOrreryWidget();
+   ReinitOrreryWidget();
    O->Radius = ((double)OrreryWidth) / (2.0 * 80.0) * O->Scale[O->Zoom];
 }
 /**********************************************************************/
-void SphereReshapeHandler(int width, int height)
+void SphereReshapeHandler(int width, int height __attribute__((unused)))
 {
    double ymin;
 
@@ -969,7 +984,7 @@ void SphereReshapeHandler(int width, int height)
    gluOrtho2D(180.0, -180.0, ymin, 90.0);
    glMatrixMode(GL_MODELVIEW);
 
-   InitSphereWidgets();
+   ReinitSphereWidgets();
 }
 /*********************************************************************/
 void InitCamWindow(void)
@@ -1384,6 +1399,8 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
 
    if (sscanf(CmdLine, "%lf GL Output Step = %lf", CmdTime, &DTOUTGL) == 2) {
       NewCmdProcessed = TRUE;
+      DTOUTGL_RAT     = double2rational(DTOUTGL);
+      DTOUTGL         = rational2double(DTOUTGL_RAT);
    }
    if (sscanf(CmdLine, "%lf POV CmdRange = %lf", CmdTime, &POV.CmdRange) == 2) {
       NewCmdProcessed = TRUE;

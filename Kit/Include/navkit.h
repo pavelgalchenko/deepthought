@@ -18,6 +18,8 @@
 #include "42types.h"
 #include "AcTypes.h"
 #include "DSMTypes.h"
+#include "defineskit.h"
+#include "spicekit.h"
 
 enum matType {
    Q_DAT,
@@ -42,27 +44,27 @@ struct DSMMeasType *swap_DSMMeas(struct DSMMeasType *ptr1,
                                  struct DSMMeasType *ptr2);
 void bubbleSort(struct DSMMeasListType *list);
 struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
-                               enum SensorType const type,
-                               long const sensorNum);
+                               enum SensorType const type, long const sensorNum)
+    __attribute__((malloc));
 int comparator_DSMMeas(const void *v1, const void *v2);
 
-void updateNavCCSDS(ccsdsCoarse *sec, ccsdsFine *subsec, const double dSeconds);
+void updateNavCCSDS(CCSDSTime ccsds_time, const double dSeconds);
 double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
-                        const double gpsSec);
+                        const double gpsSec) __attribute__((const));
 
 /*--------------------------------------------------------------------*/
 /*                    Navigation Filter Functions                     */
 /*--------------------------------------------------------------------*/
-double **GetStateLinTForm(struct DSMNavType *const Nav);
+double **GetStateLinTForm(struct DSMNavType *const Nav) __attribute__((malloc));
 void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
                          double **P);
-void configureRefFrame(struct DSMNavType *const Nav,
+void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset);
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
                        double const CRB[3][3], double const *whlH);
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
-                  const long dCCSDSSec, const long dCCSDSSubSec,
+                  CCSDSTime *const cur_ccsds, const CCSDSTime next_ccsds,
                   const long init);
 void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 
@@ -70,44 +72,53 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 /*                       Measurement Jacobians                        */
 /*--------------------------------------------------------------------*/
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long sensorNum);
+                         const long sensorNum, double **N)
+    __attribute__((malloc));
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **startrackJacobianFun(struct AcType *const AC,
-                              struct DSMType *const DSM, const long sensorNum);
+                              struct DSMType *const DSM, const long sensorNum,
+                              double **N) __attribute__((malloc));
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long sensorNum);
+                          const long sensorNum, double **N)
+    __attribute__((malloc, unused));
 
 double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
-                const long sensorNum);
+                const long sensorNum) __attribute__((malloc));
 double *magFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
-                     const long sensorNum);
+                     const long sensorNum) __attribute__((malloc));
 double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
-                 const long sensorNum);
+                 const long sensorNum) __attribute__((malloc))
+__attribute__((unused));
 
 /*--------------------------------------------------------------------*/
 /*                          RIEKF functions                           */
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, double const CRB[3][3],
+                         const DateType *date, double const CRB[3][3],
                          double const qbr[4], double const PosR[3],
                          double const VelR[3], double const wbr[3],
-                         double const whlH[AC->Nwhl], const double AtmoDensity);
+                         double const whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian);
 void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
@@ -115,10 +126,11 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const struct DateType *date, double const CRB[3][3],
+                         const DateType *date, double const CRB[3][3],
                          double const qbr[4], double const PosR[3],
                          double const VelR[3], double const wbr[3],
-                         double const whlH[AC->Nwhl], const double AtmoDensity);
+                         double const whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian);
 void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
@@ -126,10 +138,11 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const struct DateType *date, double const CRB[3][3],
+                        const DateType *date, double const CRB[3][3],
                         double const qbr[4], double const PosR[3],
                         double const VelR[3], double const wbr[3],
-                        double const whlH[AC->Nwhl], const double AtmoDensity);
+                        double const whlH[AC->Nwhl], const double AtmoDensity,
+                        double **jacobian);
 void MEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /******************************************************************************/
@@ -137,8 +150,9 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav);
 /******************************************************************************/
 void subMatAdd(double **A, double **B, long const iN, long const iM,
                long const n, long const M);
-double mahalonobis2(double **A, double *x, double *y, long const n);
-double chi2InvLookup(double const pGate, long const dim);
+double mahalonobis2(double **A, double *x, double *y, long const n)
+    __attribute__((pure));
+double chi2InvLookup(double const pGate, long const dim) __attribute__((const));
 
 /*
 ** #ifdef __cplusplus

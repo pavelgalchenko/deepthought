@@ -19,9 +19,45 @@
 */
 
 /**********************************************************************/
+int any_int(const long n, const int *const vec)
+{
+   for (long i = 0; i < n; i++)
+      if (vec[i])
+         return 1;
+   return 0;
+}
+/**********************************************************************/
+int all_int(const long n, const int *const vec)
+{
+   for (long i = 0; i < n; i++)
+      if (!vec[i])
+         return 0;
+   return 1;
+}
+/**********************************************************************/
+int any_isnan(const long n, const double *const v)
+{
+   for (long i = 0; i < n; i++) {
+      if (isnan(v[i]))
+         return 1;
+   }
+
+   return 0;
+}
+/**********************************************************************/
 double signum(const double x)
 {
    return (x >= 0 ? 1.0 : -1.0);
+}
+/**********************************************************************/
+double sin_deg(double x)
+{
+   return sin(x * D2R);
+}
+/**********************************************************************/
+double cos_deg(double x)
+{
+   return cos(x * D2R);
 }
 /**********************************************************************/
 /* sinc(x) = sin(x)/x                                                 */
@@ -56,10 +92,14 @@ double sinc(const double x)
    }
 }
 /**********************************************************************/
+double smootherstep(const double x)
+{
+   return x * x * x * (x * (6.0 * x - 15.0) + 10.0);
+}
+/**********************************************************************/
 /*   3x3 Matrix Product                                               */
 void MxM(const double A[3][3], const double B[3][3], double C[3][3])
 {
-
    C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
    C[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1];
    C[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2];
@@ -165,6 +205,13 @@ void SxM(const double S, const double A[3][3], double B[3][3])
    B[2][0] = S * A[2][0];
    B[2][1] = S * A[2][1];
    B[2][2] = S * A[2][2];
+}
+/******************************************************************************/
+double det3x3(const double M[3][3])
+{
+   return M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) -
+          M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) +
+          M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
@@ -619,13 +666,39 @@ double fact(long const n)
 /**********************************************************************/
 double oddfact(long const n)
 {
-   double F = 1.0;
-   long i;
+   static double *memo   = NULL;
+   static long memo_size = 0;
+   if (n < 0) {
+      fprintf(stderr, "oddfact: argument out of range. Exiting...\n");
+      exit(EXIT_FAILURE);
+   }
+   if (memo == NULL && n > 0) {
+      memo_size = 2;
+      memo      = calloc(memo_size, sizeof(double));
+      if (memo == NULL) {
+         fprintf(stderr, "oddfact: memory allocation failed. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      memo[0] = 1.0;
+      memo[1] = 1.0;
+   }
 
-   for (i = 1; i <= n; i += 2)
-      F *= i;
-
-   return F;
+   if (n >= memo_size) {
+      double *tmp = realloc(memo, (n + 1) * sizeof(double));
+      if (tmp == NULL) {
+         fprintf(stderr, "oddfact: memory allocation failed. Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+      memo = tmp;
+      for (long i = memo_size; i <= n; i++) {
+         if (i % 2 == 0)
+            memo[i] = 1.0;
+         else
+            memo[i] = i * memo[i - 2];
+      }
+      memo_size = n + 1;
+   }
+   return memo[n];
 }
 /**********************************************************************/
 /*  Compute fact(n)/fact(m), where n > m                              */
@@ -784,16 +857,22 @@ void SphericalHarmonics(const long N, const long M, const double r,
 void MxMG(double **A, double **B, double **C, const long N, const long K,
           const long M)
 {
-   long i, j, k;
 
-   for (i = 0; i < N; i++) {
-      for (j = 0; j < M; j++) {
+   // transpose B for better cache locality
+   double **BT = CreateMatrix(M, K);
+   for (int i = 0; i < M; i++)
+      for (int j = 0; j < K; j++)
+         BT[i][j] = B[j][i];
+
+   for (int i = 0; i < N; i++) {
+      for (int j = 0; j < M; j++) {
          C[i][j] = 0.0;
-         for (k = 0; k < K; k++) {
-            C[i][j] += A[i][k] * B[k][j];
+         for (int k = 0; k < K; k++) {
+            C[i][j] += A[i][k] * BT[j][k];
          }
       }
    }
+   DestroyMatrix(BT);
 }
 /**********************************************************************/
 /*  A is NxK, B is MxK, C is NxM                                      */
@@ -826,6 +905,24 @@ void MTxMG(double **A, double **B, double **C, const long N, const long K,
          }
       }
    }
+}
+/**********************************************************************/
+void CopyVG(double *const dest, const double *const src, const long n)
+{
+   memcpy(dest, src, n * sizeof(double));
+}
+/**********************************************************************/
+void SxVG(const double S, const double *V, double *W, const long n)
+{
+   for (long i = 0; i < n; i++)
+      W[i] = S * V[i];
+}
+/**********************************************************************/
+void axpy(const double a, const double *const x, double *const y, const long n)
+{
+   // the operation y := a * x + y for an n-dimensional vec
+   for (long i = 0; i < n; i++)
+      y[i] += a * x[i];
 }
 /**********************************************************************/
 void MxVG(double **M, double *v, double *w, const long n, const long m)
@@ -1932,28 +2029,126 @@ double WrapTo2Pi(double n)
 // "other" side of a section of a function with zero derivative. E.g
 // function 12.23459071*x^3 + 54.9176*x^2 - 23.39456*x + 97.1235 and x0 = 15
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
-                     long breakOnZeroF,
-                     void (*fdf)(const double, double *, double *, double *),
+                     long breakOnZeroF, double (*fdf)(const double, double *),
                      double *params)
 {
    if (maxStep < 0)
       maxStep = -maxStep;
    double x = x0;
    double dx;
-   double f = 0.0, fp = 0.0;
-   ;
-   long k = 0;
+   double f = 0.0;
+   long k   = 0;
    do {
-      fdf(x, params, &f, &fp);
       // TODO: what to do if fp=f' is small? break or perturb??
-      dx = f / fp;
+      dx = fdf(x, params);
       if (fabs(dx) > maxStep)
          dx = signum(dx) * maxStep;
       x -= dx;
    } while ((!breakOnZeroF || fabs(f) > tol) && fabs(dx) > tol && k++ < nMax);
    return x;
 }
+/******************************************************************************/
+/* Helper for Brent's Method                                                  */
+static double _inv_quad_int(double a, double fa, double fb, double fc)
+{
+   return a * fb * fc / ((fa - fb) * (fa - fc));
+}
+/******************************************************************************/
+/* Find root for function f in the domain [a0, b0] by Brent's Method          */
+double BrentsMethod(double a, double b, const double tol,
+                    double (*f)(const double, double *), double *params)
+{
+   if (a == b)
+      return a;
 
+   const double tol_abs = fabs(tol);
+
+   double fa = f(a, params);
+   double fb = f(b, params);
+
+   if (fa * fb >= 0) {
+      // fa and fb are same sign (or zero)
+      //    return the value associated with the smaller one
+      if (fa == 0)
+         return fa;
+      if (fb == 0)
+         return fb;
+      const double mag_fa = fabs(fa);
+      const double mag_fb = fabs(fb);
+      if (mag_fa < mag_fb)
+         return a;
+      else
+         return b;
+   }
+
+   if (fabs(fa) < fabs(fb)) {
+      double t = a;
+      a        = b;
+      b        = t;
+
+      t  = fa;
+      fa = fb;
+      fb = t;
+   }
+
+   double c = a, d = 0.0;
+   double fc = fa;
+   int mflag = 1;
+
+   double err = fabs(b - a);
+   while (fb != 0 && err > tol_abs) {
+      double s = 0;
+      if (fa != fc && fb != fc)
+         // inverse quadratic interpolation
+         s = _inv_quad_int(a, fa, fb, fc) + _inv_quad_int(b, fb, fc, fa) +
+             _inv_quad_int(c, fc, fa, fb);
+      else
+         // secant method
+         s = b - fb * (b - a) / (fb - fa);
+
+      const double tmp = (3.0 * a + b) / 4.0;
+      const int cond_1 = !((tmp > b) ? (b < s && s < tmp) : (tmp < s && s < b));
+      const int cond_2 = (mflag) && (fabs(s - b) >= (fabs(b - c) / 2.0));
+      const int cond_3 = (!mflag) && (fabs(s - b) >= (fabs(c - d) / 2.0));
+      const int cond_4 = (mflag) && (fabs(b - c) < tol_abs);
+      const int cond_5 = (!mflag) && (fabs(c - d) < tol_abs);
+      if (cond_1 || cond_2 || cond_3 || cond_4 || cond_5) {
+         // bisection method
+         s     = (a + b) / 2;
+         mflag = 1;
+      }
+      else
+         mflag = 0;
+
+      d  = c;
+      c  = b;
+      fc = fb;
+      // determine what sign fs is, and replace one of the brackets with it
+      double fs = f(s, params);
+      if (fa * fs < 0) {
+         b  = s;
+         fb = fs;
+      }
+      else {
+         a  = s;
+         fa = fs;
+      }
+      if (fabs(fa) < fabs(fb)) {
+         double t = a;
+         a        = b;
+         b        = t;
+
+         t  = fa;
+         fa = fb;
+         fb = t;
+      }
+
+      err = fabs(b - a);
+      if (fabs(a) > __DBL_EPSILON__)
+         err /= a;
+   }
+   return b;
+}
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */
@@ -2485,6 +2680,21 @@ void bhqrd(double **A, double **U, double **R, long const n, long const m,
       DestroyMatrix(Rb);
       DestroyMatrix(Tq);
    }
+}
+/******************************************************************************/
+// Algorithm for calculating integer powers of doubles
+double ipow(double base, long exp)
+{
+   double result = 1.0;
+   do {
+      if (exp & 1)
+         result *= base;
+      exp >>= 1;
+      if (!exp)
+         break;
+      base *= base;
+   } while (1);
+   return result;
 }
 /******************************************************************************/
 // Taylor series method for Matrix Exponential, adapted from John Burkardt

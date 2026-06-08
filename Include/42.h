@@ -32,11 +32,16 @@
 #include "fswkit.h"
 #include "geomkit.h"
 #include "iokit.h"
+#include "jdkit.h"
 #include "mathkit.h"
 #include "orbkit.h"
+#include "rationalkit.h"
+#include "rkkit.h"
 #include "sigkit.h"
 #include "sphkit.h"
+#include "spicekit.h"
 #include "timekit.h"
+#include "utilkit.h"
 
 #define BUFSIZE 1000 // Default buffer size for chars.
 
@@ -74,8 +79,10 @@ EXTERN double Pi, TwoPi, HalfPi, SqrtTwo, SqrtHalf, A2R, R2A, GoldenRatio;
 
 /* Simulation Control */
 EXTERN long TimeMode; /* FAST_TIME, REAL_TIME, EXTERNAL_SYNCH, NOS3_TIME */
+// All of these are TT seconds
 EXTERN double SimTime, STOPTIME, DTSIM, DTOUT, DTOUTGL;
 EXTERN long OutFlag, GLOutFlag, GLEnable, CleanUpFlag;
+EXTERN Rational DTSIM_RAT, DTOUT_RAT, DTOUTGL_RAT;
 
 /* Making global parameters for updated JPL EPHEM methods */
 EXTERN double EMRAT;  /* Earth/Moon Mass Ratio */
@@ -97,33 +104,40 @@ EXTERN long ContactActive;
 EXTERN long SloshActive;
 EXTERN long AlbedoActive; /* Affects CSS measurements */
 EXTERN long ComputeEnvTrq;
-EXTERN long EphemOption; /* MEAN, DE421, DE424, DE430, DE440, GMAT421, GMAT424,
-                            or SPICE */
+EXTERN ephemType EphemOption;   /* MEAN, DE421, DE424, DE430, DE440, GMAT421,
+                                   GMAT424, or SPICE */
+EXTERN JPLHeaderType JplHeader; /* Stores header information for
+                                   DE ephem types*/
 
 /* Calendar Time is all based in Terrestrial Dynamical Time (TT or TDT) unless
  * otherwise noted */
-EXTERN double DynTime0;   /* Time in sec since J2000 Epoch at Sim Start (TT) */
+
+EXTERN JDType JD_TDB_MJD; /* JD in TDB with reference to GMAT MJD epoch*/
+EXTERN JDType
+    JD_TT_MJD_0; /* JD since sim start in TT with reference to GMAT MJD epoch*/
+EXTERN JDType JD_TT_MJD;  /* JD in TT with reference to GMAT MJD epoch*/
 EXTERN double DynTime;    /* Absolute Time (TT), sec since J2000 Epoch */
 EXTERN double AtomicTime; /* TAI = TT - 32.184 sec, sec since J2000 */
 EXTERN double LeapSec;    /* Add to civil time (UTC) to synch with TAI */
 EXTERN double CivilTime;  /* UTC = TAI - LeapSec */
 EXTERN double GpsTime;    /* GPS Time = TAI - 19.0 sec */
-EXTERN struct DateType TDB; /* Barycentric Dynamical Time */
-EXTERN struct DateType TT;  /* Terrestrial Dynamical Time */
-EXTERN struct DateType UTC; /* Universal Time Coordinated */
+EXTERN DateType TDB;      /* Barycentric Dynamical Time */
+EXTERN DateType TT;       /* Terrestrial Dynamical Time */
+EXTERN DateType UTC;      /* Universal Time Coordinated */
 EXTERN long GpsRollover, GpsWeek;
 EXTERN double GpsSecond;
 
 /* Parameters for environmental models  */
 EXTERN long AtmoOption; /* TWOSIGMA_ATMO, NOMINAL_ATMO, USER_ATMO */
 EXTERN double Flux10p7, GeomagIndex;
-EXTERN double
-    SchattenTable[5][1009]; /* JD, +2sig F10.7, Nom F10.7, +2sig Kp, Nom Kp */
+EXTERN double SchattenTable[5][1009]; /* JD TT GMAT MJD, +2sig F10.7, Nom F10.7,
+                                         +2sig Kp, Nom Kp */
 
 EXTERN struct WorldType World[NWORLD];
-EXTERN struct LagrangeSystemType LagSys[3];
+EXTERN struct LagrangeSystemType LagSys[NLAGSYS];
 
 /* Galactic Coordinate Frame */
+EXTERN double CGJ[3][3];
 EXTERN double CGH[3][3];
 
 /* J2000 to Heliocentric Ecliptic */
@@ -180,44 +194,73 @@ EXTERN double AssembleTime, LockTime, TriangleTime, SubstTime, SolveTime;
 
 EXTERN struct ConstellationType Constell[89];
 
-void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
-                      double RKFdt);
+void StateVectorToJoints(double *u, double *x, const long Nu, const long Nx,
+                         struct JointType *GN, struct JointType *GList,
+                         const long Ng);
+void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S);
+void SToRKState(const struct OrbitType *const orb, struct SCType *S,
+                double *x_rk);
+
+void GravPertForceRK4(struct WorldType *const worlds,
+                      struct OrbitType *const orbs, struct SCType *S,
+                      double u[6], double FrcN[3], double RKFdt);
 void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
                         double Frc[3]);
-void Rk4JplEphems(double JD, long trgtWORLD, double trgtPosN[3],
-                  double trgtPosH[3], double *trgtPriMerAng,
+void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *const worlds,
+                  double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
                   double trgtCNH[3][3]);
-void Rk4SpiceEphems(double JD, long trgtWORLD, double trgtPosN[3],
-                    double trgtPosH[3], double *trgtPriMerAng,
-                    double trgtCNH[3][3]);
-
-long SimStep(void);
-void Ephemerides(void);
-void OrbitMotion(double Time);
-void Environment(struct SCType *S);
-void Perturbations(struct SCType *S);
-void Sensors(struct SCType *S);
+long SimStep_New(void);
+long SimStep_Old(void) __attribute__((deprecated));
+void ZeroNonSCContactFrcTrq(struct SCType *S);
+void ZeroFrcTrq(struct SCType *S);
+ephemType GetEphemType(const char *s) __attribute__((pure));
+void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
+                      struct WorldType *const worlds, struct RegionType *rgn,
+                      struct LagrangeSystemType *lagsys);
+void SCEphemerides(const JDType jd, struct SCType *sc,
+                   struct WorldType *const world, struct OrbitType *const orb);
+void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
+                 struct WorldType *const worlds, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys,
+                 struct OrbitType *const orbs);
+void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys, struct OrbitType *const O,
+                 struct FormationType *const frm, JDType jd);
+void Environment(JDType jd, struct WorldType *const worlds,
+                 struct OrbitType *const orbs, struct SCType *S);
+void Perturbations(JDType jd, struct WorldType *const worlds,
+                   struct OrbitType *const orbs, struct SCType *S);
+void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
+                     const long sc_id);
+void Sensors(struct WorldType *const worlds, struct OrbitType *const orbs,
+             struct SCType *S);
 void SensorDriver(struct SCType *S);
 void FlightSoftWare(struct SCType *S);
 void ActuatorDriver(struct SCType *S);
-void Actuators(struct SCType *S);
+void Actuators(const int smoothing, struct SCType *S, JDType jd);
 void CmdInterpreter(void);
 void Report(void);
 void DrawScene(void);
-void ThreeBodyOrbitRK4(struct OrbitType *O);
+void ThreeBodyOrbitRK4(struct WorldType *worlds, struct OrbitType *O);
 void MotionConstraints(struct SCType *S);
 void SCMassProps(struct SCType *S);
 void MapJointStatesToStateVector(struct SCType *S);
 void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
                                 double *uf, double *xf, struct SCType *S);
 void BodyStatesToNodeStates(struct SCType *S);
+void AddSCContactFrcTrq(struct SCType *S);
 void PartitionForces(struct SCType *S);
-void Dynamics(struct SCType *S);
+void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot);
+void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,
+                        struct SCType *S);
+void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
+              struct FormationType *const frm, struct SCType *S);
 void Cleanup(void);
 void FindInterBodyDCMs(struct SCType *S);
 void FindPathVectors(struct SCType *S);
 void FindTotalAngMom(struct SCType *S);
-double FindTotalKineticEnergy(struct SCType *S);
+double FindTotalKineticEnergy(struct OrbitType *orbs, struct SCType *S)
+    __attribute__((pure));
 void UpdateScBoundingBox(struct SCType *S);
 void FindUnshadedAreas(struct SCType *S, double DirVecN[3]);
 void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies,
@@ -243,25 +286,40 @@ void EchoStates(int Nx, double *x, int Nu, double *u);
 void EchoRemAcc(struct SCType *S);
 
 void InitSim(int argc, char **argv);
-void InitOrbits(void);
+void InitOrbits(struct OrbitType *O, const JDType jd);
 void InitSpacecraft(struct SCType *S);
-void LoadPlanets(void);
-/* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
-long LoadSpiceKernels(char SpicePath[80]);
-/* Update celestial body locations at TT.JulDay using SPICE*/
-long UpdateSpiceEphems(double JS);
+void LoadPlanets(const ephemType ephem, const JDType jd,
+                 const JPLHeaderType *const jpl_hdr,
+                 struct WorldType *const worlds);
+/* handler for initializing ephem data */
+long LoadEphems(const ephemType ephem, const JDType jd,
+                JPLHeaderType *const jpl_hdr, struct WorldType *const worlds);
+/* handler to determine which Update*Ephems() subfunction to call */
+long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
+                  JDType jd_tt_j2000, struct WorldType *const worlds);
+/* read JPLHeaderType to get data from the 1041 header */
+double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
+                           const char *grp_1040_name) __attribute__((pure));
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
-long LoadJplEphems(char EphemPath[80], double JD);
+long LoadJplEphems(ephemType ephem, char EphemPath[128],
+                   JPLHeaderType *const jpl_hdr, const JDType jd,
+                   struct WorldType *const worlds);
 /* Update celestial body locations at TT.JulDay using JPL Ephem*/
-void UpdateJplEphems(void);
+long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                     struct WorldType *const worlds);
 /* Update celestial body locations using MEAN method */
-void UpdateMeanEphems(void);
+long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                      struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
-void UpdateMinorBodies(void);
+long UpdateMinorBodies(const JDType jd, struct WorldType *const worlds,
+                       const double earth_CNH[3][3]);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
-void UpdateNonEphemMoons(void);
-long DecodeString(char *s);
+long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
+                         struct WorldType *const worlds,
+                         const double earth_CNH[3][3]);
+long DecodeString(char *s) __attribute__((pure));
+WorldID GetWorldID(const char *s) __attribute__((pure));
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);
 void InitDSM(struct SCType *S);
@@ -272,14 +330,14 @@ void UpdateLagrangePoints(void);
 long LoadTRVfromFile(const char *Path, const char *TrvFileName,
                      const char *ElemLabel, double DynTime,
                      struct OrbitType *O);
-void SplineToPosVel(struct OrbitType *O);
+void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
+                    const double dyntime);
 
 void CfdSlosh(struct SCType *S);
 void FakeCfdSlosh(struct SCType *S);
 void SendStatesToSpirent(void);
 
-void NOS3Time(long *year, long *day_of_year, long *month, long *day, long *hour,
-              long *minute, double *second);
+Rational NOS3Time(const Rational tick_sec);
 
 void InterProcessComm(void);
 void InitInterProcessComm(void);

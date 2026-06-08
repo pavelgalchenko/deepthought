@@ -48,7 +48,8 @@ Tokens *tokens_move(Tokens *ts)
  * ARGV parsing functions
  */
 
-int parse_doubledash(Tokens *ts, Elements *elements)
+int parse_doubledash(Tokens *ts __attribute__((unused)),
+                     Elements *elements __attribute__((unused)))
 {
    // int n_commands = elements->n_commands;
    // int n_arguments = elements->n_arguments;

@@ -2639,13 +2639,14 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 }
 /**********************************************************************/
 /* This wrapper function maps to/from 42, calls gtd7 to find density  */
-double NRLMSISE00(long Year, long DOY, long Hour, long Minute, double Second,
-                  double PosW[3], double F10p7, double AP)
+double NRLMSISE00(DateType date, double PosW[3], double F10p7, double AP)
 {
    static long First = 1;
    double Lat, Lng, Alt;
    long i;
    struct ap_array ApArray;
+
+   date.doy = MD2DOY(date.Year, date.Month, date.doy);
 
    /* See nrlmsise_flags description above */
    if (First) {
@@ -2659,9 +2660,10 @@ double NRLMSISE00(long Year, long DOY, long Hour, long Minute, double Second,
    ECEFToWGS84(PosW, &Lat, &Lng, &Alt);
 
    /* Populate input structure */
-   Input.year   = (int)Year;
-   Input.doy    = (int)DOY;
-   Input.sec    = 3600.0 * Hour + 60.0 * Minute + Second;
+   Input.year = (int)date.Year;
+   Input.doy  = (int)date.doy;
+   Input.sec =
+       3600.0 * date.Hour + 60.0 * date.Minute + rational2double(date.Second);
    Input.alt    = 1.0E-3 * Alt;
    Input.g_lat  = Lat * R2D;
    Input.g_long = Lng * R2D;

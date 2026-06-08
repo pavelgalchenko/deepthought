@@ -23,7 +23,7 @@ struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
                                                 const char *fileName)
 {
    FILE *f                 = FileOpen(path, fileName, "r");
-   struct fy_document *fyd = fy_document_build_from_fp(NULL, f);
+   struct fy_document *fyd = fy_document_build_from_fp(cfg, f);
    fclose(f);
    if (fy_document_resolve(fyd)) {
       fprintf(stderr, "Unable to resolve links in %127s. Exiting...\n",
@@ -155,6 +155,61 @@ long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq)
    return (i);
 }
 /**********************************************************************/
+void FilesMatchingFmt(const char path[128], const char fmt[10],
+                      char (**f_names)[256], long *const n_match)
+{
+   // search for files files in `path` matching glob format `fmt`.
+   //  returns the list of matching file names in `f_names`, and the number of
+   //  them in `n_files`
+   // NOTE: f_names will be returned with 'path'
+   // TODO: REMOVE 'path' FROM 'f_names'
+   // BEWARE, THIS IS ONLY FOR POSIX SYSTEMS
+   *n_match             = 0;
+   char search_fmt[256] = {0};
+   strcpy(search_fmt, path);
+   strcat(search_fmt, "/");
+   strcat(search_fmt, fmt);
+
+#if defined(_POSIX_VERSION)
+   glob_t results;
+   if (glob(search_fmt, 0, NULL, &results) == 0) {
+      *n_match = results.gl_pathc;
+      free(*f_names); // MAKE SURE YOU INITIALIZE PTRS TO NULL
+      *f_names = calloc(*n_match, sizeof(char[256]));
+      if (*f_names != NULL) {
+         for (long i = 0; i < *n_match; i++) {
+            strcpy((*f_names)[i], results.gl_pathv[i]);
+         }
+      }
+      else {
+         fprintf(stderr, "Error in allocation of f_names in FilesMatchingFmt. "
+                         "Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
+   }
+   else
+      f_names = NULL;
+   globfree(&results);
+#endif
+}
+/**********************************************************************/
+int FileExists(const char *Path, const char *File)
+{
+   FILE *FilePtr;
+   char FileName[1024];
+   int exists = 0;
+
+   strcpy(FileName, Path);
+   strcat(FileName, File);
+
+   FilePtr = fopen(FileName, "r");
+   if (FilePtr != NULL)
+      exists = 1;
+   fclose(FilePtr);
+
+   return exists;
+}
+/**********************************************************************/
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
 {
    FILE *FilePtr;
@@ -210,7 +265,7 @@ int FileToString(const char *file_name, char **result_string,
       printf("Error reading from file %s\n", file_name);
       return -1;
    }
-   if (ret > file_len) {
+   if (ret > (int)file_len) {
       printf("Error: Number of characters read (%d) exceeds expected file size "
              "(%d) for file %s\n",
              ret, (int)file_len, file_name);

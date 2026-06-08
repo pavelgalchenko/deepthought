@@ -57,19 +57,17 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE &&
-       Nav->sensorActive[GYRO_SENSOR] == TRUE) {
+   if (Nav->NavigationActive == TRUE) {
       for (Ig = 0; Ig < AC->Ngyro; Ig++) {
          G = &AC->Gyro[Ig];
-         if (G->Valid == TRUE) {
+         if (Nav->sensorActive[GYRO_SENSOR][Ig] == TRUE && G->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas                  = CreateMeas(Nav, GYRO_SENSOR, Ig);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
-            meas->data[0]         = G->Rate * R2D;
+            meas             = CreateMeas(Nav, GYRO_SENSOR, Ig);
+            meas->ccsds_time = Nav->ccsds_time;
+            meas->data[0]    = G->Rate * R2D;
             appendMeas(measList, meas);
          }
       }
@@ -128,18 +126,17 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE && Nav->sensorActive[MAG_SENSOR] == TRUE) {
+   if (Nav->NavigationActive == TRUE) {
       for (Im = 0; Im < AC->Nmag; Im++) {
          M = &AC->MAG[Im];
-         if (M->Valid == TRUE) {
+         if (Nav->sensorActive[MAG_SENSOR][Im] == TRUE && M->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas                  = CreateMeas(Nav, MAG_SENSOR, Im);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
-            meas->data[0]         = M->Field * T2mG;
+            meas             = CreateMeas(Nav, MAG_SENSOR, Im);
+            meas->ccsds_time = Nav->ccsds_time;
+            meas->data[0]    = M->Field * T2mG;
             appendMeas(measList, meas);
          }
       }
@@ -197,18 +194,17 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE && Nav->sensorActive[CSS_SENSOR] == TRUE) {
+   if (Nav->NavigationActive == TRUE) {
       for (Ic = 0; Ic < AC->Ncss; Ic++) {
          Css = &AC->CSS[Ic];
-         if (Css->Valid == TRUE) {
+         if (Nav->sensorActive[CSS_SENSOR][Ic] == TRUE && Css->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas                  = CreateMeas(Nav, CSS_SENSOR, Ic);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
-            meas->data[0]         = Css->Illum;
+            meas             = CreateMeas(Nav, CSS_SENSOR, Ic);
+            meas->ccsds_time = Nav->ccsds_time;
+            meas->data[0]    = Css->Illum;
             appendMeas(measList, meas);
          }
       }
@@ -281,20 +277,20 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE && Nav->sensorActive[FSS_SENSOR] == TRUE) {
+   if (Nav->NavigationActive == TRUE) {
       for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
          FSS = &AC->FSS[Ifss];
-         if (FSS->Valid == TRUE) {
+         if (Nav->sensorActive[FSS_SENSOR][Ifss] == TRUE &&
+             FSS->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            AC->SunValid          = 1;
-            meas                  = CreateMeas(Nav, FSS_SENSOR, Ifss);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
-            meas->data[0]         = FSS->SunAng[0];
-            meas->data[1]         = FSS->SunAng[1];
+            AC->SunValid     = 1;
+            meas             = CreateMeas(Nav, FSS_SENSOR, Ifss);
+            meas->ccsds_time = Nav->ccsds_time;
+            meas->data[0]    = FSS->SunAng[0];
+            meas->data[1]    = FSS->SunAng[1];
             appendMeas(measList, meas);
          }
       }
@@ -349,18 +345,17 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE &&
-       Nav->sensorActive[STARTRACK_SENSOR] == TRUE) {
+   if (Nav->NavigationActive == TRUE) {
       for (Ist = 0; Ist < AC->Nst; Ist++) {
          ST = &AC->ST[Ist];
-         if (ST->Valid == TRUE) {
+         if (Nav->sensorActive[STARTRACK_SENSOR][Ist] == TRUE &&
+             ST->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas                  = CreateMeas(Nav, STARTRACK_SENSOR, Ist);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas             = CreateMeas(Nav, STARTRACK_SENSOR, Ist);
+            meas->ccsds_time = Nav->ccsds_time;
             for (i = 0; i < 4; i++)
                meas->data[i] = ST->qn[i];
             appendMeas(measList, meas);
@@ -406,19 +401,18 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE && Nav->sensorActive[GPS_SENSOR] == TRUE) {
+   if (Nav->NavigationActive == TRUE) {
       for (Igps = 0; Igps < AC->Ngps; Igps++) {
          // TODO: handle time better
          G = &AC->GPS[Igps];
          // AC->Time = gpsTime2J2000Sec(G->Sec, G->Week, G->Rollover);
-         if (G->Valid == TRUE) {
+         if (Nav->sensorActive[GPS_SENSOR][Igps] == TRUE && G->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas                  = CreateMeas(Nav, GPS_SENSOR, Igps);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
+            meas             = CreateMeas(Nav, GPS_SENSOR, Igps);
+            meas->ccsds_time = Nav->ccsds_time;
             for (i = 0; i < 3; i++) {
                meas->data[i]     = G->PosN[i];
                meas->data[3 + i] = G->VelN[i];
@@ -455,19 +449,18 @@ struct DSMMeasListType *DSM_AccelProcessing(struct AcType *const AC,
 
    Nav = &DSM->DsmNav;
 
-   if (Nav->NavigationActive == TRUE &&
-       Nav->sensorActive[ACCEL_SENSOR] == TRUE) {
-      for (Iacc = 0; Iacc < AC->Nst; Iacc++) {
+   if (Nav->NavigationActive == TRUE) {
+      for (Iacc = 0; Iacc < AC->Nacc; Iacc++) {
          Acc = &AC->Accel[Iacc];
-         if (Acc->Valid == TRUE) {
+         if (Nav->sensorActive[ACCEL_SENSOR][Iacc] == TRUE &&
+             Acc->Valid == TRUE) {
             if (measList == NULL) {
                measList = malloc(sizeof(struct DSMMeasListType));
                InitMeasList(measList);
             }
-            meas                  = CreateMeas(Nav, ACCEL_SENSOR, Iacc);
-            meas->ccsdsSeconds    = Nav->ccsdsSeconds;
-            meas->ccsdsSubseconds = Nav->ccsdsSubseconds;
-            meas->data[0]         = Acc->Acc;
+            meas             = CreateMeas(Nav, ACCEL_SENSOR, Iacc);
+            meas->ccsds_time = Nav->ccsds_time;
+            meas->data[0]    = Acc->Acc;
             appendMeas(measList, meas);
          }
       }

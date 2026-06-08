@@ -371,7 +371,9 @@ void GpsProcessing(struct AcType *AC)
    }
 }
 /**********************************************************************/
-void AccelProcessing(struct AcType *AC) {}
+void AccelProcessing(struct AcType *AC __attribute__((unused)))
+    __attribute__((unused));
+void AccelProcessing(struct AcType *AC __attribute__((unused))) {}
 /**********************************************************************/
 /*  End Sensor Processing Functions                                   */
 /**********************************************************************/

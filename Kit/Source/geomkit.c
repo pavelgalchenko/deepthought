@@ -85,7 +85,7 @@ struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
             M->DiffFrac         = 0.0;
          }
       }
-      if (!AlreadyExists) {
+      if (!AlreadyExists && NewMatl != NULL) {
          M = &NewMatl[(*Nmatl) - 1];
          sscanf(line, " Ns %f", &M->Ns);
          if (sscanf(line, " d %f", &M->Ka[3]) == 1) {
@@ -957,7 +957,7 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    double Val1, Val2, Val3;
    char response[40];
    long Seq;
-   double RotM[3][3]  = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double RotM[3][3]  = EYE3_MAT;
    double TransVec[3] = {0.0, 0.0, 0.0};
    double Vr[3];
    long FirstUse;

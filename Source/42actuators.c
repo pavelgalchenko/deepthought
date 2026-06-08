@@ -20,6 +20,7 @@
 */
 
 /**********************************************************************/
+double ViscousFriction(struct WhlType *W) __attribute__((pure));
 double ViscousFriction(struct WhlType *W)
 {
    return (-W->ViscCoef * W->w);
@@ -28,6 +29,7 @@ double ViscousFriction(struct WhlType *W)
 /* Ref: Lugre Friction Model.pdf                                      */
 void WhlDrag(struct WhlType *W)
 {
+   // TODO: this will have problems with the rk integrators
    double v0, g, m, vd, zdot;
 
    v0 = W->w / W->StribeckZone;
@@ -47,7 +49,8 @@ void WhlDrag(struct WhlType *W)
    W->z += zdot * DTSIM;
 }
 /**********************************************************************/
-void WhlModel(struct WhlType *W, struct SCType *S)
+#define SMOOTH_INTERVAL (0.05) // ratio of WhlType::H
+void WhlModel(const int smoothing, struct WhlType *W, struct SCType *S)
 {
    struct BodyType *B;
    struct NodeType *N;
@@ -62,10 +65,20 @@ void WhlModel(struct WhlType *W, struct SCType *S)
       W->Trq = -W->Tmax;
    if (W->Trq > W->Tmax)
       W->Trq = W->Tmax;
-   if (W->Trq < 0.0 && W->H <= -W->Hmax)
-      W->Trq = 0.0;
-   if (W->Trq > 0.0 && W->H >= W->Hmax)
-      W->Trq = 0.0;
+
+   if (W->Trq * W->H > 0) {
+      // smooth W->Trq such that it is at it's current value at
+      // W->H = (1 - SMOOTH_INTERVAL) * W->Hmax and zero
+      // once the wheel reaches saturation
+      static double oneMInterval = 1.0 - SMOOTH_INTERVAL;
+      if (fabs(W->H) >= W->Hmax)
+         W->Trq = 0.0;
+      else if (smoothing && fabs(W->H) > oneMInterval * W->Hmax) {
+         // convert to interval (0.0, 1.0)
+         const double t = (W->Hmax - fabs(W->H)) / (SMOOTH_INTERVAL * W->Hmax);
+         W->Trq         = smootherstep(t) * W->Trq;
+      }
+   }
 
    if (S->FlexActive) {
       B = &S->B[W->Body];
@@ -74,6 +87,7 @@ void WhlModel(struct WhlType *W, struct SCType *S)
          N->Trq[i] += W->Trq * W->A[i];
    }
 }
+#undef SMOOTH_INTERVAL
 /**********************************************************************/
 void MTBModel(struct MTBType *MTB, double bvb[3])
 {
@@ -89,25 +103,42 @@ void MTBModel(struct MTBType *MTB, double bvb[3])
    MTB->Trq[2] = MTB->M * (MTB->A[0] * bvb[1] - MTB->A[1] * bvb[0]);
 }
 /**********************************************************************/
-void ThrModel(struct ThrType *Thr, struct SCType *S, double DT)
+#define SMOOTH_INTERVAL (0.05) // seconds
+void ThrModel(const int smoothing, struct ThrType *Thr, struct SCType *S,
+              JDType jd)
 {
    struct BodyType *B;
    struct NodeType *N;
    long i;
 
-   if (Thr->Mode == THR_PULSED) {
-      if (Thr->PulseWidthCmd > DT) {
-         Thr->F              = Thr->Fmax;
-         Thr->PulseWidthCmd -= DT;
+   if (Thr->Mode == THR_PULSED) { /* THR_PULSED */
+      // TODO: make this less ad-hoc, or at least make it user configurable
+      JDType jd_thr = Thr->PulseWidthFinTimeStamp;
+      if (isequal_jd_systemepoch(jd_thr, jd) && smoothing) {
+         static double halfInterval = SMOOTH_INTERVAL / 2.0;
+         const double timeToEnd     = JDSubToSeconds(jd_thr, jd);
+         if (timeToEnd >= halfInterval)
+            Thr->F = Thr->Fmax;
+         else if (fabs(timeToEnd) < halfInterval) {
+            // convert to interval (0.0, 1.0)
+            const double t = timeToEnd / SMOOTH_INTERVAL + 0.5;
+            Thr->F         = smootherstep(t) * Thr->Fmax;
+         }
+         else
+            Thr->F = 0.0;
       }
-      else {
-         Thr->F             = (Thr->PulseWidthCmd / DT) * Thr->Fmax;
-         Thr->PulseWidthCmd = 0.0;
+      else if (isequal_jd_systemepoch(jd_thr, jd) && isgreater_jd(jd_thr, jd)) {
+         double thrust_steps = JDSubToSeconds(jd_thr, jd) / DTSIM;
+         if (thrust_steps >= 1.0)
+            Thr->F = Thr->Fmax;
+         else
+            Thr->F = thrust_steps * Thr->Fmax;
       }
+      else
+         Thr->F = 0.0;
    }
-   else { /* THR_PROPORTIONAL */
+   else /* THR_PROPORTIONAL */
       Thr->F = Thr->ThrustLevelCmd * Thr->Fmax;
-   }
 
    if (Thr->F < 0.0)
       Thr->F = 0.0;
@@ -130,6 +161,7 @@ void ThrModel(struct ThrType *Thr, struct SCType *S, double DT)
       }
    }
 }
+#undef SMOOTH_INTERVAL
 /**********************************************************************/
 void ThrusterPlumeFrcTrq(struct SCType *S)
 {
@@ -228,7 +260,7 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
 /*  This function is called at the simulation rate.  Sub-sampling of  */
 /*  actuators should be done on a case-by-case basis.                 */
 
-void Actuators(struct SCType *S)
+void Actuators(const int smoothing, struct SCType *S, JDType jd)
 {
 
    struct NodeType *N;
@@ -262,7 +294,7 @@ void Actuators(struct SCType *S)
 
    /* Wheels */
    for (i = 0; i < S->Nw; i++) {
-      WhlModel(&S->Whl[i], S);
+      WhlModel(smoothing, &S->Whl[i], S);
    }
    /* MTBs */
    for (i = 0; i < S->Nmtb; i++) {
@@ -289,7 +321,7 @@ void Actuators(struct SCType *S)
    /* Thrusters */
    for (i = 0; i < S->Nthr; i++) {
       Thr = &S->Thr[i];
-      ThrModel(Thr, S, DTSIM);
+      ThrModel(smoothing, Thr, S, jd);
       MTxV(S->B[Thr->Body].CN, Thr->Frc, FrcN);
       for (j = 0; j < 3; j++) {
          S->B[Thr->Body].Trq[j]  += Thr->Trq[j];

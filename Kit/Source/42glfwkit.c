@@ -13,10 +13,10 @@
 
 #include "42.h"
 #define EXTERN extern
-#include "42gl.h"
+#include "42glkit.h"
 #undef EXTERN
 #define EXTERN
-#include "42glfw.h"
+#include "42glfwkit.h"
 #undef EXTERN
 
 /* #ifdef __cplusplus
@@ -75,7 +75,11 @@ void MainLoop(void)
          POV.w[0] = 0.0;
          POV.w[1] = 0.0;
          POV.w[2] = 0.0;
-         Done     = SimStep();
+#ifdef OLD_INTEGRATOR
+         Done = SimStep_Old();
+#else
+         Done = SimStep_New();
+#endif
          if (GLOutFlag) {
             glfwMakeContextCurrent(CamWindow);
             CamRenderExec();
@@ -117,6 +121,7 @@ void MainLoop(void)
 void GlfwErrorHandler(int error, const char *description)
 {
    fprintf(stderr, "GLFW Error: %s\n", description);
+   exit(EXIT_FAILURE);
 }
 /**********************************************************************/
 void KeyHandler(GLFWwindow *Window, int key, int scancode, int action, int mods)
@@ -930,7 +935,7 @@ void OrreryReshape(GLFWwindow *Window, int width, int height)
    OrreryWidth  = width;
    OrreryHeight = height;
    glfwSetWindowSize(OrreryWindow, width, height);
-   InitOrreryWidget();
+   ReinitOrreryWidget();
    O->Radius = ((double)OrreryWidth) / (2.0 * 80.0) * O->Scale[O->Zoom];
 }
 /**********************************************************************/
@@ -956,7 +961,7 @@ void SphereReshape(GLFWwindow *Window, int width, int height)
    gluOrtho2D(180.0, -180.0, ymin, 90.0);
    glMatrixMode(GL_MODELVIEW);
 
-   InitSphereWidgets();
+   ReinitSphereWidgets();
 }
 /*********************************************************************/
 void InitCamWindow(void)
@@ -1360,6 +1365,8 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
 
    if (sscanf(CmdLine, "%lf GL Output Step = %lf", CmdTime, &DTOUTGL) == 2) {
       NewCmdProcessed = TRUE;
+      DTOUTGL_RAT     = double2rational(DTOUTGL);
+      DTOUTGL         = rational2double(DTOUTGL_RAT);
    }
    if (sscanf(CmdLine, "%lf POV CmdRange = %lf", CmdTime, &POV.CmdRange) == 2) {
       NewCmdProcessed = TRUE;

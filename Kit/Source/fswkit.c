@@ -271,8 +271,9 @@ void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
 /*  this routine finds the optimal estimate of qmr, the quaternion    */
 /*  expressing the rotation from the reference frame (where Ref's are */
 /*  given) to the body frame (where Meas's are given).                */
-void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
-                 double memory, double wbn[3], double qmr[4])
+void FilterQuest(long n, double *Weight, double **Ref, double **Meas,
+                 double dt __attribute__((unused)), double memory,
+                 double wbn[3], double qmr[4])
 {
    double *a, **W, **V, rho;
    long i, j, k;
@@ -417,7 +418,7 @@ void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
 {
    double *a1, *a2;
    double a3[3];
-   double Axis[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double Axis[3][3] = EYE3_MAT;
    double TargVec[3], BoreVec[3];
    double TargAng1, BoreAng1, TargAng2, BoreAng2;
    double t1, t2, t3, b1, b2, b3;

@@ -18,46 +18,517 @@
 */
 
 /**********************************************************************/
-struct OrbitType *CloneOrbit(struct OrbitType *OldOrb, long *Norb, long Iorb)
+void CloneWorld(struct WorldType *const destWorld,
+                const struct WorldType srcWorld)
 {
-   struct OrbitType *NewOrb;
-
-   (*Norb)++;
-   NewOrb =
-       (struct OrbitType *)realloc(OldOrb, (*Norb) * sizeof(struct OrbitType));
-   if (NewOrb == NULL) {
-      fprintf(stderr, "Realloc failed in CloneOrbit\n");
-      exit(EXIT_FAILURE);
-   }
-   memcpy(&NewOrb[(*Norb) - 1], &NewOrb[Iorb], sizeof(struct OrbitType));
-   return (NewOrb);
+   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
+   CloneOrbit(&destWorld->eph, srcWorld.eph);
+   // TODO: should deep copy more, but all other pointers in WorldType (e.g.,
+   // WorldType::GravModel::C) are not modified after initial world
+   // configuration.
 }
 /**********************************************************************/
-void eccFDF(const double E, double params[2], double *f, double *fp)
+void CopyWorld(struct WorldType *const destWorld,
+               const struct WorldType srcWorld)
 {
-   *f  = E - params[0] * sin(E) - params[1];
-   *fp = 1.0 - params[0] * cos(E);
+   memcpy(destWorld, &srcWorld, sizeof(struct WorldType));
+   CopyOrbit(&destWorld->eph, srcWorld.eph);
+}
+/**********************************************************************/
+double GetWorldW(JDType jd, const struct WorldType *const world)
+{
+   jd                         = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const double day_tdb_j2000 = JDToDays(jd);
+   const AngDataType *const pm_data = &world->ang_data[0];
+
+   return (pm_data->ang[1] + 2.0 * pm_data->ang[2] * day_tdb_j2000) * D2R /
+          SEC_PER_DAY;
+}
+/**********************************************************************/
+void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3])
+{
+   wln[0] = 0.0;
+   wln[1] = 0.0;
+   wln[2] = GetWorldW(jd, world);
+}
+/**********************************************************************/
+AngDataType CopyAngData(const AngDataType src)
+{
+   AngDataType dest = ANGDATATYPE_INVALID;
+   dest.ang_char    = src.ang_char;
+   CopyVG(dest.ang, src.ang, 3);
+   dest.n_ang = src.n_ang;
+   dest.n_E   = src.n_E;
+
+   dest.nut_prec_E   = calloc(dest.n_E, sizeof(double[2]));
+   dest.nut_prec_ang = calloc(dest.n_ang, sizeof(double));
+   CopyVG(dest.nut_prec_E[0], src.nut_prec_E[0], 2 * dest.n_E);
+   CopyVG(dest.nut_prec_ang, src.nut_prec_ang, dest.n_ang);
+   return dest;
+}
+/**********************************************************************/
+double GetWorldAng(JDType jd, const AngDataType *const ang_data)
+{
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+
+   const double day_tdb_j2000 = JDToDays(jd);
+   const double cen_tdb_j2000 = day_tdb_j2000 / JDDAY_PER_CENTURY;
+
+   double angle   = 0;
+   double d       = 1;
+   double day_mul = cen_tdb_j2000;
+   if (ang_data->ang_char == 'P')
+      day_mul = day_tdb_j2000;
+
+   for (int i = 0; i < 3; i++) {
+      angle += ang_data->ang[i] * d;
+      d     *= day_mul;
+   }
+
+   if (ang_data->n_E && ang_data->n_ang) {
+      double E[ang_data->n_E];
+      double (*s_func)(double) = sin;
+      if (ang_data->ang_char == 'D')
+         s_func = cos;
+
+      for (int i = 0; i < ang_data->n_E; i++) {
+         E[i] = ang_data->nut_prec_E[i][0] +
+                ang_data->nut_prec_E[i][1] * cen_tdb_j2000;
+         E[i] = fmod(E[i], 360.0);
+         if (E[i] < 0)
+            E[i] += 360.0;
+         E[i] *= D2R;
+      }
+
+      for (int i = 0; i < ang_data->n_ang; i++)
+         angle += ang_data->nut_prec_ang[i] * s_func(E[i]);
+   }
+
+   angle = fmod(angle, 360.0);
+   if (angle < 0)
+      angle += 360.0;
+
+   return angle * D2R;
+}
+/**********************************************************************/
+double GetWorldCWN(JDType jd, const AngDataType *const ang_data,
+                   double CWN[3][3])
+{
+   const double z_axis[3] = {0.0, 0.0, 1.0};
+
+   const AngDataType *pm_data = NULL;
+   for (int i = 0; i < 3; i++) {
+      if (ang_data[i].ang_char == 'P') {
+         pm_data = &ang_data[i];
+         break;
+      }
+   }
+   if (pm_data == NULL) {
+      fprintf(stderr,
+              "Expected a 'P'rime Merdian angle in GetWorldCWN, got '%c', "
+              "'%c', and '%c'. Exiting...\n",
+              ang_data[0].ang_char, ang_data[1].ang_char, ang_data[2].ang_char);
+      exit(EXIT_FAILURE);
+   }
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+
+   const double pri_mer_ang = GetWorldAng(jd, pm_data);
+   SimpRot(z_axis, pri_mer_ang, CWN);
+
+   return pri_mer_ang;
+}
+/**********************************************************************/
+void GetWorldCNJ(JDType jd, const AngDataType *const ang_data, double CNJ[3][3])
+{
+   const AngDataType *ra_data  = NULL;
+   const AngDataType *dec_data = NULL;
+   for (int i = 0; i < 3; i++) {
+      if (ang_data[i].ang_char == 'R') {
+         ra_data = &ang_data[i];
+      }
+      else if (ang_data[i].ang_char == 'D') {
+         dec_data = &ang_data[i];
+      }
+      if (ra_data != NULL && dec_data != NULL)
+         break;
+   }
+   if (ra_data == NULL || dec_data == NULL) {
+      fprintf(stderr,
+              "Expected both a 'R'ight Ascension angle and a 'D'eclination "
+              "angle in GetWorldCNJ, got '%c', '%c', and '%c'. Exiting...\n",
+              ang_data[0].ang_char, ang_data[1].ang_char, ang_data[2].ang_char);
+      exit(EXIT_FAILURE);
+   }
+
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const double ra     = GetWorldAng(jd_tdb_j2000, ra_data);
+   const double dec    = GetWorldAng(jd_tdb_j2000, dec_data);
+
+   A2C(312, (ra + HALFPI), (HALFPI - dec), 0.0, CNJ);
+}
+/**********************************************************************/
+void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
+{
+   memcpy(destOrb, &srcOrb, sizeof(struct OrbitType));
+   if (destOrb->SplineFile)
+      destOrb->SplineFile = fopen(destOrb->SplineFileName, "rt");
+
+   if (srcOrb.Ncheb) {
+      destOrb->Cheb = malloc(srcOrb.Ncheb * sizeof(struct Cheb3DType));
+      for (int i = 0; i < destOrb->Ncheb; i++)
+         memcpy(&destOrb->Cheb[i], &srcOrb.Cheb[i], sizeof(struct Cheb3DType));
+   }
+}
+/**********************************************************************/
+void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
+{
+   if (destOrb->SplineFile)
+      fclose(destOrb->SplineFile);
+
+   memcpy(destOrb, &srcOrb, sizeof(struct OrbitType));
+   if (destOrb->SplineFile)
+      destOrb->SplineFile = fopen(destOrb->SplineFileName, "rt");
+
+   if (srcOrb.Ncheb) {
+      for (int i = 0; i < destOrb->Ncheb; i++)
+         memcpy(&destOrb->Cheb[i], &srcOrb.Cheb[i], sizeof(struct Cheb3DType));
+   }
+}
+/**********************************************************************/
+WorldID GetWorldID(const char *s)
+{
+   unsigned long i;
+   if (!strcmp(s, "SOL") || !strcmp(s, "SUN"))
+      return SOL;
+   else if (!strcmp(s, "MERCURY"))
+      return MERCURY;
+   else if (!strcmp(s, "VENUS"))
+      return VENUS;
+   else if (!strcmp(s, "EARTH"))
+      return EARTH;
+   else if (!strcmp(s, "MARS"))
+      return MARS;
+   else if (!strcmp(s, "JUPITER"))
+      return JUPITER;
+   else if (!strcmp(s, "SATURN"))
+      return SATURN;
+   else if (!strcmp(s, "URANUS"))
+      return URANUS;
+   else if (!strcmp(s, "NEPTUNE"))
+      return NEPTUNE;
+   else if (!strcmp(s, "PLUTO"))
+      return PLUTO;
+   else if (!strcmp(s, "LUNA"))
+      return LUNA;
+   else if (!strcmp(s, "PHOBOS"))
+      return PHOBOS;
+   else if (!strcmp(s, "DEIMOS"))
+      return DEIMOS;
+   else if (!strcmp(s, "IO"))
+      return IO;
+   else if (!strcmp(s, "EUROPA"))
+      return EUROPA;
+   else if (!strcmp(s, "GANYMEDE"))
+      return GANYMEDE;
+   else if (!strcmp(s, "CALLISTO"))
+      return CALLISTO;
+   else if (!strcmp(s, "AMALTHEA"))
+      return AMALTHEA;
+   else if (!strcmp(s, "HIMALIA"))
+      return HIMALIA;
+   else if (!strcmp(s, "ELARA"))
+      return ELARA;
+   else if (!strcmp(s, "PASIPHAE"))
+      return PASIPHAE;
+   else if (!strcmp(s, "SINOPE"))
+      return SINOPE;
+   else if (!strcmp(s, "LYSITHEA"))
+      return LYSITHEA;
+   else if (!strcmp(s, "CARME"))
+      return CARME;
+   else if (!strcmp(s, "ANANKE"))
+      return ANANKE;
+   else if (!strcmp(s, "LEDA"))
+      return LEDA;
+   else if (!strcmp(s, "THEBE"))
+      return THEBE;
+   else if (!strcmp(s, "ADRASTEA"))
+      return ADRASTEA;
+   else if (!strcmp(s, "METIS"))
+      return METIS;
+   else if (!strcmp(s, "MIMAS"))
+      return MIMAS;
+   else if (!strcmp(s, "ENCELADUS"))
+      return ENCELADUS;
+   else if (!strcmp(s, "TETHYS"))
+      return TETHYS;
+   else if (!strcmp(s, "DIONE"))
+      return DIONE;
+   else if (!strcmp(s, "RHEA"))
+      return RHEA;
+   else if (!strcmp(s, "TITAN"))
+      return TITAN;
+   else if (!strcmp(s, "HYPERION"))
+      return HYPERION;
+   else if (!strcmp(s, "IAPETUS"))
+      return IAPETUS;
+   else if (!strcmp(s, "PHOEBE"))
+      return PHOEBE;
+   else if (!strcmp(s, "JANUS"))
+      return JANUS;
+   else if (!strcmp(s, "EPIMETHEUS"))
+      return EPIMETHEUS;
+   else if (!strcmp(s, "HELENE"))
+      return HELENE;
+   else if (!strcmp(s, "TELESTO"))
+      return TELESTO;
+   else if (!strcmp(s, "CALYPSO"))
+      return CALYPSO;
+   else if (!strcmp(s, "ATLAS"))
+      return ATLAS;
+   else if (!strcmp(s, "PROMETHEUS"))
+      return PROMETHEUS;
+   else if (!strcmp(s, "PANDORA"))
+      return PANDORA;
+   else if (!strcmp(s, "PAN"))
+      return PAN;
+   else if (!strcmp(s, "ARIEL"))
+      return ARIEL;
+   else if (!strcmp(s, "UMBRIEL"))
+      return UMBRIEL;
+   else if (!strcmp(s, "TITANIA"))
+      return TITANIA;
+   else if (!strcmp(s, "OBERON"))
+      return OBERON;
+   else if (!strcmp(s, "MIRANDA"))
+      return MIRANDA;
+   else if (!strcmp(s, "TRITON"))
+      return TRITON;
+   else if (!strcmp(s, "NEREID"))
+      return NEREID;
+   else if (!strcmp(s, "CHARON"))
+      return CHARON;
+   else if (sscanf(s, "MINORBODY_%lu", &i) == 1)
+      return (NMAJORWORLD + i);
+   fprintf(stderr, "Bogus input %s in GetWorldID (42init.c:%d)\n", s, __LINE__);
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+void WorldID2String(WorldID w_id, char w_str[32])
+{
+   // Returns the NAIF names of the celestial bodies
+   switch (w_id) {
+      case SOL:
+         strcpy(w_str, "SUN");
+         break;
+      case MERCURY:
+         strcpy(w_str, "MERCURY");
+         break;
+      case VENUS:
+         strcpy(w_str, "VENUS");
+         break;
+      case EARTH:
+         strcpy(w_str, "EARTH");
+         break;
+      case MARS:
+         strcpy(w_str, "MARS");
+         break;
+      case JUPITER:
+         strcpy(w_str, "JUPITER");
+         break;
+      case SATURN:
+         strcpy(w_str, "SATURN");
+         break;
+      case URANUS:
+         strcpy(w_str, "URANUS");
+         break;
+      case NEPTUNE:
+         strcpy(w_str, "NEPTUNE");
+         break;
+      case PLUTO:
+         strcpy(w_str, "PLUTO");
+         break;
+      case LUNA:
+         strcpy(w_str, "MOON");
+         break;
+      case PHOBOS:
+         strcpy(w_str, "PHOBOS");
+         break;
+      case DEIMOS:
+         strcpy(w_str, "DEIMOS");
+         break;
+      case IO:
+         strcpy(w_str, "IO");
+         break;
+      case EUROPA:
+         strcpy(w_str, "EUROPA");
+         break;
+      case GANYMEDE:
+         strcpy(w_str, "GANYMEDE");
+         break;
+      case CALLISTO:
+         strcpy(w_str, "CALLISTO");
+         break;
+      case AMALTHEA:
+         strcpy(w_str, "AMALTHEA");
+         break;
+      case HIMALIA:
+         strcpy(w_str, "HIMALIA");
+         break;
+      case ELARA:
+         strcpy(w_str, "ELARA");
+         break;
+      case PASIPHAE:
+         strcpy(w_str, "PASIPHAE");
+         break;
+      case SINOPE:
+         strcpy(w_str, "SINOPE");
+         break;
+      case LYSITHEA:
+         strcpy(w_str, "LYSITHEA");
+         break;
+      case CARME:
+         strcpy(w_str, "CARME");
+         break;
+      case ANANKE:
+         strcpy(w_str, "ANANKE");
+         break;
+      case LEDA:
+         strcpy(w_str, "LEDA");
+         break;
+      case THEBE:
+         strcpy(w_str, "THEBE");
+         break;
+      case ADRASTEA:
+         strcpy(w_str, "ADRASTEA");
+         break;
+      case METIS:
+         strcpy(w_str, "METIS");
+         break;
+      case MIMAS:
+         strcpy(w_str, "MIMAS");
+         break;
+      case ENCELADUS:
+         strcpy(w_str, "ENCELADUS");
+         break;
+      case TETHYS:
+         strcpy(w_str, "TETHYS");
+         break;
+      case DIONE:
+         strcpy(w_str, "DIONE");
+         break;
+      case RHEA:
+         strcpy(w_str, "RHEA");
+         break;
+      case TITAN:
+         strcpy(w_str, "TITAN");
+         break;
+      case HYPERION:
+         strcpy(w_str, "HYPERION");
+         break;
+      case IAPETUS:
+         strcpy(w_str, "IAPETUS");
+         break;
+      case PHOEBE:
+         strcpy(w_str, "PHOEBE");
+         break;
+      case JANUS:
+         strcpy(w_str, "JANUS");
+         break;
+      case EPIMETHEUS:
+         strcpy(w_str, "EPIMETHEUS");
+         break;
+      case HELENE:
+         strcpy(w_str, "HELENE");
+         break;
+      case TELESTO:
+         strcpy(w_str, "TELESTO");
+         break;
+      case CALYPSO:
+         strcpy(w_str, "CALYPSO");
+         break;
+      case ATLAS:
+         strcpy(w_str, "ATLAS");
+         break;
+      case PROMETHEUS:
+         strcpy(w_str, "PROMETHEUS");
+         break;
+      case PANDORA:
+         strcpy(w_str, "PANDORA");
+         break;
+      case PAN:
+         strcpy(w_str, "PAN");
+         break;
+      case ARIEL:
+         strcpy(w_str, "ARIEL");
+         break;
+      case UMBRIEL:
+         strcpy(w_str, "UMBRIEL");
+         break;
+      case TITANIA:
+         strcpy(w_str, "TITANIA");
+         break;
+      case OBERON:
+         strcpy(w_str, "OBERON");
+         break;
+      case MIRANDA:
+         strcpy(w_str, "MIRANDA");
+         break;
+      case TRITON:
+         strcpy(w_str, "TRITON");
+         break;
+      case NEREID:
+         strcpy(w_str, "NEREID");
+         break;
+      case CHARON:
+         strcpy(w_str, "CHARON");
+         break;
+      default:
+         if (w_id >= NMAJORWORLD) {
+            sprintf(w_str, "MINORBODY_%u", w_id - NMAJORWORLD);
+            break;
+         }
+         else {
+            fprintf(stderr,
+                    "Unknown WorldID %u in WorldID2String. Exiting...\n", w_id);
+            exit(EXIT_FAILURE);
+         }
+   }
+}
+/**********************************************************************/
+static double _eccFDF(const double E, double params[2]) __attribute__((pure));
+static double _eccFDF(const double E, double params[2])
+{
+   const double f  = E - params[0] * sin(E) - params[1];
+   const double fp = 1.0 - params[0] * cos(E);
+   return f / fp;
 }
 /**********************************************************************/
 double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 {
 #define EPS (1.0E-12)
    double params[2] = {ecc, MeanAnom};
-   double E = NewtonRaphson(MeanAnom, EPS, 100, 0.1, 0, &eccFDF, params);
+   double E = NewtonRaphson(MeanAnom, EPS, 100, 0.1, 0, &_eccFDF, params);
    return (2.0 * atan(sqrt((1.0 + ecc) / (1.0 - ecc)) * tan(0.5 * E)));
 #undef EPS
 }
 /**********************************************************************/
-void parabolFDF(const double x, double params[1], double *f, double *fp)
+static double _parabolFDF(const double x, double params[1])
+    __attribute__((pure));
+static double _parabolFDF(const double x, double params[1])
 {
-   *f  = x * (x * x + 3.0) - 2.0 * params[0];
-   *fp = 3.0 * x * x + 3.0;
+   const double f  = x * (x * x + 3.0) - 2.0 * params[0];
+   const double fp = 3.0 * x * x + 3.0;
+   return f / fp;
 }
 /**********************************************************************/
-void hyperbolFDF(const double H, double params[2], double *f, double *fp)
+static double _hyperbolFDF(const double H, double params[2])
+    __attribute__((pure));
+static double _hyperbolFDF(const double H, double params[2])
 {
-   *f  = params[0] * sinh(H) - H - params[1];
-   *fp = params[0] * cosh(H) - 1.0;
+   const double f  = params[0] * sinh(H) - H - params[1];
+   const double fp = params[0] * cosh(H) - 1.0;
+   return f / fp;
 }
 /**********************************************************************/
 double TrueAnomaly(double mu, double p, double e, double t)
@@ -68,7 +539,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
 
    if (e == 1.0) {
       double params[1] = {3.0 * sqrt(mu / p3) * t};
-      double x = NewtonRaphson(0, EPS, 100, 1.0, 0, &parabolFDF, params);
+      double x = NewtonRaphson(0, EPS, 100, 1.0, 0, &_parabolFDF, params);
       Anom     = 2.0 * atan(x);
    }
    else if (e > 1.0) {
@@ -78,7 +549,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
       double params[2] = {e, N};
       /* H0 = arcsinh(N/e); */
       double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1, 0,
-                               &hyperbolFDF, params);
+                               &_hyperbolFDF, params);
       Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
    }
    else {
@@ -92,17 +563,19 @@ double TrueAnomaly(double mu, double p, double e, double t)
 #undef EPS
 }
 /**********************************************************************/
-void hyperradFDF(const double r, double params[7], double *f, double *fp)
+static double _hyperradFDF(const double r, double params[7])
 {
-   double rold = params[5];
-   double fold = params[6];
-   double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
-   *f = r * sqX -
-        params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
-        params[4];
-   params[5] = r;
-   params[6] = *f;
-   *fp       = (*f - fold) / (r - rold);
+   const double rold = params[5];
+   const double fold = params[6];
+   const double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
+   const double f =
+       r * sqX -
+       params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
+       params[4];
+   params[5]       = r;
+   params[6]       = f;
+   const double fp = (f - fold) / (r - rold);
+   return f / fp;
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -128,7 +601,7 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R)
    f   = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
 
    double params[7] = {p, alpha, sqma, Den, T, r, f};
-   *R = NewtonRaphson(1.1 * p, 1.0E-3, 500, 1.0E9, 0, &hyperradFDF, params);
+   *R = NewtonRaphson(1.1 * p, 1.0E-3, 500, 1.0E9, 0, &_hyperradFDF, params);
 }
 /**********************************************************************/
 double atanh(double x)
@@ -202,7 +675,6 @@ void RV02RV(double mu, double xr0[3], double xv0[3], double anom, double xr[3],
 /**********************************************************************/
 /* Compute position and velocity given orbital elements.  Works for   */
 /* circular, elliptical, parabolic and hyperbolic orbits.             */
-
 void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
             double dt, double r[3], double v[3], double *anom)
 {
@@ -252,7 +724,6 @@ void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
 /**********************************************************************/
 /* Compute orbital elements, given position and velocity.  Works for  */
 /* for all eccentricities.                                            */
-
 void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
             double *e, double *i, double *RAAN, double *ArgP, double *th,
             double *tp, double *SLR, double *alpha, double *rmin,
@@ -382,8 +853,8 @@ void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
 #undef EPS
 }
 /**********************************************************************/
-void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
-                 double LeapSec, struct OrbitType *O)
+void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
+                 struct OrbitType *O)
 {
 #define EPS (1.0E-12)
 
@@ -395,34 +866,36 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
    char omgstring[9];
    char MeanAnomString[9];
    char MeanMotionString[12];
-   long year, DOY, Month, Day;
-   double FloatDOY, FracDay, JDepoch;
-   double DynTime;
+   DateType date = {0};
+   JDType jdEpoch;
+   double FloatDOY, FracDay;
+   double j2000_tt;
    /* Parameters quoted from SatelliteToolbox.jl's sgp4_model.jl */
    double mu = 3.986005E14;
    double Re = 6378.137E3;
    double J2 = 1.08262998905E-3;
    double Coef;
 
+   date.system = UTC_TIME;
+
    strncpy(YearString, &Line1[18], 2);
    YearString[2] = 0;
-   year          = (long)atoi(YearString);
-   if (year < 57)
-      year += 2000;
+   date.Year     = (long)atoi(YearString);
+   if (date.Year < 57)
+      date.Year += 2000;
    else
-      year += 1900;
+      date.Year += 1900;
    strncpy(DOYstring, &Line1[20], 12);
    DOYstring[12] = 0;
    FloatDOY      = (double)atof(DOYstring);
-   DOY           = (long)FloatDOY;
-   FracDay       = FloatDOY - ((double)DOY);
-   DOY2MD(year, DOY, &Month, &Day);
-   JDepoch   = DateToJD(year, Month, Day, 0, 0, 0.0);
-   JDepoch  += FracDay;
-   O->Epoch  = JDToTime(JDepoch);
-   /* Shift Epoch from UTC to TT */
-   O->Epoch += LeapSec + 32.184;
-   DynTime   = JDToTime(JD);
+   date.doy      = (long)FloatDOY;
+   FracDay       = FloatDOY - ((double)date.doy);
+   DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
+   jdEpoch  = Date2JD(date, J2000_EPOCH);
+   jd       = JDChangeSystem(TT_TIME, jd);
+   jdEpoch  = JDAddDays(jdEpoch, FracDay);
+   O->Epoch = JDToDynTime(jdEpoch);
+   j2000_tt = JDToDynTime(jd);
 
    strncpy(IncString, &Line2[8], 8);
    IncString[8] = 0;
@@ -451,9 +924,9 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 
    /* Time of Periapsis passage given in seconds since J2000 */
    O->tp = O->Epoch - O->MeanAnom0 / (O->MeanMotion);
-   while ((DynTime - O->tp) > O->Period)
+   while ((j2000_tt - O->tp) > O->Period)
       O->tp += O->Period;
-   while ((DynTime - O->tp) < -(O->Period))
+   while ((j2000_tt - O->tp) < -(O->Period))
       O->tp -= O->Period;
 
    O->MeanSMA = pow(mu / (O->MeanMotion * O->MeanMotion), 1.0 / 3.0);
@@ -462,7 +935,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
    O->SLR     = O->SMA * (1.0 - O->ecc * O->ecc);
    O->rmin    = O->SLR / (1.0 + O->ecc);
 
-   O->MeanAnom = O->MeanMotion * (DynTime - O->tp);
+   O->MeanAnom = O->MeanMotion * (j2000_tt - O->tp);
    O->anom     = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
 
    /* Initialize J2 Drift Parameters (ref Markley and Crassidis, Ch. 10) */
@@ -471,12 +944,12 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
       Coef       = 1.5 * J2 * Re * Re / (O->SLR * O->SLR) * O->MeanMotion;
       O->RAANdot = -Coef * cos(O->inc);
       O->ArgPdot = Coef * (2.0 - 2.5 * sin(O->inc) * sin(O->inc));
-      O->RAAN    = O->RAAN0 + O->RAANdot * (DynTime - O->Epoch);
+      O->RAAN    = O->RAAN0 + O->RAANdot * (j2000_tt - O->Epoch);
       while (O->RAAN > PI)
          O->RAAN -= TWOPI;
       while (O->RAAN < -PI)
          O->RAAN += TWOPI;
-      O->ArgP = O->ArgP0 + O->ArgPdot * (DynTime - O->Epoch);
+      O->ArgP = O->ArgP0 + O->ArgPdot * (j2000_tt - O->Epoch);
       while (O->ArgP > PI)
          O->ArgP -= TWOPI;
       while (O->ArgP < -PI)
@@ -495,7 +968,7 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], double JD,
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
-void MeanEph2RV(struct OrbitType *O, double DynTime)
+void MeanEph2RV(struct OrbitType *O, double dyntime)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g;
    double CPN[3][3], cth, sth, R, pr[3], pv[3];
@@ -504,13 +977,13 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
 
    /* 10.121a,b */
    if (O->J2DriftEnabled) {
-      O->ArgP = O->ArgP0 + O->ArgPdot * (DynTime - O->Epoch);
-      O->RAAN = O->RAAN0 + O->RAANdot * (DynTime - O->Epoch);
+      O->ArgP = O->ArgP0 + O->ArgPdot * (dyntime - O->Epoch);
+      O->RAAN = O->RAAN0 + O->RAANdot * (dyntime - O->Epoch);
    }
 
    /* 10.122 */
    O->MeanAnom =
-       fmod(O->MeanAnom0 + O->MeanMotion * (DynTime - O->Epoch) - PI, TWOPI) +
+       fmod(O->MeanAnom0 + O->MeanMotion * (dyntime - O->Epoch) - PI, TWOPI) +
        PI;
 
    O->anom = MeanAnomToTrueAnom(O->MeanAnom, O->ecc);
@@ -608,8 +1081,8 @@ void MeanEph2RV(struct OrbitType *O, double DynTime)
 /**********************************************************************/
 /* TLEs use UTC.  42 orbits use TT.  So LeapSec are needed.           */
 long LoadTleFromFile(const char *Path, const char *TleFileName,
-                     const char *TleLabel, double DynTime, double JD,
-                     double LeapSec, struct OrbitType *O)
+                     const char *TleLabel, double dyntime, JDType jd,
+                     struct OrbitType *O)
 {
    FILE *infile;
    char line[80], line1[80], line2[80];
@@ -634,8 +1107,8 @@ long LoadTleFromFile(const char *Path, const char *TleFileName,
          Success = 1;
          fgets(line1, 80, infile);
          fgets(line2, 80, infile);
-         TLE2MeanEph(line1, line2, JD, LeapSec, O);
-         MeanEph2RV(O, DynTime);
+         TLE2MeanEph(line1, line2, jd, O);
+         MeanEph2RV(O, dyntime);
       }
    }
    fclose(infile);
@@ -699,7 +1172,7 @@ double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3])
 /*  Index 1=Mercury, 2=Venus, ... 9=Pluto.  0=Sun is not used.        */
 /*  Note that the elements for Pluto are not from Meeus, but from a   */
 /*  lower-fidelity data set from JPL.                                 */
-void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
+void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *ArgP, double *tp,
                        double *anom, double *SLR, double *alpha, double *rmin,
                        double *MeanMotion, double *Period)
@@ -763,11 +1236,13 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 
    double AU2m = 149597870000.0;
 
+   jd = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
+
    /* .. Time since J2000, in Julian centuries */
-   T = (JD - 2451545.0) / 36525.0;
+   T = JDToDays(jd) / 36525.0;
 
    /* .. Time since J2000, in seconds */
-   SecSinceJ2000 = (JD - 2451545.0) * 86400.0;
+   SecSinceJ2000 = JDToDynTime(jd);
 
    /* .. Mean Longitude */
    L = (La0[i] + T * (La1[i] + T * (La2[i] + T * La3[i]))) * D2R;
@@ -808,13 +1283,17 @@ void PlanetEphemerides(long i, double JD, double mu, double *SMA, double *ecc,
 /*  This function gives the location of Luna, with respect to the    */
 /*  geocentric ecliptic frame.  Refer to Chap 47 of Meeus,           */
 /*  "Astronomical Algorithms" QB51.3.E43 M42, 1998.                  */
-void LunaPosition(double JD, double r[3])
+void LunaPosition(const JDType jd, double r[3])
 {
+   // dug a bit through Astronomical Algorithmsm,
+   // JD is Terrestrial Dynamical Time here...
+
+   JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
 
-   T = (JD - 2451545.0) / 36525.0;
+   T = JDToDays(jd_tt_j2000) / 36525.0;
 
    Lp = (218.3164477 +
          T * (481267.88123421 +
@@ -1143,9 +1622,69 @@ void LunaPosition(double JD, double r[3])
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-/*  Finds Lunar Inertial Frame wrt J2000                              */
-void LunaInertialFrame(double JulDay, double CNJ[3][3])
+int LoadLunarNutPrecAngle(int *n_E, double (**nut_prec_E)[2])
 {
+   const double nut_prec_ang_data[26] = {
+       125.045, -0.0529921, 250.089, -0.1059842, 260.008, 13.0120009,
+       176.625, 13.3407154, 357.529, 0.9856003,  311.589, 26.4057084,
+       134.963, 13.0649930, 276.617, 0.3287146,  34.226,  1.7484877,
+       15.134,  -0.1589763, 119.743, 0.0036096,  239.961, 0.1643573,
+       25.053,  12.9590088};
+   *n_E        = 13;
+   *nut_prec_E = calloc(*n_E, sizeof(double[2]));
+
+   for (int i = 0; i < *n_E; i++) {
+      for (int j = 0; j < 2; j++) {
+         (*nut_prec_E)[i][j] = nut_prec_ang_data[j + 2 * i];
+      }
+      (*nut_prec_E)[i][1] *= JDDAY_PER_CENTURY;
+   }
+   return 1;
+}
+/**********************************************************************/
+/*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
+/*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
+/*  Finds Lunar Inertial Frame wrt J2000                              */
+int LoadLunaInertialFrameData(AngDataType *const ang_data)
+{
+   const double ra_dat[3]  = {269.9949, 0.0031, 0.0};
+   const double dec_dat[3] = {66.5392, 0.0130, 0.0};
+
+   const double nut_prec_ra[13]  = {-3.8787, -0.1204, 0.0700, -0.0172, 0.0,
+                                    0.0072,  0.0,     0.0,    0.0,     -0.0052,
+                                    0.0,     0.0,     0.0043};
+   const double nut_prec_dec[13] = {1.5419,  0.0239, -0.0278, 0.0068, 0.0,
+                                    -0.0029, 0.0009, 0.0,     0.0,    0.0008,
+                                    0.0,     0.0,    -0.0009};
+
+   AngDataType *const ra_data  = &ang_data[1];
+   AngDataType *const dec_data = &ang_data[2];
+
+   ra_data->ang_char  = 'R';
+   dec_data->ang_char = 'D';
+
+   CopyVG(ra_data->ang, ra_dat, 3);
+   CopyVG(dec_data->ang, dec_dat, 3);
+
+   LoadLunarNutPrecAngle(&ra_data->n_E, &ra_data->nut_prec_E);
+   LoadLunarNutPrecAngle(&dec_data->n_E, &dec_data->nut_prec_E);
+
+   ra_data->n_ang         = 13;
+   dec_data->n_ang        = 13;
+   ra_data->nut_prec_ang  = calloc(ra_data->n_ang, sizeof(double));
+   dec_data->nut_prec_ang = calloc(dec_data->n_ang, sizeof(double));
+   CopyVG(ra_data->nut_prec_ang, nut_prec_ra, ra_data->n_ang);
+   CopyVG(dec_data->nut_prec_ang, nut_prec_dec, dec_data->n_ang);
+   return 1;
+}
+/**********************************************************************/
+/*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
+/*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
+/*  Finds Lunar Inertial Frame wrt J2000                              */
+void LunaInertialFrame(const JDType jd, double CNJ[3][3])
+{
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
    /* double E12; */
@@ -1156,7 +1695,7 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
    double PoleVec[3], NodeVec[3], YVec[3];
    long i;
 
-   D = JulDay - 2451545.0;
+   D = JDToDays(jd_tdb_j2000);
    T = D / 36525.0;
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
@@ -1221,7 +1760,26 @@ void LunaInertialFrame(double JulDay, double CNJ[3][3])
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-double LunaPriMerAng(double JulDay)
+int LoadLunaPriMerAngData(AngDataType *const ang_data)
+{
+   const double pm_dat[3]        = {38.3213, 13.17635815, -1.4E-12};
+   const double nut_prec_dat[13] = {3.5610,  0.1208,  -0.0642, 0.0158, 0.0252,
+                                    -0.0066, -0.0047, -0.0046, 0.0028, 0.0052,
+                                    0.0040,  0.0019,  -0.0044};
+
+   AngDataType *const pm_data = &ang_data[0];
+   pm_data->ang_char          = 'P';
+   CopyVG(pm_data->ang, pm_dat, 3);
+   LoadLunarNutPrecAngle(&pm_data->n_E, &pm_data->nut_prec_E);
+   pm_data->n_ang        = 13;
+   pm_data->nut_prec_ang = calloc(pm_data->n_ang, sizeof(double));
+   CopyVG(pm_data->nut_prec_ang, nut_prec_dat, pm_data->n_ang);
+   return 1;
+}
+/**********************************************************************/
+/*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
+/*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
+double LunaPriMerAng(const JDType jd)
 {
    double D;
    double E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13;
@@ -1229,7 +1787,9 @@ double LunaPriMerAng(double JulDay)
    double SinE8, SinE9, SinE10, SinE11, SinE12, SinE13;
    double PriMerAng;
 
-   D = JulDay - 2451545.0;
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+
+   D = JDToDays(jd_tdb_j2000);
 
    E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
    E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;
@@ -1350,29 +1910,35 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])
    wln[2] = WorldW;
 }
 /**********************************************************************/
-void lagpointFDF(const double x, double params[3], double *f, double *fp)
+static double _lagpointFDF(const double x, double params[3])
+    __attribute__((pure));
+static double _lagpointFDF(const double x, double params[3])
 {
    double rho = params[0], rho1 = params[1];
    double xp  = x - params[0];
    double xp1 = xp + 1.0;
    long lp    = params[2];
    switch (lp) {
-      case 1:
-         *f = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
-         *fp =
+      case 1: {
+         const double f = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
+         const double fp =
              1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-         break;
-      case 2:
-         *f = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
-         *fp =
+         return f / fp;
+      }
+      case 2: {
+         const double f = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
+         const double fp =
              1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
-         break;
-      case 3:
-         *f = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
-         *fp =
+         return f / fp;
+      }
+      case 3: {
+         const double f = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
+         const double fp =
              1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-         break;
+         return f / fp;
+      }
    }
+   return 0;
 }
 /**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
@@ -1402,7 +1968,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
 
    /* .. L1 */
    LP     = &LS->LP[0];
-   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &_lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -1447,7 +2013,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    /* .. L2 */
    LP          = &LS->LP[1];
    lpParams[2] = 2;
-   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &_lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -1492,9 +2058,9 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    /* .. L3 */
    LP          = &LS->LP[2];
    lpParams[2] = 3;
-   x           = NewtonRaphson(1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
-   LP->X0      = x * D;
-   LP->Y0      = 0.0;
+   x      = NewtonRaphson(1.0, eps, 200, 100.0, 0, &_lagpointFDF, lpParams);
+   LP->X0 = x * D;
+   LP->Y0 = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;
@@ -2344,7 +2910,7 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
 /**********************************************************************/
 /*   Notional position and velocities for TDRS satellites             */
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
-void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
+void TDRSPosVel(double PriMerAng, double dyntime, double ptn[10][3],
                 double vtn[10][3])
 {
 
@@ -2384,11 +2950,11 @@ void TDRSPosVel(double PriMerAng, double time, double ptn[10][3],
    }
 
    for (j = 0; j < 10; j++) {
-      om  = om0[j] + omdrift[j] * time;
-      LAN = LAN0[j] * D2R + LANdrift[j] * time;
+      om  = om0[j] + omdrift[j] * dyntime;
+      LAN = LAN0[j] * D2R + LANdrift[j] * dyntime;
 
-      Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, time, ptn[j], vtn[j],
-             &anom);
+      Eph2RV(3.986004E14, p[j], e[j], i[j] * D2R, LAN, om, dyntime, ptn[j],
+             vtn[j], &anom);
    }
 }
 /**********************************************************************/
@@ -2832,9 +3398,9 @@ void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
 /*                will arrive.                                        */
 /*  Two iterations gives < mm accuracy for GEO-LEO distances.         */
 /*  Will need more iterations for interplanetary-scale applications.  */
-void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
+void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
                          struct OrbitType *Target, double PastPos[3],
-                         double FuturePos[3])
+                         double FuturePos[3] __attribute__((unused)))
 {
    double Vel[3], anom;
    double RelPos[3], dt;
@@ -2845,36 +3411,38 @@ void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
       RelPos[i] = Target->PosN[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime - dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, Vel, &anom);
 
    for (i = 0; i < 3; i++)
       RelPos[i] = PastPos[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime - dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, Vel, &anom);
 
    /* .. Future */
    for (i = 0; i < 3; i++)
       RelPos[i] = Target->PosN[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, PastPos, Vel, &anom);
 
    for (i = 0; i < 3; i++)
       RelPos[i] = PastPos[i] - Observer->PosN[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, DynTime + dt - Target->tp, PastPos, Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, PastPos, Vel, &anom);
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */
 /* Osculating elements drift from initial conditions due to J2        */
 /* Use this function to initialize mean eph at sim start              */
-void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
+void OscEphToMeanEph(double mu, double J2, double Rw, JDType jd,
                      struct OrbitType *O)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g, E;
    double a, p, p2, Coef;
+
+   const double tt_j2000_sec_0 = JDToDynTime(jd);
 
    sin2i = sin(O->inc) * sin(O->inc);
 
@@ -2901,8 +3469,8 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    O->RAANdot = -Coef * cos(O->inc);
    O->ArgPdot = Coef * (2.0 - 2.5 * sin2i);
 
-   O->RAAN0 = O->RAAN - O->RAANdot * (DynTime - O->Epoch);
-   O->ArgP0 = O->ArgP - O->ArgPdot * (DynTime - O->Epoch);
+   O->RAAN0 = O->RAAN - O->RAANdot * (tt_j2000_sec_0 - O->Epoch);
+   O->ArgP0 = O->ArgP - O->ArgPdot * (tt_j2000_sec_0 - O->Epoch);
 
    /* 10.126 */
    O->J2Rw2bya = J2 * Rw * Rw / O->MeanSMA;
@@ -2910,7 +3478,7 @@ void OscEphToMeanEph(double mu, double J2, double Rw, double DynTime,
    E = atan2(sqrt(1.0 - O->ecc * O->ecc) * sin(O->anom), O->ecc + cos(O->anom));
    O->MeanAnom = E - O->ecc * sin(E);
    O->MeanAnom0 =
-       fmod(O->MeanAnom - O->MeanMotion * (DynTime - O->Epoch), TWOPI);
+       fmod(O->MeanAnom - O->MeanMotion * (tt_j2000_sec_0 - O->Epoch), TWOPI);
 }
 /* #ifdef __cplusplus
 ** }

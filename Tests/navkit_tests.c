@@ -128,7 +128,7 @@ long DSMMeasType_Tests()
 
 long NavAux_Tests()
 {
-   double GetPriMerAng(const long orbCenter, const struct DateType *date);
+   double GetPriMerAng(const long orbCenter, const DateType *date);
    long success = TRUE;
 
    const long testGpsRollover[] = {1, 1, 1, 1, 2, 2, 2};
@@ -147,18 +147,18 @@ long NavAux_Tests()
           print_result(TEST_DOUBLE(gpsTime + 19 + 32.184, testSec, 1e-5),
                        "gpsTime2J2000Sec Test", 22, 2, trialInfo, FALSE, FALSE);
 
-      struct DateType date;
+      DateType date;
       date.JulDay = TimeToJD(testSec);
       JDToDate(date.JulDay, &date.Year, &date.Month, &date.Day, &date.Hour,
                &date.Minute, &date.Second);
       const double updateAmount[] = {0,        -51.184, 15,  86400,
                                      -94513.4, 215489,  3600};
       for (int j = 0; j < 7; j++) {
-         struct DateType date_copy = date;
+         DateType date_copy = date;
          updateNavTime(&date_copy, updateAmount[j]);
          double updatedTime =
-             DateToTime(date_copy.Year, date_copy.Month, date_copy.Day,
-                        date_copy.Hour, date_copy.Minute, date_copy.Second);
+             Date2Time(date_copy.Year, date_copy.Month, date_copy.Day,
+                       date_copy.Hour, date_copy.Minute, date_copy.Second);
 
          snprintf(trialInfo, 39, "%i, %i", i, j);
          // TODO: timing should probably be in long double

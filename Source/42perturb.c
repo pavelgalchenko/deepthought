@@ -332,13 +332,13 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
 }
 
 /**********************************************************************/
-void GravGradFrcTrq(struct SCType *S)
+void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
+                    struct SCType *S)
 {
    double r, rb[3], Coef, axIoa[3];
    double rhat[3], c[3], rhatoc;
    long Ib, i;
    struct BodyType *B;
-   struct OrbitType *O;
    struct WorldType *W;
    double GravGradN[3][3], CGG[3][3], GravGradB[3][3], GGxI[3], GGxpn[3];
    double FrcN[3], FrcB[3];
@@ -349,11 +349,9 @@ void GravGradFrcTrq(struct SCType *S)
       S->gravTrqB[i] = 0;
    }
 
-   O = &Orb[S->RefOrb];
-
-   if ((O->Regime == ORB_ZERO || O->Regime == ORB_FLIGHT) &&
-       O->PolyhedronGravityEnabled) {
-      W = &World[O->World];
+   if ((orb->Regime == ORB_ZERO || orb->Regime == ORB_FLIGHT) &&
+       orb->PolyhedronGravityEnabled) {
+      W = &worlds[orb->World];
       PolyhedronGravGrad(&Geom[W->GeomTag], W->Density, S->PosN, W->CWN,
                          GravGradN);
 
@@ -390,7 +388,7 @@ void GravGradFrcTrq(struct SCType *S)
    }
    else {
       r    = CopyUnitV(S->PosN, rhat);
-      Coef = Orb[S->RefOrb].mu / (r * r * r);
+      Coef = orb->mu / (r * r * r);
 
       if (S->Nb == 1) {
          B = &S->B[0];
@@ -446,14 +444,15 @@ void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
       Frc[j] = mu * mass * (s[j] / s3 - p[j] / p3);
 }
 /**********************************************************************/
-void GravPertForce(struct SCType *S)
+void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
+                   struct SCType *S)
 {
    struct OrbitType *O;
    double ph[3], p[3], s[3], FrcN[3];
    long Iw, Im, j;
    long OrbCenter, SecCenter;
 
-   O = &Orb[S->RefOrb];
+   O = &orbs[S->RefOrb];
    if (O->Regime == ORB_CENTRAL) {
       OrbCenter = O->World;
       SecCenter = -1; /* Nonsense value */
@@ -462,16 +461,16 @@ void GravPertForce(struct SCType *S)
       OrbCenter = O->Body1;
       SecCenter = O->Body2;
    }
-   struct WorldType *WCenter = &World[OrbCenter];
+   struct WorldType *WCenter = &worlds[OrbCenter];
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+      if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
          for (j = 0; j < 3; j++)
-            ph[j] = World[Iw].PosH[j] - WCenter->PosH[j];
+            ph[j] = worlds[Iw].PosH[j] - WCenter->PosH[j];
          MxV(WCenter->CNH, ph, p);
          for (j = 0; j < 3; j++)
             s[j] = p[j] - S->PosN[j];
-         ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcN);
+         ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcN);
          for (j = 0; j < 3; j++)
             S->FrcN[j] += FrcN[j];
       }
@@ -482,10 +481,10 @@ void GravPertForce(struct SCType *S)
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
             for (j = 0; j < 3; j++) {
-               p[j] = World[Iw].eph.PosN[j];
+               p[j] = worlds[Iw].eph.PosN[j];
                s[j] = p[j] - S->PosN[j];
             }
-            ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcN);
+            ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcN);
             for (j = 0; j < 3; j++)
                S->FrcN[j] += FrcN[j];
          }
@@ -493,38 +492,37 @@ void GravPertForce(struct SCType *S)
    }
    /* Moons of SecCenter */
    if (O->Regime == ORB_THREE_BODY) {
-      for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
-         Iw = World[SecCenter].Sat[Im];
+      for (Im = 0; Im < worlds[SecCenter].Nsat; Im++) {
+         Iw = worlds[SecCenter].Sat[Im];
          for (j = 0; j < 3; j++)
-            p[j] = World[Iw].eph.PosN[j];
-         MTxV(World[SecCenter].CNH, p, ph);
+            p[j] = worlds[Iw].eph.PosN[j];
+         MTxV(worlds[SecCenter].CNH, p, ph);
          MxV(WCenter->CNH, ph, p);
          for (j = 0; j < 3; j++) {
-            p[j] += World[SecCenter].eph.PosN[j];
+            p[j] += worlds[SecCenter].eph.PosN[j];
             s[j]  = p[j] - S->PosN[j];
          }
-         ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcN);
+         ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcN);
          for (j = 0; j < 3; j++)
             S->FrcN[j] += FrcN[j];
       }
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                          WCenter->PriMerAng, S->mass, S->PosN, FrcN);
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, WCenter->CWN,
+                          S->mass, S->PosN, FrcN);
    for (j = 0; j < 3; j++)
       S->FrcN[j] += FrcN[j];
 
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
-void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
-                      double RKFdt)
+void GravPertForceRK4(struct WorldType *const worlds,
+                      struct OrbitType *const orb, struct SCType *S,
+                      double u[6], double FrcN[3], double RKFdt)
 {
-   struct OrbitType *O;
    double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
    double FrcN_harm[3] = {0}, SCPosN_harm[3] = {0};
-   double RK4TIME;
    long Iw, Im, j;
    long OrbCenter, SecCenter;
    double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3] = {0};
@@ -536,45 +534,43 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
       SCPosN_harm[j] = u[j];
    }
 
-   RK4TIME = TDB.JulDay + RKFdt / 86400.0L;
+   JDType jd_tdb_mjd = JDAddSeconds(JD_TDB_MJD, RKFdt);
    if (EphemOption != EPH_SPICE) {
-      if (RK4TIME > World[SOL].eph.Cheb[1].JD2) {
+      if (isgreater_jd(jd_tdb_mjd, worlds[SOL].eph.Cheb[1].JD2)) {
          revertCHEB = 1;
-         LoadJplEphems(ModelPath, RK4TIME);
+         LoadJplEphems(EphemOption, ModelPath, &JplHeader, jd_tdb_mjd, worlds);
       }
    }
 
-   O         = &Orb[S->RefOrb];
-   OrbCenter = O->World;
+   OrbCenter = orb->World;
    SecCenter = -1; /* Nonsense value */
 
-   struct WorldType *WCenter = &World[OrbCenter];
+   struct WorldType *WCenter = &worlds[OrbCenter];
    if (EphemOption == EPH_SPICE) {
-      Rk4SpiceEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
-                     cntrCNH);
+      Rk4SpiceEphems(jd_tdb_mjd, OrbCenter, worlds, cntrPosN, cntrPosH,
+                     &cntrPriMerAng, cntrCNH);
    }
-   else {
-      Rk4JplEphems(RK4TIME, OrbCenter, cntrPosN, cntrPosH, &cntrPriMerAng,
-                   cntrCNH);
-   }
+   else
+      Rk4JplEphems(jd_tdb_mjd, OrbCenter, worlds, cntrPosN, cntrPosH,
+                   &cntrPriMerAng, cntrCNH);
 
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+      if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
          if (EphemOption == EPH_SPICE) {
-            Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                           trgtCNH);
+            Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
+                           &trgtPriMerAng, trgtCNH);
          }
-         else {
-            Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                         trgtCNH);
-         }
+         else
+            Rk4JplEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
+                         &trgtPriMerAng, trgtCNH);
+
          for (j = 0; j < 3; j++)
             ph[j] = trgtPosH[j] - cntrPosH[j];
          MxV(cntrCNH, ph, p);
          for (j = 0; j < 3; j++)
             s[j] = p[j] - SCPosN[j];
-         ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
+         ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcNtemp);
          for (j = 0; j < 3; j++)
             FrcN[j] += FrcNtemp[j];
       }
@@ -586,18 +582,18 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
             if (EphemOption == EPH_SPICE) {
-               Rk4SpiceEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                              trgtCNH);
+               Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
+                              &trgtPriMerAng, trgtCNH);
             }
-            else {
-               Rk4JplEphems(RK4TIME, Iw, trgtPosN, trgtPosH, &trgtPriMerAng,
-                            trgtCNH);
-            }
+            else
+               Rk4JplEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
+                            &trgtPriMerAng, trgtCNH);
+
             for (j = 0; j < 3; j++) {
                p[j] = trgtPosN[j];
                s[j] = p[j] - SCPosN[j];
             }
-            ThirdBodyGravForce(p, s, World[Iw].mu, S->mass, FrcNtemp);
+            ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcNtemp);
             for (j = 0; j < 3; j++)
                FrcN[j] += FrcNtemp[j];
          }
@@ -605,21 +601,21 @@ void GravPertForceRK4(struct SCType *S, double u[6], double FrcN[3],
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, cntrPriMerAng,
+   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, WCenter->CWN,
                           S->mass, SCPosN_harm, FrcN_harm);
    for (j = 0; j < 3; j++)
       FrcN[j] += FrcN_harm[j];
 
    if (EphemOption != EPH_SPICE) {
-      if (revertCHEB) {
-         LoadJplEphems(ModelPath, TDB.JulDay);
-      }
+      if (revertCHEB)
+         LoadJplEphems(EphemOption, ModelPath, &JplHeader, JD_TDB_MJD, worlds);
    }
 
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
-void AeroFrcTrq(struct SCType *S)
+void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
+                struct OrbitType *const orb, struct SCType *S)
 {
 
    double VrelN[3], WindSpeed, VrelB[3], Area, PolyArea, cp[3];
@@ -638,11 +634,13 @@ void AeroFrcTrq(struct SCType *S)
       S->aeroTrqB[i] = 0;
    }
 
-   OrbCenter = Orb[S->RefOrb].World;
+   OrbCenter = orb->World;
 
    /* .. Find Velocity Relative to Atmosphere, expressed in N */
-   VrelN[0]  = S->VelN[0] + World[OrbCenter].w * S->PosN[1];
-   VrelN[1]  = S->VelN[1] - World[OrbCenter].w * S->PosN[0];
+   const double W_w = GetWorldW(jd, &worlds[OrbCenter]);
+
+   VrelN[0]  = S->VelN[0] + W_w * S->PosN[1];
+   VrelN[1]  = S->VelN[1] - W_w * S->PosN[0];
    VrelN[2]  = S->VelN[2];
    WindSpeed = UNITV(VrelN);
 
@@ -1087,55 +1085,39 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
    MxV(Ba->CN, FrcN, FrcA);
    MxV(Bb->CN, FrcN, FrcB);
    for (i = 0; i < 3; i++) {
-      Ba->FrcN[i] += FrcN[i];
-      Ba->FrcB[i] += FrcA[i];
-      Ba->Trq[i]  += TrqA[i];
-      Bb->FrcN[i] -= FrcN[i];
-      Bb->FrcB[i] += FrcB[i];
-      Bb->Trq[i]  -= TrqB[i];
+      Ba->SCContactFrcN[i] += FrcN[i];
+      Ba->SCContactFrcB[i] += FrcA[i];
+      Ba->SCContactTrq[i]  += TrqA[i];
+      Bb->SCContactFrcN[i] -= FrcN[i];
+      Bb->SCContactFrcB[i] += FrcB[i];
+      Bb->SCContactTrq[i]  -= TrqB[i];
    }
 }
 /**********************************************************************/
-void ContactFrcTrq(struct SCType *S)
+void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
+                     const long sc_id)
 {
-   struct OrbitType *O;
-   struct RegionType *R;
+   // TODO: split this between sc and not sc contacts. sc contact forces will
+   // need to be outside the integrator.
    struct SCType *Sc;
    struct BodyType *Bi, *Bj;
    struct GeomType *Gi, *Gj;
    double dx[3], cmb[3], cmni[3], cmnj[3];
-   long Ir, i, Ib, Isc, Jb;
+   long i, Isc, Ib, Jb;
 
-   O = &Orb[S->RefOrb];
-
-   /* .. Contact with Regions */
-   for (Ir = 0; Ir < Nrgn; Ir++) {
-      R = &Rgn[Ir];
-      /* Cheap proximity checks */
-      if (!R->Exists)
-         continue;
-      if (R->World != O->World)
-         continue;
-      for (i = 0; i < 3; i++)
-         dx[i] = S->PosN[i] - R->PosN[i];
-      if (MAGV(dx) > S->BBox.radius + Geom[R->GeomTag].BBox.radius)
-         continue;
-
-      /* Check each body vs Region */
-      for (Ib = 0; Ib < S->Nb; Ib++) {
-         BodyRgnContactFrcTrq(S, Ib, R);
-      }
-   }
+   struct SCType *S    = &scs[sc_id];
+   struct OrbitType *O = &orbs[S->RefOrb];
 
    /* .. Contact with other S/C */
    for (Isc = S->ID + 1; Isc < Nsc; Isc++) {
-      Sc = &SC[Isc];
+      // start from S->ID + 1 to avoid double counting forces
+      Sc = &scs[Isc];
       /* Cheap S/Sc proximity checks */
       if (!Sc->Exists)
          continue;
       if (Sc->ID == S->ID)
          continue;
-      if (Orb[Sc->RefOrb].World != O->World)
+      if (orbs[Sc->RefOrb].World != O->World)
          continue;
       for (i = 0; i < 3; i++)
          dx[i] = S->PosN[i] - Sc->PosN[i];
@@ -1159,10 +1141,38 @@ void ContactFrcTrq(struct SCType *S)
             for (i = 0; i < 3; i++)
                dx[i] = (S->PosN[i] + Bi->pn[i] - cmni[i]) -
                        (Sc->PosN[i] + Bj->pn[i] - cmnj[i]);
-            if (MAGV(dx) > Gi->BBox.radius + Gj->BBox.radius)
+            if (MAGV(dx) > (Gi->BBox.radius + Gj->BBox.radius))
                continue;
             BodyBodyContactFrcTrq(S, Ib, Sc, Jb);
          }
+      }
+   }
+}
+/**********************************************************************/
+void NonSCContactFrcTrq(struct OrbitType *const O, struct SCType *S)
+{
+   // TODO: split this between sc and not sc contacts. sc contact forces will
+   // need to be outside the integrator.
+   struct RegionType *R;
+   double dx[3];
+   long Ir, i, Ib;
+
+   /* .. Contact with Regions */
+   for (Ir = 0; Ir < Nrgn; Ir++) {
+      R = &Rgn[Ir];
+      /* Cheap proximity checks */
+      if (!R->Exists)
+         continue;
+      if (R->World != O->World)
+         continue;
+      for (i = 0; i < 3; i++)
+         dx[i] = S->PosN[i] - R->PosN[i];
+      if (MAGV(dx) > S->BBox.radius + Geom[R->GeomTag].BBox.radius)
+         continue;
+
+      /* Check each body vs Region */
+      for (Ib = 0; Ib < S->Nb; Ib++) {
+         BodyRgnContactFrcTrq(S, Ib, R);
       }
    }
 }
@@ -1228,21 +1238,22 @@ void EnvTrq(struct SCType *S)
 /*  as desired to each spacecraft.                                    */
 /*  Remember that torques are expressed in the Body frame, but forces */
 /*  are expressed in the N frame.                                     */
-
-void Perturbations(struct SCType *S)
+void Perturbations(JDType jd, struct WorldType *const worlds,
+                   struct OrbitType *const O, struct SCType *S)
 {
-
+   // Only need up to 2 of the worlds, and that is only in the case of a 3 body
+   // orbit
    /* .. Gravity-Gradient Torques */
    if (GGActive)
-      GravGradFrcTrq(S);
+      GravGradFrcTrq(worlds, O, S);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive && Orb[S->RefOrb].Regime != ORB_N_BODY)
-      GravPertForce(S);
+   if (GravPertActive && O->Regime != ORB_N_BODY)
+      GravPertForce(worlds, O, S);
 
    /* .. Aerodynamic Forces and Torques */
    if (AeroActive)
-      AeroFrcTrq(S);
+      AeroFrcTrq(jd, worlds, O, S);
 
    /* .. Solar Radiation Pressure Forces and Torques */
    if (SolPressActive)
@@ -1253,8 +1264,13 @@ void Perturbations(struct SCType *S)
       ResidualDipoleTrq(S);
 
    /* .. Contact Forces and Torques */
-   if (ContactActive)
-      ContactFrcTrq(S);
+   if (ContactActive) {
+      NonSCContactFrcTrq(O, S);
+      // Since Perturbations() is called inside the integrator, we don't want to
+      // actually calculate the spacecraft/spacecraft contact forces inside the
+      // integrator
+      AddSCContactFrcTrq(S);
+   }
 
    /* .. CFD Slosh Forces and Torques */
 #ifdef _ENABLE_CFD_SLOSH_

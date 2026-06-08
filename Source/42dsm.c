@@ -83,6 +83,13 @@ void ThrProcessingMinPower(struct AcType *AC)
          distDotCmd += AC->Thr[i].DistVec[j] * cmdVec[j];
       AC->Thr[i].PulseWidthCmd  = Limit(distDotCmd * AC->DT, 0.0, AC->DT);
       AC->Thr[i].ThrustLevelCmd = Limit(distDotCmd, 0.0, 1.0);
+      if (AC->Thr[i].PulseWidthCmd > 0)
+         AC->Thr[i].PulseWidthFinTimeStamp =
+             JDAddSeconds(JD_TT_MJD, AC->Thr[i].PulseWidthCmd);
+      else {
+         // flag for not set
+         AC->Thr[i].PulseWidthFinTimeStamp.system = UTC_TIME;
+      }
    }
 }
 //-------------------------- Initialize Thruster Info --------------------------
@@ -203,32 +210,39 @@ void InitDSM(struct SCType *S)
    strcpy(Cmd->dmp_actuator, "");
    Cmd->ActNumCmds = 0;
 
-   Nav->type             = IDEAL_NAV;
-   Nav->batching         = NONE_BATCH;
-   Nav->refFrame         = FRAME_N;
-   Nav->NavigationActive = FALSE;
-   Nav->DT               = S->AC.DT;
-   Nav->ccsdsSeconds     = 0;
-   Nav->ccsdsSubseconds  = 0;
-   Nav->steps            = 0;
-   Nav->Date0.JulDay     = 0;
-   Nav->Date0.Year       = 0;
-   Nav->Date0.Month      = 0;
-   Nav->Date0.Day        = 0;
-   Nav->Date0.doy        = 0;
-   Nav->Date0.Hour       = 0;
-   Nav->Date0.Minute     = 0;
-   Nav->Date0.Second     = 0;
-   Nav->Date             = Nav->Date0;
+   Nav->type              = IDEAL_NAV;
+   Nav->batching          = NONE_BATCH;
+   Nav->refFrame          = FRAME_N;
+   Nav->NavigationActive  = FALSE;
+   Nav->DT                = S->AC.DT;
+   Nav->ccsds_time.coarse = 0;
+   Nav->ccsds_time.fine   = 0;
+   Nav->steps             = 0;
+   Nav->jd_tt_mjd_0       = JD_ZERO;
+   Nav->jd_tt_mjd         = JD_ZERO;
+   Nav->Date.Year         = 0;
+   Nav->Date.Month        = 0;
+   Nav->Date.Day          = 0;
+   Nav->Date.doy          = 0;
+   Nav->Date.Hour         = 0;
+   Nav->Date.Minute       = 0;
+   Nav->Date.Second       = RATIONAL_ZERO;
 
-   for (enum States i = INIT_STATE; i <= FIN_STATE; i++)
+   FOR_STATES(i)
+   {
       Nav->stateActive[i] = FALSE;
-   for (enum SensorType i = INIT_SENSOR; i <= FIN_SENSOR; i++) {
-      Nav->sensorActive[i] = FALSE;
+   }
+   FOR_SENSORS(i)
+   {
+      Nav->sensorActive[i] = NULL;
       Nav->measTypes[i]    = NULL;
-      Nav->residuals[i]    = NULL;
+      Nav->innovations[i]  = NULL;
    }
    InitMeasList(&Nav->measList);
+   Nav->innovationsReportFirst = TRUE;
+   Nav->innovationTime         = -1.0;
+   Nav->innovationsExist       = FALSE;
+
    /* Initialize pointers to NULL */
    Nav->sqrQ       = NULL;
    Nav->M          = NULL;
@@ -461,7 +475,7 @@ long GetController(struct DSMType *const DSM, struct fy_node *ctrlNode,
 
    enum CtrlType controller;
    char ctrlType[40] = {0};
-   if (fy_node_scanf(ctrlNode, "/Type %41s", ctrlType) == 1) {
+   if (fy_node_scanf(ctrlNode, "/Type %39s", ctrlType) == 1) {
       gainNode = fy_node_by_path_def(ctrlNode, "/Gains");
       limNode  = fy_node_by_path_def(ctrlNode, "/Limits");
       if (!strcmp(ctrlType, "PID_CNTRL"))
@@ -481,18 +495,18 @@ long GetController(struct DSMType *const DSM, struct fy_node *ctrlNode,
       // hardcoding for things...
       if (controller == LYA_ATT_CNTRL && controllerState != ATT_STATE) {
          fprintf(
-             stderr, "%s\n",
+             stderr,
              "Can only use LYA_ATT_CNTRL for attitude control. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (controller == H_DUMP_CNTRL && controllerState != DMP_STATE) {
-         fprintf(stderr, "%s\n",
+         fprintf(stderr,
                  "Can only use H_DUMP_CNTRL for momentum dumping control. "
                  "Exiting...\n");
          exit(EXIT_FAILURE);
       }
       if (controller == LYA_2BODY_CNTRL && controllerState != TRN_STATE) {
-         fprintf(stderr, "%s\n",
+         fprintf(stderr,
                  "Can only use LYA_2BODY_CNTRL for translation control. "
                  "Exiting...\n");
          exit(EXIT_FAILURE);
@@ -857,7 +871,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                      vecs[k]->W[i] = GroundStation[gsNum].PosW[i];
                }
                else {
-                  vecs[k]->TrgWorld = DecodeString(target);
+                  vecs[k]->TrgWorld = GetWorldID(target);
                   for (int i = 0; i < 3; i++)
                      vecs[k]->W[i] = 0.0;
                }
@@ -1003,11 +1017,10 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       Cmd->H_DumpActive         = getYAMLBool(dumpNode);
       state                     = DMP_STATE;
       if (Cmd->H_DumpLims[1] < Cmd->H_DumpLims[0]) {
-         fprintf(
-             stderr,
-             "Maximum momentum dump limit must be more than the minimum for "
-             "Whl H Manage Command %s Exiting...\n",
-             cmdName);
+         fprintf(stderr,
+                 "Maximum momentum dump limit must be more than the minimum "
+                 "for Whl H Manage Command %s Exiting...\n",
+                 cmdName);
          exit(EXIT_FAILURE);
       }
       if (AttitudeCmdProcessed == FALSE) {
@@ -1133,12 +1146,11 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
 
       if (GetActuators(AC, DSM, actNode, state) == FALSE) {
-         fprintf(
-             stderr,
-             "For %s command %s, could not find Actuator alias %s or invalid "
-             "format. Exiting...\n",
-             subType, cmdName,
-             fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
+         fprintf(stderr,
+                 "For %s command %s, could not find Actuator alias %s or "
+                 "invalid format. Exiting...\n",
+                 subType, cmdName,
+                 fy_anchor_get_text(fy_node_get_anchor(actNode), NULL));
          exit(EXIT_FAILURE);
       }
    }
@@ -1273,42 +1285,49 @@ void ConfigureMeas(struct DSMMeasType *meas, enum SensorType sensor)
       case GPS_SENSOR:
          meas->dim             = 6;
          meas->errDim          = 6;
+         meas->noiseDim        = 6;
          meas->measJacobianFun = &gpsJacobianFun;
          meas->measFun         = &gpsFun;
          break;
       case STARTRACK_SENSOR:
          meas->dim             = 4;
          meas->errDim          = 3;
+         meas->noiseDim        = 3;
          meas->measJacobianFun = &startrackJacobianFun;
          meas->measFun         = &startrackFun;
          break;
       case FSS_SENSOR:
          meas->dim             = 2;
          meas->errDim          = 2;
+         meas->noiseDim        = 2;
          meas->measJacobianFun = &fssJacobianFun;
          meas->measFun         = &fssFun;
          break;
       case CSS_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &cssJacobianFun;
          meas->measFun         = &cssFun;
          break;
       case GYRO_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &gyroJacobianFun;
          meas->measFun         = &gyroFun;
          break;
       case MAG_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &magJacobianFun;
          meas->measFun         = &magFun;
          break;
       case ACCEL_SENSOR:
          meas->dim             = 1;
          meas->errDim          = 1;
+         meas->noiseDim        = 1;
          meas->measJacobianFun = &accelJacobianFun;
          meas->measFun         = &accelFun;
          break;
@@ -1316,10 +1335,10 @@ void ConfigureMeas(struct DSMMeasType *meas, enum SensorType sensor)
          break;
    }
    meas->type = sensor;
-   meas->R    = calloc(meas->errDim, sizeof(double));
-   meas->N    = CreateMatrix(meas->errDim, meas->errDim);
+   meas->R    = calloc(meas->noiseDim, sizeof(double));
+   meas->N    = CreateMatrix(meas->errDim, meas->noiseDim);
    // TODO: might move this out later
-   for (int i = 0; i < meas->errDim; i++)
+   for (int i = 0; i < MIN(meas->errDim, meas->noiseDim); i++)
       meas->N[i][i] = 1.0;
 }
 
@@ -1330,9 +1349,9 @@ long ConfigureNavigationSensors(struct AcType *const AC,
    struct fy_node *iterNode = NULL;
    long DataProcessed = FALSE, numSensors[FIN_SENSOR + 1] = {0};
    long i, j;
-   enum SensorType sensor;
 
-   for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
+   FOR_SENSORS(sensor)
+   {
       long nSensor;
       Nav->sensorActive[sensor] = FALSE;
       switch (sensor) {
@@ -1364,20 +1383,26 @@ long ConfigureNavigationSensors(struct AcType *const AC,
       if (Nav->measTypes[sensor] != NULL) {
          for (i = 0; i < nSensor; i++) {
             free(Nav->measTypes[sensor][i].R);
-            free(Nav->residuals[i]);
+            free(Nav->innovations[i]);
             DestroyMatrix(Nav->measTypes[sensor][i].N);
          }
+         free(Nav->sensorActive[sensor]);
          free(Nav->measTypes[sensor]);
-         free(Nav->residuals[sensor]);
+         free(Nav->innovations[sensor]);
       }
-      Nav->nSensor[sensor] = nSensor;
+      Nav->nSensor[sensor]      = nSensor;
+      Nav->sensorActive[sensor] = calloc(nSensor, sizeof(int));
+      for (i = 0; i < nSensor; i++)
+         Nav->sensorActive[sensor][i] = FALSE;
       if (nSensor > 0) {
-         Nav->measTypes[sensor] = calloc(nSensor, sizeof(struct DSMMeasType));
-         Nav->residuals[sensor] = calloc(nSensor, sizeof(double *));
+         Nav->measTypes[sensor]   = calloc(nSensor, sizeof(struct DSMMeasType));
+         Nav->innovations[sensor] = calloc(nSensor, sizeof(double *));
+         for (i = 0; i < nSensor; i++)
+            Nav->innovations[sensor][i] = NULL;
       }
       else {
-         Nav->measTypes[sensor] = NULL;
-         Nav->residuals[sensor] = NULL;
+         Nav->measTypes[sensor]   = NULL;
+         Nav->innovations[sensor] = NULL;
       }
    }
 
@@ -1392,9 +1417,9 @@ long ConfigureNavigationSensors(struct AcType *const AC,
                     "/Type %" STR(FIELDWIDTH) "s "
                                               "/Sensor Index %ld",
                     sensorType, &sensorNum);
-      sensor                   = GetSensorValue(sensorType);
-      struct DSMMeasType *meas = NULL;
-      char sensorName[1024]    = {0};
+      const enum SensorType sensor = GetSensorValue(sensorType);
+      struct DSMMeasType *meas     = NULL;
+      char sensorName[1024]        = {0};
       fy_node_scanf(iterNode, "/Description %1023s", sensorName);
       long maxSensors = 0;
       // the strcpys are here just for error reporting later
@@ -1445,7 +1470,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             isGood        = assignYAMLToDoubleArray(
                                 3, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                                 tmp) == 3;
-            for (j = 0; j < meas->errDim; j++) {
+            for (j = 0; j < meas->noiseDim; j++) {
                long const ind = (AC->ST[sensorNum].BoreAxis + j) % 3;
                meas->R[ind]   = tmp[j] * D2R / 3600.0;
             }
@@ -1455,7 +1480,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             isGood        = assignYAMLToDoubleArray(
                                 2, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                                 tmp) == 2;
-            for (j = 0; j < meas->errDim; j++) {
+            for (j = 0; j < meas->noiseDim; j++) {
                if (j < 3)
                   meas->R[j] = tmp[0];
                else
@@ -1466,7 +1491,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
             isGood = assignYAMLToDoubleArray(
                          1, fy_node_by_path_def(iterNode, "/Sensor Noise"),
                          meas->R) == 1;
-            for (j = meas->errDim - 1; j >= 0; j--)
+            for (j = meas->noiseDim - 1; j >= 0; j--)
                meas->R[j] = meas->R[0] * D2R;
          } break;
          case CSS_SENSOR:
@@ -1493,18 +1518,17 @@ long ConfigureNavigationSensors(struct AcType *const AC,
          exit(EXIT_FAILURE);
       }
 
-      meas->nextMeas        = NULL;
-      meas->data            = NULL;
-      meas->time            = 0.0;
-      meas->ccsdsSeconds    = 0;
-      meas->ccsdsSubseconds = 0;
-      meas->sensorNum       = sensorNum;
-      meas->type            = sensor;
+      meas->nextMeas   = NULL;
+      meas->data       = NULL;
+      meas->time       = 0.0;
+      meas->ccsds_time = (CCSDSTime){.coarse = 0, .fine = 0};
+      meas->sensorNum  = sensorNum;
+      meas->type       = sensor;
       numSensors[sensor]++;
-      Nav->residuals[sensor][sensorNum] = calloc(meas->errDim, sizeof(double));
+      Nav->innovations[sensor][sensorNum] =
+          calloc(meas->errDim, sizeof(double));
+      Nav->sensorActive[sensor][sensorNum] = TRUE;
    }
-   for (sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++)
-      Nav->sensorActive[sensor] = (numSensors[sensor] > 0 ? TRUE : FALSE);
 
    return (DataProcessed);
 }
@@ -1514,7 +1538,6 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                        enum matType type)
 {
    long DataProcessed = FALSE, (*inds)[] = NULL, (*sizes)[] = NULL;
-   enum States state;
    double *dataDest;
    long dataDim = 0;
    long i, maxI, startInd;
@@ -1557,7 +1580,7 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
       struct fy_node *tmpNode = fy_node_by_path_def(datNode, stateNames[k]);
       if (tmpNode != NULL) {
          // You can do neat things with null terminated strings
-         state = GetStateValue(&stateNames[k][1]);
+         enum States state = GetStateValue(&stateNames[k][1]);
          if (state != NULL_STATE) {
             if (state == ATTITUDE_STATE) {
                if (Nav->stateActive[ROTMAT_STATE] == TRUE)
@@ -1604,18 +1627,16 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
          DataProcessed = TRUE;
          break;
       case IC_DAT:
-         for (state = INIT_STATE; state <= FIN_STATE; state++) {
+         FOR_STATES(state)
+         {
             if (Nav->stateActive[state] == TRUE) {
                startInd = Nav->stateInd[state];
                switch (state) {
-                  case TIME_STATE:
-                     Nav->Date0.JulDay = dataDest[startInd];
-                     JDToDate(dataDest[startInd], &Nav->Date0.Year,
-                              &Nav->Date0.Month, &Nav->Date0.Day,
-                              &Nav->Date0.Hour, &Nav->Date0.Minute,
-                              &Nav->Date0.Second);
-                     Nav->Date = Nav->Date0;
-                     break;
+                  case TIME_STATE: {
+                     Nav->jd_tt_mjd_0 = JDFromDays(dataDest[startInd], TT_TIME,
+                                                   GMAT_MJD_EPOCH);
+                     Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
+                  } break;
                   case ROTMAT_STATE:
                   case QUAT_STATE: {
                      double tmpM[3][3] = {{0.0}};
@@ -1648,12 +1669,11 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
 
 //------------------------------- NAVIGATION CMD -------------------------------
 long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
-                      struct fy_node *navCmdNode, struct fy_node *dsmRoot)
+                      struct fy_node *navCmdNode)
 {
    char navType[FIELDWIDTH + 1] = {}, batchingType[FIELDWIDTH + 1] = {},
                              refOri[FIELDWIDTH + 1] = {}, refFrame = 0;
    long NavigationCmdProcessed = FALSE;
-   enum States state;
    long i, j;
    struct fy_node *qNode = NULL, *pNode = NULL, *x0Node = NULL,
                   *senSetNode = NULL, *statesNode = NULL;
@@ -1704,26 +1724,22 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
                              senSetNode != NULL && statesNode != NULL;
 
    if (NavigationCmdProcessed == TRUE) {
-      Nav->DT = DSM->DT;
+      Nav->DT     = DSM->DT;
+      Nav->DT_RAT = double2rational(Nav->DT);
       // round to nearest ccsds step
       Nav->subStepSteps = DTSIM * CCSDS_FINE_MAX + 0.5;
       Nav->subStepSize  = DTSIM;
       Nav->steps        = 0;
       const double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
 
-      TimeToDate(t0, &Nav->Date0.Year, &Nav->Date0.Month, &Nav->Date0.Day,
-                 &Nav->Date0.Hour, &Nav->Date0.Minute, &Nav->Date0.Second,
-                 CCSDS_STEP_SIZE);
-      DateToCCSDS(Nav->Date0, &Nav->ccsdsSeconds, &Nav->ccsdsSubseconds);
-      updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
-                     -(32.184 + LeapSec));
+      Nav->jd_tt_mjd_0 = JDFromSeconds(t0, TT_TIME, J2000_EPOCH);
+      Nav->jd_tt_mjd_0 =
+          JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, Nav->jd_tt_mjd_0);
+      Nav->jd_tt_mjd_0 = JDSubRationalSeconds(Nav->jd_tt_mjd_0, Nav->DT_RAT);
+      Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
+      Nav->ccsds_time  = jd2ccsds(Nav->jd_tt_mjd_0);
 
-      Nav->Date0.doy =
-          MD2DOY(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day);
-      Nav->Date0.JulDay =
-          DateToJD(Nav->Date0.Year, Nav->Date0.Month, Nav->Date0.Day,
-                   Nav->Date0.Hour, Nav->Date0.Minute, Nav->Date0.Second);
-      Nav->Date = Nav->Date0;
+      Nav->Date = JDToDate(Nav->jd_tt_mjd_0, TT_TIME);
 
       Nav->Init             = FALSE;
       Nav->reportConfigured = FALSE;
@@ -1825,21 +1841,23 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       else {
          Nav->refOriType = ORI_WORLD;
          Nav->refOriBody = 0;
-         long wID        = DecodeString(refOri);
+         long wID        = GetWorldID(refOri);
          Nav->refOriPtr  = &World[wID];
          Nav->refBodyPtr = NULL;
          // error check?
       }
 
-      for (i = INIT_STATE; i <= FIN_STATE; i++)
-         Nav->stateActive[i] = FALSE;
+      FOR_STATES(state)
+      {
+         Nav->stateActive[state] = FALSE;
+      }
 
       struct fy_node *iterNode = NULL;
       WHILE_FY_ITER(statesNode, iterNode)
       {
          char p[FIELDWIDTH + 1] = {0};
          fy_node_scanf(iterNode, "/ %" STR(FIELDWIDTH) "s", p);
-         state = GetStateValue(p);
+         const enum States state = GetStateValue(p);
          if (state == -1 || (state == ROTMAT_STATE && Nav->type == MEKF_NAV) ||
              (state == QUAT_STATE && Nav->type != MEKF_NAV)) {
             printf("%s is an invalid state to estimate for Navigation Command "
@@ -1858,45 +1876,52 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
          exit(EXIT_FAILURE);
       }
 
-      for (i = INIT_STATE; i <= FIN_STATE; i++) {
-         switch (i) {
+      FOR_STATES(state)
+      {
+         switch (state) {
             case TIME_STATE:
-               Nav->stateSize[i] = 1;
-               Nav->navSize[i]   = 1;
+               Nav->stateSize[state] = 1;
+               Nav->navSize[state]   = 1;
                break;
             case ROTMAT_STATE:
-               Nav->stateSize[i] = 9;
-               Nav->navSize[i]   = 3;
+               Nav->stateSize[state] = 9;
+               Nav->navSize[state]   = 3;
                break;
             case QUAT_STATE:
-               Nav->stateSize[i] = 4;
-               Nav->navSize[i]   = 3;
+               Nav->stateSize[state] = 4;
+               Nav->navSize[state]   = 3;
                break;
             case POS_STATE:
             case VEL_STATE:
             case OMEGA_STATE:
-               Nav->stateSize[i] = 3;
-               Nav->navSize[i]   = 3;
+               Nav->stateSize[state] = 3;
+               Nav->navSize[state]   = 3;
                break;
+            default:
+               fprintf(stderr,
+                       "Invalid State in GetNavigationCmd. Misconfigured "
+                       "INIT_STATE or FIN_STATE. Exiting...\n");
+               exit(EXIT_FAILURE);
          }
       }
       Nav->whlH = calloc(AC->Nwhl, sizeof(double));
 
       long stateInd = 0;
       long navInd   = 0;
-      for (i = INIT_STATE; i <= FIN_STATE; i++) {
-         if (Nav->stateActive[i] == TRUE) {
-            Nav->stateInd[i]  = stateInd;
-            Nav->navInd[i]    = navInd;
-            stateInd         += Nav->stateSize[i];
-            navInd           += Nav->navSize[i];
+      FOR_STATES(state)
+      {
+         if (Nav->stateActive[state] == TRUE) {
+            Nav->stateInd[state]  = stateInd;
+            Nav->navInd[state]    = navInd;
+            stateInd             += Nav->stateSize[state];
+            navInd               += Nav->navSize[state];
          }
          else {
             // TODO: I need to figure out how to deal with this for varied
             // frames & origins
-            Nav->stateInd[i] = -1;
-            Nav->navInd[i]   = -1;
-            switch (i) {
+            Nav->stateInd[state] = -1;
+            Nav->navInd[state]   = -1;
+            switch (state) {
                case POS_STATE:
                   for (j = 0; j < 3; j++)
                      Nav->PosR[j] =
@@ -2073,8 +2098,7 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
    }
 }
 //--------------------- INTERPRETER (SUBSEQUENT ITERATIONS) --------------------
-void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
-                           struct fy_node *dsmRoot)
+void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM)
 {
    struct DSMCmdType *Cmd = &DSM->Cmd;
    struct fy_node *cmdsNode =
@@ -2124,7 +2148,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       else if (!strcmp(typeToken, "Navigation")) {
-         if (GetNavigationCmd(AC, DSM, iterNode, dsmRoot) == FALSE) {
+         if (GetNavigationCmd(AC, DSM, iterNode) == FALSE) {
             printf("Navigation command cannot be found in Inp_DSM.yaml. "
                    "Exiting...\n");
             exit(EXIT_FAILURE);
@@ -2169,7 +2193,8 @@ void DsmSensorModule(struct AcType *const AC, struct DSMType *const DSM)
 
    InitMeasList(&measList);
 
-   for (enum SensorType sensor = INIT_SENSOR; sensor <= FIN_SENSOR; sensor++) {
+   FOR_SENSORS(sensor)
+   {
       struct DSMMeasListType *newMeasList = NULL;
       switch (sensor) {
          case GYRO_SENSOR:
@@ -2230,6 +2255,9 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
    // desired
    if (AC->Nthr > 0) {
       for (i = 0; i < AC->Nthr; i++) {
+         AC->Thr[i].PulseWidthFinTimeStamp = JD_ZERO;
+         AC->Thr[i].PulseWidthFinTimeStamp.system =
+             UTC_TIME; // flag for not set
          AC->Thr[i].PulseWidthCmd  = 0.0;
          AC->Thr[i].ThrustLevelCmd = 0.0;
       }
@@ -2337,9 +2365,8 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    // Process ActuatorCmd
-   for (i = 0; i < Cmd->ActNumCmds;
-        i++) // loops through stored Actuator commands
-   {
+   // loops through stored Actuator commands
+   for (i = 0; i < Cmd->ActNumCmds; i++) {
       if (Cmd->ActTypes[i] == WHL_TYPE) {
          AC->Whl[Cmd->ActInds[i]].Tcmd =
              AC->Whl[i].Tmax * Cmd->ActDuties[i] / 100;
@@ -2347,6 +2374,8 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
       else if (Cmd->ActTypes[i] == THR_TYPE) {
          AC->Thr[Cmd->ActInds[i]].PulseWidthCmd =
              Cmd->ActDuties[i] / 100 * AC->DT;
+         AC->Thr[Cmd->ActInds[i]].PulseWidthFinTimeStamp =
+             JDAddSeconds(JD_TT_MJD, AC->Thr[Cmd->ActInds[i]].PulseWidthCmd);
          AC->Thr[Cmd->ActInds[i]].ThrustLevelCmd = Cmd->ActDuties[i] / 100;
       }
       else if (Cmd->ActTypes[i] == MTB_TYPE) {
@@ -3371,12 +3400,11 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    KalmanFilt(AC, DSM);
-   const struct DateType *navDate = &Nav->Date;
-   DSMState->Time = DateToTime(navDate->Year, navDate->Month, navDate->Day,
-                               navDate->Hour, navDate->Minute, navDate->Second);
+   DSMState->Time = Date2Time(Nav->Date);
    AC->Time       = DSMState->Time;
    // Overwrite data in AC structure with filtered data
-   for (enum States state = INIT_STATE; state <= FIN_STATE; state++) {
+   FOR_STATES(state)
+   {
       if (Nav->stateActive[state] == TRUE) {
          // TODO: what to do for states that are not active in Nav?
          double tmp3Vec[3] = {0.0}, tmpQ[4] = {0.0};
@@ -3421,11 +3449,21 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
 
    if (Nav->stateActive[ROTMAT_STATE] == TRUE ||
        Nav->stateActive[QUAT_STATE] == TRUE) {
-      if (Nav->sensorActive[MAG_SENSOR] == TRUE)
+      if (any_int(Nav->nSensor[MAG_SENSOR], Nav->sensorActive[MAG_SENSOR])) {
+         for (int i = 0; i < 3; i++)
+            DSMState->bvn[i] = AC->bvn[i];
          MxV(DSMState->CBN, DSMState->bvn, DSMState->bvb);
-      if (Nav->sensorActive[CSS_SENSOR] == TRUE ||
-          Nav->sensorActive[FSS_SENSOR] == TRUE)
+         for (int i = 0; i < 3; i++)
+            AC->bvb[i] = DSMState->bvb[i];
+      }
+      if (any_int(Nav->nSensor[CSS_SENSOR], Nav->sensorActive[CSS_SENSOR]) ||
+          any_int(Nav->nSensor[FSS_SENSOR], Nav->sensorActive[FSS_SENSOR])) {
+         for (int i = 0; i < 3; i++)
+            DSMState->svn[i] = AC->svn[i];
          MxV(DSMState->CBN, DSMState->svn, DSMState->svb);
+         for (int i = 0; i < 3; i++)
+            AC->svb[i] = DSMState->svb[i];
+      }
    }
 }
 //------------------------------------------------------------------------------
@@ -3448,7 +3486,11 @@ void AttitudeNavigation(struct AcType *AC, struct DSMStateType *state)
    AC->qbn[3] = state->qbn[3];
 }
 //------------------------------------------------------------------------------
-void MurAKF(struct AcType *AC, struct DSMStateType *state)
+void MurAKF(struct AcType *AC __attribute__((unused)),
+            struct DSMStateType *state __attribute__((unused)))
+    __attribute__((unused));
+void MurAKF(struct AcType *AC __attribute__((unused)),
+            struct DSMStateType *state __attribute__((unused)))
 {
    /* Propagate quaternion, bias, and error covariance */
    // (Hasnaa uses mag, ST, and FSS data)
@@ -3840,7 +3882,7 @@ void DsmFSW(struct SCType *S)
    }
 
    if (DSM->CmdNum < DSM->CmdCnt && SimTime >= DSM->CmdNextTime) {
-      DsmCmdInterpreterMrk2(AC, DSM, dsmRoot);
+      DsmCmdInterpreterMrk2(AC, DSM);
       DSM->CmdNum++;
       if (DSM->CmdNum < DSM->CmdCnt)
          fy_node_scanf(DSM->CmdArray[DSM->CmdNum], "/Time %lf",

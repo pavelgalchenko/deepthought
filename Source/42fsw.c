@@ -440,6 +440,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
                    CmdTime, &Isc, &Ithr, &ThrPulseCmd) == 4) {
       NewCmdProcessed                    = TRUE;
       SC[Isc].AC.Thr[Ithr].PulseWidthCmd = ThrPulseCmd;
+      SC[Isc].AC.Thr[Ithr].PulseWidthFinTimeStamp =
+          JDAddSeconds(JD_TT_MJD, ThrPulseCmd);
    }
 
    else if (sscanf(CmdLine, "%lf SC[%ld].AC.Thr[%ld].ThrustLevelCmd = %lf",
@@ -734,6 +736,7 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
             C2Q(C, Cmd->qrl);
          else
             C2Q(C, Cmd->qrn);
+         [[fallthrough]];
       case PARM_QUATERNION:
          C2Q(S->CLN, qln);
          if (Cmd->Frame == FRAME_L) {
@@ -1203,9 +1206,11 @@ void MapCmdsToActuators(struct SCType *S)
       }
       for (It = 0; It < AC->Nthr; It++) {
          T = &S->Thr[It];
-         if (T->Mode == THR_PULSED)
+         if (T->Mode == THR_PULSED) {
+            T->PulseWidthFinTimeStamp = AC->Thr[It].PulseWidthFinTimeStamp;
             T->PulseWidthCmd =
                 Delay(T->Delay, S->LoopGain * AC->Thr[It].PulseWidthCmd);
+         }
          else
             T->ThrustLevelCmd =
                 Delay(T->Delay, S->LoopGain * AC->Thr[It].ThrustLevelCmd);
@@ -1224,8 +1229,11 @@ void MapCmdsToActuators(struct SCType *S)
          S->MTB[Im].Mcmd = AC->MTB[Im].Mcmd;
       }
       for (It = 0; It < AC->Nthr; It++) {
-         if (S->Thr[It].Mode == THR_PULSED)
+         if (S->Thr[It].Mode == THR_PULSED) {
+            S->Thr[It].PulseWidthFinTimeStamp =
+                AC->Thr[It].PulseWidthFinTimeStamp;
             S->Thr[It].PulseWidthCmd = AC->Thr[It].PulseWidthCmd;
+         }
          else
             S->Thr[It].ThrustLevelCmd = AC->Thr[It].ThrustLevelCmd;
       }
@@ -1559,7 +1567,7 @@ void IssFSW(struct SCType *S)
    long Ig, i, j;
    struct AcType *AC;
    struct AcIssCtrlType *C;
-   double Identity[3][3] = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
+   double Identity[3][3] = EYE3_MAT;
    double Zvec[3]        = {0.0, 0.0, 1.0};
    double GimCmd[3];
    double AngErr;
@@ -1808,7 +1816,8 @@ void ThrFSW(struct SCType *S)
          T->PulseWidthCmd = (0.25 * FoA + TorxA) / T->Fmax * AC->DT;
       }
 
-      T->PulseWidthCmd = Limit(T->PulseWidthCmd, 0.0, AC->DT);
+      T->PulseWidthCmd          = Limit(T->PulseWidthCmd, 0.0, AC->DT);
+      T->PulseWidthFinTimeStamp = JDAddSeconds(JD_TT_MJD, T->PulseWidthCmd);
    }
 
 #endif
@@ -1949,8 +1958,7 @@ void FlightSoftWare(struct SCType *S)
    if (S->FswTag == DSM_FSW) {
       if (S->DSM.DsmNav.NavigationActive == TRUE) {
          struct DSMNavType *Nav = &S->DSM.DsmNav;
-         updateNavCCSDS(&Nav->ccsdsSeconds, &Nav->ccsdsSubseconds,
-                        Nav->subStepSize);
+         Nav->ccsds_time = CCSDSAddSeconds(Nav->ccsds_time, Nav->subStepSize);
       }
       DsmSensorModule(&S->AC, &S->DSM);
    }

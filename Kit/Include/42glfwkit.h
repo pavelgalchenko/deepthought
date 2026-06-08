@@ -11,9 +11,10 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#ifndef __42GLFW_H__
-#define __42GLFW_H__
+#ifndef __42GLFWKIT_H__
+#define __42GLFWKIT_H__
 
+#include "defineskit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,15 +26,22 @@
 ** #endif
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 EXTERN GLFWwindow *CamWindow;
 EXTERN GLFWwindow *MapWindow;
 EXTERN GLFWwindow *OrreryWindow;
 EXTERN GLFWwindow *SphereWindow;
+
+#ifdef __cplusplus
+}
+#endif
 
 /*
 ** #ifdef __cplusplus
 ** }
 ** #endif
 */
-
-#endif /* __42GLFW_H__ */
+#endif /* __42GLFWKIT_H__ */
