@@ -19,7 +19,7 @@
 */
 
 /**********************************************************************/
-int any_int(const long n, const int *vec)
+int any_int(const long n, const int *const vec)
 {
    for (long i = 0; i < n; i++)
       if (vec[i])
@@ -27,7 +27,7 @@ int any_int(const long n, const int *vec)
    return 0;
 }
 /**********************************************************************/
-int all_int(const long n, const int *vec)
+int all_int(const long n, const int *const vec)
 {
    for (long i = 0; i < n; i++)
       if (!vec[i])
@@ -35,12 +35,7 @@ int all_int(const long n, const int *vec)
    return 1;
 }
 /**********************************************************************/
-double signum(const double x)
-{
-   return (x >= 0 ? 1.0 : -1.0);
-}
-/**********************************************************************/
-int any_isnan(const long n, const double *v)
+int any_isnan(const long n, const double *const v)
 {
    for (long i = 0; i < n; i++) {
       if (isnan(v[i]))
@@ -48,6 +43,11 @@ int any_isnan(const long n, const double *v)
    }
 
    return 0;
+}
+/**********************************************************************/
+double signum(const double x)
+{
+   return (x >= 0 ? 1.0 : -1.0);
 }
 /**********************************************************************/
 double sin_deg(double x)
@@ -2029,20 +2029,18 @@ double WrapTo2Pi(double n)
 // "other" side of a section of a function with zero derivative. E.g
 // function 12.23459071*x^3 + 54.9176*x^2 - 23.39456*x + 97.1235 and x0 = 15
 double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
-                     long breakOnZeroF,
-                     void (*fdf)(const double, double *, double *, double *),
+                     long breakOnZeroF, double (*fdf)(const double, double *),
                      double *params)
 {
    if (maxStep < 0)
       maxStep = -maxStep;
    double x = x0;
    double dx;
-   double f = 0.0, fp = 0.0;
-   long k = 0;
+   double f = 0.0;
+   long k   = 0;
    do {
-      fdf(x, params, &f, &fp);
       // TODO: what to do if fp=f' is small? break or perturb??
-      dx = f / fp;
+      dx = fdf(x, params);
       if (fabs(dx) > maxStep)
          dx = signum(dx) * maxStep;
       x -= dx;

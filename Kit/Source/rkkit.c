@@ -36,7 +36,7 @@ static void _allocrk(RungeKutta *const rk)
       free(rk->stateDot);
       free(rk->stageState);
       free(rk->candidateState);
-      free(rk->errorEsts);
+      // free(rk->errorEsts);
    }
 
    rk->ci             = calloc(rk->stages, sizeof(double));
@@ -45,10 +45,10 @@ static void _allocrk(RungeKutta *const rk)
    rk->stateDot       = calloc(rk->dim, sizeof(double));
    rk->stageState     = calloc(rk->dim, sizeof(double));
    rk->candidateState = calloc(rk->dim, sizeof(double));
-   rk->errorEsts      = calloc(rk->dim, sizeof(double));
+   // rk->errorEsts      = calloc(rk->dim, sizeof(double));
    if (rk->ci == NULL || rk->bj == NULL || rk->ee == NULL ||
        rk->stateDot == NULL || rk->stageState == NULL ||
-       rk->candidateState == NULL || rk->errorEsts == NULL) {
+       rk->candidateState == NULL) {
       fprintf(stderr, "calloc failed in _allocrk. Exiting...\n");
       exit(EXIT_FAILURE);
    }
@@ -374,14 +374,16 @@ static void _initrk89(RungeKutta *const rk, const int dimension)
    rk->ee[15] = 233.0 / 4200.0;
 }
 
+static double _estimateError(RungeKutta *const rk) __attribute__((pure));
 static double _estimateError(RungeKutta *const rk)
 {
+   double errorEsts[rk->dim];
    for (int i = 0; i < rk->dim; i++) {
-      rk->errorEsts[i] = 0.0;
+      errorEsts[i] = 0.0;
       for (int j = 0; j < rk->stages; j++)
-         rk->errorEsts[i] += rk->ee[j] * rk->ki[j][i];
+         errorEsts[i] += rk->ee[j] * rk->ki[j][i];
    }
-   return rk->errorCalc(rk->errorEsts, rk->candidateState, rk->inState,
+   return rk->errorCalc(errorEsts, rk->candidateState, rk->inState,
                         rk->relErrThreshold, rk->dim);
 }
 

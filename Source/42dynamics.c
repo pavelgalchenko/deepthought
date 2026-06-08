@@ -4054,6 +4054,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
 /**********************************************************************/
 /* Utility function for Encke's method.  Computes f(q).               */
 /* See Battin, p. 449                                                 */
+double EnckeFQ(double r[3], double delta[3]) __attribute__((pure));
 double EnckeFQ(double r[3], double delta[3])
 {
    double q, q1;
@@ -4705,11 +4706,10 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    struct FormationType *frm         = scparams->frm;
    ephemType ephem                   = scparams->ephem;
 
-   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
-   JDType jd_tt_j2000 = jd_tt_mjd;
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
-   JDType jd_tdb_j2000 = jd_tt_j2000;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   jd_tt_mjd          = JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, jd_tt_mjd);
+   JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_mjd);
+   JDType jd_tdb_j2000 =
+       JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tt_j2000);
 
    double *x_trn    = NULL;
    double *xdot_trn = NULL;

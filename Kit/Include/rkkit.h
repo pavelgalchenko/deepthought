@@ -59,7 +59,7 @@ typedef struct RungeKutta {
    double *stateDot;
    double *stageState;
    double *candidateState;
-   double *errorEsts;
+   double *errorEsts __attribute__((deprecated));
    RKParams *params;
 
    int stages;
@@ -93,23 +93,24 @@ typedef struct RungeKutta {
    double sigma;
 } RungeKutta;
 
-RungeKutta GetRungeKutta(
-    RKType type, const double tol, const double relErrThresh,
-    const int dimension, const double minStep, const double maxStep,
-    RKParams *params,
-    void (*const ode)(RKIndType t, double *x, RKParams *const params,
-                      double *xdot),
-    double (*const errorCalc)(const double *const errEst,
-                              const double *const candState,
-                              const double *cur_state,
-                              const double relErrThreshold, const long dim));
+RungeKutta
+GetRungeKutta(RKType type, const double tol, const double relErrThresh,
+              const int dimension, const double minStep, const double maxStep,
+              RKParams *params,
+              void (*const ode)(RKIndType t, double *x, RKParams *const params,
+                                double *xdot),
+              double (*const errorCalc)(const double *const errEst,
+                                        const double *const candState,
+                                        const double *cur_state,
+                                        const double relErrThreshold,
+                                        const long dim)) __attribute__((pure));
 void RungeKuttaStep(RungeKutta *const rk, const int use_last_step, RKIndType t0,
                     double dt_seconds, double *x);
 double RKErrorCalc(const double *const errEst, const double *const candState,
                    const double *cur_state, const double relErrThreshold,
-                   const long dim);
+                   const long dim) __attribute__((pure));
 
-RKType GetRKType(const char *s);
+RKType GetRKType(const char *s) __attribute__((pure));
 void RKType2String(RKType rk_type, char s[RK_STR_LEN]);
 
 /*

@@ -210,12 +210,10 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *const worlds,
                   double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
                   double trgtCNH[3][3]);
 long SimStep_New(void);
-long SimStep_Old(void);
+long SimStep_Old(void) __attribute__((deprecated));
 void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);
-void CloneWorld(struct WorldType *const dest, const struct WorldType src);
-void CopyWorld(struct WorldType *const dest, const struct WorldType src);
-ephemType GetEphemType(const char *s);
+ephemType GetEphemType(const char *s) __attribute__((pure));
 void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
                       struct WorldType *const worlds, struct RegionType *rgn,
                       struct LagrangeSystemType *lagsys);
@@ -261,7 +259,8 @@ void Cleanup(void);
 void FindInterBodyDCMs(struct SCType *S);
 void FindPathVectors(struct SCType *S);
 void FindTotalAngMom(struct SCType *S);
-double FindTotalKineticEnergy(struct OrbitType *orbs, struct SCType *S);
+double FindTotalKineticEnergy(struct OrbitType *orbs, struct SCType *S)
+    __attribute__((pure));
 void UpdateScBoundingBox(struct SCType *S);
 void FindUnshadedAreas(struct SCType *S, double DirVecN[3]);
 void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies,
@@ -301,7 +300,7 @@ long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
                   struct WorldType *const worlds);
 /* read JPLHeaderType to get data from the 1041 header */
 double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
-                           const char *grp_1040_name);
+                           const char *grp_1040_name) __attribute__((pure));
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
 long LoadJplEphems(ephemType ephem, char EphemPath[128],
@@ -321,8 +320,8 @@ long UpdateMinorBodies(const JDType jd, struct WorldType *const worlds,
 long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                          struct WorldType *const worlds,
                          const double earth_CNH[3][3]);
-long DecodeString(char *s);
-WorldID GetWorldID(const char *s);
+long DecodeString(char *s) __attribute__((pure));
+WorldID GetWorldID(const char *s) __attribute__((pure));
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);
 void InitDSM(struct SCType *S);

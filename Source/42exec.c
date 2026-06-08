@@ -84,9 +84,9 @@ static void _ttjd2others(const JDType tt_jd, JDType *const tdb_mjd_jd,
                          long *const gps_wk, double *const gps_sec)
 {
    *tdb_mjd_jd = tt_jd;
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &*tdb_mjd_jd);
-   *tt  = JDToDate(tt_jd, TT_TIME);
-   *tdb = JDToDate(*tdb_mjd_jd, TDB_TIME);
+   *tdb_mjd_jd = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, *tdb_mjd_jd);
+   *tt         = JDToDate(tt_jd, TT_TIME);
+   *tdb        = JDToDate(*tdb_mjd_jd, TDB_TIME);
 
    *tt_time  = JDToDynTime(tt_jd);
    *tai_time = *tt_time - 32.184;
@@ -108,7 +108,7 @@ long AdvanceTime(const Rational dtsim_rat, JDType *jd_tt_mjd,
    /* Advance time to next Timestep */
    switch (TimeMode) {
       case REAL_TIME:
-         usleep(1.0E6 * DTSIM);
+         usleep(1.0E6 * dtsim);
       case FAST_TIME: {
          // TODO: was thinking about changing it around so that the time is
          // stepped with JD_TDB_MJD = JD_TDB_MJD_0 + SimTime, but that means
@@ -133,8 +133,8 @@ long AdvanceTime(const Rational dtsim_rat, JDType *jd_tt_mjd,
          *simtime = ((double)itime) * dtsim;
          *utc     = RealSystemTime();
 
-         *jd_tt_mjd = Date2JD(*utc, GMAT_MJD_EPOCH);
-         JDChangeSystem(TT_TIME, jd_tt_mjd);
+         *jd_tt_mjd  = Date2JD(*utc, GMAT_MJD_EPOCH);
+         *jd_tt_mjd  = JDChangeSystem(TT_TIME, *jd_tt_mjd);
          JD_TT_MJD_0 = JDSubSeconds(*jd_tt_mjd, *simtime);
       } break;
       case NOS3_TIME: {
@@ -538,6 +538,14 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
    }
 }
 /**********************************************************************/
+static long _check_do_world_orientation(
+    const struct WorldType *const w, const long Iw,
+    const struct SCType *const scs, const long n_scs,
+    const struct RegionType *const regions, const long n_rgn,
+    const struct GroundStationType *ground_stations, const long n_gndstn,
+    const struct OrbitType *const orbs, const ephemType ephem_option,
+    const long gui_active, const long grav_pert_active, const long atmo_active)
+    __attribute__((pure));
 static long _check_do_world_orientation(
     const struct WorldType *const w, const long Iw,
     const struct SCType *const scs, const long n_scs,

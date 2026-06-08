@@ -20,6 +20,7 @@
 */
 
 /**********************************************************************/
+double ViscousFriction(struct WhlType *W) __attribute__((pure));
 double ViscousFriction(struct WhlType *W)
 {
    return (-W->ViscCoef * W->w);
@@ -66,7 +67,7 @@ void WhlModel(const int smoothing, struct WhlType *W, struct SCType *S)
       W->Trq = W->Tmax;
 
    if (W->Trq * W->H > 0) {
-      // smooth W->Trq such that it is current value at
+      // smooth W->Trq such that it is at it's current value at
       // W->H = (1 - SMOOTH_INTERVAL) * W->Hmax and zero
       // once the wheel reaches saturation
       static double oneMInterval = 1.0 - SMOOTH_INTERVAL;
@@ -112,26 +113,22 @@ void ThrModel(const int smoothing, struct ThrType *Thr, struct SCType *S,
 
    if (Thr->Mode == THR_PULSED) { /* THR_PULSED */
       // TODO: make this less ad-hoc, or at least make it user configurable
-      if (smoothing) {
-         JDType jd_thr = Thr->PulseWidthFinTimeStamp;
-         JDChangeSystemEpoch(jd_thr.system, jd_thr.epoch, &jd);
+      JDType jd_thr = Thr->PulseWidthFinTimeStamp;
+      if (isequal_jd_systemepoch(jd_thr, jd) && smoothing) {
          static double halfInterval = SMOOTH_INTERVAL / 2.0;
-         const double timeToEnd =
-             JDSubToSeconds(Thr->PulseWidthFinTimeStamp, jd);
+         const double timeToEnd     = JDSubToSeconds(jd_thr, jd);
          if (timeToEnd >= halfInterval)
             Thr->F = Thr->Fmax;
          else if (fabs(timeToEnd) < halfInterval) {
             // convert to interval (0.0, 1.0)
             const double t = timeToEnd / SMOOTH_INTERVAL + 0.5;
             Thr->F         = smootherstep(t) * Thr->Fmax;
-            Thr->F         = Thr->F;
          }
          else
             Thr->F = 0.0;
       }
-      else if (isgreater_jd(Thr->PulseWidthFinTimeStamp, jd)) {
-         double thrust_steps =
-             JDSubToSeconds(Thr->PulseWidthFinTimeStamp, jd) / DTSIM;
+      else if (isequal_jd_systemepoch(jd_thr, jd) && isgreater_jd(jd_thr, jd)) {
+         double thrust_steps = JDSubToSeconds(jd_thr, jd) / DTSIM;
          if (thrust_steps >= 1.0)
             Thr->F = Thr->Fmax;
          else
@@ -221,8 +218,7 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
                           "INTERIOR")) { /* Plume doesn't see interior polys */
                   AoN = VoV(CPB[0], P->Norm);
                   if (AoN < 0.0) { /* Plume doesn't see polys facing away */
-                     /* Find plume pressure (momentum flux) at poly centroid
-                      */
+                     /* Find plume pressure (momentum flux) at poly centroid */
                      for (i = 0; i < 3; i++)
                         PosB[i] = P->Centroid[i] - PosThrB[i];
                      MxV(CPB, PosB, PosP);
@@ -323,10 +319,6 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
    }
 
    /* Thrusters */
-   if (S->Nthr > 0 && S->Thr->Mode == THR_PULSED && smoothing) {
-      JDType jd_thr = S->Thr[0].PulseWidthFinTimeStamp;
-      JDChangeSystemEpoch(jd_thr.system, jd_thr.epoch, &jd);
-   }
    for (i = 0; i < S->Nthr; i++) {
       Thr = &S->Thr[i];
       ThrModel(smoothing, Thr, S, jd);

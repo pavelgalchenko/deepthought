@@ -3491,6 +3491,7 @@ void DrawOrrery(void)
       W = &World[O->World];
       RotateL2R(W->CNH);
       glTranslated(-W->PosH[0], -W->PosH[1], -W->PosH[2]);
+      RotateR2L(W->CNH);
    }
    else {
       RotateL2R(O->CN);

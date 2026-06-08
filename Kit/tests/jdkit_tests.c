@@ -594,8 +594,8 @@ Theory((JDType * a, EpochTT new_epoch), SUITE_NAME, epoch)
 
    // ensure epoch changes are reversible
    JDType jd = *a;
-   JDChangeEpoch(new_epoch, &jd);
-   JDChangeEpoch(a->epoch, &jd);
+   jd        = JDChangeEpoch(new_epoch, jd);
+   jd        = JDChangeEpoch(a->epoch, jd);
    jd2str(jd, jd_str);
 
    cr_expect(ieee_ulp_eq(dbl, JDToSeconds(*a), JDToSeconds(jd), ULP_THRESH),
@@ -622,9 +622,9 @@ Theory((JDType * a, TimeSystem new_system), SUITE_NAME, system)
 
    // ensure system changes are approximately reversible
    JDType jd = *a;
-   JDChangeSystem(new_system, &jd);
+   jd        = JDChangeSystem(new_system, jd);
    jd2str(jd, inter_str);
-   JDChangeSystem(a->system, &jd);
+   jd = JDChangeSystem(a->system, jd);
    jd2str(jd, jd_str);
    const double a_sec = JDToSeconds(*a);
 
@@ -662,14 +662,12 @@ Theory((JDType * a, EpochTT new_epoch, TimeSystem new_system), SUITE_NAME,
    system2str(new_system, sys_str);
 
    // check system/epoch changes work in either order
-   JDType epsys_test = *a;
-   JDChangeEpoch(new_epoch, &epsys_test);
-   JDChangeSystem(new_system, &epsys_test);
+   JDType epsys_test = JDChangeEpoch(new_epoch, *a);
+   epsys_test        = JDChangeSystem(new_system, epsys_test);
    jd2str(epsys_test, epsys_str);
 
-   JDType sysep_test = *a;
-   JDChangeSystem(new_system, &sysep_test);
-   JDChangeEpoch(new_epoch, &sysep_test);
+   JDType sysep_test = JDChangeSystem(new_system, *a);
+   sysep_test        = JDChangeEpoch(new_epoch, sysep_test);
    jd2str(sysep_test, sysep_str);
 
    cr_expect(
@@ -680,8 +678,7 @@ Theory((JDType * a, EpochTT new_epoch, TimeSystem new_system), SUITE_NAME,
        a_str, sys_str, epo_str, epsys_str, sysep_str);
 
    // test that the combined function also stays the same
-   JDType cmbnd_test = *a;
-   JDChangeSystemEpoch(new_system, new_epoch, &cmbnd_test);
+   JDType cmbnd_test = JDChangeSystemEpoch(new_system, new_epoch, *a);
    jd2str(cmbnd_test, cmbnd_str);
    cr_assert(all(epsilon_eq(dbl, JDSubToSeconds(epsys_test, cmbnd_test), 0,
                             DBL_THRESH),

@@ -251,8 +251,7 @@ void NavGetWorldCWN(const long orbCenter, const DateType *date,
             /* .. Earth rotation is a special case */
             double C_TETE_J2000[3][3], C_W_TETE[3][3];
             const double ZAxis[3] = {0.0, 0.0, 1.0};
-            JDType jd_tt_j2000    = jd;
-            JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+            JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
             double PriMerAng = TwoPi * JD2GMST(jd_tt_j2000);
             HiFiEarthPrecNute(jd_tt_j2000, CWN, C_TETE_J2000);
@@ -1375,8 +1374,7 @@ data
 void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
                         double *NavGeomagIndex)
 {
-   JDType jd_tt_mjd = jd;
-   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd_tt_mjd);
+   JDType jd_tt_mjd      = JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, jd);
    double jd_tt_mjd_days = JDToDays(jd_tt_mjd);
    if (AtmoOption == TWOSIGMA_ATMO) {
       *NavFlux10p7 =
@@ -3032,7 +3030,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             Alt = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
                JDType jd = Date2JD(Nav->Date, MJD_EPOCH);
-               JDChangeSystem(TT_TIME, &jd);
+               jd        = JDChangeSystem(TT_TIME, jd);
                getEarthAtmoParams(jd, &NavFlux10p7, &NavGeomagIndex);
                Nav->Date.doy =
                    MD2DOY(Nav->Date.Year, Nav->Date.Month, Nav->Date.Day);
@@ -3068,9 +3066,9 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    double **Sk = CreateMatrix(Nav->navDim, Nav->navDim);
    for (k = 0; k < ORDRK; k++) {
       DateType date = Nav->Date;
-      updateTime(&date, dateOffset + DTk[k]);
-      lerpAlphak = Nav->refLerpAlpha;
-      dLerpAlpha = DTk[k] / Nav->DT;
+      date          = updateTime(date, dateOffset + DTk[k]);
+      lerpAlphak    = Nav->refLerpAlpha;
+      dLerpAlpha    = DTk[k] / Nav->DT;
       double CRB[3][3], qbr[4], PosR[3], VelR[3], wbr[3], whlH[AC->Nwhl];
       if (k == 0) {
          for (i = 0; i < Nav->navDim; i++)

@@ -46,7 +46,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
 
    P = &worlds[orb->World];
 
-   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &jd);
+   jd               = JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, jd);
    DateType date_tt = JDToDate(jd, TT_TIME);
 
    /* .. Magnetic Field */

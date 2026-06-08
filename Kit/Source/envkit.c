@@ -683,7 +683,7 @@ void HiFiEarthPrecNute(JDType jd_tt_j2000, double C_TEME_TETE[3][3],
    const static double AOm = 125.0 * 3600.0 + 2.0 * 60 + 40.280;
    const static double BOm = -(1934.0 * 3600.0 + 8.0 * 60.0 + 10.539);
 
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
 
    T     = JDToDays(jd_tt_j2000) / 36525.0;
    zeta  = (2306.2181 + (0.30188 + 0.017998 * T) * T) * T * A2R;

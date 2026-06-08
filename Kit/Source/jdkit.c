@@ -53,6 +53,7 @@ TimeSystem GetTimeSystem(const char *s)
    exit(EXIT_FAILURE);
 }
 /**********************************************************************/
+static Rational _epoch_pod_seconds(const EpochTT epoch) __attribute__((const));
 static Rational _epoch_pod_seconds(const EpochTT epoch)
 {
    // either zero or 43200 seconds
@@ -72,27 +73,29 @@ static Rational _epoch_pod_seconds(const EpochTT epoch)
    return RATIONAL_ZERO;
 }
 /**********************************************************************/
-static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
-                           Rational *const part_of_day)
+static JDType _epoch_diff_tt(const EpochTT a, const EpochTT b)
+    __attribute__((const));
+static JDType _epoch_diff_tt(const EpochTT a, const EpochTT b)
 {
+   JDType jd_diff = JD_ZERO;
    // handle the easy cases here
    if (a == b) {
-      *day         = 0;
-      *part_of_day = RATIONAL_ZERO;
-      return;
+      jd_diff.whole_days = 0;
+      jd_diff.seconds    = RATIONAL_ZERO;
+      return jd_diff;
    }
 
    // determine part of day value
    const Rational a_pod = _epoch_pod_seconds(a);
    const Rational b_pod = _epoch_pod_seconds(b);
-   *part_of_day         = RATIONAL_ZERO;
-   part_of_day->whole   = a_pod.whole - b_pod.whole;
-   *part_of_day         = RationalAbs(*part_of_day);
+
+   jd_diff.seconds.whole = a_pod.whole - b_pod.whole;
+   jd_diff.seconds       = RationalAbs(jd_diff.seconds);
 
    if (b == ZERO_EPOCH)
-      *day = (long)(EpochValueTT(a));
+      jd_diff.whole_days = (long)(EpochValueTT(a));
    else if (a == ZERO_EPOCH)
-      *day = (long)(-1.0 * EpochValueTT(b));
+      jd_diff.whole_days = (long)(-1.0 * EpochValueTT(b));
 
    // do the switches (have to do all of them due to the pragma rules)
    // TODO: some testing on how the compiler does this, hope it precomputes
@@ -102,27 +105,28 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case J1900_EPOCH: {
          switch (b) {
             case J2000_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - _J2000_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J1900_EPOCH_TT - _J2000_EPOCH_TT);
                break;
             }
             case GMAT_MJD_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_J1900_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
                break;
             }
             case MJD_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - _MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J1900_EPOCH_TT - _MJD_EPOCH_TT);
                break;
             }
             case GD_CONV_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - _GD_JD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J1900_EPOCH_TT - _GD_JD_EPOCH_TT);
                break;
             }
             case TCB_TDB_CONV_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J1900_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_J1900_EPOCH_TT - _CCSDS_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J1900_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -133,27 +137,28 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case J2000_EPOCH: {
          switch (b) {
             case GMAT_MJD_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_J2000_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
                break;
             }
             case MJD_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - _MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J2000_EPOCH_TT - _MJD_EPOCH_TT);
                break;
             }
             case GD_CONV_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - _GD_JD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J2000_EPOCH_TT - _GD_JD_EPOCH_TT);
                break;
             }
             case TCB_TDB_CONV_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J2000_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - _CCSDS_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J2000_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
-               *day = (long)(_J2000_EPOCH_TT - _J1900_EPOCH_TT);
+               jd_diff.whole_days = (long)(_J2000_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -164,27 +169,27 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case MJD_EPOCH: {
          switch (b) {
             case J2000_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - _J2000_EPOCH_TT);
+               jd_diff.whole_days = (long)(_MJD_EPOCH_TT - _J2000_EPOCH_TT);
                break;
             }
             case GMAT_MJD_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_MJD_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
                break;
             }
             case GD_CONV_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - _GD_JD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_MJD_EPOCH_TT - _GD_JD_EPOCH_TT);
                break;
             }
             case TCB_TDB_CONV_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               jd_diff.whole_days = (long)(_MJD_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - _CCSDS_EPOCH_TT);
+               jd_diff.whole_days = (long)(_MJD_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
-               *day = (long)(_MJD_EPOCH_TT - _J1900_EPOCH_TT);
+               jd_diff.whole_days = (long)(_MJD_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -195,27 +200,32 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case GMAT_MJD_EPOCH: {
          switch (b) {
             case J2000_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - _J2000_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_GMAT_MJD_EPOCH_TT - _J2000_EPOCH_TT);
                break;
             }
             case MJD_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - _MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_GMAT_MJD_EPOCH_TT - _MJD_EPOCH_TT);
                break;
             }
             case GD_CONV_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - _GD_JD_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_GMAT_MJD_EPOCH_TT - _GD_JD_EPOCH_TT);
                break;
             }
             case TCB_TDB_CONV_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_GMAT_MJD_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - _CCSDS_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_GMAT_MJD_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
-               *day = (long)(_GMAT_MJD_EPOCH_TT - _J1900_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_GMAT_MJD_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -226,27 +236,28 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case GD_CONV_EPOCH: {
          switch (b) {
             case J2000_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - _J2000_EPOCH_TT);
+               jd_diff.whole_days = (long)(_GD_JD_EPOCH_TT - _J2000_EPOCH_TT);
                break;
             }
             case MJD_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - _MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_GD_JD_EPOCH_TT - _MJD_EPOCH_TT);
                break;
             }
             case GMAT_MJD_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_GD_JD_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
                break;
             }
             case TCB_TDB_CONV_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               jd_diff.whole_days = (long)(_GD_JD_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - _CCSDS_EPOCH_TT);
+               jd_diff.whole_days = (long)(_GD_JD_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
-               *day = (long)(_GD_JD_EPOCH_TT - _J1900_EPOCH_TT);
+               jd_diff.whole_days = (long)(_GD_JD_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -257,27 +268,28 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case TCB_TDB_CONV_EPOCH: {
          switch (b) {
             case J2000_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - _J2000_EPOCH_TT);
+               jd_diff.whole_days = (long)(_TCB_TDB_EPOCH_TT - _J2000_EPOCH_TT);
                break;
             }
             case MJD_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - _MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_TCB_TDB_EPOCH_TT - _MJD_EPOCH_TT);
                break;
             }
             case GMAT_MJD_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_TCB_TDB_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
                break;
             }
             case GD_CONV_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - _GD_JD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_TCB_TDB_EPOCH_TT - _GD_JD_EPOCH_TT);
                break;
             }
             case CCSDS_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - _CCSDS_EPOCH_TT);
+               jd_diff.whole_days = (long)(_TCB_TDB_EPOCH_TT - _CCSDS_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
-               *day = (long)(_TCB_TDB_EPOCH_TT - _J1900_EPOCH_TT);
+               jd_diff.whole_days = (long)(_TCB_TDB_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -288,27 +300,28 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
       case CCSDS_EPOCH: {
          switch (b) {
             case J2000_EPOCH: {
-               *day = (long)(_CCSDS_EPOCH_TT - _J2000_EPOCH_TT);
+               jd_diff.whole_days = (long)(_CCSDS_EPOCH_TT - _J2000_EPOCH_TT);
                break;
             }
             case MJD_EPOCH: {
-               *day = (long)(_CCSDS_EPOCH_TT - _MJD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_CCSDS_EPOCH_TT - _MJD_EPOCH_TT);
                break;
             }
             case GMAT_MJD_EPOCH: {
-               *day = (long)(_CCSDS_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
+               jd_diff.whole_days =
+                   (long)(_CCSDS_EPOCH_TT - _GMAT_MJD_EPOCH_TT);
                break;
             }
             case GD_CONV_EPOCH: {
-               *day = (long)(_CCSDS_EPOCH_TT - _GD_JD_EPOCH_TT);
+               jd_diff.whole_days = (long)(_CCSDS_EPOCH_TT - _GD_JD_EPOCH_TT);
                break;
             }
             case TCB_TDB_CONV_EPOCH: {
-               *day = (long)(_CCSDS_EPOCH_TT - _TCB_TDB_EPOCH_TT);
+               jd_diff.whole_days = (long)(_CCSDS_EPOCH_TT - _TCB_TDB_EPOCH_TT);
                break;
             }
             case J1900_EPOCH: {
-               *day = (long)(_CCSDS_EPOCH_TT - _J1900_EPOCH_TT);
+               jd_diff.whole_days = (long)(_CCSDS_EPOCH_TT - _J1900_EPOCH_TT);
                break;
             }
             case ZERO_EPOCH:
@@ -320,9 +333,10 @@ static void _epoch_diff_tt(const EpochTT a, const EpochTT b, long *const day,
          break;
    }
 
-   if (*day < 0) {
-      *part_of_day = RationalNegate(*part_of_day);
+   if (jd_diff.whole_days < 0) {
+      jd_diff.seconds = RationalNegate(jd_diff.seconds);
    }
+   return jd_diff;
 }
 
 #define _jd_tt2tai(x) JDSubRationalSeconds((x), RATIONAL_NGCD(32, 23, 125))
@@ -341,11 +355,12 @@ static JDType _jd_tcb2tdb(const JDType tcb_jd)
                    "Exiting...\n");
    exit(EXIT_FAILURE);
 }
-static JDType _jdtt(JDType);
+static JDType _jdtt(JDType) __attribute__((const));
+static JDType _jd_tdb2tcb(JDType tdb_jd) __attribute__((const));
 static JDType _jd_tdb2tcb(JDType tdb_jd)
 {
-   JDType jd_tt_conv = _jdtt(tdb_jd);
-   JDChangeEpoch(TCB_TDB_CONV_EPOCH, &jd_tt_conv);
+   const JDType jd_tt_conv =
+       JDChangeSystemEpoch(TT_TIME, TCB_TDB_CONV_EPOCH, tdb_jd);
    const double d_tcb_tdb = L_B * JDToDays(jd_tt_conv);
 
    tdb_jd.system = TCB_TIME;
@@ -358,6 +373,7 @@ static JDType _jd_tdb2tcb(JDType tdb_jd)
 #define M_E_OFFSET             (357.5277233)
 #define M_E_COEFF1             (35999.05034)
 #define DAY_PER_JULIAN_CENTURY (36525.0)
+static double _sec_dbl_d_tt_tdb(double secs_tt_j2000) __attribute__((const));
 static double _sec_dbl_d_tt_tdb(double secs_tt_j2000)
 {
    const double T_TT = secs_tt_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
@@ -373,15 +389,17 @@ static double _d_tt_tdb(JDType jd)
    // TODO: use spice instead if available?
    // Approximation from GMAT 2026 Mathematical Specification, p10
    // assuming input jd is tt already
-   JDChangeEpoch(J2000_EPOCH, &jd);
+   jd = JDChangeEpoch(J2000_EPOCH, jd);
    return _sec_dbl_d_tt_tdb(JDToSeconds(jd));
 }
 /**********************************************************************/
+static double _tdb2ttF(const double x, double params[1]) __attribute__((pure));
 static double _tdb2ttF(const double x, double params[1])
 {
    return x + _sec_dbl_d_tt_tdb(x) - params[0];
 }
 /**********************************************************************/
+static JDType _jd_tt2tdb(JDType tt_jd) __attribute__((const));
 static JDType _jd_tt2tdb(JDType tt_jd)
 {
    tt_jd.system = TDB_TIME;
@@ -391,8 +409,8 @@ static JDType _jd_tt2tdb(JDType tt_jd)
 static JDType _jd_tdb2tt(JDType tdb_jd)
 {
    // Use Newton Method to approximate inverse of _jd_tt2tdb;
-   JDType jd_tdb_j2000 = tdb_jd;
-   JDChangeEpoch(J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_j2000 = JDChangeEpoch(J2000_EPOCH, tdb_jd);
+
    const double secs_tdb_j2000 = JDToSeconds(jd_tdb_j2000);
    double params[1]            = {secs_tdb_j2000};
 
@@ -401,7 +419,7 @@ static JDType _jd_tdb2tt(JDType tdb_jd)
                                              secs_tdb_j2000 + 10.0 * max_width,
                                              1e-14, &_tdb2ttF, params);
    JDType jd_tt_out = JDFromSeconds(secs_tt_j2000, TT_TIME, J2000_EPOCH);
-   JDChangeEpoch(tdb_jd.epoch, &jd_tt_out);
+   jd_tt_out        = JDChangeEpoch(tdb_jd.epoch, jd_tt_out);
 
    jd_tt_out.system = TT_TIME;
    return jd_tt_out;
@@ -409,6 +427,7 @@ static JDType _jd_tdb2tt(JDType tdb_jd)
 #undef TDB_COEFF1
 #undef TDB_COEFF2
 // UTC headaches
+static JDType _jd_utc2tai(JDType utc_jd) __attribute__((const));
 static JDType _jd_utc2tai(JDType utc_jd)
 {
    const double leap_sec = GetLeapSec(utc_jd);
@@ -416,6 +435,7 @@ static JDType _jd_utc2tai(JDType utc_jd)
    utc_jd.system = TAI_TIME;
    return JDAddSeconds(utc_jd, leap_sec);
 }
+static JDType _jd_tai2utc(JDType tai_jd) __attribute__((const));
 static JDType _jd_tai2utc(JDType tai_jd)
 {
    // IF 'GetLeapSec()' GETS BACK HERE, WE'LL HAVE INFINITE RECURSION. AVOID!!
@@ -606,10 +626,9 @@ double GetLeapSec(const JDType jd)
 
    // ensure jd is UTC with MJD epoch
    // dug through GMAT source code, JD in 'tai-utc.dat' is UTC
-   JDType jd_mjd_utc = _jdutc(jd);
    // TODO: this causes infinite recursion due to the conversion to TT_TIME
    // embeded within
-   JDChangeEpoch(MJD_EPOCH, &jd_mjd_utc);
+   const JDType jd_mjd_utc = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
 
    if (leapSecTbl.n_entries == 0) {
       // initalize data
@@ -650,7 +669,7 @@ double GetLeapSec(const JDType jd)
          if (sscanf_check) {
             entry->jd_mjd_utc =
                 JDFromDays(jd_mjd_utc_days, UTC_TIME, ZERO_EPOCH);
-            JDChangeEpoch(MJD_EPOCH, &entry->jd_mjd_utc);
+            entry->jd_mjd_utc = JDChangeEpoch(MJD_EPOCH, entry->jd_mjd_utc);
 
             i++;
          }
@@ -672,61 +691,65 @@ double GetLeapSec(const JDType jd)
 
 // ensure everything in JDType is reduced, and that if whole_days < 0, then so
 // are seconds.whole and seconds.num, and vice-versa
-static void _reduce_jd_no_rational(JDType *const jd)
+static JDType _reduce_jd_no_rational(JDType jd) __attribute__((const));
+static JDType _reduce_jd_no_rational(JDType jd)
 {
    const RationalLL rat_day =
        (RationalLL){.whole = SEC_PER_DAY, .num = 0, .den = 1};
-   jd->whole_days += RationalIntMod(&jd->seconds, SEC_PER_DAY);
-   if (((jd->whole_days < 0 && ispos_rational(jd->seconds)) ||
-        (jd->whole_days > 0 && !ispos_rational(jd->seconds))) &&
-       jd->whole_days != 0 && !isequal_rational(jd->seconds, RATIONAL_ZERO)) {
-      if (jd->whole_days > 0) {
-         jd->seconds =
-             ToRational(RationalAdd(ToRationalLL(jd->seconds), rat_day));
-         jd->whole_days--;
+   jd.whole_days += RationalIntMod(&jd.seconds, SEC_PER_DAY);
+   if (((jd.whole_days < 0 && ispos_rational(jd.seconds)) ||
+        (jd.whole_days > 0 && !ispos_rational(jd.seconds))) &&
+       jd.whole_days != 0 && !isequal_rational(jd.seconds, RATIONAL_ZERO)) {
+      if (jd.whole_days > 0) {
+         jd.seconds =
+             ToRational(RationalAdd(ToRationalLL(jd.seconds), rat_day));
+         jd.whole_days--;
       }
-      else if (jd->whole_days < 0) {
-         jd->seconds =
-             ToRational(RationalSub(ToRationalLL(jd->seconds), rat_day));
-         jd->whole_days++;
+      else if (jd.whole_days < 0) {
+         jd.seconds =
+             ToRational(RationalSub(ToRationalLL(jd.seconds), rat_day));
+         jd.whole_days++;
       }
    }
+   return jd;
 }
-static void _reduce_jd(JDType *const jd)
+static JDType _reduce_jd(JDType jd) __attribute__((const));
+static JDType _reduce_jd(JDType jd)
 {
-   _reduce_jd_no_rational(jd);
-   ReduceRational(&jd->seconds);
+   jd         = _reduce_jd_no_rational(jd);
+   jd.seconds = ReduceRational(jd.seconds);
+   return jd;
 }
 
 // chages the time system of JD
-void JDChangeSystem(const TimeSystem new_system, JDType *const jd)
+JDType JDChangeSystem(const TimeSystem new_system, JDType jd)
 {
-   if (jd->system == new_system)
-      return;
+   if (jd.system == new_system)
+      return jd;
    switch (new_system) {
       case UTC_TIME:
-         *jd = _jdutc(*jd);
-         return;
+         return _jdutc(jd);
       case TAI_TIME:
-         *jd = _jdtai(*jd);
-         return;
+         return _jdtai(jd);
       case TCB_TIME:
-         *jd = _jdtcb(*jd);
-         return;
+         return _jdtcb(jd);
       case TDB_TIME:
-         *jd = _jdtdb(*jd);
-         return;
+         return _jdtdb(jd);
       case TT_TIME:
-         *jd = _jdtt(*jd);
-         return;
+         return _jdtt(jd);
+      default:
+         fprintf(stderr,
+                 "Unkown desired system %u in JDChangeSystem. Exiting...\n",
+                 new_system);
+         exit(EXIT_FAILURE);
    }
 }
 
 // changes the epoch of JD
-void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd)
+JDType JDChangeEpoch(const EpochTT new_epoch, JDType jd)
 {
-   if (new_epoch == jd->epoch)
-      return; // nothing to do
+   if (new_epoch == jd.epoch)
+      return jd; // nothing to do
 
    // TODO: What kind of care needs to be taken with non TT_TIME systems, since
    // the epochs are currently defined as TT?
@@ -742,27 +765,26 @@ void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd)
    // Upon furthur reading in Vallado, algorithms from there assume Julian Dates
    // are in UT1 unless otherwise specified
 
-   long epoch_diff_l = 0;
-   Rational epoch_diff_pod_s; // either zero or 43200 seconds
-   _epoch_diff_tt(jd->epoch, new_epoch, &epoch_diff_l, &epoch_diff_pod_s);
+   /* jd_diff.seconds will either be zero or +/- 43200 seconds */
+   JDType jd_diff = _epoch_diff_tt(jd.epoch, new_epoch);
 
    // JDType jd_tt = _jdtt(*jd);
-   *jd                = JDAddDays(*jd, epoch_diff_l);
-   jd->seconds.whole += epoch_diff_pod_s.whole;
-   jd->epoch          = new_epoch;
-   _reduce_jd_no_rational(jd);
+   jd                = JDAddDays(jd, jd_diff.whole_days);
+   jd.seconds.whole += jd_diff.seconds.whole;
+   jd.epoch          = new_epoch;
 
    // JDChangeSystem(jd->system, &jd_tt);
    // *jd = jd_tt;
+   return _reduce_jd_no_rational(jd);
 }
 
-void JDChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
-                         JDType *const jd)
+JDType JDChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
+                           JDType jd)
 {
    // This whole kit needs some testing, but this is currently how I prefer to
    // change the jd formats due to the limitations currently in JDChangeEpoch()
-   JDChangeEpoch(new_epoch, jd);
-   JDChangeSystem(new_system, jd);
+   jd = JDChangeEpoch(new_epoch, jd);
+   return JDChangeSystem(new_system, jd);
 }
 
 // returns the number of Julian days from 'jd.epoch' according to 'jd.system'
@@ -837,21 +859,19 @@ Rational JDToRationalSeconds(JDType jd)
 /*  'jd' uses                                                         */
 double JDToTime(JDType jd)
 {
-   JDChangeEpoch(J2000_EPOCH, &jd);
-   return JDToSeconds(jd);
+   return JDToSeconds(JDChangeEpoch(J2000_EPOCH, jd));
 }
 /**********************************************************************/
 /* Time is elapsed seconds since J2000 epoch in TT time               */
 double JDToDynTime(JDType jd)
 {
-   JDChangeSystem(TT_TIME, &jd);
-   return JDToTime(jd);
+   return JDToTime(JDChangeSystem(TT_TIME, jd));
 }
 
 static void _error_epoch_system(const JDType a, const JDType b,
                                 const char *call_func)
 {
-   if (a.epoch != b.epoch || a.system != b.system) {
+   if (!isequal_jd_systemepoch(a, b)) {
       fprintf(stderr,
               "In function %s, both input JDTypes must have the same system "
               "and epoch. Exiting...\n",
@@ -868,8 +888,8 @@ JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
    jd.system     = system;
    jd.whole_days = days;
    jd.seconds    = seconds;
-   _reduce_jd(&jd);
-   return jd;
+
+   return _reduce_jd(jd);
 }
 
 static JDType _jd_rational_mult_helper(Rational mul, const JDType jd)
@@ -885,8 +905,8 @@ static JDType _jd_rational_mult_helper(Rational mul, const JDType jd)
 
    jd_out.seconds = ToRational(
        RationalAdd(ToRationalLL(jd_secs), ToRationalLL(jd_out.seconds)));
-   _reduce_jd(&jd_out);
-   return jd_out;
+
+   return _reduce_jd(jd_out);
 }
 
 JDType JDAdd(JDType a, JDType b)
@@ -904,8 +924,8 @@ JDType JDAdd(JDType a, JDType b)
    jdout.whole_days += b.whole_days;
    jdout.seconds     = ToRational(
        RationalAdd(ToRationalLL(jdout.seconds), ToRationalLL(b.seconds)));
-   _reduce_jd(&jdout);
-   return jdout;
+
+   return _reduce_jd(jdout);
 }
 JDType JDAddDays(const JDType a, const double b)
 {
@@ -923,8 +943,8 @@ JDType JDAddRationalSeconds(const JDType a, const Rational b)
    jdb.system  = a.system;
    jdb.epoch   = a.epoch;
    jdb.seconds = b;
-   _reduce_jd(&jdb);
-   return JDAdd(a, jdb);
+
+   return JDAdd(a, _reduce_jd(jdb));
 }
 /**********************************************************************/
 /*  Add (mul * b) seconds to the Julian Date in jd using an integer   */
@@ -965,8 +985,8 @@ JDType JDSub(JDType a, JDType b)
    jdout.whole_days -= b.whole_days;
    jdout.seconds     = ToRational(
        RationalSub(ToRationalLL(jdout.seconds), ToRationalLL(b.seconds)));
-   _reduce_jd(&jdout);
-   return jdout;
+
+   return _reduce_jd(jdout);
 }
 
 JDType JDSubDays(const JDType a, const double b)
@@ -987,8 +1007,8 @@ JDType JDSubRationalSeconds(const JDType a, const Rational b)
    jdb.system  = a.system;
    jdb.epoch   = a.epoch;
    jdb.seconds = b;
-   _reduce_jd(&jdb);
-   return JDSub(a, jdb);
+
+   return JDSub(a, _reduce_jd(jdb));
 }
 
 JDType JDSubRationalMult(const JDType a, Rational mul, JDType b)
@@ -1019,7 +1039,7 @@ JDType JDaxpy(const double a, JDType x, JDType y)
    x.epoch  = y.epoch;
    x.system = y.system;
 
-   _reduce_jd(&x);
+   x                = _reduce_jd(x);
    x.whole_days    *= sign;
    x.seconds.whole *= sign;
    x.seconds.num   *= sign;
@@ -1056,18 +1076,22 @@ JDType JDAbs(JDType jd)
 
 int ispos_jd(JDType jd)
 {
-   JDChangeEpoch(ZERO_EPOCH, &jd);
-   _reduce_jd(&jd);
+   jd = _reduce_jd(JDChangeEpoch(ZERO_EPOCH, jd));
    return (jd.whole_days > 0 ||
            (jd.whole_days == 0 && ispos_rational(jd.seconds)));
 }
 
 JDType JDNegate(JDType jd)
 {
-   _reduce_jd(&jd);
+   jd            = _reduce_jd(jd);
    jd.whole_days = -jd.whole_days;
    jd.seconds    = RationalNegate(jd.seconds);
    return jd;
+}
+
+int isequal_jd_systemepoch(const JDType a, const JDType b)
+{
+   return (a.system == b.system) && (a.epoch == b.epoch);
 }
 
 int isequal_jd(const JDType a, const JDType b)

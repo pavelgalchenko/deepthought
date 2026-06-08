@@ -681,7 +681,8 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
                   for (int i = 0; i < 2; i++) {
                      hdr_data->jd_range[i] =
                          JDFromDays(jd_days[i], cheb_system, ZERO_EPOCH);
-                     JDChangeEpoch(cheb_epoch, &hdr_data->jd_range[i]);
+                     hdr_data->jd_range[i] =
+                         JDChangeEpoch(cheb_epoch, hdr_data->jd_range[i]);
                   }
                   break;
                }
@@ -802,9 +803,8 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
    const TimeSystem cheb_system = TDB_TIME;
    const TimeSystem cheb_epoch  = GMAT_MJD_EPOCH;
 
-   JDType jd_cheb = jd, jd_cheb_z = jd;
-   JDChangeSystemEpoch(cheb_system, cheb_epoch, &jd_cheb);
-   JDChangeSystemEpoch(cheb_system, ZERO_EPOCH, &jd_cheb_z);
+   JDType jd_cheb   = JDChangeSystemEpoch(cheb_system, cheb_epoch, jd);
+   JDType jd_cheb_z = JDChangeSystemEpoch(cheb_system, ZERO_EPOCH, jd);
 
    if (jpl_hdr->n_data == 0)
       InitJplHeader(ephem, EphemPath, jpl_hdr);
@@ -849,7 +849,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
          for (int j = 0; j < 2; j++) {
             jd_ranges[i][j] =
                 JDFromDays(jd_rng_days[j], cheb_system, ZERO_EPOCH);
-            JDChangeEpoch(cheb_epoch, &jd_ranges[i][j]);
+            jd_ranges[i][j] = JDChangeEpoch(cheb_epoch, jd_ranges[i][j]);
          }
          fclose(infile);
       }
@@ -901,7 +901,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
                FoundBlock = 1;
 
                for (i = 0; i < 2; i++)
-                  JDChangeEpoch(GMAT_MJD_EPOCH, &jd_block[i]);
+                  jd_block[i] = JDChangeEpoch(GMAT_MJD_EPOCH, jd_block[i]);
             }
          }
       }
@@ -971,18 +971,17 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    double C_W_TETE[3][3] = {{0.0}}, C_TEME_TETE[3][3] = {{0.0}},
           C_TETE_J2000[3][3] = {{0.0}};
 
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_j2000);
-   JDType jd_tdb_mjd = jd_tdb_j2000;
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd_tdb_j2000);
+   JDType jd_tdb_mjd =
+       JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd_tdb_j2000);
+   jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
 
    const double j2000_sec = JDToDynTime(jd_tt_j2000);
    const double GMST      = JD2GMST(jd_tt_j2000);
 
    struct WorldType *const sol = &worlds[SOL];
-   JDType jd_sol_cheb          = jd_tdb_mjd;
-   JDChangeSystemEpoch(sol->eph.Cheb->JD1.system, sol->eph.Cheb->JD1.epoch,
-                       &jd_sol_cheb);
+   JDType jd_sol_cheb          = JDChangeSystemEpoch(
+       sol->eph.Cheb->JD1.system, sol->eph.Cheb->JD1.epoch, jd_tdb_mjd);
 
    /* .. Initialize Planetary Pos/Vel */
    for (Iw = SOL; Iw <= LUNA; Iw++) {
@@ -995,8 +994,8 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
 
       // Cheb jd will be TDB_TIME and GMAT_MJD_EPOCH, lets just make sure,
       // in case we do something different later
-      JDType jd_cheb = jd_sol_cheb;
-      JDChangeSystemEpoch(Cheb->JD1.system, Cheb->JD1.epoch, &jd_cheb);
+      JDType jd_cheb =
+          JDChangeSystemEpoch(Cheb->JD1.system, Cheb->JD1.epoch, jd_sol_cheb);
       while (isgreater_jd(jd_cheb, Cheb->JD2))
          Cheb++;
       /* Apply Chebyshev polynomials */
@@ -1087,8 +1086,8 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    struct OrbitType *Eph;
    struct WorldType *W;
 
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   jd_tt_j2000  = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
+   jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tdb_j2000);
    const double j2000sec = JDToDynTime(jd_tt_j2000);
    const double GMST     = JD2GMST(jd_tt_j2000);
 
@@ -1159,8 +1158,7 @@ long UpdateMinorBodies(const JDType jd, struct WorldType *const minor_worlds,
    long j, Imb;
 
    const double j2000_sec = JDToDynTime(jd);
-   JDType jd_tdb_j2000    = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_j2000    = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
    /* .. Locate Asteroids and Comets */
    for (Imb = 0; Imb < Nmb; Imb++) {
@@ -1195,9 +1193,9 @@ long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    long i;
    WorldID Ip, Iw;
 
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   JDType jd_tdb_mjd = jd_tdb_j2000;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_mjd);
+   jd_tdb_j2000      = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tdb_j2000);
+   JDType jd_tdb_mjd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tdb_j2000);
+
    const double j2000_sec = JDToDynTime(jd_tt_j2000);
 
    /* .. Other planets' moons */
@@ -1235,9 +1233,9 @@ long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
                   JDType jd_tt_j2000, const JPLHeaderType *const jpl_hdr,
                   struct WorldType *const worlds)
 {
-   JDType jd_tdb_mjd = jd_tdb_j2000;
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd_tdb_mjd);
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDType jd_tdb_mjd =
+       JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd_tdb_j2000);
+   jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
 
    long main_ephem_check = 0;
    switch (ephem) {
@@ -1252,9 +1250,9 @@ long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
       case EPH_GMAT424: {
          // variable time step integrator can go back and forth
          // -> check both directions
-         JDType jd_cheb = jd_tdb_mjd;
-         JDChangeSystemEpoch(worlds[SOL].eph.Cheb[0].JD1.system,
-                             worlds[SOL].eph.Cheb[0].JD1.epoch, &jd_cheb);
+         JDType jd_cheb =
+             JDChangeSystemEpoch(worlds[SOL].eph.Cheb[0].JD1.system,
+                                 worlds[SOL].eph.Cheb[0].JD1.epoch, jd_tdb_mjd);
          if (isgreaterequal_jd(jd_cheb, worlds[SOL].eph.Cheb[1].JD2) ||
              isless_jd(jd_cheb, worlds[SOL].eph.Cheb[0].JD1))
             LoadJplEphems(ephem, ModelPath, &JplHeader, jd_cheb, worlds);
@@ -1294,8 +1292,8 @@ void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
    struct LagrangeSystemType *LS;
    long i, j, Ir;
 
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tdb_j2000);
+   jd_tt_j2000  = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
    UpdateEphems(ephem, jd_tdb_j2000, jd_tt_j2000, &JplHeader, worlds);
 
    const double jd2000_tt_sec = JDToDynTime(jd_tt_j2000);
@@ -1445,10 +1443,8 @@ void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
                  struct LagrangeSystemType *lagsys,
                  struct OrbitType *const orbs)
 {
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   JDType jd_tt_j2000 = jd;
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   JDType jd_tt_j2000  = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    WorldEphemerides(jd_tdb_j2000, jd_tt_j2000, ephem, worlds, rgn, lagsys);
    for (int i = 0; i < Nsc; i++)
       SCEphemerides(jd_tdb_j2000, &scs[i], worlds, &orbs[scs[i].RefOrb]);

@@ -66,29 +66,34 @@ typedef struct RationalLL {
 #define RATIONAL_ZERO RATIONAL_RAW(0, 0, 1)
 
 Rational InitRational(const Rat_Long whole, const Rat_Long num,
-                      const Rat_Long den);
-Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod);
-Rat_LongLong RationalIntMod_ll(RationalLL *const rat, const Rat_LongLong mod);
-void ReduceRational(Rational *const);
-Rational IntegerRationalMult(const Rat_LongLong mul, RationalLL rat);
+                      const Rat_Long den) __attribute__((const));
+Rat_Long RationalIntMod(Rational *const rat, const Rat_Long mod)
+    __attribute__((pure));
+Rat_LongLong RationalIntMod_ll(RationalLL *const rat, const Rat_LongLong mod)
+    __attribute__((pure));
+Rational ReduceRational(Rational rat) __attribute__((const));
+Rational IntegerRationalMult(const Rat_LongLong mul, RationalLL rat)
+    __attribute__((const));
 Rational IntegerRationalMultMod(const Rat_LongLong mul, RationalLL rat,
-                                Rat_Long mod, Rat_Long *const carry);
-RationalLL RationalMult(RationalLL a, RationalLL b);
-RationalLL RationalDivide(RationalLL a, RationalLL b);
-RationalLL RationalAdd(RationalLL a, RationalLL b);
-RationalLL RationalSub(RationalLL a, RationalLL b);
-Rational double2rational(const double val);
-double rational2double(const Rational rat);
-Rat_Long RationalRoundUp(const Rational rat);
-Rat_Long RationalRoundDown(const Rational rat);
-Rational RationalAbs(Rational rat);
-Rational RationalNegate(Rational rat);
-int ispos_rational(Rational a);
-int isequal_rational(const Rational a, const Rational b);
-int isless_rational(const Rational a, const Rational b);
-int isgreater_rational(const Rational a, const Rational b);
+                                Rat_Long mod, Rat_Long *const carry)
+    __attribute__((pure));
+RationalLL RationalMult(RationalLL a, RationalLL b) __attribute__((const));
+RationalLL RationalDivide(RationalLL a, RationalLL b) __attribute__((const));
+RationalLL RationalAdd(RationalLL a, RationalLL b) __attribute__((const));
+RationalLL RationalSub(RationalLL a, RationalLL b) __attribute__((const));
+Rational double2rational(const double val) __attribute__((const));
+double rational2double(const Rational rat) __attribute__((const));
+Rat_Long RationalRoundUp(const Rational rat) __attribute__((const));
+Rat_Long RationalRoundDown(const Rational rat) __attribute__((const));
+Rational RationalAbs(Rational rat) __attribute__((const));
+Rational RationalNegate(Rational rat) __attribute__((const));
+int ispos_rational(Rational a) __attribute__((const));
+int isequal_rational(const Rational a, const Rational b) __attribute__((const));
+int isless_rational(const Rational a, const Rational b) __attribute__((const));
+int isgreater_rational(const Rational a, const Rational b)
+    __attribute__((const));
 void rat2str(Rational rat, char str[RATIONAL_STR_LEN]);
-Rational ToRational(const RationalLL rat_ll);
-RationalLL ToRationalLL(const Rational rat);
+Rational ToRational(const RationalLL rat_ll) __attribute__((const));
+RationalLL ToRationalLL(const Rational rat) __attribute__((const));
 
 #endif /* __RATIONALKIT_H__ */

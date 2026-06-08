@@ -352,17 +352,26 @@ struct AtmoType {
 
 /* Contains data for calculating the prime meridian angle             */
 /*    primarily for cspice                                            */
-struct AngDataType {
+typedef struct AngDataType {
    /*~ Internal Variables ~*/
-   char ang_char; // 'P', 'R', or 'D'
+   char ang_char; // 'P', 'R', 'D', or '\0'
    // for 'P',       t = day
    // for 'R' & 'D', t = julian century
+   // '\0' is Invalid flag
    double ang[3]; // deg, deg/t, deg/t^2
    int n_ang;
    int n_E;
    double *nut_prec_ang;    // deg
    double (*nut_prec_E)[2]; // {deg, deg/(jd century)}
-};
+} AngDataType;
+
+// equivalent to (AngDataType){0}
+#define ANGDATATYPE_INVALID                                                    \
+   (AngDataType)                                                               \
+   {                                                                           \
+      .ang_char = '\0', .ang = {0.0, 0.0, 0.0}, .n_ang = 0, .n_E = 0,          \
+      .nut_prec_ang = NULL, .nut_prec_E = NULL                                 \
+   }
 
 struct WorldType {
    /*~ Parameters ~*/
@@ -420,7 +429,7 @@ struct WorldType {
    /*~ Internal Variables ~*/
    /* contains information defining prime meridian angle information */
    /*    order: Prime Meridian, Right Ascension, Declination         */
-   struct AngDataType ang_data[3];
+   AngDataType ang_data[3];
 
    double PosH[3];   /* Position in H frame [~=~] */
    double VelH[3];   /* Velocity in H frame */
@@ -443,21 +452,26 @@ void CloneWorld(struct WorldType *const destWorld,
                 const struct WorldType srcWorld);
 void CopyWorld(struct WorldType *const destWorld,
                const struct WorldType srcWorld);
-double GetWorldW(JDType jd, const struct WorldType *const world);
+double GetWorldW(JDType jd, const struct WorldType *const world)
+    __attribute__((pure));
 void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3]);
-double GetWorldAng(JDType jd, const struct AngDataType *const ang_data);
-double GetWorldCWN(JDType jd, const struct AngDataType *const ang_data,
+AngDataType CopyAngData(const AngDataType src) __attribute__((const));
+double GetWorldAng(JDType jd, const AngDataType *const ang_data)
+    __attribute__((pure));
+double GetWorldCWN(JDType jd, const AngDataType *const ang_data,
                    double CWN[3][3]);
-void GetWorldCNJ(JDType jd, const struct AngDataType *const ang_data,
+void GetWorldCNJ(JDType jd, const AngDataType *const ang_data,
                  double CNJ[3][3]);
 
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 void WorldID2String(WorldID w_id, char w_str[32]);
-double MeanAnomToTrueAnom(double MeanAnom, double ecc);
-double TrueAnomaly(double mu, double p, double e, double t);
-double atanh(double x);
-double TimeSincePeriapsis(double mu, double p, double e, double th);
+double MeanAnomToTrueAnom(double MeanAnom, double ecc) __attribute__((const));
+double TrueAnomaly(double mu, double p, double e, double t)
+    __attribute__((const));
+double atanh(double x) __attribute__((const));
+double TimeSincePeriapsis(double mu, double p, double e, double th)
+    __attribute__((const));
 void RV02RV(double mu, double xr0[3], double xv0[3], double anom, double xr[3],
             double xv[3]);
 void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
@@ -472,16 +486,17 @@ void MeanEph2RV(struct OrbitType *O, double DynTime);
 long LoadTleFromFile(const char *Path, const char *TleFileName,
                      const char *TleLabel, double DynTime, JDType jd,
                      struct OrbitType *O);
-double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3]);
+double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3])
+    __attribute__((pure));
 void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *omg, double *tp,
                        double *anom, double *p, double *alpha, double *rmin,
                        double *MeanMotion, double *Period);
 void LunaPosition(const JDType jd, double r[3]);
-int LoadLunaInertialFrameData(struct AngDataType *const ang_data);
+int LoadLunaInertialFrameData(AngDataType *const ang_data);
 void LunaInertialFrame(const JDType jd, double CNJ[3][3]);
-int LoadLunaPriMerAngData(struct AngDataType *const ang_data);
-double LunaPriMerAng(JDType JulDay);
+int LoadLunaPriMerAngData(AngDataType *const ang_data);
+double LunaPriMerAng(JDType JulDay) __attribute__((const, deprecated));
 void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
 void FindCEN(double r[3], double CEN[3][3]);
 void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]);
@@ -504,7 +519,8 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
 void TDRSPosVel(double PriMerAng, double TIME, double ptn[10][3],
                 double vtn[10][3]);
 void TETE2J2000(double JD, double CTJ[3][3]);
-double RadiusOfInfluence(double mu1, double mu2, double r);
+double RadiusOfInfluence(double mu1, double mu2, double r)
+    __attribute__((const));
 void RelRV2EHRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
                 double Rrel[3], double Vrel[3], double re[3], double ve[3]);
 void EHRV2RelRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
@@ -513,7 +529,8 @@ void EHRV2EHModes(double r[3], double v[3], double n, double nt, double *A,
                   double *Bc, double *Bs, double *C, double *Dc, double *Ds);
 void EHModes2EHRV(double A, double Bc, double Bs, double C, double Dc,
                   double Ds, double n, double nt, double r[3], double v[3]);
-double LambertTOF(double mu, double amin, double lambda, double x);
+double LambertTOF(double mu, double amin, double lambda, double x)
+    __attribute__((const));
 void LambertProblem(double t0, double mu, double xr1[3], double xr2[3],
                     double TOF, double TransferType, double *SLR, double *e,
                     double *inc, double *RAAN, double *ArgP, double *tp);

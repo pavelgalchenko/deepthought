@@ -205,7 +205,7 @@ Theory((Rational * a), SUITE_NAME, reduce)
 
    // reduction invariance
    memcpy(&c, a, sizeof(Rational));
-   ReduceRational(&c);
+   c = ReduceRational(c);
    rat2str(c, c_str);
    cr_expect(isequal_rational(*a, c), "reducing %s to %s is not equal", a_str,
              c_str);
@@ -226,8 +226,8 @@ Theory((Rational * a, Rational *b), SUITE_NAME, add)
    Rational a_red, b_red;
    memcpy(&a_red, a, sizeof(Rational));
    memcpy(&b_red, b, sizeof(Rational));
-   ReduceRational(&a_red);
-   ReduceRational(&b_red);
+   a_red = ReduceRational(a_red);
+   b_red = ReduceRational(b_red);
 
    cr_assert(isequal_rational(*a, a_red) && isequal_rational(*b, b_red),
              "reducing %s and %s is not equal and did not preserve them", a_str,
@@ -283,8 +283,8 @@ Theory((Rational * a, Rational *b), SUITE_NAME, mult)
    Rational a_red, b_red;
    memcpy(&a_red, a, sizeof(Rational));
    memcpy(&b_red, b, sizeof(Rational));
-   ReduceRational(&a_red);
-   ReduceRational(&b_red);
+   a_red = ReduceRational(a_red);
+   b_red = ReduceRational(b_red);
 
    cr_assert(isequal_rational(*a, a_red) && isequal_rational(*b, b_red),
              "reducing %s and %s is not equal did not preserve them", a_str,

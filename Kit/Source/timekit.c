@@ -114,8 +114,8 @@ JDType ccsds2jd(const CCSDSTime ccsds_time)
 /**********************************************************************/
 CCSDSTime jd2ccsds(JDType jd)
 {
-   CCSDSTime out = {0};
-   JDChangeSystemEpoch(TAI_TIME, CCSDS_EPOCH, &jd);
+   CCSDSTime out    = {0};
+   jd               = JDChangeSystemEpoch(TAI_TIME, CCSDS_EPOCH, jd);
    out.coarse       = jd.whole_days * SEC_PER_DAY + jd.seconds.whole;
    jd.seconds.whole = 0;
    out.fine         = rational2double(jd.seconds) * CCSDS_FINE_MAX + 0.5;
@@ -168,11 +168,11 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
    const long b = (275.0 * M / 9.0);
    const long a = (7.0 * (Y + c)) / 4.0;
 
-   const long day = 367 * Y - a + b + D;
-   JDType jd      = JDFromDays(day, date.system, GD_CONV_EPOCH);
-   JDChangeEpoch(epoch, &jd);
-   s.whole += 60 * (m + 60 * H);
-   jd       = JDAddRationalSeconds(jd, s);
+   const long day  = 367 * Y - a + b + D;
+   JDType jd       = JDFromDays(day, date.system, GD_CONV_EPOCH);
+   jd              = JDChangeEpoch(epoch, jd);
+   s.whole        += 60 * (m + 60 * H);
+   jd              = JDAddRationalSeconds(jd, s);
 
    return jd;
 }
@@ -196,16 +196,16 @@ double Date2Time(const DateType date)
 double Date2TimeSystem(const DateType date, const TimeSystem system)
 {
    JDType jd = Date2JD(date, J2000_EPOCH);
-   JDChangeSystem(system, &jd);
+   jd        = JDChangeSystem(system, jd);
    return JDToTime(jd);
 }
 /**********************************************************************/
 /*  Change Time System of input DateType                              */
 /*  For now, converts to Julian Date type and converts back to  date  */
-void DateChangeSystem(const TimeSystem new_system, DateType *const date)
+DateType DateChangeSystem(const TimeSystem new_system, DateType date)
 {
-   JDType jd = Date2JD(*date, J2000_EPOCH);
-   *date     = JDToDate(jd, new_system);
+   JDType jd = Date2JD(date, J2000_EPOCH);
+   return JDToDate(jd, new_system);
 }
 /**********************************************************************/
 /*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1582) */
@@ -264,8 +264,7 @@ JDType DateToJD(const DateType date, const TimeSystem system,
    s.whole    += 60 * (date.Minute + 60 * date.Hour);
    jd          = JDAddRationalSeconds(jd, s);
 
-   JDChangeSystemEpoch(system, epoch, &jd);
-   return (jd);
+   return JDChangeSystemEpoch(system, epoch, jd);
 }
 /**********************************************************************/
 /* Convert UTC Date to CCSDS Seconds and Subseconds with epoch        */
@@ -274,8 +273,7 @@ CCSDSTime date2ccsds(const DateType date)
 {
    CCSDSTime ccsds_time;
 
-   DateType date_tai = date;
-   DateChangeSystem(TAI_TIME, &date_tai);
+   DateType date_tai     = DateChangeSystem(TAI_TIME, date);
    ccsds_time.coarse     = Date2Time(date_tai);
    date_tai.Second.whole = 0;
    ccsds_time.fine = (rational2double(date_tai.Second) * CCSDS_FINE_MAX) + 0.5;
@@ -302,8 +300,7 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
    DateType date = {0};
    date.system   = system;
 
-   JDType jd_sys_1900 = jd;
-   JDChangeSystemEpoch(system, J1900_EPOCH, &jd_sys_1900);
+   JDType jd_sys_1900        = JDChangeSystemEpoch(system, J1900_EPOCH, jd);
    const double jd_1900_days = JDToDays(jd_sys_1900);
 
    T_1900    = jd_1900_days / 365.25;
@@ -401,7 +398,7 @@ double JD2GMST(JDType jd)
 {
    double T, JD0, GMST0, GMST;
 
-   JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, &jd);
+   jd              = JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, jd);
    const double JD = JDToDays(jd);
 
    JD0 = floor(JD) + 0.5;
@@ -555,89 +552,90 @@ double RealRunTime(double *RealTimeDT)
    return (RunTime);
 }
 
-void updateTime(DateType *Time, const double dSeconds)
+DateType updateTime(DateType Time, const double dSeconds)
 {
-   JDType jd = Date2JD(*Time, GMAT_MJD_EPOCH);
+   JDType jd = Date2JD(Time, GMAT_MJD_EPOCH);
 
    if (fabs(dSeconds) > 0.0) {
       Rational rat_dseconds = double2rational(dSeconds);
 
-      Time->Second = ToRational(
-          RationalAdd(ToRationalLL(Time->Second), ToRationalLL(rat_dseconds)));
-      long quotient = RationalIntMod(&Time->Second, 60);
-      if (Time->Second.whole < 0) {
-         Time->Second.whole += 60;
+      Time.Second = ToRational(
+          RationalAdd(ToRationalLL(Time.Second), ToRationalLL(rat_dseconds)));
+      long quotient = RationalIntMod(&Time.Second, 60);
+      if (Time.Second.whole < 0) {
+         Time.Second.whole += 60;
          quotient--;
       }
 
       if (quotient != 0.0) {
-         Time->Minute += quotient;
-         quotient      = Time->Minute / 60;
-         Time->Minute %= 60;
-         if (Time->Minute < 0) {
-            Time->Minute += 60;
+         Time.Minute += quotient;
+         quotient     = Time.Minute / 60;
+         Time.Minute %= 60;
+         if (Time.Minute < 0) {
+            Time.Minute += 60;
             quotient--;
          }
 
          if (quotient != 0) {
-            Time->Hour += quotient;
-            quotient    = Time->Hour / 24;
-            Time->Hour %= 24;
-            if (Time->Hour < 0) {
-               Time->Hour += 24;
+            Time.Hour += quotient;
+            quotient   = Time.Hour / 24;
+            Time.Hour %= 24;
+            if (Time.Hour < 0) {
+               Time.Hour += 24;
                quotient--;
             }
 
             if (quotient != 0) {
                jd                = JDAddDays(jd, quotient);
-               DateType date_day = JDToDate(jd, Time->system);
-               Time->Year        = date_day.Year;
-               Time->Month       = date_day.Month;
-               Time->Day         = date_day.Day;
-               Time->doy         = MD2DOY(Time->Year, Time->Month, Time->Day);
+               DateType date_day = JDToDate(jd, Time.system);
+               Time.Year         = date_day.Year;
+               Time.Month        = date_day.Month;
+               Time.Day          = date_day.Day;
+               Time.doy          = MD2DOY(Time.Year, Time.Month, Time.Day);
                /* ALTERNATIVELY
                long l_month[12] = {31, 28, 31, 30, 31, 30,
                                    31, 31, 30, 31, 30, 31};
 
-               Time->doy = Time->Day + quotient;
-               int mnth  = Time->Month;
+               Time.doy = Time.Day + quotient;
+               int mnth  = Time.Month;
 
                int l_yr = 365;
 
-               if (_is_leap_yr(Time->Year)) {
+               if (_is_leap_yr(Time.Year)) {
                   l_yr       = 366;
                   l_month[1] = 29;
                }
 
                for (int i = 0; i < mnth - 1; i++) {
-                  Time->doy += l_month[i];
+                  Time.doy += l_month[i];
                }
 
-               long yr = Time->Year;
-               while (Time->doy < 0) {
-                  Time->Year--;
+               long yr = Time.Year;
+               while (Time.doy < 0) {
+                  Time.Year--;
                   l_yr = 365;
-                  if (_is_leap_yr(Time->Year)) {
+                  if (_is_leap_yr(Time.Year)) {
                      l_yr = 366;
                   }
-                  Time->doy += l_yr;
+                  Time.doy += l_yr;
                }
-               while (Time->doy > l_yr) {
-                  Time->Year++;
+               while (Time.doy > l_yr) {
+                  Time.Year++;
                   l_yr = 365;
-                  if (_is_leap_yr(Time->Year)) {
+                  if (_is_leap_yr(Time.Year)) {
                      l_yr = 366;
                   }
-                  Time->doy -= l_yr;
+                  Time.doy -= l_yr;
                }
-               DOY2MD(Time->Year, Time->doy, &Time->Month, &Time->Day);
+               DOY2MD(Time.Year, Time.doy, &Time.Month, &Time.Day);
                */
             }
          }
       }
-      // Time->JulDay = Date2JD(Time->Year, Time->Month, Time->Day, Time->Hour,
-      //                         Time->Minute, Time->Second);
+      // Time.JulDay = Date2JD(Time.Year, Time.Month, Time.Day, Time.Hour,
+      //                         Time.Minute, Time.Second);
    }
+   return Time;
 }
 
 /* #ifdef __cplusplus

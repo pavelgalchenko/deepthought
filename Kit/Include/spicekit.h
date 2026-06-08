@@ -59,7 +59,7 @@ typedef const char ConstSpiceChar;
 ** #endif
 */
 
-SpiceInt WorldID2NAIFID(WorldID w_id);
+SpiceInt WorldID2NAIFID(WorldID w_id) __attribute__((const));
 void WorldID2IAUFrameWorld(WorldID w_id,
                            SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 void WorldID2IAUFrame(WorldID w_id,
@@ -70,8 +70,8 @@ int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3]);
 int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, double CWJ[3][3]);
 int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
                    double C[3][3]);
-int SpiceGetAngData(const WorldID world, ConstSpiceChar *item,
-                    struct AngDataType *const ang_data);
+AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
+    __attribute__((pure));
 int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
                         double earth_CNH[3][3]);
 void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,

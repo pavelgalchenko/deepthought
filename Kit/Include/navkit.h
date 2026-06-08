@@ -44,18 +44,18 @@ struct DSMMeasType *swap_DSMMeas(struct DSMMeasType *ptr1,
                                  struct DSMMeasType *ptr2);
 void bubbleSort(struct DSMMeasListType *list);
 struct DSMMeasType *CreateMeas(struct DSMNavType *const Nav,
-                               enum SensorType const type,
-                               long const sensorNum);
+                               enum SensorType const type, long const sensorNum)
+    __attribute__((malloc));
 int comparator_DSMMeas(const void *v1, const void *v2);
 
 void updateNavCCSDS(CCSDSTime ccsds_time, const double dSeconds);
 double gpsTime2J2000Sec(const long gpsRollover, const long gpsWeek,
-                        const double gpsSec);
+                        const double gpsSec) __attribute__((const));
 
 /*--------------------------------------------------------------------*/
 /*                    Navigation Filter Functions                     */
 /*--------------------------------------------------------------------*/
-double **GetStateLinTForm(struct DSMNavType *const Nav);
+double **GetStateLinTForm(struct DSMNavType *const Nav) __attribute__((malloc));
 void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
                          double **P);
 void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
@@ -72,35 +72,41 @@ void KalmanFilt(struct AcType *const AC, struct DSMType *const DSM);
 /*                       Measurement Jacobians                        */
 /*--------------------------------------------------------------------*/
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const long sensorNum, double **N);
+                         const long sensorNum, double **N)
+    __attribute__((malloc));
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum, double **N);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum, double **N);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum, double **N);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **startrackJacobianFun(struct AcType *const AC,
                               struct DSMType *const DSM, const long sensorNum,
-                              double **N);
+                              double **N) __attribute__((malloc));
 double **gpsJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const long sensorNum, double **N);
+                        const long sensorNum, double **N)
+    __attribute__((malloc));
 double **accelJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                          const long sensorNum, double **N);
+                          const long sensorNum, double **N)
+    __attribute__((malloc));
 
 double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
-                const long sensorNum);
+                const long sensorNum) __attribute__((malloc));
 double *magFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
-                     const long sensorNum);
+                     const long sensorNum) __attribute__((malloc));
 double *gpsFun(struct AcType *const AC, struct DSMType *const DSM,
-               const long sensorNum);
+               const long sensorNum) __attribute__((malloc));
 double *accelFun(struct AcType *const AC, struct DSMType *const DSM,
-                 const long sensorNum);
+                 const long sensorNum) __attribute__((malloc));
 
 /*--------------------------------------------------------------------*/
 /*                          RIEKF functions                           */
@@ -143,8 +149,9 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav);
 /******************************************************************************/
 void subMatAdd(double **A, double **B, long const iN, long const iM,
                long const n, long const M);
-double mahalonobis2(double **A, double *x, double *y, long const n);
-double chi2InvLookup(double const pGate, long const dim);
+double mahalonobis2(double **A, double *x, double *y, long const n)
+    __attribute__((pure));
+double chi2InvLookup(double const pGate, long const dim) __attribute__((const));
 
 /*
 ** #ifdef __cplusplus

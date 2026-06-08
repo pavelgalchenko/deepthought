@@ -86,8 +86,10 @@ void ThrProcessingMinPower(struct AcType *AC)
       if (AC->Thr[i].PulseWidthCmd > 0)
          AC->Thr[i].PulseWidthFinTimeStamp =
              JDAddSeconds(JD_TT_MJD, AC->Thr[i].PulseWidthCmd);
-      else
-         AC->Thr[i].PulseWidthFinTimeStamp.system = TAI_TIME;
+      else {
+         // flag for not set
+         AC->Thr[i].PulseWidthFinTimeStamp.system = UTC_TIME;
+      }
    }
 }
 //-------------------------- Initialize Thruster Info --------------------------
@@ -1731,7 +1733,8 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       const double t0   = gpsTime2J2000Sec(GpsRollover, GpsWeek, GpsSecond);
 
       Nav->jd_tt_mjd_0 = JDFromSeconds(t0, TT_TIME, J2000_EPOCH);
-      JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &Nav->jd_tt_mjd_0);
+      Nav->jd_tt_mjd_0 =
+          JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, Nav->jd_tt_mjd_0);
       Nav->jd_tt_mjd_0 = JDSubRationalSeconds(Nav->jd_tt_mjd_0, Nav->DT_RAT);
       Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
       Nav->ccsds_time  = jd2ccsds(Nav->jd_tt_mjd_0);
@@ -2253,10 +2256,11 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
    // desired
    if (AC->Nthr > 0) {
       for (i = 0; i < AC->Nthr; i++) {
-         AC->Thr[i].PulseWidthFinTimeStamp        = JD_ZERO;
-         AC->Thr[i].PulseWidthFinTimeStamp.system = TAI_TIME;
-         AC->Thr[i].PulseWidthCmd                 = 0.0;
-         AC->Thr[i].ThrustLevelCmd                = 0.0;
+         AC->Thr[i].PulseWidthFinTimeStamp = JD_ZERO;
+         AC->Thr[i].PulseWidthFinTimeStamp.system =
+             UTC_TIME; // flag for not set
+         AC->Thr[i].PulseWidthCmd  = 0.0;
+         AC->Thr[i].ThrustLevelCmd = 0.0;
       }
    }
 

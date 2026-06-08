@@ -37,9 +37,9 @@ void CopyWorld(struct WorldType *const destWorld,
 /**********************************************************************/
 double GetWorldW(JDType jd, const struct WorldType *const world)
 {
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
-   const double day_tdb_j2000              = JDToDays(jd);
-   const struct AngDataType *const pm_data = &world->ang_data[0];
+   jd                         = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const double day_tdb_j2000 = JDToDays(jd);
+   const AngDataType *const pm_data = &world->ang_data[0];
 
    return (pm_data->ang[1] + 2.0 * pm_data->ang[2] * day_tdb_j2000) * D2R /
           SEC_PER_DAY;
@@ -52,23 +52,24 @@ void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3])
    wln[2] = GetWorldW(jd, world);
 }
 /**********************************************************************/
-void CopyAngData(struct AngDataType *const dest,
-                 const struct AngDataType *const src)
+AngDataType CopyAngData(const AngDataType src)
 {
-   dest->ang_char = src->ang_char;
-   CopyVG(dest->ang, src->ang, 3);
-   dest->n_ang = src->n_ang;
-   dest->n_E   = src->n_E;
+   AngDataType dest = ANGDATATYPE_INVALID;
+   dest.ang_char    = src.ang_char;
+   CopyVG(dest.ang, src.ang, 3);
+   dest.n_ang = src.n_ang;
+   dest.n_E   = src.n_E;
 
-   dest->nut_prec_E   = calloc(dest->n_E, sizeof(double[2]));
-   dest->nut_prec_ang = calloc(dest->n_ang, sizeof(double));
-   CopyVG(dest->nut_prec_E[0], src->nut_prec_E[0], 2 * dest->n_E);
-   CopyVG(dest->nut_prec_ang, src->nut_prec_ang, dest->n_ang);
+   dest.nut_prec_E   = calloc(dest.n_E, sizeof(double[2]));
+   dest.nut_prec_ang = calloc(dest.n_ang, sizeof(double));
+   CopyVG(dest.nut_prec_E[0], src.nut_prec_E[0], 2 * dest.n_E);
+   CopyVG(dest.nut_prec_ang, src.nut_prec_ang, dest.n_ang);
+   return dest;
 }
 /**********************************************************************/
-double GetWorldAng(JDType jd, const struct AngDataType *const ang_data)
+double GetWorldAng(JDType jd, const AngDataType *const ang_data)
 {
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
    const double day_tdb_j2000 = JDToDays(jd);
    const double cen_tdb_j2000 = day_tdb_j2000 / JDDAY_PER_CENTURY;
@@ -110,12 +111,12 @@ double GetWorldAng(JDType jd, const struct AngDataType *const ang_data)
    return angle * D2R;
 }
 /**********************************************************************/
-double GetWorldCWN(JDType jd, const struct AngDataType *const ang_data,
+double GetWorldCWN(JDType jd, const AngDataType *const ang_data,
                    double CWN[3][3])
 {
    const double z_axis[3] = {0.0, 0.0, 1.0};
 
-   const struct AngDataType *pm_data = NULL;
+   const AngDataType *pm_data = NULL;
    for (int i = 0; i < 3; i++) {
       if (ang_data[i].ang_char == 'P') {
          pm_data = &ang_data[i];
@@ -129,7 +130,7 @@ double GetWorldCWN(JDType jd, const struct AngDataType *const ang_data,
               ang_data[0].ang_char, ang_data[1].ang_char, ang_data[2].ang_char);
       exit(EXIT_FAILURE);
    }
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
    const double pri_mer_ang = GetWorldAng(jd, pm_data);
    SimpRot(z_axis, pri_mer_ang, CWN);
@@ -137,11 +138,10 @@ double GetWorldCWN(JDType jd, const struct AngDataType *const ang_data,
    return pri_mer_ang;
 }
 /**********************************************************************/
-void GetWorldCNJ(JDType jd, const struct AngDataType *const ang_data,
-                 double CNJ[3][3])
+void GetWorldCNJ(JDType jd, const AngDataType *const ang_data, double CNJ[3][3])
 {
-   const struct AngDataType *ra_data  = NULL;
-   const struct AngDataType *dec_data = NULL;
+   const AngDataType *ra_data  = NULL;
+   const AngDataType *dec_data = NULL;
    for (int i = 0; i < 3; i++) {
       if (ang_data[i].ang_char == 'R') {
          ra_data = &ang_data[i];
@@ -160,10 +160,9 @@ void GetWorldCNJ(JDType jd, const struct AngDataType *const ang_data,
       exit(EXIT_FAILURE);
    }
 
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   const double ra  = GetWorldAng(jd_tdb_j2000, ra_data);
-   const double dec = GetWorldAng(jd_tdb_j2000, dec_data);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const double ra     = GetWorldAng(jd_tdb_j2000, ra_data);
+   const double dec    = GetWorldAng(jd_tdb_j2000, dec_data);
 
    A2C(312, (ra + HALFPI), (HALFPI - dec), 0.0, CNJ);
 }
@@ -497,31 +496,39 @@ void WorldID2String(WorldID w_id, char w_str[32])
    }
 }
 /**********************************************************************/
-void eccFDF(const double E, double params[2], double *f, double *fp)
+static double _eccFDF(const double E, double params[2]) __attribute__((pure));
+static double _eccFDF(const double E, double params[2])
 {
-   *f  = E - params[0] * sin(E) - params[1];
-   *fp = 1.0 - params[0] * cos(E);
+   const double f  = E - params[0] * sin(E) - params[1];
+   const double fp = 1.0 - params[0] * cos(E);
+   return f / fp;
 }
 /**********************************************************************/
 double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 {
 #define EPS (1.0E-12)
    double params[2] = {ecc, MeanAnom};
-   double E = NewtonRaphson(MeanAnom, EPS, 100, 0.1, 0, &eccFDF, params);
+   double E = NewtonRaphson(MeanAnom, EPS, 100, 0.1, 0, &_eccFDF, params);
    return (2.0 * atan(sqrt((1.0 + ecc) / (1.0 - ecc)) * tan(0.5 * E)));
 #undef EPS
 }
 /**********************************************************************/
-void parabolFDF(const double x, double params[1], double *f, double *fp)
+static double _parabolFDF(const double x, double params[1])
+    __attribute__((pure));
+static double _parabolFDF(const double x, double params[1])
 {
-   *f  = x * (x * x + 3.0) - 2.0 * params[0];
-   *fp = 3.0 * x * x + 3.0;
+   const double f  = x * (x * x + 3.0) - 2.0 * params[0];
+   const double fp = 3.0 * x * x + 3.0;
+   return f / fp;
 }
 /**********************************************************************/
-void hyperbolFDF(const double H, double params[2], double *f, double *fp)
+static double _hyperbolFDF(const double H, double params[2])
+    __attribute__((pure));
+static double _hyperbolFDF(const double H, double params[2])
 {
-   *f  = params[0] * sinh(H) - H - params[1];
-   *fp = params[0] * cosh(H) - 1.0;
+   const double f  = params[0] * sinh(H) - H - params[1];
+   const double fp = params[0] * cosh(H) - 1.0;
+   return f / fp;
 }
 /**********************************************************************/
 double TrueAnomaly(double mu, double p, double e, double t)
@@ -532,7 +539,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
 
    if (e == 1.0) {
       double params[1] = {3.0 * sqrt(mu / p3) * t};
-      double x = NewtonRaphson(0, EPS, 100, 1.0, 0, &parabolFDF, params);
+      double x = NewtonRaphson(0, EPS, 100, 1.0, 0, &_parabolFDF, params);
       Anom     = 2.0 * atan(x);
    }
    else if (e > 1.0) {
@@ -542,7 +549,7 @@ double TrueAnomaly(double mu, double p, double e, double t)
       double params[2] = {e, N};
       /* H0 = arcsinh(N/e); */
       double H = NewtonRaphson(log(Ne + sqrt(Ne * Ne + 1.0)), EPS, 100, 0.1, 0,
-                               &hyperbolFDF, params);
+                               &_hyperbolFDF, params);
       Anom     = 2.0 * atan(sqrt((e + 1.0) / (e - 1.0)) * tanh(0.5 * H));
    }
    else {
@@ -556,17 +563,19 @@ double TrueAnomaly(double mu, double p, double e, double t)
 #undef EPS
 }
 /**********************************************************************/
-void hyperradFDF(const double r, double params[7], double *f, double *fp)
+static double _hyperradFDF(const double r, double params[7])
 {
-   double rold = params[5];
-   double fold = params[6];
-   double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
-   *f = r * sqX -
-        params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
-        params[4];
-   params[5] = r;
-   params[6] = *f;
-   *fp       = (*f - fold) / (r - rold);
+   const double rold = params[5];
+   const double fold = params[6];
+   const double sqX  = sqrt((2.0 - params[0] / r) / r - params[1]);
+   const double f =
+       r * sqX -
+       params[2] * log(((sqX + 1.0 / params[2]) * r + params[2]) / params[3]) -
+       params[4];
+   params[5]       = r;
+   params[6]       = f;
+   const double fp = (f - fold) / (r - rold);
+   return f / fp;
 }
 /**********************************************************************/
 /* As a hyperbolic trajectory approaches its asymptotes, it's more    */
@@ -592,7 +601,7 @@ void FindHyperbolicRadius(double mu, double p, double e, double dt, double *R)
    f   = r * sqX - sqma * log(((sqX + 1.0 / sqma) * r + sqma) / Den) - T;
 
    double params[7] = {p, alpha, sqma, Den, T, r, f};
-   *R = NewtonRaphson(1.1 * p, 1.0E-3, 500, 1.0E9, 0, &hyperradFDF, params);
+   *R = NewtonRaphson(1.1 * p, 1.0E-3, 500, 1.0E9, 0, &_hyperradFDF, params);
 }
 /**********************************************************************/
 double atanh(double x)
@@ -882,8 +891,8 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
    date.doy      = (long)FloatDOY;
    FracDay       = FloatDOY - ((double)date.doy);
    DOY2MD(date.Year, date.doy, &date.Month, &date.Day);
-   jdEpoch = Date2JD(date, J2000_EPOCH);
-   JDChangeSystem(TT_TIME, &jd);
+   jdEpoch  = Date2JD(date, J2000_EPOCH);
+   jd       = JDChangeSystem(TT_TIME, jd);
    jdEpoch  = JDAddDays(jdEpoch, FracDay);
    O->Epoch = JDToDynTime(jdEpoch);
    j2000_tt = JDToDynTime(jd);
@@ -1227,7 +1236,7 @@ void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
 
    double AU2m = 149597870000.0;
 
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd);
+   jd = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
    /* .. Time since J2000, in Julian centuries */
    T = JDToDays(jd) / 36525.0;
@@ -1279,8 +1288,7 @@ void LunaPosition(const JDType jd, double r[3])
    // dug a bit through Astronomical Algorithmsm,
    // JD is Terrestrial Dynamical Time here...
 
-   JDType jd_tt_j2000 = jd;
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
    double T, Lp, D, M, Mp, F, A1, A2, A3, E, E2, SumL, SumR, SumB, arg;
    double Lat, Lng, Delta;
@@ -1637,7 +1645,7 @@ int LoadLunarNutPrecAngle(int *n_E, double (**nut_prec_E)[2])
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-int LoadLunaInertialFrameData(struct AngDataType *const ang_data)
+int LoadLunaInertialFrameData(AngDataType *const ang_data)
 {
    const double ra_dat[3]  = {269.9949, 0.0031, 0.0};
    const double dec_dat[3] = {66.5392, 0.0130, 0.0};
@@ -1649,8 +1657,8 @@ int LoadLunaInertialFrameData(struct AngDataType *const ang_data)
                                     -0.0029, 0.0009, 0.0,     0.0,    0.0008,
                                     0.0,     0.0,    -0.0009};
 
-   struct AngDataType *const ra_data  = &ang_data[1];
-   struct AngDataType *const dec_data = &ang_data[2];
+   AngDataType *const ra_data  = &ang_data[1];
+   AngDataType *const dec_data = &ang_data[2];
 
    ra_data->ang_char  = 'R';
    dec_data->ang_char = 'D';
@@ -1675,8 +1683,7 @@ int LoadLunaInertialFrameData(struct AngDataType *const ang_data)
 /*  Finds Lunar Inertial Frame wrt J2000                              */
 void LunaInertialFrame(const JDType jd, double CNJ[3][3])
 {
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
    double D, T;
    double E1, E2, E3, E4, E6, E7, E10, E13;
@@ -1753,15 +1760,15 @@ void LunaInertialFrame(const JDType jd, double CNJ[3][3])
 /**********************************************************************/
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
-int LoadLunaPriMerAngData(struct AngDataType *const ang_data)
+int LoadLunaPriMerAngData(AngDataType *const ang_data)
 {
    const double pm_dat[3]        = {38.3213, 13.17635815, -1.4E-12};
    const double nut_prec_dat[13] = {3.5610,  0.1208,  -0.0642, 0.0158, 0.0252,
                                     -0.0066, -0.0047, -0.0046, 0.0028, 0.0052,
                                     0.0040,  0.0019,  -0.0044};
 
-   struct AngDataType *const pm_data = &ang_data[0];
-   pm_data->ang_char                 = 'P';
+   AngDataType *const pm_data = &ang_data[0];
+   pm_data->ang_char          = 'P';
    CopyVG(pm_data->ang, pm_dat, 3);
    LoadLunarNutPrecAngle(&pm_data->n_E, &pm_data->nut_prec_E);
    pm_data->n_ang        = 13;
@@ -1780,8 +1787,7 @@ double LunaPriMerAng(const JDType jd)
    double SinE8, SinE9, SinE10, SinE11, SinE12, SinE13;
    double PriMerAng;
 
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
    D = JDToDays(jd_tdb_j2000);
 
@@ -1904,29 +1910,35 @@ void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3])
    wln[2] = WorldW;
 }
 /**********************************************************************/
-void lagpointFDF(const double x, double params[3], double *f, double *fp)
+static double _lagpointFDF(const double x, double params[3])
+    __attribute__((pure));
+static double _lagpointFDF(const double x, double params[3])
 {
    double rho = params[0], rho1 = params[1];
    double xp  = x - params[0];
    double xp1 = xp + 1.0;
    long lp    = params[2];
    switch (lp) {
-      case 1:
-         *f = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
-         *fp =
+      case 1: {
+         const double f = x + rho1 / (xp * xp) - rho / (xp1 * xp1);
+         const double fp =
              1.0 - 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-         break;
-      case 2:
-         *f = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
-         *fp =
+         return f / fp;
+      }
+      case 2: {
+         const double f = x + rho1 / (xp * xp) + rho / (xp1 * xp1);
+         const double fp =
              1.0 - 2.0 * rho1 / (xp * xp * xp) - 2.0 * rho / (xp1 * xp1 * xp1);
-         break;
-      case 3:
-         *f = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
-         *fp =
+         return f / fp;
+      }
+      case 3: {
+         const double f = x - rho1 / (xp * xp) - rho / (xp1 * xp1);
+         const double fp =
              1.0 + 2.0 * rho1 / (xp * xp * xp) + 2.0 * rho / (xp1 * xp1 * xp1);
-         break;
+         return f / fp;
+      }
    }
+   return 0;
 }
 /**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
@@ -1956,7 +1968,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
 
    /* .. L1 */
    LP     = &LS->LP[0];
-   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &_lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -2001,7 +2013,7 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    /* .. L2 */
    LP          = &LS->LP[1];
    lpParams[2] = 2;
-   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
+   x      = NewtonRaphson(-1.0, eps, 200, 100.0, 0, &_lagpointFDF, lpParams);
    LP->X0 = x * D;
    LP->Y0 = 0.0;
 
@@ -2046,9 +2058,9 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
    /* .. L3 */
    LP          = &LS->LP[2];
    lpParams[2] = 3;
-   x           = NewtonRaphson(1.0, eps, 200, 100.0, 0, &lagpointFDF, lpParams);
-   LP->X0      = x * D;
-   LP->Y0      = 0.0;
+   x      = NewtonRaphson(1.0, eps, 200, 100.0, 0, &_lagpointFDF, lpParams);
+   LP->X0 = x * D;
+   LP->Y0 = 0.0;
 
    X0rD  = LP->X0 - rho * D;
    X0r1D = LP->X0 + rho1 * D;

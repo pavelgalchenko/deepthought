@@ -42,11 +42,13 @@ void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
 void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
                     double DipoleOffset[3], double p[3], double PriMerAng,
                     double MagVecN[3]);
-double KpToAp(double Kp);
-double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap);
-double SimpleMSIS(double pbn[3], long Col);
-double NRLMSISE00(DateType date, double PosW[3], double F10p7, double AP);
-double MarsAtmosphereModel(double r[3]);
+double KpToAp(double Kp) __attribute__((const));
+double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap)
+    __attribute__((pure));
+double SimpleMSIS(double pbn[3], long Col) __attribute__((pure));
+double NRLMSISE00(DateType date, double PosW[3], double F10p7, double AP)
+    __attribute__((pure));
+double MarsAtmosphereModel(double r[3]) __attribute__((pure));
 void SimpleEarthPrecNute(double JD, double C_TEME_TETE[3][3],
                          double C_TETE_J2000[3][3]);
 void HiFiEarthPrecNute(JDType JD, double C_TEME_TETE[3][3],

@@ -142,6 +142,7 @@ int SpiceCheckAndGetDbl(const WorldID Iw, ConstSpiceChar *item, SpiceInt start,
 /**********************************************************************/
 /* Compute the fixed frame orientaion of 'world' relative to the      */
 /* Ecliptic J2000 frame as CWJ                                        */
+static SpiceBoolean _frame_found(WorldID world) __attribute__((const));
 static SpiceBoolean _frame_found(WorldID world)
 {
    static int frm_found[NMAJORWORLD] = {-1};
@@ -164,8 +165,8 @@ int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3])
       SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
       WorldID2IAUFrame(world, frm_name);
 
-      JDType jd_tdb_j2000 = jd_epoch;
-      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+      JDType jd_tdb_j2000 =
+          JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
       pxform_c("ECLIPJ2000", frm_name, JDToSeconds(jd_tdb_j2000), CWH);
    }
 
@@ -181,8 +182,8 @@ int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, double CWJ[3][3])
       SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
       WorldID2IAUFrame(world, frm_name);
 
-      JDType jd_tdb_j2000 = jd_epoch;
-      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+      JDType jd_tdb_j2000 =
+          JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
       pxform_c("J2000", frm_name, JDToSeconds(jd_tdb_j2000), CWJ);
    }
 
@@ -200,17 +201,17 @@ int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
                 to_name[SPICE_FRM_STR_BUFF_SIZE]   = {'\0'};
       WorldID2IAUFrame(from, from_name);
       WorldID2IAUFrame(to, to_name);
-      JDType jd_tdb_j2000 = jd_epoch;
-      JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+      JDType jd_tdb_j2000 =
+          JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
       pxform_c(from_name, to_name, JDToSeconds(jd_tdb_j2000), C);
    }
 
    return found;
 }
 /**********************************************************************/
-int SpiceGetAngData(const WorldID world, ConstSpiceChar *item,
-                    struct AngDataType *const ang_data)
+AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
 {
+   AngDataType ang_data = ANGDATATYPE_INVALID;
    if (strncmp("PM", item, 2) && strncmp("RA", item, 2) &&
        strncmp("DEC", item, 3)) {
       fprintf(stderr,
@@ -219,10 +220,10 @@ int SpiceGetAngData(const WorldID world, ConstSpiceChar *item,
               item);
       exit(EXIT_FAILURE);
    }
-   ang_data->ang_char = item[0];
+   ang_data.ang_char = item[0];
 
    SpiceChar chk_str[64] = {'\0'};
-   if (ang_data->ang_char == 'P')
+   if (ang_data.ang_char == 'P')
       strcpy(chk_str, item);
    else
       sprintf(chk_str, "POLE_%s", item);
@@ -236,14 +237,14 @@ int SpiceGetAngData(const WorldID world, ConstSpiceChar *item,
    sscanf(lead_char, "%d", &lead_num);
 
    SpiceInt dim = 3;
-   if (SpiceCheckAndGetDbl(world, chk_str, 0, &dim, ang_data->ang) ==
+   if (SpiceCheckAndGetDbl(world, chk_str, 0, &dim, ang_data.ang) ==
        SPICEFALSE) {
-      ang_data->n_E          = 0;
-      ang_data->n_ang        = 0;
-      ang_data->nut_prec_E   = NULL;
-      ang_data->nut_prec_ang = NULL;
+      ang_data.n_E          = 0;
+      ang_data.n_ang        = 0;
+      ang_data.nut_prec_E   = NULL;
+      ang_data.nut_prec_ang = NULL;
       // signal to caller to use something else, such as parent orientation data
-      return 0;
+      return ANGDATATYPE_INVALID;
    }
 
    SpiceChar E_str[64] = {'\0'}, ang_str[64] = {'\0'}, srch_str[24] = {'\0'};
@@ -251,36 +252,36 @@ int SpiceGetAngData(const WorldID world, ConstSpiceChar *item,
    sprintf(srch_str, "NUT_PREC_%s", item);
    sprintf(ang_str, "BODY%d_%s", naif_id, srch_str);
 
-   dtpool_c(E_str, &fnd_tmp, &ang_data->n_E, lead_char);
-   ang_data->n_E /= 2;
-   dtpool_c(ang_str, &found, &ang_data->n_ang, lead_char);
+   dtpool_c(E_str, &fnd_tmp, &ang_data.n_E, lead_char);
+   ang_data.n_E /= 2;
+   dtpool_c(ang_str, &found, &ang_data.n_ang, lead_char);
    found &= fnd_tmp;
 
    if (found == SPICEFALSE) {
-      ang_data->n_E          = 0;
-      ang_data->n_ang        = 0;
-      ang_data->nut_prec_E   = NULL;
-      ang_data->nut_prec_ang = NULL;
-      return 1;
+      ang_data.n_E          = 0;
+      ang_data.n_ang        = 0;
+      ang_data.nut_prec_E   = NULL;
+      ang_data.nut_prec_ang = NULL;
+      return ang_data;
    }
-   ang_data->nut_prec_E   = calloc(ang_data->n_E, sizeof(double[2]));
-   ang_data->nut_prec_ang = calloc(ang_data->n_ang, sizeof(double));
+   ang_data.nut_prec_E   = calloc(ang_data.n_E, sizeof(double[2]));
+   ang_data.nut_prec_ang = calloc(ang_data.n_ang, sizeof(double));
 
-   SpiceDouble outdat_ang[ang_data->n_E * 2];
-   SpiceDouble outdat_pm[ang_data->n_ang];
+   SpiceDouble outdat_ang[ang_data.n_E * 2];
+   SpiceDouble outdat_pm[ang_data.n_ang];
 
-   bodvcd_c(lead_num, "NUT_PREC_ANGLES", ang_data->n_E * 2, &ang_data->n_E,
+   bodvcd_c(lead_num, "NUT_PREC_ANGLES", ang_data.n_E * 2, &ang_data.n_E,
             outdat_ang);
-   ang_data->n_E /= 2;
-   bodvcd_c(naif_id, srch_str, ang_data->n_ang, &ang_data->n_ang, outdat_pm);
+   ang_data.n_E /= 2;
+   bodvcd_c(naif_id, srch_str, ang_data.n_ang, &ang_data.n_ang, outdat_pm);
 
-   for (int i = 0; i < ang_data->n_E; i++)
+   for (int i = 0; i < ang_data.n_E; i++)
       for (int j = 0; j < 2; j++)
-         ang_data->nut_prec_E[i][j] = outdat_ang[j + 2 * i];
+         ang_data.nut_prec_E[i][j] = outdat_ang[j + 2 * i];
 
-   CopyVG(ang_data->nut_prec_ang, outdat_pm, ang_data->n_ang);
+   CopyVG(ang_data.nut_prec_ang, outdat_pm, ang_data.n_ang);
 
-   return 1;
+   return ang_data;
 }
 /**********************************************************************/
 int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
@@ -290,7 +291,7 @@ int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
       return 1;
    double CWJ[3][3];
 
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    if (Iw == EARTH) {
       /* .. Earth rotation is a special case */
       SpiceGetCWJ(jd, Iw, W->CWN);
@@ -341,8 +342,7 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 {
    WorldID Iw, Ip, Im;
 
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_j2000   = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    const double JS       = JDToSeconds(jd_tdb_j2000);
    const double j2000sec = JDToDynTime(jd_tdb_j2000);
 
@@ -448,7 +448,7 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
    char trgtCNH_STRING[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
    int i, j;
 
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd);
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    const double jd_tdb_j2000_sec = JDToTime(jd);
 
    SpiceInt tgt_world_naif = WorldID2NAIFID(trgtWORLD);

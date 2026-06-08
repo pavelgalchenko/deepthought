@@ -590,9 +590,9 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    if (Success) {
       EpochDate.Second = double2rational(sec);
       Epoch_JD         = Date2JD(EpochDate, J2000_EPOCH);
-      JDChangeSystem(TT_TIME, &Epoch_JD);
-      O->Epoch  = JDToDynTime(Epoch_JD);
-      O->Regime = DecodeString(response1);
+      Epoch_JD         = JDChangeSystem(TT_TIME, Epoch_JD);
+      O->Epoch         = JDToDynTime(Epoch_JD);
+      O->Regime        = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
          O->World = GetWorldID(response2);
          O->mu    = World[O->World].mu;
@@ -647,8 +647,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
 {
    long i, j, k;
 
-   JDType jd_tt_j2000 = jd;
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDType jd_tt_j2000    = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    const double j2000_tt = JDToDynTime(jd_tt_j2000);
 
    char fileName[50] = {0};
@@ -925,7 +924,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                         // TODO: do we transform the timestamps to tt to use
                         // uniformly, or do we convert the current time to
                         // O->EphemSystem and store the specified value here?
-                        JDChangeSystem(TT_TIME, &node_jd);
+                        node_jd           = JDChangeSystem(TT_TIME, node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -1122,9 +1121,9 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i][0], &O->NodePos[i][1],
                             &O->NodePos[i][2], &O->NodeVel[i][0],
                             &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
-                        NodeDate.Second = double2rational(sec);
-                        JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
-                        JDChangeSystem(TT_TIME, &node_jd);
+                        NodeDate.Second   = double2rational(sec);
+                        JDType node_jd    = Date2JD(NodeDate, J2000_EPOCH);
+                        node_jd           = JDChangeSystem(TT_TIME, node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
                         for (j = 0; j < 3; j++) {
                            O->NodePos[i][j] *= 1000.0;
@@ -2951,6 +2950,8 @@ void InitSpacecraft(struct SCType *S)
             fprintf(stderr, "SC[%ld].Thr[%ld] Node out of range\n", S->ID, It);
             exit(EXIT_FAILURE);
          }
+         T->PulseWidthFinTimeStamp        = JD_ZERO;
+         T->PulseWidthFinTimeStamp.system = UTC_TIME; // flag for not set
       }
    }
    else
@@ -3868,15 +3869,15 @@ void LoadSun(const ephemType ephem, const JDType jd,
 
    W->OrientWorld = TRUE;
 
-   W->ang_data[0]          = (struct AngDataType){0};
+   W->ang_data[0]          = (AngDataType){0};
    W->ang_data[0].ang_char = 'P';
    W->ang_data[0].ang[0]   = 84.176;
    W->ang_data[0].ang[1]   = 2.69E-6 * SEC_PER_DAY * R2D;
 
-   W->ang_data[1]          = (struct AngDataType){0};
+   W->ang_data[1]          = (AngDataType){0};
    W->ang_data[1].ang_char = 'R';
 
-   W->ang_data[2]          = (struct AngDataType){0};
+   W->ang_data[2]          = (AngDataType){0};
    W->ang_data[2].ang_char = 'D';
 
    for (j = 0; j < 3; j++) {
@@ -3896,9 +3897,9 @@ void LoadSun(const ephemType ephem, const JDType jd,
       if (SpiceCheckAndGetDbl(SOL, "RADII", 0, &dim, &W->rad))
          W->rad *= 1e3;
 
-      SpiceGetAngData(SOL, "PM", &W->ang_data[0]);
-      SpiceGetAngData(SOL, "RA", &W->ang_data[1]);
-      SpiceGetAngData(SOL, "DEC", &W->ang_data[2]);
+      W->ang_data[0] = SpiceGetAngData(SOL, "PM");
+      W->ang_data[1] = SpiceGetAngData(SOL, "RA");
+      W->ang_data[2] = SpiceGetAngData(SOL, "DEC");
    }
 
    /* Ephemeris */
@@ -4132,21 +4133,20 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          W->Glyph[j] = Glyph[i][j];
       W->Atmo.Exists = HasAtmo[i];
 
-      W->ang_data[0]          = (struct AngDataType){0};
+      W->ang_data[0]          = (AngDataType){0};
       W->ang_data[0].ang_char = 'P';
       W->ang_data[0].ang[0]   = PriMerAngJ2000[i];
       W->ang_data[0].ang[1]   = AngVel[i] * SEC_PER_DAY * R2D;
 
-      W->ang_data[1]          = (struct AngDataType){0};
+      W->ang_data[1]          = (AngDataType){0};
       W->ang_data[1].ang_char = 'R';
       W->ang_data[1].ang[0]   = PoleRA[i];
 
-      W->ang_data[2]          = (struct AngDataType){0};
+      W->ang_data[2]          = (AngDataType){0};
       W->ang_data[2].ang_char = 'D';
       W->ang_data[2].ang[0]   = PoleDec[i];
 
       if (ephem == EPH_SPICE) {
-         int found[3] = {0};
          // If we are using SPICE, replace the hardcoded values with SPICE
          // values
          int dim = 1;
@@ -4161,28 +4161,28 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
             Rad[i]  = W->rad;
          }
 
-         found[0] = SpiceGetAngData(Iw, "PM", &W->ang_data[0]);
-         found[1] = SpiceGetAngData(Iw, "RA", &W->ang_data[1]);
-         found[2] = SpiceGetAngData(Iw, "DEC", &W->ang_data[2]);
+         W->ang_data[0] = SpiceGetAngData(Iw, "PM");
+         W->ang_data[1] = SpiceGetAngData(Iw, "RA");
+         W->ang_data[2] = SpiceGetAngData(Iw, "DEC");
 
          // If we found nothing from spice, go to default
          // If we found *something*, zero out everything else
-         if (any_int(3, found)) {
-            for (int j = 0; j < 3; j++)
-               if (!found[j]) {
-                  W->ang_data[j] = (struct AngDataType){0};
-                  switch (j) {
-                     case 0:
-                        W->ang_data[j].ang_char = 'P';
-                        break;
-                     case 1:
-                        W->ang_data[j].ang_char = 'R';
-                        break;
-                     case 2:
-                        W->ang_data[j].ang_char = 'D';
-                        break;
-                  }
+
+         for (int j = 0; j < 3; j++) {
+            if (W->ang_data->ang_char == '\0') {
+               W->ang_data[j] = (AngDataType){0};
+               switch (j) {
+                  case 0:
+                     W->ang_data[j].ang_char = 'P';
+                     break;
+                  case 1:
+                     W->ang_data[j].ang_char = 'R';
+                     break;
+                  case 2:
+                     W->ang_data[j].ang_char = 'D';
+                     break;
                }
+            }
          }
       }
 
@@ -4258,10 +4258,8 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    worlds[MARS].Atmo.MaxHt        = 8.0 * worlds[MARS].Atmo.RayScaleHt;
    worlds[MARS].Atmo.rad          = worlds[MARS].rad + worlds[MARS].Atmo.MaxHt;
 
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
-   JDType jd_tt_j2000 = jd_tdb_j2000;
-   JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, &jd_tt_j2000);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tdb_j2000);
    const double j2000sec_tt = JDToDynTime(jd_tt_j2000);
    /* .. Load planetary orbit elements for date of interest */
    for (i = MERCURY; i <= PLUTO; i++) {
@@ -4715,8 +4713,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
    // TODO: wrapping in LoadPlanets() into this function? a lot of what is done
    // in LoadPlanets is in here too
 
-   JDType jd_tdb_j2000 = jd;
-   JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, &jd_tdb_j2000);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    for (WorldID p_id = MERCURY; p_id <= PLUTO; p_id++) {
       char p_name[32] = {'\0'};
       WorldID2String(p_id, p_name);
@@ -4771,16 +4768,16 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 
             M->OrientWorld = TRUE;
 
-            M->ang_data[0]          = (struct AngDataType){0};
+            M->ang_data[0]          = (AngDataType){0};
             M->ang_data[0].ang_char = 'P';
             M->ang_data[0].ang[0]   = primerang_j2000;
             M->ang_data[0].ang[1]   = w * SEC_PER_DAY * R2D;
 
-            M->ang_data[1]          = (struct AngDataType){0};
+            M->ang_data[1]          = (AngDataType){0};
             M->ang_data[1].ang_char = 'R';
             M->ang_data[1].ang[0]   = pole_ra;
 
-            M->ang_data[2]          = (struct AngDataType){0};
+            M->ang_data[2]          = (AngDataType){0};
             M->ang_data[2].ang_char = 'D';
             M->ang_data[2].ang[0]   = pole_dec;
 
@@ -4800,33 +4797,36 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                if (SpiceCheckAndGetDbl(m_id, "RADII", 0, &dim, &rad))
                   rad *= 1e3;
 
-               int found[3]   = {0};
                WorldID chk_id = m_id;
                // check if particular moon has at least the core orientation
                // angles, else use its parent
                //    (if that doesn't either, use *its* parent and so on)
+               int found = TRUE;
                do {
-                  found[0] = SpiceGetAngData(chk_id, "PM", &M->ang_data[0]);
-                  found[1] = SpiceGetAngData(chk_id, "RA", &M->ang_data[1]);
-                  found[2] = SpiceGetAngData(chk_id, "DEC", &M->ang_data[2]);
-                  chk_id   = worlds[chk_id].Parent;
-               } while (!any_int(3, found) && chk_id >= 0);
-               if (any_int(3, found)) {
-                  for (int j = 0; j < 3; j++)
-                     if (!found[j]) {
-                        M->ang_data[j] = (struct AngDataType){0};
-                        switch (j) {
-                           case 0:
-                              M->ang_data[j].ang_char = 'P';
-                              break;
-                           case 1:
-                              M->ang_data[j].ang_char = 'R';
-                              break;
-                           case 2:
-                              M->ang_data[j].ang_char = 'D';
-                              break;
-                        }
+                  M->ang_data[0]  = SpiceGetAngData(chk_id, "PM");
+                  M->ang_data[1]  = SpiceGetAngData(chk_id, "RA");
+                  M->ang_data[2]  = SpiceGetAngData(chk_id, "DEC");
+                  chk_id          = worlds[chk_id].Parent;
+                  found           = TRUE;
+                  found          &= M->ang_data[0].ang_char == 'P';
+                  found          &= M->ang_data[1].ang_char == 'R';
+                  found          &= M->ang_data[2].ang_char == 'D';
+               } while (!found && chk_id >= 0);
+               for (int j = 0; j < 3; j++) {
+                  if (M->ang_data[j].ang_char == '\0') {
+                     M->ang_data[j] = (AngDataType){0};
+                     switch (j) {
+                        case 0:
+                           M->ang_data[j].ang_char = 'P';
+                           break;
+                        case 1:
+                           M->ang_data[j].ang_char = 'R';
+                           break;
+                        case 2:
+                           M->ang_data[j].ang_char = 'D';
+                           break;
                      }
+                  }
                }
             }
 
@@ -5033,11 +5033,11 @@ void LoadMinorBodies(const ephemType ephem, const JDType jd,
       W                       = &worlds[NMAJORWORLD + Ib];
       E                       = &W->eph;
       E->SplineFile           = NULL;
-      W->ang_data[0]          = (struct AngDataType){0};
+      W->ang_data[0]          = (AngDataType){0};
       W->ang_data[0].ang_char = 'P';
-      W->ang_data[1]          = (struct AngDataType){0};
+      W->ang_data[1]          = (AngDataType){0};
       W->ang_data[1].ang_char = 'R';
-      W->ang_data[2]          = (struct AngDataType){0};
+      W->ang_data[2]          = (AngDataType){0};
       W->ang_data[2].ang_char = 'D';
 
       W->OrientWorld = TRUE;
@@ -5329,7 +5329,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
    double CNH[3][3] = {0};
 
    // TODO: premake some of the other jd types that are needed
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &jd);
+   jd = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd);
 
    /* .. Initialize position of system barycenter */
    W   = &worlds[SOL];
@@ -5451,7 +5451,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          trgtPosH[i] = lunaPosH[i];
       }
       /* Calculate PriMerAng for LUNA */
-      *trgtPriMerAng = LunaPriMerAng(jd);
+      // *trgtPriMerAng = LunaPriMerAng(jd);
    }
    else if (otherJPL) {
       /* Move target from barycentric to Sun-centered */
@@ -5953,8 +5953,7 @@ void InitSim(int argc, char **argv)
    node                = fy_node_by_path_def(root, "/Time");
    DateType input_date = ReadDateFromYaml(node, "Inp_Sim");
 
-   UTC = input_date;
-   DateChangeSystem(UTC_TIME, &UTC);
+   UTC = DateChangeSystem(UTC_TIME, input_date);
 
    /* .. Choices for Modeling Solar Activity */
    // TODO: add atmo model properties to world and use this to
@@ -6141,7 +6140,7 @@ void InitSim(int argc, char **argv)
    node = fy_node_by_path_def(root, "/Celestial Bodies");
 
    ReadWorldExists(World, node);
-   if ((World[EARTH].Exists || World[LUNA].Exists) &&
+   if ((World[EARTH].Exists ^ World[LUNA].Exists) &&
        !(EphemOption == EPH_SPICE || EphemOption == EPH_MEAN)) {
       fprintf(stdout, "Due to the way their states are defined for DE ephems, "
                       "if one of Earth or Luna is enabled, they both must be; "
@@ -6245,10 +6244,9 @@ void InitSim(int argc, char **argv)
    SimTime     = 0.0;
    JD_TT_MJD_0 = Date2JD(UTC, J2000_EPOCH);
    CivilTime   = JDToTime(JD_TT_MJD_0);
-   JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, &JD_TT_MJD_0);
-   JD_TT_MJD  = JD_TT_MJD_0;
-   JD_TDB_MJD = JD_TT_MJD;
-   JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, &JD_TDB_MJD);
+   JD_TT_MJD_0 = JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, JD_TT_MJD_0);
+   JD_TT_MJD   = JD_TT_MJD_0;
+   JD_TDB_MJD  = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, JD_TT_MJD);
 
    DynTime    = JDToDynTime(JD_TT_MJD);
    AtomicTime = DynTime - 32.184; /* TAI */

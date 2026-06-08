@@ -66,7 +66,7 @@ typedef enum TimeSystem {
    // TODO: add TT(BIPM)? others?
 } TimeSystem;
 
-TimeSystem GetTimeSystem(const char *s);
+TimeSystem GetTimeSystem(const char *s) __attribute__((pure));
 
 // some strict typing to enforce correct timing interpretation
 typedef struct JDType {
@@ -90,55 +90,62 @@ typedef struct JDType {
           RATIONAL_NGCD(((day) - ((long)(day))) * 86400.0, 0, 1))
 
 JDType InitJD(const TimeSystem system, const EpochTT epoch, const long days,
-              const Rational seconds);
-double GetLeapSec(const JDType jd);
-double EpochValueTT(EpochTT epoch);
-void JDChangeEpoch(const EpochTT new_epoch, JDType *const jd);
-void JDChangeSystem(const TimeSystem new_system, JDType *const jd);
-void JDChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
-                         JDType *const jd);
-double JDToDays(const JDType jd);
+              const Rational seconds) __attribute__((const));
+double GetLeapSec(const JDType jd) __attribute__((const));
+double EpochValueTT(EpochTT epoch) __attribute__((const));
+JDType JDChangeEpoch(const EpochTT new_epoch, JDType jd) __attribute__((const));
+JDType JDChangeSystem(const TimeSystem new_system, JDType jd)
+    __attribute__((const));
+JDType JDChangeSystemEpoch(const TimeSystem new_system, const EpochTT new_epoch,
+                           JDType jd) __attribute__((const));
+double JDToDays(const JDType jd) __attribute__((const));
 JDType JDFromDays(const double days, const TimeSystem system,
-                  const EpochTT new_epoch);
+                  const EpochTT new_epoch) __attribute__((const));
 JDType JDFromSeconds(const double seconds, const TimeSystem system,
-                     const EpochTT new_epoch);
+                     const EpochTT new_epoch) __attribute__((const));
 JDType JDFromRationalSeconds(const Rational seconds, const TimeSystem system,
-                             const EpochTT new_epoch);
-double JDToSeconds(JDType jd);
-Rational JDToRationalSeconds(JDType jd);
-double JDToTime(JDType jd);
-double JDToDynTime(JDType JD);
+                             const EpochTT new_epoch) __attribute__((const));
+double JDToSeconds(JDType jd) __attribute__((const));
+Rational JDToRationalSeconds(JDType jd) __attribute__((const));
+double JDToTime(JDType jd) __attribute__((const));
+double JDToDynTime(JDType JD) __attribute__((const));
 
-JDType JDAdd(const JDType a, const JDType b);
-JDType JDAddDays(const JDType a, const double b);
-JDType JDAddSeconds(const JDType a, const double b);
-JDType JDAddRationalSeconds(const JDType a, const Rational b);
+JDType JDAdd(const JDType a, const JDType b) __attribute__((const));
+JDType JDAddDays(const JDType a, const double b) __attribute__((const));
+JDType JDAddSeconds(const JDType a, const double b) __attribute__((const));
+JDType JDAddRationalSeconds(const JDType a, const Rational b)
+    __attribute__((const));
 JDType JDAddIntegerMultRatSecs(const JDType jd, const long mul,
-                               const Rational rat);
-JDType JDAddRationalMult(const JDType a, Rational mul, const JDType b);
-JDType JDSub(const JDType a, const JDType b);
-JDType JDSubDays(const JDType a, const double b);
-JDType JDSubSeconds(const JDType a, const double b);
-JDType JDSubRationalSeconds(const JDType a, const Rational b);
-JDType JDSubRationalMult(const JDType a, Rational mul, const JDType b);
-JDType JDaxpy(const double a, const JDType x, JDType y);
-double JDAddToDays(const JDType a, const JDType b);
-double JDAddToSeconds(const JDType a, const JDType b);
-double JDSubToDays(const JDType a, const JDType b);
-double JDSubToSeconds(const JDType a, const JDType b);
+                               const Rational rat) __attribute__((const));
+JDType JDAddRationalMult(const JDType a, Rational mul, const JDType b)
+    __attribute__((const));
+JDType JDSub(const JDType a, const JDType b) __attribute__((const));
+JDType JDSubDays(const JDType a, const double b) __attribute__((const));
+JDType JDSubSeconds(const JDType a, const double b) __attribute__((const));
+JDType JDSubRationalSeconds(const JDType a, const Rational b)
+    __attribute__((const));
+JDType JDSubRationalMult(const JDType a, Rational mul, const JDType b)
+    __attribute__((const));
+JDType JDaxpy(const double a, const JDType x, JDType y) __attribute__((const));
+double JDAddToDays(const JDType a, const JDType b) __attribute__((const));
+double JDAddToSeconds(const JDType a, const JDType b) __attribute__((const));
+double JDSubToDays(const JDType a, const JDType b) __attribute__((const));
+double JDSubToSeconds(const JDType a, const JDType b) __attribute__((const));
 
-JDType JDAbs(JDType jd);
-int ispos_jd(JDType jd);
-JDType JDNegate(JDType jd);
+JDType JDAbs(JDType jd) __attribute__((const));
+int ispos_jd(JDType jd) __attribute__((const));
+JDType JDNegate(JDType jd) __attribute__((const));
 
-int isequal_jd(const JDType a, const JDType b);
-int isless_jd(const JDType a, const JDType b);
-int islessequal_jd(const JDType a, const JDType b);
-int isgreater_jd(const JDType a, const JDType b);
-int isgreaterequal_jd(const JDType a, const JDType b);
+int isequal_jd_systemepoch(const JDType a, const JDType b)
+    __attribute__((const));
+int isequal_jd(const JDType a, const JDType b) __attribute__((const));
+int isless_jd(const JDType a, const JDType b) __attribute__((const));
+int islessequal_jd(const JDType a, const JDType b) __attribute__((const));
+int isgreater_jd(const JDType a, const JDType b) __attribute__((const));
+int isgreaterequal_jd(const JDType a, const JDType b) __attribute__((const));
 
-EpochTT str2epoch(char str[JDEPOCH_STR_LEN]);
-TimeSystem str2system(char str[JDSYSTEM_STR_LEN]);
+EpochTT str2epoch(char str[JDEPOCH_STR_LEN]) __attribute__((pure));
+TimeSystem str2system(char str[JDSYSTEM_STR_LEN]) __attribute__((pure));
 void epoch2str(EpochTT epoch, char str[JDEPOCH_STR_LEN]);
 void system2str(TimeSystem system, char str[JDSYSTEM_STR_LEN]);
 void jd2str(JDType jd, char str[JD_STR_LEN]);

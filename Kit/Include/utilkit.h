@@ -34,7 +34,7 @@ void tolower_str(size_t n, char *str);
 void toupper_str(size_t n, char *str);
 void CapitalizeFirst(size_t n, char *str);
 char *replace_char(char *str, const char find, const char replace);
-long is_line_empty(const char *s);
+long is_line_empty(const char *s) __attribute__((pure));
 
 /*
 ** #ifdef __cplusplus

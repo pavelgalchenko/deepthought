@@ -14,6 +14,10 @@
 #ifndef __DEFINESKIT_H__
 #define __DEFINESKIT_H__
 
+#ifndef __GNUC__
+#define __attribute__(x) /*NOTHING*/
+#endif
+
 #define SEC_PER_DAY (86400)
 
 #define STR2(x) #x
