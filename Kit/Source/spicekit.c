@@ -169,7 +169,7 @@ static SpiceBoolean _frame_found(WorldID world)
    return frm_found[world];
 }
 
-int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3 *CWH)
+int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3_t *CWH)
 {
    const SpiceBoolean found = _frame_found(world);
    if (found) {
@@ -186,7 +186,7 @@ int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3 *CWH)
 /**********************************************************************/
 /* Compute the fixed frame orientaion of 'world' relative to the      */
 /* J2000 frame as CWN                                                 */
-int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3 *CWJ)
+int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3_t *CWJ)
 {
    const SpiceBoolean found = _frame_found(world);
    if (found) {
@@ -202,7 +202,7 @@ int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3 *CWJ)
 }
 /**********************************************************************/
 int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
-                   mat3x3 *C)
+                   mat3x3_t *C)
 {
    const SpiceBoolean found_v[2] = {_frame_found(from), _frame_found(to)};
    const SpiceBoolean found      = all_int(2, found_v);
@@ -296,11 +296,11 @@ AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
 }
 /**********************************************************************/
 int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
-                        mat3x3 earth_CNH)
+                        mat3x3_t earth_CNH)
 {
    if (!W->OrientWorld)
       return 1;
-   mat3x3 CWJ;
+   mat3x3_t CWJ;
 
    jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    if (Iw == EARTH) {
@@ -325,10 +325,10 @@ int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
    return 1;
 }
 /**********************************************************************/
-void SpicePosN2RLngLat(const mat3x3 cwn, const vec3 posn, double *r,
+void SpicePosN2RLngLat(const mat3x3_t cwn, const vec3_t posn, double *r,
                        double *lng, double *lat)
 {
-   vec3 pw = MxV(cwn, posn);
+   vec3_t pw = MxV(cwn, posn);
    reclat_c(pw.v, r, lng, lat);
 }
 /**********************************************************************/
@@ -446,9 +446,9 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 /**********************************************************************/
 void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
                     struct WorldType *const worlds __attribute__((unused)),
-                    vec3 *trgtPosN, vec3 *trgtPosH,
+                    vec3_t *trgtPosN, vec3_t *trgtPosH,
                     double *trgtPriMerAng __attribute__((unused)),
-                    mat3x3 *trgtCNH)
+                    mat3x3_t *trgtCNH)
 {
    double Nstate[6], Hstate[6];
    double light_time;

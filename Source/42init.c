@@ -564,7 +564,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    char Label[25];
    long Nchar;
    long Success = 0;
-   vec3 R, V;
+   vec3_t R, V;
    JDType Epoch_JD;
 
    DateType EpochDate = {0};
@@ -1050,8 +1050,8 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                LagModes2RV(j2000_tt, &LagSys[O->Sys], O, &O->PosN, &O->VelN);
             } break;
             case INP_XYZ_ROT: {
-               vec3 vec3_p;
-               vec3 vec3_v;
+               vec3_t vec3_p;
+               vec3_t vec3_v;
 
                struct LagrangeSystemType *LS;
                LS = &LagSys[O->Sys];
@@ -2088,7 +2088,7 @@ void InitShakers(struct SCType *S)
          Sh->FrcTrq = DecodeString(response);
          fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &Sh->Axis.v[0],
                 &Sh->Axis.v[1], &Sh->Axis.v[2], junk, &newline);
-         UNITV(&Sh->Axis);
+         Sh->Axis = UNITV(Sh->Axis).v;
          fscanf(infile, "%ld %[^\n] %[\n]", &Sh->Ntone, junk, &newline);
          if (Sh->Ntone == 0) {
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2237,7 +2237,7 @@ void InitOptics(struct FgsType *F)
          O->ApRad /= 2.0;
          fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &O->Axis.v[0],
                 &O->Axis.v[1], &O->Axis.v[2], junk, &newline);
-         UNITV(&O->Axis);
+         O->Axis = UNITV(O->Axis).v;
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
          O->Type = DecodeString(response);
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
@@ -2433,7 +2433,7 @@ void InitSpacecraft(struct SCType *S)
       exit(EXIT_FAILURE);
    }
    long useCM = DecodeString(dummy);
-   vec3 posVec, velVec;
+   vec3_t posVec, velVec;
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Pos wrt F"),
                            posVec.v);
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Vel wrt F"),
@@ -2441,9 +2441,9 @@ void InitSpacecraft(struct SCType *S)
 
    node = fy_node_by_path_def(root, "/Attitude");
    char rateFrame, attParm, attFrame;
-   vec3 wbn, ang;
-   quat qbn;
-   mat3x3 CBN;
+   vec3_t wbn, ang;
+   quat_t qbn;
+   mat3x3_t CBN;
    long seq;
    if (fy_node_scanf(node,
                      "Ang Vel Frame %c "
@@ -2486,8 +2486,8 @@ void InitSpacecraft(struct SCType *S)
    }
    if (rateFrame == 'L') {
       /* Add LVLH rate to wn */
-      vec3 wlnb = MxV(CBN, Orb[S->RefOrb].wln);
-      wbn       = VpVElem(wbn, wlnb);
+      vec3_t wlnb = MxV(CBN, Orb[S->RefOrb].wln);
+      wbn         = VpVElem(wbn, wlnb);
    }
    S->CF = MxMT(CBN, Frm[S->RefOrb].CN);
 
@@ -2743,7 +2743,7 @@ void InitSpacecraft(struct SCType *S)
                             ang.v, &seq);
          G->CBoGo = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
 
-         vec3 pIn, pOut;
+         vec3_t pIn, pOut;
          assignYAMLToDoubleArray(
              3, fy_node_by_path_def(seqNode, "/Pos wrt Inner Body"), pIn.v);
          assignYAMLToDoubleArray(
@@ -2796,8 +2796,10 @@ void InitSpacecraft(struct SCType *S)
          struct WhlType *W = &S->Whl[Iw];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  W->A.v);
-         UNITV(&W->A);
-         W->Vaxis = PerpBasis(W->A, &W->Uaxis);
+         W->A             = UNITV(W->A).v;
+         pair_vec3_t pair = PerpBasis(W->A);
+         W->Uaxis         = pair.first;
+         W->Vaxis         = pair.second;
          if (fy_node_scanf(seqNode,
                            "/Initial Momentum %lf "
                            "/Max Torque %lf "
@@ -2842,7 +2844,7 @@ void InitSpacecraft(struct SCType *S)
          struct MTBType *MTB = &S->MTB[Im];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  MTB->A.v);
-         UNITV(&MTB->A);
+         MTB->A = UNITV(MTB->A).v;
          if (fy_node_scanf(seqNode,
                            "/Saturation %lf "
                            "/Node %ld",
@@ -2880,7 +2882,7 @@ void InitSpacecraft(struct SCType *S)
          struct ThrType *T = &S->Thr[It];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  T->A.v);
-         UNITV(&T->A);
+         T->A = UNITV(T->A).v;
          if (fy_node_scanf(seqNode,
                            "/Mode %49s "
                            "/Force %lf "
@@ -2923,7 +2925,7 @@ void InitSpacecraft(struct SCType *S)
          struct GyroType *Gyro = &S->Gyro[Ig];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  Gyro->Axis.v);
-         UNITV(&Gyro->Axis);
+         Gyro->Axis = UNITV(Gyro->Axis).v;
          double biasTime;
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
@@ -2997,7 +2999,7 @@ void InitSpacecraft(struct SCType *S)
          struct MagnetometerType *MAG = &S->MAG[Im];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  MAG->Axis.v);
-         UNITV(&MAG->Axis);
+         MAG->Axis = UNITV(MAG->Axis).v;
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
                            "/Saturation %lf "
@@ -3049,7 +3051,7 @@ void InitSpacecraft(struct SCType *S)
          struct CssType *CSS = &S->CSS[Ic];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  CSS->Axis.v);
-         UNITV(&CSS->Axis);
+         CSS->Axis = UNITV(CSS->Axis).v;
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
                            "/Half Cone Angle %lf "
@@ -3304,7 +3306,7 @@ void InitSpacecraft(struct SCType *S)
          struct AccelType *Accel = &S->Accel[Ia];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
                                  Accel->Axis.v);
-         UNITV(&Accel->Axis);
+         Accel->Axis = UNITV(Accel->Axis).v;
          double biasTime;
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
@@ -3436,7 +3438,7 @@ void InitSpacecraft(struct SCType *S)
    /* .. Initialize some Orbit and Formation variables */
    struct OrbitType *O      = &Orb[S->RefOrb];
    struct FormationType *Fr = &Frm[S->RefOrb];
-   vec3 pcmn, wxr, wxrn, psn, vsn, rh, vh;
+   vec3_t pcmn, wxr, wxrn, psn, vsn, rh, vh;
    if (useCM) {
       if (Fr->FixedInFrame == 'L') {
          S->PosEH = MTxV(Fr->CL, posVec);
@@ -3484,7 +3486,7 @@ void InitSpacecraft(struct SCType *S)
       S->PosF = posVec;
       S->VelF = velVec;
 
-      vec3 psl, vsl, pfl, pcml, wxrl;
+      vec3_t psl, vsl, pfl, pcml, wxrl;
       pcmn = MTxV(S->B[0].CN, S->cm);
       wxr  = VxV(S->B[0].wn, S->cm);
       wxrn = MTxV(S->B[0].CN, wxr);
@@ -3873,9 +3875,9 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                  struct WorldType *const worlds)
 {
    struct OrbitType *Eph;
-   const vec3 Zaxis = VEC3_PZAXIS;
+   const vec3_t Zaxis = VEC3_PZAXIS;
    double GMST;
-   mat3x3 C_W_TETE, C_TEME_TETE, C_TETE_J2000;
+   mat3x3_t C_W_TETE, C_TETE_J2000;
 
    char PlanetName[N_PLANETS][20]  = {"Mercury", "Venus",   "Earth",
                                       "Mars",    "Jupiter", "Saturn",
@@ -4203,11 +4205,12 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          if (ephem != EPH_SPICE) {
             if (Iw == EARTH) {
                /* .. Earth rotation is a special case */
-               GMST         = JD2GMST(jd_tt_j2000);
-               W->PriMerAng = TwoPi * GMST;
-               HiFiEarthPrecNute(jd_tt_j2000, &C_TEME_TETE, &C_TETE_J2000);
-               C_W_TETE = SimpRot(Zaxis, W->PriMerAng);
-               W->CWN   = MxM(C_W_TETE, C_TETE_J2000);
+               GMST                     = JD2GMST(jd_tt_j2000);
+               W->PriMerAng             = TwoPi * GMST;
+               const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+               C_TETE_J2000             = pair.second;
+               C_W_TETE                 = SimpRot(Zaxis, W->PriMerAng);
+               W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
             }
             else {
                W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
@@ -4931,7 +4934,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
    struct OrbitType *E;
    char junk[120], newline, response[120];
    long Ib, i;
-   mat3x3 CNJ;
+   mat3x3_t CNJ;
    double PoleRA, PoleDec, Epoch;
    char GravFileName[32] = {0};
    const char *f_name    = "MinorBodies.txt";
@@ -5232,18 +5235,18 @@ void UpdateLagrangePoints(void)
 }
 /**********************************************************************/
 void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
-                  vec3 *trgtPosN, vec3 *trgtPosH, double *trgtPriMerAng,
-                  mat3x3 *trgtCNH)
+                  vec3_t *trgtPosN, vec3_t *trgtPosH, double *trgtPriMerAng,
+                  mat3x3_t *trgtCNH)
 {
    long i, j, Ic, Iw;
    struct Cheb3DType *Cheb;
    struct OrbitType *Eph;
    struct WorldType *W;
    double u, dudJD, T[20], U[20], P, dPdu;
-   vec3 rh, PosJ, PosN, systemBC;
-   vec3 earthPosN, lunaPosN, otherPosN;
-   vec3 earthPosH, lunaPosH, otherPosH;
-   mat3x3 CNJ, CNH;
+   vec3_t rh, PosJ, PosN, systemBC;
+   vec3_t earthPosN, lunaPosN, otherPosN;
+   vec3_t earthPosH, lunaPosH, otherPosH;
+   mat3x3_t CNJ, CNH;
    long WRLD[2] = {EARTH, LUNA}, otherJPL;
    double GMST;
 
@@ -5398,7 +5401,7 @@ void LoadConstellations(void)
              &C->Nlines);
       C->Class = DecodeString(response);
 
-      C->StarVec = calloc(C->Nstars, sizeof(vec3));
+      C->StarVec = calloc(C->Nstars, sizeof(vec3_t));
 
       C->Star1 = (long *)calloc(C->Nlines, sizeof(long));
       C->Star2 = (long *)calloc(C->Nlines, sizeof(long));
@@ -5568,12 +5571,12 @@ void InitSim(int argc, char **argv)
    WorldID Iw;
    long MinorBodiesExist;
    long JunkTag;
-   const mat3x3 CGJ_tmp = (mat3x3){
+   const mat3x3_t CGJ_tmp = (mat3x3_t){
        .rows = {
            {.v = {-0.054873956175539, -0.873437182224835, -0.483835031431981}},
            {.v = {0.494110775064704, -0.444828614979805, 0.746981957785302}},
            {.v = {-0.867665382947348, -0.198076649977489, 0.455985113757595}}}};
-   mat3x3 CJH;
+   mat3x3_t CJH;
    CopyVG(CGJ.flat, CGJ_tmp.flat, 9);
 
    Pi          = PI;

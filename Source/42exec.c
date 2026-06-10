@@ -161,7 +161,7 @@ void UpdateScBoundingBox(struct SCType *S)
    struct BodyType *B, *B0;
    struct BoundingBoxType *BBox;
    struct GeomType *G;
-   vec3 ctrB, ctrN, ctrB0, r;
+   vec3_t ctrB, ctrN, ctrB0, r;
    double maxB0, minB0;
    long Ib, i;
 
@@ -432,8 +432,8 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          CopyVG(D->u, &x_rk[offset], D->Nu);
          offset += D->Nu;
          CopyVG(D->x, &x_rk[offset], D->Nx);
-         quat q = DBL_TO_QUAT(D->x);
-         q      = UNITQ(q);
+         quat_t q = DBL_TO_QUAT(D->x);
+         q        = UNITQ(q);
          QUAT_TO_DBL(D->x, q);
          offset += D->Nx;
          CopyVG(D->h, &x_rk[offset], S->Nw);
@@ -674,7 +674,7 @@ long SimStep_New(void)
          S = &SC[Isc];
          if (S->Exists && S->FswTag == DSM_FSW) {
             struct DSMType *DSM = &S->DSM;
-            DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+            DSM->commState      = DSM->CommStateProcessing(DSM->state);
          }
       }
       Report(); /* File Output */
@@ -736,7 +736,7 @@ long SimStep_New(void)
       S = &SC[Isc];
       if (S->Exists && S->FswTag == DSM_FSW) {
          struct DSMType *DSM = &S->DSM;
-         DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+         DSM->commState      = DSM->CommStateProcessing(DSM->state);
       }
    }
    /* File Output */
@@ -798,7 +798,7 @@ long SimStep_Old(void)
          S = &SC[Isc];
          if (S->Exists && S->FswTag == DSM_FSW) {
             struct DSMType *DSM = &S->DSM;
-            DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+            DSM->commState      = DSM->CommStateProcessing(DSM->state);
          }
       }
       Report(); /* File Output */
@@ -853,7 +853,7 @@ long SimStep_Old(void)
       S = &SC[Isc];
       if (S->Exists && S->FswTag == DSM_FSW) {
          struct DSMType *DSM = &S->DSM;
-         DSM->CommStateProcessing(&DSM->state, &DSM->commState);
+         DSM->commState      = DSM->CommStateProcessing(DSM->state);
       }
    }
    Report(); /* File Output */

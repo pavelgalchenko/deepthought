@@ -129,14 +129,14 @@ struct DSMCmdVecType {
    WorldID TrgWorld;
    long TrgSC;
    long TrgBody;
-   vec3 N;  /* Components in N */
-   vec3 W;  /* Components in W */
-   vec3 L;  /* Components in L */
-   vec3 R;  /* Components in R */
-   vec3 T;  /* Components in T */
-   vec3 wn; /* Angular velocity in N, expressed in N */
-   vec3 cmd_vec;
-   vec3 cmd_axis;
+   vec3_t N;  /* Components in N */
+   vec3_t W;  /* Components in W */
+   vec3_t L;  /* Components in L */
+   vec3_t R;  /* Components in R */
+   vec3_t T;  /* Components in T */
+   vec3_t wn; /* Angular velocity in N, expressed in N */
+   vec3_t cmd_vec;
+   vec3_t cmd_axis;
 };
 
 struct DSMCmdType {
@@ -151,39 +151,39 @@ struct DSMCmdType {
    long AttitudeCtrlActive;
    long H_DumpActive;
    long init;
-   vec3 AngRate;
-   vec3 Ang;
-   vec3 PosRate;
+   vec3_t AngRate;
+   vec3_t Ang;
+   vec3_t PosRate;
    long RotSeq;
-   quat qrl;
-   quat qrn;
-   quat qrf;
-   quat qbr;
-   vec3 wrn;
+   quat_t qrl;
+   quat_t qrn;
+   quat_t qrf;
+   quat_t qbr;
+   vec3_t wrn;
    double SpinRate;
-   vec3 Hvr;
-   vec3 Hvn;
-   mat3x3 OldCRN;
-   vec3 k_nute;              // Nutation Gain
-   vec3 k_prec;              // Precession Gain
-   vec3 trn_kp;              // Proportional Gain
-   vec3 trn_ki;              // Intergral Gain
-   vec3 trn_kr;              // Rate / Derivitive Gain
-   vec3 trn_kilimit;         // Integral Limit
-   vec3 dmp_kp;              // Dumping Proportional Gain
-   vec3 att_kp;              // Attitude Proportional Gain
-   vec3 att_ki;              // Attitude Intergral Gain
-   vec3 att_kr;              // Attitude Rate / Derivitive Gain
-   vec3 att_kilimit;         // Attitude Integral Limit
-   vec3 FrcB_max;            // Force limit in SC body frame
-   vec3 vel_max;             // Velocity limit in SC body frame
-   vec3 Trq_max;             // Torque limit in SC body frame
-   vec3 dTrq_max;            // Detumble torque limit in SC body frame
-   vec3 w_max;               // Angular velocity limit in SC body frame
-   vec3 Pos;                 // Position Vector of wrt any frame
-   vec3 PosN;                // Position Vector of wrt Inertial frame N
-   vec3 PosR;                // Position Vector of wrt Inertial frame R
-   quat q;                   // Quaternion wrt any frame
+   vec3_t Hvr;
+   vec3_t Hvn;
+   mat3x3_t OldCRN;
+   vec3_t k_nute;            // Nutation Gain
+   vec3_t k_prec;            // Precession Gain
+   vec3_t trn_kp;            // Proportional Gain
+   vec3_t trn_ki;            // Intergral Gain
+   vec3_t trn_kr;            // Rate / Derivitive Gain
+   vec3_t trn_kilimit;       // Integral Limit
+   vec3_t dmp_kp;            // Dumping Proportional Gain
+   vec3_t att_kp;            // Attitude Proportional Gain
+   vec3_t att_ki;            // Attitude Intergral Gain
+   vec3_t att_kr;            // Attitude Rate / Derivitive Gain
+   vec3_t att_kilimit;       // Attitude Integral Limit
+   vec3_t FrcB_max;          // Force limit in SC body frame
+   vec3_t vel_max;           // Velocity limit in SC body frame
+   vec3_t Trq_max;           // Torque limit in SC body frame
+   vec3_t dTrq_max;          // Detumble torque limit in SC body frame
+   vec3_t w_max;             // Angular velocity limit in SC body frame
+   vec3_t Pos;               // Position Vector of wrt any frame
+   vec3_t PosN;              // Position Vector of wrt Inertial frame N
+   vec3_t PosR;              // Position Vector of wrt Inertial frame R
+   quat_t q;                 // Quaternion wrt any frame
    double Distance;          // target distance for EH maneuver
    double Phase;             // target degree for EH maneuver
    double TimeDock;          // target time period for EH docking
@@ -202,9 +202,9 @@ struct DSMCmdType {
    char H_DumpGain[20];
    char H_DumpMode[20];
    double H_DumpLims[2];
-   vec3 DeltaV;
+   vec3_t DeltaV;
    double BurnTime;
-   vec3 TrgVelR;
+   vec3_t TrgVelR;
    double BurnStopTime;
    enum ActuatorType ActTypes[100];
    int ActInds[100];
@@ -221,40 +221,40 @@ struct DSMCmdType {
 
 struct DSMCtrlType {
    /*~ Parameters ~*/
-   vec3 trn_kp;   // Translational Proportional Gain
-   vec3 trn_kr;   // Translational Rate/derivitive Gain
-   vec3 trn_ki;   // Translational Integral Gain
-   vec3 dmp_kp;   // Momentum Gain
-   vec3 att_kp;   // Attitude Proportional Gain
-   vec3 att_kr;   // Attitude Derivative Gain
-   vec3 att_ki;   // Attitude Integral Gain
-   vec3 FrcB_max; // Maximum Force / Force limit
-   vec3 FrcN_max; // SC body Force limit in Inertial frame
-   vec3 vel_max;  // Maximum Velocity / Velocity limit
-   vec3 w_max;    // Maximum Angular Velocity / Angular Velocity limit
-   vec3 Trq_max;  // Maximum Torque / Torque limit
-   vec3 dTrq_max; // Detumble torque limit in SC body frame
+   vec3_t trn_kp;   // Translational Proportional Gain
+   vec3_t trn_kr;   // Translational Rate/derivitive Gain
+   vec3_t trn_ki;   // Translational Integral Gain
+   vec3_t dmp_kp;   // Momentum Gain
+   vec3_t att_kp;   // Attitude Proportional Gain
+   vec3_t att_kr;   // Attitude Derivative Gain
+   vec3_t att_ki;   // Attitude Integral Gain
+   vec3_t FrcB_max; // Maximum Force / Force limit
+   vec3_t FrcN_max; // SC body Force limit in Inertial frame
+   vec3_t vel_max;  // Maximum Velocity / Velocity limit
+   vec3_t w_max;    // Maximum Angular Velocity / Angular Velocity limit
+   vec3_t Trq_max;  // Maximum Torque / Torque limit
+   vec3_t dTrq_max; // Detumble torque limit in SC body frame
 
    /*~ Internal Variables ~*/
    long Init;
    long H_DumpActive; // Used interally to MomentumDumpCtrl()
-   quat qbr;
-   vec3 wrn;
-   vec3 therr;
-   vec3 werr;  // Angular velocity error
-   vec3 perr;  // Position error
-   vec3 verr;  // Velocity error
-   vec3 Tcmd;  // Torque Command
-   vec3 Mcmd;  // Magnetorquer Command
-   vec3 dTcmd; // Dump Torque Command
-   vec3 FcmdN; // Force Command in N frame
-   vec3 FcmdB; // Force Command in SC B Frame
-   vec3 u1;
-   vec3 u2;
-   vec3 CmdPosN; // Commanded Position in the Inertial frame (N)
-   vec3 CmdPosR; // Commanded Position in the Inertial frame (R)
-   vec3 CmdVelN; // Commanded Velocity in the Inertial frame (N)
-   vec3 CmdVelR; // Commanded Velocity in the Inertial frame (R)
+   quat_t qbr;
+   vec3_t wrn;
+   vec3_t therr;
+   vec3_t werr;  // Angular velocity error
+   vec3_t perr;  // Position error
+   vec3_t verr;  // Velocity error
+   vec3_t Tcmd;  // Torque Command
+   vec3_t Mcmd;  // Magnetorquer Command
+   vec3_t dTcmd; // Dump Torque Command
+   vec3_t FcmdN; // Force Command in N frame
+   vec3_t FcmdB; // Force Command in SC B Frame
+   vec3_t u1;
+   vec3_t u2;
+   vec3_t CmdPosN; // Commanded Position in the Inertial frame (N)
+   vec3_t CmdPosR; // Commanded Position in the Inertial frame (R)
+   vec3_t CmdVelN; // Commanded Velocity in the Inertial frame (N)
+   vec3_t CmdVelR; // Commanded Velocity in the Inertial frame (R)
 };
 struct DSMType;
 struct AcType;
@@ -303,18 +303,18 @@ struct DSMStateType {
    double Time; /* Time since J2000 [[sec]] */
 
    /*~ Outputs ~*/
-   vec3 VelR;  // Velocity in R Frame
-   vec3 PosR;  // Position in R Frame
-   vec3 VelN;  // Velocity in N Frame
-   vec3 PosN;  // Position in N Frame
-   vec3 wbn;   // Angular Velocity in the SC Body Frame
-   quat qbn;   // Quarternion from N to B
-   mat3x3 CBN; // Rotation Matrix from N to B
+   vec3_t VelR;  // Velocity in R Frame
+   vec3_t PosR;  // Position in R Frame
+   vec3_t VelN;  // Velocity in N Frame
+   vec3_t PosN;  // Position in N Frame
+   vec3_t wbn;   // Angular Velocity in the SC Body Frame
+   quat_t qbn;   // Quarternion from N to B
+   mat3x3_t CBN; // Rotation Matrix from N to B
 
-   vec3 svn; // Sun vector in N frame
-   vec3 svb; // Sun vector in B frame
-   vec3 bvn; // Magnetic field vector in N frame
-   vec3 bvb; // Magnetic field vector in B frame
+   vec3_t svn; // Sun vector in N frame
+   vec3_t svb; // Sun vector in B frame
+   vec3_t bvn; // Magnetic field vector in N frame
+   vec3_t bvb; // Magnetic field vector in B frame
 };
 
 struct DSMNavType {
@@ -334,19 +334,19 @@ struct DSMNavType {
    void *refOriPtr; // pointer to object of nav reference origin, can be NULL,
    // ACType, WorldType, or OrbitType
    struct BodyType *refBodyPtr; // pointer to reference body, NULL if not used
-   vec3 refPos;                 // PosN of nav origin
-   vec3 refVel;                 // VelN of nav origin
-   mat3x3 refCRN;               // rotation from body to nav reference frame
-   vec3 refOmega;               // angular velocity of nav reference frame
-   vec3 refOmegaDot;
+   vec3_t refPos;               // PosN of nav origin
+   vec3_t refVel;               // VelN of nav origin
+   mat3x3_t refCRN;             // rotation from body to nav reference frame
+   vec3_t refOmega;             // angular velocity of nav reference frame
+   vec3_t refOmegaDot;
 
-   vec3 oldRefPos; // PosN of nav origin
-   vec3 oldRefVel; // VelN of nav origin
-   mat3x3 oldRefCRN;
-   vec3 oldRefOmega; // angular velocity of nav reference frame
-   vec3 oldRefOmegaDot;
+   vec3_t oldRefPos; // PosN of nav origin
+   vec3_t oldRefVel; // VelN of nav origin
+   mat3x3_t oldRefCRN;
+   vec3_t oldRefOmega; // angular velocity of nav reference frame
+   vec3_t oldRefOmegaDot;
    double refLerpAlpha;
-   vec3 refAccel; // VelN of nav origin
+   vec3_t refAccel; // VelN of nav origin
 
    /*~ Internal Variables ~*/
    long Init;
@@ -375,18 +375,18 @@ struct DSMNavType {
    double ballisticCoef; // ballistic coefficient / mass []
 
    /*~ state information ~*/
-   mat3x3 CRB; // Rotation from body to nav reference frame
-   quat qbr;   // Quaternion for CRB^T
-   vec3 PosR;  // Position of body relative to nav origin in terms of nav
-               // reference frame
-   vec3 VelR;  // Velocity of body relative to nav origin in terms of nav
-               // reference frame with respect to nav reference frame
-   vec3 wbr;   // Angular velocity of body frame relative to nav reference frame
+   mat3x3_t CRB; // Rotation from body to nav reference frame
+   quat_t qbr;   // Quaternion for CRB^T
+   vec3_t PosR;  // Position of body relative to nav origin in terms of nav
+                 // reference frame
+   vec3_t VelR;  // Velocity of body relative to nav origin in terms of nav
+                 // reference frame with respect to nav reference frame
+   vec3_t wbr; // Angular velocity of body frame relative to nav reference frame
                // in terms of body frame with respect to nav reference frame
    double *whlH;
 
-   vec3 torqueB;
-   vec3 forceB;
+   vec3_t torqueB;
+   vec3_t forceB;
 
    double **NxN; // Pre-allocated navDim x navDim matrix for use in intermediary
                  // steps
@@ -398,9 +398,9 @@ struct DSMNavType {
    double **M;        // dynamics noise mapping matrix
    double *sqrQ;      // Diagonal elements of noise covariance
    void (*EOMJacobianFun)(struct AcType *const, struct DSMType *const,
-                          const DateType *, const mat3x3, const quat,
-                          const vec3, const vec3, const vec3, double const[],
-                          const double, double **);
+                          const DateType *, const mat3x3_t, const quat_t,
+                          const vec3_t, const vec3_t, const vec3_t,
+                          double const[], const double, double **);
    void (*updateLaw)(struct DSMNavType *const);
    // linked list of measurement buffer. Ordered by time. Head is measurement
    // with the smallest time in the queue.
@@ -432,34 +432,34 @@ struct DSMType {
    /*~ Inputs ~*/
    double DT;
    double mass;
-   mat3x3 MOI;
+   mat3x3_t MOI;
    long Mode;
 
    /*~ Outputs ~*/
    struct DSMStateType state;
    struct DSMStateType commState;
    // assign a function pointer to allow for this to be more general later
-   void (*CommStateProcessing)(struct DSMStateType *, struct DSMStateType *);
-   vec3 Tcmd;  // Torque Command
-   vec3 Mcmd;  // Magnetorquer Command
-   vec3 dTcmd; // Dump Torque Command
-   vec3 FcmdN; // Force Command in N frame
-   vec3 FcmdB; // Force Command in SC B Frame
+   struct DSMStateType (*CommStateProcessing)(struct DSMStateType);
+   vec3_t Tcmd;  // Torque Command
+   vec3_t Mcmd;  // Magnetorquer Command
+   vec3_t dTcmd; // Dump Torque Command
+   vec3_t FcmdN; // Force Command in N frame
+   vec3_t FcmdB; // Force Command in SC B Frame
 
-   vec3 therr; // Angular Position Error
-   vec3 werr;  // Angular Velocity Error
-   vec3 perr;  // Position Error
-   vec3 verr;  // Velocity Error
+   vec3_t therr; // Angular Position Error
+   vec3_t werr;  // Angular Velocity Error
+   vec3_t perr;  // Position Error
+   vec3_t verr;  // Velocity Error
 
-   vec3 trn_ei; // translation error integral
-   vec3 att_ei; // attitude error integral
+   vec3_t trn_ei; // translation error integral
+   vec3_t att_ei; // attitude error integral
 
-   vec3 Oldtherr; // stores previous iteration's therr for integration
-                  // purposes
-   vec3 Oldperr;  // stores previous iteration's therr for integration purposes
+   vec3_t Oldtherr; // stores previous iteration's therr for integration
+                    // purposes
+   vec3_t Oldperr; // stores previous iteration's therr for integration purposes
 
-   vec3 IdealTrq; // Ideal Torque
-   vec3 IdealFrc; // Ideal Force
+   vec3_t IdealTrq; // Ideal Torque
+   vec3_t IdealFrc; // Ideal Force
 
    struct fy_node **CmdArray;
    long CmdNum;
@@ -467,10 +467,10 @@ struct DSMType {
    long CmdCnt;
    double CmdNextTime;
 
-   vec3 svn;
-   vec3 svb;
-   vec3 bvn;
-   vec3 bvb;
+   vec3_t svn;
+   vec3_t svb;
+   vec3_t bvn;
+   vec3_t bvb;
 
    /*~ Internal Variables ~*/
    struct OrbitType *refOrb; // spacecraft's reference orbit

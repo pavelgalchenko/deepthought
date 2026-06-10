@@ -103,9 +103,9 @@ double Limit(double x, double min, double max)
 }
 /**********************************************************************/
 /*   3x3 Matrix Product                                               */
-mat3x3 MxM(const mat3x3 A, const mat3x3 B)
+mat3x3_t MxM(const mat3x3_t A, const mat3x3_t B)
 {
-   mat3x3 C;
+   mat3x3_t C;
    C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[0][1] * B.mat[1][0] +
                  A.mat[0][2] * B.mat[2][0];
    C.mat[0][1] = A.mat[0][0] * B.mat[0][1] + A.mat[0][1] * B.mat[1][1] +
@@ -128,9 +128,9 @@ mat3x3 MxM(const mat3x3 A, const mat3x3 B)
 }
 /**********************************************************************/
 /* 3x3 Matrix times Transpose of Matrix                               */
-mat3x3 MxMT(const mat3x3 A, const mat3x3 B)
+mat3x3_t MxMT(const mat3x3_t A, const mat3x3_t B)
 {
-   mat3x3 C;
+   mat3x3_t C;
    C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[0][1] * B.mat[0][1] +
                  A.mat[0][2] * B.mat[0][2];
    C.mat[0][1] = A.mat[0][0] * B.mat[1][0] + A.mat[0][1] * B.mat[1][1] +
@@ -153,9 +153,9 @@ mat3x3 MxMT(const mat3x3 A, const mat3x3 B)
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Matrix                              */
-mat3x3 MTxM(const mat3x3 A, const mat3x3 B)
+mat3x3_t MTxM(const mat3x3_t A, const mat3x3_t B)
 {
-   mat3x3 C;
+   mat3x3_t C;
    C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[1][0] * B.mat[1][0] +
                  A.mat[2][0] * B.mat[2][0];
    C.mat[0][1] = A.mat[0][0] * B.mat[0][1] + A.mat[1][0] * B.mat[1][1] +
@@ -178,9 +178,9 @@ mat3x3 MTxM(const mat3x3 A, const mat3x3 B)
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Transpose of Matrix                 */
-mat3x3 MTxMT(const mat3x3 A, const mat3x3 B)
+mat3x3_t MTxMT(const mat3x3_t A, const mat3x3_t B)
 {
-   mat3x3 C;
+   mat3x3_t C;
    C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[1][0] * B.mat[0][1] +
                  A.mat[2][0] * B.mat[0][2];
    C.mat[0][1] = A.mat[0][0] * B.mat[1][0] + A.mat[1][0] * B.mat[1][1] +
@@ -203,9 +203,9 @@ mat3x3 MTxMT(const mat3x3 A, const mat3x3 B)
 }
 /**********************************************************************/
 /*  1x3 Vector times 3x3 Matrix                                       */
-vec3 VxM(const vec3 V, const mat3x3 M)
+vec3_t VxM(const vec3_t V, const mat3x3_t M)
 {
-   vec3 W;
+   vec3_t W;
    W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[1][0] + V.v[2] * M.mat[2][0];
    W.v[1] = V.v[0] * M.mat[0][1] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[2][1];
    W.v[2] = V.v[0] * M.mat[0][2] + V.v[1] * M.mat[1][2] + V.v[2] * M.mat[2][2];
@@ -213,9 +213,9 @@ vec3 VxM(const vec3 V, const mat3x3 M)
 }
 /**********************************************************************/
 /*  3x3 Matrix times 3x1 Vector                                       */
-vec3 MxV(const mat3x3 M, const vec3 V)
+vec3_t MxV(const mat3x3_t M, const vec3_t V)
 {
-   vec3 W;
+   vec3_t W;
    W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[0][1] + V.v[2] * M.mat[0][2];
    W.v[1] = V.v[0] * M.mat[1][0] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[1][2];
    W.v[2] = V.v[0] * M.mat[2][0] + V.v[1] * M.mat[2][1] + V.v[2] * M.mat[2][2];
@@ -223,9 +223,9 @@ vec3 MxV(const mat3x3 M, const vec3 V)
 }
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
-vec3 VxMT(const vec3 V, const mat3x3 M)
+vec3_t VxMT(const vec3_t V, const mat3x3_t M)
 {
-   vec3 W;
+   vec3_t W;
    W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[0][1] + V.v[2] * M.mat[0][2];
    W.v[1] = V.v[0] * M.mat[1][0] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[1][2];
    W.v[2] = V.v[0] * M.mat[2][0] + V.v[1] * M.mat[2][1] + V.v[2] * M.mat[2][2];
@@ -233,9 +233,9 @@ vec3 VxMT(const vec3 V, const mat3x3 M)
 }
 /**********************************************************************/
 /*  Transpose of 3x3 Matrix times 3x1 Vector                          */
-vec3 MTxV(const mat3x3 M, const vec3 V)
+vec3_t MTxV(const mat3x3_t M, const vec3_t V)
 {
-   vec3 W;
+   vec3_t W;
    W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[1][0] + V.v[2] * M.mat[2][0];
    W.v[1] = V.v[0] * M.mat[0][1] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[2][1];
    W.v[2] = V.v[0] * M.mat[0][2] + V.v[1] * M.mat[1][2] + V.v[2] * M.mat[2][2];
@@ -243,61 +243,61 @@ vec3 MTxV(const mat3x3 M, const vec3 V)
 }
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
-vec3 SxV(const double S, const vec3 V)
+vec3_t SxV(const double S, const vec3_t V)
 {
-   vec3 W;
+   vec3_t W;
    W.v[0] = S * V.v[0];
    W.v[1] = S * V.v[1];
    W.v[2] = S * V.v[2];
    return W;
 }
 /**********************************************************************/
-vec3 VNegElem(const vec3 A)
+vec3_t VNegElem(const vec3_t A)
 {
-   vec3 out;
+   vec3_t out;
    out.v[0] = -A.v[0];
    out.v[1] = -A.v[1];
    out.v[2] = -A.v[2];
    return out;
 }
 /**********************************************************************/
-vec3 VpVElem(const vec3 A, const vec3 B)
+vec3_t VpVElem(const vec3_t A, const vec3_t B)
 {
-   vec3 out  = A;
-   out.v[0] += B.v[0];
-   out.v[1] += B.v[1];
-   out.v[2] += B.v[2];
+   vec3_t out  = A;
+   out.v[0]   += B.v[0];
+   out.v[1]   += B.v[1];
+   out.v[2]   += B.v[2];
    return out;
 }
 /**********************************************************************/
-vec3 VmVElem(const vec3 A, const vec3 B)
+vec3_t VmVElem(const vec3_t A, const vec3_t B)
 {
-   vec3 out  = A;
-   out.v[0] -= B.v[0];
-   out.v[1] -= B.v[1];
-   out.v[2] -= B.v[2];
+   vec3_t out  = A;
+   out.v[0]   -= B.v[0];
+   out.v[1]   -= B.v[1];
+   out.v[2]   -= B.v[2];
    return out;
 }
 /**********************************************************************/
-vec3 VxVElem(const vec3 A, const vec3 B)
+vec3_t VxVElem(const vec3_t A, const vec3_t B)
 {
-   vec3 out  = A;
-   out.v[0] *= B.v[0];
-   out.v[1] *= B.v[1];
-   out.v[2] *= B.v[2];
+   vec3_t out  = A;
+   out.v[0]   *= B.v[0];
+   out.v[1]   *= B.v[1];
+   out.v[2]   *= B.v[2];
    return out;
 }
 /**********************************************************************/
-vec3 VdVElem(const vec3 A, const vec3 B)
+vec3_t VdVElem(const vec3_t A, const vec3_t B)
 {
-   vec3 out  = A;
-   out.v[0] /= (fabs(B.v[0]) > __DBL_EPSILON__) ? B.v[0] : 0.0;
-   out.v[1] /= (fabs(B.v[1]) > __DBL_EPSILON__) ? B.v[1] : 0.0;
-   out.v[2] /= (fabs(B.v[2]) > __DBL_EPSILON__) ? B.v[2] : 0.0;
+   vec3_t out  = A;
+   out.v[0]   /= (fabs(B.v[0]) > __DBL_EPSILON__) ? B.v[0] : 0.0;
+   out.v[1]   /= (fabs(B.v[1]) > __DBL_EPSILON__) ? B.v[1] : 0.0;
+   out.v[2]   /= (fabs(B.v[2]) > __DBL_EPSILON__) ? B.v[2] : 0.0;
    return out;
 }
 /**********************************************************************/
-vec3 LimitElem_bidir(vec3 x, const vec3 lim)
+vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim)
 {
    for (int i = 0; i < 3; i++)
       if (lim.v[i] > 0)
@@ -307,9 +307,9 @@ vec3 LimitElem_bidir(vec3 x, const vec3 lim)
 }
 /**********************************************************************/
 /*  Scalar times 3x3 Matrix                                           */
-mat3x3 SxM(const double S, const mat3x3 A)
+mat3x3_t SxM(const double S, const mat3x3_t A)
 {
-   mat3x3 B;
+   mat3x3_t B;
    B.mat[0][0] = S * A.mat[0][0];
    B.mat[0][1] = S * A.mat[0][1];
    B.mat[0][2] = S * A.mat[0][2];
@@ -322,7 +322,7 @@ mat3x3 SxM(const double S, const mat3x3 A)
    return B;
 }
 /******************************************************************************/
-double det3x3(const mat3x3 M)
+double det3x3(const mat3x3_t M)
 {
    return M.mat[0][0] *
               (M.mat[1][1] * M.mat[2][2] - M.mat[1][2] * M.mat[2][1]) -
@@ -371,9 +371,9 @@ void MINV4(const double A[4][4], double B[4][4])
 }
 /******************************************************************************/
 /*  Inverse of a 3x3 Matrix                                                   */
-mat3x3 MINV3(const mat3x3 A)
+mat3x3_t MINV3(const mat3x3_t A)
 {
-   mat3x3 B;
+   mat3x3_t B;
    double DET;
 
    DET = det3x3(A);
@@ -431,7 +431,7 @@ void MINV2(const double A[2][2], double B[2][2])
 /*  Pseudo-inverse of a 4x3 matrix                                    */
 void PINV4x3(const double A[4][3], double Aplus[3][4])
 {
-   mat3x3 AtA = {0};
+   mat3x3_t AtA = {0};
 
    AtA.mat[0][0] = A[0][0] * A[0][0] + A[1][0] * A[1][0] + A[2][0] * A[2][0] +
                    A[3][0] * A[3][0];
@@ -452,7 +452,7 @@ void PINV4x3(const double A[4][3], double Aplus[3][4])
    AtA.mat[2][2] = A[0][2] * A[0][2] + A[1][2] * A[1][2] + A[2][2] * A[2][2] +
                    A[3][2] * A[3][2];
 
-   mat3x3 AtAi = MINV3(AtA);
+   mat3x3_t AtAi = MINV3(AtA);
 
    Aplus[0][0] = AtAi.mat[0][0] * A[0][0] + AtAi.mat[0][1] * A[0][1] +
                  AtAi.mat[0][2] * A[0][2];
@@ -481,9 +481,9 @@ void PINV4x3(const double A[4][3], double Aplus[3][4])
 }
 /**********************************************************************/
 /*  Transpose of a 3x3 Matrix                                         */
-mat3x3 MT(const mat3x3 A)
+mat3x3_t MT(const mat3x3_t A)
 {
-   mat3x3 B;
+   mat3x3_t B;
    B.mat[0][0] = A.mat[0][0];
    B.mat[0][1] = A.mat[1][0];
    B.mat[0][2] = A.mat[2][0];
@@ -497,15 +497,15 @@ mat3x3 MT(const mat3x3 A)
 }
 /**********************************************************************/
 /*  Vector Dot Product                                                */
-double VoV(const vec3 A, const vec3 B)
+double VoV(const vec3_t A, const vec3_t B)
 {
    return (A.v[0] * B.v[0] + A.v[1] * B.v[1] + A.v[2] * B.v[2]);
 }
 /**********************************************************************/
 /*  Vector Cross Product                                              */
-vec3 VxV(const vec3 A, const vec3 B)
+vec3_t VxV(const vec3_t A, const vec3_t B)
 {
-   vec3 C;
+   vec3_t C;
    C.v[0] = A.v[1] * B.v[2] - A.v[2] * B.v[1];
    C.v[1] = A.v[2] * B.v[0] - A.v[0] * B.v[2];
    C.v[2] = A.v[0] * B.v[1] - A.v[1] * B.v[0];
@@ -513,9 +513,9 @@ vec3 VxV(const vec3 A, const vec3 B)
 }
 /**********************************************************************/
 /*  Vector cross Matrix dot Vector                                    */
-vec3 vxMov(const vec3 w, const mat3x3 M)
+vec3_t vxMov(const vec3_t w, const mat3x3_t M)
 {
-   vec3 wxMow, Mow;
+   vec3_t wxMow, Mow;
 
    Mow.v[0] =
        M.mat[0][0] * w.v[0] + M.mat[0][1] * w.v[1] + M.mat[0][2] * w.v[2];
@@ -531,45 +531,46 @@ vec3 vxMov(const vec3 w, const mat3x3 M)
 }
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */
-double MAGV(const vec3 V)
+double MAGV(const vec3_t V)
 {
    return (sqrt(VoV(V, V)));
 }
 /**********************************************************************/
 /*  Normalize a 3-vector.  Return its (pre-normalization) magnitude   */
-double UNITV(vec3 *V)
+magvec3_t UNITV(vec3_t V)
 {
-   double A;
+   magvec3_t A;
 
-   A = MAGV(*V);
-   if (A > 0.0) {
-      V->v[0] /= A;
-      V->v[1] /= A;
-      V->v[2] /= A;
+   A.v = V;
+   A.m = MAGV(A.v);
+   if (A.m > 0.0) {
+      A.v.v[0] /= A.m;
+      A.v.v[1] /= A.m;
+      A.v.v[2] /= A.m;
    }
    else {
       printf("Attempted divide by zero in UNITV (Line %d of mathkit.c)\n",
              __LINE__);
-      V->v[0] = 0.0;
-      V->v[1] = 0.0;
-      V->v[2] = 0.0;
+      A.v.v[0] = 0.0;
+      A.v.v[1] = 0.0;
+      A.v.v[2] = 0.0;
    }
    return (A);
 }
 /**********************************************************************/
 /*  Copy and normalize a 3-vector.  Return its magnitude              */
-double CopyUnitV(const vec3 V, vec3 *W)
-{
-   *W       = V;
-   double A = UNITV(W);
-   return (A);
-}
+// double CopyUnitV(const vec3_t V, vec3_t *W)
+// {
+//    *W       = V;
+//    double A = UNITV(W);
+//    return (A);
+// }
 /**********************************************************************/
 /*  Form a skew-symmetric matrix M from a vector V such that the      */
 /*  product MxA equals the cross product VxA for any vector A.        */
-mat3x3 V2CrossM(const vec3 V)
+mat3x3_t V2CrossM(const vec3_t V)
 {
-   mat3x3 M;
+   mat3x3_t M;
    M.mat[0][0] = 0.0;
    M.mat[1][1] = 0.0;
    M.mat[2][2] = 0.0;
@@ -584,9 +585,9 @@ mat3x3 V2CrossM(const vec3 V)
 /**********************************************************************/
 /*  Form a symmetric matrix M from a vector V such that the           */
 /*  product M*A equals the product Vx(VxA) for any vector A.          */
-mat3x3 V2DoubleCrossM(const vec3 V)
+mat3x3_t V2DoubleCrossM(const vec3_t V)
 {
-   mat3x3 M;
+   mat3x3_t M;
    M.mat[0][0] = -V.v[1] * V.v[1] - V.v[2] * V.v[2];
    M.mat[1][1] = -V.v[2] * V.v[2] - V.v[0] * V.v[0];
    M.mat[2][2] = -V.v[0] * V.v[0] - V.v[1] * V.v[1];
@@ -600,9 +601,9 @@ mat3x3 V2DoubleCrossM(const vec3 V)
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by M       */
-mat3x3 VcrossM(const vec3 V, const mat3x3 M)
+mat3x3_t VcrossM(const vec3_t V, const mat3x3_t M)
 {
-   mat3x3 A;
+   mat3x3_t A;
    A.mat[0][0] = V.v[1] * M.mat[2][0] - V.v[2] * M.mat[1][0];
    A.mat[0][1] = V.v[1] * M.mat[2][1] - V.v[2] * M.mat[1][1];
    A.mat[0][2] = V.v[1] * M.mat[2][2] - V.v[2] * M.mat[1][2];
@@ -616,9 +617,9 @@ mat3x3 VcrossM(const vec3 V, const mat3x3 M)
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by MT      */
-mat3x3 VcrossMT(const vec3 V, const mat3x3 M)
+mat3x3_t VcrossMT(const vec3_t V, const mat3x3_t M)
 {
-   mat3x3 A;
+   mat3x3_t A;
    A.mat[0][0] = V.v[1] * M.mat[0][2] - V.v[2] * M.mat[0][1];
    A.mat[0][1] = V.v[1] * M.mat[1][2] - V.v[2] * M.mat[1][1];
    A.mat[0][2] = V.v[1] * M.mat[2][2] - V.v[2] * M.mat[2][1];
@@ -632,9 +633,9 @@ mat3x3 VcrossMT(const vec3 V, const mat3x3 M)
 }
 /**********************************************************************/
 /*  Quaternion product                                                */
-quat QxQ(const quat A, const quat B)
+quat_t QxQ(const quat_t A, const quat_t B)
 {
-   quat C;
+   quat_t C;
    C.q[0] =
        A.q[3] * B.q[0] + A.q[2] * B.q[1] - A.q[1] * B.q[2] + A.q[0] * B.q[3];
    C.q[1] =
@@ -647,9 +648,9 @@ quat QxQ(const quat A, const quat B)
 }
 /**********************************************************************/
 /* Product of the Complement of a Quaternion (A) with a Quaternion (B)*/
-quat QTxQ(const quat A, const quat B)
+quat_t QTxQ(const quat_t A, const quat_t B)
 {
-   quat C;
+   quat_t C;
    C.q[0] =
        A.q[3] * B.q[0] - A.q[2] * B.q[1] + A.q[1] * B.q[2] - A.q[0] * B.q[3];
    C.q[1] =
@@ -662,9 +663,9 @@ quat QTxQ(const quat A, const quat B)
 }
 /**********************************************************************/
 /* Product of a Quaternion (A) with the Complement of a Quaternion (B)*/
-quat QxQT(const quat A, const quat B)
+quat_t QxQT(const quat_t A, const quat_t B)
 {
-   quat C;
+   quat_t C;
    C.q[0] =
        -A.q[3] * B.q[0] - A.q[2] * B.q[1] + A.q[1] * B.q[2] + A.q[0] * B.q[3];
    C.q[1] =
@@ -677,9 +678,9 @@ quat QxQT(const quat A, const quat B)
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-vec3 VxQ(const vec3 Va, const quat QAB)
+vec3_t VxQ(const vec3_t Va, const quat_t QAB)
 {
-   vec3 Vb;
+   vec3_t Vb;
    double qq[4][4];
    long i, j;
 
@@ -701,9 +702,9 @@ vec3 VxQ(const vec3 Va, const quat QAB)
 }
 /**********************************************************************/
 /* Find components of V in A, given components of V in B, and qab     */
-vec3 QxV(const quat QAB, const vec3 Vb)
+vec3_t QxV(const quat_t QAB, const vec3_t Vb)
 {
-   vec3 Va;
+   vec3_t Va;
    double qq[4][4];
    long i, j;
 
@@ -725,9 +726,9 @@ vec3 QxV(const quat QAB, const vec3 Vb)
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-vec3 QTxV(const quat QAB, const vec3 Va)
+vec3_t QTxV(const quat_t QAB, const vec3_t Va)
 {
-   vec3 Vb;
+   vec3_t Vb;
    double qq[4][4];
    long i, j;
 
@@ -749,7 +750,7 @@ vec3 QTxV(const quat QAB, const vec3 Va)
 }
 /**********************************************************************/
 /*  Normalize a quaternion                                            */
-quat UNITQ(quat Q)
+quat_t UNITQ(quat_t Q)
 {
    double A = sqrt(VoV(Q.qv, Q.qv) + Q.qs * Q.qs);
    if (A == 0.0) {
@@ -769,7 +770,7 @@ quat UNITQ(quat Q)
 }
 /**********************************************************************/
 /*  Rectify a quaternion, forcing q[3] to be positive                 */
-quat RECTIFYQ(quat Q)
+quat_t RECTIFYQ(quat_t Q)
 {
    if (Q.q[3] < 0.0) {
       Q.q[0] = -Q.q[0];
@@ -781,10 +782,11 @@ quat RECTIFYQ(quat Q)
 }
 /*********************************************************************/
 /* Given vector A, find vectors B, C to form orthogonal basis        */
-vec3 PerpBasis(const vec3 A, vec3 *B)
+pair_vec3_t PerpBasis(const vec3_t A)
 {
    long i;
-   vec3 V = VEC3_ZERO;
+   magvec3_t uv;
+   pair_vec3_t V = {.first = VEC3_ZERO, .second = VEC3_ZERO};
    double Amin;
 
    Amin = fabs(A.v[0]);
@@ -797,12 +799,14 @@ vec3 PerpBasis(const vec3 A, vec3 *B)
       i = 2;
    }
 
-   V.v[i] = 1.0;
-   *B     = VxV(A, V);
-   UNITV(B);
-   vec3 C = VxV(A, *B);
-   UNITV(&C);
-   return C;
+   V.first.v[i] = 1.0;
+   V.first      = VxV(A, V.first);
+   uv           = UNITV(V.first);
+   V.first      = uv.v;
+   V.second     = VxV(A, V.first);
+   uv           = UNITV(V.second);
+   V.second     = uv.v;
+   return V;
 }
 /**********************************************************************/
 double fact(long const n)
@@ -936,9 +940,9 @@ void Legendre(const long N, const long M, const double x,
 /* gradV[0] = Radial (positive outward)                               */
 /* gradV[1] = Latitudinal (positive south)                            */
 /* gradV[2] = Longitudinal (positive east)                            */
-vec3 SphericalHarmonics(const long N, const long M, const double r,
-                        const double trigs[4], const double Re, const double K,
-                        double **C, double **S, double **Norm)
+vec3_t SphericalHarmonics(const long N, const long M,
+                          const sphere_coord_t coord, const double Re,
+                          const double K, double **C, double **S, double **Norm)
 {
 
    double P[N + 1][M + 1], sdP[N + 1][M + 1];
@@ -947,22 +951,24 @@ vec3 SphericalHarmonics(const long N, const long M, const double r,
    double Rern1[N + 1], CcSs, ScCs;
    double dVdr, dVdphi, dVdtheta;
 
+   const double r   = coord.r;
+   const double cth = coord.cth;
+   const double sth = coord.sth;
+
    /* .. Order can't be greater than Degree */
    if (M > N) {
       fprintf(stderr, "Order %ld can't be greater than Degree %ld\n", M, N);
       exit(EXIT_FAILURE);
    }
 
-   const double cth = trigs[0];
-   const double sth = trigs[1];
    /* .. Find Legendre functions */
    Legendre(N, M, cth, P, sdP);
 
    /* .. Build cos(m*phi) and sin(m*phi) */
    cphi[0] = 1.0;
    sphi[0] = 0.0;
-   cphi[1] = trigs[2];
-   sphi[1] = trigs[3];
+   cphi[1] = coord.cph;
+   sphi[1] = coord.sph;
    for (m = 2; m <= M; m++) {
       cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
       sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
@@ -992,7 +998,7 @@ vec3 SphericalHarmonics(const long N, const long M, const double r,
    dVdphi   *= K;
    dVdtheta *= K;
 
-   vec3 gradV;
+   vec3_t gradV;
    gradV.v[0] = dVdr;
    gradV.v[1] = dVdtheta / r;
    if (sth == 0.0)
@@ -1762,18 +1768,19 @@ double Amoeba(const long N, double *P,
 }
 /**********************************************************************/
 /*  Find unit normal vector to plane defined by points V1, V2, V3     */
-vec3 FindNormal(const vec3 V1, const vec3 V2, const vec3 V3)
+vec3_t FindNormal(const vec3_t V1, const vec3_t V2, const vec3_t V3)
 {
    long i;
-   vec3 D1, D2;
+   vec3_t D1, D2;
 
    for (i = 0; i < 3; i++) {
       D1.v[i] = V2.v[i] - V1.v[i];
       D2.v[i] = V3.v[i] - V2.v[i];
    }
-   vec3 N = VxV(D1, D2);
-   UNITV(&N);
-   return N;
+   magvec3_t N;
+   N.v = VxV(D1, D2);
+   N   = UNITV(N.v);
+   return N.v;
 }
 /**********************************************************************/
 /*  Output clamped at ends of interval                                */
@@ -1812,9 +1819,9 @@ double LinInterp(const double *X, const double *Y, const double x, const long n)
 /*  A constant-rate interpolation for quaternions                     */
 /*  Ref: Ken Shoemake, "Animating Rotation with Quaternion Curves"    */
 /*  q(u=0.0) = q1, q(u=1.0) = q2                                      */
-quat SphereInterp(quat q1, quat q2, const double u)
+quat_t SphereInterp(quat_t q1, quat_t q2, const double u)
 {
-   quat q = QUAT_ZERO;
+   quat_t q = QUAT_ZERO;
    double Theta, CosTheta, SinTheta;
    double SinU, Sin1mU;
    long k;
@@ -1858,28 +1865,35 @@ double CubicInterp3D(double f000, double f100, double f010, double f110,
    return (CubicInterp1D(f0, f1, z));
 }
 /**********************************************************************/
-double DistanceToLine(vec3 LineEnd1, vec3 LineEnd2, vec3 Point, vec3 *VecToLine)
+double DistanceToLine(vec3_t LineEnd1, vec3_t LineEnd2, vec3_t Point,
+                      vec3_t *VecToLine)
 {
-   vec3 Axis, Vec;
+   vec3_t Vec;
+   magvec3_t uAxis;
+   vec3_t *const Axis = &uAxis.v;
    double VoA;
    long i;
 
    for (i = 0; i < 3; i++) {
-      Axis.v[i] = LineEnd2.v[i] - LineEnd1.v[i];
-      Vec.v[i]  = Point.v[i] - LineEnd1.v[i];
+      Axis->v[i] = LineEnd2.v[i] - LineEnd1.v[i];
+      Vec.v[i]   = Point.v[i] - LineEnd1.v[i];
    }
-   UNITV(&Axis);
-   VoA = VoV(Vec, Axis);
+   uAxis = UNITV(*Axis);
+   VoA   = VoV(Vec, *Axis);
 
    for (i = 0; i < 3; i++)
-      VecToLine->v[i] = VoA * Axis.v[i] - Vec.v[i];
+      VecToLine->v[i] = VoA * Axis->v[i] - Vec.v[i];
    return (MAGV(*VecToLine));
 }
 /**********************************************************************/
-long ProjectPointOntoPoly(vec3 Point, vec3 DirVec, vec3 *Vtx, long Nvtx,
-                          vec3 *ProjPoint, double *Distance)
+long ProjectPointOntoPoly(vec3_t Point, vec3_t DirVec, vec3_t *Vtx, long Nvtx,
+                          vec3_t *ProjPoint, double *Distance)
 {
-   vec3 Axis, a1, a2, s1, s2, S1xS2, Norm;
+   vec3_t Axis, a1, a2, S1xS2;
+   magvec3_t uNorm, us1, us2;
+   vec3_t *const Norm = &uNorm.v;
+   vec3_t *const s1   = &us1.v;
+   vec3_t *const s2   = &us2.v;
    static double **COEF, *RHS, *x;
    double SumAng, SinAng, CosAng;
    long i, j, Iv, Nwrap;
@@ -1893,7 +1907,7 @@ long ProjectPointOntoPoly(vec3 Point, vec3 DirVec, vec3 *Vtx, long Nvtx,
       x     = (double *)calloc(4, sizeof(double));
    }
 
-   CopyUnitV(DirVec, &Axis);
+   Axis = UNITV(DirVec).v;
    for (i = 0; i < 3; i++) {
       a1.v[i] = Vtx[1].v[i] - Vtx[0].v[i];
       a2.v[i] = Vtx[2].v[i] - Vtx[0].v[i];
@@ -1925,20 +1939,20 @@ long ProjectPointOntoPoly(vec3 Point, vec3 DirVec, vec3 *Vtx, long Nvtx,
    *Distance = x[3];
 
    /* Find whether ProjPoint lies in polygon */
-   Norm = VxV(a1, a2);
-   UNITV(&Norm);
+   *Norm  = VxV(a1, a2);
+   uNorm  = UNITV(*Norm);
    SumAng = 0.0;
    OnEdge = 0;
    for (Iv = 0; Iv < Nvtx; Iv++) {
       for (j = 0; j < 3; j++) {
-         s1.v[j] = Vtx[Iv].v[j] - ProjPoint->v[j];
-         s2.v[j] = Vtx[(Iv + 1) % Nvtx].v[j] - ProjPoint->v[j];
+         s1->v[j] = Vtx[Iv].v[j] - ProjPoint->v[j];
+         s2->v[j] = Vtx[(Iv + 1) % Nvtx].v[j] - ProjPoint->v[j];
       }
-      UNITV(&s1);
-      UNITV(&s2);
-      S1xS2  = VxV(s1, s2);
-      SinAng = VoV(S1xS2, Norm);
-      CosAng = VoV(s1, s2);
+      us1    = UNITV(*s1);
+      us2    = UNITV(*s2);
+      S1xS2  = VxV(*s1, *s2);
+      SinAng = VoV(S1xS2, *Norm);
+      CosAng = VoV(*s1, *s2);
       if (fabs(SinAng) < 1.0E-6 && CosAng < -0.9)
          OnEdge = 1;
       SumAng += atan2(SinAng, CosAng);
@@ -1953,11 +1967,11 @@ long ProjectPointOntoPoly(vec3 Point, vec3 DirVec, vec3 *Vtx, long Nvtx,
 /* find the projection of Pt onto ABC.  Barycentric coords have      */
 /* fourth element, so that                                           */
 /* Pt = Bary[0]*A + Bary[1]*B + Bary[2]*C + Bary[3]*DirVec           */
-long ProjectPointOntoTriangle(vec3 A, vec3 B, vec3 C, vec3 DirVec, vec3 Pt,
-                              vec3 *ProjPt, vec4 *Bary)
+long ProjectPointOntoTriangle(vec3_t A, vec3_t B, vec3_t C, vec3_t DirVec,
+                              vec3_t Pt, vec3_t *ProjPt, vec4_t *Bary)
 {
    double Den, NumA, NumB, NumC, NumD;
-   vec3 AxB, CxD, PxB, AxP, CxP, PxD;
+   vec3_t AxB, CxD, PxB, AxP, CxP, PxD;
    double M[4][3], Mplus[3][4];
    long InPoly, i;
 
@@ -2149,12 +2163,12 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
    free(Atb);
 }
 /******************************************************************************/
-void VecToLngLat(vec3 A, double *lng, double *lat)
+void VecToLngLat(vec3_t A, double *lng, double *lat)
 {
-   vec3 B;
+   vec3_t B;
 
    if (MAGV(A) > 0.0) {
-      CopyUnitV(A, &B);
+      B = UNITV(A).v;
 
       *lng = atan2(B.v[1], B.v[0]);
 
@@ -2309,23 +2323,23 @@ double BrentsMethod(double a, double b, const double tol,
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */
-void getTrigSphericalCoords(const vec3 pbe, double *const cth,
-                            double *const sth, double *const cph,
-                            double *const sph, double *const r)
+sphere_coord_t getTrigSphericalCoords(const vec3_t pbe)
 {
-   *r                 = MAGV(pbe);
-   const double denom = sqrt(pbe.v[1] * pbe.v[1] + pbe.v[0] * pbe.v[0]);
-   *cth               = pbe.v[2] / (*r);             // cos(theta)
-   *sth               = sqrt(1.0 - (*cth) * (*cth)); // sin(theta);
-   *cph               = pbe.v[0] / denom;            // cos(phi);
-   *sph               = pbe.v[1] / denom;            // sin(phi);
+   sphere_coord_t out;
+   out.r              = MAGV(pbe);
+   const double denom = sqrt(pbe.y * pbe.y + pbe.x * pbe.x);
+   out.cth            = pbe.z / out.r;                 // cos(theta)
+   out.sth            = sqrt(1.0 - out.cth * out.cth); // sin(theta);
+   out.cph            = pbe.x / denom;                 // cos(phi);
+   out.sph            = pbe.y / denom;                 // sin(phi);
+   return out;
 }
 /******************************************************************************/
 // Calculate SO(3) adjoint operation: for rotation matrix C and matrix A,
 // calculate C*A*C^T
-mat3x3 Adjoint(const mat3x3 C, const mat3x3 A)
+mat3x3_t Adjoint(const mat3x3_t C, const mat3x3_t A)
 {
-   mat3x3 CACT;
+   mat3x3_t CACT;
    long i, j, k, l;
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++) {
@@ -2339,9 +2353,9 @@ mat3x3 Adjoint(const mat3x3 C, const mat3x3 A)
 /******************************************************************************/
 // Calculate SO(3) adjoint operation for transpose rotation: for rotation matrix
 // C and matrix A, calculate C^T*A*C
-mat3x3 AdjointT(const mat3x3 C, const mat3x3 A)
+mat3x3_t AdjointT(const mat3x3_t C, const mat3x3_t A)
 {
-   mat3x3 CTAC;
+   mat3x3_t CTAC;
    long i, j, k, l;
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++) {
@@ -2355,11 +2369,11 @@ mat3x3 AdjointT(const mat3x3 C, const mat3x3 A)
 /******************************************************************************/
 // Invert 3x3 matrix A and right multiply by 3xm matrix B, returning 3xm matrix
 // C
-void MINVxM3(mat3x3 A, long m, double B[3][m], double C[3][m])
+void MINVxM3(mat3x3_t A, long m, double B[3][m], double C[3][m])
 {
    long I, J, ROW;
    long IPIVOT = 0;
-   mat3x3 M;
+   mat3x3_t M;
    double PIVOT, K;
 
    M = A;
@@ -2382,7 +2396,7 @@ void MINVxM3(mat3x3 A, long m, double B[3][m], double C[3][m])
          exit(EXIT_FAILURE);
       }
 
-      vec3 tv        = M.rows[IPIVOT];
+      vec3_t tv      = M.rows[IPIVOT];
       M.rows[IPIVOT] = M.rows[ROW];
       M.rows[ROW]    = SxV(1.0 / PIVOT, tv);
       for (J = 0; J < m; J++) {
@@ -2506,15 +2520,15 @@ void MxMINVG(double **A, double **B, double **C, long N, long m)
 }
 /******************************************************************************/
 // Matrix Exponential for Special Orthogonal Group of dimension 3 (SO(3))
-mat3x3 expmso3(vec3 theta)
+mat3x3_t expmso3(vec3_t theta)
 {
    double tMag, sTMag, cTMagM1;
-   mat3x3 R = MAT3X3_EYE, tCross, tCrossCross;
+   mat3x3_t R = MAT3X3_EYE, tCross, tCrossCross;
    long i, j;
 
    tMag = MAGV(theta);
    if (tMag >= __DBL_EPSILON__) {
-      vec3 thetaHat;
+      vec3_t thetaHat;
       for (i = 0; i < 3; i++)
          thetaHat.v[i] = theta.v[i] / tMag;
       sTMag   = sin(tMag);
@@ -2532,7 +2546,7 @@ mat3x3 expmso3(vec3 theta)
 }
 /******************************************************************************/
 // Matrix Logarithm for SO(3)
-vec3 logso3(mat3x3 const R)
+vec3_t logso3(mat3x3_t const R)
 {
    double tMag, dSincTMag;
 
@@ -2540,7 +2554,7 @@ vec3 logso3(mat3x3 const R)
    dSincTMag = 2.0;
    if (tMag > __DBL_EPSILON__)
       dSincTMag *= sinc(tMag);
-   vec3 theta;
+   vec3_t theta;
    theta.v[0] = (R.mat[2][1] - R.mat[1][2]) / dSincTMag;
    theta.v[1] = (R.mat[0][2] - R.mat[2][0]) / dSincTMag;
    theta.v[2] = (R.mat[1][0] - R.mat[0][1]) / dSincTMag;
@@ -2548,30 +2562,32 @@ vec3 logso3(mat3x3 const R)
 }
 /******************************************************************************/
 // Calculate matrix exponential on two-frames-group (SO(3)xR^((n+m)x3))
-void expmTFG(vec3 *theta, long const n, long const m, vec3 x[n], vec3 xbar[m],
-             mat3x3 *R)
+void expmTFG(const vec3_t theta, long const n, long const m, vec3_t x[n],
+             vec3_t xbar[m], mat3x3_t *R)
 {
-   mat3x3 tCross, tCrossCross, intmR, intR = MAT3X3_EYE;
-   double tMag, scTMag, cTMagM1;
+   mat3x3_t tCross, tCrossCross, intmR, intR = MAT3X3_EYE;
+   double scTMag, cTMagM1;
    long i, j;
 
-   *R = expmso3(*theta);
+   magvec3_t utheta;
+   utheta.v = theta;
 
-   tMag = MAGV(*theta);
-   if (tMag > __DBL_EPSILON__) {
-      UNITV(theta);
-      scTMag  = sinc(tMag);
-      cTMagM1 = cos(tMag) - 1.0;
+   *R = expmso3(utheta.v);
 
-      tCross      = V2CrossM(*theta);
-      tCrossCross = V2DoubleCrossM(*theta);
+   utheta = UNITV(utheta.v);
+   if (utheta.m > __DBL_EPSILON__) {
+      scTMag  = sinc(utheta.m);
+      cTMagM1 = cos(utheta.m) - 1.0;
+
+      tCross      = V2CrossM(utheta.v);
+      tCrossCross = V2DoubleCrossM(utheta.v);
 
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
             intR.mat[i][j] += (1.0 - scTMag) * tCrossCross.mat[i][j];
             intmR.mat[i][j] =
-                intR.mat[i][j] + cTMagM1 * tCross.mat[i][j] / tMag;
-            intR.mat[i][j] -= cTMagM1 * tCross.mat[i][j] / tMag;
+                intR.mat[i][j] + cTMagM1 * tCross.mat[i][j] / utheta.m;
+            intR.mat[i][j] -= cTMagM1 * tCross.mat[i][j] / utheta.m;
          }
       }
       for (j = 0; j < n; j++)

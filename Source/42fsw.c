@@ -39,9 +39,9 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
    long Frame;
    struct CmdType *Cmd;
    struct CmdVecType *CV;
-   quat q;
-   vec3 Ang, VecR, Vec, VecH;
-   mat3x3 C;
+   quat_t q;
+   vec3_t Ang, VecR, Vec, VecH;
+   mat3x3_t C;
    double RA, Dec;
    double Lng, Lat, Alt;
    double wc, amax, vmax;
@@ -123,11 +123,11 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          CV = &Cmd->SecVec;
       CV->Mode  = CMD_DIRECTION;
       CV->Frame = FRAME_N;
-      UNITV(&VecR);
-      CV->R   = VecR;
-      CV->N.x = cos_deg(RA) * cos_deg(Dec);
-      CV->N.y = sin_deg(RA) * cos_deg(Dec);
-      CV->N.z = sin_deg(Dec);
+      VecR      = UNITV(VecR).v;
+      CV->R     = VecR;
+      CV->N.x   = cos_deg(RA) * cos_deg(Dec);
+      CV->N.y   = sin_deg(RA) * cos_deg(Dec);
+      CV->N.z   = sin_deg(Dec);
    }
 
    else if (sscanf(CmdLine,
@@ -153,8 +153,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame    = FRAME_N;
       CV->TrgType  = TARGET_WORLD;
       CV->TrgWorld = Iw;
-      UNITV(&VecR);
-      CV->R   = VecR;
+      VecR         = UNITV(VecR).v;
+      CV->R        = VecR;
       CV->W.x = (World[Iw].rad + 1000.0 * Alt) * cos_deg(Lng) * cos_deg(Lat);
       CV->W.y = (World[Iw].rad + 1000.0 * Alt) * sin_deg(Lng) * cos_deg(Lat);
       CV->W.z = (World[Iw].rad + 1000.0 * Alt) * sin_deg(Lat);
@@ -182,9 +182,9 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame    = FRAME_N;
       CV->TrgType  = TARGET_WORLD;
       CV->TrgWorld = Iw;
-      UNITV(&VecR);
-      CV->R = VecR;
-      CV->W = VEC3_ZERO;
+      VecR         = UNITV(VecR).v;
+      CV->R        = VecR;
+      CV->W        = VEC3_ZERO;
    }
 
    else if (sscanf(CmdLine,
@@ -210,9 +210,9 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame    = FRAME_N;
       CV->TrgType  = TARGET_WORLD;
       CV->TrgWorld = GroundStation[It].World;
-      UNITV(&VecR);
-      CV->R = VecR;
-      CV->W = GroundStation[It].PosW;
+      VecR         = UNITV(VecR).v;
+      CV->R        = VecR;
+      CV->W        = GroundStation[It].PosW;
    }
 
    else if (sscanf(CmdLine,
@@ -239,8 +239,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->TrgType = TARGET_BODY;
       CV->TrgSC   = Isct;
       CV->TrgBody = Ibt;
-      CopyUnitV(VecR, &CV->R);
-      CV->T = Vec;
+      CV->R       = UNITV(VecR).v;
+      CV->T       = Vec;
    }
 
    else if (sscanf(
@@ -266,7 +266,7 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame   = FRAME_N;
       CV->TrgType = TARGET_SC;
       CV->TrgSC   = Isct;
-      CopyUnitV(VecR, &CV->R);
+      CV->R       = UNITV(VecR).v;
    }
 
    else if (sscanf(CmdLine,
@@ -346,7 +346,7 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = SOL;
       }
-      UNITV(&VecR);
+      VecR  = UNITV(VecR).v;
       CV->R = VecR;
       CV->W = VEC3_ZERO;
    }
@@ -375,8 +375,8 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->TrgType = TARGET_BODY;
       CV->TrgSC   = Isct;
       CV->TrgBody = Ibt;
-      CopyUnitV(VecR, &CV->R);
-      CV->T = Vec;
+      CV->R       = UNITV(VecR).v;
+      CV->T       = Vec;
    }
 
    else if (sscanf(CmdLine,
@@ -408,9 +408,9 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          CV = &Cmd->SecVec;
       CV->Mode  = CMD_DIRECTION;
       CV->Frame = Frame;
-      UNITV(&VecR);
-      UNITV(&Vec);
-      CV->R = VecR;
+      VecR      = UNITV(VecR).v;
+      Vec       = UNITV(Vec).v;
+      CV->R     = VecR;
       if (Frame == FRAME_L)
          CV->L = Vec;
       else
@@ -537,17 +537,20 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-vec3 RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN) __attribute__((const));
-vec3 RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN)
+vec3_t RelMotionToAngRate(vec3_t RelPosN, vec3_t RelVelN)
+    __attribute__((const));
+vec3_t RelMotionToAngRate(vec3_t RelPosN, vec3_t RelVelN)
 {
    double magp, Vpar, magvp;
-   vec3 phat, Axis, Vperp, wn;
+   vec3_t phat, Axis, Vperp, wn;
    long i;
 
-   magp = CopyUnitV(RelPosN, &phat);
+   magvec3_t uv = UNITV(RelPosN);
+   magp         = uv.m;
+   phat         = uv.v;
 
    Axis = VxV(RelPosN, RelVelN);
-   UNITV(&Axis);
+   Axis = UNITV(Axis).v;
 
    Vpar = VoV(RelVelN, phat);
    for (i = 0; i < 3; i++)
@@ -563,9 +566,9 @@ vec3 RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN)
 struct CmdVecType FindCmdVecN(struct SCType *S, struct CmdVecType CV)
 {
    struct WorldType *W;
-   vec3 RelPosB, vb, Rhat;
-   vec3 RelPosN, RelPosH, RelVelN, RelVelH;
-   vec3 pcmn, pn, vn, ph, vh;
+   vec3_t RelPosB, vb, Rhat;
+   vec3_t RelPosN, RelPosH, RelVelN, RelVelH;
+   vec3_t pcmn, pn, vn, ph, vh;
    double CosPriMerAng, SinPriMerAng;
    double MaxToS, ToS;
    long It, i;
@@ -597,7 +600,7 @@ struct CmdVecType FindCmdVecN(struct SCType *S, struct CmdVecType CV)
             RelPosN = MxV(World[Orb[S->RefOrb].World].CNH, RelPosH);
             RelVelN = MxV(World[Orb[S->RefOrb].World].CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, &CV.N);
+         CV.N  = UNITV(RelPosN).v;
          CV.wn = RelMotionToAngRate(RelPosN, RelVelN);
          break;
       case TARGET_SC:
@@ -621,7 +624,7 @@ struct CmdVecType FindCmdVecN(struct SCType *S, struct CmdVecType CV)
             RelPosN = MxV(World[Orb[S->RefOrb].World].CNH, RelPosH);
             RelVelN = MxV(World[Orb[S->RefOrb].World].CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, &CV.N);
+         CV.N  = UNITV(RelPosN).v;
          CV.wn = RelMotionToAngRate(RelPosN, RelVelN);
          break;
       case TARGET_BODY:
@@ -657,29 +660,29 @@ struct CmdVecType FindCmdVecN(struct SCType *S, struct CmdVecType CV)
             RelPosN = MxV(World[Orb[S->RefOrb].World].CNH, RelPosH);
             RelVelN = MxV(World[Orb[S->RefOrb].World].CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, &CV.N);
+         CV.N  = UNITV(RelPosN).v;
          CV.wn = RelMotionToAngRate(RelPosN, RelVelN);
          break;
       case TARGET_VELOCITY:
          CV.N = S->VelN;
-         UNITV(&CV.N);
+         CV.N = UNITV(CV.N).v;
          break;
       case TARGET_MAGFIELD:
          CV.N = S->bvn;
-         UNITV(&CV.N);
+         CV.N = UNITV(CV.N).v;
          break;
       case TARGET_TDRS:
          CV.N   = VEC3_PZAXIS;
          CV.wn  = VEC3_ZERO;
          MaxToS = -2.0; /* Bogus */
-         CopyUnitV(S->PosN, &Rhat);
+         Rhat   = UNITV(S->PosN).v;
          /* Aim at TDRS closest to Zenith */
          for (It = 0; It < 10; It++) {
             if (Tdrs[It].Exists) {
                for (i = 0; i < 3; i++)
                   RelPosN.v[i] = Tdrs[It].PosN.v[i] - S->PosN.v[i];
-               UNITV(&RelPosN);
-               ToS = VoV(RelPosN, Rhat);
+               RelPosN = UNITV(RelPosN).v;
+               ToS     = VoV(RelPosN, Rhat);
                if (ToS > MaxToS) {
                   MaxToS = ToS;
                   CV.N   = RelPosN;
@@ -699,9 +702,9 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
    struct BodyType *B;
    struct CmdType *Cmd;
    struct CmdVecType *PV, *SV;
-   mat3x3 CRN, C, Cdot, CGoGi;
-   vec3 PriVecBi, SecVecBi, PriVecGi, SecVecGi, PriVecGo, SecVecGo;
-   quat qln;
+   mat3x3_t CRN, C, Cdot, CGoGi;
+   vec3_t PriVecBi, SecVecBi, PriVecGi, SecVecGi, PriVecGo, SecVecGo;
+   quat_t qln;
    long Ig, Bi, i, j;
 
    Cmd = &S->AC.Cmd;
@@ -799,7 +802,7 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
             PriVecGo = MTxV(G->CBoGo, PV->R);
             SecVecGo = MTxV(G->CBoGo, SV->R);
             CGoGi    = TRIAD(PriVecGi, SecVecGi, PriVecGo, SecVecGo);
-            C2A(G->RotSeq, CGoGi, &Cmd->Ang.x, &Cmd->Ang.y, &Cmd->Ang.z);
+            Cmd->Ang = C2A(G->RotSeq, CGoGi);
          }
          else {
             PriVecBi = MxV(B->CN, PV->N);
@@ -844,7 +847,7 @@ void InitAC(struct SCType *S)
    long Ib, Ig, i, j, k;
    struct AcType *AC;
    double **A, **Aplus;
-   vec3 r;
+   vec3_t r;
 
    AC = &S->AC;
 
@@ -1064,17 +1067,17 @@ void InitAC(struct SCType *S)
 /* inertia of the appendage depending from the joint (that is, all    */
 /* bodies for which that joint is in the JointPathTable) about that   */
 /* joint, with all joints undeflected.                                */
-vec3 FindAppendageInertia(long Ig, struct SCType *S)
+vec3_t FindAppendageInertia(long Ig, struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   vec3 rho, Cr, rhog;
-   mat3x3 CBoG, IBoG, CBoBi, Coi, Csofar;
+   vec3_t rho, Cr, rhog;
+   mat3x3_t CBoG, IBoG, CBoBi, Coi, Csofar;
    long Ib, Jg, k;
 
    D = &S->Dyn;
 
-   vec3 Iapp = VEC3_ZERO;
+   vec3_t Iapp = VEC3_ZERO;
    for (Ib = 1; Ib < S->Nb; Ib++) {
       if (D->JointPathTable[Ib][Ig].InPath) {
          /* Build undeflected rho */
@@ -1177,7 +1180,7 @@ void PrototypeFSW(struct SCType *S)
    struct AcPrototypeCtrlType *C;
    struct BodyType *B;
    struct CmdType *Cmd;
-   vec3 alpha, Iapp, Hvnb, Herr, werr;
+   vec3_t alpha, Iapp, Hvnb, Herr, werr;
    long Ig, i, j;
 
    AC  = &S->AC;
@@ -1332,10 +1335,10 @@ void MomBiasFSW(struct SCType *S)
 {
 
    double PitchRateError, PitchTcmd;
-   vec3 Zvec = VEC3_PZAXIS;
-   vec3 Tcmd, Bdot, Mcmd;
+   vec3_t Zvec = VEC3_PZAXIS;
+   vec3_t Tcmd, Bdot, Mcmd;
    double magb2;
-   static vec3 bvbold;
+   static vec3_t bvbold;
    double PitchRateCmd = -0.001059;
    double Kry          = 5.0;
    double Kpy          = 0.1;
@@ -1408,10 +1411,10 @@ void MomBiasFSW(struct SCType *S)
 /* SC_Aura is a three-body three-axis stabilized S/C                */
 void ThreeAxisFSW(struct SCType *S)
 {
-   mat3x3 CRN;
-   quat qrn, qbr;
-   vec3 wln, Herr, HxB;
-   vec3 Zvec = VEC3_PZAXIS;
+   mat3x3_t CRN;
+   quat_t qrn, qbr;
+   vec3_t wln, Herr, HxB;
+   vec3_t Zvec = VEC3_PZAXIS;
    double AngErr;
    long i, j;
    struct AcType *AC;
@@ -1488,11 +1491,11 @@ void IssFSW(struct SCType *S)
    long Ig, i, j;
    struct AcType *AC;
    struct AcIssCtrlType *C;
-   const mat3x3 Identity = MAT3X3_EYE;
-   const vec3 Zvec       = VEC3_PZAXIS;
+   const mat3x3_t Identity = MAT3X3_EYE;
+   const vec3_t Zvec       = VEC3_PZAXIS;
    double AngErr, MinRoZ, RoZ;
-   vec3 r, rb, tvb, svb, Iapp, GimCmd;
-   mat3x3 CRL, CBL, CBR;
+   vec3_t r, rb, tvb, svb, Iapp, GimCmd;
+   mat3x3_t CRL, CBL, CBR;
 
    AC = &S->AC;
    C  = &AC->IssCtrl;
@@ -1523,7 +1526,8 @@ void IssFSW(struct SCType *S)
    CBL = MxMT(S->B[0].CN, S->CLN);
    CBR = MxMT(CBL, CRL);
    /* XVV */
-   C2A(321, CBR, &C->therr.z, &C->therr.y, &C->therr.x);
+   vec3_t therrv = C2A(321, CBR);
+   C->therr      = (vec3_t){.z = therrv.x, .y = therrv.y, .x = therrv.z};
    for (i = 0; i < 3; i++) {
       C->werr.v[i] = AC->wbn.v[i] - S->wln.v[i];
       AC->IdealTrq.v[i] =
@@ -1565,7 +1569,7 @@ void IssFSW(struct SCType *S)
       if (Tdrs[i].Exists) {
          for (j = 0; j < 3; j++)
             r.v[j] = Tdrs[i].PosN.v[j] - S->PosN.v[j];
-         UNITV(&r);
+         r   = UNITV(r).v;
          rb  = MxV(S->B[0].CN, r);
          RoZ = VoV(rb, Zvec);
          if (RoZ < MinRoZ) {
@@ -1596,12 +1600,12 @@ void CmgFSW(struct SCType *S)
 {
    struct AcType *AC;
    struct AcCmgCtrlType *C;
-   quat qbl, qbr, H;
-   mat3x3 CBL, CRL;
-   vec3 Axis[4], Gim[4];
+   quat_t qbl, qbr, H;
+   mat3x3_t CBL, CRL;
+   vec3_t Axis[4], Gim[4];
    static double MoveTime = 200.0;
-   static vec3 RPYCmd     = {.v = {1.0, 1.0, 1.0}};
-   static quat qrl        = QUAT_EYE;
+   static vec3_t RPYCmd   = {.v = {1.0, 1.0, 1.0}};
+   static quat_t qrl      = QUAT_EYE;
    static long Idx        = 0;
    long i;
 
@@ -1668,10 +1672,10 @@ void ThrFSW(struct SCType *S)
    double PosXcmd[4]      = {0.0, 0.0, 0.0, 0.0};
    double PosYcmd[4]      = {24.0, 0.0, -24.0, 0.0};
    double PosZcmd[4]      = {0.0, 24.0, 0.0, -24.0};
-   static mat3x3 CRL;
-   mat3x3 CRN;
-   vec3 PosRN, PosRL, FcmdB;
-   quat qrn;
+   static mat3x3_t CRL;
+   mat3x3_t CRN;
+   vec3_t PosRN, PosRL, FcmdB;
+   quat_t qrn;
    double FoA, TorxA;
    static long Idx = 0;
    long i;
@@ -1773,16 +1777,16 @@ void CfsFSW(struct AcType *AC)
       GpsProcessing(AC);
 
 /* .. Commanded Attitude */
-      CopyUnitV(AC->PosN,L3);
+      L3=UNITV(AC->PosN).v;
       VxV(AC->PosN,AC->VelN,L2);
-      UNITV(L2);
-      UNITV(L3);
+      L2 = UNITV(L2).v;
+      L3 = UNITV(L3).v;
       for(i=0;i<3;i++) {
          L2[i] = -L2[i];
          L3[i] = -L3[i];
       }
       VxV(L2,L3,L1);
-      UNITV(L1);
+      L1 = UNITV(L1).v;
       for(i=0;i<3;i++) {
          AC->CLN[0][i] = L1[i];
          AC->CLN[1][i] = L2[i];
@@ -1823,10 +1827,10 @@ void AdHocFSW(struct SCType *S)
 {
    struct AcType *AC;
    struct AcAdHocCtrlType *C;
-   mat3x3 CLN, CRN;
-   quat qrn;
-   vec3 wln;
-   const mat3x3 CRL = {.rows = {VEC3_PYAXIS, VEC3_NZAXIS, VEC3_NXAXIS}};
+   mat3x3_t CLN, CRN;
+   quat_t qrn;
+   vec3_t wln;
+   const mat3x3_t CRL = {.rows = {VEC3_PYAXIS, VEC3_NZAXIS, VEC3_NXAXIS}};
    long i;
 
    AC = &S->AC;

@@ -127,7 +127,7 @@ EXTERN GLuint SphereSunSpriteTexTag;
 EXTERN GLuint SphereMoonSpriteTexTag;
 
 EXTERN char StarCatFileName[80];
-EXTERN vec3 BuckyPf[32];
+EXTERN vec3_t BuckyPf[32];
 EXTERN long BuckyNeighbor[32][6];
 
 EXTERN double SkyDistance;

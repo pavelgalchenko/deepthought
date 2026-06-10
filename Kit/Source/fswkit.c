@@ -96,44 +96,49 @@ void FindSpinnerGains(double J, double It, double Tc, double OrbPer,
 /*                                                                    */
 /*  Given components of two vectors (V and W) defined in A frame and  */
 /*  in B frame, find the direction cosine matrix CBA.                 */
-mat3x3 TRIAD(vec3 Va, vec3 Wa, vec3 Vb, vec3 Wb)
+mat3x3_t TRIAD(vec3_t Va, vec3_t Wa, vec3_t Vb, vec3_t Wb)
 {
-   vec3 u, v, q, r, s;
-   mat3x3 Ma, Mb;
+   magvec3_t uu, uv, uq, ur, us;
+   vec3_t *const u = &uu.v;
+   vec3_t *const v = &uv.v;
+   vec3_t *const q = &uq.v;
+   vec3_t *const r = &ur.v;
+   vec3_t *const s = &us.v;
+   mat3x3_t Ma, Mb;
    long i;
 
-   u = Va;
-   v = Wa;
-   q = u;
+   *u = Va;
+   *v = Wa;
+   *q = *u;
 
-   UNITV(&u);
-   UNITV(&v);
-   UNITV(&q);
-   r = VxV(u, v);
-   UNITV(&r);
-   s = VxV(q, r);
-   UNITV(&s);
+   uu = UNITV(*u);
+   uv = UNITV(*v);
+   uq = UNITV(*q);
+   *r = VxV(*u, *v);
+   ur = UNITV(*r);
+   *s = VxV(*q, *r);
+   us = UNITV(*s);
    for (i = 0; i < 3; i++) {
-      Ma.mat[i][0] = q.v[i];
-      Ma.mat[i][1] = r.v[i];
-      Ma.mat[i][2] = s.v[i];
+      Ma.mat[i][0] = q->v[i];
+      Ma.mat[i][1] = r->v[i];
+      Ma.mat[i][2] = s->v[i];
    }
 
-   u = Vb;
-   v = Wb;
-   q = u;
+   *u = Vb;
+   *v = Wb;
+   *q = *u;
 
-   UNITV(&u);
-   UNITV(&v);
-   UNITV(&q);
-   r = VxV(u, v);
-   UNITV(&r);
-   s = VxV(q, r);
-   UNITV(&s);
+   uu = UNITV(*u);
+   uv = UNITV(*v);
+   uq = UNITV(*q);
+   *r = VxV(*u, *v);
+   ur = UNITV(*r);
+   *s = VxV(*q, *r);
+   us = UNITV(*s);
    for (i = 0; i < 3; i++) {
-      Mb.mat[i][0] = q.v[i];
-      Mb.mat[i][1] = r.v[i];
-      Mb.mat[i][2] = s.v[i];
+      Mb.mat[i][0] = q->v[i];
+      Mb.mat[i][1] = r->v[i];
+      Mb.mat[i][2] = s->v[i];
    }
 
    return MxMT(Mb, Ma);
@@ -147,34 +152,42 @@ mat3x3 TRIAD(vec3 Va, vec3 Wa, vec3 Vb, vec3 Wb)
 /* routine finds the optimal estimate of q, the quaternion expressing */
 /* the rotation from the reference frame (where Ref's are given) to   */
 /* the body frame (where Meas's are given).                           */
-quat Quest(long n, double *Weight, vec3 *Ref, vec3 *Meas)
+quat_t Quest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas)
 {
    long i, j, k;
 
-   mat3x3 B = MAT3X3_ZERO, XX = MAT3X3_ZERO, S, SS;
-   vec3 Z = VEC3_ZERO;
+   mat3x3_t B = MAT3X3_ZERO, XX = MAT3X3_ZERO, S, SS;
+   vec3_t Z = VEC3_ZERO;
    double sigma, kappa, delta;
    double aa, bb, cc, dd;
    double lam, f0, f1, f2, f, fp, lam2;
    double mag, alpha, beta, gamma;
-   vec3 WxV, SZ, X, SSZ;
+   vec3_t WxV, SZ, X, SSZ;
 
    /* .. Normalize weights and measurements */
+   double weight[n];
+
    mag = 0.0;
+   for (i = 0; i < n; i++) {
+      weight[i]  = Weight[i];
+      mag       += weight[i];
+   }
    for (i = 0; i < n; i++)
-      mag += Weight[i];
-   for (i = 0; i < n; i++)
-      Weight[i] /= mag;
+      weight[i] /= mag;
+
+   magvec3_t uref[n], umeas[n];
 
    for (i = 0; i < n; i++) {
-      UNITV(&Ref[i]);
-      UNITV(&Meas[i]);
+      uref[i].v  = Ref[i];
+      umeas[i].v = Meas[i];
+      uref[i]    = UNITV(uref[i].v);
+      umeas[i]   = UNITV(umeas[i].v);
    }
 
    for (j = 0; j < 3; j++)
       for (k = 0; k < 3; k++)
          for (i = 0; i < n; i++)
-            B.mat[j][k] += Weight[i] * Meas[i].v[j] * Ref[i].v[k];
+            B.mat[j][k] += weight[i] * umeas[i].v.v[j] * uref[i].v.v[k];
 
    S = B;
    for (j = 0; j < 3; j++)
@@ -189,9 +202,9 @@ quat Quest(long n, double *Weight, vec3 *Ref, vec3 *Meas)
    }
 
    for (i = 0; i < n; i++) {
-      WxV = VxV(Meas[i], Ref[i]);
+      WxV = VxV(umeas[i].v, uref[i].v);
       for (j = 0; j < 3; j++)
-         Z.v[j] += Weight[i] * WxV.v[j];
+         Z.v[j] += weight[i] * WxV.v[j];
    }
 
    sigma = B.mat[0][0] + B.mat[1][1] + B.mat[2][2];
@@ -244,7 +257,7 @@ quat Quest(long n, double *Weight, vec3 *Ref, vec3 *Meas)
 
    mag = sqrt(VoV(X, X) + gamma * gamma);
 
-   quat qmr = QUAT_ZERO;
+   quat_t qmr = QUAT_ZERO;
    return qmr;
 }
 /**********************************************************************/
@@ -262,29 +275,21 @@ quat Quest(long n, double *Weight, vec3 *Ref, vec3 *Meas)
 /*  this routine finds the optimal estimate of qmr, the quaternion    */
 /*  expressing the rotation from the reference frame (where Ref's are */
 /*  given) to the body frame (where Meas's are given).                */
-quat FilterQuest(long n, double *Weight, vec3 *Ref, vec3 *Meas,
-                 double dt __attribute__((unused)), double memory, vec3 wbn)
+quat_t FilterQuest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas,
+                   double dt __attribute__((unused)), double memory, vec3_t wbn)
 {
-   double *a, rho;
+   double a[n], rho;
    long i, j, k;
 
-   mat3x3 B, S, phi, aVW, phiB;
-   vec3 U, Z, *W, *V;
+   mat3x3_t B, S, phi, aVW, phiB;
+   vec3_t U, Z;
+   vec3_t W[n], V[n];
    double th, sigma, kappa, delta;
    double aa, bb, cc, dd;
    double lam, f0, f1, f2, f, fp, lam2;
    double alpha, beta, gamma, mag;
-   vec3 SZ, X, SSZ;
-   mat3x3 XX, SS;
-
-   a = (double *)calloc(n, sizeof(double));
-   if (a == NULL) {
-      fprintf(stderr,
-              "calloc returned null pointer in FilterQuest.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-   W = malloc(n * sizeof(vec3));
-   V = malloc(n * sizeof(vec3));
+   vec3_t SZ, X, SSZ;
+   mat3x3_t XX, SS;
 
    /*.. Normalize weights and measurements */
    mag = 0.0;
@@ -301,13 +306,15 @@ quat FilterQuest(long n, double *Weight, vec3 *Ref, vec3 *Meas,
       a[i] *= (1.0 - memory) / mag;
 
    for (i = 0; i < n; i++) {
-      CopyUnitV(Ref[i], &V[i]);
-      CopyUnitV(Meas[i], &W[i]);
+      V[i] = UNITV(Ref[i]).v;
+      W[i] = UNITV(Meas[i]).v;
    }
 
    /* .. Build transition matrix, phi */
-   th  = CopyUnitV(wbn, &U);
-   phi = SimpRot(U, th);
+   magvec3_t uv = UNITV(wbn);
+   th           = uv.m;
+   U            = uv.v;
+   phi          = SimpRot(U, th);
 
    /* .. Debug this.  Where does B come from? */
    phiB = MxM(phi, B);
@@ -391,26 +398,23 @@ quat FilterQuest(long n, double *Weight, vec3 *Ref, vec3 *Meas,
 
    mag = sqrt(VoV(X, X) + gamma * gamma);
 
-   quat qmr = QUAT_ZERO;
+   quat_t qmr = QUAT_ZERO;
    for (i = 0; i < 3; i++)
       qmr.qv.v[i] += X.v[i] / mag;
    qmr.qs = gamma / mag;
 
-   free(a);
-   free(W);
-   free(V);
    return qmr;
 }
 /**********************************************************************/
 /* Find the Euler Angles to point a given boresight vector fixed in   */
 /* a joint's outer body (bvo) parallel to a target vector fixed in    */
 /* the joint's inner body (tvi).                                      */
-vec3 PointGimbalToTarget(long Seq, mat3x3 CGiBi, mat3x3 CBoGo, vec3 tvi,
-                         vec3 bvo)
+vec3_t PointGimbalToTarget(long Seq, mat3x3_t CGiBi, mat3x3_t CBoGo, vec3_t tvi,
+                           vec3_t bvo)
 {
-   vec3 *a1, *a2;
-   mat3x3 Axis = MAT3X3_EYE;
-   vec3 TargVec, BoreVec, a3;
+   vec3_t *a1, *a2;
+   mat3x3_t Axis = MAT3X3_EYE;
+   vec3_t TargVec, BoreVec, a3;
    double TargAng1, BoreAng1, TargAng2, BoreAng2;
    double t1, t2, t3, b1, b2, b3;
    double Cycle;
@@ -488,7 +492,7 @@ vec3 PointGimbalToTarget(long Seq, mat3x3 CGiBi, mat3x3 CBoGo, vec3 tvi,
    TargAng1 = atan2(-t2, t3);
    BoreAng1 = atan2(-b2, b3);
 
-   vec3 GimAngCmd;
+   vec3_t GimAngCmd;
    GimAngCmd.x = WrapTo2Pi(TargAng1 - BoreAng1) - PI;
 
    /* Find rotation about a2 to move BoreVec into TargVec */
@@ -506,45 +510,52 @@ vec3 PointGimbalToTarget(long Seq, mat3x3 CGiBi, mat3x3 CBoGo, vec3 tvi,
 /**********************************************************************/
 /*   Find control acceleration to seek goal at xg while staying at    */
 /*   least Ra away from obstacle at xa.                               */
-vec3 CollisionAvoidanceLaw(vec3 x, vec3 v, vec3 xg, vec3 xa, double Ra,
-                           double vmax, double amax, double wc, double zc)
+vec3_t CollisionAvoidanceLaw(vec3_t x, vec3_t v, vec3_t xg, vec3_t xa,
+                             double Ra, double vmax, double amax, double wc,
+                             double zc)
 {
-   vec3 a;
-   double Kx, Kv, cosa, sina, magx, dox, magvcmd, maga, magz;
-   vec3 yhat, d, xhat, xga, lam1, lam2, vcmd, zhat;
+   vec3_t a;
+   double Kx, Kv, cosa, sina, dox, magvcmd, maga;
+   vec3_t yhat, xga, lam1, lam2, vcmd;
+   magvec3_t ud, uxhat, uzhat;
+   vec3_t *const d    = &ud.v;
+   vec3_t *const xhat = &uxhat.v;
+   double *const magx = &uxhat.m;
+   vec3_t *const zhat = &uzhat.v;
+   double *const magz = &uzhat.m;
    long i;
 
    Kx = wc * wc;
    Kv = 2.0 * zc * wc;
 
    for (i = 0; i < 3; i++) {
-      d.v[i]    = xg.v[i] - x.v[i];
-      xhat.v[i] = x.v[i] - xa.v[i];
-      xga.v[i]  = xg.v[i] - xa.v[i];
+      d->v[i]    = xg.v[i] - x.v[i];
+      xhat->v[i] = x.v[i] - xa.v[i];
+      xga.v[i]   = xg.v[i] - xa.v[i];
    }
-   UNITV(&d);
-   magx = UNITV(&xhat);
-   dox  = VoV(d, xhat);
-   zhat = VxV(xga, xhat);
-   magz = UNITV(&zhat);
-   if (magz < 1.0E-3) {
-      yhat = VEC3_PYAXIS;
-      zhat = VxV(xhat, yhat);
+   ud    = UNITV(*d);
+   uxhat = UNITV(*xhat);
+   dox   = VoV(*d, *xhat);
+   *zhat = VxV(xga, *xhat);
+   uzhat = UNITV(*zhat);
+   if (*magz < 1.0E-3) {
+      yhat  = VEC3_PYAXIS;
+      *zhat = VxV(*xhat, yhat);
    }
-   yhat = VxV(zhat, xhat);
-   cosa = Ra / magx;
+   yhat = VxV(*zhat, *xhat);
+   cosa = Ra / *magx;
    sina = sqrt(1.0 - cosa * cosa);
    for (i = 0; i < 3; i++) {
-      lam1.v[i] = -xhat.v[i] * sina - yhat.v[i] * cosa;
+      lam1.v[i] = -xhat->v[i] * sina - yhat.v[i] * cosa;
       lam2.v[i] = -yhat.v[i];
    }
 
-   if (magx < 0.95 * Ra) {
+   if (*magx < 0.95 * Ra) {
       /* Get out! */
       for (i = 0; i < 3; i++)
-         a.v[i] = -Kv * (v.v[i] - vmax * xhat.v[i]);
+         a.v[i] = -Kv * (v.v[i] - vmax * xhat->v[i]);
    }
-   else if (dox > 0.0 || ((Ra / magx * Ra / magx) + dox * dox < 1.0)) {
+   else if (dox > 0.0 || ((Ra / (*magx) * Ra / (*magx)) + dox * dox < 1.0)) {
       /* Path is clear */
       for (i = 0; i < 3; i++)
          vcmd.v[i] = -Kx / Kv * (x.v[i] - xg.v[i]);
@@ -555,11 +566,11 @@ vec3 CollisionAvoidanceLaw(vec3 x, vec3 v, vec3 xg, vec3 xa, double Ra,
       for (i = 0; i < 3; i++)
          a.v[i] = -Kv * (v.v[i] - vcmd.v[i]);
    }
-   else if (fabs(magx / Ra - 1.0) < 0.01) {
+   else if (fabs((*magx) / Ra - 1.0) < 0.01) {
       /* Turn on avoidance circle */
       for (i = 0; i < 3; i++)
          a.v[i] =
-             -vmax * vmax / Ra * xhat.v[i] - Kv * (v.v[i] - vmax * lam2.v[i]);
+             -vmax * vmax / Ra * xhat->v[i] - Kv * (v.v[i] - vmax * lam2.v[i]);
    }
    else {
       /* Go to tangent on avoidance circle */
@@ -683,24 +694,28 @@ double RateControl(double v, double amax, double w0)
    return (Limit(a, -amax, amax));
 }
 /**********************************************************************/
-vec3 VectorRampCoastGlide(vec3 Xvec, vec3 Vvec, double w0, double amax,
-                          double vmax)
+vec3_t VectorRampCoastGlide(vec3_t Xvec, vec3_t Vvec, double w0, double amax,
+                            double vmax)
 {
-   vec3 Axis, Xaxis, Yaxis;
+   vec3_t Axis, Xaxis, Yaxis;
    double x, v, a, avx, avy;
    long i;
 
-   vec3 Avec;
+   vec3_t Avec;
 
    if (MAGV(Xvec) > 0.0) {
       /* RampCoastGlide on line parallel to Xvec */
-      x = CopyUnitV(Xvec, &Axis);
-      v = VoV(Vvec, Axis);
-      a = RampCoastGlide(x, v, w0, amax, vmax);
+      magvec3_t uv = UNITV(Xvec);
+      x            = uv.m;
+      Axis         = uv.v;
+      v            = VoV(Vvec, Axis);
+      a            = RampCoastGlide(x, v, w0, amax, vmax);
       /* RateControl on transverse axes */
-      Yaxis = PerpBasis(Axis, &Xaxis);
-      avx   = RateControl(VoV(Vvec, Xaxis), amax, w0);
-      avy   = RateControl(VoV(Vvec, Yaxis), amax, w0);
+      pair_vec3_t pair = PerpBasis(Axis);
+      Xaxis            = pair.first;
+      Yaxis            = pair.second;
+      avx              = RateControl(VoV(Vvec, Xaxis), amax, w0);
+      avy              = RateControl(VoV(Vvec, Yaxis), amax, w0);
 
       for (i = 0; i < 3; i++)
          Avec.v[i] = a * Axis.v[i] + avx * Xaxis.v[i] + avy * Yaxis.v[i];
@@ -713,11 +728,12 @@ vec3 VectorRampCoastGlide(vec3 Xvec, vec3 Vvec, double w0, double amax,
 /**********************************************************************/
 /* Beta is angle between Sun vector and the orbit plane.              */
 /* It is positive toward the positive orbit normal.                   */
-double SolarBeta(vec3 svn, vec3 psn, vec3 vsn)
+double SolarBeta(vec3_t svn, vec3_t psn, vec3_t vsn)
 {
-   vec3 h = VxV(psn, vsn);
-   UNITV(&h);
-   return (asin(VoV(svn, h)));
+   magvec3_t h;
+   h.v = VxV(psn, vsn);
+   h   = UNITV(h.v);
+   return (asin(VoV(svn, h.v)));
 }
 /**********************************************************************/
 /* These functions implement linear programming for thruster          */
@@ -1428,8 +1444,8 @@ void KalmanFilterTimeUpdate(struct KalmanFilterType *KF)
 /**********************************************************************/
 /*  Ref Wie, "Singularity Escape/Avoidance Steering Logic for         */
 /*  Control Moment Gyro Systems", JGCD, Sep-Oct 2005                  */
-double CMGLaw4x1DOF(vec3 Tcmd, vec3 Axis[4], vec3 Gim[4], quat h,
-                    quat *AngRateCmd)
+double CMGLaw4x1DOF(vec3_t Tcmd, vec3_t Axis[4], vec3_t Gim[4], quat_t h,
+                    quat_t *AngRateCmd)
 {
    double eps0  = 0.1;
    double lam0  = 0.01;
@@ -1441,7 +1457,7 @@ double CMGLaw4x1DOF(vec3 Tcmd, vec3 Axis[4], vec3 Gim[4], quat h,
    static double wt = 0.0;
    double lam, eps;
    double W[4][4], AW[3][4];
-   mat3x3 V, Den, InvDen;
+   mat3x3_t V, Den, InvDen;
 
    long i, j;
 

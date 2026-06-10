@@ -26,14 +26,14 @@ void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
 */
 
 /*******************************************************************************/
-void DrawWorldAsBackdrop(struct WorldType *W, vec3 PosN, vec3 svn)
+void DrawWorldAsBackdrop(struct WorldType *W, vec3_t PosN, vec3_t svn)
 {
    struct AtmoType *A;
    GLint UniLoc;
    double WorldDist;
    double CosWorldAng, CosAtmoAng, CosRingAng;
-   mat3x3 CWE;
-   vec3 UnitWorldVecE, sve, PosE, PosW;
+   mat3x3_t CWE;
+   vec3_t UnitWorldVecE, sve, PosE, PosW;
    GLfloat LightPos[4] = {0.0, 0.0, 0.0, 0.0};
    GLfloat CWEarray[9];
    long i, j;
@@ -48,10 +48,12 @@ void DrawWorldAsBackdrop(struct WorldType *W, vec3 PosN, vec3 svn)
    for (i = 0; i < 3; i++)
       LightPos[i] = sve.v[i];
    glLightfv(GL_LIGHT0, GL_POSITION, LightPos);
-   PosE      = MxV(POV.CN, PosN);
-   PosW      = MxV(W->CWN, PosN);
-   CWE       = MxMT(W->CWN, POV.CN);
-   WorldDist = CopyUnitV(PosE, &UnitWorldVecE);
+   PosE          = MxV(POV.CN, PosN);
+   PosW          = MxV(W->CWN, PosN);
+   CWE           = MxMT(W->CWN, POV.CN);
+   magvec3_t uv  = UNITV(PosE);
+   WorldDist     = uv.m;
+   UnitWorldVecE = uv.v;
    for (i = 0; i < 3; i++)
       UnitWorldVecE.v[i] = -UnitWorldVecE.v[i];
 
@@ -149,8 +151,11 @@ void DrawWorldAsBackdrop(struct WorldType *W, vec3 PosN, vec3 svn)
 void DrawSunAsBackdrop(void)
 {
    GLint UniLoc;
-   vec3 UnitSunVecE, svh;
-   double SunDist, RadRatio, RadRatio2;
+   vec3_t UnitSunVecE;
+   magvec3_t uSvh;
+   vec3_t *const svh     = &uSvh.v;
+   double *const SunDist = &uSvh.m;
+   double RadRatio, RadRatio2;
    double CosSunAng, CosCoronaAng;
    long i;
 
@@ -159,11 +164,11 @@ void DrawSunAsBackdrop(void)
 
    /* Transform and scale into Eye frame */
    for (i = 0; i < 3; i++)
-      svh.v[i] = -POV.PosH.v[i];
-   SunDist     = UNITV(&svh);
-   UnitSunVecE = MxV(POV.CH, svh);
+      svh->v[i] = -POV.PosH.v[i];
+   uSvh        = UNITV(*svh);
+   UnitSunVecE = MxV(POV.CH, *svh);
 
-   RadRatio     = World[0].rad / SunDist;
+   RadRatio     = World[0].rad / *SunDist;
    RadRatio2    = RadRatio * RadRatio;
    CosSunAng    = sqrt(1.0 - RadRatio2);
    CosCoronaAng = sqrt(1.0 - 16.0 * RadRatio2);
@@ -197,7 +202,7 @@ void GeomToDisplayLists(struct GeomType *G)
    long Ip;
    struct PolyType *P;
    struct MatlType *M;
-   vec3 V;
+   vec3_t V;
    double u, v;
 
    /* .. Depth Pass */
@@ -630,7 +635,8 @@ void SetDestination(long Dest)
 void DrawPlanetLabels(GLfloat length)
 {
    GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
-   vec3 Vec;
+   magvec3_t uVec;
+   vec3_t *const Vec = &uVec.v;
    long i, j;
    struct OrbitType *O;
 
@@ -643,14 +649,14 @@ void DrawPlanetLabels(GLfloat length)
       if (World[i].Exists) {
          glColor4fv(World[i].Color);
          for (j = 0; j < 3; j++)
-            Vec.v[j] = World[i].PosH.v[j] - SC[POV.Host.SC].PosH.v[j];
-         UNITV(&Vec);
+            Vec->v[j] = World[i].PosH.v[j] - SC[POV.Host.SC].PosH.v[j];
+         uVec = UNITV(*Vec);
          glBegin(GL_LINES);
          glVertex3f(0.0, 0.0, 0.0);
-         glVertex3f(length * Vec.x, length * Vec.y, length * Vec.z);
+         glVertex3f(length * Vec->x, length * Vec->y, length * Vec->z);
          glEnd();
-         glRasterPos3f((length + 0.2) * Vec.x, (length + 0.2) * Vec.y,
-                       (length + 0.2) * Vec.z);
+         glRasterPos3f((length + 0.2) * Vec->x, (length + 0.2) * Vec->y,
+                       (length + 0.2) * Vec->z);
          glBitmap(8, 14, 0.0, 0.0, 0.0, 0.0, World[i].Glyph);
       }
    }
@@ -665,14 +671,16 @@ void DrawThrusterPlume(struct NodeType *N, struct ThrType *Thr)
    GLfloat CoreColor[4] = {1.0, 0.937, 0.259, 1.0};
    double Rad           = 0.01;
    double scl           = 1.0;
-   vec3 p;
+   vec3_t p;
    double ang, s, c, f;
-   vec3 X, Y; /* Basis vectors perpendicular to Axis */
+   vec3_t X, Y; /* Basis vectors perpendicular to Axis */
    long j;
 
    if (Thr->F > 0.0) {
 
-      Y = PerpBasis(Thr->A, &X);
+      pair_vec3_t pair = PerpBasis(Thr->A);
+      X                = pair.first;
+      Y                = pair.second;
 
       f = sqrt(Thr->F / Thr->Fmax);
       glDisable(GL_LIGHTING);
@@ -1101,7 +1109,7 @@ void DrawWatermarks(void)
    glMatrixMode(GL_MODELVIEW);
 }
 /**********************************************************************/
-long ScIsVisible(long RefOrb, struct SCType *S, vec3 *PosR)
+long ScIsVisible(long RefOrb, struct SCType *S, vec3_t *PosR)
 {
    long ScVisible = 0;
    long i;
@@ -1126,19 +1134,22 @@ void DrawFarScene(void)
 {
    static long Nw;
    long Iw, Isc, i, j;
-   vec3 LoS;
+   vec3_t LoS;
    GLfloat WorldColor[4] = {1.0, 1.0, 1.0, 1.0};
-   mat3x3 CLpermute      = {.rows = {VEC3_PZAXIS, VEC3_PXAXIS, VEC3_PYAXIS}};
-   mat3x3 Identity       = MAT3X3_EYE;
-   mat3x3 C;
+   mat3x3_t CLpermute    = {.rows = {VEC3_PZAXIS, VEC3_PXAXIS, VEC3_PYAXIS}};
+   mat3x3_t Identity     = MAT3X3_EYE;
+   mat3x3_t C;
    static long WorldOrder[NWORLD], TempWO;
    double Zdepth[NWORLD], TempZ;
-   vec3 rh[NWORLD];
+   vec3_t rh[NWORLD];
    long Done;
    struct WorldType *W;
    struct SCType *S;
    double VisCoef, PixRad, magr;
-   vec3 PosR, svh, PosH, PosN, svn, r;
+   magvec3_t uSvh, uPosN;
+   vec3_t *const svh  = &uSvh.v;
+   vec3_t *const PosN = &uPosN.v;
+   vec3_t PosR, PosH, svn, r;
    GLfloat Black[4]       = {0.0, 0.0, 0.0, 1.0};
    GLubyte TdrsGlyph[32]  = {0x01, 0x80, 0x02, 0x40, 0x04, 0x20, 0x08, 0x10,
                              0x10, 0x08, 0x20, 0x04, 0x40, 0x02, 0x80, 0x01,
@@ -1253,7 +1264,7 @@ void DrawFarScene(void)
          DrawSunAsBackdrop();
       }
       else if (W->Visibility == WORLD_IS_POINT_SIZED) {
-         CopyUnitV(rh[Iw], &r);
+         r       = UNITV(rh[Iw]).v;
          r.v[0] *= -2.0;
          r.v[1] *= -2.0;
          r.v[2] *= -2.0;
@@ -1266,12 +1277,12 @@ void DrawFarScene(void)
       }
       else if (W->Visibility == WORLD_SHOWS_DISK) {
          for (j = 0; j < 3; j++)
-            svh.v[j] = -W->PosH.v[j];
-         UNITV(&svh);
+            svh->v[j] = -W->PosH.v[j];
+         uSvh = UNITV(*svh);
          if (W->GeomTag == 0) { /* World is sphere */
-            PosN = MxV(World[POV.Host.World].CNH, rh[Iw]);
-            svn  = MxV(World[POV.Host.World].CNH, svh);
-            DrawWorldAsBackdrop(W, PosN, svn);
+            *PosN = MxV(World[POV.Host.World].CNH, rh[Iw]);
+            svn   = MxV(World[POV.Host.World].CNH, *svh);
+            DrawWorldAsBackdrop(W, *PosN, svn);
          }
          else {
             glClear(GL_DEPTH_BUFFER_BIT);
@@ -1310,7 +1321,7 @@ void DrawFarScene(void)
          if (World[Iw].Exists) {
             if (World[Iw].Visibility == WORLD_IS_TOO_SMALL_TO_SEE ||
                 World[Iw].Visibility == WORLD_IS_POINT_SIZED || Iw == LUNA) {
-               CopyUnitV(rh[Iw], &r);
+               r = UNITV(rh[Iw]).v;
                for (i = 0; i < 3; i++)
                   r.v[i] *= SkyDistance;
                glRasterPos3d(-r.x, -r.y, -r.z);
@@ -1355,11 +1366,11 @@ void DrawFarScene(void)
       for (i = 0; i < 10; i++) {
          if (Tdrs[i].Exists) {
             for (j = 0; j < 3; j++)
-               PosN.v[j] = Tdrs[i].PosN.v[j] - POV.PosN.v[j];
-            UNITV(&PosN);
+               PosN->v[j] = Tdrs[i].PosN.v[j] - POV.PosN.v[j];
+            uPosN = UNITV(*PosN);
             for (j = 0; j < 3; j++)
-               PosN.v[j] *= SkyDistance;
-            glRasterPos3d(PosN.x, PosN.y, PosN.z);
+               PosN->v[j] *= SkyDistance;
+            glRasterPos3d(PosN->x, PosN->y, PosN->z);
             glBitmap(16, 16, 8.0, 8.0, 10, -8, TdrsGlyph);
             DrawString8x11(Tdrs[i].Designation);
          }
@@ -1376,11 +1387,11 @@ void DrawFarScene(void)
          glColor4fv(ScColor);
          for (i = 0; i < 3; i++)
             PosH.v[i] = S->PosH.v[i] - POV.PosH.v[i];
-         PosN = MxV(World[POV.Host.World].CNH, PosH);
-         UNITV(&PosN);
+         *PosN = MxV(World[POV.Host.World].CNH, PosH);
+         uPosN = UNITV(*PosN);
          for (i = 0; i < 3; i++)
-            PosN.v[i] *= SkyDistance;
-         glRasterPos3d(PosN.x, PosN.y, PosN.z);
+            PosN->v[i] *= SkyDistance;
+         glRasterPos3d(PosN->x, PosN->y, PosN->z);
          glBitmap(16, 16, 8.0, 8.0, 10, -8, ScGlyph);
          DrawString8x11(S->Label);
       }
@@ -1403,7 +1414,7 @@ void DrawProxOps(void)
                              8000.0, 10000.0, 20000.0, 40000.0, 80000.0};
    long Isc, i;
    double A, Bc, Bs, C, Dc, Ds;
-   vec3 r, v;
+   vec3_t r, v;
    double t, R, dr, AxisLength;
 
    glDisable(GL_LIGHTING);
@@ -1555,7 +1566,7 @@ void DrawNearAuxObjects(void)
    float SvbColor[4] = {1.0, 1.0, 0.0, 1.0};
    float BvbColor[4] = {1.0, 0.0, 0.5, 1.0};
    float HvbColor[4] = {0.5, 0.5, 1.0, 1.0};
-   vec3 PosR, r, len;
+   vec3_t PosR, r, len;
 
    /* .. Draw near-field Auxiliary Objects */
    glMatrixMode(GL_PROJECTION);
@@ -1826,7 +1837,7 @@ void DepthPass(void)
    GLfloat BS[16] = {0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0,
                      0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.5, 1.0};
    GLfloat MPN[16];
-   mat3x3 CLN;
+   mat3x3_t CLN;
    double r;
    struct ShadowFBOType *SM;
    struct SCType *S;
@@ -1834,7 +1845,7 @@ void DepthPass(void)
    struct GeomType *G;
    struct BoundingBoxType *BB, LB;
    long Isc, Ib, i;
-   vec3 PosR, rb, rn, rl;
+   vec3_t PosR, rb, rn, rl;
 
    SM = &ShadowMap;
 
@@ -1846,8 +1857,12 @@ void DepthPass(void)
 
    for (i = 0; i < 3; i++)
       CLN.mat[2][i] = LightPosN[i];
-   UNITV(&CLN.rows[2]);
-   CLN.rows[1] = PerpBasis(CLN.rows[2], &CLN.rows[0]);
+   magvec3_t urow;
+   urow             = UNITV(CLN.rows[2]);
+   CLN.rows[2]      = urow.v;
+   pair_vec3_t pair = PerpBasis(CLN.rows[2]);
+   CLN.rows[0]      = pair.first;
+   CLN.rows[1]      = pair.second;
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       // if (S->RefOrb == POV.Host.RefOrb) { /* TODO:  Improve this */
@@ -1941,7 +1956,8 @@ void DepthPass(void)
    glViewport(0, 0, CamWidth, CamHeight);
 }
 /**********************************************************************/
-void DrawEllipsoid(const mat3x3 E_mat, const vec3 pbn, const GLfloat color[4])
+void DrawEllipsoid(const mat3x3_t E_mat, const vec3_t pbn,
+                   const GLfloat color[4])
 {
    const GLfloat shininess = 34.0f;
 
@@ -1959,7 +1975,7 @@ void DrawEllipsoid(const mat3x3 E_mat, const vec3 pbn, const GLfloat color[4])
    double d[3] = {0.0};
    jacobiEValueEVector(E_mat_ptr, 3, 150, V, d);
 
-   mat3x3 rot;
+   mat3x3_t rot;
    for (int i = 0; i < 3; i++)
       for (int j = 0; j < 3; j++)
          rot.mat[i][j] = V[j][i];
@@ -2031,17 +2047,17 @@ void DrawNavEllipsoids(struct SCType *S, struct DSMType *DSM)
    struct DSMNavType *Nav         = &DSM->DsmNav;
    const long navDim              = Nav->navDim;
 
-   mat3x3 BCN = MAT3X3_ZERO;
+   mat3x3_t BCN = MAT3X3_ZERO;
    for (int i = 0; i < 3; i++) {
       for (int j = 0; j < 3; j++) {
          BCN.mat[i][j] = dsm_state->CBN.mat[i][j];
       }
    }
-   vec3 pbn;
+   vec3_t pbn;
    for (int i = 0; i < 3; i++)
       pbn.v[i] = dsm_state->PosR.v[i] + B->pn.v[i];
    if (S->RefPt == REFPT_CM) {
-      vec3 pcmn;
+      vec3_t pcmn;
       pcmn = MTxV(BCN, B->cm);
       for (int i = 0; i < 3; i++)
          pbn.v[i] -= pcmn.v[i];
@@ -2053,7 +2069,7 @@ void DrawNavEllipsoids(struct SCType *S, struct DSMType *DSM)
    if (Nav->stateActive[POS_STATE]) {
       const GLfloat nav_ell_color[4] = {0.133, 0.545, 0.133, 1.0};
 
-      mat3x3 P_pos = MAT3X3_ZERO;
+      mat3x3_t P_pos = MAT3X3_ZERO;
       for (int i = 0; i < 3; i++)
          for (int j = 0; j < 3; j++)
             P_pos.mat[i][j] =
@@ -2070,7 +2086,7 @@ void OpaquePass(void)
    struct RegionType *R;
    struct ShadowFBOType *SM;
    long Ir;
-   vec3 PosR;
+   vec3_t PosR;
 
    SM = &ShadowMap;
 
@@ -2121,7 +2137,7 @@ void SeeThruPass(void)
    struct GeomType *G;
    struct RegionType *R;
    struct ShadowFBOType *SM;
-   vec3 PosR;
+   vec3_t PosR;
 
    SM = &ShadowMap;
 
@@ -2175,7 +2191,7 @@ void SeeThruPass(void)
             B                            = &S->B[Ib];
             G                            = &Geom[B->GeomTag];
             float navBodyModelMatrix[16] = {0.0};
-            mat3x3 BCN                   = MAT3X3_ZERO;
+            mat3x3_t BCN                 = MAT3X3_ZERO;
             if (Ib == 0) {
                for (int i = 0; i < 3; i++) {
                   for (int j = 0; j < 3; j++) {
@@ -2184,11 +2200,11 @@ void SeeThruPass(void)
                }
             }
             else {
-               mat3x3 CbB = MAT3X3_ZERO;
-               CbB        = MxMT(B->CN, S->B[0].CN);
-               BCN        = MxM(CbB, dsm_state->CBN);
+               mat3x3_t CbB = MAT3X3_ZERO;
+               CbB          = MxMT(B->CN, S->B[0].CN);
+               BCN          = MxM(CbB, dsm_state->CBN);
             }
-            vec3 pcmn = VEC3_ZERO, pbn = VEC3_ZERO;
+            vec3_t pcmn = VEC3_ZERO, pbn = VEC3_ZERO;
             if (S->RefPt == REFPT_CM) {
                pcmn = MTxV(BCN, B->cm);
             }
@@ -2207,18 +2223,20 @@ void SeeThruPass(void)
 /**********************************************************************/
 void DrawBodies(void)
 {
-   mat3x3 CNH;
-   vec3 PosN;
-   GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
+   mat3x3_t CNH;
+   magvec3_t uPosN;
+   vec3_t *const PosN = &uPosN.v;
+   GLfloat Black[4]   = {0.0, 0.0, 0.0, 1.0};
 
    /* .. Light Source */
    /* Sun */
-   CNH  = MTxM(POV.CN, POV.CH);
-   PosN = MxV(CNH, POV.PosH);
-   UNITV(&PosN);
-   LightPosN[0] = (GLfloat)-PosN.x;
-   LightPosN[1] = (GLfloat)-PosN.y;
-   LightPosN[2] = (GLfloat)-PosN.z;
+   CNH   = MTxM(POV.CN, POV.CH);
+   *PosN = MxV(CNH, POV.PosH);
+
+   uPosN        = UNITV(*PosN);
+   LightPosN[0] = (GLfloat)-PosN->x;
+   LightPosN[1] = (GLfloat)-PosN->y;
+   LightPosN[2] = (GLfloat)-PosN->z;
    LightPosN[3] = 0.0;
    glLightfv(GL_LIGHT0, GL_POSITION, LightPosN);
    glLightfv(GL_LIGHT0, GL_DIFFUSE, LocalDiffuseLightColor);
@@ -2247,20 +2265,21 @@ void BufferToScreen() {}
 /**********************************************************************/
 void SetPovOrientation(void)
 {
-   vec3 Axis[6]    = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS,
-                      VEC3_NXAXIS, VEC3_NYAXIS, VEC3_NZAXIS};
-   quat Qfixed[10] = {
-       (quat){.x = 0.0, .y = -SqrtHalf, .z = 0.0, .s = SqrtHalf}, /* Down */
-       (quat){.x = 0.0, .y = 0.0, .z = -0.9239, .s = 0.3827}, /* Rear Left */
-       (quat){.x = 0.0, .y = 0.0, .z = 1.0, .s = 0.0},        /* Rear */
-       (quat){.x = 0.0, .y = 0.0, .z = 0.9239, .s = 0.3827},  /* Rear Right */
-       (quat){.x = 0.0, .y = 0.0, .z = -SqrtHalf, .s = SqrtHalf}, /* Left */
-       (quat){.x = 0.0, .y = SqrtHalf, .z = 0.0, .s = SqrtHalf},  /* Up */
-       (quat){.x = 0.0, .y = 0.0, .z = SqrtHalf, .s = SqrtHalf},  /* Right */
-       (quat){.x = 0.0, .y = 0.0, .z = -0.3827, .s = 0.9239}, /* Front Left */
-       (quat){.x = 0.0, .y = 0.0, .z = 0.0, .s = 1.0},        /* Front */
-       (quat){.x = 0.0, .y = 0.0, .z = 0.3827, .s = 0.9239} /* Front Right */};
-   quat Qpermute = (quat){.x = 0.5, .y = 0.5, .z = -0.5, .s = -0.5};
+   vec3_t Axis[6]    = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS,
+                        VEC3_NXAXIS, VEC3_NYAXIS, VEC3_NZAXIS};
+   quat_t Qfixed[10] = {
+       (quat_t){.x = 0.0, .y = -SqrtHalf, .z = 0.0, .s = SqrtHalf}, /* Down */
+       (quat_t){.x = 0.0, .y = 0.0, .z = -0.9239, .s = 0.3827}, /* Rear Left */
+       (quat_t){.x = 0.0, .y = 0.0, .z = 1.0, .s = 0.0},        /* Rear */
+       (quat_t){.x = 0.0, .y = 0.0, .z = 0.9239, .s = 0.3827},  /* Rear Right */
+       (quat_t){.x = 0.0, .y = 0.0, .z = -SqrtHalf, .s = SqrtHalf}, /* Left */
+       (quat_t){.x = 0.0, .y = SqrtHalf, .z = 0.0, .s = SqrtHalf},  /* Up */
+       (quat_t){.x = 0.0, .y = 0.0, .z = SqrtHalf, .s = SqrtHalf},  /* Right */
+       (quat_t){.x = 0.0, .y = 0.0, .z = -0.3827, .s = 0.9239}, /* Front Left */
+       (quat_t){.x = 0.0, .y = 0.0, .z = 0.0, .s = 1.0},        /* Front */
+       (quat_t){
+           .x = 0.0, .y = 0.0, .z = 0.3827, .s = 0.9239} /* Front Right */};
+   quat_t Qpermute = (quat_t){.x = 0.5, .y = 0.5, .z = -0.5, .s = -0.5};
    long i;
 
    if (POV.Mode == TRACK_HOST) {
@@ -2287,8 +2306,8 @@ void SetPovOrientation(void)
 /**********************************************************************/
 void PovTrackHostMode(void)
 {
-   quat qdot;
-   vec3 rb, rs, rf, rw, rh;
+   quat_t qdot;
+   vec3_t rb, rs, rf, rw, rh;
    long i, RefOrb, center, PovSC, PovBody;
    struct TargetType *Host;
 
@@ -2391,11 +2410,13 @@ void PovTrackHostMode(void)
 void PovTrackTargetMode(void)
 {
    struct TargetType *Host, *Trg;
-   vec3 LoS, LoSN, LoSH, pn;
+   magvec3_t uLoS;
+   vec3_t *const LoS = &uLoS.v;
+   vec3_t LoSN, LoSH, pn;
    double CosAz, SinAz, CosEl, SinEl;
-   mat3x3 CTH, CTN;
-   mat3x3 Identity = MAT3X3_EYE;
-   double Cos1deg  = 0.99985;
+   mat3x3_t CTH, CTN;
+   mat3x3_t Identity = MAT3X3_EYE;
+   double Cos1deg    = 0.99985;
    long j;
 
    Host = &POV.Host;
@@ -2542,8 +2563,8 @@ void PovTrackTargetMode(void)
          LoSH.v[j] = Trg->PosH.v[j] - POV.PosH.v[j];
       LoSN = MxV(World[Host->World].CNH, LoSH);
    }
-   LoS = MxV(Host->CN, LoSN);
-   if (MAGV(LoS) < 1.0E-2) {
+   *LoS = MxV(Host->CN, LoSN);
+   if (MAGV(*LoS) < 1.0E-2) {
       printf("Target suspiciously close to POV.  POV Mode reverting to TRACK "
              "HOST\n");
       POV.Mode                   = TRACK_HOST;
@@ -2551,26 +2572,26 @@ void PovTrackTargetMode(void)
       PovWidget.Spot[1].Selected = 0;
    }
    else {
-      UNITV(&LoS);
+      uLoS = UNITV(*LoS);
 
       /* .. Find POV orientation */
-      if (LoS.z > Cos1deg) {
+      if (LoS->z > Cos1deg) {
          CosAz = 1.0;
          SinAz = 0.0;
          CosEl = 0.0;
          SinEl = -1.0;
       }
-      else if (LoS.z < -Cos1deg) {
+      else if (LoS->z < -Cos1deg) {
          CosAz = 1.0;
          SinAz = 0.0;
          CosEl = 0.0;
          SinEl = 1.0;
       }
       else {
-         SinEl = -LoS.z;
-         CosEl = sqrt(LoS.x * LoS.x + LoS.y * LoS.y);
-         SinAz = LoS.y / CosEl;
-         CosAz = LoS.x / CosEl;
+         SinEl = -LoS->z;
+         CosEl = sqrt(LoS->x * LoS->x + LoS->y * LoS->y);
+         SinAz = LoS->y / CosEl;
+         CosAz = LoS->x / CosEl;
       }
       CTH.mat[0][0] = CosAz * CosEl;
       CTH.mat[0][1] = SinAz * CosEl;
@@ -2593,7 +2614,7 @@ void PovTrackTargetMode(void)
 void PovFixedInHostMode(void)
 {
    struct TargetType *Host;
-   vec3 pn;
+   vec3_t pn;
    long j;
 
    Host = &POV.Host;
@@ -2695,8 +2716,8 @@ void PovFixedInHostMode(void)
 /**********************************************************************/
 void PanZoomPOV(void)
 {
-   mat3x3 C;
-   vec3 Ang;
+   mat3x3_t C;
+   vec3_t Ang;
    double f, dAng, dR;
    long i;
 
@@ -2704,8 +2725,8 @@ void PanZoomPOV(void)
       f = (POV.TimeToGo - DTOUTGL) / POV.TimeToGo;
       if (f < 0.0)
          f = 0.0;
-      C = MxMT(POV.C, POV.CmdPermute);
-      C2A(POV.CmdSeq, C, &Ang.x, &Ang.y, &Ang.z);
+      C   = MxMT(POV.C, POV.CmdPermute);
+      Ang = C2A(POV.CmdSeq, C);
       for (i = 0; i < 3; i++) {
          dAng     = Ang.v[i] - POV.CmdAngle.v[i];
          Ang.v[i] = POV.CmdAngle.v[i] + f * dAng;
@@ -2737,12 +2758,12 @@ void UpdatePOV(void)
 void FindModelMatrices(void)
 {
    long Isc, Ib, i, Ir;
-   vec3 pbn, pcmn, prn;
+   vec3_t pbn, pcmn, prn;
    struct SCType *S;
    struct BodyType *B;
    struct OrbitType *O;
    struct RegionType *R;
-   vec3 PosR;
+   vec3_t PosR;
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
@@ -2908,20 +2929,22 @@ void DrawTdrsMap(void)
    glEnable(GL_LIGHTING);
 }
 /*********************************************************************/
-long OccultedByEarth(vec3 pge, vec3 pte) __attribute__((pure));
-long OccultedByEarth(vec3 pge, vec3 pte)
+long OccultedByEarth(vec3_t pge, vec3_t pte) __attribute__((pure));
+long OccultedByEarth(vec3_t pge, vec3_t pte)
 {
-   vec3 dp, phat;
+   magvec3_t udp;
+   vec3_t *const dp = &udp.v;
+   vec3_t phat;
    double magpg, CosVec, CosOcc, SinOcc;
    long i, Occulted;
 
    for (i = 0; i < 3; i++)
-      dp.v[i] = pte.v[i] - pge.v[i];
+      dp->v[i] = pte.v[i] - pge.v[i];
    magpg = MAGV(pge);
    for (i = 0; i < 3; i++)
       phat.v[i] = pge.v[i] / magpg;
-   UNITV(&dp);
-   CosVec = VoV(dp, phat);
+   udp    = UNITV(*dp);
+   CosVec = VoV(*dp, phat);
 
    SinOcc = World[EARTH].rad / magpg;
    CosOcc = -sqrt(1.0 - SinOcc * SinOcc);
@@ -2938,7 +2961,6 @@ void DrawMap(void)
 
    double dt, anom, a, Lng, Lat, x, y;
    double magr, CosEclipse, rad, lngc, latc;
-   vec3 p, axis, svh, svw;
    GLfloat Black[4]              = {0.0, 0.0, 0.0, 1.0};
    float MinorLatLngColor[4]     = {1.0, 1.0, 1.0, 0.2};
    float MajorLatLngColor[4]     = {1.0, 1.0, 1.0, 0.4};
@@ -2949,12 +2971,17 @@ void DrawMap(void)
    struct OrbitType *Eph;
    struct SCType *S;
    struct WorldType *W;
-   vec3 rn, vn, re, rmw;
-   vec3 Zaxis = VEC3_PZAXIS;
-   mat3x3 CEW, CEN, CWH;
+   vec3_t Zaxis = VEC3_PZAXIS;
+   mat3x3_t CEW, CEN, CWH;
    float OldLng, OldLat;
    long i, k, Im, Isc;
-   vec3 rmh, rmn;
+   vec3_t rn, vn, re, rmh, svw;
+   magvec3_t usvh, urmw, urmn, up, uaxis;
+   vec3_t *const svh  = &usvh.v;
+   vec3_t *const rmw  = &urmw.v;
+   vec3_t *const rmn  = &urmn.v;
+   vec3_t *const p    = &up.v;
+   vec3_t *const axis = &uaxis.v;
 
    glClear(GL_COLOR_BUFFER_BIT);
    glMaterialfv(GL_FRONT, GL_DIFFUSE, Black);
@@ -2964,10 +2991,10 @@ void DrawMap(void)
       W = &World[Orb[S->RefOrb].World];
 
       for (i = 0; i < 3; i++)
-         svh.v[i] = -W->PosH.v[i];
-      UNITV(&svh);
+         svh->v[i] = -W->PosH.v[i];
+      usvh       = UNITV(*svh);
       CWH        = MxM(W->CWN, W->CNH);
-      svw        = MxV(CWH, svh);
+      svw        = MxV(CWH, *svh);
       magr       = MAGV(S->PosN);
       CosEclipse = -sqrt(1.0 - (W->rad * W->rad / magr / magr));
 
@@ -3072,12 +3099,12 @@ void DrawMap(void)
          glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
          glBindTexture(GL_TEXTURE_2D, MoonSpriteTexTag);
          for (Im = 0; Im < W->Nsat; Im++) {
-            rmw = MxV(W->CWN, World[W->Sat[Im]].eph.PosN);
-            UNITV(&rmw);
-            Lng = atan2(rmw.y, rmw.x) * R2D;
-            Lat = asin(rmw.z) * R2D;
-            x   = 4.0;
-            y   = x;
+            *rmw = MxV(W->CWN, World[W->Sat[Im]].eph.PosN);
+            urmw = UNITV(*rmw);
+            Lng  = atan2(rmw->y, rmw->x) * R2D;
+            Lat  = asin(rmw->z) * R2D;
+            x    = 4.0;
+            y    = x;
             glBegin(GL_QUADS);
             glTexCoord2f(0.0, 1.0);
             glVertex2f(Lng - x, Lat - y);
@@ -3096,15 +3123,15 @@ void DrawMap(void)
          glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
          glBindTexture(GL_TEXTURE_2D, MoonSpriteTexTag);
          for (i = 0; i < 3; i++)
-            rmn.v[i] = -W->eph.PosN.v[i];
-         UNITV(&rmn);
-         rmh = MTxV(World[W->Parent].CNH, rmn);
-         rmn = MxV(W->CNH, rmh);
-         rmw = MxV(W->CWN, rmn);
-         Lng = atan2(rmw.y, rmw.x) * R2D;
-         Lat = asin(rmw.z) * R2D;
-         x   = 4.0;
-         y   = x;
+            rmn->v[i] = -W->eph.PosN.v[i];
+         urmn = UNITV(*rmn);
+         rmh  = MTxV(World[W->Parent].CNH, *rmn);
+         *rmn = MxV(W->CNH, rmh);
+         *rmw = MxV(W->CWN, *rmn);
+         Lng  = atan2(rmw->y, rmw->x) * R2D;
+         Lat  = asin(rmw->z) * R2D;
+         x    = 4.0;
+         y    = x;
          glBegin(GL_QUADS);
          glTexCoord2f(0.0, 1.0);
          glVertex2f(Lng - x, Lat - y);
@@ -3141,10 +3168,10 @@ void DrawMap(void)
              Isc != S->ID) {
 
             /* SC Sprite */
-            p = MxV(W->CWN, SC[Isc].PosN);
-            UNITV(&p);
-            Lng = atan2(p.y, p.x) * R2D;
-            Lat = asin(p.z) * R2D;
+            *p  = MxV(W->CWN, SC[Isc].PosN);
+            up  = UNITV(*p);
+            Lng = atan2(p->y, p->x) * R2D;
+            Lat = asin(p->z) * R2D;
             glEnable(GL_TEXTURE_2D);
             glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
             glBindTexture(GL_TEXTURE_2D, SC[Isc].SpriteTexTag);
@@ -3166,11 +3193,11 @@ void DrawMap(void)
 
             /* Horizon Circle */
             glLineWidth(1.5);
-            axis = MxV(W->CWN, SC[Isc].PosN);
-            UNITV(&axis);
-            lngc = atan2(axis.y, axis.x);
-            latc = asin(axis.z);
-            rad  = acos(W->rad / magr);
+            *axis = MxV(W->CWN, SC[Isc].PosN);
+            uaxis = UNITV(*axis);
+            lngc  = atan2(axis->y, axis->x);
+            latc  = asin(axis->z);
+            rad   = acos(W->rad / magr);
             glColor4fv(NonHostColor);
             DrawSmallCircle(lngc, latc, rad);
 
@@ -3225,10 +3252,10 @@ void DrawMap(void)
 
       /* .. POV Host SC */
       /* SC Sprite */
-      p = MxV(W->CWN, S->PosN);
-      UNITV(&p);
-      Lng = atan2(p.y, p.x) * R2D;
-      Lat = asin(p.z) * R2D;
+      *p  = MxV(W->CWN, S->PosN);
+      up  = UNITV(*p);
+      Lng = atan2(p->y, p->x) * R2D;
+      Lat = asin(p->z) * R2D;
       glEnable(GL_TEXTURE_2D);
       glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
       glBindTexture(GL_TEXTURE_2D, S->SpriteTexTag);
@@ -3250,11 +3277,11 @@ void DrawMap(void)
 
       /* Horizon Circle */
       glLineWidth(1.5);
-      axis = MxV(W->CWN, S->PosN);
-      UNITV(&axis);
-      lngc = atan2(axis.y, axis.x) * R2D;
-      latc = asin(axis.z) * R2D;
-      rad  = acos(W->rad / magr);
+      *axis = MxV(W->CWN, S->PosN);
+      uaxis = UNITV(*axis);
+      lngc  = atan2(axis->y, axis->x) * R2D;
+      latc  = asin(axis->z) * R2D;
+      rad   = acos(W->rad / magr);
       glColor4fv(GroundStationColor);
       DrawSmallCircle(lngc, latc, rad);
 
@@ -3430,7 +3457,7 @@ void DrawOrrery(void)
    double Period, ta, tc, te;
    char LPName[5][3] = {"L1", "L2", "L3", "L4", "L5"};
    double PointSize;
-   vec3 r, v;
+   vec3_t r, v;
 
    O = &Orrery;
 
@@ -3948,10 +3975,10 @@ void DrawSphereHUD(void)
 /**********************************************************************/
 /* 24 possible cases for body axes orientation in Unit Sphere window -
    calculate appropriate DCM                                          */
-mat3x3 FindSphereWindowAxes()
+mat3x3_t FindSphereWindowAxes()
 {
    struct WidgetType *W;
-   mat3x3 CT;
+   mat3x3_t CT;
 
    W = &CenterWidget;
 
@@ -3984,10 +4011,10 @@ mat3x3 FindSphereWindowAxes()
 }
 /**********************************************************************/
 /* Draws a constellation given a constellation struct and DCM         */
-void DrawConstellation(struct ConstellationType *C, mat3x3 CVJ)
+void DrawConstellation(struct ConstellationType *C, mat3x3_t CVJ)
 {
    long i, Nstars, Nlines;
-   vec3 VecV;
+   vec3_t VecV;
    double lngA, latA, lngB, latB;
 
    Nstars = C->Nstars;
@@ -4027,20 +4054,22 @@ void DrawUnitSphere(void)
    struct FssType *F;
    struct StarTrackerType *ST;
 
-   mat3x3 CVB0; /* DCM from Body0 frame to Viewing frame */
-   mat3x3 CVB;
-   mat3x3 CVL;
-   mat3x3 CVN;
-   mat3x3 CVH;
-   mat3x3 CVG;
-   mat3x3 CVS;
-   mat3x3 CVJ;
-   mat3x3 Cp; /* Permute axes */
-   mat3x3 CVSp;
-   vec3 ZAxis = {.x = 0.0, .y = 0.0, .z = 1.0};
+   mat3x3_t CVB0; /* DCM from Body0 frame to Viewing frame */
+   mat3x3_t CVB;
+   mat3x3_t CVL;
+   mat3x3_t CVN;
+   mat3x3_t CVH;
+   mat3x3_t CVG;
+   mat3x3_t CVS;
+   mat3x3_t CVJ;
+   mat3x3_t Cp; /* Permute axes */
+   mat3x3_t CVSp;
+   vec3_t ZAxis = {.x = 0.0, .y = 0.0, .z = 1.0};
    double x, y;
 
-   vec3 VecH, VecN, VecV;
+   vec3_t VecH, VecV;
+   magvec3_t uVecN;
+   vec3_t *const VecN = &uVecN.v;
 
    struct SCType *S     = &SC[POV.Host.SC];
    struct WorldType *Wd = &World[Orb[S->RefOrb].World];
@@ -4067,7 +4096,7 @@ void DrawUnitSphere(void)
 
    long MenuTop;
    double rad;
-   vec3 rmn, rmh;
+   vec3_t rmn, rmh;
 
    glClear(GL_COLOR_BUFFER_BIT);
 
@@ -4100,9 +4129,9 @@ void DrawUnitSphere(void)
       rad = asin(Wd->rad / MAGV(S->PosN));
 
       for (i = 0; i < 3; i++)
-         VecN.v[i] = -S->PosN.v[i];
-      UNITV(&VecN);
-      VecV = MxV(CVN, VecN);
+         VecN->v[i] = -S->PosN.v[i];
+      uVecN = UNITV(*VecN);
+      VecV  = MxV(CVN, *VecN);
 
       VecToLngLat(VecV, &lng, &lat);
 
@@ -4323,9 +4352,9 @@ void DrawUnitSphere(void)
          y = x;
          for (Im = 0; Im < Wd->Nsat; Im++) {
             for (j = 0; j < 3; j++) {
-               VecN.v[j] = World[Wd->Sat[Im]].eph.PosN.v[j] - S->PosN.v[j];
+               VecN->v[j] = World[Wd->Sat[Im]].eph.PosN.v[j] - S->PosN.v[j];
             }
-            VecV = MxV(CVN, VecN);
+            VecV = MxV(CVN, *VecN);
             VecToLngLat(VecV, &lng, &lat);
             lng *= R2D;
             lat *= R2D;
@@ -4351,8 +4380,8 @@ void DrawUnitSphere(void)
          rmh = MTxV(World[Wd->Parent].CNH, rmn);
          rmn = MxV(Wd->CNH, rmh);
          for (i = 0; i < 3; i++)
-            VecN.v[i] = rmn.v[i] - S->PosN.v[i];
-         VecV = MxV(CVN, VecN);
+            VecN->v[i] = rmn.v[i] - S->PosN.v[i];
+         VecV = MxV(CVN, *VecN);
          VecToLngLat(VecV, &lng, &lat);
          x = 4.0;
          y = x;
@@ -4945,7 +4974,7 @@ void Load3DNoise(void)
 void LoadCamLists(void)
 {
    long Isc, Ib, Iw, Ir;
-   quat MwAlphaMask = {.q = {0.0, 0.5, 0.5, 0.0}};
+   quat_t MwAlphaMask = {.q = {0.0, 0.5, 0.5, 0.0}};
 
    /* .. Load SC Geom Display Lists */
    for (Isc = 0; Isc < Nsc; Isc++) {
@@ -5291,15 +5320,15 @@ void CreateStarrySkyEnvMap(void)
    GLenum Status;
    float *Tex;
    long If, i;
-   mat3x3 CPH[6] = {
-       ((mat3x3){.rows = {VEC3_PYAXIS, VEC3_PZAXIS, VEC3_PXAXIS}}), /* PX */
-       ((mat3x3){.rows = {VEC3_NXAXIS, VEC3_PZAXIS, VEC3_PYAXIS}}), /* PY */
-       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}}), /* PZ */
-       ((mat3x3){.rows = {VEC3_NYAXIS, VEC3_PZAXIS, VEC3_NXAXIS}}), /* MX */
-       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PZAXIS, VEC3_NYAXIS}}), /* MY */
-       ((mat3x3){.rows = {VEC3_NXAXIS, VEC3_PYAXIS, VEC3_NZAXIS}}), /* MZ */
+   mat3x3_t CPH[6] = {
+       ((mat3x3_t){.rows = {VEC3_PYAXIS, VEC3_PZAXIS, VEC3_PXAXIS}}), /* PX */
+       ((mat3x3_t){.rows = {VEC3_NXAXIS, VEC3_PZAXIS, VEC3_PYAXIS}}), /* PY */
+       ((mat3x3_t){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}}), /* PZ */
+       ((mat3x3_t){.rows = {VEC3_NYAXIS, VEC3_PZAXIS, VEC3_NXAXIS}}), /* MX */
+       ((mat3x3_t){.rows = {VEC3_PXAXIS, VEC3_PZAXIS, VEC3_NYAXIS}}), /* MY */
+       ((mat3x3_t){.rows = {VEC3_NXAXIS, VEC3_PYAXIS, VEC3_NZAXIS}}), /* MZ */
    };
-   vec3 LoS;
+   vec3_t LoS;
 
    Height = 1024;
    Width  = 1024;

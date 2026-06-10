@@ -43,30 +43,30 @@ struct CmdVecType {
    long TrgWorld;
    long TrgSC;
    long TrgBody;
-   vec3 N;  /* Components in N */
-   vec3 W;  /* Components in W */
-   vec3 L;  /* Components in L */
-   vec3 R;  /* Components in R */
-   vec3 T;  /* Components in T */
-   vec3 wn; /* Angular velocity in N, expressed in N */
+   vec3_t N;  /* Components in N */
+   vec3_t W;  /* Components in W */
+   vec3_t L;  /* Components in L */
+   vec3_t R;  /* Components in R */
+   vec3_t T;  /* Components in T */
+   vec3_t wn; /* Angular velocity in N, expressed in N */
 };
 
 struct CmdType {
    /*~ Internal Variables ~*/
    long Parm;
    long Frame;
-   vec3 AngRate; /* [~<~] */
-   vec3 Ang;     /* [~<~] */
-   vec3 PosRate;
-   vec3 Pos;
+   vec3_t AngRate; /* [~<~] */
+   vec3_t Ang;     /* [~<~] */
+   vec3_t PosRate;
+   vec3_t Pos;
    long RotSeq;
-   quat qrl; /* [~!~] */
-   quat qrn; /* [~!~] */
-   vec3 wrn;
+   quat_t qrl; /* [~!~] */
+   quat_t qrn; /* [~!~] */
+   vec3_t wrn;
    double SpinRate;
-   vec3 Hvr;
-   vec3 Hvn;
-   mat3x3 OldCRN;
+   vec3_t Hvr;
+   vec3_t Hvn;
+   mat3x3_t OldCRN;
 
    /*~ Structures ~*/
    struct CmdVecType PriVec;
@@ -75,9 +75,9 @@ struct CmdType {
 
 struct AcBodyType {
    /*~ Parameters ~*/
-   double mass; /* [[kg]] */
-   vec3 cm;     /* [[m]] */
-   mat3x3 MOI;  /* [[kg-m^2]] */
+   double mass;  /* [[kg]] */
+   vec3_t cm;    /* [[m]] */
+   mat3x3_t MOI; /* [[kg-m^2]] */
 };
 
 struct AcJointType {
@@ -87,23 +87,23 @@ struct AcJointType {
    long TrnDOF;
    long RotSeq;
    long TrnSeq;
-   mat3x3 CGiBi;
-   mat3x3 CBoGo;
-   vec3 AngGain;
-   vec3 AngRateGain;
-   vec3 PosGain;
-   vec3 PosRateGain;
-   vec3 MaxAngRate;
-   vec3 MaxPosRate;
-   vec3 MaxTrq;
-   vec3 MaxFrc;
+   mat3x3_t CGiBi;
+   mat3x3_t CBoGo;
+   vec3_t AngGain;
+   vec3_t AngRateGain;
+   vec3_t PosGain;
+   vec3_t PosRateGain;
+   vec3_t MaxAngRate;
+   vec3_t MaxPosRate;
+   vec3_t MaxTrq;
+   vec3_t MaxFrc;
 
    /*~ Internal Variables ~*/
-   vec3 Ang; /* [[rad]] [~>~] */
-   vec3 AngRate;
-   vec3 Pos;
-   vec3 PosRate;
-   mat3x3 COI;
+   vec3_t Ang; /* [[rad]] [~>~] */
+   vec3_t AngRate;
+   vec3_t Pos;
+   vec3_t PosRate;
+   mat3x3_t COI;
 
    /*~ Structures ~*/
    struct CmdType Cmd;
@@ -111,7 +111,7 @@ struct AcJointType {
 
 struct AcGyroType {
    /*~ Parameters ~*/
-   vec3 Axis;
+   vec3_t Axis;
 
    /*~ Internal Variables ~*/
    long Valid;
@@ -120,7 +120,7 @@ struct AcGyroType {
 
 struct AcMagnetometerType {
    /*~ Parameters ~*/
-   vec3 Axis;
+   vec3_t Axis;
 
    /*~ Internal Variables ~*/
    long Valid;
@@ -130,7 +130,7 @@ struct AcMagnetometerType {
 struct AcCssType {
    /*~ Parameters ~*/
    long Body;
-   vec3 Axis;
+   vec3_t Axis;
    double Scale;
 
    /*~ Internal Variables ~*/
@@ -140,8 +140,8 @@ struct AcCssType {
 
 struct AcFssType {
    /*~ Parameters ~*/
-   quat qb;
-   mat3x3 CB;
+   quat_t qb;
+   mat3x3_t CB;
    long H_Axis;
    long V_Axis;
    long BoreAxis;
@@ -150,19 +150,19 @@ struct AcFssType {
    enum fssTypes type;
    long Valid;       /* [~>~] */
    double SunAng[2]; /* [[rad]] [~>~] */
-   vec3 SunVecS;
-   vec3 SunVecB;
+   vec3_t SunVecS;
+   vec3_t SunVecB;
 };
 
 struct AcStarTrackerType {
    /*~ Parameters ~*/
-   quat qb;
-   mat3x3 CB;
+   quat_t qb;
+   mat3x3_t CB;
 
    /*~ Internal Variables ~*/
    long Valid; /* [~>~] */
-   quat qn;    /* [~>~] */
-   quat qbn;
+   quat_t qn;  /* [~>~] */
+   quat_t qbn;
    long BoreAxis; /* X_AXIS, Y_AXIS, Z_AXIS */
 };
 
@@ -172,10 +172,10 @@ struct AcGpsType {
    long Rollover; /* [~>~] */
    long Week;     /* [~>~] */
    double Sec;    /* [~>~] */
-   vec3 PosN;     /* [[m]] [~>~] */
-   vec3 VelN;     /* [[m/s]] [~>~] */
-   vec3 PosW;     /* [[m]] [~>~] */
-   vec3 VelW;     /* [[m/s]] [~>~] */
+   vec3_t PosN;   /* [[m]] [~>~] */
+   vec3_t VelN;   /* [[m/s]] [~>~] */
+   vec3_t PosW;   /* [[m]] [~>~] */
+   vec3_t VelW;   /* [[m/s]] [~>~] */
    double Lng;    /* Geocentric [[rad]] [~>~] */
    double Lat;    /* Geocentric [[rad]] [~>~] */
    double Alt;    /* Geocentric [[m]] [~>~] */
@@ -186,8 +186,8 @@ struct AcGpsType {
 
 struct AcAccelType {
    /*~ Parameters ~*/
-   vec3 PosB;
-   vec3 Axis;
+   vec3_t PosB;
+   vec3_t Axis;
 
    /*~ Internal Variables ~*/
    long Valid;
@@ -204,8 +204,8 @@ struct AcEarthSensorType {
 struct AcWhlType {
    /*~ Parameters ~*/
    long Body;
-   vec3 Axis;
-   vec3 DistVec;
+   vec3_t Axis;
+   vec3_t DistVec;
    double J;
    double Tmax;
    double Hmax;
@@ -218,8 +218,8 @@ struct AcWhlType {
 
 struct AcMtbType {
    /*~ Parameters ~*/
-   vec3 Axis;
-   vec3 DistVec;
+   vec3_t Axis;
+   vec3_t DistVec;
    double Mmax;
 
    /*~ Internal Variables ~*/
@@ -229,9 +229,9 @@ struct AcMtbType {
 struct AcThrType {
    /*~ Parameters ~*/
    long Body;
-   vec3 PosB;
-   vec3 Axis;
-   vec3 rxA;
+   vec3_t PosB;
+   vec3_t Axis;
+   vec3_t rxA;
    double DistVec[6];
    double Fmax;
 
@@ -252,22 +252,22 @@ struct AcPrototypeCtrlType {
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 Tcmd;
-   quat qbr;
-   vec3 therr;
-   vec3 werr;
+   vec3_t Tcmd;
+   quat_t qbr;
+   vec3_t therr;
+   vec3_t werr;
 };
 
 struct AcAdHocCtrlType {
    /*~ Parameters ~*/
-   vec3 Kr;
-   vec3 Kp;
+   vec3_t Kr;
+   vec3_t Kp;
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 therr;
-   vec3 werr;
-   vec3 Tcmd;
+   vec3_t therr;
+   vec3_t werr;
+   vec3_t Tcmd;
 };
 
 struct AcSpinnerCtrlType {
@@ -282,9 +282,9 @@ struct AcSpinnerCtrlType {
    long Init;
    double Bold1, Bold2;
    double xold, yold;
-   vec3 rvn, rvb;
-   vec3 Tcmd;
-   vec3 Mcmd;
+   vec3_t rvn, rvb;
+   vec3_t Tcmd;
+   vec3_t Mcmd;
 };
 
 struct AcMomBiasCtrlType {
@@ -294,44 +294,44 @@ struct AcMomBiasCtrlType {
 
 struct AcThreeAxisCtrlType {
    /*~ Parameters ~*/
-   vec3 Kr;
-   vec3 Kp;
+   vec3_t Kr;
+   vec3_t Kp;
    double Kunl;
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 Tcmd;
-   vec3 Hwcmd;
+   vec3_t Tcmd;
+   vec3_t Hwcmd;
 };
 
 struct AcIssCtrlType {
    /*~ Parameters ~*/
-   vec3 Kr;
-   vec3 Kp;
+   vec3_t Kr;
+   vec3_t Kp;
    double Tmax;
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 therr;
-   vec3 werr;
+   vec3_t therr;
+   vec3_t werr;
 };
 
 struct AcCmgCtrlType {
    /*~ Parameters ~*/
-   vec3 Kr;
-   vec3 Kp;
+   vec3_t Kr;
+   vec3_t Kp;
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 therr, werr;
-   vec3 Tcmd;
-   quat AngRateCmd;
+   vec3_t therr, werr;
+   vec3_t Tcmd;
+   quat_t AngRateCmd;
 };
 
 struct AcThrCtrlType {
    /*~ Parameters ~*/
-   vec3 Kw;
-   vec3 Kth;
+   vec3_t Kw;
+   vec3_t Kth;
    double Kv;
    double Kp;
 
@@ -341,27 +341,27 @@ struct AcThrCtrlType {
 
 struct AcCfsCtrlType {
    /*~ Parameters ~*/
-   vec3 Kr;
-   vec3 Kp;
+   vec3_t Kr;
+   vec3_t Kp;
    double Kunl;
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 therr;
-   vec3 werr;
+   vec3_t therr;
+   vec3_t werr;
 };
 
 struct AcThrSteerCtrlType {
    /*~ Parameters ~*/
-   vec3 Kr;
-   vec3 Kp;
+   vec3_t Kr;
+   vec3_t Kp;
 
    /*~ Internal Variables ~*/
    long Init;
-   vec3 therr;
-   vec3 werr;
-   vec3 ierr;
-   vec3 Tcmd;
+   vec3_t therr;
+   vec3_t werr;
+   vec3_t ierr;
+   vec3_t Tcmd;
 };
 
 struct AcType {
@@ -389,24 +389,24 @@ struct AcType {
 
    double DT;
    double mass;
-   vec3 cm;
-   mat3x3 MOI;
+   vec3_t cm;
+   mat3x3_t MOI;
 
    /*~ Inputs ~*/
    double Time; /* Time since J2000 [[sec]] */
    long Mode;
-   vec3 wbn;
-   quat qbn;
-   mat3x3 CBN;
-   mat3x3 CLN;
-   vec3 wln;
-   quat qln;
-   vec3 svn;
-   vec3 svb; /* [~<~] */
-   vec3 bvn;
-   vec3 bvb; /* [~<~] */
-   vec3 PosN;
-   vec3 VelN;
+   vec3_t wbn;
+   quat_t qbn;
+   mat3x3_t CBN;
+   mat3x3_t CLN;
+   vec3_t wln;
+   quat_t qln;
+   vec3_t svn;
+   vec3_t svb; /* [~<~] */
+   vec3_t bvn;
+   vec3_t bvb; /* [~<~] */
+   vec3_t PosN;
+   vec3_t VelN;
    long SunValid;
    long MagValid;
    long EphValid;
@@ -415,19 +415,19 @@ struct AcType {
    /*~ Outputs ~*/
    long ReqMode;
 
-   vec3 Tcmd;
-   vec3 Mcmd;
-   vec3 Fcmd;
+   vec3_t Tcmd;
+   vec3_t Mcmd;
+   vec3_t Fcmd;
 
-   vec3 IdealTrq;
-   vec3 IdealFrc;
+   vec3_t IdealTrq;
+   vec3_t IdealFrc;
 
    /*~ Internal Variables ~*/
    long Init;
-   quat qrn;
-   vec3 wrn;
-   quat qbr;
-   vec3 Hvb; /* [~<~] */
+   quat_t qrn;
+   vec3_t wrn;
+   quat_t qbr;
+   vec3_t Hvb; /* [~<~] */
 
    /*~ Structures ~*/
 

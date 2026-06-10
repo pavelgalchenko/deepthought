@@ -2639,7 +2639,7 @@ void gts7(struct nrlmsise_input *input, struct nrlmsise_flags *flags,
 }
 /**********************************************************************/
 /* This wrapper function maps to/from 42, calls gtd7 to find density  */
-double NRLMSISE00(DateType date, vec3 PosW, double F10p7, double AP)
+double NRLMSISE00(DateType date, vec3_t PosW, double F10p7, double AP)
 {
    static long First = 1;
    double Lat, Lng, Alt;

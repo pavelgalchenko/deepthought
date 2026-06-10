@@ -132,9 +132,12 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
    struct BodyType *B;
    struct WorldType *W;
    struct AlbedoFBOType *A;
-   mat3x3 CEB, CEN, CWE;
-   vec3 PosEyeW, WorldVecN, UnitWorldVecE, SunVecE;
-   double WorldDist, CosWorldAng;
+   mat3x3_t CEB, CEN, CWE;
+   vec3_t PosEyeW, UnitWorldVecE, SunVecE;
+   magvec3_t uWorldVecN;
+   vec3_t *const WorldVecN = &uWorldVecN.v;
+   double *const WorldDist = &uWorldVecN.m;
+   double CosWorldAng;
    float TexWidth;
    unsigned int AlbedoCubeTag;
    GLint UniLoc;
@@ -144,17 +147,17 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
 
    /* E is "eye" frame, F is "face" frame */
    /* Faces are faces of a cube centered on Eye */
-   mat3x3 CEF[5] = {
+   mat3x3_t CEF[5] = {
        /* Ceiling */
-       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}}),
+       ((mat3x3_t){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}}),
        /* North Wall */
-       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_NZAXIS, VEC3_PYAXIS}}),
+       ((mat3x3_t){.rows = {VEC3_PXAXIS, VEC3_NZAXIS, VEC3_PYAXIS}}),
        /* South Wall */
-       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PZAXIS, VEC3_NYAXIS}}),
+       ((mat3x3_t){.rows = {VEC3_PXAXIS, VEC3_PZAXIS, VEC3_NYAXIS}}),
        /* East Wall */
-       ((mat3x3){.rows = {VEC3_NZAXIS, VEC3_PYAXIS, VEC3_PXAXIS}}),
+       ((mat3x3_t){.rows = {VEC3_NZAXIS, VEC3_PYAXIS, VEC3_PXAXIS}}),
        /* West Wall */
-       ((mat3x3){.rows = {VEC3_PZAXIS, VEC3_PYAXIS, VEC3_NXAXIS}}),
+       ((mat3x3_t){.rows = {VEC3_PZAXIS, VEC3_PYAXIS, VEC3_NXAXIS}}),
    };
 
    if (First) {
@@ -170,16 +173,18 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
    /* .. Setup geometry for Shader */
    for (i = 0; i < 3; i++)
       CEB.mat[2][i] = -CSS->Axis.v[i];
-   CEB.rows[1] = PerpBasis(CEB.rows[2], &CEB.rows[0]);
-   CEN         = MxM(CEB, B->CN);
-   CWE         = MxMT(W->CWN, CEN);
-   PosEyeW     = MxV(W->CWN, S->PosN);
+   pair_vec3_t pair = PerpBasis(CEB.rows[2]);
+   CEB.rows[0]      = pair.first;
+   CEB.rows[1]      = pair.second;
+   CEN              = MxM(CEB, B->CN);
+   CWE              = MxMT(W->CWN, CEN);
+   PosEyeW          = MxV(W->CWN, S->PosN);
    for (i = 0; i < 3; i++)
-      WorldVecN.v[i] = -S->PosN.v[i];
-   WorldDist     = UNITV(&WorldVecN);
-   UnitWorldVecE = MxV(CEN, WorldVecN);
+      WorldVecN->v[i] = -S->PosN.v[i];
+   uWorldVecN    = UNITV(*WorldVecN);
+   UnitWorldVecE = MxV(CEN, *WorldVecN);
    SunVecE       = MxV(CEN, S->svn);
-   CosWorldAng   = sqrt(1.0 - W->rad * W->rad / (WorldDist * WorldDist));
+   CosWorldAng   = sqrt(1.0 - W->rad * W->rad / ((*WorldDist) * (*WorldDist)));
 
    if (Orb[S->RefOrb].World == EARTH)
       AlbedoCubeTag = EarthAlbedoCubeTag;

@@ -29,9 +29,9 @@ void InitGradRandomTable(int seed);
 double glattice(long ix, long iy, long iz, double fx, double fy, double fz);
 double gnoise(double x, double y, double z);
 double turbulence(double x, double y, double z, double MinFreq, double MaxFreq);
-double FractalWorley(vec3 p[3], long octaves, double lacunarity,
+double FractalWorley(vec3_t p[3], long octaves, double lacunarity,
                      long DistanceType);
-double FractalWorley2(vec3 p[3], long octaves, double lacunarity,
+double FractalWorley2(vec3_t p[3], long octaves, double lacunarity,
                       long DistanceType);
 double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct);
 double ProcTex3D(double x, double y, double z, double Xunit, double Yunit,

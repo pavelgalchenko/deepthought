@@ -567,7 +567,7 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
 {
    struct SpotType *S;
    long i, Pick;
-   vec3 rwn, rwh, rw, LPrh;
+   vec3_t rwn, rwh, rw, LPrh;
    double xw, yw, dx, dy, d;
    long Iw, Is, Ip;
    struct WorldType *W;

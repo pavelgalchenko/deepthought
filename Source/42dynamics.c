@@ -25,7 +25,7 @@
 void MotionConstraints(struct SCType *S)
 {
    struct BodyType *B;
-   vec3 pcm = VEC3_ZERO, vcm = VEC3_ZERO;
+   vec3_t pcm = VEC3_ZERO, vcm = VEC3_ZERO;
    long Ib, i;
 
    /* Constrain Sum(mass*pn = 0.0), Sum(mass*vn = 0.0) */
@@ -59,8 +59,8 @@ void MotionConstraints(struct SCType *S)
 void SCMassProps(struct SCType *S)
 {
    struct BodyType *B0, *B;
-   vec3 pnb, p;
-   mat3x3 pp, CI0, MOI;
+   vec3_t pnb, p;
+   mat3x3_t pp, CI0, MOI;
    double p2;
    long i, j, Ib;
 
@@ -96,8 +96,8 @@ void SCMassProps(struct SCType *S)
 /**********************************************************************/
 void MapJointStatesToStateVector(struct SCType *S)
 {
-   mat3x3 CGoGi;
-   quat qgogi;
+   mat3x3_t CGoGi;
+   quat_t qgogi;
    long i, Ig;
    struct JointType *G;
    struct DynType *D;
@@ -153,11 +153,11 @@ void MapJointStatesToStateVector(struct SCType *S)
 void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
                                 double *uf, double *xf, struct SCType *S)
 {
-   vec3 wi, ri, ro, wxr, wxri, wxro, xg;
-   mat3x3 CBfiBi, CBfoBo, CGoBfi;
-   vec3 wgon, wo, fvi, fvo;
-   quat qfi, qfo;
-   vec3 vg, vgb, vgn;
+   vec3_t wi, ri, ro, wxr, wxri, wxro, xg;
+   mat3x3_t CBfiBi, CBfoBo, CGoBfi;
+   vec3_t wgon, wo, fvi, fvo;
+   quat_t qfi, qfo;
+   vec3_t vg, vgb, vgn;
    struct BodyType *Bi, *Bo, *B;
    struct JointType *G;
    struct WhlType *W;
@@ -198,7 +198,7 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
             G->AngRate.v[i] = u[G->Rotu0 + i];
          }
          G->CGoGi = Q2C(G->q);
-         C2A(G->RotSeq, G->CGoGi, &G->Ang.v[0], &G->Ang.v[1], &G->Ang.v[2]);
+         G->Ang   = C2A(G->RotSeq, G->CGoGi);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
@@ -328,7 +328,7 @@ void BodyStatesToNodeStates(struct SCType *S)
 {
    struct BodyType *B;
    struct NodeType *N;
-   vec3 vb, wxr;
+   vec3_t vb, wxr;
    long Ib, In, If, i;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -374,8 +374,8 @@ void FindTotalAngMom(struct SCType *S)
 
    struct BodyType *B;
    struct WhlType *W;
-   vec3 Hb, Hn, mv, rxmv, Hwn;
-   vec3 Hwb = VEC3_ZERO;
+   vec3_t Hb, Hn, mv, rxmv, Hwn;
+   vec3_t Hwb = VEC3_ZERO;
    long Ib, Iwhl;
 
    /* Zero */
@@ -410,7 +410,7 @@ double FindTotalKineticEnergy(struct OrbitType *orbs, struct SCType *S)
 {
    struct BodyType *B;
    struct WhlType *W;
-   vec3 Iw, mv;
+   vec3_t Iw, mv;
    double KE = 0.0;
    long Ib, Iwhl;
 
@@ -464,7 +464,7 @@ void FindPathVectors(struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   vec3 ri, ro;
+   vec3_t ri, ro;
    long Ig, Jg, Ia, Bi, Bo;
 
    D = &S->Dyn;
@@ -495,7 +495,7 @@ void FindPAngVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib;
    struct JointType *G;
-   mat3x3 CGo, CG, IC;
+   mat3x3_t CGo, CG, IC;
    long Ib, i, j, k, i0, j0;
    long Jb, Ig;
 
@@ -572,9 +572,9 @@ void FindPVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
-   mat3x3 RC, BC;
-   mat3x3 RCB, RCG;
-   mat3x3 CNG, CD;
+   mat3x3_t RC, BC;
+   mat3x3_t RCB, RCG;
+   mat3x3_t CNG, CD;
    double m;
    long Ib, Jb, Ig, i, j, k, i0, j0;
 
@@ -727,7 +727,7 @@ void FindPVelf(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi, *Go;
-   mat3x3 RCi, RCo;
+   mat3x3_t RCi, RCo;
    double m;
    long Ib, Jb, Gin, Gout, i, j, k, i0, j0;
 
@@ -799,7 +799,7 @@ void AugmentIPAngVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
-   mat3x3 cplusPetaN;
+   mat3x3_t cplusPetaN;
    long Ib, i, j, k, i0, j0;
    long Jb, Ig;
 
@@ -870,7 +870,7 @@ void AugmentMPVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
-   mat3x3 CcplusPeta;
+   mat3x3_t CcplusPeta;
    long Ib, Jb, Ig, i, j, k, i0, j0;
 
    D = &S->Dyn;
@@ -912,7 +912,7 @@ void AugmentIPAngVelf(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
-   mat3x3 cplusPetaN;
+   mat3x3_t cplusPetaN;
    long Ib, i, j, k, i0, j0;
    long Jb, Gin;
 
@@ -985,7 +985,7 @@ void AugmentMPVelf(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
-   mat3x3 CcplusPeta;
+   mat3x3_t CcplusPeta;
    long Ib, Jb, Gin, i, j, k, i0, j0;
    long Nfi, Nfj;
 
@@ -1171,7 +1171,7 @@ void FindAlphaR(struct SCType *S)
 {
    struct JointType *G;
    struct BodyType *Bi, *Bo;
-   vec3 CGs, CGds, wxGs, wxFo, wxFi, CwxFi, CAlphaR;
+   vec3_t CGs, CGds, wxGs, wxFo, wxFi, CwxFi, CAlphaR;
    long Ig;
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
@@ -1204,10 +1204,10 @@ void FindAccR(struct SCType *S)
 {
    struct JointType *G;
    struct BodyType *Bi, *Bo;
-   vec3 wxr, wxwxr, Cwri, Cwro;
-   vec3 Dsb, wxDsb, wxDsn;
-   vec3 axr, Caxri, Caxro;
-   vec3 wxv, Cwxvi, Cwxvo;
+   vec3_t wxr, wxwxr, Cwri, Cwro;
+   vec3_t Dsb, wxDsb, wxDsn;
+   vec3_t axr, Caxri, Caxro;
+   vec3_t wxv, Cwxvi, Cwxvo;
    long Ig, i;
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
@@ -1261,7 +1261,7 @@ void FindFlexTerms(struct SCType *S)
 {
    struct BodyType *B;
    long Nf, Ib, i, j, k;
-   vec3 cPe;
+   vec3_t cPe;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B  = &S->B[Ib];
@@ -1316,9 +1316,9 @@ void FindInertiaTrq(struct SCType *S)
 {
    struct BodyType *B;
    struct WhlType *W;
-   vec3 H, wxH, Ia;
-   vec3 cPexa;
-   vec3 CAccR;
+   vec3_t H, wxH, Ia;
+   vec3_t cPexa;
+   vec3_t CAccR;
    long Ib, Iw;
 
    /* -I*AlphaR - wxH for all bodies */
@@ -1356,8 +1356,8 @@ void FindInertiaTrq(struct SCType *S)
 void FindInertiaFrc(struct SCType *S)
 {
    struct BodyType *B;
-   vec3 cPexa, cPexw, cPexwxw, Pxi, wxPxi;
-   vec3 FlexInertiaFrc, FlexInertiaFrcN;
+   vec3_t cPexa, cPexw, cPexwxw, Pxi, wxPxi;
+   vec3_t FlexInertiaFrc, FlexInertiaFrcN;
    long Ib, i, j, Nf;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -1711,10 +1711,10 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
    struct JointType *G;
    struct BodyType *B;
    struct WhlType *W;
-   vec3 TrqBo, TrqGo, TrqBi;
-   vec3 FrcBo, FrcGo, FrcBi, FrcGi;
-   vec3 FrcBiN, FrcBoN;
-   vec3 rxFi, rxFo;
+   vec3_t TrqBo, TrqGo, TrqBi;
+   vec3_t FrcBo, FrcGo, FrcBi, FrcGi;
+   vec3_t FrcBiN, FrcBoN;
+   vec3_t rxFi, rxFo;
    D = &S->Dyn;
 
    /* .. Dynamics */
@@ -1928,10 +1928,10 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
 
    /* .. Kinematics */
    /* B[0].qn */
-   quat q = DBL_TO_QUAT(&x[0]);
-   quat qdot;
-   vec3 w = DBL_TO_VEC3(&u[0]);
-   qdot   = QW2QDOT(q, w);
+   quat_t q = DBL_TO_QUAT(&x[0]);
+   quat_t qdot;
+   vec3_t w = DBL_TO_VEC3(&u[0]);
+   qdot     = QW2QDOT(q, w);
    QUAT_TO_DBL(&xdot[0], qdot);
 
    /* Joints, rotation and translation */
@@ -1969,7 +1969,7 @@ void FindPAngVelc(struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   mat3x3 CGo, CG;
+   mat3x3_t CGo, CG;
    long Ib, i, j, k, i0, j0;
    long Jb, Ig, Nc;
 
@@ -2018,9 +2018,9 @@ void FindPVelc(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bjb;
    struct JointType *G;
-   mat3x3 RC;
-   mat3x3 RCB, RCG;
-   mat3x3 CNG, CD;
+   mat3x3_t RC;
+   mat3x3_t RCB, RCG;
+   mat3x3_t CNG, CD;
    long Ib, Jb, Ig, i, j, k, i0, j0, Nc;
 
    D = &S->Dyn;
@@ -2075,10 +2075,10 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
    struct JointType *G;
    struct WhlType *W;
    long Ig, Ib, Iw, i, j;
-   vec3 TrqBo, TrqGo, TrqBi;
-   vec3 FrcBo, FrcGo, FrcBi, FrcGi;
-   vec3 FrcBiN, FrcBoN;
-   vec3 rxFi, rxFo;
+   vec3_t TrqBo, TrqGo, TrqBi;
+   vec3_t FrcBo, FrcGo, FrcBi, FrcGi;
+   vec3_t FrcBiN, FrcBoN;
+   vec3_t rxFi, rxFo;
 
    D = &S->Dyn;
 
@@ -2576,8 +2576,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
    struct BodyType *B;
    struct DynType *D;
    struct NodeType *FN;
-   vec3 Hb, WhlTorq, wxH, Trq;
-   mat3x3 Iinv;
+   vec3_t Hb, WhlTorq, wxH, Trq;
+   mat3x3_t Iinv;
    long i, j, k;
    long If, Nf, In;
 
@@ -2586,8 +2586,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
    Nf = B->Nf;
 
    /* .. Build H's */
-   vec3 uvec = DBL_TO_VEC3(&u[0]);
-   Hb        = MxV(B->I, uvec);
+   vec3_t uvec = DBL_TO_VEC3(&u[0]);
+   Hb          = MxV(B->I, uvec);
    for (i = 0; i < 3; i++)
       Hb.v[i] += B->EmbeddedMom.v[i];
    for (j = 0; j < S->Nw; j++)
@@ -2605,8 +2605,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
       Trq.v[0] = B->Trq.v[0] - wxH.v[0] + WhlTorq.v[0];
 
    /* .. Rigid Body EOM */
-   Iinv         = MINV3(B->I);
-   vec3 uvecdot = MxV(Iinv, Trq);
+   Iinv           = MINV3(B->I);
+   vec3_t uvecdot = MxV(Iinv, Trq);
    VEC3_TO_DBL(udot, uvecdot);
 
    /* .. Wheel-body interaction  */
@@ -2614,8 +2614,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
       hdot[i] = S->Whl[i].Trq;
 
    /* .. Quaternion kinematics */
-   quat q = DBL_TO_QUAT(&x[0]);
-   quat qdot;
+   quat_t q = DBL_TO_QUAT(&x[0]);
+   quat_t qdot;
    qdot = QW2QDOT(q, uvec);
 
    QUAT_TO_DBL(&xdot[0], qdot);
@@ -2807,10 +2807,10 @@ void OneBodyRK4(struct SCType *S)
 void OrderNJointPartials(struct JointType *G)
 {
    double s2, c2, s3, c3;
-   mat3x3 Pw    = MAT3X3_ZERO;
-   mat3x3 Pwdot = MAT3X3_ZERO;
-   mat3x3 Pv    = MAT3X3_ZERO;
-   mat3x3 CPv;
+   mat3x3_t Pw    = MAT3X3_ZERO;
+   mat3x3_t Pwdot = MAT3X3_ZERO;
+   mat3x3_t Pv    = MAT3X3_ZERO;
+   mat3x3_t CPv;
    long i1, i2, i3, Cyclic, i, j, k;
 
    if (G->Init) {
@@ -2969,10 +2969,10 @@ void MINV1to6(double A[6][6], double AI[6][6], long N)
    }
 }
 /******************************************************************************/
-void ShiftArtFrc(double F[6], vec3 r, double Fbar[6])
+void ShiftArtFrc(double F[6], vec3_t r, double Fbar[6])
 {
-   vec3 F2  = DBL_TO_VEC3(&F[3]);
-   vec3 rxF = VxV(r, F2);
+   vec3_t F2  = DBL_TO_VEC3(&F[3]);
+   vec3_t rxF = VxV(r, F2);
 
    Fbar[0] = F[0] - rxF.v[0];
    Fbar[1] = F[1] - rxF.v[1];
@@ -2982,10 +2982,10 @@ void ShiftArtFrc(double F[6], vec3 r, double Fbar[6])
    Fbar[5] = F[5];
 }
 /******************************************************************************/
-void ShiftSpatAcc(double a[6], vec3 r, double abar[6])
+void ShiftSpatAcc(double a[6], vec3_t r, double abar[6])
 {
-   vec3 a2  = DBL_TO_VEC3(&a[0]);
-   vec3 axr = VxV(a2, r);
+   vec3_t a2  = DBL_TO_VEC3(&a[0]);
+   vec3_t axr = VxV(a2, r);
 
    abar[0] = a[0];
    abar[1] = a[1];
@@ -2995,9 +2995,9 @@ void ShiftSpatAcc(double a[6], vec3 r, double abar[6])
    abar[5] = a[5] + axr.v[2];
 }
 /******************************************************************************/
-void ShiftArtMass(double A[6][6], vec3 r, double B[6][6])
+void ShiftArtMass(double A[6][6], vec3_t r, double B[6][6])
 {
-   mat3x3 rx, rxA21, A12xr, rxA22, A22xr, rxA22xr;
+   mat3x3_t rx, rxA21, A12xr, rxA22, A22xr, rxA22xr;
    long i, j, k;
 
    rx    = V2CrossM(r);
@@ -3031,7 +3031,7 @@ void ShiftArtMass(double A[6][6], vec3 r, double B[6][6])
    }
 }
 /******************************************************************************/
-void RotateSpatVec(mat3x3 CBA, double Va[6], double Vb[6])
+void RotateSpatVec(mat3x3_t CBA, double Va[6], double Vb[6])
 {
    long i, j;
 
@@ -3045,9 +3045,9 @@ void RotateSpatVec(mat3x3 CBA, double Va[6], double Vb[6])
    }
 }
 /******************************************************************************/
-void RotateSpatMat(mat3x3 CBA, double Ma[6][6], double Mb[6][6])
+void RotateSpatMat(mat3x3_t CBA, double Ma[6][6], double Mb[6][6])
 {
-   mat3x3 CM11, CM12, CM21, CM22;
+   mat3x3_t CM11, CM12, CM21, CM22;
    long i, j, k;
 
    CM11 = MAT3X3_ZERO;
@@ -3083,11 +3083,11 @@ void RotateSpatMat(mat3x3 CBA, double Ma[6][6], double Mb[6][6])
 /******************************************************************************/
 void OrderNJointCOI(struct JointType *G)
 {
-   mat3x3 CBoGi;
+   mat3x3_t CBoGi;
 
    if (G->IsSpherical) {
       G->CGoGi = Q2C(G->q);
-      C2A(G->RotSeq, G->CGoGi, &G->Ang.v[0], &G->Ang.v[1], &G->Ang.v[2]);
+      G->Ang   = C2A(G->RotSeq, G->CGoGi);
    }
    else
       G->CGoGi = A2C(G->RotSeq, G->Ang.v[0], G->Ang.v[1], G->Ang.v[2]);
@@ -3099,12 +3099,12 @@ void OrderNJointCOI(struct JointType *G)
 void ScatterStates(struct JointType *G)
 {
    struct BodyType *Bi, *Bo;
-   vec3 Pwu, Pvu, Pdwu;
-   vec3 pni, vi, Cvi, wxPvu, ai, Cai;
-   vec3 wxri, wxro, Calfri, wxPwu;
-   vec3 axri, axro, wxwxri;
-   vec3 wxwxro, Cwi;
-   vec3 Iw, Ialfr, wxH;
+   vec3_t Pwu, Pvu, Pdwu;
+   vec3_t pni, vi, Cvi, wxPvu, ai, Cai;
+   vec3_t wxri, wxro, Calfri, wxPwu;
+   vec3_t axri, axro, wxwxri;
+   vec3_t wxwxro, Cwi;
+   vec3_t Iw, Ialfr, wxH;
    long i, j;
 
    Bi = G->Bi;
@@ -3173,10 +3173,10 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
 {
    struct BodyType *Bo;
    struct JointType *Gd;
-   vec3 rdk;
+   vec3_t rdk;
    double F[6], TF[6], CTF[6], SCTF[6];
    double M[6][6], TM[6][6], CTMC[6][6], SCTMCS[6][6];
-   mat3x3 Coc;
+   mat3x3_t Coc;
    long i, Id, j, k;
 
    Bo = G->Bo;
@@ -3284,7 +3284,7 @@ void ScatterStateDerivatives(struct JointType *G)
 {
    struct BodyType *Bi, *Bo;
    double Ma[6], Saui[6], CSaui[6], F[6], CSauiPudot[6];
-   vec3 rko;
+   vec3_t rko;
    long i, j;
 
    Bi = G->Bi;
@@ -3318,10 +3318,10 @@ void OrderNMultiBodyEOM(struct SCType *S)
    struct BodyType *B, *Bi, *Bo;
    struct JointType *G;
    struct WhlType *W;
-   vec3 Iow, wxH;
-   vec3 TrqBo, TrqGo, TrqBi;
-   vec3 FrcBo, FrcBi;
-   vec3 rxFi, rxFo;
+   vec3_t Iow, wxH;
+   vec3_t TrqBo, TrqGo, TrqBi;
+   vec3_t FrcBo, FrcBi;
+   vec3_t rxFi, rxFo;
    long i, j, Ib, Ig, Iw;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -3912,7 +3912,7 @@ void OrderNMultiBodyRK4(struct SCType *S)
       D->u[D->Nu - 3 + i] = G->RKum[3 + i] + dt * G->RKdu[3 + i];
       D->x[D->Nx - 3 + i] = G->RKxm.v[i] + dt * G->RKdx.v[i];
    }
-   quat q;
+   quat_t q;
    for (i = 0; i < 4; i++)
       q.q[i] = G->RKqm.q[i] + dt * G->RKdq.q[i];
 
@@ -3956,8 +3956,8 @@ void OrderNMultiBodyRK4(struct SCType *S)
 /**********************************************************************/
 /* Utility function for Encke's method.  Computes f(q).               */
 /* See Battin, p. 449                                                 */
-double EnckeFQ(vec3 r, vec3 delta) __attribute__((const));
-double EnckeFQ(vec3 r, vec3 delta)
+double EnckeFQ(vec3_t r, vec3_t delta) __attribute__((const));
+double EnckeFQ(vec3_t r, vec3_t delta)
 {
    double q, q1;
 
@@ -3975,10 +3975,10 @@ double EnckeFQ(vec3 r, vec3 delta)
 /*  See Battin, p. 449                                                */
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
-void EnckeEOM(double u[6], double udot[6], vec3 R, double muR3, vec3 a)
+void EnckeEOM(double u[6], double udot[6], vec3_t R, double muR3, vec3_t a)
 {
    double fq;
-   vec3 r;
+   vec3_t r;
 
    udot[0] = u[3];
    udot[1] = u[4];
@@ -3988,8 +3988,8 @@ void EnckeEOM(double u[6], double udot[6], vec3 R, double muR3, vec3 a)
    r.v[1] = R.v[1] + u[1];
    r.v[2] = R.v[2] + u[2];
 
-   vec3 uv = DBL_TO_VEC3(u);
-   fq      = EnckeFQ(r, uv);
+   vec3_t uv = DBL_TO_VEC3(u);
+   fq        = EnckeFQ(r, uv);
 
    udot[3] = a.v[0] - muR3 * (u[0] + fq * r.v[0]);
    udot[4] = a.v[1] - muR3 * (u[1] + fq * r.v[1]);
@@ -3999,7 +3999,7 @@ void EnckeEOM(double u[6], double udot[6], vec3 R, double muR3, vec3 a)
 void EnckeEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
                  double *xdot)
 {
-   vec3 accel, R;
+   vec3_t accel, R;
    double magr, muR3;
 
    accel = SxV(1.0 / S->mass, S->FrcN);
@@ -4016,7 +4016,7 @@ void EnckeEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
 /* by 4th order Runge-Kutta                                           */
 void EnckeRK4(struct OrbitType *orb, struct SCType *S)
 {
-   vec3 accel, R;
+   vec3_t accel, R;
    double magr, muR3;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
@@ -4056,13 +4056,13 @@ void EnckeRK4(struct OrbitType *orb, struct SCType *S)
    S->VelR.v[2] = u[5];
 }
 /**********************************************************************/
-void CowellEOM(double u[6], double udot[6], double mu, double mass, vec3 Frc)
+void CowellEOM(double u[6], double udot[6], double mu, double mass, vec3_t Frc)
 {
    double r, muR3;
 
-   vec3 uv = DBL_TO_VEC3(u);
-   r       = MAGV(uv);
-   muR3    = mu / (r * r * r);
+   vec3_t uv = DBL_TO_VEC3(u);
+   r         = MAGV(uv);
+   muR3      = mu / (r * r * r);
 
    udot[0] = u[3];
    udot[1] = u[4];
@@ -4073,10 +4073,10 @@ void CowellEOM(double u[6], double udot[6], double mu, double mass, vec3 Frc)
 }
 /**********************************************************************/
 void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
-                   vec3 Frc, struct WorldType *const worlds,
+                   vec3_t Frc, struct WorldType *const worlds,
                    struct OrbitType *const orb, struct SCType *S, double RKFdt)
 {
-   vec3 r_vec, gravpertFrc;
+   vec3_t r_vec, gravpertFrc;
    double rmag, muR3;
 
    r_vec = DBL_TO_VEC3(u);
@@ -4181,8 +4181,8 @@ void CowellRK4(struct OrbitType *const orb, struct SCType *S)
    S->VelN.v[2] = u[5];
 }
 /**********************************************************************/
-void PolyhedronCowellEOM(double u[6], double udot[6], double mass, vec3 GravAcc,
-                         vec3 Frc)
+void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
+                         vec3_t GravAcc, vec3_t Frc)
 {
    udot[0] = u[3];
    udot[1] = u[4];
@@ -4198,7 +4198,7 @@ void PolyhedronCowellEOM_RK(struct WorldType *const world,
 {
    double u[6];
    struct GeomType *G;
-   vec3 GravAccN;
+   vec3_t GravAccN;
 
    G = &Geom[world->GeomTag];
 
@@ -4209,7 +4209,7 @@ void PolyhedronCowellEOM_RK(struct WorldType *const world,
    u[4] = x[4];
    u[5] = x[5];
 
-   vec3 uv = DBL_TO_VEC3(u);
+   vec3_t uv = DBL_TO_VEC3(u);
    /* .. EOM Call */
    PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(u, xdot, S->mass, GravAccN, S->FrcN);
@@ -4224,7 +4224,7 @@ void PolyhedronCowellRK4(struct WorldType *const world,
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
    struct GeomType *G;
-   vec3 GravAccN;
+   vec3_t GravAccN;
 
    G = &Geom[world->GeomTag];
 
@@ -4235,8 +4235,8 @@ void PolyhedronCowellRK4(struct WorldType *const world,
    u[4] = S->VelN.v[1];
    u[5] = S->VelN.v[2];
 
-   vec3 uv = S->PosN;
-   vec3 mv[4];
+   vec3_t uv = S->PosN;
+   vec3_t mv[4];
 
    /* .. 4th Order Runga-Kutta Integration */
    PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
@@ -4277,19 +4277,19 @@ void PolyhedronCowellRK4(struct WorldType *const world,
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
 
-void ThreeBodyEnckeEOM(double u[6], double udot[6], vec3 R1, double muR13,
-                       vec3 R2, double muR23, vec3 a)
+void ThreeBodyEnckeEOM(double u[6], double udot[6], vec3_t R1, double muR13,
+                       vec3_t R2, double muR23, vec3_t a)
 {
-   vec3 r1, r2;
+   vec3_t r1, r2;
    double fq1, fq2;
 
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
 
-   vec3 uv = DBL_TO_VEC3(u);
-   r1      = VpVElem(R1, uv);
-   r2      = VpVElem(R2, uv);
+   vec3_t uv = DBL_TO_VEC3(u);
+   r1        = VpVElem(R1, uv);
+   r2        = VpVElem(R2, uv);
 
    fq1 = EnckeFQ(r1, uv);
    fq2 = EnckeFQ(r2, uv);
@@ -4306,7 +4306,7 @@ void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
                           struct OrbitType *const orb, struct SCType *S,
                           double *x, double *xdot)
 {
-   vec3 accel, R1, R2;
+   vec3_t accel, R1, R2;
    double MagR1, muR13, MagR2, muR23;
    struct OrbitType *E;
 
@@ -4330,7 +4330,7 @@ void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
 void ThreeBodyEnckeRK4(struct WorldType *const worlds,
                        struct OrbitType *const orb, struct SCType *S)
 {
-   vec3 accel, R1, R2;
+   vec3_t accel, R1, R2;
    double MagR1, muR13, MagR2, muR23;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
@@ -4378,7 +4378,7 @@ void ThreeBodyEnckeRK4(struct WorldType *const worlds,
 /************************************************************/
 /*  Euler-Hill linearized EOM for near-circular orbits.     */
 
-void EulHillEOM(double u[6], double udot[6], double n, vec3 a)
+void EulHillEOM(double u[6], double udot[6], double n, vec3_t a)
 {
    udot[0] = u[3];
    udot[1] = u[4];
@@ -4391,7 +4391,7 @@ void EulHillEOM(double u[6], double udot[6], double n, vec3 a)
 void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
                    double *xdot)
 {
-   vec3 accelN, accel;
+   vec3_t accelN, accel;
 
    accelN = SxV(1.0 / S->mass, S->FrcN);
    accel  = MxV(orb->CLN, accelN);
@@ -4405,8 +4405,8 @@ void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
 /* State u[0:2] = r, u[3:5] = v                                       */
 void EulHillRK4(struct OrbitType *orb, struct SCType *S)
 {
-   vec3 accelN, accel;
-   mat3x3 CLprop, CLN;
+   vec3_t accelN, accel;
+   mat3x3_t CLprop, CLN;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
@@ -4446,24 +4446,24 @@ void EulHillRK4(struct OrbitType *orb, struct SCType *S)
               &S->VelR);
 }
 /**********************************************************************/
-void ThreeBodyOrbitEOM(double mu1, double mu2, vec3 p, double u[6],
+void ThreeBodyOrbitEOM(double mu1, double mu2, vec3_t p, double u[6],
                        double udot[6])
 {
 
-   vec3 r2;
+   vec3_t r2;
    double r13, r23, p3, c1, c2, c3;
 
    r2.v[0] = u[0] - p.v[0];
    r2.v[1] = u[1] - p.v[1];
    r2.v[2] = u[2] - p.v[2];
 
-   vec3 uv = DBL_TO_VEC3(u);
-   r13     = MAGV(uv);
-   r13     = r13 * r13 * r13;
-   r23     = MAGV(r2);
-   r23     = r23 * r23 * r23;
-   p3      = MAGV(p);
-   p3      = p3 * p3 * p3;
+   vec3_t uv = DBL_TO_VEC3(u);
+   r13       = MAGV(uv);
+   r13       = r13 * r13 * r13;
+   r23       = MAGV(r2);
+   r23       = r23 * r23 * r23;
+   p3        = MAGV(p);
+   p3        = p3 * p3 * p3;
 
    c1 = -mu1 / r13;
    c2 = -mu2 / r23;
@@ -4543,8 +4543,8 @@ void AddSCContactFrcTrq(struct SCType *S)
 void PartitionForces(struct SCType *S)
 {
    long Ib;
-   vec3 FextN = VEC3_ZERO;
-   vec3 FextB;
+   vec3_t FextN = VEC3_ZERO;
+   vec3_t FextB;
    long Nb;
 
    Nb = S->Nb;
@@ -4608,8 +4608,8 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    OrbitMotion(world, rgn, lagsys, orb, frm, jd_tt_mjd);
    RKStateToS(orb, x, S);
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
-      vec3 pv = DBL_TO_VEC3(x_trn);
-      vec3 vv = DBL_TO_VEC3(&x_trn[3]);
+      vec3_t pv = DBL_TO_VEC3(x_trn);
+      vec3_t vv = DBL_TO_VEC3(&x_trn[3]);
       EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, pv, vv, &S->PosR,
                  &S->VelR);
    }

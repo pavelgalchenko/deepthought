@@ -300,7 +300,7 @@ long ClampColor4fv(GLfloat *Color)
 /**********************************************************************/
 void FindSunColor(double T, GLfloat LightColor[3], GLfloat DiskColor[3])
 {
-   vec3 rgb;
+   vec3_t rgb;
    double F1, F2, m;
    /* These wavelengths picked to make Sol (5800K) white */
    double lam1 = 0.552;
@@ -348,7 +348,7 @@ void FindSunColor(double T, GLfloat LightColor[3], GLfloat DiskColor[3])
       DiskColor[i] = 0.6 + 0.4 * rgb.v[i];
 }
 /**********************************************************************/
-void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], mat3x3 C,
+void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], mat3x3_t C,
                  GLuint MajList, GLuint MinList)
 {
 
@@ -553,16 +553,18 @@ void LoadSkyGrid(double MajGrid, double MinGrid, double SkyDistance,
    glEndList();
 }
 /*********************************************************************/
-void DrawArrowhead(vec3 v, double scale)
+void DrawArrowhead(vec3_t v, double scale)
 {
-   vec3 X, Y;
+   vec3_t X, Y;
    double c[13] = {1.0,    0.866, 0.5, 0.0, -0.5,  -0.866, -1.0,
                    -0.866, -0.5,  0.0, 0.5, 0.866, 1.0};
    double s[13] = {0.0,  0.5,    0.866, 1.0,    0.866, 0.5, 0.0,
                    -0.5, -0.866, -1.0,  -0.866, -0.5,  0.0};
    long i;
 
-   Y = PerpBasis(v, &X);
+   pair_vec3_t pair = PerpBasis(v);
+   X                = pair.first;
+   Y                = pair.second;
 
    glBegin(GL_TRIANGLE_FAN);
    glVertex3d(scale * v.x, scale * v.y, scale * v.z);
@@ -755,7 +757,7 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
    }
 }
 /*********************************************************************/
-void RotateL2R(mat3x3 C)
+void RotateL2R(mat3x3_t C)
 {
    float M[16] = {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
                   0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0};
@@ -768,7 +770,7 @@ void RotateL2R(mat3x3 C)
    glMultMatrixf(M);
 }
 /*********************************************************************/
-void RotateR2L(mat3x3 C)
+void RotateR2L(mat3x3_t C)
 {
    float M[16] = {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
                   0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0};
@@ -912,7 +914,8 @@ void Minv4f(float A[16], float Ai[16])
    Ai[15] = b44 / DetA;
 }
 /**********************************************************************/
-void BuildModelMatrix(const mat3x3 CBN, const vec3 pbn, float ModelMatrix[16])
+void BuildModelMatrix(const mat3x3_t CBN, const vec3_t pbn,
+                      float ModelMatrix[16])
 {
    long i, j;
 
@@ -926,12 +929,12 @@ void BuildModelMatrix(const mat3x3 CBN, const vec3 pbn, float ModelMatrix[16])
    ModelMatrix[15] = 1.0f;
 }
 /**********************************************************************/
-void BuildViewMatrix(const mat3x3 CEN, const vec3 pen, float ViewMatrix[16])
+void BuildViewMatrix(const mat3x3_t CEN, const vec3_t pen, float ViewMatrix[16])
 {
    ;
    long i, j;
 
-   vec3 pene = MxV(CEN, pen);
+   vec3_t pene = MxV(CEN, pen);
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
          ViewMatrix[4 * i + j] = (float)CEN.mat[j][i];
@@ -1258,7 +1261,7 @@ void CubeToPpm(GLubyte *Cube, long N, const char *pathname,
    }
 }
 /*********************************************************************/
-void LoadBucky(vec3 BuckyPf[32], long BuckyNeighbor[32][6])
+void LoadBucky(vec3_t BuckyPf[32], long BuckyNeighbor[32][6])
 {
 
    double IcoPv[12][3] = {{0.0, 0.0, 1.0},
@@ -1310,11 +1313,12 @@ void LoadBucky(vec3 BuckyPf[32], long BuckyNeighbor[32][6])
                             BuckyPf[BuckyNeighbor[i][2]].v[j]) /
                            3.0;
       }
-      UNITV(&BuckyPf[i]);
+      magvec3_t uv = UNITV(BuckyPf[i]);
+      BuckyPf[i]   = uv.v;
    }
 }
 /**********************************************************************/
-void LoadStars(const char *StarFileName, vec3 BuckyPf[32],
+void LoadStars(const char *StarFileName, vec3_t BuckyPf[32],
                long BuckyNeighbor[32][6], GLuint StarList[32],
                double SkyDistance)
 {
@@ -1326,15 +1330,15 @@ void LoadStars(const char *StarFileName, vec3 BuckyPf[32],
    GLfloat Col;
    FILE *StarFile;
    struct StarType {
-      vec4 r;
+      vec4_t r;
       double m;
       GLfloat Color[4];
-      vec4 v1, v2, v3, v4;
+      vec4_t v1, v2, v3, v4;
    };
    struct StarType *Star;
-   const quat qnh = {
+   const quat_t qnh = {
        .x = -0.203123038887, .y = 0.0, .z = 0.0, .s = 0.979153221449};
-   vec3 r, uhat, vhat;
+   vec3_t r, uhat, vhat;
    double QuadSize;
    GLuint StarTexTag;
 
@@ -1375,8 +1379,10 @@ void LoadStars(const char *StarFileName, vec3 BuckyPf[32],
       /* Transform from input frame (probably ECI) to H frame */
       Star[i].r.qv = QTxV(qnh, r);
 
-      vhat     = PerpBasis(Star[i].r.qv, &uhat);
-      QuadSize = 0.0016 * (10.0 - Star[i].m);
+      pair_vec3_t pair = PerpBasis(Star[i].r.qv);
+      uhat             = pair.first;
+      vhat             = pair.second;
+      QuadSize         = 0.0016 * (10.0 - Star[i].m);
       for (k = 0; k < 3; k++) {
          Star[i].v1.q[k] =
              Star[i].r.q[k] - QuadSize * uhat.v[k] - QuadSize * vhat.v[k];
@@ -1452,7 +1458,7 @@ void LoadStars(const char *StarFileName, vec3 BuckyPf[32],
    free(Star);
 }
 /**********************************************************************/
-void DrawStars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint StarList[32])
+void DrawStars(vec3_t LineOfSight, vec3_t BuckyPf[32], GLuint StarList[32])
 {
    double PoL;
    long k;
@@ -1475,7 +1481,8 @@ void DrawStars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint StarList[32])
    glDisable(GL_COLOR_MATERIAL);
 }
 /**********************************************************************/
-void Draw1FGL(vec3 LineOfSight, vec3 BuckyPf[32], GLuint FermiSourceList[32])
+void Draw1FGL(vec3_t LineOfSight, vec3_t BuckyPf[32],
+              GLuint FermiSourceList[32])
 {
    double PoL;
    long k;
@@ -1494,7 +1501,8 @@ void Draw1FGL(vec3 LineOfSight, vec3 BuckyPf[32], GLuint FermiSourceList[32])
    glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
-void DrawEgret(vec3 LineOfSight, vec3 BuckyPf[32], GLuint EgretSourceList[32])
+void DrawEgret(vec3_t LineOfSight, vec3_t BuckyPf[32],
+               GLuint EgretSourceList[32])
 {
    double PoL;
    long k;
@@ -1513,7 +1521,7 @@ void DrawEgret(vec3 LineOfSight, vec3 BuckyPf[32], GLuint EgretSourceList[32])
    glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
-void DrawPulsars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint PulsarList[32])
+void DrawPulsars(vec3_t LineOfSight, vec3_t BuckyPf[32], GLuint PulsarList[32])
 {
    double PoL;
    long k;
@@ -1532,8 +1540,8 @@ void DrawPulsars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint PulsarList[32])
    glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
-GLuint LoadMilkyWay(const char *PathName, const char *FileName, mat3x3 CGH,
-                    double SkyDistance, vec4 AlphaMask)
+GLuint LoadMilkyWay(const char *PathName, const char *FileName, mat3x3_t CGH,
+                    double SkyDistance, vec4_t AlphaMask)
 {
    long i, j;
    double lat, lng, lat1, lat2, r[3], s, t1, t2;
@@ -1592,7 +1600,7 @@ GLuint LoadMilkyWay(const char *PathName, const char *FileName, mat3x3 CGH,
    return (ListTag);
 }
 /**********************************************************************/
-GLuint LoadSkyCube(const char *PathName, const char *FileName, mat3x3 CGH,
+GLuint LoadSkyCube(const char *PathName, const char *FileName, mat3x3_t CGH,
                    double SkyDistance)
 {
    GLuint TexTag;
@@ -1677,22 +1685,22 @@ GLuint LoadSkyCube(const char *PathName, const char *FileName, mat3x3 CGH,
 }
 /**********************************************************************/
 /* Egret Catalog of Gamma-ray Sources                                 */
-void LoadEgretCatalog(const char *EgretFileName, vec3 BuckyPf[32],
+void LoadEgretCatalog(const char *EgretFileName, vec3_t BuckyPf[32],
                       long BuckyNeighbor[32][6] __attribute__((unused)),
                       GLuint EgretSourceList[32], double SkyDistance)
 {
 #define Nsource 262
 
    struct GammaSourceType {
-      vec4 r;
+      vec4_t r;
       char Type;
       char Label[40];
       GLfloat Color[4];
    };
    struct GammaSourceType GammaSource[Nsource];
    double MaxPoR, PoR, c1, s1, c2, s2, RA, Dec;
-   vec3 r;
-   const quat qnh = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
+   vec3_t r;
+   const quat_t qnh = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
    long ClosestVtx;
    long ID[32][Nsource], N[32];
    long i, j, k;
@@ -1783,7 +1791,7 @@ void LoadEgretCatalog(const char *EgretFileName, vec3 BuckyPf[32],
 }
 /**********************************************************************/
 /* Fermi Source Catalog 1FGL                                          */
-void Load1FGL(const char *FileName, vec3 BuckyPf[32],
+void Load1FGL(const char *FileName, vec3_t BuckyPf[32],
               long BuckyNeighbor[32][6] __attribute__((unused)),
               GLuint FermiSourceList[32], double SkyDistance)
 {
@@ -1892,11 +1900,11 @@ void Load1FGL(const char *FileName, vec3 BuckyPf[32],
 
    FILE *infile;
    double RA, Dec;
-   vec4 SourceVec[Nsource];
+   vec4_t SourceVec[Nsource];
    long Type[Nsource];
    char line[512];
    double RAhr, RAmin, RAsec, DECdeg, DECmin, DECsec, flux, fluxerr;
-   vec3 r;
+   vec3_t r;
    char Class[3];
    double MaxPoR, PoR;
    long ClosestVtx;
@@ -1908,7 +1916,7 @@ void Load1FGL(const char *FileName, vec3 BuckyPf[32],
                           {0.863, 0.078, 0.235, 1.0}}; /* Identified */
    long ColorIdx[16]   = {0, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 2};
    float Black[4]      = {0.0, 0.0, 0.0, 1.0};
-   const quat qnh      = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
+   const quat_t qnh    = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
 
    /*
          unc = No association :  Gray Square
@@ -2043,7 +2051,7 @@ void Load1FGL(const char *FileName, vec3 BuckyPf[32],
 #undef Nsource
 }
 /**********************************************************************/
-void LoadPulsars(const char *FileName, vec3 BuckyPf[32],
+void LoadPulsars(const char *FileName, vec3_t BuckyPf[32],
                  long BuckyNeighbor[32][6] __attribute__((unused)),
                  GLuint PulsarList[32], double SkyDistance)
 {
@@ -2057,15 +2065,15 @@ void LoadPulsars(const char *FileName, vec3 BuckyPf[32],
 
    FILE *infile;
    double RA, Dec;
-   quat SourceVec[Npul];
-   vec3 r;
+   quat_t SourceVec[Npul];
+   vec3_t r;
    double MaxPoR, PoR;
    long ClosestVtx;
    long N[32], ID[32][Npul];
    long i, j, k;
    GLfloat Color[4] = {0.635, 0.178, 0.635, 0.5};
    float Black[4]   = {0.0, 0.0, 0.0, 1.0};
-   const quat qnh   = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
+   const quat_t qnh = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
    char Identifier[Npul][40];
    double EclLng, EclLat;
    char line[512];
@@ -2481,12 +2489,13 @@ void DrawBullseye(GLfloat Color[4], double p[4])
    glMaterialfv(GL_FRONT, GL_EMISSION, Black);
 }
 /*********************************************************************/
-void DrawVector(vec3 v, const char *Label, const char *Units, GLfloat Color[4],
-                double VisScale, double MagScale, long UnitVec)
+void DrawVector(vec3_t v, const char *Label, const char *Units,
+                GLfloat Color[4], double VisScale, double MagScale,
+                long UnitVec)
 {
    GLubyte GlyphHat[4] = {0x82, 0x44, 0x28, 0x10};
    GLubyte GlyphVec[3] = {0xfe, 0x0c, 0x10};
-   vec3 u;
+   vec3_t u;
    double mag;
    char s[40];
 
@@ -2506,7 +2515,9 @@ void DrawVector(vec3 v, const char *Label, const char *Units, GLfloat Color[4],
       glBitmap(7, 4, 8.0 * strlen(Label), -11.0, 0.0, 0.0, GlyphHat);
    }
    else {
-      mag = CopyUnitV(v, &u);
+      magvec3_t uv = UNITV(v);
+      mag          = uv.m;
+      u            = uv.v;
       glBegin(GL_LINES);
       glVertex3d(0.0, 0.0, 0.0);
       glVertex3d(VisScale * u.x, VisScale * u.y, VisScale * u.z);
@@ -2579,7 +2590,7 @@ void DrawAxisLabels(long Iglyph, GLfloat Color[4], GLfloat Xc, GLfloat Xmax,
    glEnable(GL_LIGHTING);
 }
 /*********************************************************************/
-void DrawBodyLabel(long Ib, GLfloat Color[4], vec3 p)
+void DrawBodyLabel(long Ib, GLfloat Color[4], vec3_t p)
 {
    GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
    char s[40];
@@ -2831,8 +2842,9 @@ void DrawRollPitchYaw(long xc, long yc, long PixScale, double AngScale,
 /* Draw a small circle on a Mercator projection in active window.    */
 void DrawSmallCircle(double lngc, double latc, double rad)
 {
-   vec3 axis, norm, binorm, sigma, p;
-   mat3x3 C;
+   magvec3_t uv;
+   vec3_t axis, norm, binorm, sigma, p;
+   mat3x3_t C;
    double x, y, xold, yold, ang;
 
    axis.x = cos(lngc) * cos(latc);
@@ -2850,13 +2862,14 @@ void DrawSmallCircle(double lngc, double latc, double rad)
       norm.z = 0.0;
    }
    binorm = VxV(axis, norm);
-   UNITV(&binorm);
-   C     = SimpRot(binorm, rad);
-   sigma = MxV(C, axis);
-   C     = SimpRot(axis, 0.0);
-   p     = MxV(C, sigma);
-   xold  = atan2(p.y, p.x) * R2D;
-   yold  = asin(p.z) * R2D;
+   uv     = UNITV(binorm);
+   binorm = uv.v;
+   C      = SimpRot(binorm, rad);
+   sigma  = MxV(C, axis);
+   C      = SimpRot(axis, 0.0);
+   p      = MxV(C, sigma);
+   xold   = atan2(p.y, p.x) * R2D;
+   yold   = asin(p.z) * R2D;
    glBegin(GL_LINES);
    for (ang = 0.0; ang < TWOPI; ang += 0.005 * TWOPI) {
       C = SimpRot(axis, ang);
@@ -2887,19 +2900,19 @@ void DrawSmallCircle(double lngc, double latc, double rad)
 /*********************************************************************/
 /* Draws a full grid of any orientation on a Mercator projection.
    CVA is the DCM from the Axis frame to the Viewing frame           */
-void DrawMercatorGrid(mat3x3 CVA)
+void DrawMercatorGrid(mat3x3_t CVA)
 {
    long min = 30; /* Degrees between each minor gridline */
    long maj = 90; /* Degrees between each major gridline */
 
-   vec3 norm;
-   vec3 x = VEC3_PXAXIS;
-   vec3 z = VEC3_PZAXIS;
+   vec3_t norm;
+   vec3_t x = VEC3_PXAXIS;
+   vec3_t z = VEC3_PZAXIS;
 
    long ang; /* Tracked in degrees */
    double lng, lat;
-   mat3x3 CNA; /* DCM from normal vector to axis frame */
-   mat3x3 CNV; /* DCM from normal vector to viewing frame */
+   mat3x3_t CNA; /* DCM from normal vector to axis frame */
+   mat3x3_t CNV; /* DCM from normal vector to viewing frame */
 
    /* Latitude lines */
    norm = MxV(CVA, z);
@@ -2946,8 +2959,9 @@ void DrawMercatorGrid(mat3x3 CVA)
    be less than 180 degrees)                                         */
 void DrawMercatorLine(double lngA, double latA, double lngB, double latB)
 {
-   vec3 A, B, norm, p;
-   mat3x3 C;
+   magvec3_t uv;
+   vec3_t A, B, norm, p;
+   mat3x3_t C;
    double x, y, xold, yold, ang, totalang;
 
    A.x = cos(lngA) * cos(latA);
@@ -2961,9 +2975,10 @@ void DrawMercatorLine(double lngA, double latA, double lngB, double latB)
    totalang = acos(VoV(A, B));
 
    norm = VxV(A, B);
-   UNITV(&norm);
-   C = SimpRot(A, 0.0);
-   p = MxV(C, A);
+   uv   = UNITV(norm);
+   norm = uv.v;
+   C    = SimpRot(A, 0.0);
+   p    = MxV(C, A);
    VecToLngLat(p, &xold, &yold);
    xold *= R2D;
    yold *= R2D;
@@ -3004,13 +3019,13 @@ void DrawMercatorLine(double lngA, double latA, double lngB, double latB)
 /* Draws a square FOV on a Mercator projection using DrawMercatorLine.
    Square is centered on x-axis of CCV; FOV half-angles given in radians.
    CVS = DCM from Center of square to Viewing frame                   */
-void DrawMercatorSquare(mat3x3 CVS, double FOV[2])
+void DrawMercatorSquare(mat3x3_t CVS, double FOV[2])
 {
-   vec3 p, q;
-   vec3 zaxis = VEC3_PZAXIS;
+   vec3_t p, q;
+   vec3_t zaxis = VEC3_PZAXIS;
    double lngA, latA, lngB, latB;
-   vec4 xang, yang;
-   mat3x3 CPC; /* DCM from Center to corner Point */
+   vec4_t xang, yang;
+   mat3x3_t CPC; /* DCM from Center to corner Point */
    long i, j;
 
    xang.x = -FOV[0]; /* x to the left, y up, z out of the sensor in boresight
@@ -3063,14 +3078,14 @@ void DrawMercatorVector(double lng, double lat, char *label)
 /**********************************************************************/
 /* Draws all 6 primary axes on a Mercator projection
    CAV is the DCM from the Axis frame to the Viewing frame            */
-void DrawMercatorAxes(mat3x3 CVA, char *label)
+void DrawMercatorAxes(mat3x3_t CVA, char *label)
 {
 
    double x[6] = {1, -1, 0, 0, 0, 0};
    double y[6] = {0, 0, 1, -1, 0, 0};
    double z[6] = {0, 0, 0, 0, 1, -1};
 
-   vec3 a, v;
+   vec3_t a, v;
    long i;
    double lat, lng;
    char str[20];
@@ -3159,7 +3174,7 @@ void HammerProjection(double Lng, double Lat, double *x, double *y)
    *y = SQRTTWO * SinLat / Den;
 }
 /**********************************************************************/
-void VecToCube(long N, vec3 p, long *f, long *i, long *j)
+void VecToCube(long N, vec3_t p, long *f, long *i, long *j)
 {
    double MaxComponent = 0.0;
    double MidPoint     = 0.5 * (N - 1.0);
@@ -3202,10 +3217,11 @@ void VecToCube(long N, vec3 p, long *f, long *i, long *j)
    }
 }
 /**********************************************************************/
-void CubeToVec(long N, long f, long i, long j, vec3 p)
+vec3_t CubeToVec(long N, long f, long i, long j)
 {
    double MidPoint = 0.5 * (N - 1.0);
    double HalfN    = 0.5 * N;
+   vec3_t p;
 
    switch (f) {
       case 0: {
@@ -3246,7 +3262,8 @@ void CubeToVec(long N, long f, long i, long j, vec3 p)
       } break;
    }
 
-   UNITV(&p);
+   magvec3_t up = UNITV(p);
+   return up.v;
 }
 /*********************************************************************/
 double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct)

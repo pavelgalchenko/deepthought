@@ -27,13 +27,13 @@
 */
 
 /*********************************************************************/
-double FindTotalProjectedArea(struct SCType *S, vec3 VecN)
+double FindTotalProjectedArea(struct SCType *S, vec3_t VecN)
 {
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
    double ProjArea = 0.0, VoN;
-   vec3 VecB;
+   vec3_t VecB;
    long Ib, Ipoly;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -53,13 +53,13 @@ double FindTotalProjectedArea(struct SCType *S, vec3 VecN)
    return (ProjArea);
 }
 /*********************************************************************/
-double FindTotalUnshadedProjectedArea(struct SCType *S, vec3 VecN)
+double FindTotalUnshadedProjectedArea(struct SCType *S, vec3_t VecN)
 {
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
    double ProjArea = 0.0, VoN;
-   vec3 VecB;
+   vec3_t VecB;
    long Ib, Ipoly;
 
    FindUnshadedAreas(S, VecN);
@@ -192,7 +192,7 @@ void DSM_InertialReport(void)
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
-   vec3 PosL;
+   vec3_t PosL;
    char s[40];
 
    if (First) {
@@ -249,7 +249,7 @@ void DSM_RelativeReport(void)
       struct SCType *S = &SC[Isc];
       if (S->Exists) {
          struct OrbitType *O = &Orb[S->RefOrb];
-         vec3 wxr, posr, velr;
+         vec3_t wxr, posr, velr;
          wxr  = VxV(O->wln, S->PosR);
          velr = MxV(O->CLN, S->VelR);
          posr = MxV(O->CLN, wxr);
@@ -272,8 +272,8 @@ void DSM_PlanetEphemReport(void)
    static long First = 1;
    long Iw;
    char s[50];
-   vec3 svh, svw;
-   mat3x3 CWH;
+   vec3_t svh, svw;
+   mat3x3_t CWH;
    double Lat, Lng;
 
    if (First) {
@@ -309,7 +309,7 @@ void DSM_PlanetEphemReport(void)
 
          if (Iw != 0) {
             svh = VNegElem(World[Iw].PosH);
-            UNITV(&svh);
+            svh = UNITV(svh).v;
             CWH = MxM(World[Iw].CWN, World[Iw].CNH);
             svw = MxV(CWH, svh);
 
@@ -368,7 +368,7 @@ void DSM_StateRot3BodyReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   vec3 posRot, velRot;
+   vec3_t posRot, velRot;
    struct LagrangeSystemType *LS;
 
    if (First) {
@@ -413,8 +413,8 @@ void DSM_PosHReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   mat3x3 CNJ;
-   vec3 SC_ECI, SC_LEI, SC_LCI;
+   mat3x3_t CNJ;
+   vec3_t SC_ECI, SC_LEI, SC_LCI;
 
    if (First) {
       poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -499,8 +499,8 @@ void DSM_Rot3BodyReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   vec3 posRel, posRot, velRel, velRot, z_axis = VEC3_PZAXIS;
-   mat3x3 DCM;
+   vec3_t posRel, posRot, velRel, velRot, z_axis = VEC3_PZAXIS;
+   mat3x3_t DCM;
    struct LagrangeSystemType *LS;
    double ang_rot = M_PI;
 
@@ -662,14 +662,14 @@ void DSM_NAV_StateReport(void)
                              Nav->wbr.y, Nav->wbr.z);
                      break;
                   case POS_STATE: {
-                     vec3 tmpV1, tmpV2;
+                     vec3_t tmpV1, tmpV2;
                      tmpV1 = VpVElem(Nav->PosR, Nav->refPos);
                      tmpV2 = MTxV(Nav->refCRN, tmpV1);
                      fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2.x, tmpV2.y,
                              tmpV2.z);
                   } break;
                   case VEL_STATE: {
-                     vec3 tmpV1, tmpV2;
+                     vec3_t tmpV1, tmpV2;
                      tmpV1 = VpVElem(Nav->VelR, Nav->refVel);
                      tmpV2 = MTxV(Nav->refCRN, tmpV1);
                      fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2.x, tmpV2.y,
@@ -1254,11 +1254,10 @@ void Report(void)
    static char First = TRUE;
    long Isc, i;
    struct DynType *D;
-   double Roll, Pitch, Yaw;
-   mat3x3 CBR, CRN, CRL = MAT3X3_EYE;
+   mat3x3_t CBR, CRN, CRL = MAT3X3_EYE;
    struct WorldType *W;
-   vec3 WorldAngVel, wxR, VelN;
-   vec3 PosW, VelW, PosR, VelR;
+   vec3_t WorldAngVel, wxR, VelN;
+   vec3_t PosW, VelW, PosR, VelR;
    // double SMA,ecc,inc,RAAN,ArgP,anom,tp,SLR,alpha,rmin,MeanMotion,Period;
    char s[40];
 
@@ -1411,11 +1410,11 @@ void Report(void)
          // fprintf(ProjAreaFile, PRNT_DBL PRNT_DBL"\n",
          //    FindTotalProjectedArea(&SC[0],ZAxis),
          //    FindTotalUnshadedProjectedArea(&SC[0],ZAxis));
-         CRN = MxM(CRL, SC[0].CLN);
-         CBR = MxMT(SC[0].B[0].CN, CRN);
-         C2A(123, CBR, &Roll, &Pitch, &Yaw);
-         fprintf(RPYfile, PRNT_DBL_3VEC "\n", Roll * R2D, Pitch * R2D,
-                 Yaw * R2D);
+         CRN            = MxM(CRL, SC[0].CLN);
+         CBR            = MxMT(SC[0].B[0].CN, CRN);
+         vec3_t eu_angs = C2A(123, CBR);
+         fprintf(RPYfile, PRNT_DBL_3VEC "\n", eu_angs.x * R2D, eu_angs.y * R2D,
+                 eu_angs.z * R2D);
          if (SC[0].Nw > 0) {
             for (i = 0; i < SC[0].Nw; i++) {
                fprintf(Hwhlfile, "%lf ", SC[0].Whl[i].H);

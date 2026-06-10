@@ -33,7 +33,7 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
    double Val;
    long Iorb, i;
    char DvFrame;
-   vec3 Vec, DVN;
+   vec3_t Vec, DVN;
    struct OrbitType *O;
    struct SCType *S;
 

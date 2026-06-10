@@ -23,24 +23,28 @@
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-vec3 DSM_RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN)
+vec3_t DSM_RelMotionToAngRate(vec3_t RelPosN, vec3_t RelVelN)
 {
-   vec3 wn;
+   vec3_t wn;
    double magp, Vpar, magvp;
-   vec3 phat, Axis, Vperp;
+   vec3_t phat, Vperp;
+   magvec3_t uAxis;
+   vec3_t *const Axis = &uAxis.v;
    long i;
 
-   magp = CopyUnitV(RelPosN, &phat);
+   uAxis = UNITV(RelPosN);
+   magp  = uAxis.m;
+   phat  = uAxis.v;
 
-   Axis = VxV(RelPosN, RelVelN);
-   UNITV(&Axis);
+   *Axis = VxV(RelPosN, RelVelN);
+   uAxis = UNITV(*Axis);
 
    Vpar = VoV(RelVelN, phat);
    for (i = 0; i < 3; i++)
       Vperp.v[i] = RelVelN.v[i] - Vpar * phat.v[i];
    magvp = MAGV(Vperp);
    for (i = 0; i < 3; i++)
-      wn.v[i] = magvp / magp * Axis.v[i];
+      wn.v[i] = magvp / magp * Axis->v[i];
    return wn;
 }
 
@@ -76,9 +80,9 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Ngyro != 0) {
-      vec3 A0xA1, b, Atb = VEC3_ZERO;
-      mat3x3 A, Ai, AtAi;
-      mat3x3 AtA = MAT3X3_ZERO;
+      vec3_t A0xA1, b, Atb = VEC3_ZERO;
+      mat3x3_t A, Ai, AtAi;
+      mat3x3_t AtA = MAT3X3_ZERO;
       if (AC->Ngyro == 1) {
          G = &AC->Gyro[0];
          for (i = 0; i < 3; i++)
@@ -143,9 +147,9 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Nmag != 0) {
-      vec3 A0xA1, b, Atb;
-      mat3x3 AtA = MAT3X3_ZERO;
-      mat3x3 A, Ai, AtAi;
+      vec3_t A0xA1, b, Atb;
+      mat3x3_t AtA = MAT3X3_ZERO;
+      mat3x3_t A, Ai, AtAi;
       if (AC->Nmag == 1) {
          M = &AC->MAG[0];
          for (i = 0; i < 3; i++)
@@ -207,13 +211,16 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Ncss != 0) {
-      mat3x3 AtA = MAT3X3_ZERO;
-      vec3 Atb;
-      mat3x3 AtAi;
+
+      magvec3_t usvb;
+
+      mat3x3_t AtA = MAT3X3_ZERO;
+      vec3_t Atb;
+      mat3x3_t AtAi;
       double A[2][3], b[2] = {0.0};
       long Nvalid = 0;
       /* Safe vector if SunValid == FALSE */
-      const vec3 InvalidSVB = VEC3_PXAXIS;
+      const vec3_t InvalidSVB = VEC3_PXAXIS;
       for (Ic = 0; Ic < AC->Ncss; Ic++) {
          Css = &AC->CSS[Ic];
          if (Css->Valid) {
@@ -238,18 +245,21 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
          AC->SunValid = TRUE;
          AtAi         = MINV3(AtA);
          AC->svb      = MxV(AtAi, Atb);
-         UNITV(&AC->svb);
+         usvb         = UNITV(AC->svb);
+         AC->svb      = usvb.v;
       }
       else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb.v[i] = b[0] * A[0][i] + b[1] * A[1][i];
-         UNITV(&AC->svb);
+         usvb    = UNITV(AC->svb);
+         AC->svb = usvb.v;
       }
       else if (Nvalid == 1) {
          AC->SunValid = TRUE;
          AC->svb      = Atb;
-         UNITV(&AC->svb);
+         usvb         = UNITV(AC->svb);
+         AC->svb      = usvb.v;
       }
       else {
          AC->SunValid = FALSE;
@@ -357,7 +367,7 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
    }
    else if (Nav->NavigationActive == FALSE && AC->Nst != 0) {
       long Nvalid = 0;
-      quat qbn;
+      quat_t qbn;
       /* Naive averaging */
       AC->qbn = QUAT_ZERO;
       for (Ist = 0; Ist < AC->Nst; Ist++) {
@@ -488,24 +498,9 @@ void DSM_MtbProcessing(struct AcType *AC)
 /**********************************************************************/
 /*  Some "Comm" Processing Functions                                  */
 /**********************************************************************/
-void DSM_CommStateProcessing(struct DSMStateType *state,
-                             struct DSMStateType *commState)
+struct DSMStateType DSM_CommStateProcessing(struct DSMStateType state)
 {
-   commState->Time = state->Time;
-   commState->ID   = state->ID;
-   commState->VelR = state->VelR;
-   commState->PosR = state->PosR;
-   commState->VelN = state->VelN;
-   commState->PosN = state->PosN;
-   commState->wbn  = state->wbn;
-   commState->qbn  = state->qbn;
-
-   commState->CBN = state->CBN;
-
-   commState->svn = state->svn;
-   commState->svb = state->svb;
-   commState->bvn = state->bvn;
-   commState->bvb = state->bvb;
+   return state;
 }
 /**********************************************************************/
 /*  End "Comm" Processing Functions                                   */

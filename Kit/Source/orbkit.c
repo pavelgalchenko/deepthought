@@ -45,9 +45,9 @@ double GetWorldW(JDType jd, const struct WorldType *const world)
           SEC_PER_DAY;
 }
 /**********************************************************************/
-vec3 GetWorldWln(JDType jd, const struct WorldType *const world)
+vec3_t GetWorldWln(JDType jd, const struct WorldType *const world)
 {
-   vec3 wln;
+   vec3_t wln;
    wln.x = 0.0;
    wln.y = 0.0;
    wln.z = GetWorldW(jd, world);
@@ -113,9 +113,9 @@ double GetWorldAng(JDType jd, const AngDataType *const ang_data)
    return angle * D2R;
 }
 /**********************************************************************/
-mat3x3 GetWorldCWN(JDType jd, const AngDataType *const ang_data)
+mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
 {
-   const vec3 z_axis = VEC3_PZAXIS;
+   const vec3_t z_axis = VEC3_PZAXIS;
 
    const AngDataType *pm_data = NULL;
    for (int i = 0; i < 3; i++) {
@@ -137,7 +137,7 @@ mat3x3 GetWorldCWN(JDType jd, const AngDataType *const ang_data)
    return SimpRot(z_axis, pri_mer_ang);
 }
 /**********************************************************************/
-mat3x3 GetWorldCNJ(JDType jd, const AngDataType *const ang_data)
+mat3x3_t GetWorldCNJ(JDType jd, const AngDataType *const ang_data)
 {
    const AngDataType *ra_data  = NULL;
    const AngDataType *dec_data = NULL;
@@ -637,10 +637,11 @@ double TimeSincePeriapsis(double mu, double p, double e, double th)
 /* Find position and velocity, given initial position, velocity, and  */
 /* true anomaly difference.  This routine good for all orbits.        */
 /* See Battin, p.130                                                  */
-void RV02RV(double mu, vec3 xr0, vec3 xv0, double anom, vec3 *xr, vec3 *xv)
+void RV02RV(double mu, vec3_t xr0, vec3_t xv0, double anom, vec3_t *xr,
+            vec3_t *xv)
 {
    double sqmu, cth, sth, cth1, s0, p, r0, sqp, r, F, Ft, G, Gt;
-   vec3 R0xV0;
+   vec3_t R0xV0;
    long i;
 
    sqmu = sqrt(mu);
@@ -669,10 +670,10 @@ void RV02RV(double mu, vec3 xr0, vec3 xv0, double anom, vec3 *xr, vec3 *xv)
 /* Compute position and velocity given orbital elements.  Works for   */
 /* circular, elliptical, parabolic and hyperbolic orbits.             */
 void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
-            double dt, vec3 *r, vec3 *v, double *anom)
+            double dt, vec3_t *r, vec3_t *v, double *anom)
 {
-   mat3x3 CPN;
-   vec3 pr, pv;
+   mat3x3_t CPN;
+   vec3_t pr, pv;
    double R, th, cth, sth, c2;
    double C1, S1, C2, S2, C3, S3;
 
@@ -719,16 +720,16 @@ void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
 /**********************************************************************/
 /* Compute orbital elements, given position and velocity.  Works for  */
 /* for all eccentricities.                                            */
-void RV2Eph(double time, double mu, vec3 xr, vec3 xv, double *SMA, double *e,
-            double *i, double *RAAN, double *ArgP, double *th, double *tp,
-            double *SLR, double *alpha, double *rmin, double *MeanMotion,
-            double *Period)
+void RV2Eph(double time, double mu, vec3_t xr, vec3_t xv, double *SMA,
+            double *e, double *i, double *RAAN, double *ArgP, double *th,
+            double *tp, double *SLR, double *alpha, double *rmin,
+            double *MeanMotion, double *Period)
 {
 #define EPS (1.0E-12)
 
    double r, v, cth, cosw, sinw;
    double rohxe, h, dt;
-   vec3 xn, hxn, xh, xe, rhat, vxh, hxe;
+   vec3_t xn, hxn, xh, xe, rhat, vxh, hxe;
 
    r = MAGV(xr);
    v = MAGV(xv);
@@ -956,8 +957,8 @@ void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
 void MeanEph2RV(struct OrbitType *O, double dyntime)
 {
    double e, e2, sin2i, sinw, sin2w, cosnu, g, cth, sth, R;
-   mat3x3 CPN;
-   vec3 pr, pv;
+   mat3x3_t CPN;
+   vec3_t pr, pv;
    double C1, S1, C2, S2, C3, S3;
    long i;
 
@@ -1053,9 +1054,9 @@ void MeanEph2RV(struct OrbitType *O, double dyntime)
       O->VelN.v[i] = pv.x * CPN.mat[0][i] + pv.y * CPN.mat[1][i];
    }
    if (O->J2DriftEnabled) {
-      vec3 wxr  = VEC3_ZERO;
-      wxr.x    += (-pr.x * CPN.mat[0][1] - pr.y * CPN.mat[1][1]) * O->RAANdot;
-      wxr.y    += (+pr.x * CPN.mat[0][0] + pr.y * CPN.mat[1][0]) * O->RAANdot;
+      vec3_t wxr  = VEC3_ZERO;
+      wxr.x      += (-pr.x * CPN.mat[0][1] - pr.y * CPN.mat[1][1]) * O->RAANdot;
+      wxr.y      += (+pr.x * CPN.mat[0][0] + pr.y * CPN.mat[1][0]) * O->RAANdot;
 
       for (i = 0; i < 3; i++)
          wxr.v[i] +=
@@ -1106,18 +1107,20 @@ long LoadTleFromFile(const char *Path, const char *TleFileName,
 /* Periapsis position and velocity might make a useful orbit element  */
 /* set for some applications.  This function finds them from the      */
 /* given position and velocity.                                       */
-double RV2RVp(double mu, vec3 r, vec3 v, vec3 *rp, vec3 *vp)
+double RV2RVp(double mu, vec3_t r, vec3_t v, vec3_t *rp, vec3_t *vp)
 {
    double cth, sth;
    double Cer, Cev, Cpr, Cpv, anom;
-   vec3 ie, ip;
+   magvec3_t uie, uip;
+   vec3_t *const ie = &uie.v;
+   vec3_t *const ip = &uip.v;
    long i;
 
    const double magr = MAGV(r);
    const double magv = MAGV(v);
 
    const double E     = 0.5 * magv * magv - mu / magr;
-   const vec3 rxv     = VxV(r, v);
+   const vec3_t rxv   = VxV(r, v);
    const double h     = MAGV(rxv);
    const double p     = h * h / mu;
    const double e     = sqrt(1.0 + 2.0 * E * p / mu);
@@ -1139,14 +1142,14 @@ double RV2RVp(double mu, vec3 r, vec3 v, vec3 *rp, vec3 *vp)
    Cpr = sth / p;
    Cpv = magr / h * cth;
    for (i = 0; i < 3; i++) {
-      ie.v[i] = Cer * r.v[i] + Cev * v.v[i];
-      ip.v[i] = Cpr * r.v[i] + Cpv * v.v[i];
+      ie->v[i] = Cer * r.v[i] + Cev * v.v[i];
+      ip->v[i] = Cpr * r.v[i] + Cpv * v.v[i];
    }
-   UNITV(&ie);
-   UNITV(&ip);
+   uie = UNITV(*ie);
+   uip = UNITV(*ip);
    for (i = 0; i < 3; i++) {
-      rp->v[i] = magrp * ie.v[i];
-      vp->v[i] = magvp * ip.v[i];
+      rp->v[i] = magrp * ie->v[i];
+      vp->v[i] = magvp * ip->v[i];
    }
    anom = atan2(sth, cth);
 
@@ -1270,7 +1273,7 @@ void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
 /*  This function gives the location of Luna, with respect to the    */
 /*  geocentric ecliptic frame.  Refer to Chap 47 of Meeus,           */
 /*  "Astronomical Algorithms" QB51.3.E43 M42, 1998.                  */
-vec3 LunaPosition(const JDType jd)
+vec3_t LunaPosition(const JDType jd)
 {
    // dug a bit through Astronomical Algorithmsm,
    // JD is Terrestrial Dynamical Time here...
@@ -1602,7 +1605,7 @@ vec3 LunaPosition(const JDType jd)
    Lat   = 1.0E-6 * SumB * D2R;
    Delta = 385000.56E3 + SumR;
 
-   vec3 r;
+   vec3_t r;
    r.x = Delta * cos(Lng) * cos(Lat);
    r.y = Delta * sin(Lng) * cos(Lat);
    r.z = Delta * sin(Lat);
@@ -1670,7 +1673,7 @@ int LoadLunaInertialFrameData(AngDataType *const ang_data)
 /*  Ref JPL D-32296, "Lunar Constants and Models Document"            */
 /*  http://ssd.jpl.nasa.gov/?lunar_doc                                */
 /*  Finds Lunar Inertial Frame wrt J2000                              */
-mat3x3 LunaInertialFrame(const JDType jd)
+mat3x3_t LunaInertialFrame(const JDType jd)
 {
    JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
@@ -1681,7 +1684,10 @@ mat3x3 LunaInertialFrame(const JDType jd)
    double SinE10, SinE13;
    double CosE1, CosE2, CosE3, CosE4, CosE6, CosE7, CosE10, CosE13;
    double PoleRA, PoleDec;
-   vec3 PoleVec, NodeVec, YVec;
+   vec3_t PoleVec;
+   magvec3_t uNodeVec, uYVec;
+   vec3_t *const NodeVec = &uNodeVec.v;
+   vec3_t *const YVec    = &uYVec.v;
 
    D = JDToDays(jd_tdb_j2000);
    T = D / 36525.0;
@@ -1730,16 +1736,16 @@ mat3x3 LunaInertialFrame(const JDType jd)
    PoleVec.z = sin(PoleDec);
 
    /* IAU convention puts the X axis at Z(J2000) x PoleVec */
-   NodeVec.x = -PoleVec.y;
-   NodeVec.y = PoleVec.x;
-   NodeVec.z = 0.0;
-   UNITV(&NodeVec);
+   NodeVec->x = -PoleVec.y;
+   NodeVec->y = PoleVec.x;
+   NodeVec->z = 0.0;
+   uNodeVec   = UNITV(*NodeVec);
 
-   YVec = VxV(PoleVec, NodeVec);
-   UNITV(&YVec);
+   *YVec = VxV(PoleVec, *NodeVec);
+   uYVec = UNITV(*YVec);
 
    /* Luna's N frame wrt J2000 */
-   mat3x3 out = {.rows = {NodeVec, YVec, PoleVec}};
+   mat3x3_t out = {.rows = {*NodeVec, *YVec, PoleVec}};
    return out;
 }
 /**********************************************************************/
@@ -1813,9 +1819,9 @@ double LunaPriMerAng(const JDType jd)
    return (PriMerAng * D2R);
 }
 /**********************************************************************/
-void FindCLN(vec3 r, vec3 v, mat3x3 *CLN, vec3 *wln)
+void FindCLN(vec3_t r, vec3_t v, mat3x3_t *CLN, vec3_t *wln)
 {
-   vec3 L1, L2, L3, h;
+   vec3_t L1, L2, L3, h;
    double m, rr, hh;
    long i;
 
@@ -1837,7 +1843,9 @@ void FindCLN(vec3 r, vec3 v, mat3x3 *CLN, vec3 *wln)
    L3.z /= m;
 
    if (hh == 0.0) { /* Rectlinear Motion */
-      L2 = PerpBasis(L3, &L1);
+      pair_vec3_t pair = PerpBasis(L3);
+      L1               = pair.first;
+      L2               = pair.second;
    }
    else {
       m     = MAGV(L2);
@@ -1861,30 +1869,34 @@ void FindCLN(vec3 r, vec3 v, mat3x3 *CLN, vec3 *wln)
 }
 /**********************************************************************/
 /* E = Equatorial Frame.  e1 = n3, e2 = East, e3 points to axis of World */
-mat3x3 FindCEN(vec3 r)
+mat3x3_t FindCEN(vec3_t r)
 {
-   mat3x3 CEN    = MAT3X3_ZERO;
+   mat3x3_t CEN  = MAT3X3_ZERO;
    CEN.rows[0]   = VEC3_PZAXIS;
    CEN.mat[2][0] = -r.v[0];
    CEN.mat[2][1] = -r.v[1];
-   UNITV(&CEN.rows[2]);
-   CEN.rows[1] = VxV(CEN.rows[2], CEN.rows[0]);
+   magvec3_t uv  = UNITV(CEN.rows[2]);
+   CEN.rows[2]   = uv.v;
+   CEN.rows[1]   = VxV(CEN.rows[2], CEN.rows[0]);
    return CEN;
 }
 /**********************************************************************/
-void FindENU(vec3 PosN, double WorldW, mat3x3 *CLN, vec3 *wln)
+void FindENU(vec3_t PosN, double WorldW, mat3x3_t *CLN, vec3_t *wln)
 {
-   vec3 Zaxis = VEC3_PZAXIS;
-   vec3 East, North, Up;
+   vec3_t Zaxis = VEC3_PZAXIS;
+   vec3_t Up;
+   magvec3_t uEast, uNorth;
+   vec3_t *const East  = &uEast.v;
+   vec3_t *const North = &uNorth.v;
 
-   CopyUnitV(PosN, &Up);
-   East = VxV(Zaxis, Up);
-   UNITV(&East);
-   North = VxV(Up, East);
-   UNITV(&North);
+   Up     = UNITV(PosN).v;
+   *East  = VxV(Zaxis, Up);
+   uEast  = UNITV(*East);
+   *North = VxV(Up, *East);
+   uNorth = UNITV(*North);
 
-   CLN->rows[0] = East;
-   CLN->rows[1] = North;
+   CLN->rows[0] = *East;
+   CLN->rows[1] = *North;
    CLN->rows[2] = Up;
 
    wln->v[0] = 0.0;
@@ -2190,11 +2202,15 @@ void FindLagPtParms(struct LagrangeSystemType *LS)
 /*  Reference Bong Wie, "Space Vehicle Dynamics and Control"          */
 /*  (TL1050.W52)Sec 3.7.3                                             */
 void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
-                     long Ilp, vec3 *PosN, vec3 *VelN, mat3x3 *CLN)
+                     long Ilp, vec3_t *PosN, vec3_t *VelN, mat3x3_t *CLN)
 {
 
    double OnePlusEcosTH, magr, OneMinusE2;
-   vec3 R2, V2, L1, L2, L3, rp, rhat, thhat, vp;
+   vec3_t R2, V2, rp, rhat, thhat, vp;
+   magvec3_t uL1, uL2, uL3;
+   vec3_t *const L1 = &uL1.v;
+   vec3_t *const L2 = &uL2.v;
+   vec3_t *const L3 = &uL3.v;
    double sth, cth;
    long i;
 
@@ -2218,26 +2234,29 @@ void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
    /* L1 points from Body 2 to Body 1 */
    /* L2 is in plane of rotation */
    for (i = 0; i < 3; i++) {
-      L1.v[i] = -R2.v[i];
-      L2.v[i] = -V2.v[i];
+      L1->v[i] = -R2.v[i];
+      L2->v[i] = -V2.v[i];
    }
-   UNITV(&L1);
-   UNITV(&L2);
-   L3 = VxV(L1, L2);
-   UNITV(&L3);
-   L2 = VxV(L3, L1);
-   UNITV(&L2);
-   CLN->rows[0] = L1;
-   CLN->rows[1] = L2;
-   CLN->rows[2] = L3;
+   uL1 = UNITV(*L1);
+   uL2 = UNITV(*L2);
+   *L3 = VxV(*L1, *L2);
+   uL3 = UNITV(*L3);
+   *L2 = VxV(*L3, *L1);
+   uL2 = UNITV(*L2);
 
-   rp.x    = S->LP[Ilp].X0 * S->D;
-   rp.y    = S->LP[Ilp].Y0 * S->D;
-   rp.z    = 0.0;
-   magr    = CopyUnitV(rp, &rhat);
-   thhat.x = -rhat.y;
-   thhat.y = rhat.x;
-   thhat.z = 0.0;
+   CLN->rows[0] = *L1;
+   CLN->rows[1] = *L2;
+   CLN->rows[2] = *L3;
+
+   rp.x         = S->LP[Ilp].X0 * S->D;
+   rp.y         = S->LP[Ilp].Y0 * S->D;
+   rp.z         = 0.0;
+   magvec3_t uv = UNITV(rp);
+   magr         = uv.m;
+   rhat         = uv.v;
+   thhat.x      = -rhat.y;
+   thhat.y      = rhat.x;
+   thhat.z      = 0.0;
    vp.x = (S->Ddot * S->SMA * rhat.x + magr * S->thdot * thhat.x) * S->MeanRate;
    vp.y = (S->Ddot * S->SMA * rhat.y + magr * S->thdot * thhat.y) * S->MeanRate;
    vp.z = 0.0;
@@ -2248,12 +2267,12 @@ void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
 /*  From Lagrange System "modal" description, find position, velocity */
 /*  (m, m/sec) wrt N frame of LagSys Body 1                           */
 void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
-                 struct OrbitType *O, vec3 *r, vec3 *v)
+                 struct OrbitType *O, vec3_t *r, vec3_t *v)
 {
    struct LagrangePointType *LP;
    double cw1t, sw1t, cw2t, sw2t, ep, em, cwzt, swzt;
    double TimeSinceEpoch;
-   vec3 rl, vl;
+   vec3_t rl, vl;
    long i;
 
    LP = &LS->LP[O->LP];
@@ -2314,8 +2333,8 @@ void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
    double TimeSinceEpoch;
    double R, Rmin;
    double cw1t, sw1t, cw2t, sw2t, ep, em, cwzt, swzt;
-   vec3 rn, rl, vn, vl, LpPosN, LpVelN, wvec, wxr;
-   mat3x3 CLN;
+   vec3_t rn, rl, vn, vl, LpPosN, LpVelN, wvec, wxr;
+   mat3x3_t CLN;
    double **COEF, *RHS, *ParmVec;
    long i, j;
 
@@ -2452,8 +2471,8 @@ void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
    double TimeSinceEpoch;
    double R, Rmin;
    double cw1t, sw1t, cwzt, swzt;
-   vec3 rn, rl, vn, vl, wvec, wxr, LpPosN, LpVelN;
-   mat3x3 CLN;
+   vec3_t rn, rl, vn, vl, wvec, wxr, LpPosN, LpVelN;
+   mat3x3_t CLN;
    double **COEF, *RHS, *ParmVec;
    long i, j;
 
@@ -2710,15 +2729,19 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
 /*   frame [dim] (body 1 centric)                                        */
 /*   Follows algorithm given in TA Pavlak's Ph.D. thesis                 */
 /*   Summary of process:                                                 */
-void StateRnd2StateN(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
-                     vec3 R_R_nd, vec3 V_R_nd, vec3 *R_N, vec3 *V_N)
+void StateRnd2StateN(struct LagrangeSystemType *LS, vec3_t W2_pos,
+                     vec3_t W2_vel, vec3_t R_R_nd, vec3_t V_R_nd, vec3_t *R_N,
+                     vec3_t *V_N)
 {
-   vec3 bary_p, bary_v;
-   vec3 r2_from_r1, v2_from_v1, xvec, yvec, zvec;
-   mat3x3 CRN;
+   vec3_t bary_p, bary_v;
+   vec3_t r2_from_r1, v2_from_v1, yvec;
+   magvec3_t uxvec, uzvec;
+   vec3_t *const xvec = &uxvec.v;
+   vec3_t *const zvec = &uzvec.v;
+   mat3x3_t CRN;
    double LU, VU;
    // double TU;
-   double magr, angmom, theta_dot;
+   double magr, theta_dot;
    double full_N_state[6], full_R_state[6];
 
    for (int i = 0; i < 3; i++)
@@ -2733,18 +2756,18 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
    // TU = LS->TU;
    VU = LS->VU;
 
-   xvec = r2_from_r1;
-   UNITV(&xvec);
-   zvec   = VxV(r2_from_r1, v2_from_v1);
-   angmom = UNITV(&zvec);
-   yvec   = VxV(zvec, xvec);
+   *xvec = r2_from_r1;
+   uxvec = UNITV(*xvec);
+   *zvec = VxV(r2_from_r1, v2_from_v1);
+   uzvec = UNITV(*zvec);
+   yvec  = VxV(*zvec, *xvec);
 
    magr = MAGV(r2_from_r1);
 
-   theta_dot = angmom / (magr * magr);
+   theta_dot = uzvec.m / (magr * magr);
 
-   mat3x3 CNR = {.rows = {xvec, yvec, zvec}};
-   CRN        = MT(CNR);
+   mat3x3_t CNR = {.rows = {*xvec, yvec, *zvec}};
+   CRN          = MT(CNR);
 
    // Transform nd Body 1 Centric to inertial
    double **StateCRN = CreateMatrix(6, 6);
@@ -2789,14 +2812,18 @@ void StateRnd2StateN(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
 /*    - Invert transformation to yield N state to rot state              */
 /*    - Transform to rot state                                           */
 /*    - Center at barycenter                                             */
-void StateN2StateRnd(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
-                     vec3 R_N, vec3 V_N, vec3 *R_R_nd, vec3 *V_R_nd)
+void StateN2StateRnd(struct LagrangeSystemType *LS, vec3_t W2_pos,
+                     vec3_t W2_vel, vec3_t R_N, vec3_t V_N, vec3_t *R_R_nd,
+                     vec3_t *V_R_nd)
 {
-   vec3 bary_p, bary_v, r2_from_r1, v2_from_v1, xvec, yvec, zvec;
-   mat3x3 CRN;
+   vec3_t bary_p, bary_v, r2_from_r1, v2_from_v1, yvec;
+   magvec3_t uxvec, uzvec;
+   vec3_t *const xvec = &uxvec.v;
+   vec3_t *const zvec = &uzvec.v;
+   mat3x3_t CRN;
    double LU, VU;
    // double TU;
-   double magr, angmom, theta_dot;
+   double magr, theta_dot;
    double StateCRN[6][6], StateCNR[6][6];
    double full_N_state[6], full_R_state[6];
 
@@ -2812,18 +2839,18 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
    // TU = LS->TU;
    VU = LS->VU;
 
-   xvec = r2_from_r1;
-   UNITV(&xvec);
-   zvec   = VxV(r2_from_r1, v2_from_v1);
-   angmom = UNITV(&zvec);
-   yvec   = VxV(zvec, xvec);
+   *xvec = r2_from_r1;
+   uxvec = UNITV(*xvec);
+   *zvec = VxV(r2_from_r1, v2_from_v1);
+   uzvec = UNITV(*zvec);
+   yvec  = VxV(*zvec, *xvec);
 
    magr = MAGV(r2_from_r1);
 
-   theta_dot = angmom / (magr * magr);
+   theta_dot = uzvec.m / (magr * magr);
 
-   mat3x3 CNR = {.rows = {xvec, yvec, zvec}};
-   CRN        = MT(CNR);
+   mat3x3_t CNR = {.rows = {*xvec, yvec, *zvec}};
+   CRN          = MT(CNR);
 
    for (int i = 0; i < 6; i++)
       for (int j = 0; j < 6; j++)
@@ -2865,7 +2892,8 @@ void StateN2StateRnd(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
 /**********************************************************************/
 /*   Notional position and velocities for TDRS satellites             */
 /*   Note that TDRS[1] (TDRS-2) was lost at launch                    */
-void TDRSPosVel(double PriMerAng, double dyntime, vec3 ptn[10], vec3 vtn[10])
+void TDRSPosVel(double PriMerAng, double dyntime, vec3_t ptn[10],
+                vec3_t vtn[10])
 {
 
    double Lng[10] = {-49.0,  0.0,    -275.0, -46.0, -171.4,
@@ -2915,13 +2943,13 @@ void TDRSPosVel(double PriMerAng, double dyntime, vec3 ptn[10], vec3 vtn[10])
 /* Find coordinate transformation from True Equator True Equinox      */
 /* (TETE) frame to J2000 frame.  Ref "The Astronomical Almanac",      */
 /* QB8.U5, 2003, p. B18,B20.                                          */
-mat3x3 TETE2J2000(double JD)
+mat3x3_t TETE2J2000(double JD)
 {
 
    double d, arg1, arg2, dpsi, deps, eps;
    double T, z, theta, zeta;
    double c1, s1, c2, s2, c3, s3;
-   mat3x3 CTM, CMJ, CTJ;
+   mat3x3_t CTM, CMJ, CTJ;
 
    /* TETE to MEME */
    d    = JD - 2452639.5;
@@ -3003,18 +3031,20 @@ double RadiusOfInfluence(double mu1, double mu2, double r)
 /*  Given Rrel and Vrel, find the Euler-Hill state vector [re, ve]    */
 /*  E-H usually assumes small departures from LVLH.  I'm using        */
 /*  spherical coordinates here to ensure valid solution anywhere.     */
-void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3 OrbCLN, vec3 Rrel,
-                vec3 Vrel, vec3 *re, vec3 *ve)
+void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t Rrel,
+                vec3_t Vrel, vec3_t *re, vec3_t *ve)
 {
    double magp, alpha, beta;
-   vec3 p, b3, vn, vb;
-   mat3x3 CBL, CBN;
+   vec3_t p, b3, vn, vb;
+   mat3x3_t CBL, CBN;
    double C1, S1, C2, S2;
    long i;
 
    for (i = 0; i < 3; i++)
       p.v[i] = Rrel.v[i] - OrbRadius * OrbCLN.mat[2][i];
-   magp = CopyUnitV(p, &b3);
+   magvec3_t uv = UNITV(p);
+   magp         = uv.m;
+   b3           = uv.v;
    for (i = 0; i < 3; i++)
       b3.v[i] = -b3.v[i];
    alpha = atan2(-VoV(OrbCLN.rows[0], b3), VoV(OrbCLN.rows[2], b3));
@@ -3050,12 +3080,12 @@ void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3 OrbCLN, vec3 Rrel,
 /*  find the relative position and velocity (expressed in N)          */
 /*  E-H usually assumes small departures from LVLH.  I'm using        */
 /*  spherical coordinates here to ensure valid solution anywhere.     */
-void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3 OrbCLN, vec3 re,
-                vec3 ve, vec3 *Rrel, vec3 *Vrel)
+void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t re,
+                vec3_t ve, vec3_t *Rrel, vec3_t *Vrel)
 {
    double alpha, beta, magp;
-   mat3x3 CBL, CBN;
-   vec3 vb, vn;
+   mat3x3_t CBL, CBN;
+   vec3_t vb, vn;
    double C1, S1, C2, S2;
    long i;
 
@@ -3090,8 +3120,8 @@ void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3 OrbCLN, vec3 re,
 /**********************************************************************/
 /*  Given Euler-Hill position and velocity, find parameters of        */
 /*  Drift, Ellipse, Static, and Cross-Track modes                     */
-void EHRV2EHModes(vec3 r, vec3 v, double n, double nt, double *A, double *Bc,
-                  double *Bs, double *C, double *Dc, double *Ds)
+void EHRV2EHModes(vec3_t r, vec3_t v, double n, double nt, double *A,
+                  double *Bc, double *Bs, double *C, double *Dc, double *Ds)
 {
    double s, c, zuterm;
 
@@ -3115,7 +3145,8 @@ void EHRV2EHModes(vec3 r, vec3 v, double n, double nt, double *A, double *Bc,
 }
 /**********************************************************************/
 void EHModes2EHRV(double A, double Bc, double Bs, double C, double Dc,
-                  double Ds, double n, double nt, vec3 *const r, vec3 *const v)
+                  double Ds, double n, double nt, vec3_t *const r,
+                  vec3_t *const v)
 {
    double c, s, BCosTheta, BSinTheta, DCosTheta, DSinTheta;
 
@@ -3176,22 +3207,28 @@ double LambertTOF(double mu, double amin, double lambda, double x)
 /*  See Battin 7.1                                                    */
 /*  TransferType =  1.0 for Type I  (1H, 1A, 1B) transfers            */
 /*  TransferType = -1.0 for Type II (2H, 2A, 2B) transfers            */
-void LambertProblem(double t0, double mu, vec3 xr1, vec3 xr2, double TOF,
+void LambertProblem(double t0, double mu, vec3_t xr1, vec3_t xr2, double TOF,
                     double TransferType, double *SLR, double *e, double *inc,
                     double *RAAN, double *ArgP, double *tp)
 {
    double r1, r2, th, c, s, amin, lambda;
    double xold, Told, x, dx, T;
    double y, eta, Coef0, Coef1, Coef2;
-   vec3 ir1, ir2, ih, dr, ihxir1, xv1;
+   vec3_t ir1, ir2, ih, dr, ihxir1, xv1;
    double a, anom, alpha, MeanMotion, Period, rmin;
    long i;
+   magvec3_t uv;
 
-   r1 = CopyUnitV(xr1, &ir1);
-   r2 = CopyUnitV(xr2, &ir2);
-   ih = VxV(xr1, xr2);
-   UNITV(&ih);
-   th = acos(VoV(ir1, ir2));
+   uv  = UNITV(xr1);
+   r1  = uv.m;
+   ir1 = uv.v;
+   uv  = UNITV(xr2);
+   r2  = uv.m;
+   ir2 = uv.v;
+   ih  = VxV(xr1, xr2);
+   uv  = UNITV(ih);
+   ih  = uv.v;
+   th  = acos(VoV(ir1, ir2));
    for (i = 0; i < 3; i++)
       dr.v[i] = xr2.v[i] - xr1.v[i];
    c      = MAGV(dr);
@@ -3234,9 +3271,9 @@ double RendezvousCostFunction(double *InVec, double *AuxVec)
 {
    double t0, TOF, mu;
    double tf, SMA, ecc, inc, RAAN, ArgP, anom, tp, p, alpha, MeanMotion, rmin;
-   vec3 r1, v1, r2, v2, r1e, v1e, r2e, v2e;
-   vec3 r1t, v1t, r2t, v2t;
-   vec3 DV1I, DV2I, DV1II, DV2II, DV1, DV2;
+   vec3_t r1, v1, r2, v2, r1e, v1e, r2e, v2e;
+   vec3_t r1t, v1t, r2t, v2t;
+   vec3_t DV1I, DV2I, DV1II, DV2II, DV1, DV2;
    double Per1, Per2, DeltaV, DeltaVII, DeltaVI;
    long i;
 
@@ -3317,8 +3354,9 @@ double RendezvousCostFunction(double *InVec, double *AuxVec)
 /*  Given starting state (r1e, v1e) and target state (r2e, v2e) at    */
 /*  epoch t=0, find times (t1, t2) and DVs (DV1, DV2) to perform      */
 /*  rendezvous.                                                       */
-void PlanTwoImpulseRendezvous(double mu, vec3 r1e, vec3 v1e, vec3 r2e, vec3 v2e,
-                              double *t1, double *t2, vec3 DV1, vec3 DV2)
+void PlanTwoImpulseRendezvous(double mu, vec3_t r1e, vec3_t v1e, vec3_t r2e,
+                              vec3_t v2e, double *t1, double *t2, vec3_t DV1,
+                              vec3_t DV2)
 {
    double SMA1, SMA2, ecc, inc, RAAN, ArgP, anom1, anom2, tp, p, alpha;
    double AmP[2], AmParm[19], DeltaV;
@@ -3360,10 +3398,10 @@ void PlanTwoImpulseRendezvous(double mu, vec3 r1e, vec3 v1e, vec3 r2e, vec3 v2e,
 /*  Two iterations gives < mm accuracy for GEO-LEO distances.         */
 /*  Will need more iterations for interplanetary-scale applications.  */
 void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
-                         struct OrbitType *Target, vec3 PastPos,
-                         vec3 FuturePos __attribute__((unused)))
+                         struct OrbitType *Target, vec3_t PastPos,
+                         vec3_t FuturePos __attribute__((unused)))
 {
-   vec3 RelPos, Vel;
+   vec3_t RelPos, Vel;
    double dt, anom;
    long i;
 

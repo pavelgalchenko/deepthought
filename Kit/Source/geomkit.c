@@ -150,9 +150,13 @@ void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl)
 /*********************************************************************/
 void SurfaceForceProps(struct GeomType *G)
 {
-   vec3 *uv;
-   vec3 uhat, v2, nhat, vhat, uvbar;
-   mat3x3 C;
+   vec3_t *uv;
+   vec3_t v2, uvbar;
+   magvec3_t uuhat, unhat, uvhat;
+   vec3_t *const uhat = &uuhat.v;
+   vec3_t *const nhat = &unhat.v;
+   vec3_t *const vhat = &uvhat.v;
+   mat3x3_t C;
    double x1, y1, x2, y2, xA, yA;
    long Ip;
    long j;
@@ -161,20 +165,20 @@ void SurfaceForceProps(struct GeomType *G)
    for (Ip = 0; Ip < G->Npoly; Ip++) {
       P = &G->Poly[Ip];
 
-      uv = calloc(P->Nv + 1, sizeof(vec3));
+      uv = calloc(P->Nv + 1, sizeof(vec3_t));
 
       /* Compute Unit Normal Vector */
       for (j = 0; j < 3; j++) {
-         uhat.v[j] = G->V[P->V[1]].v[j] - G->V[P->V[0]].v[j];
-         v2.v[j]   = G->V[P->V[2]].v[j] - G->V[P->V[1]].v[j];
+         uhat->v[j] = G->V[P->V[1]].v[j] - G->V[P->V[0]].v[j];
+         v2.v[j]    = G->V[P->V[2]].v[j] - G->V[P->V[1]].v[j];
       }
-      UNITV(&uhat);
-      nhat = VxV(uhat, v2);
-      UNITV(&nhat);
-      vhat = VxV(nhat, uhat);
-      UNITV(&vhat);
-      P->Norm = nhat;
-      if (MAGV(nhat) == 0.0) {
+      uuhat   = UNITV(*uhat);
+      *nhat   = VxV(*uhat, v2);
+      unhat   = UNITV(*nhat);
+      *vhat   = VxV(*nhat, *uhat);
+      uvhat   = UNITV(*vhat);
+      P->Norm = *nhat;
+      if (MAGV(*nhat) == 0.0) {
          fprintf(stderr, "Zero-length unit vector in SurfaceForceProps. Check "
                          "for zero-area polys or polys with three colinear "
                          "vertices. Tesselating your model to all triangles is "
@@ -183,12 +187,13 @@ void SurfaceForceProps(struct GeomType *G)
       }
 
       /* Compute in-plane basis vectors */
-      P->Vhat = PerpBasis(P->Norm, &P->Uhat);
-
+      pair_vec3_t pair = PerpBasis(P->Norm);
+      P->Uhat          = pair.first;
+      P->Vhat          = pair.second;
       /* Compute Polygon Area and Centroid */
-      C.rows[0] = uhat;
-      C.rows[1] = vhat;
-      C.rows[2] = nhat;
+      C.rows[0] = *uhat;
+      C.rows[1] = *vhat;
+      C.rows[2] = *nhat;
 
       for (j = 0; j < P->Nv; j++)
          uv[j] = MxV(C, G->V[P->V[j]]);
@@ -227,8 +232,12 @@ void EdgeAndPolyDyads(struct GeomType *G)
 {
    struct EdgeType *E;
    struct PolyType *P1, *P2, *P;
-   vec3 *V1, *V2;
-   vec3 Axis, N1, N2;
+   vec3_t *V1, *V2;
+   magvec3_t uAxis, uN1, uN2;
+   vec3_t *const Axis = &uAxis.v;
+   vec3_t *const N1   = &uN1.v;
+   vec3_t *const N2   = &uN2.v;
+
    long Ie, Ip, i, j;
 
    for (Ie = 0; Ie < G->Nedge; Ie++) {
@@ -239,17 +248,17 @@ void EdgeAndPolyDyads(struct GeomType *G)
          V1 = &G->V[E->Vtx1];
          V2 = &G->V[E->Vtx2];
          for (i = 0; i < 3; i++)
-            Axis.v[i] = V2->v[i] - V1->v[i];
-         UNITV(&Axis);
+            Axis->v[i] = V2->v[i] - V1->v[i];
+         uAxis = UNITV(*Axis);
          /* Unit vectors in plane, pointing outward */
-         N1 = VxV(Axis, P1->Norm);
-         N2 = VxV(P2->Norm, Axis);
-         UNITV(&N1);
-         UNITV(&N2);
+         *N1 = VxV(*Axis, P1->Norm);
+         *N2 = VxV(P2->Norm, *Axis);
+         uN1 = UNITV(*N1);
+         uN2 = UNITV(*N2);
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
                E->Dyad.mat[i][j] =
-                   P1->Norm.v[i] * N1.v[j] + P2->Norm.v[i] * N2.v[j];
+                   P1->Norm.v[i] * N1->v[j] + P2->Norm.v[i] * N2->v[j];
             }
          }
       }
@@ -267,8 +276,8 @@ double PolyhedronVolume(struct GeomType *G)
 {
    double Vol;
    struct PolyType *P;
-   vec3 *V1, *V2, *V3;
-   vec3 V2xV3;
+   vec3_t *V1, *V2, *V3;
+   vec3_t V2xV3;
    long Ip;
 
    Vol = 0.0;
@@ -283,12 +292,12 @@ double PolyhedronVolume(struct GeomType *G)
    return (Vol);
 }
 /*********************************************************************/
-long PolyIsDegenerate(struct PolyType *P, vec3 *V)
+long PolyIsDegenerate(struct PolyType *P, vec3_t *V)
 {
 #define EPS (1.0E-6)
    long ZeroArea;
    long Iv, I1, I2, I3, i;
-   vec3 E1, E2, E1xE2;
+   vec3_t E1, E2, E1xE2;
 
    ZeroArea = 1;
    for (Iv = 0; Iv < P->Nv; Iv++) {
@@ -308,7 +317,7 @@ long PolyIsDegenerate(struct PolyType *P, vec3 *V)
 #undef EPS
 }
 /**********************************************************************/
-long RayHitsBBox(vec3 Source, vec3 DirVec, struct BoundingBoxType *BB)
+long RayHitsBBox(vec3_t Source, vec3_t DirVec, struct BoundingBoxType *BB)
 {
    double dx, dy, dz, x, y, z;
 
@@ -376,21 +385,21 @@ long RayHitsBBox(vec3 Source, vec3 DirVec, struct BoundingBoxType *BB)
    return (0);
 }
 /**********************************************************************/
-long KDRayHitsLeaf(vec3 Source, vec3 DirVec, struct KDNodeType *KD,
-                   struct GeomType *G, long *HitPoly, vec3 *HitPoint,
+long KDRayHitsLeaf(vec3_t Source, vec3_t DirVec, struct KDNodeType *KD,
+                   struct GeomType *G, long *HitPoly, vec3_t *HitPoint,
                    double *HitDist)
 {
    struct PolyType *P;
-   vec3 *Vtx;
+   vec3_t *Vtx;
    long Hit, Ip, Iv;
    double Dist;
-   vec3 ProjPoint;
+   vec3_t ProjPoint;
 
    Hit = 0;
 
    for (Ip = 0; Ip < KD->Npoly; Ip++) {
       P   = &G->Poly[KD->Poly[Ip]];
-      Vtx = calloc(P->Nv, sizeof(vec3));
+      Vtx = calloc(P->Nv, sizeof(vec3_t));
       for (Iv = 0; Iv < P->Nv; Iv++)
          Vtx[Iv] = G->V[P->V[Iv]];
 
@@ -407,8 +416,8 @@ long KDRayHitsLeaf(vec3 Source, vec3 DirVec, struct KDNodeType *KD,
    return (Hit);
 }
 /**********************************************************************/
-long KDRayHitsNode(vec3 Source, vec3 DirVec, struct KDNodeType *KD,
-                   struct GeomType *G, long *HitPoly, vec3 HitPoint,
+long KDRayHitsNode(vec3_t Source, vec3_t DirVec, struct KDNodeType *KD,
+                   struct GeomType *G, long *HitPoly, vec3_t HitPoint,
                    double *HitDist)
 {
    long HitLow, HitHigh;
@@ -431,8 +440,8 @@ long KDRayHitsNode(vec3 Source, vec3 DirVec, struct KDNodeType *KD,
 }
 /**********************************************************************/
 /* Source and DirVec must be expressed in G's coordinate system       */
-long KDProjectRayOntoGeom(vec3 Source, vec3 DirVec, struct GeomType *G,
-                          long *HitPoly, vec3 HitPoint)
+long KDProjectRayOntoGeom(vec3_t Source, vec3_t DirVec, struct GeomType *G,
+                          long *HitPoly, vec3_t HitPoint)
 {
    double HitDist = 1.0E12; /* Absurd large value */
    long RayHitsGeom;
@@ -669,13 +678,13 @@ void LoadOctree(struct GeomType *G)
    struct OctreeCellType *OC, *C;
    struct BoundingBoxType *BB;
    struct PolyType *P;
-   vec3 *V;
-   vec3 sign[8] = {
-       (vec3){.v = {-1.0, -1.0, -1.0}}, (vec3){.v = {-1.0, -1.0, 1.0}},
-       (vec3){.v = {-1.0, 1.0, -1.0}},  (vec3){.v = {-1.0, 1.0, 1.0}},
-       (vec3){.v = {1.0, -1.0, -1.0}},  (vec3){.v = {1.0, -1.0, 1.0}},
-       (vec3){.v = {1.0, 1.0, -1.0}},   (vec3){.v = {1.0, 1.0, 1.0}}};
-   vec3 r;
+   vec3_t *V;
+   vec3_t sign[8] = {
+       (vec3_t){.v = {-1.0, -1.0, -1.0}}, (vec3_t){.v = {-1.0, -1.0, 1.0}},
+       (vec3_t){.v = {-1.0, 1.0, -1.0}},  (vec3_t){.v = {-1.0, 1.0, 1.0}},
+       (vec3_t){.v = {1.0, -1.0, -1.0}},  (vec3_t){.v = {1.0, -1.0, 1.0}},
+       (vec3_t){.v = {1.0, 1.0, -1.0}},   (vec3_t){.v = {1.0, 1.0, 1.0}}};
+   vec3_t r;
    long Ic, Io, i, j, k, Ipoly, Iv;
    long AllPos[3] = {0}, AllNeg[3] = {0};
    long NoChildHasAll;
@@ -837,15 +846,15 @@ void LoadOctree(struct GeomType *G)
 }
 /*********************************************************************/
 /* Point and DirVec have already been transformed into Geom frame      */
-long OCProjectRayOntoGeom(vec3 Point, vec3 DirVec, struct GeomType *G,
-                          vec3 *ProjPoint, long *ClosestPoly)
+long OCProjectRayOntoGeom(vec3_t Point, vec3_t DirVec, struct GeomType *G,
+                          vec3_t *ProjPoint, long *ClosestPoly)
 {
    struct OctreeType *O;
    struct PolyType *P;
    struct OctreeCellType *OC;
-   vec3 Point2, Vec, dr;
+   vec3_t Point2, Vec, dr;
    double Dist, MinDist, RoD;
-   vec3 Vtx[3];
+   vec3_t Vtx[3];
    long Exhausted, Ip, Iv, InPoly, i;
    long FoundPoly;
 
@@ -939,9 +948,9 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    double Val1, Val2, Val3;
    char response[40];
    long Seq;
-   mat3x3 RotM   = MAT3X3_EYE;
-   vec3 TransVec = VEC3_ZERO;
-   vec3 V, r, Vr;
+   mat3x3_t RotM   = MAT3X3_EYE;
+   vec3_t TransVec = VEC3_ZERO;
+   vec3_t V, r, Vr;
    long FirstUse;
 
    char line[512], vtxstring[512], *vtxtoken, MatlName[40];
@@ -1035,9 +1044,9 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    }
 
    /* .. Allocate arrays */
-   G->V    = calloc(G->Nv, sizeof(vec3));
-   G->Vt   = calloc(G->Nvt, sizeof(vec3));
-   G->Vn   = calloc(G->Nvn, sizeof(vec3));
+   G->V    = calloc(G->Nv, sizeof(vec3_t));
+   G->Vt   = calloc(G->Nvt, sizeof(vec3_t));
+   G->Vn   = calloc(G->Nvn, sizeof(vec3_t));
    G->Poly = (struct PolyType *)calloc(G->Npoly, sizeof(struct PolyType));
    if (G->Poly == NULL) {
       fprintf(stderr, "G->Poly calloc returned null pointer.  Bailing out!\n");
@@ -1068,7 +1077,7 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
       }
       else if (sscanf(line, "# Translate by [%lf %lf %lf]", &Val1, &Val2,
                       &Val3) == 3) {
-         TransVec = (vec3){.v = {Val1, Val2, Val3}};
+         TransVec = (vec3_t){.v = {Val1, Val2, Val3}};
       }
       else if (sscanf(line, "# Rotate via Seq = %ld by [%lf %lf %lf] deg", &Seq,
                       &Val1, &Val2, &Val3) == 4) {
@@ -1238,8 +1247,10 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
          G->BBox.radius = MAGV(r);
    }
 
-   for (i = 0; i < G->Nvn; i++)
-      UNITV(&G->Vn[i]);
+   for (i = 0; i < G->Nvn; i++) {
+      magvec3_t uv = UNITV(G->Vn[i]);
+      G->Vn[i]     = uv.v;
+   }
 
    if (EdgesEnabled) {
       /* Build Edge Tables */
@@ -1324,7 +1335,7 @@ void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
    FILE *MtlFile, *ObjFile;
    long Im, Iv, Ip;
    struct MatlType *M;
-   vec3 *V;
+   vec3_t *V;
    struct PolyType *P;
 
    strcpy(MtlFileName, FileName);

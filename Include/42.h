@@ -137,11 +137,11 @@ EXTERN struct WorldType World[NWORLD];
 EXTERN struct LagrangeSystemType LagSys[NLAGSYS];
 
 /* Galactic Coordinate Frame */
-EXTERN mat3x3 CGJ;
-EXTERN mat3x3 CGH;
+EXTERN mat3x3_t CGJ;
+EXTERN mat3x3_t CGH;
 
 /* J2000 to Heliocentric Ecliptic */
-EXTERN quat qjh;
+EXTERN quat_t qjh;
 
 /* SC structure manages attitude and translation wrt Reference Orbit */
 EXTERN struct SCType *SC;
@@ -203,12 +203,12 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
 
 void GravPertForceRK4(struct WorldType *const worlds,
                       struct OrbitType *const orbs, struct SCType *S,
-                      double u[6], vec3 *FrcN, double RKFdt);
-__attribute__((const)) vec3 ThirdBodyGravForce(vec3 p, vec3 s, double mu,
+                      double u[6], vec3_t *FrcN, double RKFdt);
+__attribute__((const)) vec3_t ThirdBodyGravForce(vec3_t p, vec3_t s, double mu,
                                                double mass);
 void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
-                  vec3 *trgtPosN, vec3 *trgtPosH, double *trgtPriMerAng,
-                  mat3x3 *trgtCNH);
+                  vec3_t *trgtPosN, vec3_t *trgtPosH, double *trgtPriMerAng,
+                  mat3x3_t *trgtCNH);
 long SimStep_New(void);
 __attribute__((deprecated)) long SimStep_Old(void);
 void ZeroNonSCContactFrcTrq(struct SCType *S);
@@ -262,7 +262,7 @@ void FindTotalAngMom(struct SCType *S);
 __attribute__((pure)) double FindTotalKineticEnergy(struct OrbitType *orbs,
                                                     struct SCType *S);
 void UpdateScBoundingBox(struct SCType *S);
-void FindUnshadedAreas(struct SCType *S, vec3 DirVecN);
+void FindUnshadedAreas(struct SCType *S, vec3_t DirVecN);
 void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies,
              float *ElectronEnergy, float *ProtonEnergy, double **Flux);
 void InitAlbedo(void);
@@ -272,11 +272,11 @@ void JointFrcTrq(struct JointType *G, struct SCType *S);
 void InitActuatedJoint(struct JointType *G, struct SCType *S);
 void WheelJitter(struct WhlType *W, struct SCType *S);
 void ShakerJitter(struct ShakerType *Sh, struct SCType *S);
-long OpticalFieldPoint(vec3 StarVecB, struct OpticsType *O, vec3 *FldPntB,
-                       vec3 *FldDirB);
-long OpticalTrain(long FldSC, long FldBody, vec3 FldPntB, vec3 FldDirB,
+long OpticalFieldPoint(vec3_t StarVecB, struct OpticsType *O, vec3_t *FldPntB,
+                       vec3_t *FldDirB);
+long OpticalTrain(long FldSC, long FldBody, vec3_t FldPntB, vec3_t FldDirB,
                   long Nopt, struct OpticsType *Opt, long *OutSC, long *OutBody,
-                  vec3 *OutPntB, vec3 *OutDirB);
+                  vec3_t *OutPntB, vec3_t *OutDirB);
 
 /* Debug Function Prototypes */
 void EchoPVel(struct SCType *S);
@@ -313,11 +313,11 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                       struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
 long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
-                       struct WorldType *const worlds, const mat3x3 earth_CNH);
+                       struct WorldType *const worlds, const mat3x3_t earth_CNH);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
 long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                          struct WorldType *const worlds,
-                         const mat3x3 earth_CNH);
+                         const mat3x3_t earth_CNH);
 __attribute__((pure)) long DecodeString(char *s);
 __attribute__((pure)) WorldID GetWorldID(const char *s);
 void InitFSW(struct SCType *S);

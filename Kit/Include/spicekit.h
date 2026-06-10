@@ -66,18 +66,18 @@ void WorldID2IAUFrame(WorldID w_id,
                       SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 int SpiceCheckAndGetDbl(WorldID Iw, ConstSpiceChar *item, SpiceInt start,
                         SpiceInt n, SpiceDouble *vals);
-int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3 *CWH);
-int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3 *CWJ);
+int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3_t *CWH);
+int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3_t *CWJ);
 int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
-                   mat3x3 *C);
+                   mat3x3_t *C);
 __attribute__((pure)) AngDataType SpiceGetAngData(const WorldID world,
                                                   ConstSpiceChar *item);
 int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
-                        mat3x3 earth_CNH);
+                        mat3x3_t earth_CNH);
 void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
-                    struct WorldType *const worlds, vec3 *trgtPosN,
-                    vec3 *trgtPosH, double *trgtPriMerAng, mat3x3 *trgtCNH);
-void SpicePosN2RLngLat(const mat3x3 cwn, const vec3 posn, double *r,
+                    struct WorldType *const worlds, vec3_t *trgtPosN,
+                    vec3_t *trgtPosH, double *trgtPriMerAng, mat3x3_t *trgtCNH);
+void SpicePosN2RLngLat(const mat3x3_t cwn, const vec3_t posn, double *r,
                        double *lng, double *lat);
 /* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
 long SpiceLoadKernels(char SpicePath[80]);

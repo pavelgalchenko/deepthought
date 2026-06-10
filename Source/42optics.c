@@ -20,15 +20,15 @@
 */
 
 /**********************************************************************/
-long Aperture(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
-              vec3 *IntPnt, vec3 *OutDir)
+long Aperture(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
+              double ApRad, vec3_t *IntPnt, vec3_t *OutDir)
 {
    double eps = 1.0E-12;
    double dl  = 1.0E6;
    double K   = 1.0;
 
    double PoA, r, l, a;
-   vec3 cq, rvec, cp, rhat;
+   vec3_t cq, rvec, cp;
    long k = 0;
 
    long InAperture = TRUE;
@@ -42,7 +42,7 @@ long Aperture(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
       PoA = VoV(cp, axis);
       for (int i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
-      r = CopyUnitV(rvec, &rhat);
+      r = MAGV(rvec);
 
       /* Surface Equation */
       a = 0.0;
@@ -61,15 +61,15 @@ long Aperture(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
    return (InAperture);
 }
 /**********************************************************************/
-long PlanarMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
-                  vec3 *IntPnt, vec3 *ReflDir)
+long PlanarMirror(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
+                  double ApRad, vec3_t *IntPnt, vec3_t *ReflDir)
 {
    double eps = 1.0E-12;
    double dl  = 1.0E6;
    double K   = 1.0;
 
    double PoA, r, a, l;
-   vec3 rvec, nhat, cq, cp, rhat;
+   vec3_t rvec, nhat, cq, cp;
    double LoN;
    long k = 0;
 
@@ -84,7 +84,7 @@ long PlanarMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
       PoA = VoV(cp, axis);
       for (int i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
-      r = CopyUnitV(rvec, &rhat);
+      r = MAGV(rvec);
 
       /* Mirror Equation */
       a = 0.0;
@@ -107,9 +107,9 @@ long PlanarMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
    return (InAperture);
 }
 /**********************************************************************/
-long ConicMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
-                 double ConicConst, double ConicSign, double ApRad,
-                 vec3 *IntPnt, vec3 *ReflDir)
+long ConicMirror(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
+                 double foclen, double ConicConst, double ConicSign,
+                 double ApRad, vec3_t *IntPnt, vec3_t *ReflDir)
 {
    double eps = 1.0E-12;
    double dl  = 1.0E6;
@@ -118,7 +118,7 @@ long ConicMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
    double R, D;
 
    double PoA, r, l, a, LoN;
-   vec3 nhat, cq, rvec, cp, rhat;
+   vec3_t nhat, cq, rvec, cp;
    double Den;
    long k = 0;
    long i;
@@ -136,7 +136,7 @@ long ConicMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
       PoA = VoV(cp, axis);
       for (i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
-      r = CopyUnitV(rvec, &rhat);
+      r = MAGV(rvec);
 
       /* Mirror Equation */
       D = sqrt(R * R - (1.0 + ConicConst) * r * r);
@@ -162,12 +162,12 @@ long ConicMirror(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
    return (InAperture);
 }
 /**********************************************************************/
-long ThinLens(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
-              double ApRad, vec3 *IntPnt, vec3 *RefrDir)
+long ThinLens(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
+              double foclen, double ApRad, vec3_t *IntPnt, vec3_t *RefrDir)
 {
    long RayOnAxis  = FALSE;
    long InAperture = TRUE;
-   vec3 dp, binorm, rhat;
+   vec3_t dp, binorm, rhat;
    double r0, a0, r1;
    double TanTheta0, TanTheta1;
    double theta1, CosTheta1, SinTheta1;
@@ -186,8 +186,8 @@ long ThinLens(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
       *RefrDir = VNegElem(axis);
    }
    else {
-      UNITV(&binorm);
-      rhat = VxV(axis, binorm);
+      binorm = UNITV(binorm).v;
+      rhat   = VxV(axis, binorm);
 
       a0 = VoV(dp, axis);
       r0 = VoV(dp, rhat);
@@ -211,15 +211,15 @@ long ThinLens(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double foclen,
    return (InAperture);
 }
 /**********************************************************************/
-long Detector(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
-              vec3 *IntPnt)
+long Detector(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
+              double ApRad, vec3_t *IntPnt)
 {
    double eps = 1.0E-12;
    double dl  = 1.0E6;
    double K   = 1.0;
 
    double PoA, r, l, a;
-   vec3 cq, rvec, rhat, cp;
+   vec3_t cq, rvec, cp;
    long k = 0;
 
    long InAperture = TRUE;
@@ -233,7 +233,7 @@ long Detector(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
       PoA = VoV(cp, axis);
       for (int i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
-      r = CopyUnitV(rvec, &rhat);
+      r = MAGV(rvec);
 
       /* Surface Equation */
       a = 0.0;
@@ -250,11 +250,11 @@ long Detector(vec3 FldPnt, vec3 FldDir, vec3 ctr, vec3 axis, double ApRad,
    return (InAperture);
 }
 /**********************************************************************/
-long OpticalFieldPoint(vec3 StarVecB, struct OpticsType *O, vec3 *FldPntB,
-                       vec3 *FldDirB)
+long OpticalFieldPoint(vec3_t StarVecB, struct OpticsType *O, vec3_t *FldPntB,
+                       vec3_t *FldDirB)
 {
    struct NodeType *N;
-   vec3 InPntB, InDirB, OutPntB, OutDirB;
+   vec3_t InPntB, InDirB, OutPntB, OutDirB;
    long InAp;
 
    N = &SC[O->SC].B[O->Body].Node[O->Node];
@@ -272,16 +272,16 @@ long OpticalFieldPoint(vec3 StarVecB, struct OpticsType *O, vec3 *FldPntB,
 }
 /**********************************************************************/
 /* Returns number of elements successfully passed [0:Nopt]            */
-long OpticalTrain(long FldSC, long FldBody, vec3 FldPntB, vec3 FldDirB,
+long OpticalTrain(long FldSC, long FldBody, vec3_t FldPntB, vec3_t FldDirB,
                   long Nopt, struct OpticsType *Opt, long *OutSC, long *OutBody,
-                  vec3 *OutPntB, vec3 *OutDirB)
+                  vec3_t *OutPntB, vec3_t *OutDirB)
 {
    struct SCType *S;
    struct BodyType *B;
    struct NodeType *N;
    struct OpticsType *O;
-   vec3 InPntN, InDirN, InPntB, InDirB;
-   vec3 axis;
+   vec3_t InPntN, InDirN, InPntB, InDirB;
+   vec3_t axis;
    long Io;
    long InAp;
 

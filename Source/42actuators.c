@@ -88,7 +88,7 @@ void WhlModel(const int smoothing, struct WhlType *W, struct SCType *S)
 }
 #undef SMOOTH_INTERVAL
 /**********************************************************************/
-void MTBModel(struct MTBType *MTB, vec3 bvb)
+void MTBModel(struct MTBType *MTB, vec3_t bvb)
 {
    MTB->M   = Limit(MTB->Mcmd, -MTB->Mmax, MTB->Mmax);
    MTB->Trq = SxV(MTB->M, VxV(MTB->A, bvb));
@@ -167,8 +167,8 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
    struct NodeType *Nt;
    struct GeomType *G;
    struct PolyType *P;
-   mat3x3 CPB;
-   vec3 PosThrN, PosThrB, AxisN, PosB, PosP, Phat, FrcP, FrcB, r, TrqB, FrcN;
+   mat3x3_t CPB;
+   vec3_t PosThrN, PosThrB, AxisN, PosB, PosP, Phat, FrcP, FrcB, r, TrqB, FrcN;
    double AoN, MagPos, cosphi, w, w2, Wpoly, TotalCoef;
    long Ithr, Ipoly, Ib;
 
@@ -191,10 +191,12 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
             PosThrB = MxV(B->CN, PosThrN);
             /* Note that plume axis is opposite T->A */
             /* CPB is DCM from B to Plume (P) frame */
-            AxisN       = MTxV(Bt->CN, T->A);
-            CPB.rows[0] = MxV(B->CN, AxisN);
-            CPB.rows[0] = SxV(-1.0, CPB.rows[0]);
-            CPB.rows[2] = PerpBasis(CPB.rows[0], &CPB.rows[1]);
+            AxisN            = MTxV(Bt->CN, T->A);
+            CPB.rows[0]      = MxV(B->CN, AxisN);
+            CPB.rows[0]      = SxV(-1.0, CPB.rows[0]);
+            pair_vec3_t pair = PerpBasis(CPB.rows[0]);
+            CPB.rows[1]      = pair.first;
+            CPB.rows[2]      = pair.second;
 
             /* Find force and torque on each illuminated polygon */
             for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
@@ -207,14 +209,16 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
                      PosB = VmVElem(P->Centroid, PosThrB);
                      PosP = MxV(CPB, PosB);
                      if (PosP.x > 0.0) { /* Ignore backflow */
-                        MagPos  = CopyUnitV(PosP, &Phat);
-                        cosphi  = Phat.x;
-                        w       = s * cosphi;
-                        w2      = w * w;
-                        Wpoly   = (w2 + 2.5) * w * exp(-w2);
-                        Wpoly  += (0.75 + 3.0 * w2 + w2 * w2) * sqrt(Pi) *
-                                  (1.0 + erf(w));
-                        Wpoly  *= exp(w2 - s * s);
+                        magvec3_t uv  = UNITV(PosP);
+                        MagPos        = uv.m;
+                        Phat          = uv.v;
+                        cosphi        = Phat.x;
+                        w             = s * cosphi;
+                        w2            = w * w;
+                        Wpoly         = (w2 + 2.5) * w * exp(-w2);
+                        Wpoly        += (0.75 + 3.0 * w2 + w2 * w2) * sqrt(Pi) *
+                                        (1.0 + erf(w));
+                        Wpoly        *= exp(w2 - s * s);
                         TotalCoef =
                             P->Area * Coef * cosphi * Wpoly / (MagPos * MagPos);
 
@@ -245,7 +249,7 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
 
    struct NodeType *N;
    long i, j;
-   vec3 FrcN, FrcB;
+   vec3_t FrcN, FrcB;
    struct AcType *AC;
    struct JointType *G;
    struct AcJointType *AG;

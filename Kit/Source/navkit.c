@@ -236,14 +236,14 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
 /**********************************************************************/
 /* Given a time in seconds since J2000 TT, find the orientation of    */
 /* the world fixed frame relative to the world's inertial frame       */
-mat3x3 NavGetWorldCWN(const long orbCenter, const DateType date)
+mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
     __attribute__((pure));
-mat3x3 NavGetWorldCWN(const long orbCenter, const DateType date)
+mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
 {
    // TODO: don't use worlds and getworldCWN directly
    struct WorldType *W = &World[orbCenter];
    JDType jd           = Date2JD(date, J2000_EPOCH);
-   mat3x3 CWN          = MAT3X3_EYE;
+   mat3x3_t CWN        = MAT3X3_EYE;
 
    switch (orbCenter) {
       case EARTH: {
@@ -251,14 +251,16 @@ mat3x3 NavGetWorldCWN(const long orbCenter, const DateType date)
             SpiceGetCWJ(jd, EARTH, &CWN);
          else {
             /* .. Earth rotation is a special case */
-            mat3x3 C_TETE_J2000, C_W_TETE;
-            const vec3 ZAxis   = VEC3_PZAXIS;
+            mat3x3_t C_TETE_J2000, C_W_TETE;
+            const vec3_t ZAxis = VEC3_PZAXIS;
             JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
-            double PriMerAng = TwoPi * JD2GMST(jd_tt_j2000);
-            HiFiEarthPrecNute(jd_tt_j2000, &CWN, &C_TETE_J2000);
-            C_W_TETE = SimpRot(ZAxis, PriMerAng);
-            CWN      = MxM(C_W_TETE, C_TETE_J2000);
+            double PriMerAng         = TwoPi * JD2GMST(jd_tt_j2000);
+            const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+            CWN                      = pair.first;
+            C_TETE_J2000             = pair.second;
+            C_W_TETE                 = SimpRot(ZAxis, PriMerAng);
+            CWN                      = MxM(C_W_TETE, C_TETE_J2000);
          }
       } break;
       default:
@@ -270,15 +272,19 @@ mat3x3 NavGetWorldCWN(const long orbCenter, const DateType date)
 //------------------------------------------------------------------------------
 // Acceleration perturbation functions
 //------------------------------------------------------------------------------
-mat3x3 SphericalHarmonicsJacobian(const long N, const long M, const double r,
-                                  const double trigs[4], const double Re,
-                                  const double K, double **C, double **S,
-                                  double **Norm)
+mat3x3_t SphericalHarmonicsJacobian(const long N, const long M,
+                                    const sphere_coord_t coord, const double Re,
+                                    const double K, double **C, double **S,
+                                    double **Norm)
 {
    double P[N + 1][M + 1], sdP[N + 1][M + 1];
    long n, m;
    double cphi[M + 1], sphi[M + 1];
-   double Rern1[N + 1], sth, cth;
+   double Rern1[N + 1];
+
+   const double r   = coord.r;
+   const double cth = coord.cth;
+   const double sth = coord.sth;
 
    /* .. Order can't be greater than Degree */
    if (M > N) {
@@ -287,8 +293,6 @@ mat3x3 SphericalHarmonicsJacobian(const long N, const long M, const double r,
    }
 
    /* .. Find Legendre functions */
-   cth                = trigs[0];
-   sth                = trigs[1]; // sin(theta);
    const double sth2  = sth * sth;
    const double cotth = cth / sth;
    const double r2 = r * r, rsth = r * sth;
@@ -298,8 +302,8 @@ mat3x3 SphericalHarmonicsJacobian(const long N, const long M, const double r,
    /* .. Build cos(m*phi) and sin(m*phi) */
    cphi[0] = 1.0;
    sphi[0] = 0.0;
-   cphi[1] = trigs[2]; // cos(phi);
-   sphi[1] = trigs[3]; // sin(phi);
+   cphi[1] = coord.cph; // cos(phi);
+   sphi[1] = coord.sph; // sin(phi);
    for (m = 2; m <= M; m++) {
       cphi[m] = cphi[m - 1] * cphi[1] - sphi[m - 1] * sphi[1];
       sphi[m] = sphi[m - 1] * cphi[1] + cphi[m - 1] * sphi[1];
@@ -343,7 +347,7 @@ mat3x3 SphericalHarmonicsJacobian(const long N, const long M, const double r,
    d2Vdrdtheta     *= Kr;
    d2Vdphidtheta   *= K;
 
-   mat3x3 HV;
+   mat3x3_t HV;
    HV.mat[0][0] = d2Vdr2;
    HV.mat[1][1] = d2Vdtheta2 / r2;
    HV.mat[2][2] = d2Vdphi2 / rsth2;
@@ -356,35 +360,37 @@ mat3x3 SphericalHarmonicsJacobian(const long N, const long M, const double r,
    return HV;
 }
 
-mat3x3 SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
-                                 mat3x3 CWN, vec3 pbn)
+mat3x3_t SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
+                                   mat3x3_t CWN, vec3_t pbn)
 {
-   double cth, sth, cph, sph;
-   double r;
    long i, j, k;
    const struct SphereHarmType *GravModel = &W->GravModel;
 
-   mat3x3 HV;
-   vec3 gradV = VEC3_ZERO, pbw;
+   mat3x3_t HV;
+   vec3_t gradV = VEC3_ZERO, pbw;
 
    /*    Transform p to ECEF */
    pbw = MxV(CWN, pbn);
 
-   const double denom = sqrt(pbw.y * pbw.y + pbw.x * pbw.x);
-   getTrigSphericalCoords(pbw, &cth, &sth, &cph, &sph, &r);
-   const double trigs[4] = {cth, sth, cph, sph};
+   const double denom   = sqrt(pbw.y * pbw.y + pbw.x * pbw.x);
+   sphere_coord_t coord = getTrigSphericalCoords(pbw);
+   const double r       = coord.r;
+   const double cth     = coord.cth;
+   const double sth     = coord.sth;
+   const double cph     = coord.cph;
+   const double sph     = coord.sph;
 
-   const mat3x3 MSE = {.flat = {pbw.x / r, pbw.y / r, cth, cth * cph, cth * sph,
-                                -sth, -sph, cph, 0.0}};
+   const mat3x3_t MSE = {.flat = {pbw.x / r, pbw.y / r, cth, cth * cph,
+                                  cth * sph, -sth, -sph, cph, 0.0}};
 
    /*    Find Jacobian */
-   HV = SphericalHarmonicsJacobian(N, M, r, trigs, W->rad, W->mu / W->rad,
+   HV = SphericalHarmonicsJacobian(N, M, coord, W->rad, W->mu / W->rad,
                                    GravModel->C, GravModel->S, GravModel->Norm);
 
    /*   Calculate scaled Christoffel Symbols */
    /*     sCS^k_{ij} = CS^k_{ij} * sqrt(g_{kk}) / (sqrt(g_{ii})*sqrt(g_{jj})) */
    /*     due to scaling of gradV and scaling in polar transform */
-   mat3x3 sCS[3] = {MAT3X3_ZERO};
+   mat3x3_t sCS[3] = {MAT3X3_ZERO};
 
    sCS[0].mat[1][1] = -1.0 / r;          // -r * 1 / (r*r) = -1 / r
    sCS[0].mat[2][2] = sCS[0].mat[1][1];  // -rsth*sth * 1 / (rsth*rsth) = -1/r
@@ -398,68 +404,75 @@ mat3x3 SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
    sCS[2].mat[2][0] = sCS[2].mat[0][2];
    sCS[2].mat[2][1] = sCS[2].mat[1][2];
 
-   gradV = SphericalHarmonics(N, M, r, trigs, W->rad, W->mu / W->rad,
-                              GravModel->C, GravModel->S, GravModel->Norm);
+   gradV = SphericalHarmonics(N, M, coord, W->rad, W->mu / W->rad, GravModel->C,
+                              GravModel->S, GravModel->Norm);
    for (k = 0; k < 3; k++)
       for (i = 0; i < 3; i++)
          for (j = 0; j < 3; j++)
             HV.mat[i][j] -= gradV.v[k] * sCS[k].mat[i][j];
 
    /*    Transform back to cartesian coords in Newtonian frame */
-   mat3x3 CSN = MxM(MSE, CWN);
+   mat3x3_t CSN = MxM(MSE, CWN);
    return AdjointT(CSN, HV);
 }
 
-vec3 getGravAccel(const double mu, const vec3 pos) __attribute__((const));
-vec3 getGravAccel(const double mu, const vec3 pos)
+vec3_t getGravAccel(const double mu, const vec3_t pos) __attribute__((const));
+vec3_t getGravAccel(const double mu, const vec3_t pos)
 {
    int i;
-   vec3 posHat, gravFrc;
-   const double posMag    = CopyUnitV(pos, &posHat);
+   vec3_t posHat, gravFrc;
+
+   const magvec3_t uv     = UNITV(pos);
+   const double posMag    = uv.m;
+   posHat                 = uv.v;
    const double gravScale = -mu / (posMag * posMag);
    for (i = 0; i < 3; i++)
       gravFrc.v[i] = posHat.v[i] * gravScale;
    return gravFrc;
 }
 
-mat3x3 getDGravFrcDPos(const double mu, const vec3 pos) __attribute__((const));
-mat3x3 getDGravFrcDPos(const double mu, const vec3 pos)
+mat3x3_t getDGravFrcDPos(const double mu, const vec3_t pos)
+    __attribute__((const));
+mat3x3_t getDGravFrcDPos(const double mu, const vec3_t pos)
 {
    int i, j;
-   vec3 posHat;
-   posHat                 = pos;
-   const double posMag    = UNITV(&posHat);
+   magvec3_t uposHat;
+   uposHat.v           = pos;
+   uposHat             = UNITV(uposHat.v);
+   const double posMag = uposHat.m;
+   const vec3_t posHat = uposHat.v;
+
    const double gravScale = -mu / (posMag * posMag * posMag);
 
-   mat3x3 dGravFrcdPos = MAT3X3_EYE;
+   mat3x3_t dGravFrcdPos = MAT3X3_EYE;
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++)
          dGravFrcdPos.mat[i][j] += -posHat.v[i] * posHat.v[j] * 3.0;
    return SxM(gravScale, dGravFrcdPos);
 }
 
-vec3 ThirdBodyGravAccel(vec3 p, vec3 s, double mu) __attribute__((const));
-vec3 ThirdBodyGravAccel(vec3 p, vec3 s, double mu)
+vec3_t ThirdBodyGravAccel(vec3_t p, vec3_t s, double mu) __attribute__((const));
+vec3_t ThirdBodyGravAccel(vec3_t p, vec3_t s, double mu)
 {
    const double magp = MAGV(p);
    const double mags = MAGV(s);
    const double p3   = magp * magp * magp;
    const double s3   = mags * mags * mags;
-   vec3 accel;
+   vec3_t accel;
    for (long j = 0; j < 3; j++)
       accel.v[j] = mu * (s.v[j] / s3 - p.v[j] / p3);
    return accel;
 }
 
-vec3 NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
-                      const vec3 PosR, const double mass,
-                      const struct OrbitType *O) __attribute__((pure));
-vec3 NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
-                      const vec3 PosR, const double mass,
-                      const struct OrbitType *O)
+vec3_t NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
+                        const vec3_t PosR, const double mass,
+                        const struct OrbitType *O) __attribute__((pure));
+vec3_t NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
+                        const vec3_t PosR, const double mass,
+                        const struct OrbitType *O)
 {
-   vec3 VelRdot = VEC3_ZERO;
-   vec3 ph, pn, pr, s, accelR;
+   vec3_t VelRdot = VEC3_ZERO;
+   vec3_t ph, pn, pr, s, accelR;
    long Iw, Im, j;
    long OrbCenter, SecCenter;
 
@@ -526,8 +539,8 @@ vec3 NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      mat3x3 CWN = NavGetWorldCWN(OrbCenter, *date);
-      vec3 fGeoN, fGeoR, PosN;
+      mat3x3_t CWN = NavGetWorldCWN(OrbCenter, *date);
+      vec3_t fGeoN, fGeoR, PosN;
       PosN  = MTxV(Nav->refCRN, PosR);
       fGeoN = SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, CWN,
                                      mass, PosN);
@@ -538,11 +551,11 @@ vec3 NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    return VelRdot;
 }
 
-mat3x3 NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
-                             vec3 PosR, struct OrbitType const *O)
+mat3x3_t NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
+                               vec3_t PosR, struct OrbitType const *O)
 {
-   mat3x3 dGravDPos = MAT3X3_ZERO, dGdR;
-   vec3 ph, pn, pr, s;
+   mat3x3_t dGravDPos = MAT3X3_ZERO, dGdR;
+   vec3_t ph, pn, pr, s;
    long Iw, Im, i, j;
    long OrbCenter, SecCenter;
 
@@ -611,8 +624,8 @@ mat3x3 NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      mat3x3 CWN, HgeoN, HgeoR;
-      vec3 PosN;
+      mat3x3_t CWN, HgeoN, HgeoR;
+      vec3_t PosN;
       CWN   = NavGetWorldCWN(OrbCenter, *date);
       PosN  = MTxV(Nav->refCRN, PosR);
       HgeoN = SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter,
@@ -633,10 +646,10 @@ mat3x3 NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
 }
 
 void getAeroForceAndTorque(struct DSMType *const DSM,
-                           const mat3x3 CRB __attribute__((unused)),
-                           const vec3 PosR, const vec3 VelR,
+                           const mat3x3_t CRB __attribute__((unused)),
+                           const vec3_t PosR, const vec3_t VelR,
                            double const worldW, double const AtmoDensity,
-                           vec3 *frcR, vec3 *trq)
+                           vec3_t *frcR, vec3_t *trq)
 {
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
@@ -644,7 +657,7 @@ void getAeroForceAndTorque(struct DSMType *const DSM,
    // Higher fidelity model requires information that exists only in SCType
 
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   vec3 worldWR, VrelR, PosRWorld, VrelRHat;
+   vec3_t worldWR, VrelR, PosRWorld, VrelRHat;
    for (int i = 0; i < 3; i++)
       PosRWorld.v[i] = PosR.v[i] + Nav->refPos.v[i];
    for (int i = 0; i < 3; i++)
@@ -653,7 +666,9 @@ void getAeroForceAndTorque(struct DSMType *const DSM,
    for (int i = 0; i < 3; i++)
       VrelR.v[i] += VelR.v[i] + Nav->refVel.v[i];
 
-   const double WindSpeed = CopyUnitV(VrelR, &VrelRHat);
+   const magvec3_t uv     = UNITV(VrelR);
+   const double WindSpeed = uv.m;
+   VrelRHat               = uv.v;
    const double Coef1 = -0.5 * AtmoDensity * WindSpeed * WindSpeed * DSM->mass /
                         Nav->ballisticCoef;
    for (int i = 0; i < 3; i++)
@@ -662,11 +677,11 @@ void getAeroForceAndTorque(struct DSMType *const DSM,
 }
 
 void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
-                            const mat3x3 CRB __attribute__((unused)),
-                            const vec3 PosR, const vec3 VelR,
+                            const mat3x3_t CRB __attribute__((unused)),
+                            const vec3_t PosR, const vec3_t VelR,
                             const double worldW, const double AtmoDensity,
-                            mat3x3 *const dAeroFrcdVRel,
-                            mat3x3 *const dAeroTrqdVRel)
+                            mat3x3_t *const dAeroFrcdVRel,
+                            mat3x3_t *const dAeroTrqdVRel)
 {
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
@@ -674,7 +689,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
    // Higher fidelity model requires information that exists only in SCType
 
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   vec3 worldWR, VrelR, PosRWorld;
+   vec3_t worldWR, VrelR, PosRWorld, VrelRHat;
    for (int i = 0; i < 3; i++)
       PosRWorld.v[i] = PosR.v[i] + Nav->refPos.v[i];
    for (int i = 0; i < 3; i++)
@@ -683,8 +698,9 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
    for (int i = 0; i < 3; i++)
       VrelR.v[i] += VelR.v[i] + Nav->refVel.v[i];
 
-   vec3 VrelRHat;
-   const double WindSpeed = CopyUnitV(VrelR, &VrelRHat);
+   const magvec3_t uv     = UNITV(VrelR);
+   const double WindSpeed = uv.m;
+   VrelRHat               = uv.v;
    const double Coef1 =
        -0.5 * AtmoDensity * WindSpeed * DSM->mass / Nav->ballisticCoef;
 
@@ -703,7 +719,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                          const long Igyro, double **N __attribute__((unused)))
 {
-   vec3 tmp, tmp2;
+   vec3_t tmp, tmp2;
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    const struct DSMNavType *Nav  = &DSM->DsmNav;
@@ -734,7 +750,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
          break;
       case RIEKF_NAV: {
-         vec3 axisR = MxV(Nav->CRB, gyro->Axis);
+         vec3_t axisR = MxV(Nav->CRB, gyro->Axis);
          for (i = 0; i < 3; i++)
             B[0][i] = -axisR.v[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
@@ -769,7 +785,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Imag, double **N __attribute__((unused)))
 {
-   vec3 tmp, tmp2;
+   vec3_t tmp, tmp2;
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    const struct DSMNavType *Nav         = &DSM->DsmNav;
@@ -796,9 +812,9 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
       case RIEKF_NAV: {
-         tmp2       = MxV(Nav->refCRN, AC->bvn);
-         vec3 axisR = MxV(Nav->CRB, mag->Axis);
-         tmp        = VxV(tmp2, axisR);
+         tmp2         = MxV(Nav->refCRN, AC->bvn);
+         vec3_t axisR = MxV(Nav->CRB, mag->Axis);
+         tmp          = VxV(tmp2, axisR);
          for (i = 0; i < 3; i++)
             B[0][i] = tmp.v[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
@@ -823,7 +839,7 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Icss, double **N __attribute__((unused)))
 {
-   vec3 tmp, svb, svr;
+   vec3_t tmp, svb, svr;
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    const struct DSMNavType *Nav = &DSM->DsmNav;
@@ -876,12 +892,12 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Ifss, double **N __attribute__((unused)))
 {
-   mat3x3 B, tmp3x3, CBN;
+   mat3x3_t B, tmp3x3, CBN;
    const struct AcFssType *fss  = &AC->FSS[Ifss];
    const struct DSMNavType *Nav = &DSM->DsmNav;
    static double **tmpAssign    = NULL;
-   vec3 svb, svs, bhat = VEC3_ZERO, hhat = VEC3_ZERO, vhat = VEC3_ZERO;
-   vec3 bxsvs, hxsvs, vxsvs;
+   vec3_t svb, svs, bhat = VEC3_ZERO, hhat = VEC3_ZERO, vhat = VEC3_ZERO;
+   vec3_t bxsvs, hxsvs, vxsvs;
    long i;
 
    const long BoreAxis = fss->BoreAxis;
@@ -965,7 +981,7 @@ double **startrackJacobianFun(struct AcType *const AC,
                               struct DSMType *const DSM, const long Ist,
                               double **N __attribute__((unused)))
 {
-   mat3x3 tmpM, CSB;
+   mat3x3_t tmpM, CSB;
    static double **tmpAssign          = NULL;
    const struct DSMNavType *Nav       = &DSM->DsmNav;
    const struct AcStarTrackerType *st = &AC->ST[Ist];
@@ -1004,8 +1020,8 @@ double **gpsJacobianFun(struct AcType *const AC __attribute__((unused)),
                         struct DSMType *const DSM, const long Igps,
                         double **N __attribute__((unused)))
 {
-   mat3x3 tmp1, tmp2, tmp3, tmpX;
-   vec3 tmpV;
+   mat3x3_t tmp1, tmp2, tmp3, tmpX;
+   vec3_t tmpV;
    static double **tmpAssign    = NULL;
    const struct DSMNavType *Nav = &DSM->DsmNav;
 
@@ -1111,7 +1127,7 @@ double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcGyroType *G   = &AC->Gyro[Ig];
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   vec3 wbn, wrn;
+   vec3_t wbn, wrn;
    long i;
 
    double *gyroEst = calloc(1, sizeof(double));
@@ -1128,8 +1144,8 @@ double *magFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcMagnetometerType *MAG = &AC->MAG[Imag];
    const struct DSMNavType *Nav         = &DSM->DsmNav;
-   vec3 bvb, bvn;
-   mat3x3 CBN;
+   vec3_t bvb, bvn;
+   mat3x3_t CBN;
    const double T2mG = 1.0e7; // tesla to milligauss
 
    double *magEst = calloc(1, sizeof(double));
@@ -1149,8 +1165,8 @@ double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcCssType *css  = &AC->CSS[Icss];
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   vec3 svb;
-   mat3x3 CBN;
+   vec3_t svb;
+   mat3x3_t CBN;
 
    double *IllumEst = calloc(1, sizeof(double));
 
@@ -1166,8 +1182,8 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcFssType *fss  = &AC->FSS[Ifss];
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   vec3 svb, svs;
-   mat3x3 CBN;
+   vec3_t svb, svs;
+   mat3x3_t CBN;
 
    double *SunAngEst = calloc(2, sizeof(double));
 
@@ -1204,7 +1220,7 @@ double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcStarTrackerType *st = &AC->ST[Ist];
    const struct DSMNavType *Nav       = &DSM->DsmNav;
-   quat qbn, qrn, qsnEst;
+   quat_t qbn, qrn, qsnEst;
 
    double *q = calloc(4, sizeof(double));
 
@@ -1221,7 +1237,7 @@ double *gpsFun(struct AcType *const AC __attribute__((unused)),
                const long Igps __attribute__((unused)))
 {
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   vec3 tmp3V, tmpPosN, tmpVelN;
+   vec3_t tmp3V, tmpPosN, tmpVelN;
    long i;
 
    double *posNVelNEst = calloc(6, sizeof(double));
@@ -1233,7 +1249,7 @@ double *gpsFun(struct AcType *const AC __attribute__((unused)),
       tmp3V.v[i] = Nav->VelR.v[i] + Nav->refVel.v[i];
    tmpVelN = MTxV(Nav->refCRN, tmp3V);
    if (Nav->refFrame != FRAME_N) {
-      vec3 wrn, wxr;
+      vec3_t wrn, wxr;
       wrn = MTxV(Nav->refCRN, Nav->refOmega);
       wxr = VxV(wrn, tmpPosN);
       for (i = 0; i < 3; i++)
@@ -1357,16 +1373,16 @@ void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const DateType *date, const mat3x3 CRB,
-                         const quat qbr __attribute__((unused)),
-                         const vec3 PosR, const vec3 VelR, const vec3 wbr,
+                         const DateType *date, const mat3x3_t CRB,
+                         const quat_t qbr __attribute__((unused)),
+                         const vec3_t PosR, const vec3_t VelR, const vec3_t wbr,
                          const double whlH[AC->Nwhl], const double AtmoDensity,
                          double **jacobian)
 {
-   mat3x3 tmpM, tmpM2, tmpM3;
-   vec3 tmpV, tmpV2, tmpV3;
+   mat3x3_t tmpM, tmpM2, tmpM3;
+   vec3_t tmpV, tmpV2, tmpV3;
    static double **tmpAssign = NULL;
-   vec3 wrnd;
+   vec3_t wrnd;
    struct DSMNavType *Nav = &DSM->DsmNav;
    long i, j, rowInd;
 
@@ -1513,9 +1529,9 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       if (DSM->refOrb->Regime == ORB_CENTRAL) {
-         long orbCenter       = DSM->refOrb->World;
-         mat3x3 dAeroFrcdVRel = MAT3X3_ZERO, dAeroTrqdVRel = MAT3X3_ZERO;
-         vec3 worldWR = VEC3_ZERO;
+         long orbCenter         = DSM->refOrb->World;
+         mat3x3_t dAeroFrcdVRel = MAT3X3_ZERO, dAeroTrqdVRel = MAT3X3_ZERO;
+         vec3_t worldWR = VEC3_ZERO;
          if (AeroActive) {
             double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
@@ -1533,9 +1549,9 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                switch (state) {
                   case VEL_STATE:
                      if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
-                        vec3 VelRdot = VEC3_ZERO;
+                        vec3_t VelRdot = VEC3_ZERO;
                         if (GravPertActive) {
-                           vec3 accelR = VEC3_ZERO;
+                           vec3_t accelR = VEC3_ZERO;
                            for (i = 0; i < 3; i++)
                               tmpV.v[i] = PosR.v[i] + Nav->refPos.v[i];
                            accelR = NavGravPertAccel(Nav, date, tmpV, 1.0,
@@ -1645,15 +1661,15 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 {
-   vec3 theta, tmpV, dr, dv, dw;
-   mat3x3 dR, tmpM;
+   vec3_t theta, tmpV, dr, dv, dw;
+   mat3x3_t dR, tmpM;
    long i;
 
    const long nRVec = Nav->stateActive[POS_STATE] + Nav->stateActive[VEL_STATE];
    const long nBVec = Nav->stateActive[OMEGA_STATE];
 
-   vec3 x[nRVec];
-   vec3 xbar[nBVec];
+   vec3_t x[nRVec];
+   vec3_t xbar[nBVec];
 
    long curRInd = 0, curBInd = 0;
    FOR_STATES(state)
@@ -1673,7 +1689,7 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
    for (i = 0; i < 3; i++)
       theta.v[i] = -Nav->delta[i + Nav->navInd[ROTMAT_STATE]];
 
-   expmTFG(&theta, nRVec, nBVec, x, xbar, &dR);
+   expmTFG(theta, nRVec, nBVec, x, xbar, &dR);
    curRInd = 0, curBInd = 0;
    FOR_STATES(state)
    {
@@ -1714,14 +1730,14 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const DateType *date, const mat3x3 CRB,
-                         const quat qbr __attribute__((unused)),
-                         const vec3 PosR, const vec3 VelR, const vec3 wbr,
+                         const DateType *date, const mat3x3_t CRB,
+                         const quat_t qbr __attribute__((unused)),
+                         const vec3_t PosR, const vec3_t VelR, const vec3_t wbr,
                          const double whlH[AC->Nwhl], const double AtmoDensity,
                          double **jacobian)
 {
-   mat3x3 tmpM, tmpM2, tmpM3;
-   vec3 tmpV, tmpV2, tmpV3, wrnd = VEC3_ZERO;
+   mat3x3_t tmpM, tmpM2, tmpM3;
+   vec3_t tmpV, tmpV2, tmpV3, wrnd = VEC3_ZERO;
    static double **tmpAssign = NULL;
    struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, rowInd;
@@ -1740,7 +1756,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    }
    memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
-   vec3 aeroTrq, aeroFrc;
+   vec3_t aeroTrq, aeroFrc;
    if (AeroActive) {
       const long orbCenter = DSM->refOrb->World;
       getAeroForceAndTorque(DSM, CRB, PosR, VelR,
@@ -1900,9 +1916,9 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       if (DSM->refOrb->Regime == ORB_CENTRAL) {
-         long orbCenter       = DSM->refOrb->World;
-         mat3x3 dAeroFrcdVRel = MAT3X3_ZERO, dAeroTrqdVRel = MAT3X3_ZERO;
-         vec3 worldWR = VEC3_ZERO;
+         long orbCenter         = DSM->refOrb->World;
+         mat3x3_t dAeroFrcdVRel = MAT3X3_ZERO, dAeroTrqdVRel = MAT3X3_ZERO;
+         vec3_t worldWR = VEC3_ZERO;
          if (AeroActive) {
             double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
@@ -1979,15 +1995,15 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 {
-   mat3x3 dR, tmpM;
-   vec3 theta, dr, dv, dw, tmpV;
+   mat3x3_t dR, tmpM;
+   vec3_t theta, dr, dv, dw, tmpV;
    long i;
 
    long nRVec = Nav->stateActive[POS_STATE] + Nav->stateActive[VEL_STATE];
    long nBVec = Nav->stateActive[OMEGA_STATE];
 
-   vec3 x[nRVec];
-   vec3 xbar[nBVec];
+   vec3_t x[nRVec];
+   vec3_t xbar[nBVec];
 
    long curRInd = 0, curBInd = 0;
    FOR_STATES(state)
@@ -2007,7 +2023,7 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
    for (i = 0; i < 3; i++)
       theta.v[i] = -Nav->delta[i + Nav->navInd[ROTMAT_STATE]];
 
-   expmTFG(&theta, nRVec, nBVec, x, xbar, &dR);
+   expmTFG(theta, nRVec, nBVec, x, xbar, &dR);
    curRInd = 0, curBInd = 0;
    FOR_STATES(state)
    {
@@ -2050,14 +2066,14 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const DateType *date, const mat3x3 CRB, const quat qbr,
-                        const vec3 PosR, const vec3 VelR, const vec3 wbr,
-                        const double whlH[AC->Nwhl], const double AtmoDensity,
-                        double **jacobian)
+                        const DateType *date, const mat3x3_t CRB,
+                        const quat_t qbr, const vec3_t PosR, const vec3_t VelR,
+                        const vec3_t wbr, const double whlH[AC->Nwhl],
+                        const double AtmoDensity, double **jacobian)
 {
-   mat3x3 tmpM, tmpM2, tmpM3;
-   vec3 tmpV, tmpV2, tmpV3;
-   vec3 wrnd                 = VEC3_ZERO;
+   mat3x3_t tmpM, tmpM2, tmpM3;
+   vec3_t tmpV, tmpV2, tmpV3;
+   vec3_t wrnd               = VEC3_ZERO;
    static double **tmpAssign = NULL;
    struct DSMNavType *Nav    = &DSM->DsmNav;
    long i, rowInd;
@@ -2170,8 +2186,8 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
       }
       if (DSM->refOrb->Regime == ORB_CENTRAL) {
          long orbCenter = DSM->refOrb->World;
-         mat3x3 dAeroFrcdVRel, dAeroTrqdVRel;
-         vec3 worldWR = VEC3_ZERO;
+         mat3x3_t dAeroFrcdVRel, dAeroTrqdVRel;
+         vec3_t worldWR = VEC3_ZERO;
          if (AeroActive) {
             double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
@@ -2246,8 +2262,8 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 void MEKFUpdateLaw(struct DSMNavType *const Nav)
 {
-   quat q, dq = QUAT_EYE;
-   mat3x3 tmpM;
+   quat_t q, dq = QUAT_EYE;
+   mat3x3_t tmpM;
 
    for (int i = 0; i < 3; i++) {
       dq.qv.v[i]      = -Nav->delta[i + Nav->navInd[QUAT_STATE]] / 2.0;
@@ -2267,7 +2283,7 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav)
 /******************************************************************************/
 double **GetStateLinTForm(struct DSMNavType *const Nav)
 {
-   mat3x3 tmpM;
+   mat3x3_t tmpM;
    double **tForm;
    static double **tmpAssign = NULL;
    long i;
@@ -2372,7 +2388,7 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const long reset)
 {
    // set up reference frame. Not a fan of effectively using truth data for it
-   vec3 targetPosN, targetVelN;
+   vec3_t targetPosN, targetVelN;
 
    if (reset == TRUE)
       *lerp_alpha = 1.0;
@@ -2441,7 +2457,7 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
          break;
    }
    if (Nav->refFrame != FRAME_N) {
-      vec3 refPos, refVel, wxr;
+      vec3_t refPos, refVel, wxr;
       refPos      = MxV(Nav->refCRN, Nav->refPos);
       Nav->refPos = refPos;
       refVel      = MxV(Nav->refCRN, Nav->refVel);
@@ -2465,10 +2481,10 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
 }
 
 void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
-          const mat3x3 CRB, const quat qbr __attribute__((unused)),
-          const vec3 PosR, const vec3 VelR, const vec3 wbr, double **M)
+          const mat3x3_t CRB, const quat_t qbr __attribute__((unused)),
+          const vec3_t PosR, const vec3_t VelR, const vec3_t wbr, double **M)
 {
-   mat3x3 tmp3x3, MOIInv;
+   mat3x3_t tmp3x3, MOIInv;
    long i, j;
 
    memset(M, 0, sizeof(double) * Nav->navDim * Nav->navDim);
@@ -2543,7 +2559,7 @@ void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
 }
 
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
-                       const mat3x3 CRB, const double *whlH)
+                       const mat3x3_t CRB, const double *whlH)
 {
    long j;
 
@@ -2567,14 +2583,14 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
          for (int i = 0; i < 3; i++)
             Nav->torqueB.v[i] -= whl->Tcmd * whl->Axis.v[i];
    }
-   vec3 bvb;
-   mat3x3 CBN;
+   vec3_t bvb;
+   mat3x3_t CBN;
    CBN = MTxM(CRB, Nav->refCRN);
    bvb = MxV(CBN, AC->bvn);
    for (j = 0; j < AC->Nmtb; j++) {
       const struct AcMtbType *mtb = &AC->MTB[j];
 
-      vec3 AxBvb = VxV(mtb->Axis, bvb);
+      vec3_t AxBvb = VxV(mtb->Axis, bvb);
       for (int i = 0; i < 3; i++)
          Nav->torqueB.v[i] -= mtb->Mcmd * AxBvb.v[i];
    }
@@ -2620,10 +2636,10 @@ void NavSkDot(const long nav_dim, double **sk, double **F, double **M_sqrtQ,
 }
 
 void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
-             const DateType *date, const mat3x3 CRB, const quat qbr,
-             const vec3 PosR, const vec3 VelR, const vec3 wbr,
-             const double *whlH, double **Sk, mat3x3 *CRBdot, quat *qbrdot,
-             vec3 *PosRdot, vec3 *VelRdot, vec3 *wbrdot, double *whlHdot,
+             const DateType *date, const mat3x3_t CRB, const quat_t qbr,
+             const vec3_t PosR, const vec3_t VelR, const vec3_t wbr,
+             const double *whlH, double **Sk, mat3x3_t *CRBdot, quat_t *qbrdot,
+             vec3_t *PosRdot, vec3_t *VelRdot, vec3_t *wbrdot, double *whlHdot,
              double **Skdot, const double AtmoDensity)
 {
    long i, j;
@@ -2640,7 +2656,7 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
 
    NavSkDot(navDim, Sk, Nav->NxN, Nav->NxN2, Skdot);
 
-   vec3 aeroFrc, aeroTrq;
+   vec3_t aeroFrc, aeroTrq;
    const long orbCenter          = DSM->refOrb->World;
    enum orbitRegime const regime = DSM->refOrb->Regime;
    if (AeroActive && regime == ORB_CENTRAL) {
@@ -2654,8 +2670,8 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
    {
       if (Nav->stateActive[iState] == TRUE) {
          double **pM3x3;
-         mat3x3 wbrX;
-         vec3 tmpV, tmpV2, wbn;
+         mat3x3_t wbrX;
+         vec3_t tmpV, tmpV2, wbn;
          switch (iState) {
             case TIME_STATE:
                break;
@@ -2672,7 +2688,7 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                   tmpV = MTxV(CRB, Nav->refOmega);
                   wbn  = VpVElem(wbn, tmpV);
                }
-               vec3 Hb = MxV(DSM->MOI, wbn);
+               vec3_t Hb = MxV(DSM->MOI, wbn);
 
                for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                   for (i = 0; i < 3; i++)
@@ -2709,7 +2725,7 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                }
 
                if (GravPertActive) {
-                  vec3 accelR;
+                  vec3_t accelR;
                   tmpV   = VpVElem(PosR, Nav->refPos);
                   accelR = NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb);
                   *VelRdot = VpVElem(*VelRdot, accelR);
@@ -2769,7 +2785,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    if (init == TRUE) {
       if (AeroActive) {
          const long orbCenter = DSM->refOrb->World;
-         vec3 worldWR, VrelR, PosN, PosRWorld;
+         vec3_t worldWR, VrelR, PosN, PosRWorld;
          PosRWorld           = VpVElem(Nav->PosR, Nav->refPos);
          const double worldw = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
          for (i = 0; i < 3; i++)
@@ -2781,8 +2797,8 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
          if (orbCenter == EARTH) {
             double NavFlux10p7, NavGeomagIndex;
             double Alt;
-            vec3 PosW;
-            mat3x3 CWN;
+            vec3_t PosW;
+            mat3x3_t CWN;
 
             if (EphemOption == 3) {
                JDType jd = ccsds2jd(*cur_ccsds);
@@ -2815,9 +2831,9 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    double dLerpAlpha = 0.0;
    double lerpAlphak = Nav->refLerpAlpha;
    // RK4
-   mat3x3 CRBk[ORDRK];
-   quat qbrk[ORDRK];
-   vec3 PosRk[ORDRK], VelRk[ORDRK], wbrk[ORDRK];
+   mat3x3_t CRBk[ORDRK];
+   quat_t qbrk[ORDRK];
+   vec3_t PosRk[ORDRK], VelRk[ORDRK], wbrk[ORDRK];
    double **Skk[ORDRK] = {NULL};
    for (k = 0; k < ORDRK; k++)
       Skk[k] = CreateMatrix(Nav->navDim, Nav->navDim);
@@ -2835,9 +2851,9 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       date          = updateTime(date, dateOffset + DTk[k]);
       lerpAlphak    = Nav->refLerpAlpha;
       dLerpAlpha    = DTk[k] / Nav->DT;
-      mat3x3 CRB;
-      quat qbr;
-      vec3 PosR, VelR, wbr;
+      mat3x3_t CRB;
+      quat_t qbr;
+      vec3_t PosR, VelR, wbr;
       double whlH[AC->Nwhl];
 
       for (i = 0; i < Nav->navDim; i++)
@@ -2858,7 +2874,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
          FOR_STATES(Istate)
          {
             if (Nav->stateActive[Istate] == TRUE) {
-               mat3x3 CBR;
+               mat3x3_t CBR;
                switch (Istate) {
                   case TIME_STATE:
                      // incremented by DT after this function is called
@@ -2917,7 +2933,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    FOR_STATES(Istate)
    {
       if (Nav->stateActive[Istate] == TRUE) {
-         mat3x3 CBR;
+         mat3x3_t CBR;
          switch (Istate) {
             case TIME_STATE:
                // incremented by DT at end of this function
@@ -2929,7 +2945,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
                      Nav->CRB.flat[i] += rkScale[k] * CRBk->flat[i];
 #elif ORDRK == 1
                CRB = MTxM(Nav->CRB, CRBk[0]);
-               vec3 tmpV;
+               vec3_t tmpV;
                tmpV.x   = CRB.mat[2][1] * rkScale[0];
                tmpV.y   = CRB.mat[0][2] * rkScale[0];
                tmpV.z   = CRB.mat[1][0] * rkScale[0];
@@ -2949,8 +2965,9 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 4; i++)
                      Nav->qbr.q[i] += rkScale[k] * qbrk[k].q[i];
 #elif ORDRK == 1
-               qbr         = QxQT(qbrk[0], Nav->qbr);
-               double tmag = UNITV(qbr) * rkScale[0];
+               qbr               = QxQT(qbrk[0], Nav->qbr);
+               magvec3_t uq      = UNITV(qbr.qv) * rkScale[0];
+               const double tmag = uq.m * rkScale[0];
                if (tmag > __DBL_EPSILON__) {
                   double stmag = sin(tmag);
                   qbrk[0].qv   = SxV(stmag, qbr.qv);
@@ -3000,18 +3017,18 @@ void CalcInnovation(const enum SensorType type,
 {
    switch (type) {
       case STARTRACK_SENSOR: {
-         const quat q_data = {.x = meas->data[0],
-                              .y = meas->data[1],
-                              .z = meas->data[2],
-                              .s = meas->data[3]};
-         const quat q_est  = {.x = meas_est[0],
-                              .y = meas_est[1],
-                              .z = meas_est[2],
-                              .s = meas_est[3]};
-         vec3 inn_v        = Q2AngleVec(QxQT(q_data, q_est));
-         innovation[0]     = inn_v.x;
-         innovation[1]     = inn_v.y;
-         innovation[2]     = inn_v.z;
+         const quat_t q_data = {.x = meas->data[0],
+                                .y = meas->data[1],
+                                .z = meas->data[2],
+                                .s = meas->data[3]};
+         const quat_t q_est  = {.x = meas_est[0],
+                                .y = meas_est[1],
+                                .z = meas_est[2],
+                                .s = meas_est[3]};
+         vec3_t inn_v        = Q2AngleVec(QxQT(q_data, q_est));
+         innovation[0]       = inn_v.x;
+         innovation[1]       = inn_v.y;
+         innovation[2]       = inn_v.z;
       } break;
       default:
          for (int i = 0; i < meas->errDim; i++)

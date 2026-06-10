@@ -23,7 +23,7 @@
 void PassiveJoint(struct JointType *G, struct SCType *S __attribute__((unused)))
 {
    long i;
-   vec3 a;
+   vec3_t a;
 
    if (G->IsSpherical) {
       a = Q2AngleVec(G->q);

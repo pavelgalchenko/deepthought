@@ -63,7 +63,7 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const struct OrbitType *refOrb, const double dLerpAlpha,
                        const long reset);
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
-                       const mat3x3 CRB, const double *whlH);
+                       const mat3x3_t CRB, const double *whlH);
 void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
                   CCSDSTime *const cur_ccsds, const CCSDSTime next_ccsds,
                   const long init);
@@ -127,10 +127,10 @@ __attribute__((malloc, unused)) double *accelFun(struct AcType *const AC,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const DateType *date, const mat3x3 CRB, const quat qbr,
-                         const vec3 PosR, const vec3 VelR, const vec3 wbr,
-                         const double whlH[AC->Nwhl], const double AtmoDensity,
-                         double **jacobian);
+                         const DateType *date, const mat3x3_t CRB,
+                         const quat_t qbr, const vec3_t PosR, const vec3_t VelR,
+                         const vec3_t wbr, const double whlH[AC->Nwhl],
+                         const double AtmoDensity, double **jacobian);
 void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
@@ -138,10 +138,10 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const DateType *date, const mat3x3 CRB, const quat qbr,
-                         const vec3 PosR, const vec3 VelR, const vec3 wbr,
-                         const double whlH[AC->Nwhl], const double AtmoDensity,
-                         double **jacobian);
+                         const DateType *date, const mat3x3_t CRB,
+                         const quat_t qbr, const vec3_t PosR, const vec3_t VelR,
+                         const vec3_t wbr, const double whlH[AC->Nwhl],
+                         const double AtmoDensity, double **jacobian);
 void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /*--------------------------------------------------------------------*/
@@ -149,10 +149,10 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav);
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const DateType *date, const mat3x3 CRB, const quat qbr,
-                        const vec3 PosR, const vec3 VelR, const vec3 wbr,
-                        const double whlH[AC->Nwhl], const double AtmoDensity,
-                        double **jacobian);
+                        const DateType *date, const mat3x3_t CRB,
+                        const quat_t qbr, const vec3_t PosR, const vec3_t VelR,
+                        const vec3_t wbr, const double whlH[AC->Nwhl],
+                        const double AtmoDensity, double **jacobian);
 void MEKFUpdateLaw(struct DSMNavType *const Nav);
 
 /******************************************************************************/

@@ -20,13 +20,12 @@
 */
 
 /**********************************************************************/
-vec3 SphericalHarmGravForce(const long N, const long M,
-                            const struct WorldType *W, mat3x3 CWN,
-                            const double mass, const vec3 pbn)
+vec3_t SphericalHarmGravForce(const long N, const long M,
+                              const struct WorldType *W, mat3x3_t CWN,
+                              const double mass, const vec3_t pbn)
 {
-   double cth, sth, cph, sph;
-   double r, Fr, Fth, Fph;
-   vec3 pbw, Fe, gradV = VEC3_ZERO;
+   double Fr, Fth, Fph;
+   vec3_t pbw, Fe, gradV = VEC3_ZERO;
    const struct SphereHarmType *GravModel = &W->GravModel;
 
 #ifdef _DEBUG_GRAV_
@@ -35,7 +34,7 @@ vec3 SphericalHarmGravForce(const long N, const long M,
    static int reporting  = 0;
    static FILE *gravFile = NULL;
    static double theta, phi;
-   mat3x3 eye3 = MAT3X3_EYE;
+   mat3x3_t eye3 = MAT3X3_EYE;
    if (!first && !strcmp(W->Name, "Earth")) {
       first = 1;
       extern char OutPath[1000];
@@ -44,15 +43,15 @@ vec3 SphericalHarmGravForce(const long N, const long M,
       reporting = 1;
       for (theta = 0.5; theta <= 179.5; theta += 0.5) {
          for (phi = -180.0; phi < 180.0; phi += 0.5) {
-            cth       = cos(theta * D2R);
-            sth       = sin(theta * D2R);
-            cph       = cos(phi * D2R);
-            sph       = sin(phi * D2R);
-            vec3 rvec = VEC3_ZERO;
-            rvec.v[0] = r * sth * cph;
-            rvec.v[1] = r * sth * sph;
-            rvec.v[2] = r * cth;
-            vec3 out  = SphericalHarmGravForce(N, M, W, eye3, mass, rvec);
+            cth         = cos(theta * D2R);
+            sth         = sin(theta * D2R);
+            cph         = cos(phi * D2R);
+            sph         = sin(phi * D2R);
+            vec3_t rvec = VEC3_ZERO;
+            rvec.v[0]   = r * sth * cph;
+            rvec.v[1]   = r * sth * sph;
+            rvec.v[2]   = r * cth;
+            vec3_t out  = SphericalHarmGravForce(N, M, W, eye3, mass, rvec);
          }
       }
       reporting = 0;
@@ -62,11 +61,14 @@ vec3 SphericalHarmGravForce(const long N, const long M,
 
    if (GravModel->C != NULL && GravModel->N >= 2) {
       /*    Transform p to spherical coords in World frame */
-      pbw = MxV(CWN, pbn);
-      getTrigSphericalCoords(pbw, &cth, &sth, &cph, &sph, &r);
-      const double trigs[4] = {cth, sth, cph, sph};
+      pbw                  = MxV(CWN, pbn);
+      sphere_coord_t coord = getTrigSphericalCoords(pbw);
+      const double cth     = coord.cth;
+      const double sth     = coord.sth;
+      const double cph     = coord.cph;
+      const double sph     = coord.sph;
 
-      gradV = SphericalHarmonics(N, M, r, trigs, GravModel->r_ref,
+      gradV = SphericalHarmonics(N, M, coord, GravModel->r_ref,
                                  W->mu / GravModel->r_ref, GravModel->C,
                                  GravModel->S, GravModel->Norm);
       Fr    = mass * gradV.v[0];
@@ -94,8 +96,8 @@ vec3 SphericalHarmGravForce(const long N, const long M,
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
-vec3 IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
-                  const long M, const vec3 pbn, const double PriMerAng)
+vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
+                    const long M, const vec3_t pbn, const double PriMerAng)
 {
    static double **C = NULL, **S = NULL, **Norm = NULL;
 #define nYears 26
@@ -105,11 +107,11 @@ vec3 IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
                        1935.0, 1940.0, 1945.0, 1950.0, 1955.0, 1960.0, 1965.0,
                        1970.0, 1975.0, 1980.0, 1985.0, 1990.0, 1995.0, 2000.0,
                        2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
-   double cth, sth, cph, sph;
-   double r, Br, Bth, Bph;
-   vec3 pbe, gradV, BVE;
-   const vec3 AXIS = VEC3_PZAXIS;
-   mat3x3 CEN;
+
+   double Br, Bth, Bph;
+   vec3_t pbe, gradV, BVE;
+   const vec3_t AXIS = VEC3_PZAXIS;
+   mat3x3_t CEN;
    const double Re    = 6371200.0;
    static long First  = 1;
    static long warned = 0;
@@ -193,11 +195,11 @@ vec3 IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
             sth = sin(theta * D2R);
             cph = cos(phi * D2R);
             sph = sin(phi * D2R);
-            vec3 rvec;
-            rvec.v[0] = r * sth * cph;
-            rvec.v[1] = r * sth * sph;
-            rvec.v[2] = r * cth;
-            vec3 out  = IGRFMagField(ModelPath, UTC, N, M, rvec, 0);
+            vec3_t rvec;
+            rvec.v[0]  = r * sth * cph;
+            rvec.v[1]  = r * sth * sph;
+            rvec.v[2]  = r * cth;
+            vec3_t out = IGRFMagField(ModelPath, UTC, N, M, rvec, 0);
          }
       }
       reporting = 0;
@@ -244,12 +246,15 @@ vec3 IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
    CEN = SimpRot(AXIS, PriMerAng);
 
    /*    Transform p to spherical coords in Earth frame */
-   pbe = MxV(CEN, pbn);
-   getTrigSphericalCoords(pbe, &cth, &sth, &cph, &sph, &r);
-   const double trigs[4] = {cth, sth, cph, sph};
+   pbe                  = MxV(CEN, pbn);
+   sphere_coord_t coord = getTrigSphericalCoords(pbe);
+   const double cth     = coord.cth;
+   const double sth     = coord.sth;
+   const double cph     = coord.cph;
+   const double sph     = coord.sph;
 
    /*    Find Br, Bth, Bph */
-   gradV = SphericalHarmonics(N, M, r, trigs, Re, Re, C, S, Norm);
+   gradV = SphericalHarmonics(N, M, coord, Re, Re, C, S, Norm);
    Br    = -gradV.v[0];
    Bth   = -gradV.v[1];
    Bph   = -gradV.v[2];
@@ -278,26 +283,29 @@ vec3 IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
 
 /**********************************************************************/
 /*  Computes planetary dipole magnetic field vector at S/C position.  */
-vec3 DipoleMagField(double DipoleMoment, vec3 DipoleAxis, vec3 DipoleOffset,
-                    vec3 p, double PriMerAng)
+vec3_t DipoleMagField(double DipoleMoment, vec3_t DipoleAxis,
+                      vec3_t DipoleOffset, vec3_t p, double PriMerAng)
 {
-   double R3, MoR;
-   vec3 R, PCN, MN;
-   vec3 AXIS = VEC3_PZAXIS;
+   double MoR;
+   vec3_t PCN, MN;
+   vec3_t AXIS = VEC3_PZAXIS;
+   magvec3_t uR;
+   vec3_t *const R  = &uR.v;
+   double *const R3 = &uR.m;
    long i;
 
-   mat3x3 CEN = SimpRot(AXIS, PriMerAng);
+   mat3x3_t CEN = SimpRot(AXIS, PriMerAng);
 
    PCN = MTxV(CEN, DipoleOffset);
    for (i = 0; i < 3; i++)
-      R.v[i] = p.v[i] - PCN.v[i];
-   R3  = UNITV(&R);
-   R3  = R3 * R3 * R3;
+      R->v[i] = p.v[i] - PCN.v[i];
+   uR  = UNITV(*R);
+   *R3 = (*R3) * (*R3) * (*R3);
    MN  = MTxV(CEN, DipoleAxis);
-   MoR = VoV(MN, R);
-   vec3 MagVecN;
+   MoR = VoV(MN, *R);
+   vec3_t MagVecN;
    for (i = 0; i < 3; i++)
-      MagVecN.v[i] = DipoleMoment / R3 * (3.0 * MoR * R.v[i] - MN.v[i]);
+      MagVecN.v[i] = DipoleMoment / (*R3) * (3.0 * MoR * R->v[i] - MN.v[i]);
    return MagVecN;
 }
 /**********************************************************************/
@@ -326,7 +334,7 @@ double KpToAp(double Kp)
 /* Earth's Atmosphere", NASA SP-8021, May 1969.  It is a modification */
 /* of the Jacchia model.  Range of validity is from 120 km to 1000 km */
 /* altitude.                                                          */
-double JacchiaRoberts(vec3 pbn, vec3 svn, double F10p7, double Ap)
+double JacchiaRoberts(vec3_t pbn, vec3_t svn, double F10p7, double Ap)
 {
 #define ERAD 6378.145E3
    double N[5], Fbar, F, logT, sinth25;
@@ -425,7 +433,7 @@ double JacchiaRoberts(vec3 pbn, vec3 svn, double F10p7, double Ap)
 /*  on MSIS-86, averaged to be a function of altitude only, and       */
 /*  F10.7 chosen so that the density is according to the column.      */
 /*  Col = 0 (Min), 1, (Mean), or 2 (Max) as defined in table.         */
-double SimpleMSIS(vec3 pbn, long Col)
+double SimpleMSIS(vec3_t pbn, long Col)
 {
    double AltTable[22]    = {0.0,   100.0,  150.0,  200.0, 250.0, 300.0,
                              350.0, 400.0,  450.0,  500.0, 550.0, 600.0,
@@ -485,7 +493,7 @@ double SimpleMSIS(vec3 pbn, long Col)
 /**********************************************************************/
 /* This simple model is taken from                                    */
 /* http://www.grc.nasa.gov/WWW/K-12/airplane/atmosmrm.html            */
-double MarsAtmosphereModel(vec3 r)
+double MarsAtmosphereModel(vec3_t r)
 {
    double Alt, T, p;
    double MarsRad = 3410.0E3;
@@ -512,17 +520,22 @@ double MarsAtmosphereModel(vec3 r)
 /* (TETE) frame to J2000 frame.  Ref "The Astronomical Almanac",      */
 /* QB8.U5, 2003, p. B18,B20.                                          */
 /* TEME to TETE rotation from Montenbruck adn Gill (TL1080.M66)       */
-void SimpleEarthPrecNute(double JD, mat3x3 *const C_TEME_TETE,
-                         mat3x3 *const C_TETE_J2000)
+pair_mat3x3_t SimpleEarthPrecNute(JDType jd_tt_j2000)
 {
    double d, arg1, arg2, dpsi, deps, eps;
    double T, z, theta, zeta;
-   mat3x3 N, P;
+   mat3x3_t N, P;
    double c1, s1, c2, s2, c3, s3;
    double dR;
+   pair_mat3x3_t pair;
+   mat3x3_t *const C_TEME_TETE  = &pair.first;
+   mat3x3_t *const C_TETE_J2000 = &pair.second;
+
+   jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
+   const double days_tt_j2000 = JDToDays(jd_tt_j2000);
 
    /* TETE to MEME (Nutation) */
-   d    = JD - 2452639.5;
+   d    = days_tt_j2000 - 1094.5;
    arg1 = (67.1 - 0.053 * d) * D2R;
    arg2 = (198.5 + 1.971 * d) * D2R;
    dpsi = (-0.0048 * sin(arg1) - 0.0004 * sin(arg2)) * D2R;
@@ -540,7 +553,7 @@ void SimpleEarthPrecNute(double JD, mat3x3 *const C_TEME_TETE,
    N.mat[0][1] = -N.mat[1][0];
 
    /* MEME to J2000 (Precession) */
-   T     = (JD - 2451545.0) / 36525.0;
+   T     = days_tt_j2000 / 36525.0;
    z     = D2R * ((0.6406161 + (3.041E-4 + 5.10E-6 * T) * T) * T);
    theta = D2R * ((0.5567530 - (1.185E-4 + 1.16E-5 * T) * T) * T);
    zeta  = D2R * ((0.6406161 + (8.390E-5 + 5.00E-6 * T) * T) * T);
@@ -603,21 +616,24 @@ void SimpleEarthPrecNute(double JD, mat3x3 *const C_TEME_TETE,
    C_TEME_TETE->mat[0][2] = 0.0;
    C_TEME_TETE->mat[1][2] = 0.0;
    C_TEME_TETE->mat[2][2] = 1.0;
+   return pair;
 }
 /**********************************************************************/
 /* Ref Montenbruck and Gill, "Satellite Orbits: Models, Methods,      */
 /* Applications", TL1080.M66                                          */
-void HiFiEarthPrecNute(JDType jd_tt_j2000, mat3x3 *C_TEME_TETE,
-                       mat3x3 *C_TETE_J2000)
+pair_mat3x3_t HiFiEarthPrecNute(JDType jd_tt_j2000)
 {
 
-   mat3x3 P, N;
+   mat3x3_t P, N;
    long i;
    double T, zeta, z, theta;
    double cos_zeta, sin_zeta, cos_theta, sin_theta, cos_z, sin_z;
    double dpsi, de, l, lp, F, D, Om, phi, e, ep;
    double cos_e, sin_e, cos_ep, sin_ep, cos_dpsi, sin_dpsi;
    double dR, cos_dR, sin_dR;
+   pair_mat3x3_t pair;
+   mat3x3_t *const C_TEME_TETE  = &pair.first;
+   mat3x3_t *const C_TETE_J2000 = &pair.second;
 
    static const double pl[106] = {
        0, 0,  -2, 2,  -2, 1,  0,  2, 0,  0,  0,  0,  0, 2,  0,  0,  0, 0,
@@ -769,11 +785,12 @@ void HiFiEarthPrecNute(JDType jd_tt_j2000, mat3x3 *C_TEME_TETE,
    C_TEME_TETE->mat[1][0] = -sin_dR;
    C_TEME_TETE->mat[0][1] = sin_dR;
    C_TEME_TETE->mat[1][1] = cos_dR;
+   return pair;
 }
 /**********************************************************************/
 /* http://en.wikipedia.org/wiki/Geodetic_system#Geodetic_versus_geocentric_latitude
  */
-vec3 WGS84ToECEF(double glat, double glong, double alt)
+vec3_t WGS84ToECEF(double glat, double glong, double alt)
 {
    double a  = 6378137.0;
    double f  = 1.0 / 298.257222101;
@@ -787,14 +804,14 @@ vec3 WGS84ToECEF(double glat, double glong, double alt)
    SinLng = sin(glong);
 
    X = sqrt(1.0 - e2 * SinLat * SinLat);
-   vec3 p;
+   vec3_t p;
    p.x = (a / X + alt) * CosLat * CosLng;
    p.y = (a / X + alt) * CosLat * SinLng;
    p.z = (a / X * (1.0 - e2) + alt) * SinLat;
    return p;
 }
 /**********************************************************************/
-void ECEFToWGS84(vec3 p, double *glat, double *glong, double *alt)
+void ECEFToWGS84(vec3_t p, double *glat, double *glong, double *alt)
 {
    double a   = 6378137.0;
    double f   = 1.0 / 298.257222101;
@@ -851,13 +868,13 @@ void ECEFToWGS84(vec3 p, double *glat, double *glong, double *alt)
 /**********************************************************************/
 /* Ref Werner and Scheeres, "Exterior Gravitation of a Polyhedron ..." */
 /* Returns 1 if PosN is outside polyhedron, 0 if inside */
-long PolyhedronGravAcc(struct GeomType *G, double Density, vec3 PosN,
-                       mat3x3 CWN, vec3 *const GravAccN)
+long PolyhedronGravAcc(struct GeomType *G, double Density, vec3_t PosN,
+                       mat3x3_t CWN, vec3_t *const GravAccN)
 {
    struct EdgeType *E;
    struct PolyType *P;
-   vec3 *V1, *V2, *V3;
-   vec3 PosW, GravAccW, re1, re2, rf1, rf2, rf3, r2xr3, Er, Fr;
+   vec3_t *V1, *V2, *V3;
+   vec3_t PosW, GravAccW, re1, re2, rf1, rf2, rf3, r2xr3, Er, Fr;
    double r1, r2, r3, Num, Den, Le, wf, SumWf, Gsig;
    long PosIsOutside;
    long Ie, Ip, i;
@@ -922,14 +939,14 @@ long PolyhedronGravAcc(struct GeomType *G, double Density, vec3 PosN,
 /**********************************************************************/
 /* Ref Werner and Scheeres, "Exterior Gravitation of a Polyhedron ..." */
 /* Returns 1 if PosN is outside polyhedron, 0 if inside */
-long PolyhedronGravGrad(struct GeomType *G, double Density, vec3 PosN,
-                        mat3x3 CWN, mat3x3 *GravGradN)
+long PolyhedronGravGrad(struct GeomType *G, double Density, vec3_t PosN,
+                        mat3x3_t CWN, mat3x3_t *GravGradN)
 {
    struct EdgeType *E;
    struct PolyType *P;
-   vec3 *V1, *V2, *V3;
-   mat3x3 GravGradW, GC;
-   vec3 PosW, re1, re2, rf1, rf2, rf3, r2xr3;
+   vec3_t *V1, *V2, *V3;
+   mat3x3_t GravGradW, GC;
+   vec3_t PosW, re1, re2, rf1, rf2, rf3, r2xr3;
    double r1, r2, r3;
    double Num, Den, Le, wf, SumWf, Gsig;
    long PosIsOutside;
@@ -994,9 +1011,9 @@ long PolyhedronGravGrad(struct GeomType *G, double Density, vec3 PosN,
    return (PosIsOutside);
 }
 /**********************************************************************/
-vec3 GravGradTimesInertia(mat3x3 g, mat3x3 I)
+vec3_t GravGradTimesInertia(mat3x3_t g, mat3x3_t I)
 {
-   vec3 GGxI;
+   vec3_t GGxI;
    GGxI.v[0] = (I.mat[2][2] - I.mat[1][1]) * g.mat[1][2] +
                (g.mat[1][1] - g.mat[2][2]) * I.mat[1][2] +
                I.mat[0][2] * g.mat[1][0] - I.mat[0][1] * g.mat[2][0];

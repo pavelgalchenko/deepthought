@@ -127,8 +127,8 @@ void InitAC(struct AcType *AC)
 void GyroProcessing(struct AcType *AC)
 {
    struct AcGyroType *G;
-   mat3x3 A, Ai, AtAi, AtA = MAT3X3_ZERO;
-   vec3 A0xA1, b, Atb = VEC3_ZERO;
+   mat3x3_t A, Ai, AtAi, AtA = MAT3X3_ZERO;
+   vec3_t A0xA1, b, Atb = VEC3_ZERO;
    long Ig, i, j;
 
    if (AC->Ngyro == 0) {
@@ -168,8 +168,8 @@ void GyroProcessing(struct AcType *AC)
 void MagnetometerProcessing(struct AcType *AC)
 {
    struct AcMagnetometerType *M;
-   mat3x3 A, Ai, AtAi, AtA = MAT3X3_ZERO;
-   vec3 A0xA1, b, Atb = VEC3_ZERO;
+   mat3x3_t A, Ai, AtAi, AtA = MAT3X3_ZERO;
+   vec3_t A0xA1, b, Atb = VEC3_ZERO;
    long Im, i, j;
 
    if (AC->Nmag == 0) {
@@ -209,13 +209,13 @@ void MagnetometerProcessing(struct AcType *AC)
 void CssProcessing(struct AcType *AC)
 {
    struct AcCssType *Css;
-   vec3 Atb = VEC3_ZERO;
-   mat3x3 AtA, AtAi;
-   vec3 A[2];
+   vec3_t Atb = VEC3_ZERO;
+   mat3x3_t AtA, AtAi;
+   vec3_t A[2];
    double b[2] = {0.0};
    long Ic, i, j;
-   long Nvalid     = 0;
-   vec3 InvalidSVB = VEC3_PXAXIS; /* Safe vector if SunValid == FALSE */
+   long Nvalid       = 0;
+   vec3_t InvalidSVB = VEC3_PXAXIS; /* Safe vector if SunValid == FALSE */
 
    if (AC->Ncss == 0) {
       /* AC->svb populated by true S->svb in 42sensors.c */
@@ -244,18 +244,18 @@ void CssProcessing(struct AcType *AC)
          AC->SunValid = TRUE;
          AtAi         = MINV3(AtA);
          AC->svb      = MxV(AtAi, Atb);
-         UNITV(&AC->svb);
+         AC->svb      = UNITV(AC->svb).v;
       }
       else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb.v[i] = b[0] * A[0].v[i] + b[1] * A[1].v[i];
-         UNITV(&AC->svb);
+         AC->svb = UNITV(AC->svb).v;
       }
       else if (Nvalid == 1) {
          AC->SunValid = TRUE;
          AC->svb      = Atb;
-         UNITV(&AC->svb);
+         AC->svb      = UNITV(AC->svb).v;
       }
       else {
          AC->SunValid = FALSE;
@@ -293,7 +293,7 @@ void StarTrackerProcessing(struct AcType *AC)
    long Ist, i;
    struct AcStarTrackerType *ST;
    long Nvalid = 0;
-   quat qbn;
+   quat_t qbn;
 
    if (AC->Nst == 0) {
       /* AC->qbn populated by true S->B[0].qn in 42sensors.c */
@@ -385,8 +385,8 @@ void AcFsw(struct AcType *AC)
 {
    struct AcCfsCtrlType *C;
    struct AcJointType *G;
-   vec3 L1, L2, L3;
-   vec3 HxB;
+   vec3_t L1, L2, L3;
+   vec3_t HxB;
    double AngErr;
    long i, j;
 
@@ -413,15 +413,15 @@ void AcFsw(struct AcType *AC)
 
    /* .. Commanded Attitude */
    if (AC->GPS[0].Valid) {
-      CopyUnitV(AC->PosN, &L3);
+      L3 = UNITV(AC->PosN).v;
       L2 = VxV(AC->PosN, AC->VelN);
-      UNITV(&L2);
-      UNITV(&L3);
+      L2 = UNITV(L2).v;
+      L3 = UNITV(L3).v;
       L2 = VNegElem(L2);
       L3 = VNegElem(L3);
 
-      L1 = VxV(L2, L3);
-      UNITV(&L1);
+      L1              = VxV(L2, L3);
+      L1              = UNITV(L1).v;
       AC->CLN.rows[0] = L1;
       AC->CLN.rows[1] = L2;
       AC->CLN.rows[2] = L3;

@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-vec3 DSM_RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN);
+vec3_t DSM_RelMotionToAngRate(vec3_t RelPosN, vec3_t RelVelN);
 void DSM_WheelProcessing(struct AcType *AC);
 void DSM_MtbProcessing(struct AcType *AC);
 __attribute__((malloc)) struct DSMMeasListType *
@@ -49,8 +49,8 @@ __attribute__((malloc)) struct DSMMeasListType *
 DSM_GpsProcessing(struct AcType *const AC, struct DSMType *const DSM);
 __attribute__((malloc)) struct DSMMeasListType *
 DSM_AccelProcessing(struct AcType *const AC, struct DSMType *const DSM);
-void DSM_CommStateProcessing(struct DSMStateType *state,
-                             struct DSMStateType *commState);
+__attribute__((const)) struct DSMStateType
+DSM_CommStateProcessing(struct DSMStateType state);
 
 #ifdef __cplusplus
 }

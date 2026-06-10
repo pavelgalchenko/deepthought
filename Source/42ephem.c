@@ -54,8 +54,8 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
 void FindSCinFormation(struct SCType *S)
 {
 
-   vec3 psn, pcmn;
-   vec3 wxr, wxrn, vsn;
+   vec3_t psn, pcmn;
+   vec3_t wxr, wxrn, vsn;
    struct FormationType *F;
 
    F = &Frm[S->RefOrb];
@@ -95,10 +95,10 @@ void FindSCinFormation(struct SCType *S)
 void CheckOrbitRectification(struct SCType *scs, struct OrbitType *O)
 {
    long Isc;
-   double m = 0.0;
-   vec3 mr  = VEC3_ZERO;
-   vec3 mv  = VEC3_ZERO;
-   vec3 PosR, VelR;
+   double m  = 0.0;
+   vec3_t mr = VEC3_ZERO;
+   vec3_t mv = VEC3_ZERO;
+   vec3_t PosR, VelR;
    double a, n;
    struct SCType *S;
 
@@ -146,8 +146,8 @@ void CheckOrbitRectification(struct SCType *scs, struct OrbitType *O)
 void ChangeNFrame(struct SCType *const scs, struct WorldType *const worlds,
                   struct OrbitType *O, long OldWorld, long NewWorld)
 {
-   mat3x3 CN1H, CN2H, CL1H, CL2H, CH, CBN1, CBN2;
-   vec3 VH;
+   mat3x3_t CN1H, CN2H, CL1H, CL2H, CH, CBN1, CBN2;
+   vec3_t VH;
    struct FormationType *F;
    struct SCType *S;
    struct BodyType *B;
@@ -206,16 +206,16 @@ void ChangeNFrame(struct SCType *const scs, struct WorldType *const worlds,
             B->pn = MxV(CN2H, VH);
          }
          /* Dyn */
-         D       = &S->Dyn;
-         quat qv = DBL_TO_QUAT(&D->x[0]);
-         CBN1    = Q2C(qv);
-         CH      = MxM(CBN1, CN1H);
-         CBN2    = MxMT(CH, CN2H);
-         qv      = C2Q(CBN2);
+         D         = &S->Dyn;
+         quat_t qv = DBL_TO_QUAT(&D->x[0]);
+         CBN1      = Q2C(qv);
+         CH        = MxM(CBN1, CN1H);
+         CBN2      = MxMT(CH, CN2H);
+         qv        = C2Q(CBN2);
          QUAT_TO_DBL(&D->x[0], qv);
-         vec3 xv = DBL_TO_VEC3(&D->u[D->Nu - 3]);
-         VH      = MTxV(CN1H, xv);
-         xv      = MxV(CN2H, VH);
+         vec3_t xv = DBL_TO_VEC3(&D->u[D->Nu - 3]);
+         VH        = MTxV(CN1H, xv);
+         xv        = MxV(CN2H, VH);
          VEC3_TO_DBL(&D->u[D->Nu - 3], xv);
       }
    }
@@ -251,7 +251,7 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
 #define THREEBODY_TO_CENTRAL2 4
 
    long i, Im, Iw;
-   vec3 dr, rh, vh;
+   vec3_t dr, rh, vh;
    struct WorldType *P;
    long Transition = NO_TRANSITION;
    long Body1 = 0, Body2 = 1;
@@ -373,8 +373,8 @@ void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
    DateType NodeDate;
    char newline;
    long i, j, k;
-   vec4 X, Y;
-   vec3 x, v, xn, vn;
+   vec4_t X, Y;
+   vec3_t x, v, xn, vn;
 
    NodeDate.system = O->EphemSystem;
 
@@ -921,11 +921,11 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    struct OrbitType *Eph;
    struct WorldType *W;
    double u, dudJD, T[20], U[20], P, dPdu;
-   vec3 rh, vh;
-   vec3 EarthMoonBaryPosH, EarthMoonBaryVelH;
-   vec3 ZAxis = VEC3_PZAXIS;
-   vec3 PosJ, VelJ;
-   mat3x3 C_W_TETE, C_TEME_TETE, C_TETE_J2000;
+   vec3_t rh, vh;
+   vec3_t EarthMoonBaryPosH, EarthMoonBaryVelH;
+   vec3_t ZAxis = VEC3_PZAXIS;
+   vec3_t PosJ, VelJ;
+   mat3x3_t C_W_TETE, C_TETE_J2000;
 
    jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd_tdb_j2000);
    JDType jd_tdb_mjd =
@@ -1009,10 +1009,11 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
          continue;
       if (Iw == EARTH) {
          /* .. Earth rotation is a special case */
-         W->PriMerAng = TwoPi * GMST;
-         HiFiEarthPrecNute(jd_tt_j2000, &C_TEME_TETE, &C_TETE_J2000);
-         C_W_TETE = SimpRot(ZAxis, W->PriMerAng);
-         W->CWN   = MxM(C_W_TETE, C_TETE_J2000);
+         W->PriMerAng             = TwoPi * GMST;
+         const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+         C_TETE_J2000             = pair.second;
+         C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
+         W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
       }
       else {
          W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
@@ -1047,10 +1048,10 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    const double j2000sec = JDToDynTime(jd_tt_j2000);
    const double GMST     = JD2GMST(jd_tt_j2000);
 
-   vec3 r1, rh, vh;
-   const vec3 ZAxis = VEC3_PZAXIS;
+   vec3_t r1, rh, vh;
+   const vec3_t ZAxis = VEC3_PZAXIS;
    long Ip;
-   mat3x3 C_W_TETE, C_TEME_TETE, C_TETE_J2000;
+   mat3x3_t C_W_TETE, C_TETE_J2000;
 
    for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
       W = &worlds[Ip];
@@ -1088,10 +1089,11 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
       if (W->Exists) {
          if (Ip == EARTH) {
             /* .. Earth rotation is a special case */
-            W->PriMerAng = TwoPi * GMST;
-            HiFiEarthPrecNute(jd_tt_j2000, &C_TEME_TETE, &C_TETE_J2000);
-            C_W_TETE = SimpRot(ZAxis, W->PriMerAng);
-            W->CWN   = MxM(C_W_TETE, C_TETE_J2000);
+            W->PriMerAng             = TwoPi * GMST;
+            const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+            C_TETE_J2000             = pair.second;
+            C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
+            W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
          }
          else {
             W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
@@ -1106,7 +1108,7 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
 /**********************************************************************/
 long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
                        struct WorldType *const minor_worlds,
-                       const mat3x3 earth_CNH)
+                       const mat3x3_t earth_CNH)
 {
    struct OrbitType *Eph;
    struct WorldType *W;
@@ -1139,11 +1141,12 @@ long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
 }
 /**********************************************************************/
 long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
-                         struct WorldType *const worlds, const mat3x3 earth_CNH)
+                         struct WorldType *const worlds,
+                         const mat3x3_t earth_CNH)
 {
    struct OrbitType *Eph;
    struct WorldType *W, *M;
-   vec3 rh, vh;
+   vec3_t rh, vh;
    WorldID Ip, Iw;
 
    jd_tdb_j2000      = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_tdb_j2000);
@@ -1238,7 +1241,7 @@ void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
    // BE VERY CAREFUL!! BOTH JDTYPES MUST BE ASSOCIATED WITH THE SAME TIME
    struct WorldType *W;
    struct RegionType *R;
-   vec3 ptn[10], vtn[10], ptw;
+   vec3_t ptn[10], vtn[10], ptw;
    struct LagrangeSystemType *LS;
    long i, j, Ir;
 
@@ -1283,7 +1286,7 @@ void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
          Tdrs[i].PosN = ptn[i];
          Tdrs[i].VelN = vtn[i];
 
-         CopyUnitV(Tdrs[i].rw, &ptw);
+         ptw         = UNITV(Tdrs[i].rw).v;
          Tdrs[i].lat = asin(ptw.z);
          Tdrs[i].lng = atan2(ptw.y, ptw.x);
       }
@@ -1293,7 +1296,7 @@ void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
 void SCEphemerides(const JDType jd, struct SCType *sc,
                    struct WorldType *const world, struct OrbitType *const orb)
 {
-   vec3 svh, pvn;
+   vec3_t svh, pvn;
    double MagR1, MeanMotion, SoP, Rp, p;
 
    if (sc->Exists) {
@@ -1345,16 +1348,16 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
       svh     = VNegElem(world->PosH);
       sc->svn = MxV(world->CNH, svh);
       sc->svn = VmVElem(sc->svn, sc->PosN);
-      UNITV(&sc->svn);
+      sc->svn = UNITV(sc->svn).v;
       sc->svb = MxV(sc->B[0].CN, sc->svn);
 
       /* Eclipse Flag */
       if (world->Type == SUN)
          sc->Eclipse = FALSE;
       else {
-         p   = MAGV(sc->PosN);
-         pvn = VNegElem(sc->PosN);
-         UNITV(&pvn);
+         p           = MAGV(sc->PosN);
+         pvn         = VNegElem(sc->PosN);
+         pvn         = UNITV(pvn).v;
          SoP         = VoV(sc->svn, pvn);
          sc->Eclipse = FALSE;
          if (SoP > 0.0) {

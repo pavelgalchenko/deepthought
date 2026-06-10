@@ -23,9 +23,9 @@
 
 /**********************************************************************/
 /*    Convert direction cosine matrix to quaternion.  Bulletproof.    */
-quat C2Q(const mat3x3 C)
+quat_t C2Q(const mat3x3_t C)
 {
-   quat Q = QUAT_EYE;
+   quat_t Q = QUAT_EYE;
    double K1, K2, K3, K4, K;
 
    K1 = 1.0 + C.mat[0][0] - C.mat[1][1] - C.mat[2][2];
@@ -69,7 +69,7 @@ quat C2Q(const mat3x3 C)
 }
 /**********************************************************************/
 /*  Convert quaternion to direction cosine matrix                     */
-mat3x3 Q2C(const quat Q)
+mat3x3_t Q2C(const quat_t Q)
 {
    double TwoQ00, TwoQ11, TwoQ22;
    double TwoQ01, TwoQ02, TwoQ03;
@@ -85,7 +85,7 @@ mat3x3 Q2C(const quat Q)
    TwoQ13 = 2.0 * Q.q[1] * Q.q[3];
    TwoQ23 = 2.0 * Q.q[2] * Q.q[3];
 
-   mat3x3 C;
+   mat3x3_t C;
 
    C.mat[0][0] = 1.0 - (TwoQ11 + TwoQ22);
    C.mat[0][1] = TwoQ01 + TwoQ23;
@@ -101,7 +101,7 @@ mat3x3 Q2C(const quat Q)
 /**********************************************************************/
 /*   Convert Euler angle sequence to direction cosine matrix          */
 
-mat3x3 A2C(long SEQ, double TH1, double TH2, double TH3)
+mat3x3_t A2C(long SEQ, double TH1, double TH2, double TH3)
 {
    double S1, C1;
    double S2 = 0.0;
@@ -120,7 +120,7 @@ mat3x3 A2C(long SEQ, double TH1, double TH2, double TH3)
       C3 = cos(TH3);
    }
 
-   mat3x3 C;
+   mat3x3_t C;
    switch (SEQ) {
       case 1: {
          C.mat[0][0] = 1.0;
@@ -362,8 +362,12 @@ mat3x3 A2C(long SEQ, double TH1, double TH2, double TH3)
 /**********************************************************************/
 /*  Convert direction cosine matrix to Euler angles                   */
 
-void C2A(long SEQ, mat3x3 C, double *TH1, double *TH2, double *TH3)
+vec3_t C2A(long SEQ, mat3x3_t C)
 {
+   vec3_t TH;
+   double *TH1 = &TH.x;
+   double *TH2 = &TH.y;
+   double *TH3 = &TH.z;
    switch (SEQ) {
       case 123: {
          *TH1 = atan2(-C.mat[2][1], C.mat[2][2]);
@@ -429,23 +433,24 @@ void C2A(long SEQ, mat3x3 C, double *TH1, double *TH2, double *TH3)
          fprintf(stderr, "Bogus Euler Sequence %ld in C2A\n", SEQ);
          exit(EXIT_FAILURE);
    }
+   return TH;
 }
 /**********************************************************************/
 /* Compute direction cosine matrix corresponding to a                 */
 /* simple rotation of THETA radians about a unit vector               */
 /* parallel to AXIS                                                   */
 
-mat3x3 SimpRot(const vec3 AXIS, const double THETA)
+mat3x3_t SimpRot(const vec3_t AXIS, const double THETA)
 {
    double CTH, STH, CTH1;
-   vec3 AX;
+   vec3_t AX;
 
    CTH  = cos(THETA);
    STH  = sin(THETA);
    CTH1 = 1.0 - CTH;
-   CopyUnitV(AXIS, &AX);
+   AX   = UNITV(AXIS).v;
 
-   mat3x3 C;
+   mat3x3_t C;
    C.mat[0][0] = CTH + AX.x * AX.x * CTH1;
    C.mat[1][0] = -AX.z * STH + AX.x * AX.y * CTH1;
    C.mat[2][0] = AX.y * STH + AX.z * AX.x * CTH1;
@@ -458,7 +463,7 @@ mat3x3 SimpRot(const vec3 AXIS, const double THETA)
    return C;
 }
 /**********************************************************************/
-vec3 Q2AngleVec(quat Q)
+vec3_t Q2AngleVec(quat_t Q)
 {
 
    double s;
@@ -474,9 +479,9 @@ vec3 Q2AngleVec(quat Q)
 }
 /**********************************************************************/
 /*  Given body rates and quaternion, find qdot.  Ref Kane, 1.13       */
-quat QW2QDOT(const quat Q, const vec3 W)
+quat_t QW2QDOT(const quat_t Q, const vec3_t W)
 {
-   quat QDOT;
+   quat_t QDOT;
    QDOT.x  = 0.5 * (W.v[0] * Q.q[3] - W.v[1] * Q.q[2] + W.v[2] * Q.q[1]);
    QDOT.y  = 0.5 * (W.v[0] * Q.q[2] + W.v[1] * Q.q[3] - W.v[2] * Q.q[0]);
    QDOT.z  = 0.5 * (-W.v[0] * Q.q[1] + W.v[1] * Q.q[0] + W.v[2] * Q.q[3]);
@@ -506,9 +511,9 @@ quat QW2QDOT(const quat Q, const vec3 W)
 /*     m:   Mass of B                                                 */
 /*     pba: Location of mass center of B, wrt origin of A             */
 /*     IBA: Inertia of B about the origin of A, expressed in A        */
-mat3x3 PARAXIS(mat3x3 IB, mat3x3 CBA, double m, vec3 pba)
+mat3x3_t PARAXIS(mat3x3_t IB, mat3x3_t CBA, double m, vec3_t pba)
 {
-   mat3x3 CI = MAT3X3_ZERO, CIC = MAT3X3_ZERO, pp = MAT3X3_ZERO;
+   mat3x3_t CI = MAT3X3_ZERO, CIC = MAT3X3_ZERO, pp = MAT3X3_ZERO;
    double p2;
    long i, j, k;
 
@@ -535,20 +540,20 @@ mat3x3 PARAXIS(mat3x3 IB, mat3x3 CBA, double m, vec3 pba)
       pp.mat[i][i] += p2;
    }
 
-   mat3x3 IBA;
+   mat3x3_t IBA;
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++)
          IBA.mat[i][j] = CIC.mat[i][j] + m * pp.mat[i][j];
    return IBA;
 }
 /******************************************************************************/
-void PrincipalMOI(mat3x3 Ib, vec3 *Ip, mat3x3 *CPB)
+void PrincipalMOI(mat3x3_t Ib, vec3_t *Ip, mat3x3_t *CPB)
 {
    double Tol = 1.0E-12;
    long MaxK  = 100;
-   mat3x3 I;
-   mat3x3 C = MAT3X3_EYE;
-   mat3x3 CI, CICT, CCPB;
+   mat3x3_t I;
+   mat3x3_t C = MAT3X3_EYE;
+   mat3x3_t CI, CICT, CCPB;
    double MaxOffDiag, th, MaxEl, Swap;
    long i, j, k;
    long id, jd;
@@ -642,9 +647,9 @@ void PrincipalMOI(mat3x3 Ib, vec3 *Ip, mat3x3 *CPB)
 }
 /**********************************************************************/
 /*  Given quaternion measurements, find body rates.  Ref Kane, 1.13   */
-vec3 Q2W(quat q, quat qdot)
+vec3_t Q2W(quat_t q, quat_t qdot)
 {
-   vec3 w;
+   vec3_t w;
    w.x = 2.0 * (qdot.q[0] * q.q[3] + qdot.q[1] * q.q[2] - qdot.q[2] * q.q[1] -
                 qdot.q[3] * q.q[0]);
 
@@ -660,8 +665,9 @@ vec3 Q2W(quat q, quat qdot)
 /*  On Init, populate all matrix elements.  Else, only populate       */
 /*  variable ones.                                                    */
 void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
-                   vec3 ang, vec3 sig, mat3x3 *Gamma, vec3 *Gs, vec3 *Gds,
-                   vec3 s, mat3x3 *Delta, vec3 *Ds, vec3 *Dds)
+                   vec3_t ang, vec3_t sig, mat3x3_t *Gamma, vec3_t *Gs,
+                   vec3_t *Gds, vec3_t s, mat3x3_t *Delta, vec3_t *Ds,
+                   vec3_t *Dds)
 {
    double s2, c2, s3, c3;
    long i1, i2, i3, Cyclic, i;
@@ -756,9 +762,9 @@ void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
    Ds->v[i3] = s.z;
 }
 /**********************************************************************/
-vec3 ADOT2W(long IsSpherical, long Seq, vec3 ang, vec3 u)
+vec3_t ADOT2W(long IsSpherical, long Seq, vec3_t ang, vec3_t u)
 {
-   vec3 w;
+   vec3_t w;
    double s2, c2, s3, c3;
    long i1, i2, i3, Cyclic;
 
@@ -810,9 +816,9 @@ vec3 ADOT2W(long IsSpherical, long Seq, vec3 ang, vec3 u)
    return w;
 }
 /**********************************************************************/
-vec3 W2ADOT(long Seq, vec3 ang, vec3 w)
+vec3_t W2ADOT(long Seq, vec3_t ang, vec3_t w)
 {
-   vec3 adot;
+   vec3_t adot;
    double s2, c2, s3, c3;
    long i1, i2, i3, Cyclic;
 
@@ -867,9 +873,9 @@ vec3 W2ADOT(long Seq, vec3 ang, vec3 w)
    return adot;
 }
 /**********************************************************************/
-mat3x3 W2CDOT(vec3 w, mat3x3 C)
+mat3x3_t W2CDOT(vec3_t w, mat3x3_t C)
 {
-   mat3x3 Cdot;
+   mat3x3_t Cdot;
    Cdot.mat[0][0] = C.mat[1][0] * w.z - C.mat[2][0] * w.y;
    Cdot.mat[1][0] = C.mat[2][0] * w.x - C.mat[0][0] * w.z;
    Cdot.mat[2][0] = C.mat[0][0] * w.y - C.mat[1][0] * w.x;
@@ -882,9 +888,9 @@ mat3x3 W2CDOT(vec3 w, mat3x3 C)
    return Cdot;
 }
 /**********************************************************************/
-vec3 CDOT2W(mat3x3 C, mat3x3 Cdot)
+vec3_t CDOT2W(mat3x3_t C, mat3x3_t Cdot)
 {
-   vec3 w;
+   vec3_t w;
    w.x = C.mat[2][0] * Cdot.mat[1][0] + C.mat[2][1] * Cdot.mat[1][1] +
          C.mat[2][2] * Cdot.mat[1][2];
    w.y = C.mat[0][1] * Cdot.mat[2][1] + C.mat[0][2] * Cdot.mat[2][2] +

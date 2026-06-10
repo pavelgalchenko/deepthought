@@ -29,7 +29,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
 {
    struct WorldType *P;
    double Alt;
-   vec3 PosW;
+   vec3_t PosW;
 #ifdef _RADBELT_
    int NumEnergies         = 5;
    float ElectronEnergy[5] = {0.15, 0.5, 1.0, 3.0, 4.0};    /* MeV */
@@ -99,7 +99,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
 #ifdef _RADBELT_
    if (orb->World == EARTH) {
       MxV(World[EARTH].CWN, S->PosN, PosW);
-      UNITV(PosW);
+      PosW   = UNITV(PosW).v;
       MagLat = asin(VoV(PosW, World[EARTH].DipoleAxis));
       RadBelt(MAGV(S->PosN) / 1000.0, fabs(MagLat) * R2D, NumEnergies,
               ElectronEnergy, ProtonEnergy, Flux);

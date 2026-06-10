@@ -35,9 +35,9 @@ void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
    struct BodyType *B;
    struct NodeType *N;
    double r, Coef, rhatop, AccGG, AvgAcc;
-   vec3 AccGGB, Axis, rhatn, rhat, p;
-   vec3 dvn, dvb;
-   quat NodeQN, AvgQN;
+   vec3_t AccGGB, Axis, rhatn, rhat, p;
+   vec3_t dvn, dvb;
+   quat_t NodeQN, AvgQN;
    long Ia;
    double PrevBias;
 
@@ -55,9 +55,9 @@ void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
          /* Grav-grad force (see Hughes, p.246, eq (56)) */
          AccGGB = VEC3_ZERO;
          if (GGActive) {
-            r    = MAGV(S->PosN);
-            Coef = -3.0 * orb->mu / (r * r * r);
-            CopyUnitV(S->PosN, &rhatn);
+            r      = MAGV(S->PosN);
+            Coef   = -3.0 * orb->mu / (r * r * r);
+            rhatn  = UNITV(S->PosN).v;
             rhat   = MxV(B->CN, rhatn);
             p      = MxV(B->CN, B->pn);
             p      = VpVElem(p, N->PosB);
@@ -112,7 +112,7 @@ void GyroModel(struct SCType *S)
    struct BodyType *B;
    struct NodeType *N;
    long Ig;
-   vec3 Axis;
+   vec3_t Axis;
    double PrevBias, RateError, PrevAngle;
    long Counts, PrevCounts;
 
@@ -187,7 +187,7 @@ void CssModel(struct SCType *S)
    long Counts, Icss;
    double Signal;
    double SoA;
-   vec3 svb;
+   vec3_t svb;
 
    for (Icss = 0; Icss < S->Ncss; Icss++) {
       CSS = &S->CSS[Icss];
@@ -242,7 +242,7 @@ void FssModel(struct SCType *S)
 {
    struct FssType *FSS;
    static struct RandomProcessType *FssNoise;
-   vec3 svs;
+   vec3_t svs;
    double SunAng[2], Signal;
    long Counts;
    static long First = 1;
@@ -324,9 +324,9 @@ void StarTrackerModel(struct WorldType *const worlds,
    struct NodeType *N;
    static struct RandomProcessType *StNoise;
    struct WorldType *W;
-   quat qsn, Qnoise, qsb;
+   quat_t qsn, Qnoise, qsb;
    double BoS, OrbRad, LimbAng, BoN, MoonDist, BoM;
-   vec3 mvn, mvb, NadirVecB;
+   vec3_t mvn, mvb, NadirVecB;
    static long First = 1;
    long Ist, i;
 
@@ -360,11 +360,13 @@ void StarTrackerModel(struct WorldType *const worlds,
          /* Moon Occultation? (Only worked out if orbiting Earth.  Customize
           * as needed)*/
          if ((ST->Valid == TRUE) && (orb->World == EARTH)) {
-            mvn      = VmVElem(worlds[LUNA].eph.PosN, S->PosN);
-            MoonDist = UNITV(&mvn);
-            LimbAng  = asin(worlds[LUNA].rad / MoonDist);
-            mvb      = MxV(S->B[0].CN, mvn);
-            BoM      = VoV(ST->CB.rows[ST->BoreAxis], mvb);
+            mvn          = VmVElem(worlds[LUNA].eph.PosN, S->PosN);
+            magvec3_t uv = UNITV(mvn);
+            MoonDist     = uv.m;
+            mvn          = uv.v;
+            LimbAng      = asin(worlds[LUNA].rad / MoonDist);
+            mvb          = MxV(S->B[0].CN, mvn);
+            BoM          = VoV(ST->CB.rows[ST->BoreAxis], mvb);
             if (BoM > cos(LimbAng + ST->MoonExclAng))
                ST->Valid = FALSE;
          }
@@ -393,7 +395,7 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
 {
    struct GpsType *GPS;
    static struct RandomProcessType *GpsNoise;
-   vec3 PosW;
+   vec3_t PosW;
    double MagPosW;
    long Ig, i;
    static long First = 1;
@@ -477,10 +479,10 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
    struct BodyType *B;
    struct NodeType *N;
    double ar;
-   quat qbb0, qb0r, qbr, qfb;
-   vec3 StarVecB, StarPosB, StarVecFr;
-   vec3 FldPntB, FldDirB, OutPntB, OutDirB;
-   mat3x3 CFB;
+   quat_t qbb0, qb0r, qbr, qfb;
+   vec3_t StarVecB, StarPosB, StarVecFr;
+   vec3_t FldPntB, FldDirB, OutPntB, OutDirB;
+   mat3x3_t CFB;
    double x, y;
    long i;
    long OutSC, OutBody;
@@ -552,8 +554,8 @@ void SimpleFgsModel(struct FgsType *F, struct SCType *S)
    struct BodyType *B;
    struct NodeType *N;
    double ar;
-   quat qbb0, qb0r, qbr, qfb;
-   vec3 StarVecFr, StarVecB, StarVecF;
+   quat_t qbb0, qb0r, qbr, qfb;
+   vec3_t StarVecFr, StarVecB, StarVecF;
 
    F->SampleCounter++;
    if (F->SampleCounter >= F->MaxCounter) {
@@ -619,7 +621,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
              struct SCType *S)
 {
 
-   vec3 evn, evb;
+   vec3_t evn, evb;
    long i, j, DOF;
    struct AcType *AC;
    struct JointType *G;
@@ -687,7 +689,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
 
    /* Earth Sensor */
    evn = VNegElem(S->PosN);
-   UNITV(&evn);
+   evn = UNITV(evn).v;
    evb = MxV(S->B[0].CN, evn);
    if (evb.z > 0.866) {
       AC->ES.Valid = TRUE;
