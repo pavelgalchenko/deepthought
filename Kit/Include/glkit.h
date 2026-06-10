@@ -84,19 +84,19 @@
 #define GLYPH_L 6
 
 struct FacetType {
-   double V[55][3];
+   vec3 V[55];
    double ST[55][2];
 };
 
 struct HexType {
-   double Pc[3];
-   double Pv[6][3];
+   vec3 Pc;
+   vec3 Pv[6];
    struct FacetType F[6];
 };
 
 struct PentType {
-   double Pc[3];
-   double Pv[5][3];
+   vec3 Pc;
+   vec3 Pv[5];
    struct FacetType F[5];
 };
 
@@ -124,7 +124,7 @@ GLuint LoadFont8x11(void);
 void DrawString8x11(const char *s);
 long ClampColor4fv(GLfloat *Color);
 void FindSunColor(double T, GLfloat LightColor[3], GLfloat DiskColor[3]);
-void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], double C[3][3],
+void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], mat3x3 C,
                  GLuint MajList, GLuint MinList);
 void LoadSkyGrid(double MajGrid, double MinGrid, double SkyDistance,
                  GLuint *MajList, GLuint *MinList);
@@ -134,14 +134,12 @@ void DrawNearFOV(long Nv, double Width, double Height, double Length,
 void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
                 long H_Axis, long V_Axis, long Type, GLfloat Color[4],
                 const char *Label, double SkyDistance);
-void RotateL2R(double C[3][3]);
-void RotateR2L(double C[3][3]);
+void RotateL2R(mat3x3 C);
+void RotateR2L(mat3x3 C);
 void MxM4f(float A[16], float B[16], float C[16]);
 void Minv4f(float A[16], float Ai[16]);
-void BuildModelMatrix(const double CBN[3][3], const double pbn[3],
-                      float ModelMatrix[16]);
-void BuildViewMatrix(const double CEN[3][3], const double pen[3],
-                     float ViewMatrix[16]);
+void BuildModelMatrix(const mat3x3 CBN, const vec3 pbn, float ModelMatrix[16]);
+void BuildViewMatrix(const mat3x3 CEN, const vec3 pen, float ViewMatrix[16]);
 void CaptureScreenToPpm(const char *path, const char *filename, long Nh,
                         long Nw);
 void TexToPpm(const char *path, const char *filename, long Nh, long Nw, long Nb,
@@ -154,57 +152,51 @@ GLuint PpmToCubeTag(const char *path, const char *file, int BytesPerPixel);
 GLuint PpmToRingTexTag(const char *path, const char *filename);
 void CubeToPpm(GLubyte *Cube, long N, const char *pathname,
                const char *filename);
-void LoadBucky(double BuckyPf[32][3], long BuckyNeighbor[32][6]);
-void LoadStars(const char *StarFileName, double BuckyPf[32][3],
+void LoadBucky(vec3 BuckyPf[32], long BuckyNeighbor[32][6]);
+void LoadStars(const char *StarFileName, vec3 BuckyPf[32],
                long BuckyNeighbor[32][6], GLuint StarList[32],
                double SkyDistance);
-void DrawStars(double LineOfSight[3], double BuckyPf[32][3],
-               GLuint StarList[32]);
-void Draw1FGL(double LineOfSight[3], double BuckyPf[32][3],
-              GLuint FermiSourceList[32]);
-void DrawEgret(double LineOfSight[3], double BuckyPf[32][3],
-               GLuint EgretSourceList[32]);
-void DrawPulsars(double LineOfSight[3], double BuckyPf[32][3],
-                 GLuint PulsarList[32]);
-GLuint LoadMilkyWay(const char *PathName, const char *FileName,
-                    double CGH[3][3], double SkyDistance, double AlphaMask[4]);
-GLuint LoadSkyCube(const char *PathName, const char *FileName, double CGH[3][3],
+void DrawStars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint StarList[32]);
+void Draw1FGL(vec3 LineOfSight, vec3 BuckyPf[32], GLuint FermiSourceList[32]);
+void DrawEgret(vec3 LineOfSight, vec3 BuckyPf[32], GLuint EgretSourceList[32]);
+void DrawPulsars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint PulsarList[32]);
+GLuint LoadMilkyWay(const char *PathName, const char *FileName, mat3x3 CGH,
+                    double SkyDistance, vec4 AlphaMask);
+GLuint LoadSkyCube(const char *PathName, const char *FileName, mat3x3 CGH,
                    double SkyDistance);
-void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
+void LoadEgretCatalog(const char *EgretFileName, vec3 BuckyPf[32],
                       long BuckyNeighbor[32][6], GLuint EgretSourceList[32],
                       double SkyDistance);
-void Load1FGL(const char *FileName, double BuckyPf[32][3],
-              long BuckyNeighbor[32][6], GLuint FermiSourceList[32],
-              double SkyDistance);
-void LoadPulsars(const char *FileName, double BuckyPf[32][3],
+void Load1FGL(const char *FileName, vec3 BuckyPf[32], long BuckyNeighbor[32][6],
+              GLuint FermiSourceList[32], double SkyDistance);
+void LoadPulsars(const char *FileName, vec3 BuckyPf[32],
                  long BuckyNeighbor[32][6], GLuint PulsarList[32],
                  double SkyDistance);
 void DrawUnitCubeSphere(long Ndiv);
 void DrawSkySphere(long Ndiv);
 void DrawUnitMercatorSphere(GLuint Nlat, GLuint Nlng);
 void DrawBullseye(GLfloat Color[4], double p[4]);
-void DrawArrowhead(double v[3], double scale);
-void DrawVector(double v[3], const char *Label, const char *Units,
-                GLfloat Color[4], double VisScale, double MagScale,
-                long UnitVec);
+void DrawArrowhead(vec3 v, double scale);
+void DrawVector(vec3 v, const char *Label, const char *Units, GLfloat Color[4],
+                double VisScale, double MagScale, long UnitVec);
 void DrawAxisLabels(long Iglyph, GLfloat Color[4], GLfloat Xc, GLfloat Xmax,
                     GLfloat Yc, GLfloat Ymax, GLfloat Zc, GLfloat Zmax);
-void DrawBodyLabel(long Ib, GLfloat Color[4], double p[3]);
+void DrawBodyLabel(long Ib, GLfloat Color[4], vec3 p);
 void DrawRollPitchYaw(long xc, long yc, long PixScale, double AngScale,
                       double RateScale, double Roll, double Pitch, double Yaw,
                       double RollRate, double PitchRate, double YawRate,
                       double RollCmd, double PitchCmd, double YawCmd,
                       GLfloat GaugeColor[4], GLfloat BarColor[4]);
 void DrawSmallCircle(double lngc, double latc, double rad);
-void DrawMercatorGrid(double CVA[3][3]);
+void DrawMercatorGrid(mat3x3 CVA);
 void DrawMercatorLine(double lngA, double latA, double lngB, double latB);
-void DrawMercatorSquare(double CCV[3][3], double FOV[2]);
+void DrawMercatorSquare(mat3x3 CCV, double FOV[2]);
 void DrawMercatorVector(double lng, double lat, char *label);
-void DrawMercatorAxes(double CAV[3][3], char *label);
+void DrawMercatorAxes(mat3x3 CAV, char *label);
 void CheckOpenGLProperties(void);
 void HammerProjection(double Lng, double Lat, double *x, double *y);
-void VecToCube(long N, double p[3], long *f, long *i, long *j);
-void CubeToVec(long N, long f, long i, long j, double p[3]);
+void VecToCube(long N, vec3 p, long *f, long *i, long *j);
+void CubeToVec(long N, long f, long i, long j, vec3 p);
 double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct);
 double ProcTex3D(double x, double y, double z, double Xunit, double Yunit,
                  double Zunit, long Noct, double Persist);

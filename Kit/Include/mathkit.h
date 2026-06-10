@@ -27,59 +27,131 @@
 ** #endif
 */
 
-#define EYE3_MAT {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}}
+typedef union {
+   struct {
+      double x;
+      double y;
+      double z;
+   };
+   double v[3];
+} vec3;
 
-int any_int(const long n, const int *const vec) __attribute__((pure));
-int all_int(const long n, const int *const vec) __attribute__((pure));
-int any_isnan(const long n, const double *const v) __attribute__((pure));
-double signum(const double x) __attribute__((const));
-double sin_deg(double x) __attribute__((const));
-double cos_deg(double x) __attribute__((const));
-double sinc(const double x) __attribute__((const));
-double smootherstep(const double x) __attribute__((const));
-void MxM(const double A[3][3], const double B[3][3], double C[3][3]);
-void MxMT(const double A[3][3], const double B[3][3], double C[3][3]);
-void MTxM(const double A[3][3], const double B[3][3], double C[3][3]);
-void MTxMT(const double A[3][3], const double B[3][3], double C[3][3]);
-void VxM(const double V[3], const double M[3][3], double W[3]);
-void MxV(const double M[3][3], const double V[3], double W[3]);
-void VxMT(const double V[3], const double M[3][3], double W[3]);
-void MTxV(const double M[3][3], const double V[3], double W[3]);
-void SxV(const double S, const double V[3], double W[3]);
-void SxM(const double S, const double A[3][3], double B[3][3]);
-double det3x3(const double M[3][3]) __attribute__((pure));
+#define VEC3_ZERO          ((vec3){.x = 0, .y = 0, .z = 0})
+#define VEC3_PXAXIS        ((vec3){.x = 1, .y = 0, .z = 0})
+#define VEC3_PYAXIS        ((vec3){.x = 0, .y = 1, .z = 0})
+#define VEC3_PZAXIS        ((vec3){.x = 0, .y = 0, .z = 1})
+#define VEC3_NXAXIS        ((vec3){.x = -1, .y = 0, .z = 0})
+#define VEC3_NYAXIS        ((vec3){.x = 0, .y = -1, .z = 0})
+#define VEC3_NZAXIS        ((vec3){.x = 0, .y = 0, .z = -1})
+#define VEC3_INIT(a, b, c) ((vec3){.x = (a), .y = (b), .z = (c)})
+#define DBL_TO_VEC3(dbl)   ((vec3){.x = (dbl)[0], .y = (dbl)[1], .z = (dbl)[2]})
+#define VEC3_TO_DBL(dbl, vec)                                                  \
+   do {                                                                        \
+      (dbl)[0] = vec.x;                                                        \
+      (dbl)[1] = vec.y;                                                        \
+      (dbl)[2] = vec.z;                                                        \
+   } while (0)
+
+// Row-Major 3x3 Matrix
+typedef union {
+   vec3 rows[3];
+   double flat[9];
+   double mat[3][3];
+} mat3x3;
+#define MAT3X3_ZERO                                                            \
+   ((mat3x3){.rows = {(vec3){.x = 0, .y = 0, .z = 0},                          \
+                      (vec3){.x = 0, .y = 0, .z = 0},                          \
+                      (vec3){.x = 0, .y = 0, .z = 0}}})
+#define MAT3X3_EYE ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}})
+
+// Vector first Quaternion
+typedef union {
+   struct {
+      double x;
+      double y;
+      double z;
+      double s;
+   };
+   struct {
+      vec3 qv;
+      double qs;
+   };
+   double q[4];
+} quat;
+typedef quat vec4;
+
+#define QUAT_ZERO ((quat){.qv = {.x = 0, .y = 0, .z = 0}, .qs = 0})
+#define QUAT_EYE  ((quat){.qv = {.x = 0, .y = 0, .z = 0}, .qs = 1})
+#define DBL_TO_QUAT(dbl)                                                       \
+   ((quat){.qv = {.x = (dbl)[0], .y = (dbl)[1], .z = (dbl)[2]}, .qs = (dbl)[3]})
+#define QUAT_TO_DBL(dbl, qua)                                                  \
+   do {                                                                        \
+      (dbl)[0] = qua.x;                                                        \
+      (dbl)[1] = qua.y;                                                        \
+      (dbl)[2] = qua.z;                                                        \
+      (dbl)[3] = qua.s;                                                        \
+   } while (0)
+
+__attribute__((pure)) int any_int(const long n, const int *const vec);
+__attribute__((pure)) int all_int(const long n, const int *const vec);
+__attribute__((pure)) int any_isnan(const long n, const double *const v);
+__attribute__((const)) double signum(const double x);
+__attribute__((const)) double sin_deg(double x);
+__attribute__((const)) double cos_deg(double x);
+__attribute__((const)) double sinc(const double x);
+__attribute__((const)) double smootherstep(const double x);
+__attribute__((const)) double Limit(double x, double min, double max);
+__attribute__((const)) mat3x3 MxM(const mat3x3 A, const mat3x3 B);
+__attribute__((const)) mat3x3 MxMT(const mat3x3 A, const mat3x3 B);
+__attribute__((const)) mat3x3 MTxM(const mat3x3 A, const mat3x3 B);
+__attribute__((const)) mat3x3 MTxMT(const mat3x3 A, const mat3x3 B);
+__attribute__((const)) vec3 VxM(const vec3 V, const mat3x3 M);
+__attribute__((const)) vec3 MxV(const mat3x3 M, const vec3 V);
+__attribute__((const)) vec3 VxMT(const vec3 V, const mat3x3 M);
+__attribute__((const)) vec3 MTxV(const mat3x3 M, const vec3 V);
+__attribute__((const)) vec3 SxV(const double S, const vec3 V);
+
+__attribute__((const)) vec3 VNegElem(const vec3 A);
+__attribute__((const)) vec3 VpVElem(const vec3 A, const vec3 B);
+__attribute__((const)) vec3 VmVElem(const vec3 A, const vec3 B);
+__attribute__((const)) vec3 VxVElem(const vec3 A, const vec3 B);
+__attribute__((const)) vec3 VdVElem(const vec3 A, const vec3 B);
+__attribute__((const)) vec3 LimitElem_bidir(vec3 x, const vec3 lim);
+
+__attribute__((const)) mat3x3 SxM(const double S, const mat3x3 A);
+__attribute__((const)) double det3x3(const mat3x3 M);
 void MINV4(const double A[4][4], double B[4][4]);
-void MINV3(const double A[3][3], double B[3][3]);
+__attribute__((const)) mat3x3 MINV3(const mat3x3 A);
 void MINV2(const double A[2][2], double B[2][2]);
 void PINV4x3(const double A[4][3], double Aplus[3][4]);
-void MT(const double A[3][3], double B[3][3]);
-double VoV(const double A[3], const double B[3]) __attribute__((pure));
-void VxV(const double A[3], const double B[3], double C[3]);
-void vxMov(const double w[3], const double M[3][3], double wxMow[3]);
-double MAGV(const double V[3]) __attribute__((pure));
-double UNITV(double V[3]);
-double CopyUnitV(const double V[3], double W[3]);
-void V2CrossM(const double V[3], double M[3][3]);
-void V2DoubleCrossM(const double V[3], double M[3][3]);
-void VcrossM(const double V[3], const double M[3][3], double A[3][3]);
-void VcrossMT(const double V[3], const double M[3][3], double A[3][3]);
-void QxQ(const double A[4], const double B[4], double C[4]);
-void QTxQ(const double A[4], const double B[4], double C[4]);
-void QxQT(const double A[4], const double B[4], double C[4]);
-void VxQ(const double Va[3], const double QAB[4], double Vb[3]);
-void QxV(const double QAB[4], const double Vb[3], double Va[3]);
-void QTxV(const double QAB[4], const double Va[3], double Vb[3]);
-void UNITQ(double Q[4]);
-void RECTIFYQ(double Q[4]);
-void PerpBasis(const double A[3], double B[3], double C[3]);
-double fact(long const n) __attribute__((const));
-double oddfact(long const n) __attribute__((const));
-double factDfact(long const n, long const m) __attribute__((const));
+mat3x3 MT(const mat3x3 A);
+__attribute__((const)) double VoV(const vec3 A, const vec3 B);
+__attribute__((const)) vec3 VxV(const vec3 A, const vec3 B);
+__attribute__((const)) vec3 vxMov(const vec3 w, const mat3x3 M);
+__attribute__((const)) double MAGV(const vec3 V);
+double UNITV(vec3 *V);
+double CopyUnitV(const vec3 V, vec3 *W);
+__attribute__((const)) mat3x3 V2CrossM(const vec3 V);
+__attribute__((const)) mat3x3 V2DoubleCrossM(const vec3 V);
+__attribute__((const)) mat3x3 VcrossM(const vec3 V, const mat3x3 M);
+__attribute__((const)) mat3x3 VcrossMT(const vec3 V, const mat3x3 M);
+__attribute__((const)) quat QxQ(const quat A, const quat B);
+__attribute__((const)) quat QTxQ(const quat A, const quat B);
+__attribute__((const)) quat QxQT(const quat A, const quat B);
+__attribute__((const)) vec3 VxQ(const vec3 Va, const quat QAB);
+__attribute__((const)) vec3 QxV(const quat QAB, const vec3 Vb);
+__attribute__((const)) vec3 QTxV(const quat QAB, const vec3 Va);
+__attribute__((const)) quat UNITQ(quat Q);
+__attribute__((const)) quat RECTIFYQ(quat Q);
+vec3 PerpBasis(const vec3 A, vec3 *B);
+__attribute__((const)) double fact(long const n);
+__attribute__((const)) double oddfact(long const n);
+__attribute__((const)) double factDfact(long const n, long const m);
 void Legendre(const long N, const long M, const double x,
               double P[N + 1][M + 1], double sdP[N + 1][M + 1]);
-void SphericalHarmonics(const long N, const long M, const double r,
+vec3 SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
-                        double **C, double **S, double **Norm, double gradV[3]);
+                        double **C, double **S, double **Norm);
 void MxMG(double **A, double **B, double **C, const long N, const long K,
           const long M);
 void MxMTG(double **A, double **B, double **C, const long N, const long K,
@@ -94,7 +166,7 @@ void SxMG(double s, double **A, double **B, const long N, const long M);
 void MINVG(double **A, double **AI, const long N);
 void FastMINV6(const double A[6][6], double AI[6][6], const long N);
 void PINVG(double **A, double **Ai, const long n, const long m);
-double **CreateMatrix(const long n, const long m) __attribute__((malloc));
+__attribute__((malloc)) double **CreateMatrix(const long n, const long m);
 void DestroyMatrix(double **A);
 void LINSOLVE(double **A, double *x, double *b, const long n);
 void CholeskySolve(double **A, double *x, double *b, const long n);
@@ -104,65 +176,67 @@ void Bairstow(long n, double *a, const double Tol, double *Real, double *Imag);
 double Amoeba(const long N, double *P,
               double CostFunction(double *p, double *Parm), double *CostParm,
               const double scale, const double Tol);
-void FindNormal(const double V1[3], const double V2[3], const double V3[3],
-                double N[3]);
-double LinInterp(const double *X, const double *Y, const double x, const long n)
-    __attribute__((pure));
-void SphereInterp(double q1[4], double q2[4], const double u, double q[4]);
-double CubicInterp1D(double f0, double f1, double x) __attribute__((const));
-double CubicInterp2D(double f00, double f10, double f01, double f11, double x,
-                     double y) __attribute__((const));
-double CubicInterp3D(double f000, double f100, double f010, double f110,
-                     double f001, double f101, double f011, double f111,
-                     double x, double y, double z) __attribute__((const));
-double DistanceToLine(double LineEnd1[3], double LineEnd2[3], double Point[3],
-                      double VecToLine[3]);
-long ProjectPointOntoPoly(double Point[3], double DirVec[3], double **Vtx,
-                          long Nvtx, double ProjPoint[3], double *Distance);
-long ProjectPointOntoTriangle(double A[3], double B[3], double C[3],
-                              double DirVec[3], double Pt[3], double ProjPt[3],
-                              double Bary[4]);
-double CubicSpline(double x, double X[4], double Y[4]) __attribute__((pure));
+__attribute__((const)) vec3 FindNormal(const vec3 V1, const vec3 V2,
+                                       const vec3 V3);
+__attribute__((pure)) double LinInterp(const double *X, const double *Y,
+                                       const double x, const long n);
+__attribute__((const)) quat SphereInterp(quat q1, quat q2, const double u);
+__attribute__((const)) double CubicInterp1D(double f0, double f1, double x);
+__attribute__((const)) double CubicInterp2D(double f00, double f10, double f01,
+                                            double f11, double x, double y);
+__attribute__((const)) double CubicInterp3D(double f000, double f100,
+                                            double f010, double f110,
+                                            double f001, double f101,
+                                            double f011, double f111, double x,
+                                            double y, double z);
+double DistanceToLine(vec3 LineEnd1, vec3 LineEnd2, vec3 Point,
+                      vec3 *VecToLine);
+long ProjectPointOntoPoly(vec3 Point, vec3 DirVec, vec3 *Vtx, long Nvtx,
+                          vec3 *ProjPoint, double *Distance);
+long ProjectPointOntoTriangle(vec3 A, vec3 B, vec3 C, vec3 DirVec, vec3 Pt,
+                              vec3 *ProjPt, vec4 *Bary);
+__attribute__((pure)) double CubicSpline(double x, double X[4], double Y[4]);
 void ChebyPolys(double u, long n, double T[20], double U[20]);
 void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
                  double *dPdu);
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
-void VecToLngLat(double A[3], double *lng, double *lat);
-double WrapTo2Pi(double OrbVar) __attribute__((const));
-double BrentsMethod(double a, double b, const double tol,
-                    double (*f)(const double, double *), double *params)
-    __attribute__((pure));
-double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
-                     long breakOnZero, double (*fdf)(const double, double *),
-                     double *params) __attribute__((pure));
-void getTrigSphericalCoords(const double pbe[3], double *cth, double *sth,
+void VecToLngLat(vec3 A, double *lng, double *lat);
+__attribute__((const)) double WrapTo2Pi(double OrbVar);
+__attribute__((pure)) double BrentsMethod(double a, double b, const double tol,
+                                          double (*f)(const double, double *),
+                                          double *params);
+__attribute__((pure)) double
+NewtonRaphson(double x0, double tol, long nMax, double maxStep,
+              long breakOnZero, double (*fdf)(const double, double *),
+              double *params);
+void getTrigSphericalCoords(const vec3 pbe, double *cth, double *sth,
                             double *cph, double *sph, double *r);
-void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3]);
-void AdjointT(const double C[3][3], const double A[3][3], double CACT[3][3]);
-void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m]);
+__attribute__((const)) mat3x3 Adjoint(const mat3x3 C, const mat3x3 A);
+__attribute__((const)) mat3x3 AdjointT(const mat3x3 C, const mat3x3 A);
+void MINVxM3(mat3x3 A, long m, double B[3][m], double C[3][m]);
 void MINVxMG(double **A, double **B, double **C, long N, long m);
 void MxMINVG(double **A, double **B, double **C, long N, long m);
-void expmso3(double theta[3], double R[3][3]);
-void logso3(double const R[3][3], double theta[3]);
-void expmTFG(double theta[3], long const n, long const m, double x[n][3],
-             double xbar[m][3], double R[3][3]);
-double M1NormG(double **A, long const n, long const m) __attribute__((pure));
-double M2Norm2G(double **A, long const n, long const m) __attribute__((pure));
+__attribute__((const)) mat3x3 expmso3(vec3 const theta);
+__attribute__((const)) vec3 logso3(mat3x3 const R);
+void expmTFG(vec3 *theta, long const n, long const m, vec3 x[n], vec3 xbar[m],
+             mat3x3 *R);
+__attribute__((pure)) double M1NormG(double **A, long const n, long const m);
+__attribute__((pure)) double M2Norm2G(double **A, long const n, long const m);
 int cholDowndate(double **S, double u[], long const n);
 void chol(double **A, double **S, long const n);
 void hqrd(double **A, double **U, double **R, long const n, long const m);
 void bhqrd(double **A, double **U, double **R, long const n, long const m,
            long const bSize);
 
-double ipow(double base, long exp) __attribute__((const));
+__attribute__((const)) double ipow(double base, long exp);
 void expm(double **A, double **e, long const n);
-long isSignificant(int const m, int const n, double **A, double **B)
-    __attribute__((pure));
+__attribute__((pure)) long isSignificant(int const m, int const n, double **A,
+                                         double **B);
 void jacobiEValue(double **A, int const n, int const maxIter, double d[n]);
 void jacobiEValueEVector(double **A, int const n, int const maxIter, double **V,
                          double d[n]);
-double **matPow(const long n, double **A, const unsigned long p)
-    __attribute__((malloc));
+__attribute__((malloc)) double **matPow(const long n, double **A,
+                                        const unsigned long p);
 void QuickMatPow(const long n, double **A, double **As, const long s,
                  double **Ap, const long p);
 

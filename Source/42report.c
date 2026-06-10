@@ -27,40 +27,39 @@
 */
 
 /*********************************************************************/
-double FindTotalProjectedArea(struct SCType *S, double VecN[3])
+double FindTotalProjectedArea(struct SCType *S, vec3 VecN)
 {
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
-   double ProjArea = 0.0;
-   double VecB[3], VoN;
+   double ProjArea = 0.0, VoN;
+   vec3 VecB;
    long Ib, Ipoly;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
 
       /* Transform Direction Vector from N to B */
-      MxV(B->CN, VecN, VecB);
+      VecB = MxV(B->CN, VecN);
 
       G = &Geom[B->GeomTag];
       for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
          P   = &G->Poly[Ipoly];
          VoN = VoV(VecB, P->Norm);
-         if (VoN > 0.0) {
+         if (VoN > 0.0)
             ProjArea += VoN * P->Area;
-         }
       }
    }
    return (ProjArea);
 }
 /*********************************************************************/
-double FindTotalUnshadedProjectedArea(struct SCType *S, double VecN[3])
+double FindTotalUnshadedProjectedArea(struct SCType *S, vec3 VecN)
 {
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
-   double ProjArea = 0.0;
-   double VecB[3], VoN;
+   double ProjArea = 0.0, VoN;
+   vec3 VecB;
    long Ib, Ipoly;
 
    FindUnshadedAreas(S, VecN);
@@ -69,15 +68,14 @@ double FindTotalUnshadedProjectedArea(struct SCType *S, double VecN[3])
       B = &S->B[Ib];
 
       /* Transform Direction Vector from N to B */
-      MxV(B->CN, VecN, VecB);
+      VecB = MxV(B->CN, VecN);
 
       G = &Geom[B->GeomTag];
       for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
          P   = &G->Poly[Ipoly];
          VoN = VoV(VecB, P->Norm);
-         if (VoN > 0.0) {
+         if (VoN > 0.0)
             ProjArea += VoN * P->UnshadedArea;
-         }
       }
    }
    return (ProjArea);
@@ -94,9 +92,9 @@ void MagReport(void)
    }
 
    fprintf(magfile, PRNT_DBL_3VEC PRNT_DBL_3VEC PRNT_DBL_3VEC "\n",
-           SC[0].bvb[0], SC[0].bvb[1], SC[0].bvb[2], SC[0].MAG[0].Field,
-           SC[0].MAG[1].Field, SC[0].MAG[2].Field, SC[0].AC.bvb[0],
-           SC[0].AC.bvb[1], SC[0].AC.bvb[2]);
+           SC[0].bvb.v[0], SC[0].bvb.v[1], SC[0].bvb.v[2], SC[0].MAG[0].Field,
+           SC[0].MAG[1].Field, SC[0].MAG[2].Field, SC[0].AC.bvb.v[0],
+           SC[0].AC.bvb.v[1], SC[0].AC.bvb.v[2]);
 }
 /*********************************************************************/
 void GyroReport(void)
@@ -112,13 +110,13 @@ void GyroReport(void)
    fprintf(gyrofile,
            PRNT_DBL_3VEC PRNT_DBL_3VEC PRNT_DBL_3VEC PRNT_DBL_3VEC
                PRNT_DBL_3VEC PRNT_DBL_3VEC "\n",
-           SC[0].B[0].wn[0], SC[0].B[0].wn[1], SC[0].B[0].wn[2],
+           SC[0].B[0].wn.v[0], SC[0].B[0].wn.v[1], SC[0].B[0].wn.v[2],
            SC[0].Gyro[0].TrueRate, SC[0].Gyro[1].TrueRate,
            SC[0].Gyro[2].TrueRate, SC[0].Gyro[0].Bias, SC[0].Gyro[1].Bias,
            SC[0].Gyro[2].Bias, SC[0].Gyro[0].Angle, SC[0].Gyro[1].Angle,
            SC[0].Gyro[2].Angle, SC[0].Gyro[0].MeasRate, SC[0].Gyro[1].MeasRate,
-           SC[0].Gyro[2].MeasRate, SC[0].AC.wbn[0], SC[0].AC.wbn[1],
-           SC[0].AC.wbn[2]);
+           SC[0].Gyro[2].MeasRate, SC[0].AC.wbn.v[0], SC[0].AC.wbn.v[1],
+           SC[0].AC.wbn.v[2]);
 }
 /*********************************************************************/
 void DSM_AttitudeReport(void)
@@ -145,10 +143,10 @@ void DSM_AttitudeReport(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          fprintf(attitudefile[Isc], PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL,
-                 SC[Isc].B[0].qn[0], SC[Isc].B[0].qn[1], SC[Isc].B[0].qn[2],
-                 SC[Isc].B[0].qn[3]);
-         fprintf(attitudefile[Isc], PRNT_DBL_3VEC, SC[Isc].B[0].wn[0],
-                 SC[Isc].B[0].wn[1], SC[Isc].B[0].wn[2]);
+                 SC[Isc].B[0].qn.q[0], SC[Isc].B[0].qn.q[1],
+                 SC[Isc].B[0].qn.q[2], SC[Isc].B[0].qn.q[3]);
+         fprintf(attitudefile[Isc], PRNT_DBL_3VEC, SC[Isc].B[0].wn.v[0],
+                 SC[Isc].B[0].wn.v[1], SC[Isc].B[0].wn.v[2]);
          fprintf(attitudefile[Isc], "\n");
       }
       fflush(attitudefile[Isc]);
@@ -179,10 +177,10 @@ void DSM_AC_AttitudeReport(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
          fprintf(attitudefile[Isc], PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL,
-                 SC[Isc].AC.qbn[0], SC[Isc].AC.qbn[1], SC[Isc].AC.qbn[2],
-                 SC[Isc].AC.qbn[3]);
-         fprintf(attitudefile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.wbn[0],
-                 SC[Isc].AC.wbn[1], SC[Isc].AC.wbn[2]);
+                 SC[Isc].AC.qbn.q[0], SC[Isc].AC.qbn.q[1], SC[Isc].AC.qbn.q[2],
+                 SC[Isc].AC.qbn.q[3]);
+         fprintf(attitudefile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.wbn.v[0],
+                 SC[Isc].AC.wbn.v[1], SC[Isc].AC.wbn.v[2]);
          fprintf(attitudefile[Isc], "\n");
       }
       fflush(attitudefile[Isc]);
@@ -194,7 +192,7 @@ void DSM_InertialReport(void)
    static FILE **inertialfile;
    static long First = 1;
    long Isc;
-   double PosL[3];
+   vec3 PosL;
    char s[40];
 
    if (First) {
@@ -214,12 +212,13 @@ void DSM_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         MxV(SC[0].CLN, SC[Isc].PosN, PosL);
-         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].PosN[0],
-                 SC[Isc].PosN[1], SC[Isc].PosN[2]);
-         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].VelN[0],
-                 SC[Isc].VelN[1], SC[Isc].VelN[2]);
-         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, PosL[0], PosL[1], PosL[2]);
+         PosL = MxV(SC[0].CLN, SC[Isc].PosN);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].PosN.v[0],
+                 SC[Isc].PosN.v[1], SC[Isc].PosN.v[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].VelN.v[0],
+                 SC[Isc].VelN.v[1], SC[Isc].VelN.v[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, PosL.v[0], PosL.v[1],
+                 PosL.v[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
@@ -250,15 +249,16 @@ void DSM_RelativeReport(void)
       struct SCType *S = &SC[Isc];
       if (S->Exists) {
          struct OrbitType *O = &Orb[S->RefOrb];
-         double wxr[3], posr[3], velr[3];
-         VxV(O->wln, S->PosR, wxr);
-         MxV(O->CLN, S->VelR, velr);
-         MxV(O->CLN, wxr, posr);
-         for (int i = 0; i < 3; i++)
-            velr[i] -= posr[i];
-         MxV(O->CLN, S->PosR, posr);
-         fprintf(relativefile[Isc], PRNT_DBL_3VEC, posr[0], posr[1], posr[2]);
-         fprintf(relativefile[Isc], PRNT_DBL_3VEC, velr[0], velr[1], velr[2]);
+         vec3 wxr, posr, velr;
+         wxr  = VxV(O->wln, S->PosR);
+         velr = MxV(O->CLN, S->VelR);
+         posr = MxV(O->CLN, wxr);
+         velr = VmVElem(velr, posr);
+         posr = MxV(O->CLN, S->PosR);
+         fprintf(relativefile[Isc], PRNT_DBL_3VEC, posr.v[0], posr.v[1],
+                 posr.v[2]);
+         fprintf(relativefile[Isc], PRNT_DBL_3VEC, velr.v[0], velr.v[1],
+                 velr.v[2]);
          fprintf(relativefile[Isc], "\n");
       }
       fflush(relativefile[Isc]);
@@ -272,7 +272,8 @@ void DSM_PlanetEphemReport(void)
    static long First = 1;
    long Iw;
    char s[50];
-   double svh[3], svw[3], CWH[3][3];
+   vec3 svh, svw;
+   mat3x3 CWH;
    double Lat, Lng;
 
    if (First) {
@@ -300,21 +301,20 @@ void DSM_PlanetEphemReport(void)
    }
    for (Iw = 0; Iw < NWORLD; Iw++) { // Skip Sun
       if (World[Iw].Exists) {
-         fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].PosH[0],
-                 World[Iw].PosH[1], World[Iw].PosH[2]);
-         fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].VelH[0],
-                 World[Iw].VelH[1], World[Iw].VelH[2]);
+         fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].PosH.v[0],
+                 World[Iw].PosH.v[1], World[Iw].PosH.v[2]);
+         fprintf(ephemfile[Iw], PRNT_DBL_3VEC, World[Iw].VelH.v[0],
+                 World[Iw].VelH.v[1], World[Iw].VelH.v[2]);
          fprintf(ephemfile[Iw], "\n");
 
          if (Iw != 0) {
-            for (int i = 0; i < 3; i++)
-               svh[i] = -World[Iw].PosH[i];
-            UNITV(svh);
-            MxM(World[Iw].CWN, World[Iw].CNH, CWH);
-            MxV(CWH, svh, svw);
+            svh = VNegElem(World[Iw].PosH);
+            UNITV(&svh);
+            CWH = MxM(World[Iw].CWN, World[Iw].CNH);
+            svw = MxV(CWH, svh);
 
-            Lng = atan2(svw[1], svw[0]) * R2D;
-            Lat = asin(svw[2]) * R2D;
+            Lng = atan2(svw.y, svw.x) * R2D;
+            Lat = asin(svw.z) * R2D;
          }
          else {
             Lng = 0.0;
@@ -352,10 +352,10 @@ void DSM_AC_InertialReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.PosN[0],
-                 SC[Isc].AC.PosN[1], SC[Isc].AC.PosN[2]);
-         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.VelN[0],
-                 SC[Isc].AC.VelN[1], SC[Isc].AC.VelN[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.PosN.v[0],
+                 SC[Isc].AC.PosN.v[1], SC[Isc].AC.PosN.v[2]);
+         fprintf(inertialfile[Isc], PRNT_DBL_3VEC, SC[Isc].AC.VelN.v[0],
+                 SC[Isc].AC.VelN.v[1], SC[Isc].AC.VelN.v[2]);
          fprintf(inertialfile[Isc], "\n");
       }
       fflush(inertialfile[Isc]);
@@ -368,7 +368,7 @@ void DSM_StateRot3BodyReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   double posRot[3], velRot[3];
+   vec3 posRot, velRot;
    struct LagrangeSystemType *LS;
 
    if (First) {
@@ -394,12 +394,12 @@ void DSM_StateRot3BodyReport(void)
          if (LS->Exists) {
             StateN2StateRnd(LS, World[LS->Body2].eph.PosN,
                             World[LS->Body2].eph.VelN, SC[Isc].PosN,
-                            SC[Isc].VelN, posRot, velRot);
+                            SC[Isc].VelN, &posRot, &velRot);
 
-            fprintf(staterotfile[Isc], PRNT_DBL_3VEC, posRot[0], posRot[1],
-                    posRot[2]);
-            fprintf(staterotfile[Isc], PRNT_DBL_3VEC, velRot[0], velRot[1],
-                    velRot[2]);
+            fprintf(staterotfile[Isc], PRNT_DBL_3VEC, posRot.v[0], posRot.v[1],
+                    posRot.v[2]);
+            fprintf(staterotfile[Isc], PRNT_DBL_3VEC, velRot.v[0], velRot.v[1],
+                    velRot.v[2]);
             fprintf(staterotfile[Isc], "\n");
          }
       }
@@ -411,10 +411,10 @@ void DSM_PosHReport(void)
 {
    static FILE **poshfile;
    static long First = 1;
-   long Isc, i;
+   long Isc;
    char s[50];
-   double CNJ[3][3];
-   double SC_ECI[3], SC_LEI[3], SC_LCI[3];
+   mat3x3 CNJ;
+   vec3 SC_ECI, SC_LEI, SC_LCI;
 
    if (First) {
       poshfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -444,23 +444,17 @@ void DSM_PosHReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         GetWorldCNJ(JD_TDB_MJD, World[LUNA].ang_data, CNJ);
+         CNJ = GetWorldCNJ(JD_TDB_MJD, World[LUNA].ang_data);
          // LunaInertialFrame(JD_TDB_MJD, CNJ);
          if (Orb[SC[Isc].RefOrb].World == LUNA) {
-            for (i = 0; i < 3; ++i) {
-               SC_LEI[i] = SC[Isc].PosN[i];
-            }
-            MTxV(CNJ, SC_LEI, SC_LCI);
-            for (i = 0; i < 3; ++i) {
-               SC_ECI[i] = SC_LCI[i] + World[LUNA].eph.PosN[i];
-            }
+            SC_LEI = SC[Isc].PosN;
+            SC_LCI = MTxV(CNJ, SC_LEI);
+            SC_ECI = VpVElem(SC_LCI, World[LUNA].eph.PosN);
          }
          else if (Orb[SC[Isc].RefOrb].World == EARTH) {
-            for (i = 0; i < 3; ++i) {
-               SC_ECI[i] = SC[Isc].PosN[i];
-               SC_LCI[i] = SC_ECI[i] - World[LUNA].eph.PosN[i];
-            }
-            MxV(CNJ, SC_LCI, SC_LEI);
+            SC_ECI = SC[Isc].PosN;
+            SC_LCI = VmVElem(SC_ECI, World[LUNA].eph.PosN);
+            SC_LEI = MxV(CNJ, SC_LCI);
          }
          else
             break;
@@ -471,27 +465,27 @@ void DSM_PosHReport(void)
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, JDToDays(jd_tdb_j2000),
                  JDToDays(jd_tt_j2000));
          fprintf(poshfile[Isc], PRNT_DBL PRNT_DBL, tdbTime, DynTime);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH[0],
-                 World[VENUS].PosH[1], World[VENUS].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[EARTH].PosH[0],
-                 World[EARTH].PosH[1], World[EARTH].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[LUNA].PosH[0],
-                 World[LUNA].PosH[1], World[LUNA].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[LUNA].eph.PosN[0],
-                 World[LUNA].eph.PosN[1], World[LUNA].eph.PosN[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[MARS].PosH[0],
-                 World[MARS].PosH[1], World[MARS].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[JUPITER].PosH[0],
-                 World[JUPITER].PosH[1], World[JUPITER].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[SATURN].PosH[0],
-                 World[SATURN].PosH[1], World[SATURN].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC[0].PosN[0], SC[0].PosN[1],
-                 SC[0].PosN[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC[0].PosH[0], SC[0].PosH[1],
-                 SC[0].PosH[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_ECI[0], SC_ECI[1], SC_ECI[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_LCI[0], SC_LCI[1], SC_LCI[2]);
-         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_LEI[0], SC_LEI[1], SC_LEI[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[VENUS].PosH.v[0],
+                 World[VENUS].PosH.v[1], World[VENUS].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[EARTH].PosH.v[0],
+                 World[EARTH].PosH.v[1], World[EARTH].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[LUNA].PosH.v[0],
+                 World[LUNA].PosH.v[1], World[LUNA].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[LUNA].eph.PosN.v[0],
+                 World[LUNA].eph.PosN.v[1], World[LUNA].eph.PosN.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[MARS].PosH.v[0],
+                 World[MARS].PosH.v[1], World[MARS].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[JUPITER].PosH.v[0],
+                 World[JUPITER].PosH.v[1], World[JUPITER].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, World[SATURN].PosH.v[0],
+                 World[SATURN].PosH.v[1], World[SATURN].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC[0].PosN.v[0], SC[0].PosN.v[1],
+                 SC[0].PosN.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC[0].PosH.v[0], SC[0].PosH.v[1],
+                 SC[0].PosH.v[2]);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_ECI.x, SC_ECI.y, SC_ECI.z);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_LCI.x, SC_LCI.y, SC_LCI.z);
+         fprintf(poshfile[Isc], PRNT_DBL_3VEC, SC_LEI.x, SC_LEI.y, SC_LEI.z);
          fprintf(poshfile[Isc], "\n");
       }
       fflush(poshfile[Isc]);
@@ -505,9 +499,10 @@ void DSM_Rot3BodyReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   double posRel[3], posRot[3], velRel[3], velRot[3], DCM[3][3];
+   vec3 posRel, posRot, velRel, velRot, z_axis = VEC3_PZAXIS;
+   mat3x3 DCM;
    struct LagrangeSystemType *LS;
-   double z_axis[3] = {0, 0, 1}, ang_rot = M_PI;
+   double ang_rot = M_PI;
 
    if (First) {
       rotfile = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -531,26 +526,20 @@ void DSM_Rot3BodyReport(void)
          LS = &LagSys[EARTHMOON];
          if (LS->Exists) {
             if (Orb[SC[Isc].RefOrb].World == LUNA) {
-               for (int i = 0; i < 3; ++i) {
-                  posRel[i] = SC[Isc].PosN[i];
-                  velRel[i] = SC[Isc].VelN[i];
-               }
+               posRel = SC[Isc].PosN;
+               velRel = SC[Isc].VelN;
             }
             else {
-               for (int i = 0; i < 3; ++i) {
-                  posRel[i] = SC[Isc].PosN[i] - World[LUNA].eph.PosN[i];
-                  velRel[i] = SC[Isc].VelN[i] - World[LUNA].eph.VelN[i];
-               }
+               posRel = VmVElem(SC[Isc].PosN, World[LUNA].eph.PosN);
+               velRel = VmVElem(SC[Isc].VelN, World[LUNA].eph.VelN);
             }
-            MxV(LS->CLN, posRel, posRot);
-            MxV(LS->CLN, velRel, velRot);
-            SimpRot(z_axis, ang_rot, DCM);
-            MxV(DCM, posRot, posRot);
-            MxV(DCM, velRot, velRot);
-            fprintf(rotfile[Isc], PRNT_DBL_3VEC, posRot[0], posRot[1],
-                    posRot[2]);
-            fprintf(rotfile[Isc], PRNT_DBL_3VEC, velRot[0], velRot[1],
-                    velRot[2]);
+            posRot = MxV(LS->CLN, posRel);
+            velRot = MxV(LS->CLN, velRel);
+            DCM    = SimpRot(z_axis, ang_rot);
+            posRot = MxV(DCM, posRot);
+            velRot = MxV(DCM, velRot);
+            fprintf(rotfile[Isc], PRNT_DBL_3VEC, posRot.x, posRot.y, posRot.z);
+            fprintf(rotfile[Isc], PRNT_DBL_3VEC, velRot.x, velRot.y, velRot.z);
             fprintf(rotfile[Isc], "\n");
          }
       }
@@ -659,33 +648,32 @@ void DSM_NAV_StateReport(void)
                      break;
                   case ROTMAT_STATE:
                      for (int i = 0; i < 3; i++)
-                        fprintf(stateFile[Isc], PRNT_DBL_3VEC, Nav->CRB[i][0],
-                                Nav->CRB[i][1], Nav->CRB[i][2]);
+                        fprintf(stateFile[Isc], PRNT_DBL_3VEC,
+                                Nav->CRB.rows[i].x, Nav->CRB.rows[i].y,
+                                Nav->CRB.rows[i].z);
                      break;
                   case QUAT_STATE:
                      fprintf(stateFile[Isc],
-                             PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL, Nav->qbr[0],
-                             Nav->qbr[1], Nav->qbr[2], Nav->qbr[3]);
+                             PRNT_DBL PRNT_DBL PRNT_DBL PRNT_DBL, Nav->qbr.x,
+                             Nav->qbr.y, Nav->qbr.z, Nav->qbr.s);
                      break;
                   case OMEGA_STATE:
-                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, Nav->wbr[0],
-                             Nav->wbr[1], Nav->wbr[2]);
+                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, Nav->wbr.x,
+                             Nav->wbr.y, Nav->wbr.z);
                      break;
                   case POS_STATE: {
-                     double tmpV1[3] = {0.0}, tmpV2[3] = {0.0};
-                     for (int i = 0; i < 3; i++)
-                        tmpV1[i] = Nav->PosR[i] + Nav->refPos[i];
-                     MTxV(Nav->refCRN, tmpV1, tmpV2);
-                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2[0], tmpV2[1],
-                             tmpV2[2]);
+                     vec3 tmpV1, tmpV2;
+                     tmpV1 = VpVElem(Nav->PosR, Nav->refPos);
+                     tmpV2 = MTxV(Nav->refCRN, tmpV1);
+                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2.x, tmpV2.y,
+                             tmpV2.z);
                   } break;
                   case VEL_STATE: {
-                     double tmpV1[3] = {0.0}, tmpV2[3] = {0.0};
-                     for (int i = 0; i < 3; i++)
-                        tmpV1[i] = Nav->VelR[i] + Nav->refVel[i];
-                     MTxV(Nav->refCRN, tmpV1, tmpV2);
-                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2[0], tmpV2[1],
-                             tmpV2[2]);
+                     vec3 tmpV1, tmpV2;
+                     tmpV1 = VpVElem(Nav->VelR, Nav->refVel);
+                     tmpV2 = MTxV(Nav->refCRN, tmpV1);
+                     fprintf(stateFile[Isc], PRNT_DBL_3VEC, tmpV2.x, tmpV2.y,
+                             tmpV2.z);
                   } break;
                   default:
                      break;
@@ -897,16 +885,16 @@ void DSM_ATT_ControlReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.therr[0],
-                 SC[Isc].DSM.therr[1], SC[Isc].DSM.therr[2]);
-         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.werr[0],
-                 SC[Isc].DSM.werr[1], SC[Isc].DSM.werr[2]);
-         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.Tcmd[0],
-                 SC[Isc].DSM.Tcmd[1], SC[Isc].DSM.Tcmd[2]);
-         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.dTcmd[0],
-                 SC[Isc].DSM.dTcmd[1], SC[Isc].DSM.dTcmd[2]);
-         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.Mcmd[0],
-                 SC[Isc].DSM.Mcmd[1], SC[Isc].DSM.Mcmd[2]);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.therr.x,
+                 SC[Isc].DSM.therr.y, SC[Isc].DSM.therr.z);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.werr.x,
+                 SC[Isc].DSM.werr.y, SC[Isc].DSM.werr.z);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.Tcmd.x,
+                 SC[Isc].DSM.Tcmd.y, SC[Isc].DSM.Tcmd.z);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.dTcmd.x,
+                 SC[Isc].DSM.dTcmd.y, SC[Isc].DSM.dTcmd.z);
+         fprintf(attcontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.Mcmd.x,
+                 SC[Isc].DSM.Mcmd.y, SC[Isc].DSM.Mcmd.z);
          fprintf(attcontrolfile[Isc], "\n");
       }
       fflush(attcontrolfile[Isc]);
@@ -938,14 +926,14 @@ void DSM_POS_ControlReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.perr[0],
-                 SC[Isc].DSM.perr[1], SC[Isc].DSM.perr[2]);
-         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.verr[0],
-                 SC[Isc].DSM.verr[1], SC[Isc].DSM.verr[2]);
-         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.FcmdN[0],
-                 SC[Isc].DSM.FcmdN[1], SC[Isc].DSM.FcmdN[2]);
-         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.FcmdB[0],
-                 SC[Isc].DSM.FcmdB[1], SC[Isc].DSM.FcmdB[2]);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.perr.x,
+                 SC[Isc].DSM.perr.y, SC[Isc].DSM.perr.z);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.verr.x,
+                 SC[Isc].DSM.verr.y, SC[Isc].DSM.verr.z);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.FcmdN.x,
+                 SC[Isc].DSM.FcmdN.y, SC[Isc].DSM.FcmdN.z);
+         fprintf(poscontrolfile[Isc], PRNT_DBL_3VEC, SC[Isc].DSM.FcmdB.x,
+                 SC[Isc].DSM.FcmdB.y, SC[Isc].DSM.FcmdB.z);
          fprintf(poscontrolfile[Isc], "\n");
       }
       fflush(poscontrolfile[Isc]);
@@ -1098,8 +1086,8 @@ void DSM_SVBReport(void)
 
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {
-         fprintf(SVBFile[Isc], PRNT_DBL_3VEC, SC[Isc].svb[0], SC[Isc].svb[1],
-                 SC[Isc].svb[2]);
+         fprintf(SVBFile[Isc], PRNT_DBL_3VEC, SC[Isc].svb.x, SC[Isc].svb.y,
+                 SC[Isc].svb.z);
          fprintf(SVBFile[Isc], "\n");
       }
       fflush(SVBFile[Isc]);
@@ -1159,18 +1147,18 @@ void OrbPropReport(void)
    }
 
    if (OutFlag) {
-      fprintf(FixedFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[0].PosN[0],
-              SC[0].PosN[1], SC[0].PosN[2], SC[0].VelN[0], SC[0].VelN[1],
-              SC[0].VelN[2]);
-      fprintf(EnckeFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[1].PosN[0],
-              SC[1].PosN[1], SC[1].PosN[2], SC[1].VelN[0], SC[1].VelN[1],
-              SC[1].VelN[2]);
-      fprintf(CowellFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[2].PosN[0],
-              SC[2].PosN[1], SC[2].PosN[2], SC[2].VelN[0], SC[2].VelN[1],
-              SC[2].VelN[2]);
-      fprintf(EulHillFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[3].PosN[0],
-              SC[3].PosN[1], SC[3].PosN[2], SC[3].VelN[0], SC[3].VelN[1],
-              SC[3].VelN[2]);
+      fprintf(FixedFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[0].PosN.x,
+              SC[0].PosN.y, SC[0].PosN.z, SC[0].VelN.x, SC[0].VelN.y,
+              SC[0].VelN.z);
+      fprintf(EnckeFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[1].PosN.x,
+              SC[1].PosN.y, SC[1].PosN.z, SC[1].VelN.x, SC[1].VelN.y,
+              SC[1].VelN.z);
+      fprintf(CowellFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[2].PosN.x,
+              SC[2].PosN.y, SC[2].PosN.z, SC[2].VelN.x, SC[2].VelN.y,
+              SC[2].VelN.z);
+      fprintf(EulHillFile, PRNT_DBL_3VEC PRNT_DBL_3VEC "\n", SC[3].PosN.x,
+              SC[3].PosN.y, SC[3].PosN.z, SC[3].VelN.x, SC[3].VelN.y,
+              SC[3].VelN.z);
    }
 }
 /*********************************************************************/
@@ -1187,8 +1175,8 @@ void GmatReport(void)
 
    if (OutFlag) {
       for (i = 0; i < 9; i++) {
-         fprintf(outfile, PRNT_DBL_3VEC, SC[i].PosN[0], SC[i].PosN[1],
-                 SC[i].PosN[2]);
+         fprintf(outfile, PRNT_DBL_3VEC, SC[i].PosN.x, SC[i].PosN.y,
+                 SC[i].PosN.z);
       }
       fprintf(outfile, "\n");
    }
@@ -1215,26 +1203,26 @@ void PerturbReport(void)
       First = 0;
    }
 
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].gravTrqB[0], SC[0].gravTrqB[1],
-           SC[0].gravTrqB[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].gravTrqN[0], SC[0].gravTrqN[1],
-           SC[0].gravTrqN[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpTrqB[0], SC[0].srpTrqB[1],
-           SC[0].srpTrqB[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpTrqN[0], SC[0].srpTrqN[1],
-           SC[0].srpTrqN[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroTrqB[0], SC[0].aeroTrqB[1],
-           SC[0].aeroTrqB[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroTrqN[0], SC[0].aeroTrqN[1],
-           SC[0].aeroTrqN[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpFrcB[0], SC[0].srpFrcB[1],
-           SC[0].srpFrcB[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpFrcN[0], SC[0].srpFrcN[1],
-           SC[0].srpFrcN[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroFrcB[0], SC[0].aeroFrcB[1],
-           SC[0].aeroFrcB[2]);
-   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroFrcN[0], SC[0].aeroFrcN[1],
-           SC[0].aeroFrcN[2]);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].gravTrqB.x, SC[0].gravTrqB.y,
+           SC[0].gravTrqB.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].gravTrqN.x, SC[0].gravTrqN.y,
+           SC[0].gravTrqN.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpTrqB.x, SC[0].srpTrqB.y,
+           SC[0].srpTrqB.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpTrqN.x, SC[0].srpTrqN.y,
+           SC[0].srpTrqN.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroTrqB.x, SC[0].aeroTrqB.y,
+           SC[0].aeroTrqB.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroTrqN.x, SC[0].aeroTrqN.y,
+           SC[0].aeroTrqN.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpFrcB.x, SC[0].srpFrcB.y,
+           SC[0].srpFrcB.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].srpFrcN.x, SC[0].srpFrcN.y,
+           SC[0].srpFrcN.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroFrcB.x, SC[0].aeroFrcB.y,
+           SC[0].aeroFrcB.z);
+   fprintf(perturbfile, PRNT_DBL_3VEC, SC[0].aeroFrcN.x, SC[0].aeroFrcN.y,
+           SC[0].aeroFrcN.z);
    fprintf(perturbfile, "\n");
 
    fflush(perturbfile);
@@ -1266,14 +1254,13 @@ void Report(void)
    static char First = TRUE;
    long Isc, i;
    struct DynType *D;
-   double CBR[3][3], CRN[3][3], Roll, Pitch, Yaw;
+   double Roll, Pitch, Yaw;
+   mat3x3 CBR, CRN, CRL = MAT3X3_EYE;
    struct WorldType *W;
-   double WorldAngVel[3], wxR[3], VelN[3];
-   double PosW[3], VelW[3], PosR[3], VelR[3];
-   double CRL[3][3] = EYE3_MAT;
+   vec3 WorldAngVel, wxR, VelN;
+   vec3 PosW, VelW, PosR, VelR;
    // double SMA,ecc,inc,RAAN,ArgP,anom,tp,SLR,alpha,rmin,MeanMotion,Period;
    char s[40];
-   // double ZAxis[3] = {0.0,0.0,1.0};
 
    if (First) {
       First       = FALSE;
@@ -1375,57 +1362,57 @@ void Report(void)
          }
       }
       if (SC[0].Exists) {
-         fprintf(PosNfile, PRNT_DBL_3VEC "\n", SC[0].PosN[0], SC[0].PosN[1],
-                 SC[0].PosN[2]);
-         fprintf(VelNfile, PRNT_DBL_3VEC "\n", SC[0].VelN[0], SC[0].VelN[1],
-                 SC[0].VelN[2]);
-         W              = &World[Orb[SC[0].RefOrb].World];
-         WorldAngVel[0] = 0.0;
-         WorldAngVel[1] = 0.0;
-         WorldAngVel[2] = GetWorldW(JD_TDB_MJD, W);
-         VxV(WorldAngVel, SC[0].PosN, wxR);
-         for (i = 0; i < 3; i++)
-            VelN[i] = SC[0].VelN[i] - wxR[i];
-         MxV(W->CWN, SC[0].PosN, PosW);
-         MxV(W->CWN, VelN, VelW);
-         fprintf(PosWfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", PosW[0], PosW[1],
-                 PosW[2]);
-         fprintf(VelWfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", VelW[0], VelW[1],
-                 VelW[2]);
+         fprintf(PosNfile, PRNT_DBL_3VEC "\n", SC[0].PosN.x, SC[0].PosN.y,
+                 SC[0].PosN.z);
+         fprintf(VelNfile, PRNT_DBL_3VEC "\n", SC[0].VelN.x, SC[0].VelN.y,
+                 SC[0].VelN.z);
+         W                = &World[Orb[SC[0].RefOrb].World];
+         WorldAngVel.v[0] = 0.0;
+         WorldAngVel.v[1] = 0.0;
+         WorldAngVel.v[2] = GetWorldW(JD_TDB_MJD, W);
+
+         wxR  = VxV(WorldAngVel, SC[0].PosN);
+         VelN = VmVElem(SC[0].VelN, wxR);
+         PosW = MxV(W->CWN, SC[0].PosN);
+         VelW = MxV(W->CWN, VelN);
+         fprintf(PosWfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", PosW.x, PosW.y,
+                 PosW.z);
+         fprintf(VelWfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", VelW.x, VelW.y,
+                 VelW.z);
          if (Orb[SC[0].RefOrb].Regime == ORB_FLIGHT) {
-            MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].PosR, PosR);
-            MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].VelR, VelR);
-            fprintf(PosRfile, PRNT_DBL_3VEC "\n", PosR[0], PosR[1], PosR[2]);
-            fprintf(VelRfile, PRNT_DBL_3VEC "\n", VelR[0], VelR[1], VelR[2]);
+            PosR = MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].PosR);
+            VelR = MxV(Rgn[Orb[SC[0].RefOrb].Region].CN, SC[0].VelR);
+            fprintf(PosRfile, PRNT_DBL_3VEC "\n", PosR.x, PosR.y, PosR.z);
+            fprintf(VelRfile, PRNT_DBL_3VEC "\n", VelR.x, VelR.y, VelR.z);
          }
          else {
-            fprintf(PosRfile, PRNT_DBL_3VEC "\n", SC[0].PosR[0], SC[0].PosR[1],
-                    SC[0].PosR[2]);
-            fprintf(VelRfile, PRNT_DBL_3VEC "\n", SC[0].VelR[0], SC[0].VelR[1],
-                    SC[0].VelR[2]);
+            fprintf(PosRfile, PRNT_DBL_3VEC "\n", SC[0].PosR.x, SC[0].PosR.y,
+                    SC[0].PosR.z);
+            fprintf(VelRfile, PRNT_DBL_3VEC "\n", SC[0].VelR.x, SC[0].VelR.y,
+                    SC[0].VelR.z);
          }
-         fprintf(qbnfile, PRNT_DBL_3VEC PRNT_DBL "\n", SC[0].B[0].qn[0],
-                 SC[0].B[0].qn[1], SC[0].B[0].qn[2], SC[0].B[0].qn[3]);
-         fprintf(wbnfile, PRNT_DBL_3VEC "\n", SC[0].B[0].wn[0],
-                 SC[0].B[0].wn[1], SC[0].B[0].wn[2]);
-         fprintf(bvnfile, PRNT_DBL_3VEC "\n", SC[0].bvn[0], SC[0].bvn[1],
-                 SC[0].bvn[2]);
-         fprintf(bvbfile, PRNT_DBL_3VEC "\n", SC[0].bvb[0], SC[0].bvb[1],
-                 SC[0].bvb[2]);
-         fprintf(Hvnfile, PRNT_DBL_3VEC "\n", SC[0].Hvn[0], SC[0].Hvn[1],
-                 SC[0].Hvn[2]);
-         fprintf(Hvbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].Hvb[0],
-                 SC[0].Hvb[1], SC[0].Hvb[2]);
-         fprintf(svnfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svn[0],
-                 SC[0].svn[1], SC[0].svn[2]);
-         fprintf(svbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svb[0],
-                 SC[0].svb[1], SC[0].svb[2]);
+         fprintf(qbnfile, PRNT_DBL_3VEC PRNT_DBL "\n", SC[0].B[0].qn.x,
+                 SC[0].B[0].qn.y, SC[0].B[0].qn.z, SC[0].B[0].qn.s);
+         fprintf(wbnfile, PRNT_DBL_3VEC "\n", SC[0].B[0].wn.x, SC[0].B[0].wn.y,
+                 SC[0].B[0].wn.z);
+         fprintf(bvnfile, PRNT_DBL_3VEC "\n", SC[0].bvn.x, SC[0].bvn.y,
+                 SC[0].bvn.z);
+         fprintf(bvbfile, PRNT_DBL_3VEC "\n", SC[0].bvb.x, SC[0].bvb.y,
+                 SC[0].bvb.z);
+         fprintf(Hvnfile, PRNT_DBL_3VEC "\n", SC[0].Hvn.x, SC[0].Hvn.y,
+                 SC[0].Hvn.z);
+         fprintf(Hvbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].Hvb.x,
+                 SC[0].Hvb.y, SC[0].Hvb.z);
+         fprintf(svnfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svn.x,
+                 SC[0].svn.y, SC[0].svn.z);
+         fprintf(svbfile, PRNT_DBL PRNT_DBL PRNT_DBL "\n", SC[0].svb.x,
+                 SC[0].svb.y, SC[0].svb.z);
          fprintf(KEfile, PRNT_DBL "\n", FindTotalKineticEnergy(Orb, &SC[0]));
          // fprintf(ProjAreaFile, PRNT_DBL PRNT_DBL"\n",
          //    FindTotalProjectedArea(&SC[0],ZAxis),
          //    FindTotalUnshadedProjectedArea(&SC[0],ZAxis));
-         MxM(CRL, SC[0].CLN, CRN);
-         MxMT(SC[0].B[0].CN, CRN, CBR);
+         CRN = MxM(CRL, SC[0].CLN);
+         CBR = MxMT(SC[0].B[0].CN, CRN);
          C2A(123, CBR, &Roll, &Pitch, &Yaw);
          fprintf(RPYfile, PRNT_DBL_3VEC "\n", Roll * R2D, Pitch * R2D,
                  Yaw * R2D);
@@ -1452,8 +1439,8 @@ void Report(void)
             fprintf(AccFile, "\n");
          }
          if (SC[0].Ngps > 0) {
-            fprintf(GpsFile, PRNT_DBL_3VEC "\n", SC[0].GPS[0].PosN[0],
-                    SC[0].GPS[0].PosN[1], SC[0].GPS[0].PosN[2]);
+            fprintf(GpsFile, PRNT_DBL_3VEC "\n", SC[0].GPS[0].PosN.x,
+                    SC[0].GPS[0].PosN.y, SC[0].GPS[0].PosN.z);
          }
          if (SC[0].Ncss > 0) {
             for (i = 0; i < SC[0].Ncss; i++) {

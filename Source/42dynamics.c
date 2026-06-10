@@ -25,38 +25,32 @@
 void MotionConstraints(struct SCType *S)
 {
    struct BodyType *B;
-   double pcm[3], vcm[3];
+   vec3 pcm = VEC3_ZERO, vcm = VEC3_ZERO;
    long Ib, i;
 
    /* Constrain Sum(mass*pn = 0.0), Sum(mass*vn = 0.0) */
-   for (i = 0; i < 3; i++) {
-      pcm[i] = 0.0;
-      vcm[i] = 0.0;
-   }
+
    S->mass = 0.0;
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         pcm[i] += B->mass * B->pn[i];
-         vcm[i] += B->mass * B->vn[i];
+         pcm.v[i] += B->mass * B->pn.v[i];
+         vcm.v[i] += B->mass * B->vn.v[i];
       }
       S->mass += B->mass;
    }
-   for (i = 0; i < 3; i++) {
-      pcm[i] /= S->mass;
-      vcm[i] /= S->mass;
-   }
+   pcm = SxV(1.0 / S->mass, pcm);
+   vcm = SxV(1.0 / S->mass, vcm);
+
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      for (i = 0; i < 3; i++) {
-         B->pn[i] -= pcm[i];
-         B->vn[i] -= vcm[i];
-      }
+      B     = &S->B[Ib];
+      B->pn = VmVElem(B->pn, pcm);
+      B->vn = VmVElem(B->pn, vcm);
    }
    /* Adjust Dyn States corresponding to B[0].vn, B[0].pn */
    for (i = 0; i < 3; i++) {
-      S->Dyn.u[S->Dyn.Nu - 3 + i] = S->B[0].vn[i];
-      S->Dyn.x[S->Dyn.Nx - 3 + i] = S->B[0].pn[i];
+      S->Dyn.u[S->Dyn.Nu - 3 + i] = S->B[0].vn.v[i];
+      S->Dyn.x[S->Dyn.Nx - 3 + i] = S->B[0].pn.v[i];
    }
 }
 /**********************************************************************/
@@ -65,50 +59,46 @@ void MotionConstraints(struct SCType *S)
 void SCMassProps(struct SCType *S)
 {
    struct BodyType *B0, *B;
-   double pnb[3];
-   double p2, p[3], pp[3][3], CI0[3][3], MOI[3][3];
+   vec3 pnb, p;
+   mat3x3 pp, CI0, MOI;
+   double p2;
    long i, j, Ib;
 
    B0 = &S->B[0];
 
    /* Locate SC.cm wrt B0 origin */
-   MxV(B0->CN, B0->pn, pnb);
-   for (i = 0; i < 3; i++)
-      S->cm[i] = B0->cm[i] - pnb[i];
+   pnb   = MxV(B0->CN, B0->pn);
+   S->cm = VmVElem(B0->cm, pnb);
 
    /* Compute composite inertia matrix, SC.I */
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++)
-         S->I[i][j] = B0->I[i][j];
-   }
-   MxV(B0->CN, B0->pn, p);
+   S->I = B0->I;
+
+   p  = MxV(B0->CN, B0->pn);
    p2 = VoV(p, p);
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         pp[i][j] = -p[i] * p[j];
+         pp.mat[i][j] = -p.v[i] * p.v[j];
       }
-      pp[i][i] += p2;
+      pp.mat[i][i] += p2;
    }
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++)
-         S->I[i][j] += B0->mass * pp[i][j];
-   }
+   for (i = 0; i < 9; i++)
+      S->I.flat[i] += B0->mass * pp.flat[i];
+
    for (Ib = 1; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      MxMT(B->CN, B0->CN, CI0);
-      MxV(B0->CN, B->pn, p);
-      PARAXIS(B->I, CI0, B->mass, p, MOI);
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            S->I[i][j] += MOI[i][j];
-      }
+      B   = &S->B[Ib];
+      CI0 = MxMT(B->CN, B0->CN);
+      p   = MxV(B0->CN, B->pn);
+      MOI = PARAXIS(B->I, CI0, B->mass, p);
+      for (i = 0; i < 3; i++)
+         S->I.rows[i] = VpVElem(S->I.rows[i], MOI.rows[i]);
    }
 }
 /**********************************************************************/
 void MapJointStatesToStateVector(struct SCType *S)
 {
-   double CGoGi[3][3], qgogi[4];
-   long i, j, Ig;
+   mat3x3 CGoGi;
+   quat qgogi;
+   long i, Ig;
    struct JointType *G;
    struct DynType *D;
 
@@ -116,46 +106,42 @@ void MapJointStatesToStateVector(struct SCType *S)
 
    /* Map in state variables */
    for (i = 0; i < 3; i++) {
-      D->u[i]             = S->B[0].wn[i];
-      D->u[D->Nu - 3 + i] = S->B[0].vn[i];
-      D->x[D->Nx - 3 + i] = S->B[0].pn[i];
+      D->u[i]             = S->B[0].wn.v[i];
+      D->u[D->Nu - 3 + i] = S->B[0].vn.v[i];
+      D->x[D->Nx - 3 + i] = S->B[0].pn.v[i];
    }
+   S->B[0].qn = UNITQ(S->B[0].qn);
    for (i = 0; i < 4; i++)
-      D->x[i] = S->B[0].qn[i];
-   UNITQ(D->x);
+      D->x[i] = S->B[0].qn.q[i];
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       if (G->IsSpherical) {
-         A2C(G->RotSeq, G->Ang[0], G->Ang[1], G->Ang[2], CGoGi);
-         C2Q(CGoGi, qgogi);
+         CGoGi = A2C(G->RotSeq, G->Ang.v[0], G->Ang.v[1], G->Ang.v[2]);
+         qgogi = C2Q(CGoGi);
          for (i = 0; i < 3; i++)
-            D->u[G->Rotu0 + i] = G->AngRate[i];
+            D->u[G->Rotu0 + i] = G->AngRate.v[i];
+         qgogi = UNITQ(qgogi);
          for (i = 0; i < 4; i++)
-            D->x[G->Rotx0 + i] = qgogi[i];
-         UNITQ(&D->x[G->Rotx0 + i]);
+            D->x[G->Rotx0 + i] = qgogi.q[i];
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
-            D->u[G->Rotu0 + i] = G->AngRate[i];
-            D->x[G->Rotx0 + i] = G->Ang[i];
+            D->u[G->Rotu0 + i] = G->AngRate.v[i];
+            D->x[G->Rotx0 + i] = G->Ang.v[i];
          }
       }
       for (i = 0; i < G->TrnDOF; i++) {
-         D->u[G->Trnu0 + i] = G->PosRate[i];
-         D->x[G->Trnx0 + i] = G->Pos[i];
+         D->u[G->Trnu0 + i] = G->PosRate.v[i];
+         D->x[G->Trnx0 + i] = G->Pos.v[i];
       }
-      A2C(G->RotSeq, G->Ang[0], G->Ang[1], G->Ang[2], G->CGoGi);
+      G->CGoGi = A2C(G->RotSeq, G->Ang.v[0], G->Ang.v[1], G->Ang.v[2]);
       JointPartials(TRUE, G->IsSpherical, G->RotSeq, G->TrnSeq, G->Ang,
-                    G->AngRate, G->Gamma, G->Gs, G->Gds, G->PosRate, G->Delta,
-                    G->Ds, G->Dds);
+                    G->AngRate, &G->Gamma, &G->Gs, &G->Gds, G->PosRate,
+                    &G->Delta, &G->Ds, &G->Dds);
       /* CTrqBo is constant for rigid body dynamics */
       /* It gets overwritten for flex */
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++) {
-            G->CTrqBo[i][j] = G->CBoGo[j][i];
-         }
-      }
+      G->CTrqBo = G->CBoGo;
    }
 
    for (i = 0; i < S->Nw; i++) {
@@ -167,12 +153,11 @@ void MapJointStatesToStateVector(struct SCType *S)
 void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
                                 double *uf, double *xf, struct SCType *S)
 {
-   double wi[3], ri[3], ro[3], wxr[3], wxri[3], wxro[3];
-   double xg[3];
-   double CBfiBi[3][3], CBfoBo[3][3], CGoBfi[3][3];
-   double wgon[3], wo[3], fvi[3], fvo[3];
-   double qfi[4], qfo[4];
-   double vg[3], vgb[3], vgn[3];
+   vec3 wi, ri, ro, wxr, wxri, wxro, xg;
+   mat3x3 CBfiBi, CBfoBo, CGoBfi;
+   vec3 wgon, wo, fvi, fvo;
+   quat qfi, qfo;
+   vec3 vg, vgb, vgn;
    struct BodyType *Bi, *Bo, *B;
    struct JointType *G;
    struct WhlType *W;
@@ -181,15 +166,15 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
    Nu = S->Dyn.Nu;
    Nx = S->Dyn.Nx;
    Ng = S->Ng;
-   UNITQ(&x[0]);
    for (i = 0; i < 3; i++) {
-      S->B[0].wn[i] = u[i];
-      S->B[0].qn[i] = x[i];
-      S->B[0].vn[i] = u[Nu - 3 + i];
-      S->B[0].pn[i] = x[Nx - 3 + i];
+      S->B[0].wn.v[i]    = u[i];
+      S->B[0].qn.qv.v[i] = x[i];
+      S->B[0].vn.v[i]    = u[Nu - 3 + i];
+      S->B[0].pn.v[i]    = x[Nx - 3 + i];
    }
-   S->B[0].qn[3] = x[3];
-   Q2C(S->B[0].qn, S->B[0].CN);
+   S->B[0].qn.qs = x[3];
+   S->B[0].CN    = Q2C(S->B[0].qn);
+   S->B[0].qn    = UNITQ(S->B[0].qn);
 
    if (S->FlexActive) {
       for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -207,135 +192,126 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
       Bo = &S->B[G->Bout];
       if (G->IsSpherical) {
          for (i = 0; i < 4; i++)
-            G->q[i] = x[G->Rotx0 + i];
-         UNITQ(G->q);
+            G->q.q[i] = x[G->Rotx0 + i];
+         G->q = UNITQ(G->q);
          for (i = 0; i < 3; i++) {
-            G->AngRate[i] = u[G->Rotu0 + i];
+            G->AngRate.v[i] = u[G->Rotu0 + i];
          }
-         Q2C(G->q, G->CGoGi);
-         C2A(G->RotSeq, G->CGoGi, &G->Ang[0], &G->Ang[1], &G->Ang[2]);
+         G->CGoGi = Q2C(G->q);
+         C2A(G->RotSeq, G->CGoGi, &G->Ang.v[0], &G->Ang.v[1], &G->Ang.v[2]);
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
-            G->AngRate[i] = u[G->Rotu0 + i];
-            while (x[G->Rotx0 + i] > Pi)
-               x[G->Rotx0 + i] -= TwoPi;
-            while (x[G->Rotx0 + i] < -Pi)
-               x[G->Rotx0 + i] += TwoPi;
-            G->Ang[i] = x[G->Rotx0 + i];
+            G->AngRate.v[i] = u[G->Rotu0 + i];
+            x[G->Rotx0 + i] = WrapTo2Pi(x[G->Rotx0 + i]) - Pi;
+            G->Ang.v[i]     = x[G->Rotx0 + i];
          }
          if (G->RotDOF == 3) {
-            if (fabs(G->Ang[1]) > 1.5533) {
+            if (fabs(G->Ang.y) > 1.5533) {
                printf("Warning:  Joint %ld is near gimbal lock.\n", Ig);
             }
          }
-         A2C(G->RotSeq, G->Ang[0], G->Ang[1], G->Ang[2], G->CGoGi);
+         G->CGoGi = A2C(G->RotSeq, G->Ang.v[0], G->Ang.v[1], G->Ang.v[2]);
       }
       for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = u[G->Trnu0 + i];
-         G->Pos[i]     = x[G->Trnx0 + i];
+         G->PosRate.v[i] = u[G->Trnu0 + i];
+         G->Pos.v[i]     = x[G->Trnx0 + i];
       }
       if (S->FlexActive) {
          /* Flex */
+         G->FlexPosi    = VEC3_ZERO;
+         G->FlexVeli    = VEC3_ZERO;
+         G->FlexAngi    = VEC3_ZERO;
+         G->FlexAngVeli = VEC3_ZERO;
+         G->FlexPoso    = VEC3_ZERO;
+         G->FlexVelo    = VEC3_ZERO;
+         G->FlexAngo    = VEC3_ZERO;
+         G->FlexAngVelo = VEC3_ZERO;
          for (i = 0; i < 3; i++) {
-            G->FlexPosi[i]    = 0.0;
-            G->FlexVeli[i]    = 0.0;
-            G->FlexAngi[i]    = 0.0;
-            G->FlexAngVeli[i] = 0.0;
             for (If = 0; If < Bi->Nf; If++) {
-               G->FlexPosi[i]    += G->PSIi[i][If] * Bi->eta[If];
-               G->FlexVeli[i]    += G->PSIi[i][If] * Bi->xi[If];
-               G->FlexAngi[i]    += G->THETAi[i][If] * Bi->eta[If];
-               G->FlexAngVeli[i] += G->THETAi[i][If] * Bi->xi[If];
+               G->FlexPosi.v[i]    += G->PSIi[i][If] * Bi->eta[If];
+               G->FlexVeli.v[i]    += G->PSIi[i][If] * Bi->xi[If];
+               G->FlexAngi.v[i]    += G->THETAi[i][If] * Bi->eta[If];
+               G->FlexAngVeli.v[i] += G->THETAi[i][If] * Bi->xi[If];
             }
-            G->FlexPoso[i]    = 0.0;
-            G->FlexVelo[i]    = 0.0;
-            G->FlexAngo[i]    = 0.0;
-            G->FlexAngVelo[i] = 0.0;
             for (If = 0; If < Bo->Nf; If++) {
-               G->FlexPoso[i]    += G->PSIo[i][If] * Bo->eta[If];
-               G->FlexVelo[i]    += G->PSIo[i][If] * Bo->xi[If];
-               G->FlexAngo[i]    += G->THETAo[i][If] * Bo->eta[If];
-               G->FlexAngVelo[i] += G->THETAo[i][If] * Bo->xi[If];
+               G->FlexPoso.v[i]    += G->PSIo[i][If] * Bo->eta[If];
+               G->FlexVelo.v[i]    += G->PSIo[i][If] * Bo->xi[If];
+               G->FlexAngo.v[i]    += G->THETAo[i][If] * Bo->eta[If];
+               G->FlexAngVelo.v[i] += G->THETAo[i][If] * Bo->xi[If];
             }
          }
          /* CN, qn */
-         qfi[3] = 1.0;
-         qfo[3] = 1.0;
+         qfi.qs = 1.0;
+         qfo.qs = 1.0;
          for (i = 0; i < 3; i++) {
-            qfi[i]  = sin(0.5 * G->FlexAngi[i]);
-            qfo[i]  = sin(0.5 * G->FlexAngo[i]);
-            qfi[3] -= qfi[i] * qfi[i];
-            qfo[3] -= qfo[i] * qfo[i];
+            qfi.qv.v[i]  = sin(0.5 * G->FlexAngi.v[i]);
+            qfo.qv.v[i]  = sin(0.5 * G->FlexAngo.v[i]);
+            qfi.qs      -= qfi.qv.v[i] * qfi.qv.v[i];
+            qfo.qs      -= qfo.qv.v[i] * qfo.qv.v[i];
          }
-         qfi[3] = sqrt(qfi[3]);
-         qfo[3] = sqrt(qfo[3]);
-         Q2C(qfi, CBfiBi);
-         Q2C(qfo, CBfoBo);
-         MTxM(G->CBoGo, CBfoBo, G->CTrqBo);
-         MxM(G->CGoGi, G->CGiBi, CGoBfi);
-         MxM(CGoBfi, CBfiBi, G->CTrqBi);
+         qfi.qs    = sqrt(qfi.qs);
+         qfo.qs    = sqrt(qfo.qs);
+         CBfiBi    = Q2C(qfi);
+         CBfoBo    = Q2C(qfo);
+         G->CTrqBo = MTxM(G->CBoGo, CBfoBo);
+         CGoBfi    = MxM(G->CGoGi, G->CGiBi);
+         G->CTrqBi = MxM(CGoBfi, CBfiBi);
       }
-      else {
-         MxM(G->CGoGi, G->CGiBi, G->CTrqBi);
-      }
-      MTxM(G->CTrqBo, G->CTrqBi, G->COI);
-      MxM(G->COI, Bi->CN, Bo->CN);
-      C2Q(Bo->CN, Bo->qn);
+      else
+         G->CTrqBi = MxM(G->CGoGi, G->CGiBi);
+
+      G->COI = MTxM(G->CTrqBo, G->CTrqBi);
+      Bo->CN = MxM(G->COI, Bi->CN);
+      Bo->qn = C2Q(Bo->CN);
 
       /* wn */
-      ADOT2W(G->IsSpherical, G->RotSeq, G->Ang, G->AngRate, wgon);
-      MxV(G->CBoGo, wgon, Bo->wn);
+      wgon   = ADOT2W(G->IsSpherical, G->RotSeq, G->Ang, G->AngRate);
+      Bo->wn = MxV(G->CBoGo, wgon);
       if (S->FlexActive) {
-         for (i = 0; i < 3; i++) {
-            Bo->wn[i] -= G->FlexAngVelo[i];
-            wi[i]      = Bi->wn[i] + G->FlexAngVeli[i];
-         }
-         MxV(G->COI, wi, wo);
+         Bo->wn = VmVElem(Bo->wn, G->FlexAngVelo);
+         wi     = VpVElem(Bi->wn, G->FlexAngVeli);
+         wo     = MxV(G->COI, wi);
       }
-      else {
-         MxV(G->COI, Bi->wn, wo);
-      }
-      for (i = 0; i < 3; i++)
-         Bo->wn[i] += wo[i];
+      else
+         wo = MxV(G->COI, Bi->wn);
+
+      Bo->wn = VpVElem(Bo->wn, wo);
 
       /* pn, vn */
+      xg = VEC3_ZERO;
+      vg = VEC3_ZERO;
       for (i = 0; i < 3; i++) {
-         xg[i] = 0.0;
-         vg[i] = 0.0;
          for (j = 0; j < G->TrnDOF; j++) {
-            xg[i] += G->Delta[i][j] * G->Pos[j];
-            vg[i] += G->Delta[i][j] * G->PosRate[j];
+            xg.v[i] += G->Delta.mat[i][j] * G->Pos.v[j];
+            vg.v[i] += G->Delta.mat[i][j] * G->PosRate.v[j];
          }
       }
-      MTxV(G->CGiBi, xg, G->xb);
-      for (i = 0; i < 3; i++) {
-         G->ri[i] = G->RigidRin[i] + G->xb[i];
-         G->ro[i] = G->RigidRout[i];
-      }
-      MTxV(Bi->CN, G->xb, G->xn);
-      MTxV(Bi->CN, G->ri, ri);
-      MTxV(Bo->CN, G->ro, ro);
+      G->xb = MTxV(G->CGiBi, xg);
+      G->ro = G->RigidRout;
+      G->ri = VpVElem(G->RigidRin, G->xb);
+
+      G->xn = MTxV(Bi->CN, G->xb);
+      ri    = MTxV(Bi->CN, G->ri);
+      ro    = MTxV(Bo->CN, G->ro);
       for (i = 0; i < 3; i++)
-         Bo->pn[i] = Bi->pn[i] + ri[i] - ro[i];
+         Bo->pn.v[i] = Bi->pn.v[i] + ri.v[i] - ro.v[i];
       /* vn */
-      VxV(Bi->wn, G->ri, wxr);
-      MTxV(Bi->CN, wxr, wxri);
-      VxV(Bo->wn, G->ro, wxr);
-      MTxV(Bo->CN, wxr, wxro);
-      MTxV(G->CGiBi, vg, vgb);
-      MTxV(Bi->CN, vgb, vgn);
+      wxr  = VxV(Bi->wn, G->ri);
+      wxri = MTxV(Bi->CN, wxr);
+      wxr  = VxV(Bo->wn, G->ro);
+      wxro = MTxV(Bo->CN, wxr);
+      vgb  = MTxV(G->CGiBi, vg);
+      vgn  = MTxV(Bi->CN, vgb);
       for (i = 0; i < 3; i++)
-         Bo->vn[i] = Bi->vn[i] + wxri[i] + vgn[i] - wxro[i];
+         Bo->vn.v[i] = Bi->vn.v[i] + wxri.v[i] + vgn.v[i] - wxro.v[i];
       if (S->FlexActive) {
-         for (i = 0; i < 3; i++) {
-            G->ri[i] += G->FlexPosi[i];
-            G->ro[i] += G->FlexPoso[i];
-         }
-         MTxV(Bi->CN, G->FlexVeli, fvi);
-         MTxV(Bo->CN, G->FlexVelo, fvo);
+         G->ri = VpVElem(G->ri, G->FlexPosi);
+         G->ro = VpVElem(G->ro, G->FlexPoso);
+         fvi   = MTxV(Bi->CN, G->FlexVeli);
+         fvo   = MTxV(Bo->CN, G->FlexVelo);
          for (i = 0; i < 3; i++)
-            Bo->vn[i] += fvi[i] - fvo[i];
+            Bo->vn.v[i] += fvi.v[i] - fvo.v[i];
       }
    }
 
@@ -352,48 +328,43 @@ void BodyStatesToNodeStates(struct SCType *S)
 {
    struct BodyType *B;
    struct NodeType *N;
-   double vb[3], wxr[3];
-   double SumQ2 = 0.0;
+   vec3 vb, wxr;
    long Ib, In, If, i;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (In = 0; In < B->NumNodes; In++) {
-         N = &B->Node[In];
-         for (i = 0; i < 3; i++) {
-            N->PosB[i]    = N->NomPosB[i];
-            N->VelB[i]    = 0.0;
-            N->qb[i]      = 0.0;
-            N->AngVelB[i] = B->wn[i];
-         }
-         N->qb[3] = 1.0;
+         N          = &B->Node[In];
+         N->PosB    = N->NomPosB;
+         N->VelB    = VEC3_ZERO;
+         N->qb      = QUAT_EYE;
+         N->AngVelB = B->wn;
+
          if (S->FlexActive) {
+            N->FlexPos     = VEC3_ZERO;
+            N->FlexVel     = VEC3_ZERO;
+            N->FlexAng     = VEC3_ZERO;
+            N->FlexAngRate = VEC3_ZERO;
             for (i = 0; i < 3; i++) {
-               N->FlexPos[i]     = 0.0;
-               N->FlexVel[i]     = 0.0;
-               N->FlexAng[i]     = 0.0;
-               N->FlexAngRate[i] = 0.0;
                for (If = 0; If < B->Nf; If++) {
-                  N->FlexPos[i]     += N->PSI[i][If] * B->eta[If];
-                  N->FlexVel[i]     += N->PSI[i][If] * B->xi[If];
-                  N->FlexAng[i]     += N->THETA[i][If] * B->eta[If];
-                  N->FlexAngRate[i] += N->THETA[i][If] * B->xi[If];
+                  N->FlexPos.v[i]     += N->PSI[i][If] * B->eta[If];
+                  N->FlexVel.v[i]     += N->PSI[i][If] * B->xi[If];
+                  N->FlexAng.v[i]     += N->THETA[i][If] * B->eta[If];
+                  N->FlexAngRate.v[i] += N->THETA[i][If] * B->xi[If];
                }
-               N->PosB[i]    += N->FlexPos[i];
-               N->VelB[i]    += N->FlexVel[i];
-               N->qb[i]       = 0.5 * N->FlexAng[i];
-               SumQ2         += N->qb[i] * N->qb[i];
-               N->AngVelB[i] += N->FlexAngRate[i];
             }
-            N->qb[3] = sqrt(1.0 - SumQ2);
+            N->PosB    = VpVElem(N->PosB, N->FlexPos);
+            N->VelB    = VpVElem(N->VelB, N->FlexVel);
+            N->AngVelB = VpVElem(N->AngVelB, N->FlexAngRate);
+            N->qb.qv   = SxV(0.5, N->FlexAng);
+            N->qb.qs   = sqrt(1.0 - VoV(N->qb.qv, N->qb.qv));
          }
-         MxV(B->CN, B->vn, vb);
+         vb       = MxV(B->CN, B->vn);
+         N->PosCm = VpVElem(N->PosB, B->cm);
+         wxr      = VxV(N->AngVelB, N->PosCm);
          for (i = 0; i < 3; i++)
-            N->PosCm[i] = N->PosB[i] - B->cm[i];
-         VxV(N->AngVelB, N->PosCm, wxr);
-         for (i = 0; i < 3; i++)
-            N->VelB[i] += vb[i] + wxr[i];
-         MTxV(B->CN, N->VelB, N->VelN);
+            N->VelB.v[i] += vb.v[i] + wxr.v[i];
+         N->VelN = MTxV(B->CN, N->VelB);
       }
    }
 }
@@ -403,55 +374,50 @@ void FindTotalAngMom(struct SCType *S)
 
    struct BodyType *B;
    struct WhlType *W;
-   double Hb[3], Hn[3], mv[3], rxmv[3], Hwn[3];
-   double Hwb[3] = {0.0, 0.0, 0.0};
-   long Ib, i, Iwhl;
+   vec3 Hb, Hn, mv, rxmv, Hwn;
+   vec3 Hwb = VEC3_ZERO;
+   long Ib, Iwhl;
 
    /* Zero */
-   for (i = 0; i < 3; i++) {
-      S->Hvn[i] = 0.0;
-      S->Hvb[i] = 0.0;
-   }
+   S->Hvn = VEC3_ZERO;
+   S->Hvb = VEC3_ZERO;
 
    /* Bodies */
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      MxV(B->I, B->wn, Hb);
-      for (i = 0; i < 3; i++)
-         Hb[i] += B->EmbeddedMom[i];
-      MTxV(B->CN, Hb, Hn);
-      SxV(B->mass, B->vn, mv);
-      VxV(B->pn, mv, rxmv);
-      for (i = 0; i < 3; i++)
-         S->Hvn[i] += Hn[i] + rxmv[i];
+      B    = &S->B[Ib];
+      Hb   = MxV(B->I, B->wn);
+      Hb   = VpVElem(Hb, B->EmbeddedMom);
+      Hn   = MTxV(B->CN, Hb);
+      mv   = SxV(B->mass, B->vn);
+      rxmv = VxV(B->pn, mv);
+      for (int i = 0; i < 3; i++)
+         S->Hvn.v[i] += Hn.v[i] + rxmv.v[i];
    }
 
    /* Wheels */
    for (Iwhl = 0; Iwhl < S->Nw; Iwhl++) {
-      W = &S->Whl[Iwhl];
-      for (i = 0; i < 3; i++)
-         Hwb[i] = W->A[i] * W->H;
-      MTxV(S->B[W->Body].CN, Hwb, Hwn);
-      for (i = 0; i < 3; i++)
-         S->Hvn[i] += Hwn[i];
+      W      = &S->Whl[Iwhl];
+      Hwb    = SxV(W->H, W->A);
+      Hwn    = MTxV(S->B[W->Body].CN, Hwb);
+      S->Hvn = VpVElem(S->Hvn, Hwn);
    }
 
    /* Express in B[0] frame */
-   MxV(S->B[0].CN, S->Hvn, S->Hvb);
+   S->Hvb = MxV(S->B[0].CN, S->Hvn);
 }
 /**********************************************************************/
 double FindTotalKineticEnergy(struct OrbitType *orbs, struct SCType *S)
 {
    struct BodyType *B;
    struct WhlType *W;
-   double Iw[3], mv[3];
+   vec3 Iw, mv;
    double KE = 0.0;
    long Ib, Iwhl;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      MxV(B->I, B->wn, Iw);
-      SxV(B->mass, B->vn, mv);
+      B   = &S->B[Ib];
+      Iw  = MxV(B->I, B->wn);
+      mv  = SxV(B->mass, B->vn);
       KE += 0.5 * (VoV(B->wn, Iw) + VoV(B->vn, mv));
    }
 
@@ -474,7 +440,7 @@ void FindBodyPathDCMs(struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   long Ig, i, j, Bo, Bi, Gi;
+   long Ig, Bo, Bi, Gi;
 
    D = &S->Dyn;
 
@@ -482,14 +448,14 @@ void FindBodyPathDCMs(struct SCType *S)
       G  = &S->G[Ig];
       Bo = G->Bout;
       Bi = G->Bin;
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            D->BodyPathTable[Bo][Bi].Coi[i][j] = G->COI[i][j];
-      }
+
+      D->BodyPathTable[Bo][Bi].Coi = G->COI;
+
       while (Bi != 0) {
          Gi = S->B[Bi].Gin;
          Bi = S->G[Gi].Bin;
-         MxMT(S->B[Bo].CN, S->B[Bi].CN, D->BodyPathTable[Bo][Bi].Coi);
+
+         D->BodyPathTable[Bo][Bi].Coi = MxMT(S->B[Bo].CN, S->B[Bi].CN);
       }
    }
 }
@@ -498,8 +464,8 @@ void FindPathVectors(struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   double ri[3], ro[3];
-   long Ig, Jg, Ia, i, Bi, Bo;
+   vec3 ri, ro;
+   long Ig, Jg, Ia, Bi, Bo;
 
    D = &S->Dyn;
 
@@ -507,19 +473,19 @@ void FindPathVectors(struct SCType *S)
       G  = &S->G[Ig];
       Bi = G->Bin;
       Bo = G->Bout;
-      MTxV(S->B[Bi].CN, G->ri, ri);
-      MTxV(S->B[Bo].CN, G->ro, ro);
-      for (i = 0; i < 3; i++) {
-         S->B[Bo].beta[i] = S->B[Bi].beta[i] + ro[i] - ri[i];
-      }
+      ri = MTxV(S->B[Bi].CN, G->ri);
+      ro = MTxV(S->B[Bo].CN, G->ro);
+
+      for (int i = 0; i < 3; i++)
+         S->B[Bo].beta.v[i] = S->B[Bi].beta.v[i] + (ro.v[i] - ri.v[i]);
+
       for (Ia = 0; Ia < G->Nanc; Ia++) {
          Jg = G->Anc[Ia];
-         for (i = 0; i < 3; i++)
-            D->JointPathTable[Bo][Jg].rho[i] =
-                D->JointPathTable[Bi][Jg].rho[i] + ro[i] - ri[i];
+         for (int i = 0; i < 3; i++)
+            D->JointPathTable[Bo][Jg].rho.v[i] =
+                D->JointPathTable[Bi][Jg].rho.v[i] + (ro.v[i] - ri.v[i]);
       }
-      for (i = 0; i < 3; i++)
-         D->JointPathTable[Bo][Ig].rho[i] = ro[i];
+      D->JointPathTable[Bo][Ig].rho = ro;
    }
 }
 /**********************************************************************/
@@ -529,7 +495,7 @@ void FindPAngVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib;
    struct JointType *G;
-   double CGo[3][3], CG[3][3], IC[3][3];
+   mat3x3 CGo, CG, IC;
    long Ib, i, j, k, i0, j0;
    long Jb, Ig;
 
@@ -542,60 +508,59 @@ void FindPAngVel(struct SCType *S)
       G   = &S->G[Ig];
       i0  = 3 * Ib;
       j0  = G->Rotu0;
+      CGo = MAT3X3_ZERO;
       for (i = 0; i < 3; i++) {
          for (j = 0; j < G->RotDOF; j++) {
-            CGo[i][j] = 0.0;
-            for (k = 0; k < 3; k++) {
-               CGo[i][j] += G->CTrqBo[k][i] * G->Gamma[k][j];
-            }
+            for (k = 0; k < 3; k++)
+               CGo.mat[i][j] += G->CTrqBo.mat[k][i] * G->Gamma.mat[k][j];
          }
       }
       for (i = 0; i < 3; i++) {
          for (j = 0; j < G->RotDOF; j++) {
-            D->PAngVel[i0 + i][j0 + j]  = CGo[i][j];
+            D->PAngVel[i0 + i][j0 + j]  = CGo.mat[i][j];
             D->IPAngVel[i0 + i][j0 + j] = 0.0;
-            for (k = 0; k < 3; k++) {
-               D->IPAngVel[i0 + i][j0 + j] += Bib->I[i][k] * CGo[k][j];
-            }
+            for (k = 0; k < 3; k++)
+               D->IPAngVel[i0 + i][j0 + j] += Bib->I.mat[i][k] * CGo.mat[k][j];
          }
       }
       Jb = G->Bin;
       while (Jb > 0) {
-         Ig = S->B[Jb].Gin;
-         G  = &S->G[Ig];
-         j0 = G->Rotu0;
+         Ig  = S->B[Jb].Gin;
+         G   = &S->G[Ig];
+         j0  = G->Rotu0;
+         CGo = MAT3X3_ZERO;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < G->RotDOF; j++) {
-               CGo[i][j] = 0.0;
                for (k = 0; k < 3; k++) {
-                  CGo[i][j] += G->CTrqBo[k][i] * G->Gamma[k][j];
+                  CGo.mat[i][j] += G->CTrqBo.mat[k][i] * G->Gamma.mat[k][j];
                }
+            }
+         }
+         CG = MAT3X3_ZERO;
+         for (i = 0; i < 3; i++) {
+            for (j = 0; j < G->RotDOF; j++) {
+               for (k = 0; k < 3; k++)
+                  CG.mat[i][j] +=
+                      D->BodyPathTable[Ib][Jb].Coi.mat[i][k] * CGo.mat[k][j];
             }
          }
          for (i = 0; i < 3; i++) {
             for (j = 0; j < G->RotDOF; j++) {
-               CG[i][j] = 0.0;
-               for (k = 0; k < 3; k++) {
-                  CG[i][j] += D->BodyPathTable[Ib][Jb].Coi[i][k] * CGo[k][j];
-               }
-            }
-         }
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < G->RotDOF; j++) {
-               D->PAngVel[i0 + i][j0 + j]  = CG[i][j];
+               D->PAngVel[i0 + i][j0 + j]  = CG.mat[i][j];
                D->IPAngVel[i0 + i][j0 + j] = 0.0;
                for (k = 0; k < 3; k++) {
-                  D->IPAngVel[i0 + i][j0 + j] += Bib->I[i][k] * CG[k][j];
+                  D->IPAngVel[i0 + i][j0 + j] +=
+                      Bib->I.mat[i][k] * CG.mat[k][j];
                }
             }
          }
          Jb = G->Bin;
       }
-      MxM(Bib->I, D->BodyPathTable[Ib][0].Coi, IC);
+      IC = MxM(Bib->I, D->BodyPathTable[Ib][0].Coi);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
-            D->PAngVel[i0 + i][j]  = D->BodyPathTable[Ib][0].Coi[i][j];
-            D->IPAngVel[i0 + i][j] = IC[i][j];
+            D->PAngVel[i0 + i][j]  = D->BodyPathTable[Ib][0].Coi.mat[i][j];
+            D->IPAngVel[i0 + i][j] = IC.mat[i][j];
          }
       }
    }
@@ -607,9 +572,9 @@ void FindPVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
-   double RC[3][3], BC[3][3];
-   double RCB[3][3], RCG[3][3];
-   double CNG[3][3], CD[3][3];
+   mat3x3 RC, BC;
+   mat3x3 RCB, RCG;
+   mat3x3 CNG, CD;
    double m;
    long Ib, Jb, Ig, i, j, k, i0, j0;
 
@@ -626,49 +591,49 @@ void FindPVel(struct SCType *S)
          Ig  = Bjb->Gin;
          G   = &S->G[Ig];
          /* Rotation */
-         j0 = G->Rotu0;
-         VcrossMT(D->JointPathTable[Ib][Ig].rho, Bjb->CN, RCB);
-         MxMT(RCB, G->CTrqBo, RC);
+         j0  = G->Rotu0;
+         RCB = VcrossMT(D->JointPathTable[Ib][Ig].rho, Bjb->CN);
+         RC  = MxMT(RCB, G->CTrqBo);
+         RCG = MAT3X3_ZERO;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < G->RotDOF; j++) {
-               RCG[i][j] = 0.0;
                for (k = 0; k < 3; k++) {
-                  RCG[i][j] += RC[i][k] * G->Gamma[k][j];
+                  RCG.mat[i][j] += RC.mat[i][k] * G->Gamma.mat[k][j];
                }
             }
          }
          for (i = 0; i < 3; i++) {
             for (j = 0; j < G->RotDOF; j++) {
-               D->PVel[i0 + i][j0 + j]  = RCG[i][j];
-               D->mPVel[i0 + i][j0 + j] = m * RCG[i][j];
+               D->PVel[i0 + i][j0 + j]  = RCG.mat[i][j];
+               D->mPVel[i0 + i][j0 + j] = m * RCG.mat[i][j];
             }
          }
          /* Translation */
-         j0 = G->Trnu0;
-         MTxMT(S->B[G->Bin].CN, G->CGiBi, CNG);
+         j0  = G->Trnu0;
+         CNG = MTxMT(S->B[G->Bin].CN, G->CGiBi);
+         CD  = MAT3X3_ZERO;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
-               CD[i][j] = 0.0;
-            for (j = 0; j < G->TrnDOF; j++) {
-               for (k = 0; k < 3; k++) {
-                  CD[i][j] += CNG[i][k] * G->Delta[k][j];
+               for (j = 0; j < G->TrnDOF; j++) {
+                  for (k = 0; k < 3; k++) {
+                     CD.mat[i][j] += CNG.mat[i][k] * G->Delta.mat[k][j];
+                  }
                }
-            }
          }
          for (i = 0; i < 3; i++) {
             for (j = 0; j < G->TrnDOF; j++) {
-               D->PVel[i0 + i][j0 + j]  = CD[i][j];
-               D->mPVel[i0 + i][j0 + j] = m * CD[i][j];
+               D->PVel[i0 + i][j0 + j]  = CD.mat[i][j];
+               D->mPVel[i0 + i][j0 + j] = m * CD.mat[i][j];
             }
          }
          Jb = G->Bin;
       }
       /* First Column */
-      VcrossMT(Bib->beta, S->B[0].CN, BC);
+      BC = VcrossMT(Bib->beta, S->B[0].CN);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
-            D->PVel[i0 + i][j]  = BC[i][j];
-            D->mPVel[i0 + i][j] = m * BC[i][j];
+            D->PVel[i0 + i][j]  = BC.mat[i][j];
+            D->mPVel[i0 + i][j] = m * BC.mat[i][j];
          }
       }
    }
@@ -703,7 +668,7 @@ void FindPAngVelf(struct SCType *S)
             D->IPAngVelf[i0 + i][j0 + j] = 0.0;
             for (k = 0; k < 3; k++)
                D->IPAngVelf[i0 + i][j0 + j] +=
-                   Bib->I[i][k] * D->PAngVelf[i0 + k][j0 + j];
+                   Bib->I.mat[i][k] * D->PAngVelf[i0 + k][j0 + j];
          }
       }
       Jb = Gi->Bin;
@@ -718,7 +683,7 @@ void FindPAngVelf(struct SCType *S)
                D->PAngVelf[i0 + i][j0 + j] = 0.0;
                for (k = 0; k < 3; k++) {
                   D->PAngVelf[i0 + i][j0 + j] +=
-                      D->BodyPathTable[Ib][Jb].Coi[i][k] *
+                      D->BodyPathTable[Ib][Jb].Coi.mat[i][k] *
                       (Go->THETAi[k][j] - Gi->THETAo[k][j]);
                }
             }
@@ -728,7 +693,7 @@ void FindPAngVelf(struct SCType *S)
                D->IPAngVelf[i0 + i][j0 + j] = 0.0;
                for (k = 0; k < 3; k++) {
                   D->IPAngVelf[i0 + i][j0 + j] +=
-                      Bib->I[i][k] * D->PAngVelf[i0 + k][j0 + j];
+                      Bib->I.mat[i][k] * D->PAngVelf[i0 + k][j0 + j];
                }
             }
          }
@@ -740,7 +705,7 @@ void FindPAngVelf(struct SCType *S)
             D->PAngVelf[i0 + i][j] = 0.0;
             for (k = 0; k < 3; k++) {
                D->PAngVelf[i0 + i][j] +=
-                   D->BodyPathTable[Ib][0].Coi[i][k] * Gi->THETAi[k][j];
+                   D->BodyPathTable[Ib][0].Coi.mat[i][k] * Gi->THETAi[k][j];
             }
          }
       }
@@ -748,7 +713,8 @@ void FindPAngVelf(struct SCType *S)
          for (j = 0; j < Bjb->Nf; j++) {
             D->IPAngVelf[i0 + i][j] = 0.0;
             for (k = 0; k < 3; k++) {
-               D->IPAngVelf[i0 + i][j] += Bib->I[i][k] * D->PAngVelf[i0 + k][j];
+               D->IPAngVelf[i0 + i][j] +=
+                   Bib->I.mat[i][k] * D->PAngVelf[i0 + k][j];
             }
          }
       }
@@ -761,7 +727,8 @@ void FindPVelf(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi, *Go;
-   double RCi[3][3], RCo[3][3], m;
+   mat3x3 RCi, RCo;
+   double m;
    long Ib, Jb, Gin, Gout, i, j, k, i0, j0;
 
    D = &S->Dyn;
@@ -774,13 +741,13 @@ void FindPVelf(struct SCType *S)
       m   = Bib->mass;
       Gin = Bib->Gin;
       Gi  = &S->G[Gin];
-      VcrossMT(D->JointPathTable[Ib][Gin].rho, Bib->CN, RCi);
+      RCi = VcrossMT(D->JointPathTable[Ib][Gin].rho, Bib->CN);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < Bib->Nf; j++) {
             D->PVelf[i0 + i][j0 + j] = 0.0;
             for (k = 0; k < 3; k++) {
-               D->PVelf[i0 + i][j0 + j] -= Bib->CN[k][i] * Gi->PSIo[k][j] +
-                                           RCi[i][k] * Gi->THETAo[k][j];
+               D->PVelf[i0 + i][j0 + j] -= Bib->CN.mat[k][i] * Gi->PSIo[k][j] +
+                                           RCi.mat[i][k] * Gi->THETAo[k][j];
             }
             D->mPVelf[i0 + i][j0 + j] = m * D->PVelf[i0 + i][j0 + j];
          }
@@ -794,16 +761,16 @@ void FindPVelf(struct SCType *S)
          Go   = Gi;
          Gin  = Bjb->Gin;
          Gi   = &S->G[Gin];
-         VcrossMT(D->JointPathTable[Ib][Gin].rho, Bjb->CN, RCi);
-         VcrossMT(D->JointPathTable[Ib][Gout].rho, Bjb->CN, RCo);
+         RCi  = VcrossMT(D->JointPathTable[Ib][Gin].rho, Bjb->CN);
+         RCo  = VcrossMT(D->JointPathTable[Ib][Gout].rho, Bjb->CN);
          for (i = 0; i < 3; i++) {
             for (j = 0; j < Bjb->Nf; j++) {
                D->PVelf[i0 + i][j0 + j] = 0.0;
                for (k = 0; k < 3; k++) {
                   D->PVelf[i0 + i][j0 + j] +=
-                      Bjb->CN[k][i] * (Go->PSIi[k][j] - Gi->PSIo[k][j]) +
-                      RCo[i][k] * Go->THETAi[k][j] -
-                      RCi[i][k] * Gi->THETAo[k][j];
+                      Bjb->CN.mat[k][i] * (Go->PSIi[k][j] - Gi->PSIo[k][j]) +
+                      RCo.mat[i][k] * Go->THETAi[k][j] -
+                      RCi.mat[i][k] * Gi->THETAo[k][j];
                }
                D->mPVelf[i0 + i][j0 + j] = m * D->PVelf[i0 + i][j0 + j];
             }
@@ -812,13 +779,13 @@ void FindPVelf(struct SCType *S)
       }
 
       Bjb = &S->B[0];
-      VcrossMT(D->JointPathTable[Ib][Gin].rho, Bjb->CN, RCi);
+      RCi = VcrossMT(D->JointPathTable[Ib][Gin].rho, Bjb->CN);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < Bjb->Nf; j++) {
             D->PVelf[i0 + i][j] = 0.0;
             for (k = 0; k < 3; k++) {
-               D->PVelf[i0 + i][j] += Bjb->CN[k][i] * Gi->PSIi[k][j] +
-                                      RCi[i][k] * Gi->THETAi[k][j];
+               D->PVelf[i0 + i][j] += Bjb->CN.mat[k][i] * Gi->PSIi[k][j] +
+                                      RCi.mat[i][k] * Gi->THETAi[k][j];
             }
             D->mPVelf[i0 + i][j] = m * D->PVelf[i0 + i][j];
          }
@@ -832,7 +799,7 @@ void AugmentIPAngVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
-   double cplusPetaN[3][3];
+   mat3x3 cplusPetaN;
    long Ib, i, j, k, i0, j0;
    long Jb, Ig;
 
@@ -840,17 +807,17 @@ void AugmentIPAngVel(struct SCType *S)
 
    /* IPAngVel */
    for (Ib = 1; Ib < S->Nb; Ib++) {
-      Ig  = S->B[Ib].Gin;
-      Bib = &S->B[Ib];
-      G   = &S->G[Ig];
-      i0  = 3 * Ib;
-      j0  = G->Rotu0;
-      MxM(Bib->cplusPeta, Bib->CN, cplusPetaN);
+      Ig         = S->B[Ib].Gin;
+      Bib        = &S->B[Ib];
+      G          = &S->G[Ig];
+      i0         = 3 * Ib;
+      j0         = G->Rotu0;
+      cplusPetaN = MxM(Bib->cplusPeta, Bib->CN);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < G->RotDOF; j++) {
             for (k = 0; k < 3; k++) {
                D->IPAngVel[i0 + i][j0 + j] +=
-                   cplusPetaN[i][k] * D->PVel[i0 + k][j0 + j];
+                   cplusPetaN.mat[i][k] * D->PVel[i0 + k][j0 + j];
             }
          }
       }
@@ -864,7 +831,7 @@ void AugmentIPAngVel(struct SCType *S)
             for (j = 0; j < G->RotDOF; j++) {
                for (k = 0; k < 3; k++) {
                   D->IPAngVel[i0 + i][j0 + j] +=
-                      cplusPetaN[i][k] * D->PVel[i0 + k][j0 + j];
+                      cplusPetaN.mat[i][k] * D->PVel[i0 + k][j0 + j];
                }
             }
          }
@@ -873,7 +840,7 @@ void AugmentIPAngVel(struct SCType *S)
             for (j = 0; j < G->TrnDOF; j++) {
                for (k = 0; k < 3; k++) {
                   D->IPAngVel[i0 + i][j0 + j] +=
-                      cplusPetaN[i][k] * D->PVel[i0 + k][j0 + j];
+                      cplusPetaN.mat[i][k] * D->PVel[i0 + k][j0 + j];
                }
             }
          }
@@ -882,7 +849,8 @@ void AugmentIPAngVel(struct SCType *S)
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
             for (k = 0; k < 3; k++) {
-               D->IPAngVel[i0 + i][j] += cplusPetaN[i][k] * D->PVel[i0 + k][j];
+               D->IPAngVel[i0 + i][j] +=
+                   cplusPetaN.mat[i][k] * D->PVel[i0 + k][j];
             }
          }
       }
@@ -890,7 +858,7 @@ void AugmentIPAngVel(struct SCType *S)
       j0 = D->Nu - 3;
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
-            D->IPAngVel[i0 + i][j0 + j] = cplusPetaN[i][j];
+            D->IPAngVel[i0 + i][j0 + j] = cplusPetaN.mat[i][j];
          }
       }
    }
@@ -902,17 +870,17 @@ void AugmentMPVel(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *G;
-   double CcplusPeta[3][3];
+   mat3x3 CcplusPeta;
    long Ib, Jb, Ig, i, j, k, i0, j0;
 
    D = &S->Dyn;
 
    /* mPVel */
    for (Ib = 1; Ib < S->Nb; Ib++) {
-      Bib = &S->B[Ib];
-      i0  = 3 * Ib;
-      Jb  = Ib;
-      MTxM(Bib->CN, Bib->cplusPeta, CcplusPeta);
+      Bib        = &S->B[Ib];
+      i0         = 3 * Ib;
+      Jb         = Ib;
+      CcplusPeta = MTxM(Bib->CN, Bib->cplusPeta);
       while (Jb > 0) {
          Bjb = &S->B[Jb];
          Ig  = Bjb->Gin;
@@ -922,7 +890,7 @@ void AugmentMPVel(struct SCType *S)
             for (j = 0; j < G->RotDOF; j++) {
                for (k = 0; k < 3; k++)
                   D->mPVel[i0 + i][j0 + j] -=
-                      CcplusPeta[i][k] * D->PAngVel[i0 + k][j0 + j];
+                      CcplusPeta.mat[i][k] * D->PAngVel[i0 + k][j0 + j];
             }
          }
          Jb = G->Bin;
@@ -931,7 +899,8 @@ void AugmentMPVel(struct SCType *S)
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++) {
             for (k = 0; k < 3; k++)
-               D->mPVel[i0 + i][j] -= CcplusPeta[i][k] * D->PAngVel[i0 + k][j];
+               D->mPVel[i0 + i][j] -=
+                   CcplusPeta.mat[i][k] * D->PAngVel[i0 + k][j];
          }
       }
    }
@@ -943,7 +912,7 @@ void AugmentIPAngVelf(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
-   double cplusPetaN[3][3];
+   mat3x3 cplusPetaN;
    long Ib, i, j, k, i0, j0;
    long Jb, Gin;
 
@@ -964,18 +933,18 @@ void AugmentIPAngVelf(struct SCType *S)
    if (S->RefPt == REFPT_JOINT) {
       /* Add (c+Pf*eta)xPVelf */
       for (Ib = 1; Ib < S->Nb; Ib++) {
-         i0  = 3 * Ib;
-         Bib = &S->B[Ib];
-         Gin = Bib->Gin;
-         Gi  = &S->G[Gin];
-         j0  = Bib->f0;
-         MxM(Bib->cplusPeta, Bib->CN, cplusPetaN);
+         i0         = 3 * Ib;
+         Bib        = &S->B[Ib];
+         Gin        = Bib->Gin;
+         Gi         = &S->G[Gin];
+         j0         = Bib->f0;
+         cplusPetaN = MxM(Bib->cplusPeta, Bib->CN);
          for (i = 0; i < 3; i++) {
             for (j = 0; j < Bib->Nf; j++) {
                D->IPAngVelf[i0 + i][j0 + j] += Bib->HplusQeta[i][j];
                for (k = 0; k < 3; k++) {
                   D->IPAngVelf[i0 + i][j0 + j] +=
-                      cplusPetaN[i][k] * D->PVelf[i0 + k][j0 + j];
+                      cplusPetaN.mat[i][k] * D->PVelf[i0 + k][j0 + j];
                }
             }
          }
@@ -990,7 +959,7 @@ void AugmentIPAngVelf(struct SCType *S)
                for (j = 0; j < Bjb->Nf; j++) {
                   for (k = 0; k < 3; k++) {
                      D->IPAngVelf[i0 + i][j0 + j] +=
-                         cplusPetaN[i][k] * D->PVelf[i0 + k][j0 + j];
+                         cplusPetaN.mat[i][k] * D->PVelf[i0 + k][j0 + j];
                   }
                }
             }
@@ -1002,7 +971,7 @@ void AugmentIPAngVelf(struct SCType *S)
             for (j = 0; j < Bjb->Nf; j++) {
                for (k = 0; k < 3; k++) {
                   D->IPAngVelf[i0 + i][j] +=
-                      cplusPetaN[i][k] * D->PVelf[i0 + k][j];
+                      cplusPetaN.mat[i][k] * D->PVelf[i0 + k][j];
                }
             }
          }
@@ -1016,7 +985,7 @@ void AugmentMPVelf(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bib, *Bjb;
    struct JointType *Gi;
-   double CcplusPeta[3][3];
+   mat3x3 CcplusPeta;
    long Ib, Jb, Gin, i, j, k, i0, j0;
    long Nfi, Nfj;
 
@@ -1033,19 +1002,19 @@ void AugmentMPVelf(struct SCType *S)
 
    /* Other bodies see both terms */
    for (Ib = 1; Ib < S->Nb; Ib++) {
-      i0  = 3 * Ib;
-      Bib = &S->B[Ib];
-      j0  = Bib->f0;
-      Gin = Bib->Gin;
-      Gi  = &S->G[Gin];
-      Nfi = Bib->Nf;
-      MTxM(Bib->CN, Bib->cplusPeta, CcplusPeta);
+      i0         = 3 * Ib;
+      Bib        = &S->B[Ib];
+      j0         = Bib->f0;
+      Gin        = Bib->Gin;
+      Gi         = &S->G[Gin];
+      Nfi        = Bib->Nf;
+      CcplusPeta = MTxM(Bib->CN, Bib->cplusPeta);
       for (i = 0; i < 3; i++) {
          for (j = 0; j < Nfi; j++) {
             D->mPVelf[i0 + i][j0 + j] += Bib->CnbP[i][j];
             for (k = 0; k < 3; k++) {
                D->mPVelf[i0 + i][j0 + j] -=
-                   CcplusPeta[i][k] * D->PAngVelf[i0 + k][j0 + j];
+                   CcplusPeta.mat[i][k] * D->PAngVelf[i0 + k][j0 + j];
             }
          }
       }
@@ -1061,7 +1030,7 @@ void AugmentMPVelf(struct SCType *S)
             for (j = 0; j < Nfj; j++) {
                for (k = 0; k < 3; k++) {
                   D->mPVelf[i0 + i][j0 + j] -=
-                      CcplusPeta[i][k] * D->PAngVelf[i0 + k][j0 + j];
+                      CcplusPeta.mat[i][k] * D->PAngVelf[i0 + k][j0 + j];
                }
             }
          }
@@ -1074,7 +1043,7 @@ void AugmentMPVelf(struct SCType *S)
          for (j = 0; j < Nfj; j++) {
             for (k = 0; k < 3; k++) {
                D->mPVelf[i0 + i][j] -=
-                   CcplusPeta[i][k] * D->PAngVelf[i0 + k][j];
+                   CcplusPeta.mat[i][k] * D->PAngVelf[i0 + k][j];
             }
          }
       }
@@ -1202,32 +1171,31 @@ void FindAlphaR(struct SCType *S)
 {
    struct JointType *G;
    struct BodyType *Bi, *Bo;
-   double CGs[3], CGds[3];
-   double wxGs[3], wxFo[3], wxFi[3], CwxFi[3], CAlphaR[3];
-   long Ig, i;
+   vec3 CGs, CGds, wxGs, wxFo, wxFi, CwxFi, CAlphaR;
+   long Ig;
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
-      G  = &S->G[Ig];
-      Bi = &S->B[G->Bin];
-      Bo = &S->B[G->Bout];
-      MTxV(G->CTrqBo, G->Gs, CGs);
-      MTxV(G->CTrqBo, G->Gds, CGds);
-      VxV(Bo->wn, CGs, wxGs);
-      MxV(G->COI, Bi->AlphaR, CAlphaR);
-      for (i = 0; i < 3; i++)
-         Bo->AlphaR[i] = CAlphaR[i] + CGds[i] + wxGs[i];
+      G       = &S->G[Ig];
+      Bi      = &S->B[G->Bin];
+      Bo      = &S->B[G->Bout];
+      CGs     = MTxV(G->CTrqBo, G->Gs);
+      CGds    = MTxV(G->CTrqBo, G->Gds);
+      wxGs    = VxV(Bo->wn, CGs);
+      CAlphaR = MxV(G->COI, Bi->AlphaR);
+      for (int i = 0; i < 3; i++)
+         Bo->AlphaR.v[i] = CAlphaR.v[i] + CGds.v[i] + wxGs.v[i];
    }
 
    if (S->FlexActive) {
       for (Ig = 0; Ig < S->Ng; Ig++) {
-         G  = &S->G[Ig];
-         Bi = &S->B[G->Bin];
-         Bo = &S->B[G->Bout];
-         VxV(Bo->wn, G->FlexAngVelo, wxFo);
-         VxV(Bi->wn, G->FlexAngVeli, wxFi);
-         MxV(G->COI, wxFi, CwxFi);
-         for (i = 0; i < 3; i++)
-            Bo->AlphaR[i] += CwxFi[i] - wxFo[i];
+         G     = &S->G[Ig];
+         Bi    = &S->B[G->Bin];
+         Bo    = &S->B[G->Bout];
+         wxFo  = VxV(Bo->wn, G->FlexAngVelo);
+         wxFi  = VxV(Bi->wn, G->FlexAngVeli);
+         CwxFi = MxV(G->COI, wxFi);
+         for (int i = 0; i < 3; i++)
+            Bo->AlphaR.v[i] += CwxFi.v[i] - wxFo.v[i];
       }
    }
 }
@@ -1236,10 +1204,10 @@ void FindAccR(struct SCType *S)
 {
    struct JointType *G;
    struct BodyType *Bi, *Bo;
-   double wxr[3], wxwxr[3], Cwri[3], Cwro[3];
-   double Dsb[3], wxDsb[3], wxDsn[3];
-   double axr[3], Caxri[3], Caxro[3];
-   double wxv[3], Cwxvi[3], Cwxvo[3];
+   vec3 wxr, wxwxr, Cwri, Cwro;
+   vec3 Dsb, wxDsb, wxDsn;
+   vec3 axr, Caxri, Caxro;
+   vec3 wxv, Cwxvi, Cwxvo;
    long Ig, i;
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
@@ -1247,27 +1215,27 @@ void FindAccR(struct SCType *S)
       Bi = &S->B[G->Bin];
       Bo = &S->B[G->Bout];
 
-      VxV(Bi->wn, G->ri, wxr);
-      VxV(Bi->wn, wxr, wxwxr);
-      MTxV(Bi->CN, wxwxr, Cwri);
+      wxr   = VxV(Bi->wn, G->ri);
+      wxwxr = VxV(Bi->wn, wxr);
+      Cwri  = MTxV(Bi->CN, wxwxr);
 
-      VxV(Bo->wn, G->ro, wxr);
-      VxV(Bo->wn, wxr, wxwxr);
-      MTxV(Bo->CN, wxwxr, Cwro);
+      wxr   = VxV(Bo->wn, G->ro);
+      wxwxr = VxV(Bo->wn, wxr);
+      Cwro  = MTxV(Bo->CN, wxwxr);
 
-      VxV(Bo->AlphaR, G->ro, axr);
-      MTxV(Bo->CN, axr, Caxro);
+      axr   = VxV(Bo->AlphaR, G->ro);
+      Caxro = MTxV(Bo->CN, axr);
 
-      VxV(Bi->AlphaR, G->ri, axr);
-      MTxV(Bi->CN, axr, Caxri);
+      axr   = VxV(Bi->AlphaR, G->ri);
+      Caxri = MTxV(Bi->CN, axr);
 
-      MTxV(G->CGiBi, G->Ds, Dsb);
-      VxV(Bi->wn, Dsb, wxDsb);
-      MTxV(Bi->CN, wxDsb, wxDsn);
+      Dsb   = MTxV(G->CGiBi, G->Ds);
+      wxDsb = VxV(Bi->wn, Dsb);
+      wxDsn = MTxV(Bi->CN, wxDsb);
 
       for (i = 0; i < 3; i++)
-         Bo->AccR[i] = Bi->AccR[i] + Cwri[i] - Cwro[i] + Caxri[i] - Caxro[i] +
-                       2.0 * wxDsn[i];
+         Bo->AccR.v[i] = Bi->AccR.v[i] + Cwri.v[i] - Cwro.v[i] + Caxri.v[i] -
+                         Caxro.v[i] + 2.0 * wxDsn.v[i];
    }
 
    if (S->FlexActive) {
@@ -1276,14 +1244,14 @@ void FindAccR(struct SCType *S)
          Bi = &S->B[G->Bin];
          Bo = &S->B[G->Bout];
 
-         VxV(Bo->wn, G->FlexVelo, wxv);
-         MTxV(Bo->CN, wxv, Cwxvo);
+         wxv   = VxV(Bo->wn, G->FlexVelo);
+         Cwxvo = MTxV(Bo->CN, wxv);
 
-         VxV(Bi->wn, G->FlexVeli, wxv);
-         MTxV(Bi->CN, wxv, Cwxvi);
+         wxv   = VxV(Bi->wn, G->FlexVeli);
+         Cwxvi = MTxV(Bi->CN, wxv);
 
          for (i = 0; i < 3; i++)
-            Bo->AccR[i] += 2.0 * (Cwxvi[i] - Cwxvo[i]);
+            Bo->AccR.v[i] += 2.0 * (Cwxvi.v[i] - Cwxvo.v[i]);
       }
    }
 }
@@ -1293,29 +1261,33 @@ void FindFlexTerms(struct SCType *S)
 {
    struct BodyType *B;
    long Nf, Ib, i, j, k;
-   double cPe[3];
+   vec3 cPe;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B  = &S->B[Ib];
       Nf = B->Nf;
+      if (Nf < 1)
+         continue;
+      B->Peta = VEC3_ZERO;
+      memset(B->CnbP[0], 0, 3 * Nf * sizeof(double));
+
       for (i = 0; i < 3; i++) {
-         B->Peta[i] = 0.0;
-         for (k = 0; k < Nf; k++) {
-            B->Peta[i] += B->Pf[i][k] * B->eta[k];
-         }
-         cPe[i] = B->c[i] + B->Peta[i];
-         for (j = 0; j < Nf; j++) {
-            B->CnbP[i][j] = 0.0;
+         for (k = 0; k < Nf; k++)
+            B->Peta.v[i] += B->Pf[i][k] * B->eta[k];
+
+         cPe.v[i] = B->c.v[i] + B->Peta.v[i];
+         for (j = 0; j < Nf; j++)
             for (k = 0; k < 3; k++)
-               B->CnbP[i][j] += B->CN[k][i] * B->Pf[k][j];
-         }
+               B->CnbP[i][j] += B->CN.mat[k][i] * B->Pf[k][j];
       }
-      V2CrossM(cPe, B->cplusPeta);
+      B->cplusPeta = V2CrossM(cPe);
    }
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B  = &S->B[Ib];
       Nf = B->Nf;
+      if (Nf < 1)
+         continue;
       for (i = 0; i < 3; i++) {
          for (j = 0; j < Nf; j++) {
             B->HplusQeta[i][j] = B->Hf[i][j];
@@ -1326,6 +1298,8 @@ void FindFlexTerms(struct SCType *S)
       for (Ib = 0; Ib < S->Nb; Ib++) {
          B  = &S->B[Ib];
          Nf = B->Nf;
+         if (Nf < 1)
+            continue;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < Nf; j++) {
                for (k = 0; k < Nf; k++) {
@@ -1342,42 +1316,39 @@ void FindInertiaTrq(struct SCType *S)
 {
    struct BodyType *B;
    struct WhlType *W;
-   double H[3], wxH[3], Ia[3];
-   double cPexa[3];
-   double CAccR[3];
-   long Ib, Iw, i;
+   vec3 H, wxH, Ia;
+   vec3 cPexa;
+   vec3 CAccR;
+   long Ib, Iw;
 
    /* -I*AlphaR - wxH for all bodies */
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
-      MxV(B->I, B->wn, H);
-      for (i = 0; i < 3; i++)
-         H[i] += B->EmbeddedMom[i];
-      VxV(B->wn, H, wxH);
-      MxV(B->I, B->AlphaR, Ia);
-      for (i = 0; i < 3; i++)
-         B->InertiaTrq[i] = -Ia[i] - wxH[i];
+      H = MxV(B->I, B->wn);
+      for (int i = 0; i < 3; i++)
+         H.v[i] += B->EmbeddedMom.v[i];
+      wxH = VxV(B->wn, H);
+      Ia  = MxV(B->I, B->AlphaR);
+      for (int i = 0; i < 3; i++)
+         B->InertiaTrq.v[i] = -Ia.v[i] - wxH.v[i];
    }
 
    for (Iw = 0; Iw < S->Nw; Iw++) {
       W = &S->Whl[Iw];
       B = &S->B[W->Body];
-      for (i = 0; i < 3; i++) {
-         H[i] = W->H * W->A[i];
-      }
-      VxV(B->wn, H, wxH);
-      for (i = 0; i < 3; i++)
-         B->InertiaTrq[i] += -wxH[i];
+      H = SxV(W->H, W->A);
+
+      wxH           = VxV(B->wn, H);
+      B->InertiaTrq = VmVElem(B->InertiaTrq, wxH);
    }
 
    if (S->FlexActive && S->RefPt == REFPT_JOINT) {
       /* -(c + Pf*eta) x AccR */
       for (Ib = 0; Ib < S->Nb; Ib++) {
-         B = &S->B[Ib];
-         MxV(B->CN, B->AccR, CAccR);
-         MxV(B->cplusPeta, CAccR, cPexa);
-         for (i = 0; i < 3; i++)
-            B->InertiaTrq[i] += -cPexa[i];
+         B             = &S->B[Ib];
+         CAccR         = MxV(B->CN, B->AccR);
+         cPexa         = MxV(B->cplusPeta, CAccR);
+         B->InertiaTrq = VmVElem(B->InertiaTrq, cPexa);
       }
    }
 }
@@ -1385,35 +1356,33 @@ void FindInertiaTrq(struct SCType *S)
 void FindInertiaFrc(struct SCType *S)
 {
    struct BodyType *B;
-   double cPexa[3], cPexw[3], cPexwxw[3], Pxi[3], wxPxi[3];
-   double FlexInertiaFrc[3], FlexInertiaFrcN[3];
+   vec3 cPexa, cPexw, cPexwxw, Pxi, wxPxi;
+   vec3 FlexInertiaFrc, FlexInertiaFrcN;
    long Ib, i, j, Nf;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      for (i = 0; i < 3; i++)
-         B->InertiaFrc[i] = -B->mass * B->AccR[i];
+      B             = &S->B[Ib];
+      B->InertiaFrc = SxV(-B->mass, B->AccR);
    }
 
    if (S->FlexActive && S->RefPt == REFPT_JOINT) {
       /* -AlphaR x (c+Pf*eta) - wx(wx(c+Pf*eta)) - 2wxPf*xi */
       for (Ib = 0; Ib < S->Nb; Ib++) {
-         B  = &S->B[Ib];
-         Nf = B->Nf;
-         MxV(B->cplusPeta, B->AlphaR, cPexa);
-         MxV(B->cplusPeta, B->wn, cPexw);
-         VxV(cPexw, B->wn, cPexwxw);
-         for (i = 0; i < 3; i++) {
-            Pxi[i] = 0.0;
+         B       = &S->B[Ib];
+         Nf      = B->Nf;
+         cPexa   = MxV(B->cplusPeta, B->AlphaR);
+         cPexw   = MxV(B->cplusPeta, B->wn);
+         cPexwxw = VxV(cPexw, B->wn);
+         Pxi     = VEC3_ZERO;
+         for (i = 0; i < 3; i++)
             for (j = 0; j < Nf; j++)
-               Pxi[i] += B->Pf[i][j] * B->xi[j];
-         }
-         VxV(B->wn, Pxi, wxPxi);
+               Pxi.v[i] += B->Pf[i][j] * B->xi[j];
+
+         wxPxi = VxV(B->wn, Pxi);
          for (i = 0; i < 3; i++)
-            FlexInertiaFrc[i] = cPexa[i] - cPexwxw[i] - 2.0 * wxPxi[i];
-         MTxV(B->CN, FlexInertiaFrc, FlexInertiaFrcN);
-         for (i = 0; i < 3; i++)
-            B->InertiaFrc[i] += FlexInertiaFrcN[i];
+            FlexInertiaFrc.v[i] = cPexa.v[i] - cPexwxw.v[i] - 2.0 * wxPxi.v[i];
+         FlexInertiaFrcN = MTxV(B->CN, FlexInertiaFrc);
+         B->InertiaFrc   = VpVElem(B->InertiaFrc, FlexInertiaFrcN);
       }
    }
 }
@@ -1435,8 +1404,8 @@ void FindFlexInertiaFrc(struct SCType *S)
          f0 = B->f0;
          for (i = 0; i < Nf; i++) {
             for (k = 0; k < 3; k++)
-               D->FlexFrc[f0 + i] -= B->CnbP[k][i] * B->AccR[k] +
-                                     B->HplusQeta[k][i] * B->AlphaR[k];
+               D->FlexFrc[f0 + i] -= B->CnbP[k][i] * B->AccR.v[k] +
+                                     B->HplusQeta[k][i] * B->AlphaR.v[k];
          }
       }
    }
@@ -1461,9 +1430,9 @@ void FindFlexInertiaFrc(struct SCType *S)
          /* Rw */
          for (i = 0; i < 3; i++) {
             for (j = 0; j < Nf; j++) {
-               B->Rw[i][j] = B->Rf[IDX3(i, j, 0, Nf, 3)] * B->wn[0] +
-                             B->Rf[IDX3(i, j, 1, Nf, 3)] * B->wn[1] +
-                             B->Rf[IDX3(i, j, 2, Nf, 3)] * B->wn[2];
+               B->Rw[i][j] = B->Rf[IDX3(i, j, 0, Nf, 3)] * B->wn.v[0] +
+                             B->Rf[IDX3(i, j, 1, Nf, 3)] * B->wn.v[1] +
+                             B->Rf[IDX3(i, j, 2, Nf, 3)] * B->wn.v[2];
             }
          }
 
@@ -1472,9 +1441,9 @@ void FindFlexInertiaFrc(struct SCType *S)
             for (j = 0; j < Nf; j++) {
                for (k = 0; k < Nf; k++) {
                   B->Sw[IDX3(i, j, k, Nf, Nf)] =
-                      B->Sf[IDX4(i, j, k, 0, Nf, Nf, 3)] * B->wn[0] +
-                      B->Sf[IDX4(i, j, k, 1, Nf, Nf, 3)] * B->wn[1] +
-                      B->Sf[IDX4(i, j, k, 2, Nf, Nf, 3)] * B->wn[2];
+                      B->Sf[IDX4(i, j, k, 0, Nf, Nf, 3)] * B->wn.v[0] +
+                      B->Sf[IDX4(i, j, k, 1, Nf, Nf, 3)] * B->wn.v[1] +
+                      B->Sf[IDX4(i, j, k, 2, Nf, Nf, 3)] * B->wn.v[2];
                }
             }
          }
@@ -1490,7 +1459,8 @@ void FindFlexInertiaFrc(struct SCType *S)
          for (i = 0; i < Nf; i++) {
             for (j = 0; j < 3; j++)
                D->FlexFrc[f0 + i] -=
-                   (B->Rw[j][i] + B->Swe[j][i] + 2.0 * B->Qxi[j][i]) * B->wn[j];
+                   (B->Rw[j][i] + B->Swe[j][i] + 2.0 * B->Qxi[j][i]) *
+                   B->wn.v[j];
          }
       }
    }
@@ -1519,9 +1489,9 @@ void FindFlexFrc(struct SCType *S)
          N = &B->Node[In];
          for (i = 0; i < Nf; i++) {
             D->FlexFrc[f0 + i] +=
-                N->PSI[0][i] * N->Frc[0] + N->PSI[1][i] * N->Frc[1] +
-                N->PSI[2][i] * N->Frc[2] + N->THETA[0][i] * N->Trq[0] +
-                N->THETA[1][i] * N->Trq[1] + N->THETA[2][i] * N->Trq[2];
+                N->PSI[0][i] * N->Frc.v[0] + N->PSI[1][i] * N->Frc.v[1] +
+                N->PSI[2][i] * N->Frc.v[2] + N->THETA[0][i] * N->Trq.v[0] +
+                N->THETA[1][i] * N->Trq.v[1] + N->THETA[2][i] * N->Trq.v[2];
          }
       }
    }
@@ -1695,7 +1665,7 @@ void EchoRemAcc(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++)
-         fprintf(outfile, " %24.16le\n", B->AccR[i]);
+         fprintf(outfile, " %24.16le\n", B->AccR.v[i]);
    }
    fclose(outfile);
 
@@ -1703,7 +1673,7 @@ void EchoRemAcc(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++)
-         fprintf(outfile, " %24.16le\n", B->AlphaR[i]);
+         fprintf(outfile, " %24.16le\n", B->AlphaR.v[i]);
    }
    fclose(outfile);
 
@@ -1711,7 +1681,7 @@ void EchoRemAcc(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++)
-         fprintf(outfile, " %24.16le\n", B->wn[i]);
+         fprintf(outfile, " %24.16le\n", B->wn.v[i]);
    }
    fclose(outfile);
 
@@ -1719,7 +1689,7 @@ void EchoRemAcc(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++)
-         fprintf(outfile, " %24.16le\n", B->InertiaTrq[i]);
+         fprintf(outfile, " %24.16le\n", B->InertiaTrq.v[i]);
    }
    fclose(outfile);
 
@@ -1727,7 +1697,7 @@ void EchoRemAcc(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++)
-         fprintf(outfile, " %24.16le\n", B->InertiaFrc[i]);
+         fprintf(outfile, " %24.16le\n", B->InertiaFrc.v[i]);
    }
    fclose(outfile);
 }
@@ -1741,10 +1711,10 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
    struct JointType *G;
    struct BodyType *B;
    struct WhlType *W;
-   double TrqBo[3], TrqGo[3], TrqBi[3];
-   double FrcBo[3], FrcGo[3], FrcBi[3], FrcGi[3];
-   double FrcBiN[3], FrcBoN[3];
-   double rxFi[3], rxFo[3];
+   vec3 TrqBo, TrqGo, TrqBi;
+   vec3 FrcBo, FrcGo, FrcBi, FrcGi;
+   vec3 FrcBiN, FrcBoN;
+   vec3 rxFi, rxFo;
    D = &S->Dyn;
 
    /* .. Dynamics */
@@ -1755,8 +1725,8 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       JointPartials(FALSE, G->IsSpherical, G->RotSeq, G->TrnSeq, G->Ang,
-                    G->AngRate, G->Gamma, G->Gs, G->Gds, G->PosRate, G->Delta,
-                    G->Ds, G->Dds);
+                    G->AngRate, &G->Gamma, &G->Gs, &G->Gds, G->PosRate,
+                    &G->Delta, &G->Ds, &G->Dds);
    }
 
    /* Path vectors, beta and rho */
@@ -1808,8 +1778,8 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         D->BodyTrq[3 * Ib + i] = B->Trq[i] + B->InertiaTrq[i];
-         D->BodyFrc[3 * Ib + i] = B->FrcN[i] + B->InertiaFrc[i];
+         D->BodyTrq[3 * Ib + i] = B->Trq.v[i] + B->InertiaTrq.v[i];
+         D->BodyFrc[3 * Ib + i] = B->FrcN.v[i] + B->InertiaFrc.v[i];
       }
    }
    /* Add Wheel Torques */
@@ -1817,42 +1787,42 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
       W  = &S->Whl[Iw];
       Ib = W->Body;
       for (i = 0; i < 3; i++) {
-         D->BodyTrq[3 * Ib + i] -= W->Trq * W->A[i];
+         D->BodyTrq[3 * Ib + i] -= W->Trq * W->A.v[i];
       }
    }
 
    /* Applied Joint Torques and Forces */
    for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
+      G     = &S->G[Ig];
+      FrcGi = VEC3_ZERO;
+      TrqGo = VEC3_ZERO;
       for (i = 0; i < 3; i++) {
-         FrcGi[i] = 0.0;
-         TrqGo[i] = 0.0;
          for (j = 0; j < G->RotDOF; j++) {
-            TrqGo[i] += G->Gamma[i][j] * (G->Trq[j]);
+            TrqGo.v[i] += G->Gamma.mat[i][j] * (G->Trq.v[j]);
          }
          for (j = 0; j < G->TrnDOF; j++) {
-            FrcGi[i] += G->Delta[i][j] * (G->Frc[j]);
+            FrcGi.v[i] += G->Delta.mat[i][j] * (G->Frc.v[j]);
          }
       }
 
       /* Force Transformations*/
-      MxV(G->CGoGi, FrcGi, FrcGo);
-      MTxV(G->CTrqBi, FrcGo, FrcBi);
-      MTxV(G->CTrqBo, FrcGo, FrcBo);
-      MTxV(S->B[G->Bin].CN, FrcBi, FrcBiN);
-      MTxV(S->B[G->Bout].CN, FrcBo, FrcBoN);
-      VxV(G->ri, FrcBi, rxFi);
-      VxV(G->ro, FrcBo, rxFo);
+      FrcGo  = MxV(G->CGoGi, FrcGi);
+      FrcBi  = MTxV(G->CTrqBi, FrcGo);
+      FrcBo  = MTxV(G->CTrqBo, FrcGo);
+      FrcBiN = MTxV(S->B[G->Bin].CN, FrcBi);
+      FrcBoN = MTxV(S->B[G->Bout].CN, FrcBo);
+      rxFi   = VxV(G->ri, FrcBi);
+      rxFo   = VxV(G->ro, FrcBo);
 
       /* Torque Transformations */
-      MTxV(G->CTrqBi, TrqGo, TrqBi);
-      MTxV(G->CTrqBo, TrqGo, TrqBo);
+      TrqBi = MTxV(G->CTrqBi, TrqGo);
+      TrqBo = MTxV(G->CTrqBo, TrqGo);
 
       for (i = 0; i < 3; i++) {
-         D->BodyTrq[3 * G->Bin + i]  -= TrqBi[i] + rxFi[i];
-         D->BodyTrq[3 * G->Bout + i] += TrqBo[i] + rxFo[i];
-         D->BodyFrc[3 * G->Bin + i]  -= FrcBiN[i];
-         D->BodyFrc[3 * G->Bout + i] += FrcBoN[i];
+         D->BodyTrq[3 * G->Bin + i]  -= TrqBi.v[i] + rxFi.v[i];
+         D->BodyTrq[3 * G->Bout + i] += TrqBo.v[i] + rxFo.v[i];
+         D->BodyFrc[3 * G->Bin + i]  -= FrcBiN.v[i];
+         D->BodyFrc[3 * G->Bout + i] += FrcBoN.v[i];
       }
    }
 
@@ -1958,12 +1928,20 @@ void KaneNBodyEOM(double *u, double *x, double *h, double *a, double *uf,
 
    /* .. Kinematics */
    /* B[0].qn */
-   QW2QDOT(&x[0], &u[0], &xdot[0]);
+   quat q = DBL_TO_QUAT(&x[0]);
+   quat qdot;
+   vec3 w = DBL_TO_VEC3(&u[0]);
+   qdot   = QW2QDOT(q, w);
+   QUAT_TO_DBL(&xdot[0], qdot);
+
    /* Joints, rotation and translation */
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       if (G->IsSpherical) {
-         QW2QDOT(&x[G->Rotx0], &u[G->Rotu0], &xdot[G->Rotx0]);
+         q    = DBL_TO_QUAT(&x[G->Rotx0]);
+         w    = DBL_TO_VEC3(&u[G->Rotu0]);
+         qdot = QW2QDOT(q, w);
+         QUAT_TO_DBL(&xdot[G->Rotx0], qdot);
       }
       else {
          for (i = 0; i < G->RotDOF; i++)
@@ -1991,25 +1969,26 @@ void FindPAngVelc(struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   double CGo[3][3], CG[3][3];
+   mat3x3 CGo, CG;
    long Ib, i, j, k, i0, j0;
    long Jb, Ig, Nc;
 
    D = &S->Dyn;
 
    for (Ib = 1; Ib < S->Nb; Ib++) {
-      Ig = S->B[Ib].Gin;
-      G  = &S->G[Ig];
-      i0 = 3 * Ib;
-      j0 = G->Rotc0;
-      Nc = 3 - G->RotDOF;
+      Ig  = S->B[Ib].Gin;
+      G   = &S->G[Ig];
+      i0  = 3 * Ib;
+      j0  = G->Rotc0;
+      Nc  = 3 - G->RotDOF;
+      CGo = MAT3X3_ZERO;
       for (i = 0; i < 3; i++) {
          for (j = 0; j < Nc; j++) {
-            CGo[i][j] = 0.0;
             for (k = 0; k < 3; k++) {
-               CGo[i][j] += G->CTrqBo[k][i] * G->Gamma[k][G->RotDOF + j];
+               CGo.mat[i][j] +=
+                   G->CTrqBo.mat[k][i] * G->Gamma.mat[k][G->RotDOF + j];
             }
-            D->PAngVelc[i0 + i][j0 + j] = CGo[i][j];
+            D->PAngVelc[i0 + i][j0 + j] = CGo.mat[i][j];
          }
       }
       Jb = G->Bin;
@@ -2018,19 +1997,16 @@ void FindPAngVelc(struct SCType *S)
          G  = &S->G[Ig];
          j0 = G->Rotc0;
          Nc = 3 - G->RotDOF;
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < Nc; j++) {
-               CG[i][j] = 0.0;
-               for (k = 0; k < 3; k++) {
-                  CG[i][j] += D->BodyPathTable[Ib][Jb].Coi[i][k] * CGo[k][j];
-               }
-            }
-         }
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < Nc; j++) {
-               D->PAngVelc[i0 + i][j0 + j] = CG[i][j];
-            }
-         }
+         CG = MAT3X3_ZERO;
+         for (i = 0; i < 3; i++)
+            for (j = 0; j < Nc; j++)
+               for (k = 0; k < 3; k++)
+                  CG.mat[i][j] +=
+                      D->BodyPathTable[Ib][Jb].Coi.mat[i][k] * CGo.mat[k][j];
+
+         for (i = 0; i < 3; i++)
+            for (j = 0; j < Nc; j++)
+               D->PAngVelc[i0 + i][j0 + j] = CG.mat[i][j];
          Jb = G->Bin;
       }
    }
@@ -2042,9 +2018,9 @@ void FindPVelc(struct SCType *S)
    struct DynType *D;
    struct BodyType *Bjb;
    struct JointType *G;
-   double RC[3][3];
-   double RCB[3][3], RCG[3][3];
-   double CNG[3][3], CD[3][3];
+   mat3x3 RC;
+   mat3x3 RCB, RCG;
+   mat3x3 CNG, CD;
    long Ib, Jb, Ig, i, j, k, i0, j0, Nc;
 
    D = &S->Dyn;
@@ -2057,34 +2033,33 @@ void FindPVelc(struct SCType *S)
          Ig  = Bjb->Gin;
          G   = &S->G[Ig];
          /* Rotation */
-         j0 = G->Rotc0;
-         Nc = 3 - G->RotDOF;
-         VcrossMT(D->JointPathTable[Ib][Ig].rho, Bjb->CN, RCB);
-         MxMT(RCB, G->CTrqBo, RC);
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < Nc; j++) {
-               RCG[i][j] = 0.0;
-               for (k = 0; k < 3; k++) {
-                  RCG[i][j] += RC[i][k] * G->Gamma[k][G->RotDOF + j];
-               }
-            }
-         }
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < Nc; j++) {
-               D->PVelc[i0 + i][j0 + j] = RCG[i][j];
-            }
-         }
+         j0  = G->Rotc0;
+         Nc  = 3 - G->RotDOF;
+         RCB = VcrossMT(D->JointPathTable[Ib][Ig].rho, Bjb->CN);
+         RC  = MxMT(RCB, G->CTrqBo);
+         RCG = MAT3X3_ZERO;
+         for (i = 0; i < 3; i++)
+            for (j = 0; j < Nc; j++)
+               for (k = 0; k < 3; k++)
+                  RCG.mat[i][j] +=
+                      RC.mat[i][k] * G->Gamma.mat[k][G->RotDOF + j];
+
+         for (i = 0; i < 3; i++)
+            for (j = 0; j < Nc; j++)
+               D->PVelc[i0 + i][j0 + j] = RCG.mat[i][j];
+
          /* Translation */
-         j0 = G->Trnc0;
-         Nc = 3 - G->TrnDOF;
-         MTxMT(S->B[G->Bin].CN, G->CGiBi, CNG);
+         j0  = G->Trnc0;
+         Nc  = 3 - G->TrnDOF;
+         CNG = MTxMT(S->B[G->Bin].CN, G->CGiBi);
+         CD  = MAT3X3_ZERO;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < Nc; j++) {
-               CD[i][j] = 0.0;
                for (k = 0; k < 3; k++) {
-                  CD[i][j] += CNG[i][k] * G->Delta[k][G->TrnDOF + j];
+                  CD.mat[i][j] +=
+                      CNG.mat[i][k] * G->Delta.mat[k][G->TrnDOF + j];
                }
-               D->PVelc[i0 + i][j0 + j] = CD[i][j];
+               D->PVelc[i0 + i][j0 + j] = CD.mat[i][j];
             }
          }
          Jb = G->Bin;
@@ -2100,10 +2075,10 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
    struct JointType *G;
    struct WhlType *W;
    long Ig, Ib, Iw, i, j;
-   double TrqBo[3], TrqGo[3], TrqBi[3];
-   double FrcBo[3], FrcGo[3], FrcBi[3], FrcGi[3];
-   double FrcBiN[3], FrcBoN[3];
-   double rxFi[3], rxFo[3];
+   vec3 TrqBo, TrqGo, TrqBi;
+   vec3 FrcBo, FrcGo, FrcBi, FrcGi;
+   vec3 FrcBiN, FrcBoN;
+   vec3 rxFi, rxFo;
 
    D = &S->Dyn;
 
@@ -2112,8 +2087,8 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       JointPartials(FALSE, G->IsSpherical, G->RotSeq, G->TrnSeq, G->Ang,
-                    G->AngRate, G->Gamma, G->Gs, G->Gds, G->PosRate, G->Delta,
-                    G->Ds, G->Dds);
+                    G->AngRate, &G->Gamma, &G->Gs, &G->Gds, G->PosRate,
+                    &G->Delta, &G->Ds, &G->Dds);
    }
    FindBodyPathDCMs(S);
    FindPathVectors(S);
@@ -2130,9 +2105,8 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
    FindInertiaFrc(S);
 
    /* Non-actuator-induced joint torques */
-   for (Ig = 0; Ig < S->Ng; Ig++) {
+   for (Ig = 0; Ig < S->Ng; Ig++)
       JointFrcTrq(&S->G[Ig], S);
-   }
 
    /* "F-bendy" and "T-bendy", Spring/Damping, and nonlinear terms */
    if (S->FlexActive) {
@@ -2144,8 +2118,8 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         D->BodyTrq[3 * Ib + i] = B->Trq[i] + B->InertiaTrq[i];
-         D->BodyFrc[3 * Ib + i] = B->FrcN[i] + B->InertiaFrc[i];
+         D->BodyTrq[3 * Ib + i] = B->Trq.v[i] + B->InertiaTrq.v[i];
+         D->BodyFrc[3 * Ib + i] = B->FrcN.v[i] + B->InertiaFrc.v[i];
       }
    }
    /* Add Wheel Torques */
@@ -2153,41 +2127,41 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
       W  = &S->Whl[Iw];
       Ib = W->Body;
       for (i = 0; i < 3; i++) {
-         D->BodyTrq[3 * Ib + i] -= W->Trq * W->A[i];
+         D->BodyTrq[3 * Ib + i] -= W->Trq * W->A.v[i];
       }
    }
    /* Applied Joint Torques and Forces */
    for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
+      G     = &S->G[Ig];
+      FrcGi = VEC3_ZERO;
+      TrqGo = VEC3_ZERO;
       for (i = 0; i < 3; i++) {
-         FrcGi[i] = 0.0;
-         TrqGo[i] = 0.0;
          for (j = 0; j < G->RotDOF; j++) {
-            TrqGo[i] += G->Gamma[i][j] * G->Trq[j];
+            TrqGo.v[i] += G->Gamma.mat[i][j] * G->Trq.v[j];
          }
          for (j = 0; j < G->TrnDOF; j++) {
-            FrcGi[i] += G->Delta[i][j] * G->Frc[j];
+            FrcGi.v[i] += G->Delta.mat[i][j] * G->Frc.v[j];
          }
       }
 
       /* Force Transformations*/
-      MxV(G->CGoGi, FrcGi, FrcGo);
-      MTxV(G->CTrqBi, FrcGo, FrcBi);
-      MTxV(G->CTrqBo, FrcGo, FrcBo);
-      MTxV(S->B[G->Bin].CN, FrcBi, FrcBiN);
-      MTxV(S->B[G->Bout].CN, FrcBo, FrcBoN);
-      VxV(G->ri, FrcBi, rxFi);
-      VxV(G->ro, FrcBo, rxFo);
+      FrcGo  = MxV(G->CGoGi, FrcGi);
+      FrcBi  = MTxV(G->CTrqBi, FrcGo);
+      FrcBo  = MTxV(G->CTrqBo, FrcGo);
+      FrcBiN = MTxV(S->B[G->Bin].CN, FrcBi);
+      FrcBoN = MTxV(S->B[G->Bout].CN, FrcBo);
+      rxFi   = VxV(G->ri, FrcBi);
+      rxFo   = VxV(G->ro, FrcBo);
 
       /* Torque Transformations */
-      MTxV(G->CTrqBi, TrqGo, TrqBi);
-      MTxV(G->CTrqBo, TrqGo, TrqBo);
+      TrqBi = MTxV(G->CTrqBi, TrqGo);
+      TrqBo = MTxV(G->CTrqBo, TrqGo);
 
       for (i = 0; i < 3; i++) {
-         D->BodyTrq[3 * G->Bin + i]  -= TrqBi[i] + rxFi[i];
-         D->BodyTrq[3 * G->Bout + i] += TrqBo[i] + rxFo[i];
-         D->BodyFrc[3 * G->Bin + i]  -= FrcBiN[i];
-         D->BodyFrc[3 * G->Bout + i] += FrcBoN[i];
+         D->BodyTrq[3 * G->Bin + i]  -= TrqBi.v[i] + rxFi.v[i];
+         D->BodyTrq[3 * G->Bout + i] += TrqBo.v[i] + rxFo.v[i];
+         D->BodyFrc[3 * G->Bin + i]  -= FrcBiN.v[i];
+         D->BodyFrc[3 * G->Bout + i] += FrcBoN.v[i];
       }
    }
 
@@ -2203,8 +2177,8 @@ void KaneNBodyConstraints(struct SCType *S, double *u, double *x, double *h,
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         D->TotalTrq[3 * Ib + i] += B->InertiaTrq[i];
-         D->TotalFrc[3 * Ib + i] += B->InertiaFrc[i];
+         D->TotalTrq[3 * Ib + i] += B->InertiaTrq.v[i];
+         D->TotalFrc[3 * Ib + i] += B->InertiaFrc.v[i];
       }
    }
 
@@ -2227,13 +2201,13 @@ void FindBodyAccelerations(struct SCType *S, double *du)
    D = &S->Dyn;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
+      B        = &S->B[Ib];
+      B->alpha = B->AlphaR;
       for (i = 0; i < 3; i++) {
-         B->alpha[i] = B->AlphaR[i];
-         B->accel[i] = S->FrcN[i] / S->mass + B->AccR[i];
+         B->accel.v[i] = S->FrcN.v[i] / S->mass + B->AccR.v[i];
          for (j = 0; j < D->Nu; j++) {
-            B->alpha[i] += D->PAngVel[3 * Ib + i][j] * du[j];
-            B->accel[i] += D->PVel[3 * Ib + i][j] * du[j];
+            B->alpha.v[i] += D->PAngVel[3 * Ib + i][j] * du[j];
+            B->accel.v[i] += D->PVel[3 * Ib + i][j] * du[j];
          }
       }
    }
@@ -2602,8 +2576,8 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
    struct BodyType *B;
    struct DynType *D;
    struct NodeType *FN;
-   double Hb[3], WhlTorq[3], wxH[3], Trq[3];
-   double Iinv[3][3];
+   vec3 Hb, WhlTorq, wxH, Trq;
+   mat3x3 Iinv;
    long i, j, k;
    long If, Nf, In;
 
@@ -2612,42 +2586,39 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
    Nf = B->Nf;
 
    /* .. Build H's */
-   MxV(B->I, u, Hb);
-   for (i = 0; i < 3; i++) {
-      Hb[i] += B->EmbeddedMom[i];
-      for (j = 0; j < S->Nw; j++) {
-         Hb[i] += h[j] * S->Whl[j].A[i];
-      }
-   }
+   vec3 uvec = DBL_TO_VEC3(&u[0]);
+   Hb        = MxV(B->I, uvec);
+   for (i = 0; i < 3; i++)
+      Hb.v[i] += B->EmbeddedMom.v[i];
+   for (j = 0; j < S->Nw; j++)
+      Hb.v[i] += h[j] * S->Whl[j].A.v[i];
 
    /* .. Build wheel torque in B0 frame */
-   for (i = 0; i < 3; i++) {
-      WhlTorq[i] = 0.0;
-      for (j = 0; j < S->Nw; j++) {
-         WhlTorq[i] -= S->Whl[j].Trq * S->Whl[j].A[i];
-      }
-   }
+   WhlTorq = VEC3_ZERO;
+   for (i = 0; i < 3; i++)
+      for (j = 0; j < S->Nw; j++)
+         WhlTorq.v[i] -= S->Whl[j].Trq * S->Whl[j].A.v[i];
 
    /* .. Angular Rates */
-   VxV(u, Hb, wxH);
-   Trq[0] = B->Trq[0] - wxH[0] + WhlTorq[0];
-   Trq[1] = B->Trq[1] - wxH[1] + WhlTorq[1];
-   Trq[2] = B->Trq[2] - wxH[2] + WhlTorq[2];
+   wxH = VxV(uvec, Hb);
+   for (i = 0; i < 3; i++)
+      Trq.v[0] = B->Trq.v[0] - wxH.v[0] + WhlTorq.v[0];
 
    /* .. Rigid Body EOM */
-   MINV3(B->I, Iinv);
-   MxV(Iinv, Trq, udot);
+   Iinv         = MINV3(B->I);
+   vec3 uvecdot = MxV(Iinv, Trq);
+   VEC3_TO_DBL(udot, uvecdot);
 
    /* .. Wheel-body interaction  */
-   for (i = 0; i < S->Nw; i++) {
+   for (i = 0; i < S->Nw; i++)
       hdot[i] = S->Whl[i].Trq;
-   }
 
    /* .. Quaternion kinematics */
-   xdot[0] = 0.5 * (u[0] * x[3] - u[1] * x[2] + u[2] * x[1]);
-   xdot[1] = 0.5 * (u[0] * x[2] + u[1] * x[3] - u[2] * x[0]);
-   xdot[2] = 0.5 * (-u[0] * x[1] + u[1] * x[0] + u[2] * x[3]);
-   xdot[3] = 0.5 * (-u[0] * x[0] - u[1] * x[1] - u[2] * x[2]);
+   quat q = DBL_TO_QUAT(&x[0]);
+   quat qdot;
+   qdot = QW2QDOT(q, uvec);
+
+   QUAT_TO_DBL(&xdot[0], qdot);
 
    /* .. Flex EOM */
    if (S->FlexActive) {
@@ -2658,23 +2629,20 @@ void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
          for (In = 0; In < B->NumNodes; In++) {
             FN = &B->Node[In];
             D->FlexFrc[If] +=
-                FN->PSI[0][If] * FN->Frc[0] + FN->PSI[1][If] * FN->Frc[1] +
-                FN->PSI[2][If] * FN->Frc[2] + FN->THETA[0][If] * FN->Trq[0] +
-                FN->THETA[1][If] * FN->Trq[1] + FN->THETA[2][If] * FN->Trq[2];
+                FN->PSI[0][If] * FN->Frc.x + FN->PSI[1][If] * FN->Frc.x +
+                FN->PSI[2][If] * FN->Frc.z + FN->THETA[0][If] * FN->Trq.x +
+                FN->THETA[1][If] * FN->Trq.x + FN->THETA[2][If] * FN->Trq.z;
          }
       }
-      if (B->MfIsDiagonal) {
-         for (If = 0; If < Nf; If++) {
+      if (B->MfIsDiagonal)
+         for (If = 0; If < Nf; If++)
             ufdot[If] = D->FlexFrc[If] / B->Mf[If][If];
-         }
-      }
-      else {
+      else
          LINSOLVE(B->Mf, ufdot, D->FlexFrc, Nf);
-      }
+
       /* Flex Kinematics */
-      for (If = 0; If < Nf; If++) {
+      for (If = 0; If < Nf; If++)
          xfdot[If] = uf[If];
-      }
    }
 }
 /**********************************************************************/
@@ -2811,13 +2779,14 @@ void OneBodyRK4(struct SCType *S)
    }
 
    /* .. Map out state variables */
-   UNITQ(x);
    for (i = 0; i < 3; i++) {
-      S->B[0].wn[i] = u[i];
-      S->B[0].qn[i] = x[i];
+      S->B[0].wn.v[i] = u[i];
+      S->B[0].qn.q[i] = x[i];
    }
-   S->B[0].qn[3] = x[3];
-   Q2C(S->B[0].qn, S->B[0].CN);
+   S->B[0].qn.qs = x[3];
+
+   S->B[0].qn = UNITQ(S->B[0].qn);
+   S->B[0].CN = Q2C(S->B[0].qn);
 
    /* .. Wheels */
    for (i = 0; i < Nw; i++) {
@@ -2838,42 +2807,33 @@ void OneBodyRK4(struct SCType *S)
 void OrderNJointPartials(struct JointType *G)
 {
    double s2, c2, s3, c3;
-   double Pw[3][3]    = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Pwdot[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Pv[3][3]    = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double CPv[3][3];
+   mat3x3 Pw    = MAT3X3_ZERO;
+   mat3x3 Pwdot = MAT3X3_ZERO;
+   mat3x3 Pv    = MAT3X3_ZERO;
+   mat3x3 CPv;
    long i1, i2, i3, Cyclic, i, j, k;
 
    if (G->Init) {
       G->Init = 0;
 
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++) {
-            G->Pw[i][j]    = 0.0;
-            G->Pv[i][j]    = 0.0;
-            G->Pwdot[i][j] = 0.0;
-         }
-      }
-      for (i = 0; i < 6; i++) {
+      G->Pw    = MAT3X3_ZERO;
+      G->Pv    = MAT3X3_ZERO;
+      G->Pwdot = MAT3X3_ZERO;
+      for (i = 0; i < 6; i++)
          for (j = 0; j < 6; j++)
             G->P[i][j] = 0.0;
-      }
 
-      if (G->IsSpherical) {
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               G->Pw[i][j] = G->CBoGo[i][j];
-         }
-      }
+      if (G->IsSpherical)
+         G->Pw = G->CBoGo;
 
       i3 = G->TrnSeq % 10;         /* Pick off third digit */
       i2 = (G->TrnSeq % 100) / 10; /* Extract second digit */
       i1 = G->TrnSeq / 100;        /* Pick off first digit */
 
-      Pv[i1 - 1][0] = 1.0;
-      Pv[i2 - 1][1] = 1.0;
-      Pv[i3 - 1][2] = 1.0;
-      MTxM(G->CGiBi, Pv, G->Pv);
+      Pv.mat[i1 - 1][0] = 1.0;
+      Pv.mat[i2 - 1][1] = 1.0;
+      Pv.mat[i3 - 1][2] = 1.0;
+      G->Pv             = MTxM(G->CGiBi, Pv);
    }
 
    if (!G->IsSpherical) {
@@ -2881,10 +2841,10 @@ void OrderNJointPartials(struct JointType *G)
       i2 = (G->RotSeq % 100) / 10; /* Extract second digit */
       i1 = G->RotSeq / 100;        /* Pick off first digit */
 
-      s2 = sin(G->Ang[1]);
-      c2 = cos(G->Ang[1]);
-      s3 = sin(G->Ang[2]);
-      c3 = cos(G->Ang[2]);
+      s2 = sin(G->Ang.y);
+      c2 = cos(G->Ang.y);
+      s3 = sin(G->Ang.z);
+      c3 = cos(G->Ang.z);
 
       Cyclic = (i2 - i1) * (i3 - i2) * (i3 - i1);
       /* Convert (123) style to [012] subscripts */
@@ -2892,32 +2852,36 @@ void OrderNJointPartials(struct JointType *G)
       i2--;
       i3--;
       if (Cyclic > 0) { /* 123, 231, 312 */
-         Pw[i1][0] = c2 * c3;
-         Pw[i1][1] = s3;
-         Pw[i2][0] = -c2 * s3;
-         Pw[i2][1] = c3;
-         Pw[i3][0] = s2;
-         Pw[i3][2] = 1.0;
+         Pw.mat[i1][0] = c2 * c3;
+         Pw.mat[i1][1] = s3;
+         Pw.mat[i2][0] = -c2 * s3;
+         Pw.mat[i2][1] = c3;
+         Pw.mat[i3][0] = s2;
+         Pw.mat[i3][2] = 1.0;
 
-         Pwdot[i1][0] = -s2 * c3 * G->AngRate[1] - c2 * s3 * G->AngRate[2];
-         Pwdot[i1][1] = c3 * G->AngRate[2];
-         Pwdot[i2][0] = s2 * s3 * G->AngRate[1] - c2 * c3 * G->AngRate[2];
-         Pwdot[i2][1] = -s3 * G->AngRate[2];
-         Pwdot[i3][0] = c2 * G->AngRate[1];
+         Pwdot.mat[i1][0] =
+             -s2 * c3 * G->AngRate.v[1] - c2 * s3 * G->AngRate.v[2];
+         Pwdot.mat[i1][1] = c3 * G->AngRate.v[2];
+         Pwdot.mat[i2][0] =
+             s2 * s3 * G->AngRate.v[1] - c2 * c3 * G->AngRate.v[2];
+         Pwdot.mat[i2][1] = -s3 * G->AngRate.v[2];
+         Pwdot.mat[i3][0] = c2 * G->AngRate.v[1];
       }
       else if (Cyclic < 0) { /* 321, 132, 213 */
-         Pw[i1][0] = c2 * c3;
-         Pw[i1][1] = -s3;
-         Pw[i2][0] = c2 * s3;
-         Pw[i2][1] = c3;
-         Pw[i3][0] = -s2;
-         Pw[i3][2] = 1.0;
+         Pw.mat[i1][0] = c2 * c3;
+         Pw.mat[i1][1] = -s3;
+         Pw.mat[i2][0] = c2 * s3;
+         Pw.mat[i2][1] = c3;
+         Pw.mat[i3][0] = -s2;
+         Pw.mat[i3][2] = 1.0;
 
-         Pwdot[i1][0] = -s2 * c3 * G->AngRate[1] - c2 * s3 * G->AngRate[2];
-         Pwdot[i1][1] = -c3 * G->AngRate[2];
-         Pwdot[i2][0] = -s2 * s3 * G->AngRate[1] + c2 * c3 * G->AngRate[2];
-         Pwdot[i2][1] = -s3 * G->AngRate[2];
-         Pwdot[i3][0] = -c2 * G->AngRate[1];
+         Pwdot.mat[i1][0] =
+             -s2 * c3 * G->AngRate.v[1] - c2 * s3 * G->AngRate.v[2];
+         Pwdot.mat[i1][1] = -c3 * G->AngRate.v[2];
+         Pwdot.mat[i2][0] =
+             -s2 * s3 * G->AngRate.v[1] + c2 * c3 * G->AngRate.v[2];
+         Pwdot.mat[i2][1] = -s3 * G->AngRate.v[2];
+         Pwdot.mat[i3][0] = -c2 * G->AngRate.v[1];
       }
       else {
          fprintf(stderr,
@@ -2925,24 +2889,24 @@ void OrderNJointPartials(struct JointType *G)
                  G->RotSeq);
          exit(EXIT_FAILURE);
       }
-      MxM(G->CBoGo, Pw, G->Pw);
-      MxM(G->CBoGo, Pwdot, G->Pwdot);
+      G->Pw    = MxM(G->CBoGo, Pw);
+      G->Pwdot = MxM(G->CBoGo, Pwdot);
    }
 
    /* Pw is expressed in Bo, Pv is expressed in Bi */
    /* Express P in Bo */
    for (i = 0; i < 3; i++) {
       for (j = 0; j < G->TrnDOF; j++) {
-         CPv[i][j] = 0.0;
+         CPv.mat[i][j] = 0.0;
          for (k = 0; k < 3; k++)
-            CPv[i][j] += G->COI[i][k] * G->Pv[k][j];
+            CPv.mat[i][j] += G->COI.mat[i][k] * G->Pv.mat[k][j];
       }
    }
    for (i = 0; i < 3; i++) {
       for (j = 0; j < G->RotDOF; j++)
-         G->P[i][j] = G->Pw[i][j];
+         G->P[i][j] = G->Pw.mat[i][j];
       for (j = 0; j < G->TrnDOF; j++)
-         G->P[3 + i][G->RotDOF + j] = CPv[i][j];
+         G->P[3 + i][G->RotDOF + j] = CPv.mat[i][j];
    }
 }
 /******************************************************************************/
@@ -3005,79 +2969,69 @@ void MINV1to6(double A[6][6], double AI[6][6], long N)
    }
 }
 /******************************************************************************/
-void ShiftArtFrc(double F[6], double r[3], double Fbar[6])
+void ShiftArtFrc(double F[6], vec3 r, double Fbar[6])
 {
-   double rxF[3];
+   vec3 F2  = DBL_TO_VEC3(&F[3]);
+   vec3 rxF = VxV(r, F2);
 
-   VxV(r, &F[3], rxF);
-
-   Fbar[0] = F[0] - rxF[0];
-   Fbar[1] = F[1] - rxF[1];
-   Fbar[2] = F[2] - rxF[2];
+   Fbar[0] = F[0] - rxF.v[0];
+   Fbar[1] = F[1] - rxF.v[1];
+   Fbar[2] = F[2] - rxF.v[2];
    Fbar[3] = F[3];
    Fbar[4] = F[4];
    Fbar[5] = F[5];
 }
 /******************************************************************************/
-void ShiftSpatAcc(double a[6], double r[3], double abar[6])
+void ShiftSpatAcc(double a[6], vec3 r, double abar[6])
 {
-   double axr[3];
-
-   VxV(&a[0], r, axr);
+   vec3 a2  = DBL_TO_VEC3(&a[0]);
+   vec3 axr = VxV(a2, r);
 
    abar[0] = a[0];
    abar[1] = a[1];
    abar[2] = a[2];
-   abar[3] = a[3] + axr[0];
-   abar[4] = a[4] + axr[1];
-   abar[5] = a[5] + axr[2];
+   abar[3] = a[3] + axr.v[0];
+   abar[4] = a[4] + axr.v[1];
+   abar[5] = a[5] + axr.v[2];
 }
 /******************************************************************************/
-void ShiftArtMass(double A[6][6], double r[3], double B[6][6])
+void ShiftArtMass(double A[6][6], vec3 r, double B[6][6])
 {
-   double rx[3][3], rxA21[3][3], A12xr[3][3], rxA22[3][3], A22xr[3][3],
-       rxA22xr[3][3];
+   mat3x3 rx, rxA21, A12xr, rxA22, A22xr, rxA22xr;
    long i, j, k;
 
-   rx[0][0] = 0.0;
-   rx[1][1] = 0.0;
-   rx[2][2] = 0.0;
-   rx[2][1] = r[0];
-   rx[0][2] = r[1];
-   rx[1][0] = r[2];
-   rx[1][2] = -r[0];
-   rx[2][0] = -r[1];
-   rx[0][1] = -r[2];
+   rx    = V2CrossM(r);
+   rxA21 = MAT3X3_ZERO;
+   A12xr = MAT3X3_ZERO;
+   rxA22 = MAT3X3_ZERO;
+   A22xr = MAT3X3_ZERO;
 
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++) {
-         rxA21[i][j] = 0.0;
-         A12xr[i][j] = 0.0;
-         rxA22[i][j] = 0.0;
-         A22xr[i][j] = 0.0;
+   for (j = 0; j < 3; j++) {
+      for (i = 0; i < 3; i++) {
          for (k = 0; k < 3; k++) {
-            rxA21[i][j] += rx[i][k] * A[3 + k][j];
-            A12xr[i][j] += A[i][3 + k] * rx[k][j];
-            rxA22[i][j] += rx[i][k] * A[3 + k][3 + j];
-            A22xr[i][j] += A[3 + i][3 + k] * rx[k][j];
+            rxA21.mat[i][j] += rx.mat[i][k] * A[3 + k][j];
+            A12xr.mat[i][j] += A[i][3 + k] * rx.mat[k][j];
+            rxA22.mat[i][j] += rx.mat[i][k] * A[3 + k][3 + j];
+            A22xr.mat[i][j] += A[3 + i][3 + k] * rx.mat[k][j];
          }
       }
    }
-   MxM(rxA22, rx, rxA22xr);
+   rxA22xr = MxM(rxA22, rx);
 
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
          for (k = 0; k < 3; k++) {
-            B[i][j]     = A[i][j] - rxA21[i][j] + A12xr[i][j] - rxA22xr[i][j];
-            B[i][3 + j] = A[i][3 + j] - rxA22[i][j];
-            B[3 + i][j] = A[3 + i][j] + A22xr[i][j];
+            B[i][j] =
+                A[i][j] - rxA21.mat[i][j] + A12xr.mat[i][j] - rxA22xr.mat[i][j];
+            B[i][3 + j] = A[i][3 + j] - rxA22.mat[i][j];
+            B[3 + i][j] = A[3 + i][j] + A22xr.mat[i][j];
          }
          B[3 + i][3 + j] = A[3 + i][3 + j];
       }
    }
 }
 /******************************************************************************/
-void RotateSpatVec(double CBA[3][3], double Va[6], double Vb[6])
+void RotateSpatVec(mat3x3 CBA, double Va[6], double Vb[6])
 {
    long i, j;
 
@@ -3085,28 +3039,28 @@ void RotateSpatVec(double CBA[3][3], double Va[6], double Vb[6])
       Vb[i]     = 0.0;
       Vb[3 + i] = 0.0;
       for (j = 0; j < 3; j++) {
-         Vb[i]     += CBA[i][j] * Va[j];
-         Vb[3 + i] += CBA[i][j] * Va[3 + j];
+         Vb[i]     += CBA.mat[i][j] * Va[j];
+         Vb[3 + i] += CBA.mat[i][j] * Va[3 + j];
       }
    }
 }
 /******************************************************************************/
-void RotateSpatMat(double CBA[3][3], double Ma[6][6], double Mb[6][6])
+void RotateSpatMat(mat3x3 CBA, double Ma[6][6], double Mb[6][6])
 {
-   double CM11[3][3], CM12[3][3], CM21[3][3], CM22[3][3];
+   mat3x3 CM11, CM12, CM21, CM22;
    long i, j, k;
 
+   CM11 = MAT3X3_ZERO;
+   CM12 = MAT3X3_ZERO;
+   CM21 = MAT3X3_ZERO;
+   CM22 = MAT3X3_ZERO;
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         CM11[i][j] = 0.0;
-         CM12[i][j] = 0.0;
-         CM21[i][j] = 0.0;
-         CM22[i][j] = 0.0;
          for (k = 0; k < 3; k++) {
-            CM11[i][j] += CBA[i][k] * Ma[k][j];
-            CM12[i][j] += CBA[i][k] * Ma[k][3 + j];
-            CM21[i][j] += CBA[i][k] * Ma[3 + k][j];
-            CM22[i][j] += CBA[i][k] * Ma[3 + k][3 + j];
+            CM11.mat[i][j] += CBA.mat[i][k] * Ma[k][j];
+            CM12.mat[i][j] += CBA.mat[i][k] * Ma[k][3 + j];
+            CM21.mat[i][j] += CBA.mat[i][k] * Ma[3 + k][j];
+            CM22.mat[i][j] += CBA.mat[i][k] * Ma[3 + k][3 + j];
          }
       }
    }
@@ -3118,10 +3072,10 @@ void RotateSpatMat(double CBA[3][3], double Ma[6][6], double Mb[6][6])
          Mb[3 + i][j]     = 0.0;
          Mb[3 + i][3 + j] = 0.0;
          for (k = 0; k < 3; k++) {
-            Mb[i][j]         += CM11[i][k] * CBA[j][k];
-            Mb[i][3 + j]     += CM12[i][k] * CBA[j][k];
-            Mb[3 + i][j]     += CM21[i][k] * CBA[j][k];
-            Mb[3 + i][3 + j] += CM22[i][k] * CBA[j][k];
+            Mb[i][j]         += CM11.mat[i][k] * CBA.mat[j][k];
+            Mb[i][3 + j]     += CM12.mat[i][k] * CBA.mat[j][k];
+            Mb[3 + i][j]     += CM21.mat[i][k] * CBA.mat[j][k];
+            Mb[3 + i][3 + j] += CM22.mat[i][k] * CBA.mat[j][k];
          }
       }
    }
@@ -3129,96 +3083,89 @@ void RotateSpatMat(double CBA[3][3], double Ma[6][6], double Mb[6][6])
 /******************************************************************************/
 void OrderNJointCOI(struct JointType *G)
 {
-   double CBoGi[3][3];
+   mat3x3 CBoGi;
 
    if (G->IsSpherical) {
-      Q2C(G->q, G->CGoGi);
-      C2A(G->RotSeq, G->CGoGi, &G->Ang[0], &G->Ang[1], &G->Ang[2]);
+      G->CGoGi = Q2C(G->q);
+      C2A(G->RotSeq, G->CGoGi, &G->Ang.v[0], &G->Ang.v[1], &G->Ang.v[2]);
    }
    else
-      A2C(G->RotSeq, G->Ang[0], G->Ang[1], G->Ang[2], G->CGoGi);
+      G->CGoGi = A2C(G->RotSeq, G->Ang.v[0], G->Ang.v[1], G->Ang.v[2]);
 
-   MxM(G->CBoGo, G->CGoGi, CBoGi);
-   MxM(CBoGi, G->CGiBi, G->COI);
+   CBoGi  = MxM(G->CBoGo, G->CGoGi);
+   G->COI = MxM(CBoGi, G->CGiBi);
 }
 /******************************************************************************/
 void ScatterStates(struct JointType *G)
 {
    struct BodyType *Bi, *Bo;
-   double Pwu[3], Pvu[3], Pdwu[3];
-   double pni[3], vi[3], Cvi[3], wxPvu[3], ai[3], Cai[3];
-   double wxri[3], wxro[3], Calfri[3], wxPwu[3];
-   double axri[3], axro[3], wxwxri[3];
-   double wxwxro[3], Cwi[3];
-   double Iw[3], Ialfr[3], wxH[3];
+   vec3 Pwu, Pvu, Pdwu;
+   vec3 pni, vi, Cvi, wxPvu, ai, Cai;
+   vec3 wxri, wxro, Calfri, wxPwu;
+   vec3 axri, axro, wxwxri;
+   vec3 wxwxro, Cwi;
+   vec3 Iw, Ialfr, wxH;
    long i, j;
 
    Bi = G->Bi;
    Bo = G->Bo;
 
+   Pwu  = VEC3_ZERO;
+   Pvu  = VEC3_ZERO;
+   Pdwu = VEC3_ZERO;
    for (i = 0; i < 3; i++) {
-      Pwu[i]  = 0.0;
-      Pvu[i]  = 0.0;
-      Pdwu[i] = 0.0;
       for (j = 0; j < G->RotDOF; j++) {
-         Pwu[i]  += G->Pw[i][j] * G->AngRate[j];
-         Pdwu[i] += G->Pwdot[i][j] * G->AngRate[j];
+         Pwu.v[i]  += G->Pw.mat[i][j] * G->AngRate.v[j];
+         Pdwu.v[i] += G->Pwdot.mat[i][j] * G->AngRate.v[j];
       }
       for (j = 0; j < G->TrnDOF; j++) {
-         Pvu[i] += G->Pv[i][j] * G->PosRate[j];
+         Pvu.v[i] += G->Pv.mat[i][j] * G->PosRate.v[j];
       }
    }
 
-   MxM(G->COI, Bi->CN, Bo->CN);
+   Bo->CN = MxM(G->COI, Bi->CN);
 
-   for (i = 0; i < 3; i++)
-      pni[i] = Bi->pn[i] + G->riplusPx[i];
-   MxV(G->COI, pni, Bo->pn);
-   for (i = 0; i < 3; i++)
-      Bo->pn[i] -= G->RigidRout[i];
+   pni    = VpVElem(Bi->pn, G->riplusPx);
+   Bo->pn = MxV(G->COI, pni);
+   Bo->pn = VmVElem(Bo->pn, G->RigidRout);
 
    /* Velocities */
-   MxV(G->COI, Bi->wn, Cwi);
-   for (i = 0; i < 3; i++)
-      Bo->wn[i] = Cwi[i] + Pwu[i];
+   Cwi    = MxV(G->COI, Bi->wn);
+   Bo->wn = VpVElem(Cwi, Pwu);
 
-   VxV(Bi->wn, G->riplusPx, wxri);
-   VxV(Bo->wn, G->RigidRout, wxro);
+   wxri = VxV(Bi->wn, G->riplusPx);
+   wxro = VxV(Bo->wn, G->RigidRout);
    for (i = 0; i < 3; i++)
-      vi[i] = Bi->vn[i] + Pvu[i] + wxri[i];
-   MxV(G->COI, vi, Cvi);
-   for (i = 0; i < 3; i++) {
-      Bo->vn[i] = Cvi[i] - wxro[i];
-   }
+      vi.v[i] = Bi->vn.v[i] + Pvu.v[i] + wxri.v[i];
+   Cvi    = MxV(G->COI, vi);
+   Bo->vn = VmVElem(Cvi, wxro);
 
    /* Remainder Accelerations */
-   MxV(G->COI, Bi->RemAlf, Calfri);
-   VxV(Bo->wn, Pwu, wxPwu);
-   for (i = 0; i < 3; i++) {
-      Bo->RemAlf[i] = Calfri[i] + Pdwu[i] + wxPwu[i];
-   }
-
-   VxV(Bi->RemAlf, G->riplusPx, axri);
-   VxV(Bi->wn, wxri, wxwxri);
-   VxV(Bi->wn, Pvu, wxPvu);
+   Calfri = MxV(G->COI, Bi->RemAlf);
+   wxPwu  = VxV(Bo->wn, Pwu);
    for (i = 0; i < 3; i++)
-      ai[i] = Bi->RemAcc[i] + 2.0 * wxPvu[i] + axri[i] + wxwxri[i];
-   MxV(G->COI, ai, Cai);
-   VxV(Bo->RemAlf, G->RigidRout, axro);
-   VxV(Bo->wn, wxro, wxwxro);
-   for (i = 0; i < 3; i++) {
-      Bo->RemAcc[i] = Cai[i] - axro[i] - wxwxro[i];
-   }
+      Bo->RemAlf.v[i] = Calfri.v[i] + Pdwu.v[i] + wxPwu.v[i];
 
-   MxV(Bo->I, Bo->wn, Iw);
+   axri   = VxV(Bi->RemAlf, G->riplusPx);
+   wxwxri = VxV(Bi->wn, wxri);
+   wxPvu  = VxV(Bi->wn, Pvu);
    for (i = 0; i < 3; i++)
-      Bo->H[i] = Iw[i] + Bo->WhlMom[i] + Bo->EmbeddedMom[i];
+      ai.v[i] = Bi->RemAcc.v[i] + 2.0 * wxPvu.v[i] + axri.v[i] + wxwxri.v[i];
+   Cai    = MxV(G->COI, ai);
+   axro   = VxV(Bo->RemAlf, G->RigidRout);
+   wxwxro = VxV(Bo->wn, wxro);
+   for (i = 0; i < 3; i++)
+      Bo->RemAcc.v[i] = Cai.v[i] - axro.v[i] - wxwxro.v[i];
 
-   MxV(Bo->I, Bo->RemAlf, Ialfr);
-   VxV(Bo->wn, Bo->H, wxH);
+   Iw = MxV(Bo->I, Bo->wn);
+   for (i = 0; i < 3; i++)
+      Bo->H.v[i] = Iw.v[i] + Bo->WhlMom.v[i] + Bo->EmbeddedMom.v[i];
+
+   Ialfr = MxV(Bo->I, Bo->RemAlf);
+   wxH   = VxV(Bo->wn, Bo->H);
    for (i = 0; i < 3; i++) {
-      Bo->RemInertiaFrc[i]     = -Ialfr[i] - wxH[i];
-      Bo->RemInertiaFrc[3 + i] = -Bo->mass * Bo->RemAcc[i];
+      Bo->RemInertiaFrc[i]     = -Ialfr.v[i] - wxH.v[i];
+      Bo->RemInertiaFrc[3 + i] = -Bo->mass * Bo->RemAcc.v[i];
    }
 }
 /******************************************************************************/
@@ -3226,9 +3173,10 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
 {
    struct BodyType *Bo;
    struct JointType *Gd;
-   double F[6], TF[6], CTF[6], rdk[3], SCTF[6];
+   vec3 rdk;
+   double F[6], TF[6], CTF[6], SCTF[6];
    double M[6][6], TM[6][6], CTMC[6][6], SCTMCS[6][6];
-   double Coc[3][3];
+   mat3x3 Coc;
    long i, Id, j, k;
 
    Bo = G->Bo;
@@ -3245,10 +3193,9 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
          for (j = 0; j < 6; j++)
             TF[i] += Gd->TransMtx[i][j] * Gd->ArtFrc[j];
       }
-      MT(Gd->COI, Coc);
+      Coc = MT(Gd->COI);
       RotateSpatVec(Coc, TF, CTF);
-      for (i = 0; i < 3; i++)
-         rdk[i] = G->RigidRout[i] - Gd->riplusPx[i];
+      rdk = VmVElem(G->RigidRout, Gd->riplusPx);
       ShiftArtFrc(CTF, rdk, SCTF);
       for (i = 0; i < 6; i++)
          G->ArtFrc[i] += SCTF[i];
@@ -3257,7 +3204,7 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
    /* Articulated-Body Mass */
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         M[i][j]         = Bo->I[i][j];
+         M[i][j]         = Bo->I.mat[i][j];
          M[i][3 + j]     = 0.0;
          M[3 + i][j]     = 0.0;
          M[3 + i][3 + j] = 0.0;
@@ -3275,10 +3222,9 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
             }
          }
       }
-      MT(Gd->COI, Coc);
+      Coc = MT(Gd->COI);
       RotateSpatMat(Coc, TM, CTMC);
-      for (i = 0; i < 3; i++)
-         rdk[i] = G->ro[i] - Gd->riplusPx[i];
+      rdk = VmVElem(G->ro, Gd->riplusPx);
       ShiftArtMass(CTMC, rdk, SCTMCS);
       for (i = 0; i < 6; i++) {
          for (j = 0; j < 6; j++)
@@ -3337,7 +3283,8 @@ void GatherDynMtx(struct JointType *G, struct SCType *S __attribute__((unused)))
 void ScatterStateDerivatives(struct JointType *G)
 {
    struct BodyType *Bi, *Bo;
-   double Ma[6], Saui[6], CSaui[6], F[6], CSauiPudot[6], rko[3];
+   double Ma[6], Saui[6], CSaui[6], F[6], CSauiPudot[6];
+   vec3 rko;
    long i, j;
 
    Bi = G->Bi;
@@ -3362,8 +3309,7 @@ void ScatterStateDerivatives(struct JointType *G)
       for (j = 0; j < G->Nu; j++)
          CSauiPudot[i] += G->P[i][j] * G->udot[j];
    }
-   for (i = 0; i < 3; i++)
-      rko[i] = -G->RigidRout[i];
+   rko = VNegElem(G->RigidRout);
    ShiftSpatAcc(CSauiPudot, rko, Bo->AccU);
 }
 /******************************************************************************/
@@ -3372,23 +3318,22 @@ void OrderNMultiBodyEOM(struct SCType *S)
    struct BodyType *B, *Bi, *Bo;
    struct JointType *G;
    struct WhlType *W;
-   double Iow[3], wxH[3];
-   double TrqBo[3], TrqGo[3], TrqBi[3];
-   double FrcBo[3], FrcBi[3];
-   double rxFi[3], rxFo[3];
+   vec3 Iow, wxH;
+   vec3 TrqBo, TrqGo, TrqBi;
+   vec3 FrcBo, FrcBi;
+   vec3 rxFi, rxFo;
    long i, j, Ib, Ig, Iw;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      for (i = 0; i < 3; i++)
-         B->WhlMom[i] = 0.0;
+      B         = &S->B[Ib];
+      B->WhlMom = VEC3_ZERO;
    }
    for (Iw = 0; Iw < S->Nw; Iw++) {
       W = &S->Whl[Iw];
       B = &S->B[W->Body];
       for (i = 0; i < 3; i++) {
-         B->SpatFrc[i] -= W->Trq * W->A[i];
-         B->WhlMom[i]  += W->H * W->A[i];
+         B->SpatFrc[i]  -= W->Trq * W->A.v[i];
+         B->WhlMom.v[i] += W->H * W->A.v[i];
       }
    }
 
@@ -3397,31 +3342,28 @@ void OrderNMultiBodyEOM(struct SCType *S)
    G = &S->GN;
    OrderNJointCOI(G);
    OrderNJointPartials(G);
-   for (i = 0; i < 3; i++) {
-      B->wn[i] = G->AngRate[i];
-      for (j = 0; j < 3; j++)
-         B->CN[i][j] = G->COI[i][j];
-   }
-   MxV(B->CN, G->Pos, B->pn);
-   MxV(B->CN, G->PosRate, B->vn);
-   MxV(B->I, B->wn, Iow);
+   B->wn = G->AngRate;
+   B->CN = G->COI;
+
+   B->pn = MxV(B->CN, G->Pos);
+   B->vn = MxV(B->CN, G->PosRate);
+   Iow   = MxV(B->I, B->wn);
    for (i = 0; i < 3; i++)
-      B->H[i] = Iow[i] + B->WhlMom[i] + B->EmbeddedMom[i];
-   VxV(B->wn, B->H, wxH);
+      B->H.v[i] = Iow.v[i] + B->WhlMom.v[i] + B->EmbeddedMom.v[i];
+   wxH = VxV(B->wn, B->H);
    for (i = 0; i < 3; i++) {
-      B->RemInertiaFrc[i]     = -wxH[i];
+      B->RemInertiaFrc[i]     = -wxH.v[i];
       B->RemInertiaFrc[3 + i] = 0.0;
    }
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       OrderNJointCOI(G);
       OrderNJointPartials(G);
-      for (i = 0; i < 3; i++) {
-         G->riplusPx[i] = G->RigidRin[i];
-         for (j = 0; j < G->TrnDOF; j++) {
-            G->riplusPx[i] += G->Pv[i][j] * G->Pos[j];
-         }
-      }
+      G->riplusPx = G->RigidRin;
+      for (i = 0; i < 3; i++)
+         for (j = 0; j < G->TrnDOF; j++)
+            G->riplusPx.v[i] += G->Pv.mat[i][j] * G->Pos.v[j];
+
       ScatterStates(G);
    }
 
@@ -3431,30 +3373,29 @@ void OrderNMultiBodyEOM(struct SCType *S)
       Bi = G->Bi;
       Bo = G->Bo;
       JointFrcTrq(G, S);
+      FrcBi = VEC3_ZERO;
+      TrqGo = VEC3_ZERO;
       for (i = 0; i < 3; i++) {
-         FrcBi[i] = 0.0;
-         TrqGo[i] = 0.0;
-         for (j = 0; j < G->RotDOF; j++) {
-            TrqGo[i] += G->Pw[i][j] * G->Trq[j];
-         }
-         for (j = 0; j < G->TrnDOF; j++) {
-            FrcBi[i] += G->Pv[i][j] * G->Frc[j];
-         }
+         for (j = 0; j < G->RotDOF; j++)
+            TrqGo.v[i] += G->Pw.mat[i][j] * G->Trq.v[j];
+
+         for (j = 0; j < G->TrnDOF; j++)
+            FrcBi.v[i] += G->Pv.mat[i][j] * G->Frc.v[j];
       }
       /* Force Transformations*/
-      MxV(G->COI, FrcBi, FrcBo);
-      VxV(G->riplusPx, FrcBi, rxFi);
-      VxV(G->RigidRout, FrcBo, rxFo);
+      FrcBo = MxV(G->COI, FrcBi);
+      rxFi  = VxV(G->riplusPx, FrcBi);
+      rxFo  = VxV(G->RigidRout, FrcBo);
 
       /* Torque Transformations */
-      MTxV(G->CTrqBi, TrqGo, TrqBi);
-      MTxV(G->CTrqBo, TrqGo, TrqBo);
+      TrqBi = MTxV(G->CTrqBi, TrqGo);
+      TrqBo = MTxV(G->CTrqBo, TrqGo);
 
       for (i = 0; i < 3; i++) {
-         Bi->SpatFrc[i]     -= TrqBi[i] + rxFi[i];
-         Bo->SpatFrc[i]     += TrqBo[i] + rxFo[i];
-         Bi->SpatFrc[3 + i] -= FrcBi[i];
-         Bo->SpatFrc[3 + i] += FrcBo[i];
+         Bi->SpatFrc[i]     -= TrqBi.v[i] + rxFi.v[i];
+         Bo->SpatFrc[i]     += TrqBo.v[i] + rxFo.v[i];
+         Bi->SpatFrc[3 + i] -= FrcBi.v[i];
+         Bo->SpatFrc[3 + i] += FrcBo.v[i];
       }
    }
 
@@ -3478,27 +3419,28 @@ void OrderNMultiBodyEOM(struct SCType *S)
    }
    for (i = 0; i < 3; i++) {
       B->AccU[i]     = G->udot[i];
-      B->AccU[3 + i] = B->CN[i][0] * G->udot[3] + B->CN[i][1] * G->udot[4] +
-                       B->CN[i][2] * G->udot[5];
+      B->AccU[3 + i] = B->CN.mat[i][0] * G->udot[3] +
+                       B->CN.mat[i][1] * G->udot[4] +
+                       B->CN.mat[i][2] * G->udot[5];
    }
 
    for (Ig = 0; Ig < S->Ng; Ig++)
       ScatterStateDerivatives(&S->G[Ig]);
 
    /* Kinematic EOM */
-   G = &S->GN;
-   QW2QDOT(G->q, G->AngRate, G->qdot);
+   G       = &S->GN;
+   G->qdot = QW2QDOT(G->q, G->AngRate);
    for (i = 0; i < 3; i++)
-      G->xdot[i] = G->PosRate[i];
+      G->xdot.v[i] = G->PosRate.v[i];
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       if (G->IsSpherical)
-         QW2QDOT(G->q, G->AngRate, G->qdot);
+         G->qdot = QW2QDOT(G->q, G->AngRate);
       else
          for (i = 0; i < G->RotDOF; i++)
-            G->qdot[i] = G->AngRate[i];
+            G->qdot.q[i] = G->AngRate.v[i];
       for (i = 0; i < G->TrnDOF; i++)
-         G->xdot[i] = G->PosRate[i];
+         G->xdot.v[i] = G->PosRate.v[i];
    }
 
    /* Wheel EOM */
@@ -3513,25 +3455,25 @@ void StateVectorToJoints(double *u, double *x, const long Nu, const long Nx,
                          const long Ng)
 {
    for (int i = 0; i < 3; i++) {
-      GN->AngRate[i] = u[i];
-      GN->PosRate[i] = u[Nu - 3 + i];
-      GN->Pos[i]     = x[Nx - 3 + i];
+      GN->AngRate.v[i] = u[i];
+      GN->PosRate.v[i] = u[Nu - 3 + i];
+      GN->Pos.v[i]     = x[Nx - 3 + i];
    }
    for (int i = 0; i < 4; i++)
-      GN->q[i] = x[i];
-   UNITQ(GN->q);
+      GN->q.q[i] = x[i];
+   GN->q = UNITQ(GN->q);
 
    for (int Ig = 0; Ig < Ng; Ig++) {
       struct JointType *G = &GList[Ig];
-      for (int i = 0; i < G->RotDOF; i++) {
-         G->AngRate[i] = u[G->Rotu0 + i];
-      }
+      for (int i = 0; i < G->RotDOF; i++)
+         G->AngRate.v[i] = u[G->Rotu0 + i];
+
       for (int i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = u[G->Trnu0 + i];
-         G->Pos[i]     = x[G->Trnx0 + i];
+         G->PosRate.v[i] = u[G->Trnu0 + i];
+         G->Pos.v[i]     = x[G->Trnx0 + i];
       }
       for (int i = 0; i < ((G->IsSpherical) ? 4 : G->RotDOF); i++)
-         G->q[i] = x[G->Rotx0 + i];
+         G->q.q[i] = x[G->Rotx0 + i];
    }
 }
 /******************************************************************************/
@@ -3551,8 +3493,8 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const xdot_out)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq[i];
-         B->SpatFrc[3 + i] = B->FrcB[i];
+         B->SpatFrc[i]     = B->Trq.v[i];
+         B->SpatFrc[3 + i] = B->FrcB.v[i];
       }
    }
 
@@ -3572,10 +3514,10 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const xdot_out)
    for (i = 0; i < 3; i++) {
       xdot_out[i]                     = G->udot[i];
       xdot_out[D->Nu - 3 + i]         = G->udot[3 + i];
-      xdot_out[D->Nu + D->Nx - 3 + i] = G->xdot[i];
+      xdot_out[D->Nu + D->Nx - 3 + i] = G->xdot.v[i];
    }
    for (i = 0; i < 4; i++)
-      xdot_out[D->Nu + i] = G->qdot[i];
+      xdot_out[D->Nu + i] = G->qdot.q[i];
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3583,10 +3525,10 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const xdot_out)
          xdot_out[G->Rotu0 + i] = G->udot[i];
       for (i = 0; i < G->TrnDOF; i++) {
          xdot_out[G->Trnu0 + i]         = G->udot[G->RotDOF + i];
-         xdot_out[D->Nu + G->Trnx0 + i] = G->xdot[i];
+         xdot_out[D->Nu + G->Trnx0 + i] = G->xdot.v[i];
       }
       for (i = 0; i < ((G->IsSpherical) ? 4 : G->RotDOF); i++)
-         xdot_out[D->Nu + G->Rotx0 + i] = G->qdot[i];
+         xdot_out[D->Nu + G->Rotx0 + i] = G->qdot.q[i];
    }
    for (Iw = 0; Iw < S->Nw; Iw++) {
       W = &S->Whl[Iw];
@@ -3610,33 +3552,27 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 3; i++) {
       G->RKum[i]     = D->u[i];
       G->RKum[3 + i] = D->u[D->Nu - 3 + i];
-      G->RKxm[i]     = D->x[D->Nx - 3 + i];
+      G->RKxm.v[i]   = D->x[D->Nx - 3 + i];
    }
-   for (i = 0; i < 4; i++) {
-      G->RKqm[i] = D->x[i];
-   }
-   UNITQ(G->RKqm);
+   CopyVG(D->x, G->RKqm.q, 4);
+   G->RKqm = UNITQ(G->RKqm);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
+      for (i = 0; i < G->RotDOF; i++)
          G->RKum[i] = D->u[G->Rotu0 + i];
-      }
       for (i = 0; i < G->TrnDOF; i++) {
          G->RKum[G->RotDOF + i] = D->u[G->Trnu0 + i];
-         G->RKxm[i]             = D->x[G->Trnx0 + i];
+         G->RKxm.v[i]           = D->x[G->Trnx0 + i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->RKqm[i] = D->x[G->Rotx0 + i];
-         }
-         UNITQ(G->RKqm);
+         for (i = 0; i < 4; i++)
+            G->RKqm.q[i] = D->x[G->Rotx0 + i];
+         G->RKqm = UNITQ(G->RKqm);
       }
-      else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->RKqm[i] = D->x[G->Rotx0 + i];
-         }
-      }
+      else
+         for (i = 0; i < G->RotDOF; i++)
+            G->RKqm.q[i] = D->x[G->Rotx0 + i];
    }
 
    for (Iw = 0; Iw < S->Nw; Iw++) {
@@ -3647,42 +3583,29 @@ void OrderNMultiBodyRK4(struct SCType *S)
    /* Set up for First Call */
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
-      for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq[i];
-         B->SpatFrc[3 + i] = B->FrcB[i];
-      }
+      CopyVG(&B->SpatFrc[0], B->Trq.v, 3);
+      CopyVG(&B->SpatFrc[3], B->FrcB.v, 3);
    }
    G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->AngRate[i] = G->RKum[i];
-      G->PosRate[i] = G->RKum[3 + i];
-      G->Pos[i]     = G->RKxm[i];
-   }
-   for (i = 0; i < 4; i++) {
-      G->q[i] = G->RKqm[i];
-   }
-   UNITQ(G->q);
+   CopyVG(G->AngRate.v, &G->RKum[0], 3);
+   CopyVG(G->PosRate.v, &G->RKum[3], 3);
+   CopyVG(G->Pos.v, G->RKxm.v, 3);
+   CopyVG(G->q.q, G->RKqm.q, 4);
+   G->q = UNITQ(G->q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->AngRate[i] = G->RKum[i];
-      }
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = G->RKum[G->RotDOF + i];
-         G->Pos[i]     = G->RKxm[i];
-      }
+      CopyVG(G->AngRate.v, G->RKum, G->RotDOF);
+
+      CopyVG(G->PosRate.v, &G->RKum[G->RotDOF], G->TrnDOF);
+      CopyVG(G->Pos.v, G->RKxm.v, G->TrnDOF);
+
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->q[i] = G->RKqm[i];
-         }
-         UNITQ(G->q);
+         CopyVG(G->q.q, G->RKqm.q, 4);
+         G->q = UNITQ(G->q);
       }
-      else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->Ang[i] = G->RKqm[i];
-         }
-      }
+      else
+         CopyVG(G->q.q, G->RKqm.q, G->RotDOF);
    }
 
    for (Iw = 0; Iw < S->Nw; Iw++) {
@@ -3695,34 +3618,32 @@ void OrderNMultiBodyRK4(struct SCType *S)
    OrderNMultiBodyEOM(S);
 
    /* Digest First Call */
-   f = 1.0 / 6.0;
-   G = &S->GN;
+   f       = 1.0 / 6.0;
+   G       = &S->GN;
+   G->RKdx = SxV(f, G->xdot);
    for (i = 0; i < 3; i++) {
       G->RKdu[i]     = f * G->udot[i];
       G->RKdu[3 + i] = f * G->udot[3 + i];
-      G->RKdx[i]     = f * G->xdot[i];
    }
-   for (i = 0; i < 4; i++) {
-      G->RKdq[i] = f * G->qdot[i];
-   }
+   for (i = 0; i < 4; i++)
+      G->RKdq.q[i] = f * G->qdot.q[i];
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       for (i = 0; i < G->RotDOF; i++) {
          G->RKdu[i] = f * G->udot[i];
       }
-      for (i = 0; i < G->TrnDOF; i++) {
+      G->RKdx = SxV(f, G->xdot);
+      for (i = 0; i < G->TrnDOF; i++)
          G->RKdu[G->RotDOF + i] = f * G->udot[G->RotDOF + i];
-         G->RKdx[i]             = f * G->xdot[i];
-      }
       if (G->IsSpherical) {
          for (i = 0; i < 4; i++) {
-            G->RKdq[i] = f * G->qdot[i];
+            G->RKdq.q[i] = f * G->qdot.q[i];
          }
       }
       else {
          for (i = 0; i < G->RotDOF; i++) {
-            G->RKdq[i] = f * G->qdot[i];
+            G->RKdq.q[i] = f * G->qdot.q[i];
          }
       }
    }
@@ -3737,41 +3658,37 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq[i];
-         B->SpatFrc[3 + i] = B->FrcB[i];
+         B->SpatFrc[i]     = B->Trq.v[i];
+         B->SpatFrc[3 + i] = B->FrcB.v[i];
       }
    }
    G = &S->GN;
    for (i = 0; i < 3; i++) {
-      G->AngRate[i] = G->RKum[i] + dt * G->udot[i];
-      G->PosRate[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
-      G->Pos[i]     = G->RKxm[i] + dt * G->xdot[i];
+      G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
+      G->PosRate.v[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
+      G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
    }
-   for (i = 0; i < 4; i++) {
-      G->q[i] = G->RKqm[i] + dt * G->qdot[i];
-   }
-   UNITQ(G->q);
+   for (i = 0; i < 4; i++)
+      G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
+   G->q = UNITQ(G->q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->AngRate[i] = G->RKum[i] + dt * G->udot[i];
-      }
+      for (i = 0; i < G->RotDOF; i++)
+         G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
       for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
-         G->Pos[i]     = G->RKxm[i] + dt * G->xdot[i];
+         G->PosRate.v[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
+         G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->q[i] = G->RKqm[i] + dt * G->qdot[i];
-         }
-         UNITQ(G->q);
+         for (i = 0; i < 4; i++)
+            G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
+         G->q = UNITQ(G->q);
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->Ang[i] = G->RKqm[i] +
-                        dt * G->qdot[i]; /* "q" here used for angle states */
-         }
+         /* "q" here used for angle states */
+         for (i = 0; i < G->RotDOF; i++)
+            G->Ang.v[i] = G->RKqm.qv.v[i] + dt * G->qdot.qv.v[i];
       }
    }
 
@@ -3790,11 +3707,10 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 3; i++) {
       G->RKdu[i]     += f * G->udot[i];
       G->RKdu[3 + i] += f * G->udot[3 + i];
-      G->RKdx[i]     += f * G->xdot[i];
+      G->RKdx.v[i]   += f * G->xdot.v[i];
    }
-   for (i = 0; i < 4; i++) {
-      G->RKdq[i] += f * G->qdot[i];
-   }
+   for (i = 0; i < 4; i++)
+      G->RKdq.q[i] += f * G->qdot.q[i];
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3803,17 +3719,15 @@ void OrderNMultiBodyRK4(struct SCType *S)
       }
       for (i = 0; i < G->TrnDOF; i++) {
          G->RKdu[G->RotDOF + i] += f * G->udot[G->RotDOF + i];
-         G->RKdx[i]             += f * G->xdot[i];
+         G->RKdx.v[i]           += f * G->xdot.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->RKdq[i] += f * G->qdot[i];
-         }
+         for (i = 0; i < 4; i++)
+            G->RKdq.q[i] += f * G->qdot.q[i];
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->RKdq[i] += f * G->qdot[i];
-         }
+         for (i = 0; i < G->RotDOF; i++)
+            G->RKdq.q[i] += f * G->qdot.q[i];
       }
    }
 
@@ -3827,41 +3741,38 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq[i];
-         B->SpatFrc[3 + i] = B->FrcB[i];
+         B->SpatFrc[i]     = B->Trq.v[i];
+         B->SpatFrc[3 + i] = B->FrcB.v[i];
       }
    }
    G = &S->GN;
    for (i = 0; i < 3; i++) {
-      G->AngRate[i] = G->RKum[i] + dt * G->udot[i];
-      G->PosRate[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
-      G->Pos[i]     = G->RKxm[i] + dt * G->xdot[i];
+      G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
+      G->PosRate.v[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
+      G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
    }
-   for (i = 0; i < 4; i++) {
-      G->q[i] = G->RKqm[i] + dt * G->qdot[i];
-   }
-   UNITQ(G->q);
+   for (i = 0; i < 4; i++)
+      G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
+   G->q = UNITQ(G->q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
       for (i = 0; i < G->RotDOF; i++) {
-         G->AngRate[i] = G->RKum[i] + dt * G->udot[i];
+         G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
       }
       for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
-         G->Pos[i]     = G->RKxm[i] + dt * G->xdot[i];
+         G->PosRate.v[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
+         G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->q[i] = G->RKqm[i] + dt * G->qdot[i];
-         }
-         UNITQ(G->q);
+         for (i = 0; i < 4; i++)
+            G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
+         G->q = UNITQ(G->q);
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->Ang[i] = G->RKqm[i] +
-                        dt * G->qdot[i]; /* "q" here used for angle states */
-         }
+         /* "q" here used for angle states */
+         for (i = 0; i < G->RotDOF; i++)
+            G->Ang.v[i] = G->RKqm.qv.v[i] + dt * G->qdot.qv.v[i];
       }
    }
 
@@ -3880,30 +3791,27 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 3; i++) {
       G->RKdu[i]     += f * G->udot[i];
       G->RKdu[3 + i] += f * G->udot[3 + i];
-      G->RKdx[i]     += f * G->xdot[i];
+      G->RKdx.v[i]   += f * G->xdot.v[i];
    }
    for (i = 0; i < 4; i++) {
-      G->RKdq[i] += f * G->qdot[i];
+      G->RKdq.q[i] += f * G->qdot.q[i];
    }
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
+      for (i = 0; i < G->RotDOF; i++)
          G->RKdu[i] += f * G->udot[i];
-      }
       for (i = 0; i < G->TrnDOF; i++) {
          G->RKdu[G->RotDOF + i] += f * G->udot[G->RotDOF + i];
-         G->RKdx[i]             += f * G->xdot[i];
+         G->RKdx.v[i]           += f * G->xdot.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->RKdq[i] += f * G->qdot[i];
-         }
+         for (i = 0; i < 4; i++)
+            G->RKdq.q[i] += f * G->qdot.q[i];
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->RKdq[i] += f * G->qdot[i];
-         }
+         for (i = 0; i < G->RotDOF; i++)
+            G->RKdq.q[i] += f * G->qdot.q[i];
       }
    }
 
@@ -3917,41 +3825,38 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq[i];
-         B->SpatFrc[3 + i] = B->FrcB[i];
+         B->SpatFrc[i]     = B->Trq.v[i];
+         B->SpatFrc[3 + i] = B->FrcB.v[i];
       }
    }
    G = &S->GN;
    for (i = 0; i < 3; i++) {
-      G->AngRate[i] = G->RKum[i] + dt * G->udot[i];
-      G->PosRate[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
-      G->Pos[i]     = G->RKxm[i] + dt * G->xdot[i];
+      G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
+      G->PosRate.v[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
+      G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
    }
    for (i = 0; i < 4; i++) {
-      G->q[i] = G->RKqm[i] + dt * G->qdot[i];
+      G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
    }
-   UNITQ(G->RKqm);
+   G->RKqm = UNITQ(G->RKqm);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->AngRate[i] = G->RKum[i] + dt * G->udot[i];
-      }
+      for (i = 0; i < G->RotDOF; i++)
+         G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
       for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
-         G->Pos[i]     = G->RKxm[i] + dt * G->xdot[i];
+         G->PosRate.v[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
+         G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->q[i] = G->RKqm[i] + dt * G->qdot[i];
-         }
-         UNITQ(G->RKqm);
+         for (i = 0; i < 4; i++)
+            G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
+         G->q = UNITQ(G->RKqm);
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->Ang[i] = G->RKqm[i] +
-                        dt * G->qdot[i]; /* "q" here used for angle states */
-         }
+         /* "q" here used for angle states */
+         for (i = 0; i < G->RotDOF; i++)
+            G->Ang.v[i] = G->RKqm.qv.v[i] + dt * G->qdot.qv.v[i];
       }
    }
 
@@ -3970,11 +3875,10 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 3; i++) {
       G->RKdu[i]     += f * G->udot[i];
       G->RKdu[3 + i] += f * G->udot[3 + i];
-      G->RKdx[i]     += f * G->xdot[i];
+      G->RKdx.v[i]   += f * G->xdot.v[i];
    }
-   for (i = 0; i < 4; i++) {
-      G->RKdq[i] += f * G->qdot[i];
-   }
+   for (i = 0; i < 4; i++)
+      G->RKdq.q[i] += f * G->qdot.q[i];
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -3983,17 +3887,15 @@ void OrderNMultiBodyRK4(struct SCType *S)
       }
       for (i = 0; i < G->TrnDOF; i++) {
          G->RKdu[G->RotDOF + i] += f * G->udot[G->RotDOF + i];
-         G->RKdx[i]             += f * G->xdot[i];
+         G->RKdx.v[i]           += f * G->xdot.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->RKdq[i] += f * G->qdot[i];
-         }
+         for (i = 0; i < 4; i++)
+            G->RKdq.q[i] += f * G->qdot.q[i];
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->RKdq[i] += f * G->qdot[i];
-         }
+         for (i = 0; i < G->RotDOF; i++)
+            G->RKdq.q[i] += f * G->qdot.q[i];
       }
    }
 
@@ -4008,12 +3910,14 @@ void OrderNMultiBodyRK4(struct SCType *S)
    for (i = 0; i < 3; i++) {
       D->u[i]             = G->RKum[i] + dt * G->RKdu[i];
       D->u[D->Nu - 3 + i] = G->RKum[3 + i] + dt * G->RKdu[3 + i];
-      D->x[D->Nx - 3 + i] = G->RKxm[i] + dt * G->RKdx[i];
+      D->x[D->Nx - 3 + i] = G->RKxm.v[i] + dt * G->RKdx.v[i];
    }
-   for (i = 0; i < 4; i++) {
-      D->x[i] = G->RKqm[i] + dt * G->RKdq[i];
-   }
-   UNITQ(D->x);
+   quat q;
+   for (i = 0; i < 4; i++)
+      q.q[i] = G->RKqm.q[i] + dt * G->RKdq.q[i];
+
+   q = UNITQ(q);
+   QUAT_TO_DBL(D->x, q);
 
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G = &S->G[Ig];
@@ -4023,20 +3927,18 @@ void OrderNMultiBodyRK4(struct SCType *S)
       for (i = 0; i < G->TrnDOF; i++) {
          D->u[G->Trnu0 + i] =
              G->RKum[G->RotDOF + i] + dt * G->RKdu[G->RotDOF + i];
-         D->x[G->Trnx0 + i] = G->RKxm[i] + dt * G->RKdx[i];
+         D->x[G->Trnx0 + i] = G->RKxm.v[i] + dt * G->RKdx.v[i];
       }
       if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            D->x[G->Rotx0 + i] = G->RKqm[i] + dt * G->RKdq[i];
-         }
-         UNITQ(&D->x[G->Rotx0]);
+         for (i = 0; i < 4; i++)
+            q.q[i] = G->RKqm.q[i] + dt * G->RKdq.q[i];
+         q = UNITQ(q);
+         QUAT_TO_DBL(&D->x[G->Rotx0], q);
       }
       else {
-         for (i = 0; i < G->RotDOF; i++) {
-            D->x[G->Rotx0 + i] =
-                G->RKqm[i] +
-                dt * G->RKdq[i]; /* "q" here used for angle states */
-         }
+         /* "q" here used for angle states */
+         for (i = 0; i < G->RotDOF; i++)
+            D->x[G->Rotx0 + i] = G->RKqm.qv.v[i] + dt * G->RKdq.qv.v[i];
       }
    }
 
@@ -4054,15 +3956,15 @@ void OrderNMultiBodyRK4(struct SCType *S)
 /**********************************************************************/
 /* Utility function for Encke's method.  Computes f(q).               */
 /* See Battin, p. 449                                                 */
-double EnckeFQ(double r[3], double delta[3]) __attribute__((pure));
-double EnckeFQ(double r[3], double delta[3])
+double EnckeFQ(vec3 r, vec3 delta) __attribute__((const));
+double EnckeFQ(vec3 r, vec3 delta)
 {
    double q, q1;
 
-   q = (delta[0] * (delta[0] - 2.0 * r[0]) +
-        delta[1] * (delta[1] - 2.0 * r[1]) +
-        delta[2] * (delta[2] - 2.0 * r[2])) /
-       (r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
+   q = (delta.v[0] * (delta.v[0] - 2.0 * r.v[0]) +
+        delta.v[1] * (delta.v[1] - 2.0 * r.v[1]) +
+        delta.v[2] * (delta.v[2] - 2.0 * r.v[2])) /
+       VoV(r, r);
 
    q1 = 1.0 + q;
 
@@ -4073,37 +3975,35 @@ double EnckeFQ(double r[3], double delta[3])
 /*  See Battin, p. 449                                                */
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
-void EnckeEOM(double u[6], double udot[6], double R[3], double muR3,
-              double a[3])
+void EnckeEOM(double u[6], double udot[6], vec3 R, double muR3, vec3 a)
 {
-   double r[3], fq;
+   double fq;
+   vec3 r;
 
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
 
-   r[0] = R[0] + u[0];
-   r[1] = R[1] + u[1];
-   r[2] = R[2] + u[2];
+   r.v[0] = R.v[0] + u[0];
+   r.v[1] = R.v[1] + u[1];
+   r.v[2] = R.v[2] + u[2];
 
-   fq = EnckeFQ(r, u);
+   vec3 uv = DBL_TO_VEC3(u);
+   fq      = EnckeFQ(r, uv);
 
-   udot[3] = a[0] - muR3 * (u[0] + fq * r[0]);
-   udot[4] = a[1] - muR3 * (u[1] + fq * r[1]);
-   udot[5] = a[2] - muR3 * (u[2] + fq * r[2]);
+   udot[3] = a.v[0] - muR3 * (u[0] + fq * r.v[0]);
+   udot[4] = a.v[1] - muR3 * (u[1] + fq * r.v[1]);
+   udot[5] = a.v[2] - muR3 * (u[2] + fq * r.v[2]);
 }
 /**********************************************************************/
 void EnckeEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
                  double *xdot)
 {
-   double accel[3], R[3], magr, muR3;
+   vec3 accel, R;
+   double magr, muR3;
 
-   accel[0] = S->FrcN[0] / S->mass;
-   accel[1] = S->FrcN[1] / S->mass;
-   accel[2] = S->FrcN[2] / S->mass;
-   R[0]     = orb->PosN[0];
-   R[1]     = orb->PosN[1];
-   R[2]     = orb->PosN[2];
+   accel = SxV(1.0 / S->mass, S->FrcN);
+   R     = orb->PosN;
 
    magr = MAGV(R);
    muR3 = orb->mu / (magr * magr * magr);
@@ -4116,26 +4016,23 @@ void EnckeEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
 /* by 4th order Runge-Kutta                                           */
 void EnckeRK4(struct OrbitType *orb, struct SCType *S)
 {
-   double accel[3], R[3], magr, muR3;
+   vec3 accel, R;
+   double magr, muR3;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
-   accel[0] = S->FrcN[0] / S->mass;
-   accel[1] = S->FrcN[1] / S->mass;
-   accel[2] = S->FrcN[2] / S->mass;
-   R[0]     = orb->PosN[0];
-   R[1]     = orb->PosN[1];
-   R[2]     = orb->PosN[2];
+   accel = SxV(1.0 / S->mass, S->FrcN);
+   R     = orb->PosN;
 
-   magr = sqrt(R[0] * R[0] + R[1] * R[1] + R[2] * R[2]);
+   magr = MAGV(R);
    muR3 = orb->mu / (magr * magr * magr);
 
-   u[0] = S->PosR[0];
-   u[1] = S->PosR[1];
-   u[2] = S->PosR[2];
-   u[3] = S->VelR[0];
-   u[4] = S->VelR[1];
-   u[5] = S->VelR[2];
+   u[0] = S->PosR.v[0];
+   u[1] = S->PosR.v[1];
+   u[2] = S->PosR.v[2];
+   u[3] = S->VelR.v[0];
+   u[4] = S->VelR.v[1];
+   u[5] = S->VelR.v[2];
 
    /* .. 4th Order Runga-Kutta Integration */
    EnckeEOM(u, m1, R, muR3, accel);
@@ -4151,54 +4048,51 @@ void EnckeRK4(struct OrbitType *orb, struct SCType *S)
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   S->PosR[0] = u[0];
-   S->PosR[1] = u[1];
-   S->PosR[2] = u[2];
-   S->VelR[0] = u[3];
-   S->VelR[1] = u[4];
-   S->VelR[2] = u[5];
+   S->PosR.v[0] = u[0];
+   S->PosR.v[1] = u[1];
+   S->PosR.v[2] = u[2];
+   S->VelR.v[0] = u[3];
+   S->VelR.v[1] = u[4];
+   S->VelR.v[2] = u[5];
 }
 /**********************************************************************/
-void CowellEOM(double u[6], double udot[6], double mu, double mass,
-               double Frc[3])
+void CowellEOM(double u[6], double udot[6], double mu, double mass, vec3 Frc)
 {
    double r, muR3;
 
-   r    = MAGV(u);
-   muR3 = mu / (r * r * r);
+   vec3 uv = DBL_TO_VEC3(u);
+   r       = MAGV(uv);
+   muR3    = mu / (r * r * r);
 
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
-   udot[3] = Frc[0] / mass - muR3 * u[0];
-   udot[4] = Frc[1] / mass - muR3 * u[1];
-   udot[5] = Frc[2] / mass - muR3 * u[2];
+   udot[3] = Frc.v[0] / mass - muR3 * u[0];
+   udot[4] = Frc.v[1] / mass - muR3 * u[1];
+   udot[5] = Frc.v[2] / mass - muR3 * u[2];
 }
 /**********************************************************************/
 void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
-                   double Frc[3], struct WorldType *const worlds,
+                   vec3 Frc, struct WorldType *const worlds,
                    struct OrbitType *const orb, struct SCType *S, double RKFdt)
 {
-   double r_vec[3]       = {0};
-   double gravpertFrc[3] = {0};
+   vec3 r_vec, gravpertFrc;
    double rmag, muR3;
-   int j;
 
-   for (j = 0; j < 3; j++)
-      r_vec[j] = u[j];
-   rmag = MAGV(r_vec);
-   muR3 = mu / (rmag * rmag * rmag);
+   r_vec = DBL_TO_VEC3(u);
+   rmag  = MAGV(r_vec);
+   muR3  = mu / (rmag * rmag * rmag);
 
    /* .. Gravity Perturbation Forces */
    if (GravPertActive)
-      GravPertForceRK4(worlds, orb, S, u, gravpertFrc, RKFdt);
+      GravPertForceRK4(worlds, orb, S, u, &gravpertFrc, RKFdt);
 
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
-   udot[3] = (Frc[0] + gravpertFrc[0]) / mass - muR3 * u[0];
-   udot[4] = (Frc[1] + gravpertFrc[1]) / mass - muR3 * u[1];
-   udot[5] = (Frc[2] + gravpertFrc[2]) / mass - muR3 * u[2];
+   udot[3] = (Frc.v[0] + gravpertFrc.v[0]) / mass - muR3 * u[0];
+   udot[4] = (Frc.v[1] + gravpertFrc.v[1]) / mass - muR3 * u[1];
+   udot[5] = (Frc.v[2] + gravpertFrc.v[2]) / mass - muR3 * u[2];
 }
 /**********************************************************************/
 /* Integration of orbital equations of motion using Cowell's method   */
@@ -4210,12 +4104,12 @@ void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orb,
    double dt0, dt1, dt2, dt3;
    long j;
 
-   u[0] = S->PosN[0];
-   u[1] = S->PosN[1];
-   u[2] = S->PosN[2];
-   u[3] = S->VelN[0];
-   u[4] = S->VelN[1];
-   u[5] = S->VelN[2];
+   u[0] = S->PosN.v[0];
+   u[1] = S->PosN.v[1];
+   u[2] = S->PosN.v[2];
+   u[3] = S->VelN.v[0];
+   u[4] = S->VelN.v[1];
+   u[5] = S->VelN.v[2];
 
    dt0 = 0.0;
    dt1 = 0.5 * DTSIM;
@@ -4236,12 +4130,12 @@ void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orb,
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   S->PosN[0] = u[0];
-   S->PosN[1] = u[1];
-   S->PosN[2] = u[2];
-   S->VelN[0] = u[3];
-   S->VelN[1] = u[4];
-   S->VelN[2] = u[5];
+   S->PosN.v[0] = u[0];
+   S->PosN.v[1] = u[1];
+   S->PosN.v[2] = u[2];
+   S->VelN.v[0] = u[3];
+   S->VelN.v[1] = u[4];
+   S->VelN.v[2] = u[5];
 }
 /**********************************************************************/
 void CowellEOM_RK(struct OrbitType *const orb, struct SCType *S, double *x,
@@ -4258,12 +4152,12 @@ void CowellRK4(struct OrbitType *const orb, struct SCType *S)
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
-   u[0] = S->PosN[0];
-   u[1] = S->PosN[1];
-   u[2] = S->PosN[2];
-   u[3] = S->VelN[0];
-   u[4] = S->VelN[1];
-   u[5] = S->VelN[2];
+   u[0] = S->PosN.v[0];
+   u[1] = S->PosN.v[1];
+   u[2] = S->PosN.v[2];
+   u[3] = S->VelN.v[0];
+   u[4] = S->VelN.v[1];
+   u[5] = S->VelN.v[2];
 
    /* .. 4th Order Runga-Kutta Integration */
    CowellEOM(u, m1, orb->mu, S->mass, S->FrcN);
@@ -4279,23 +4173,23 @@ void CowellRK4(struct OrbitType *const orb, struct SCType *S)
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   S->PosN[0] = u[0];
-   S->PosN[1] = u[1];
-   S->PosN[2] = u[2];
-   S->VelN[0] = u[3];
-   S->VelN[1] = u[4];
-   S->VelN[2] = u[5];
+   S->PosN.v[0] = u[0];
+   S->PosN.v[1] = u[1];
+   S->PosN.v[2] = u[2];
+   S->VelN.v[0] = u[3];
+   S->VelN.v[1] = u[4];
+   S->VelN.v[2] = u[5];
 }
 /**********************************************************************/
-void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
-                         double GravAcc[3], double Frc[3])
+void PolyhedronCowellEOM(double u[6], double udot[6], double mass, vec3 GravAcc,
+                         vec3 Frc)
 {
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
-   udot[3] = GravAcc[0] + Frc[0] / mass;
-   udot[4] = GravAcc[1] + Frc[1] / mass;
-   udot[5] = GravAcc[2] + Frc[2] / mass;
+   udot[3] = GravAcc.v[0] + Frc.v[0] / mass;
+   udot[4] = GravAcc.v[1] + Frc.v[1] / mass;
+   udot[5] = GravAcc.v[2] + Frc.v[2] / mass;
 }
 /**********************************************************************/
 void PolyhedronCowellEOM_RK(struct WorldType *const world,
@@ -4304,7 +4198,7 @@ void PolyhedronCowellEOM_RK(struct WorldType *const world,
 {
    double u[6];
    struct GeomType *G;
-   double GravAccN[3];
+   vec3 GravAccN;
 
    G = &Geom[world->GeomTag];
 
@@ -4315,8 +4209,9 @@ void PolyhedronCowellEOM_RK(struct WorldType *const world,
    u[4] = x[4];
    u[5] = x[5];
 
+   vec3 uv = DBL_TO_VEC3(u);
    /* .. EOM Call */
-   PolyhedronGravAcc(G, world->Density, u, world->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(u, xdot, S->mass, GravAccN, S->FrcN);
 }
 /**********************************************************************/
@@ -4329,44 +4224,51 @@ void PolyhedronCowellRK4(struct WorldType *const world,
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
    struct GeomType *G;
-   double GravAccN[3];
+   vec3 GravAccN;
 
    G = &Geom[world->GeomTag];
 
-   u[0] = S->PosN[0];
-   u[1] = S->PosN[1];
-   u[2] = S->PosN[2];
-   u[3] = S->VelN[0];
-   u[4] = S->VelN[1];
-   u[5] = S->VelN[2];
+   u[0] = S->PosN.v[0];
+   u[1] = S->PosN.v[1];
+   u[2] = S->PosN.v[2];
+   u[3] = S->VelN.v[0];
+   u[4] = S->VelN.v[1];
+   u[5] = S->VelN.v[2];
+
+   vec3 uv = S->PosN;
+   vec3 mv[4];
 
    /* .. 4th Order Runga-Kutta Integration */
-   PolyhedronGravAcc(G, world->Density, u, world->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(u, m1, S->mass, GravAccN, S->FrcN);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m1[j];
+   mv[0] = DBL_TO_VEC3(m1);
+   uv    = VpVElem(S->PosN, SxV(0.5 * DTSIM, mv[0]));
+   VEC3_TO_DBL(uu, uv);
 
-   PolyhedronGravAcc(G, world->Density, uu, world->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(uu, m2, S->mass, GravAccN, S->FrcN);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m2[j];
+   mv[1] = DBL_TO_VEC3(m2);
+   uv    = VpVElem(S->PosN, SxV(0.5 * DTSIM, mv[1]));
+   VEC3_TO_DBL(uu, uv);
 
-   PolyhedronGravAcc(G, world->Density, uu, world->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(uu, m3, S->mass, GravAccN, S->FrcN);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + DTSIM * m3[j];
+   mv[2] = DBL_TO_VEC3(m3);
+   uv    = VpVElem(S->PosN, SxV(DTSIM, mv[0]));
+   VEC3_TO_DBL(uu, uv);
 
-   PolyhedronGravAcc(G, world->Density, uu, world->CWN, GravAccN);
+   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(uu, m4, S->mass, GravAccN, S->FrcN);
-   for (j = 0; j < 6; j++)
+   mv[3] = DBL_TO_VEC3(m4);
+   for (j = 3; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   S->PosN[0] = u[0];
-   S->PosN[1] = u[1];
-   S->PosN[2] = u[2];
-   S->VelN[0] = u[3];
-   S->VelN[1] = u[4];
-   S->VelN[2] = u[5];
+   S->PosN.v[0] = u[0];
+   S->PosN.v[1] = u[1];
+   S->PosN.v[2] = u[2];
+   S->VelN.v[0] = u[3];
+   S->VelN.v[1] = u[4];
+   S->VelN.v[2] = u[5];
 }
 /**********************************************************************/
 /*  Orbit dynamics using Encke's method                               */
@@ -4375,53 +4277,48 @@ void PolyhedronCowellRK4(struct WorldType *const world,
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
 
-void ThreeBodyEnckeEOM(double u[6], double udot[6], double R1[3], double muR13,
-                       double R2[3], double muR23, double a[3])
+void ThreeBodyEnckeEOM(double u[6], double udot[6], vec3 R1, double muR13,
+                       vec3 R2, double muR23, vec3 a)
 {
-   double r1[3], r2[3], fq1, fq2;
+   vec3 r1, r2;
+   double fq1, fq2;
 
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
 
-   r1[0] = R1[0] + u[0];
-   r1[1] = R1[1] + u[1];
-   r1[2] = R1[2] + u[2];
+   vec3 uv = DBL_TO_VEC3(u);
+   r1      = VpVElem(R1, uv);
+   r2      = VpVElem(R2, uv);
 
-   r2[0] = R2[0] + u[0];
-   r2[1] = R2[1] + u[1];
-   r2[2] = R2[2] + u[2];
+   fq1 = EnckeFQ(r1, uv);
+   fq2 = EnckeFQ(r2, uv);
 
-   fq1 = EnckeFQ(r1, u);
-   fq2 = EnckeFQ(r2, u);
-
-   udot[3] = a[0] - muR13 * (u[0] + fq1 * r1[0]) - muR23 * (u[0] + fq2 * r2[0]);
-   udot[4] = a[1] - muR13 * (u[1] + fq1 * r1[1]) - muR23 * (u[1] + fq2 * r2[1]);
-   udot[5] = a[2] - muR13 * (u[2] + fq1 * r1[2]) - muR23 * (u[2] + fq2 * r2[2]);
+   udot[3] =
+       a.v[0] - muR13 * (u[0] + fq1 * r1.v[0]) - muR23 * (u[0] + fq2 * r2.v[0]);
+   udot[4] =
+       a.v[1] - muR13 * (u[1] + fq1 * r1.v[1]) - muR23 * (u[1] + fq2 * r2.v[1]);
+   udot[5] =
+       a.v[2] - muR13 * (u[2] + fq1 * r1.v[2]) - muR23 * (u[2] + fq2 * r2.v[2]);
 }
 /**********************************************************************/
 void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
                           struct OrbitType *const orb, struct SCType *S,
                           double *x, double *xdot)
 {
-   double accel[3], R1[3], MagR1, muR13, R2[3], MagR2, muR23;
+   vec3 accel, R1, R2;
+   double MagR1, muR13, MagR2, muR23;
    struct OrbitType *E;
 
    E = &worlds[orb->Body2].eph;
 
-   accel[0] = S->FrcN[0] / S->mass;
-   accel[1] = S->FrcN[1] / S->mass;
-   accel[2] = S->FrcN[2] / S->mass;
-   R1[0]    = orb->PosN[0];
-   R1[1]    = orb->PosN[1];
-   R1[2]    = orb->PosN[2];
-   R2[0]    = R1[0] - E->PosN[0];
-   R2[1]    = R1[1] - E->PosN[1];
-   R2[2]    = R1[2] - E->PosN[2];
+   accel = SxV(1.0 / S->mass, S->FrcN);
+   R1    = orb->PosN;
+   R2    = VmVElem(R1, E->PosN);
 
-   MagR1 = sqrt(R1[0] * R1[0] + R1[1] * R1[1] + R1[2] * R1[2]);
+   MagR1 = MAGV(R1);
    muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
-   MagR2 = sqrt(R2[0] * R2[0] + R2[1] * R2[1] + R2[2] * R2[2]);
+   MagR2 = MAGV(R2);
    muR23 = orb->mu2 / (MagR2 * MagR2 * MagR2);
 
    /* .. EOM Call */
@@ -4433,34 +4330,29 @@ void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
 void ThreeBodyEnckeRK4(struct WorldType *const worlds,
                        struct OrbitType *const orb, struct SCType *S)
 {
-   double accel[3], R1[3], MagR1, muR13, R2[3], MagR2, muR23;
+   vec3 accel, R1, R2;
+   double MagR1, muR13, MagR2, muR23;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
    struct OrbitType *E;
 
    E = &worlds[orb->Body2].eph;
 
-   accel[0] = S->FrcN[0] / S->mass;
-   accel[1] = S->FrcN[1] / S->mass;
-   accel[2] = S->FrcN[2] / S->mass;
-   R1[0]    = orb->PosN[0];
-   R1[1]    = orb->PosN[1];
-   R1[2]    = orb->PosN[2];
-   R2[0]    = R1[0] - E->PosN[0];
-   R2[1]    = R1[1] - E->PosN[1];
-   R2[2]    = R1[2] - E->PosN[2];
+   accel = SxV(1.0 / S->mass, S->FrcN);
+   R1    = orb->PosN;
+   R2    = VmVElem(R1, E->PosN);
 
-   MagR1 = sqrt(R1[0] * R1[0] + R1[1] * R1[1] + R1[2] * R1[2]);
+   MagR1 = MAGV(R1);
    muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
-   MagR2 = sqrt(R2[0] * R2[0] + R2[1] * R2[1] + R2[2] * R2[2]);
+   MagR2 = MAGV(R2);
    muR23 = orb->mu2 / (MagR2 * MagR2 * MagR2);
 
-   u[0] = S->PosR[0];
-   u[1] = S->PosR[1];
-   u[2] = S->PosR[2];
-   u[3] = S->VelR[0];
-   u[4] = S->VelR[1];
-   u[5] = S->VelR[2];
+   u[0] = S->PosR.v[0];
+   u[1] = S->PosR.v[1];
+   u[2] = S->PosR.v[2];
+   u[3] = S->VelR.v[0];
+   u[4] = S->VelR.v[1];
+   u[5] = S->VelR.v[2];
 
    /* .. 4th Order Runga-Kutta Integration */
    ThreeBodyEnckeEOM(u, m1, R1, muR13, R2, muR23, accel);
@@ -4476,35 +4368,33 @@ void ThreeBodyEnckeRK4(struct WorldType *const worlds,
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   S->PosR[0] = u[0];
-   S->PosR[1] = u[1];
-   S->PosR[2] = u[2];
-   S->VelR[0] = u[3];
-   S->VelR[1] = u[4];
-   S->VelR[2] = u[5];
+   S->PosR.v[0] = u[0];
+   S->PosR.v[1] = u[1];
+   S->PosR.v[2] = u[2];
+   S->VelR.v[0] = u[3];
+   S->VelR.v[1] = u[4];
+   S->VelR.v[2] = u[5];
 }
 /************************************************************/
 /*  Euler-Hill linearized EOM for near-circular orbits.     */
 
-void EulHillEOM(double u[6], double udot[6], double n, double a[3])
+void EulHillEOM(double u[6], double udot[6], double n, vec3 a)
 {
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
-   udot[3] = a[0] + 2.0 * n * u[5];
-   udot[4] = a[1] - n * n * u[1];
-   udot[5] = a[2] - 2.0 * n * u[3] + 3.0 * n * n * u[2];
+   udot[3] = a.v[0] + 2.0 * n * u[5];
+   udot[4] = a.v[1] - n * n * u[1];
+   udot[5] = a.v[2] - 2.0 * n * u[3] + 3.0 * n * n * u[2];
 }
 /**********************************************************************/
 void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
                    double *xdot)
 {
-   double accelN[3], accel[3];
+   vec3 accelN, accel;
 
-   accelN[0] = S->FrcN[0] / S->mass;
-   accelN[1] = S->FrcN[1] / S->mass;
-   accelN[2] = S->FrcN[2] / S->mass;
-   MxV(orb->CLN, accelN, accel);
+   accelN = SxV(1.0 / S->mass, S->FrcN);
+   accel  = MxV(orb->CLN, accelN);
 
    // assuming x is already in euler hill frame
    EulHillEOM(x, xdot, orb->MeanMotion, accel);
@@ -4515,65 +4405,65 @@ void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
 /* State u[0:2] = r, u[3:5] = v                                       */
 void EulHillRK4(struct OrbitType *orb, struct SCType *S)
 {
-   double accelN[3], accel[3];
-   double CLprop[3][3], CLN[3][3];
+   vec3 accelN, accel;
+   mat3x3 CLprop, CLN;
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
-   accelN[0] = S->FrcN[0] / S->mass;
-   accelN[1] = S->FrcN[1] / S->mass;
-   accelN[2] = S->FrcN[2] / S->mass;
+   accelN = SxV(1.0 / S->mass, S->FrcN);
    for (j = 0; j < 3; j++) {
-      u[j]     = S->PosEH[j];
-      u[3 + j] = S->VelEH[j];
+      u[j]     = S->PosEH.v[j];
+      u[3 + j] = S->VelEH.v[j];
    }
-   MxV(orb->CLN, accelN, accel);
+   accel = MxV(orb->CLN, accelN);
 
    /* .. 4th Order Runga-Kutta Integration */
    EulHillEOM(u, m1, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   SimpRot(orb->CLN[1], -orb->MeanMotion * 0.5 * DTSIM, CLprop);
-   MxM(orb->CLN, CLprop, CLN);
-   MxV(CLN, accelN, accel);
+   CLprop = SimpRot(orb->CLN.rows[1], -orb->MeanMotion * 0.5 * DTSIM);
+   CLN    = MxM(orb->CLN, CLprop);
+   accel  = MxV(CLN, accelN);
    EulHillEOM(uu, m2, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + 0.5 * DTSIM * m2[j];
    EulHillEOM(uu, m3, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       uu[j] = u[j] + DTSIM * m3[j];
-   SimpRot(orb->CLN[1], -orb->MeanMotion * DTSIM, CLprop);
-   MxM(orb->CLN, CLprop, CLN);
-   MxV(CLN, accelN, accel);
+   CLprop = SimpRot(orb->CLN.rows[1], -orb->MeanMotion * DTSIM);
+   CLN    = MxM(orb->CLN, CLprop);
+   accel  = MxV(CLN, accelN);
    EulHillEOM(uu, m4, orb->MeanMotion, accel);
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
    for (j = 0; j < 3; j++) {
-      S->PosEH[j] = u[j];
-      S->VelEH[j] = u[3 + j];
+      S->PosEH.v[j] = u[j];
+      S->VelEH.v[j] = u[3 + j];
    }
 
-   EHRV2RelRV(orb->SMA, orb->MeanMotion, CLN, S->PosEH, S->VelEH, S->PosR,
-              S->VelR);
+   EHRV2RelRV(orb->SMA, orb->MeanMotion, CLN, S->PosEH, S->VelEH, &S->PosR,
+              &S->VelR);
 }
 /**********************************************************************/
-void ThreeBodyOrbitEOM(double mu1, double mu2, double p[3], double u[6],
+void ThreeBodyOrbitEOM(double mu1, double mu2, vec3 p, double u[6],
                        double udot[6])
 {
 
-   double r2[3], r13, r23, p3, c1, c2, c3;
+   vec3 r2;
+   double r13, r23, p3, c1, c2, c3;
 
-   r2[0] = u[0] - p[0];
-   r2[1] = u[1] - p[1];
-   r2[2] = u[2] - p[2];
+   r2.v[0] = u[0] - p.v[0];
+   r2.v[1] = u[1] - p.v[1];
+   r2.v[2] = u[2] - p.v[2];
 
-   r13 = sqrt(u[0] * u[0] + u[1] * u[1] + u[2] * u[2]);
-   r13 = r13 * r13 * r13;
-   r23 = sqrt(r2[0] * r2[0] + r2[1] * r2[1] + r2[2] * r2[2]);
-   r23 = r23 * r23 * r23;
-   p3  = sqrt(p[0] * p[0] + p[1] * p[1] + p[2] * p[2]);
-   p3  = p3 * p3 * p3;
+   vec3 uv = DBL_TO_VEC3(u);
+   r13     = MAGV(uv);
+   r13     = r13 * r13 * r13;
+   r23     = MAGV(r2);
+   r23     = r23 * r23 * r23;
+   p3      = MAGV(p);
+   p3      = p3 * p3 * p3;
 
    c1 = -mu1 / r13;
    c2 = -mu2 / r23;
@@ -4582,9 +4472,9 @@ void ThreeBodyOrbitEOM(double mu1, double mu2, double p[3], double u[6],
    udot[0] = u[3];
    udot[1] = u[4];
    udot[2] = u[5];
-   udot[3] = c1 * u[0] + c2 * r2[0] + c3 * p[0];
-   udot[4] = c1 * u[1] + c2 * r2[1] + c3 * p[1];
-   udot[5] = c1 * u[2] + c2 * r2[2] + c3 * p[2];
+   udot[3] = c1 * u[0] + c2 * r2.v[0] + c3 * p.v[0];
+   udot[4] = c1 * u[1] + c2 * r2.v[1] + c3 * p.v[1];
+   udot[5] = c1 * u[2] + c2 * r2.v[2] + c3 * p.v[2];
 }
 /************************************************************/
 /*  Propagates motion of Reference Orbit under              */
@@ -4594,12 +4484,12 @@ void ThreeBodyOrbitRK4(struct WorldType *worlds, struct OrbitType *orb)
    double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
    long j;
 
-   u[0] = orb->PosN[0];
-   u[1] = orb->PosN[1];
-   u[2] = orb->PosN[2];
-   u[3] = orb->VelN[0];
-   u[4] = orb->VelN[1];
-   u[5] = orb->VelN[2];
+   u[0] = orb->PosN.v[0];
+   u[1] = orb->PosN.v[1];
+   u[2] = orb->PosN.v[2];
+   u[3] = orb->VelN.v[0];
+   u[4] = orb->VelN.v[1];
+   u[5] = orb->VelN.v[2];
 
    /* .. 4th Order Runga-Kutta Integration */
    ThreeBodyOrbitEOM(orb->mu1, orb->mu2, worlds[orb->Body2].eph.PosN, u, m1);
@@ -4615,33 +4505,31 @@ void ThreeBodyOrbitRK4(struct WorldType *worlds, struct OrbitType *orb)
    for (j = 0; j < 6; j++)
       u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
 
-   orb->PosN[0] = u[0];
-   orb->PosN[1] = u[1];
-   orb->PosN[2] = u[2];
-   orb->VelN[0] = u[3];
-   orb->VelN[1] = u[4];
-   orb->VelN[2] = u[5];
+   orb->PosN.v[0] = u[0];
+   orb->PosN.v[1] = u[1];
+   orb->PosN.v[2] = u[2];
+   orb->VelN.v[0] = u[3];
+   orb->VelN.v[1] = u[4];
+   orb->VelN.v[2] = u[5];
 }
 /**********************************************************************/
 void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,
                         struct SCType *S)
 {
-   if (frm->FixedInFrame == 'L') {
+   if (frm->FixedInFrame == 'L')
       /* TODO: This misbehaves for hyperbolic orbit.  Investigate */
-      MxV(orb->CLN, S->PosEH, S->PosR);
-   }
-   else {
-      MTxV(orb->CLN, S->PosR, S->PosEH);
-   }
+      S->PosR = MxV(orb->CLN, S->PosEH);
+   else
+      S->PosEH = MTxV(orb->CLN, S->PosR);
 }
 /**********************************************************************/
 void AddSCContactFrcTrq(struct SCType *S)
 {
    for (long Ib = 0; Ib < S->Nb; Ib++) {
       for (long i = 0; i < 3; i++) {
-         S->B[Ib].FrcN[i] += S->B[Ib].SCContactFrcN[i];
-         S->B[Ib].FrcB[i] += S->B[Ib].SCContactFrcB[i];
-         S->B[Ib].Trq[i]  += S->B[Ib].SCContactTrq[i];
+         S->B[Ib].FrcN.v[i] += S->B[Ib].SCContactFrcN.v[i];
+         S->B[Ib].FrcB.v[i] += S->B[Ib].SCContactFrcB.v[i];
+         S->B[Ib].Trq.v[i]  += S->B[Ib].SCContactTrq.v[i];
       }
    }
 }
@@ -4654,26 +4542,25 @@ void AddSCContactFrcTrq(struct SCType *S)
 /*   and   S->B[j].Frc = Internal component                           */
 void PartitionForces(struct SCType *S)
 {
-   long i, Ib;
-   double FextN[3] = {0.0, 0.0, 0.0};
-   double FextB[3];
+   long Ib;
+   vec3 FextN = VEC3_ZERO;
+   vec3 FextB;
    long Nb;
 
    Nb = S->Nb;
-   for (Ib = 0; Ib < Nb; Ib++) {
-      for (i = 0; i < 3; i++)
-         FextN[i] += S->B[Ib].FrcN[i];
+   for (Ib = 0; Ib < Nb; Ib++)
+      FextN = VpVElem(FextN, S->B[Ib].FrcN);
+
+   for (int i = 0; i < 3; i++) {
+      S->FrcN.v[i] += FextN.v[i];
+      S->AccN.v[i]  = FextN.v[i] / S->mass; /* For accelerometer model */
    }
 
-   for (i = 0; i < 3; i++) {
-      S->FrcN[i] += FextN[i];
-      S->AccN[i]  = FextN[i] / S->mass; /* For accelerometer model */
-   }
    for (Ib = 0; Ib < Nb; Ib++) {
-      MxV(S->B[Ib].CN, FextN, FextB);
-      for (i = 0; i < 3; i++) {
-         S->B[Ib].FrcN[i] -= FextN[i] * S->B[Ib].mass / S->mass;
-         S->B[Ib].FrcB[i] -= FextB[i] * S->B[Ib].mass / S->mass;
+      FextB = MxV(S->B[Ib].CN, FextN);
+      for (int i = 0; i < 3; i++) {
+         S->B[Ib].FrcN.v[i] -= FextN.v[i] * S->B[Ib].mass / S->mass;
+         S->B[Ib].FrcB.v[i] -= FextB.v[i] * S->B[Ib].mass / S->mass;
       }
    }
 }
@@ -4721,9 +4608,10 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    OrbitMotion(world, rgn, lagsys, orb, frm, jd_tt_mjd);
    RKStateToS(orb, x, S);
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
-      x_trn = &x[dim - 6];
-      EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, x_trn, &x_trn[3], S->PosR,
-                 S->VelR);
+      vec3 pv = DBL_TO_VEC3(x_trn);
+      vec3 vv = DBL_TO_VEC3(&x_trn[3]);
+      EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, pv, vv, &S->PosR,
+                 &S->VelR);
    }
    else if (S->OrbDOF == ORBDOF_FIXED)
       FixedOrbitPosition(orb, frm, S);

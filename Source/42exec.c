@@ -161,41 +161,40 @@ void UpdateScBoundingBox(struct SCType *S)
    struct BodyType *B, *B0;
    struct BoundingBoxType *BBox;
    struct GeomType *G;
-   double ctrB[3], ctrN[3], ctrB0[3], maxB0, minB0, r[3];
+   vec3 ctrB, ctrN, ctrB0, r;
+   double maxB0, minB0;
    long Ib, i;
 
    B0   = &S->B[0];
    BBox = &S->BBox;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      G = &Geom[B->GeomTag];
+      B    = &S->B[Ib];
+      G    = &Geom[B->GeomTag];
+      ctrB = G->BBox.center;
+      if (S->RefPt == REFPT_CM)
+         ctrB = VmVElem(ctrB, B->cm);
+
+      ctrN = MTxV(B->CN, ctrB);
+      for (i = 0; i < 3; i++)
+         ctrN.v[i] += (B->pn.v[i] - B0->pn.v[i]);
+
+      ctrB0 = MxV(B0->CN, ctrN);
+      if (S->RefPt == REFPT_CM)
+         ctrB0 = VpVElem(ctrB0, B0->cm);
+
       for (i = 0; i < 3; i++) {
-         ctrB[i] = G->BBox.center[i];
-         if (S->RefPt == REFPT_CM) {
-            ctrB[i] -= B->cm[i];
-         }
-      }
-      MTxV(B->CN, ctrB, ctrN);
-      for (i = 0; i < 3; i++) {
-         ctrN[i] += (B->pn[i] - B0->pn[i]);
-      }
-      MxV(B0->CN, ctrN, ctrB0);
-      for (i = 0; i < 3; i++) {
-         if (S->RefPt == REFPT_CM) {
-            ctrB0[i] += B0->cm[i];
-         }
-         maxB0 = ctrB0[i] + G->BBox.radius;
-         minB0 = ctrB0[i] - G->BBox.radius;
-         if (BBox->max[i] < maxB0)
-            BBox->max[i] = maxB0;
-         if (BBox->min[i] > minB0)
-            BBox->min[i] = minB0;
+         maxB0 = ctrB0.v[i] + G->BBox.radius;
+         minB0 = ctrB0.v[i] - G->BBox.radius;
+         if (BBox->max.v[i] < maxB0)
+            BBox->max.v[i] = maxB0;
+         if (BBox->min.v[i] > minB0)
+            BBox->min.v[i] = minB0;
       }
    }
    for (i = 0; i < 3; i++) {
-      BBox->center[i] = 0.5 * (BBox->max[i] + BBox->min[i]);
-      r[i]            = BBox->max[i] - BBox->center[i];
+      BBox->center.v[i] = 0.5 * (BBox->max.v[i] + BBox->min.v[i]);
+      r.v[i]            = BBox->max.v[i] - BBox->center.v[i];
    }
    BBox->radius = MAGV(r);
 #undef REFPT_CM
@@ -212,9 +211,8 @@ void ManageBoundingBoxes(void)
       BBoxCtr = 0;
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
-         if (S->Exists) {
+         if (S->Exists)
             UpdateScBoundingBox(S);
-         }
       }
    }
 }
@@ -227,41 +225,25 @@ void ZeroNonSCContactFrcTrq(struct SCType *S)
    struct NodeType *FN;
    long Ib, Ig, In;
 
-   S->FrcN[0] = 0.0;
-   S->FrcN[1] = 0.0;
-   S->FrcN[2] = 0.0;
+   S->FrcN = VEC3_ZERO;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B          = &S->B[Ib];
-      B->FrcN[0] = 0.0;
-      B->FrcN[1] = 0.0;
-      B->FrcN[2] = 0.0;
-      B->FrcB[0] = 0.0;
-      B->FrcB[1] = 0.0;
-      B->FrcB[2] = 0.0;
-      B->Trq[0]  = 0.0;
-      B->Trq[1]  = 0.0;
-      B->Trq[2]  = 0.0;
+      B       = &S->B[Ib];
+      B->FrcN = VEC3_ZERO;
+      B->FrcB = VEC3_ZERO;
+      B->Trq  = VEC3_ZERO;
    }
    for (Ig = 0; Ig < S->Ng; Ig++) {
-      G         = &S->G[Ig];
-      G->Frc[0] = 0.0;
-      G->Frc[1] = 0.0;
-      G->Frc[2] = 0.0;
-      G->Trq[0] = 0.0;
-      G->Trq[1] = 0.0;
-      G->Trq[2] = 0.0;
+      G      = &S->G[Ig];
+      G->Frc = VEC3_ZERO;
+      G->Trq = VEC3_ZERO;
    }
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
       for (In = 0; In < B->NumNodes; In++) {
-         FN         = &B->Node[In];
-         FN->Frc[0] = 0.0;
-         FN->Frc[1] = 0.0;
-         FN->Frc[2] = 0.0;
-         FN->Trq[0] = 0.0;
-         FN->Trq[1] = 0.0;
-         FN->Trq[2] = 0.0;
+         FN      = &B->Node[In];
+         FN->Frc = VEC3_ZERO;
+         FN->Trq = VEC3_ZERO;
       }
    }
 }
@@ -274,15 +256,9 @@ void ZeroFrcTrq(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B = &S->B[Ib];
 
-      B->SCContactFrcN[0] = 0.0;
-      B->SCContactFrcN[1] = 0.0;
-      B->SCContactFrcN[2] = 0.0;
-      B->SCContactFrcB[0] = 0.0;
-      B->SCContactFrcB[1] = 0.0;
-      B->SCContactFrcB[2] = 0.0;
-      B->SCContactTrq[0]  = 0.0;
-      B->SCContactTrq[1]  = 0.0;
-      B->SCContactTrq[2]  = 0.0;
+      B->SCContactFrcN = VEC3_ZERO;
+      B->SCContactFrcB = VEC3_ZERO;
+      B->SCContactTrq  = VEC3_ZERO;
    }
 }
 /**********************************************************************/
@@ -372,8 +348,8 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
       case ORB_ZERO:
       case ORB_FLIGHT:
          x_trn = &x_rk[dim - 6];
-         CopyVG(x_trn, S->PosN, 3);
-         CopyVG(&x_trn[3], S->VelN, 3);
+         CopyVG(x_trn, S->PosN.v, 3);
+         CopyVG(&x_trn[3], S->VelN.v, 3);
          [[fallthrough]];
       case ORB_CENTRAL:
          switch (S->OrbDOF) {
@@ -381,18 +357,18 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
                break;
             case ORBDOF_EULER_HILL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(x_trn, S->PosEH, 3);
-               CopyVG(&x_trn[3], S->VelEH, 3);
+               CopyVG(x_trn, S->PosEH.v, 3);
+               CopyVG(&x_trn[3], S->VelEH.v, 3);
                break;
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(x_trn, S->PosN, 3);
-               CopyVG(&x_trn[3], S->VelN, 3);
+               CopyVG(x_trn, S->PosN.v, 3);
+               CopyVG(&x_trn[3], S->VelN.v, 3);
                break;
             default:
                x_trn = &x_rk[dim - 6];
-               CopyVG(x_trn, S->PosR, 3);
-               CopyVG(&x_trn[3], S->VelR, 3);
+               CopyVG(x_trn, S->PosR.v, 3);
+               CopyVG(&x_trn[3], S->VelR.v, 3);
                break;
          }
          break;
@@ -400,8 +376,8 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
          switch (S->OrbDOF) {
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(x_trn, S->PosN, 3);
-               CopyVG(&x_trn[3], S->VelN, 3);
+               CopyVG(x_trn, S->PosN.v, 3);
+               CopyVG(&x_trn[3], S->VelN.v, 3);
                break;
             default:
                printf("ERROR: MUST USE COWELLS METHOD!!! \n");
@@ -414,13 +390,13 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
                break;
             case ORBDOF_EULER_HILL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(x_trn, S->PosEH, 3);
-               CopyVG(&x_trn[3], S->VelEH, 3);
+               CopyVG(x_trn, S->PosEH.v, 3);
+               CopyVG(&x_trn[3], S->VelEH.v, 3);
                break;
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(x_trn, S->PosN, 3);
-               CopyVG(&x_trn[3], S->VelN, 3);
+               CopyVG(x_trn, S->PosN.v, 3);
+               CopyVG(&x_trn[3], S->VelN.v, 3);
                break;
             default:
                break;
@@ -456,7 +432,9 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          CopyVG(D->u, &x_rk[offset], D->Nu);
          offset += D->Nu;
          CopyVG(D->x, &x_rk[offset], D->Nx);
-         UNITQ(D->x);
+         quat q = DBL_TO_QUAT(D->x);
+         q      = UNITQ(q);
+         QUAT_TO_DBL(D->x, q);
          offset += D->Nx;
          CopyVG(D->h, &x_rk[offset], S->Nw);
          break;
@@ -474,8 +452,8 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
       case ORB_ZERO:
       case ORB_FLIGHT:
          x_trn = &x_rk[dim - 6];
-         CopyVG(S->PosN, x_trn, 3);
-         CopyVG(S->VelN, &x_trn[3], 3);
+         CopyVG(S->PosN.v, x_trn, 3);
+         CopyVG(S->VelN.v, &x_trn[3], 3);
          [[fallthrough]];
       case ORB_CENTRAL:
          switch (S->OrbDOF) {
@@ -483,20 +461,20 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
                break;
             case ORBDOF_EULER_HILL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosEH, x_trn, 3);
-               CopyVG(S->VelEH, &x_trn[3], 3);
+               CopyVG(S->PosEH.v, x_trn, 3);
+               CopyVG(S->VelEH.v, &x_trn[3], 3);
                EHRV2RelRV(orb->SMA, orb->MeanMotion, orb->CLN, S->PosEH,
-                          S->VelEH, S->PosR, S->VelR);
+                          S->VelEH, &S->PosR, &S->VelR);
                break;
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosN, x_trn, 3);
-               CopyVG(S->VelN, &x_trn[3], 3);
+               CopyVG(S->PosN.v, x_trn, 3);
+               CopyVG(S->VelN.v, &x_trn[3], 3);
                break;
             default:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosR, x_trn, 3);
-               CopyVG(S->VelR, &x_trn[3], 3);
+               CopyVG(S->PosR.v, x_trn, 3);
+               CopyVG(S->VelR.v, &x_trn[3], 3);
                break;
          }
          break;
@@ -504,8 +482,8 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          switch (S->OrbDOF) {
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosN, x_trn, 3);
-               CopyVG(S->VelN, &x_trn[3], 3);
+               CopyVG(S->PosN.v, x_trn, 3);
+               CopyVG(S->VelN.v, &x_trn[3], 3);
                break;
             default:
                printf("ERROR: MUST USE COWELLS METHOD!!! \n");
@@ -518,20 +496,20 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
                break;
             case ORBDOF_EULER_HILL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosEH, x_trn, 3);
-               CopyVG(S->VelEH, &x_trn[3], 3);
+               CopyVG(S->PosEH.v, x_trn, 3);
+               CopyVG(S->VelEH.v, &x_trn[3], 3);
                EHRV2RelRV(orb->SMA, orb->MeanMotion, orb->CLN, S->PosEH,
-                          S->VelEH, S->PosR, S->VelR);
+                          S->VelEH, &S->PosR, &S->VelR);
                break;
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosN, x_trn, 3);
-               CopyVG(S->VelN, &x_trn[3], 3);
+               CopyVG(S->PosN.v, x_trn, 3);
+               CopyVG(S->VelN.v, &x_trn[3], 3);
                break;
             default:
                x_trn = &x_rk[dim - 6];
-               CopyVG(S->PosR, x_trn, 3);
-               CopyVG(S->VelR, &x_trn[3], 3);
+               CopyVG(S->PosR.v, x_trn, 3);
+               CopyVG(S->VelR.v, &x_trn[3], 3);
                break;
          }
          break;

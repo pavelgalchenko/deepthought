@@ -152,11 +152,10 @@ typedef enum LagrangeSystem {
 
 struct LagrangePointType {
    /*~ Internal Variables ~*/
-   double PosN[3]; /* Pos wrt N frame of Body 1 (larger grav center), [[m]] */
-   double
-       VelN[3]; /* Vel wrt N frame of Body 1 (larger grav center), [[m/sec]] */
-   double X0;   /* Radial location wrt Body 1, in Synodic Frame, m */
-   double Y0;   /* Transversed location wrt Body 1, in Synodic Frame, m */
+   vec3 PosN; /* Pos wrt N frame of Body 1 (larger grav center), [[m]] */
+   vec3 VelN; /* Vel wrt N frame of Body 1 (larger grav center), [[m/sec]] */
+   double X0; /* Radial location wrt Body 1, in Synodic Frame, m */
+   double Y0; /* Transversed location wrt Body 1, in Synodic Frame, m */
    double R1;
    double R2;
    double Kxx;
@@ -212,8 +211,8 @@ struct LagrangeSystemType {
    double thdot;
    double thdotdot;
    struct LagrangePointType LP[5];
-   double CLH[3][3];
-   double CLN[3][3];
+   mat3x3 CLH;
+   mat3x3 CLN;
 };
 
 /* Chebyshev coefficients.  Used for DE430 planetary ephemerides. */
@@ -301,24 +300,24 @@ struct OrbitType {
    COWELL method for orbit propagation in SC configuration and that
    you are using a JPL Ephemerides as the Ephem option. */
    int use_N_BODY_Vec;
-   double N_BODY_PosN[3]; /* SC Position from TRV file, [[m]], expressed in N of
+   vec3 N_BODY_PosN; /* SC Position from TRV file, [[m]], expressed in N of
                              CENTRAL body */
-   double N_BODY_VelN[3]; /* SC Velocity from TRV file, [[m/sec]], expressed in
+   vec3 N_BODY_VelN; /* SC Velocity from TRV file, [[m/sec]], expressed in
                              N of CENTRAL body */
 
    /* For Central Orbit Description */
    double MeanAnom;
-   double anom;      /* True Anomaly, rad */
-   double PosN[3];   /* Position, [[m]], expressed in N [~=~] */
-   double VelN[3];   /* Velocity, [[m/sec]], expressed in N [~=~] */
-   double CLN[3][3]; /* For ZERO, L = N.  For FLIGHT, L = ENU.  For CENTRAL, L =
-                        LVLH.  For THREE_BODY, L = XYZ */
-   double wln[3];    /* Expressed in N */
+   double anom; /* True Anomaly, rad */
+   vec3 PosN;   /* Position, [[m]], expressed in N [~=~] */
+   vec3 VelN;   /* Velocity, [[m/sec]], expressed in N [~=~] */
+   mat3x3 CLN;  /* For ZERO, L = N.  For FLIGHT, L = ENU.  For CENTRAL, L =
+                         LVLH.  For THREE_BODY, L = XYZ */
+   vec3 wln;    /* Expressed in N */
    /* Fit spline to data file */
    long SplineActive;
    double NodeDynTime[4]; /* Sec since J2000 (TT) */
-   double NodePos[4][3];
-   double NodeVel[4][3];
+   vec3 NodePos[4];
+   vec3 NodeVel[4];
    /* Chebyshev Coefficients */
    long Ncheb;
    struct Cheb3DType *Cheb;
@@ -389,10 +388,10 @@ struct WorldType {
    double rad; /* Radius */
    // double w;               /* Spin Rate */
    // double PriMerAngJ2000;  /* Prime Meridian Angle at J2000 epoch, rad */
-   double RadOfInfluence;  /* Radius of Sphere of Influence */
-   double DipoleMoment;    /* Magnetic Field Dipole Moment, Wb-m */
-   double DipoleAxis[3];   /* Magnetic Field Dipole Axis */
-   double DipoleOffset[3]; /* Dipole Offset, m */
+   double RadOfInfluence; /* Radius of Sphere of Influence */
+   double DipoleMoment;   /* Magnetic Field Dipole Moment, Wb-m */
+   vec3 DipoleAxis;       /* Magnetic Field Dipole Axis */
+   vec3 DipoleOffset;     /* Dipole Offset, m */
    double RingInner, RingOuter;
    double Density; /* For minor bodies, polyhedron gravity */
    struct SphereHarmType GravModel;
@@ -419,24 +418,24 @@ struct WorldType {
 
    long OrientWorld; /* Compute the worlds orientation for this SimStep
                         (used only with SPICE)*/
-   double CNH[3][3]; /* DCM from heliocentric ecliptic frame
-                        to world-centric equatorial inertial frame */
-   double qnh[4];    /* ~*/
-   double CNJ[3][3]; /* DCM from J2000 frame to world-centric equatorial
-                        inertial frame */
-   double qnj[4];
+   mat3x3 CNH;       /* DCM from heliocentric ecliptic frame
+                              to world-centric equatorial inertial frame */
+   quat qnh;         /* ~*/
+   mat3x3 CNJ;       /* DCM from J2000 frame to world-centric equatorial
+                              inertial frame */
+   quat qnj;
 
    /*~ Internal Variables ~*/
    /* contains information defining prime meridian angle information */
    /*    order: Prime Meridian, Right Ascension, Declination         */
    AngDataType ang_data[3];
 
-   double PosH[3];   /* Position in H frame [~=~] */
-   double VelH[3];   /* Velocity in H frame */
+   vec3 PosH;        /* Position in H frame [~=~] */
+   vec3 VelH;        /* Velocity in H frame */
    double PriMerAng; /* Angle from N1 to prime meridian */
-   double CWN[3][3]; /* DCM from world-centric inertial frame
-                        to world-centric rotating frame */
-   double qwn[4];    /* ~*/
+   mat3x3 CWN;       /* DCM from world-centric inertial frame
+                              to world-centric rotating frame */
+   quat qwn;         /* ~*/
    long Visibility;  /* Too small to see, point-sized, or shows disk */
    float ModelMatrix[16];
 
@@ -452,60 +451,59 @@ void CloneWorld(struct WorldType *const destWorld,
                 const struct WorldType srcWorld);
 void CopyWorld(struct WorldType *const destWorld,
                const struct WorldType srcWorld);
-double GetWorldW(JDType jd, const struct WorldType *const world)
-    __attribute__((pure));
-void GetWorldWln(JDType jd, const struct WorldType *const world, double wln[3]);
-AngDataType CopyAngData(const AngDataType src) __attribute__((const));
-double GetWorldAng(JDType jd, const AngDataType *const ang_data)
-    __attribute__((pure));
-double GetWorldCWN(JDType jd, const AngDataType *const ang_data,
-                   double CWN[3][3]);
-void GetWorldCNJ(JDType jd, const AngDataType *const ang_data,
-                 double CNJ[3][3]);
+__attribute__((pure)) double GetWorldW(JDType jd,
+                                       const struct WorldType *const world);
+__attribute__((pure)) vec3 GetWorldWln(JDType jd,
+                                       const struct WorldType *const world);
+__attribute__((const)) AngDataType CopyAngData(const AngDataType src);
+__attribute__((pure)) double GetWorldAng(JDType jd,
+                                         const AngDataType *const ang_data);
+__attribute__((pure)) mat3x3 GetWorldCWN(JDType jd,
+                                         const AngDataType *const ang_data);
+__attribute__((pure)) mat3x3 GetWorldCNJ(JDType jd,
+                                         const AngDataType *const ang_data);
 
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 void WorldID2String(WorldID w_id, char w_str[32]);
-double MeanAnomToTrueAnom(double MeanAnom, double ecc) __attribute__((const));
-double TrueAnomaly(double mu, double p, double e, double t)
-    __attribute__((const));
-double atanh(double x) __attribute__((const));
-double TimeSincePeriapsis(double mu, double p, double e, double th)
-    __attribute__((const));
-void RV02RV(double mu, double xr0[3], double xv0[3], double anom, double xr[3],
-            double xv[3]);
+__attribute__((const)) double MeanAnomToTrueAnom(double MeanAnom, double ecc);
+__attribute__((const)) double TrueAnomaly(double mu, double p, double e,
+                                          double t);
+__attribute__((const)) double atanh(double x);
+__attribute__((const)) double TimeSincePeriapsis(double mu, double p, double e,
+                                                 double th);
+void RV02RV(double mu, vec3 xr0, vec3 xv0, double anom, vec3 *xr, vec3 *xv);
 void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
-            double dt, double r[3], double v[3], double *anom);
-void RV2Eph(double time, double mu, double xr[3], double xv[3], double *SMA,
-            double *e, double *i, double *RAAN, double *ArgP, double *th,
-            double *tp, double *SLR, double *alpha, double *rmin,
-            double *MeanMotion, double *Period);
+            double dt, vec3 *r, vec3 *v, double *anom);
+void RV2Eph(double time, double mu, vec3 xr, vec3 xv, double *SMA, double *e,
+            double *i, double *RAAN, double *ArgP, double *th, double *tp,
+            double *SLR, double *alpha, double *rmin, double *MeanMotion,
+            double *Period);
 void TLE2MeanEph(const char Line1[80], const char Line2[80], JDType jd,
                  struct OrbitType *O);
 void MeanEph2RV(struct OrbitType *O, double DynTime);
 long LoadTleFromFile(const char *Path, const char *TleFileName,
                      const char *TleLabel, double DynTime, JDType jd,
                      struct OrbitType *O);
-double RV2RVp(double mu, double r[3], double v[3], double rp[3], double vp[3])
-    __attribute__((pure));
+__attribute__((pure)) double RV2RVp(double mu, vec3 r, vec3 v, vec3 *rp,
+                                    vec3 *vp);
 void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *omg, double *tp,
                        double *anom, double *p, double *alpha, double *rmin,
                        double *MeanMotion, double *Period);
-void LunaPosition(const JDType jd, double r[3]);
+vec3 LunaPosition(const JDType jd);
 int LoadLunaInertialFrameData(AngDataType *const ang_data);
-void LunaInertialFrame(const JDType jd, double CNJ[3][3]);
+mat3x3 LunaInertialFrame(const JDType jd);
 int LoadLunaPriMerAngData(AngDataType *const ang_data);
-double LunaPriMerAng(JDType JulDay) __attribute__((const, deprecated));
-void FindCLN(double r[3], double v[3], double CLN[3][3], double wln[3]);
-void FindCEN(double r[3], double CEN[3][3]);
-void FindENU(double PosN[3], double WorldW, double CLN[3][3], double wln[3]);
+__attribute__((const, deprecated)) double LunaPriMerAng(JDType JulDay);
+void FindCLN(vec3 r, vec3 v, mat3x3 *CLN, vec3 *wln);
+__attribute__((const)) mat3x3 FindCEN(vec3 r);
+void FindENU(vec3 PosN, double WorldW, mat3x3 *CLN, vec3 *wln);
 void FindLagPtParms(struct LagrangeSystemType *LS);
 void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
-                     long Ilp, double PosN[3], double VelN[3],
-                     double CLN[3][3]);
+                     long Ilp, vec3 *PosN, vec3 *VelN, mat3x3 *CLN);
 void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
-                 struct OrbitType *O, double r[3], double v[3]);
+                 struct OrbitType *O, vec3 *r, vec3 *v);
 void RV2LagModes(double SecSinceJ2000, struct LagrangeSystemType *LS,
                  struct OrbitType *O);
 void R2StableLagMode(double SecSinceJ2000, struct LagrangeSystemType *LS,
@@ -516,41 +514,37 @@ void AmpPhase2LagModes(double TimeSinceEpoch, double AmpXY1, double PhiXY1,
                        double SenseXY1, double AmpXY2, double PhiXY2,
                        double SenseXY2, double AmpZ, double PhiZ,
                        struct LagrangeSystemType *S, struct OrbitType *O);
-void TDRSPosVel(double PriMerAng, double TIME, double ptn[10][3],
-                double vtn[10][3]);
-void TETE2J2000(double JD, double CTJ[3][3]);
-double RadiusOfInfluence(double mu1, double mu2, double r)
-    __attribute__((const));
-void RelRV2EHRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
-                double Rrel[3], double Vrel[3], double re[3], double ve[3]);
-void EHRV2RelRV(double OrbRadius, double OrbRate, double OrbCLN[3][3],
-                double re[3], double ve[3], double Rrel[3], double Vrel[3]);
-void EHRV2EHModes(double r[3], double v[3], double n, double nt, double *A,
-                  double *Bc, double *Bs, double *C, double *Dc, double *Ds);
+void TDRSPosVel(double PriMerAng, double TIME, vec3 ptn[10], vec3 vtn[10]);
+__attribute__((const)) mat3x3 TETE2J2000(double JD);
+__attribute__((const)) double RadiusOfInfluence(double mu1, double mu2,
+                                                double r);
+void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3 OrbCLN, vec3 Rrel,
+                vec3 Vrel, vec3 *re, vec3 *ve);
+void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3 OrbCLN, vec3 re,
+                vec3 ve, vec3 *Rrel, vec3 *Vrel);
+void EHRV2EHModes(vec3 r, vec3 v, double n, double nt, double *A, double *Bc,
+                  double *Bs, double *C, double *Dc, double *Ds);
 void EHModes2EHRV(double A, double Bc, double Bs, double C, double Dc,
-                  double Ds, double n, double nt, double r[3], double v[3]);
-double LambertTOF(double mu, double amin, double lambda, double x)
-    __attribute__((const));
-void LambertProblem(double t0, double mu, double xr1[3], double xr2[3],
-                    double TOF, double TransferType, double *SLR, double *e,
-                    double *inc, double *RAAN, double *ArgP, double *tp);
+                  double Ds, double n, double nt, vec3 *const r, vec3 *const v);
+__attribute__((const)) double LambertTOF(double mu, double amin, double lambda,
+                                         double x);
+void LambertProblem(double t0, double mu, vec3 xr1, vec3 xr2, double TOF,
+                    double TransferType, double *SLR, double *e, double *inc,
+                    double *RAAN, double *ArgP, double *tp);
 double RendezvousCostFunction(double *InVec, double *AuxVec);
-void PlanTwoImpulseRendezvous(double mu, double r1e[3], double v1e[3],
-                              double r2e[3], double v2e[3], double *t1,
-                              double *t2, double DV1[3], double DV2[3]);
+void PlanTwoImpulseRendezvous(double mu, vec3 r1e, vec3 v1e, vec3 r2e, vec3 v2e,
+                              double *t1, double *t2, vec3 DV1, vec3 DV2);
 void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
-                         struct OrbitType *Target, double PastPos[3],
-                         double FuturePos[3]);
+                         struct OrbitType *Target, vec3 PastPos,
+                         vec3 FuturePos);
 void OscEphToMeanEph(double mu, double J2, double Rw, JDType jd,
                      struct OrbitType *O);
 void MeanEphToOscEph(struct OrbitType *O, double DynTime);
 
-void StateRnd2StateN(struct LagrangeSystemType *LS, double W2_pos[3],
-                     double W2_vel[3], double R_R_nd[3], double V_R_nd[3],
-                     double R_N[3], double V_N[3]);
-void StateN2StateRnd(struct LagrangeSystemType *LS, double W2_pos[3],
-                     double W2_vel[3], double R_N[3], double V_N[3],
-                     double R_R_nd[3], double V_R_nd[3]);
+void StateRnd2StateN(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
+                     vec3 R_R_nd, vec3 V_R_nd, vec3 *R_N, vec3 *V_N);
+void StateN2StateRnd(struct LagrangeSystemType *LS, vec3 W2_pos, vec3 W2_vel,
+                     vec3 R_N, vec3 V_N, vec3 *R_R_nd, vec3 *V_R_nd);
 
 /*
 ** #ifdef __cplusplus

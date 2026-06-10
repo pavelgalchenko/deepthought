@@ -50,7 +50,7 @@ void WheelJitter(struct WhlType *W, struct SCType *S __attribute__((unused)))
    double CosTerm, SinTerm, rho;
    double mR, nsigma;
    double JA, ndelta;
-   long Ih, i;
+   long Ih;
 
    OM  = W->w;
    OM2 = OM * OM;
@@ -87,9 +87,9 @@ void WheelJitter(struct WhlType *W, struct SCType *S __attribute__((unused)))
          Ty      += nOM2 * (-H->Kd * sin(rho) + JA * sin(rho - ndelta));
       }
    }
-   for (i = 0; i < 3; i++) {
-      W->JitFrc[i] = Fx * W->Uaxis[i] + Fy * W->Vaxis[i];
-      W->JitTrq[i] = Tx * W->Uaxis[i] + Ty * W->Vaxis[i];
+   for (int i = 0; i < 3; i++) {
+      W->JitFrc.v[i] = Fx * W->Uaxis.v[i] + Fy * W->Vaxis.v[i];
+      W->JitTrq.v[i] = Tx * W->Uaxis.v[i] + Ty * W->Vaxis.v[i];
    }
 }
 

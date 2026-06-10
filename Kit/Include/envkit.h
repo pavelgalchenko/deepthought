@@ -32,34 +32,34 @@
 ** #endif
 */
 
-void SphericalHarmGravForce(const long N, const long M,
-                            const struct WorldType *W, double CWN[3][3],
-                            const double mass, const double pbn[3],
-                            double FgeoN[3]);
-void IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
-                  const long M, const double pbn[3], const double PriMerAng,
-                  double MagVecN[3]);
-void DipoleMagField(double DipoleMoment, double DipoleAxis[3],
-                    double DipoleOffset[3], double p[3], double PriMerAng,
-                    double MagVecN[3]);
-double KpToAp(double Kp) __attribute__((const));
-double JacchiaRoberts(double pbn[3], double svn[3], double F10p7, double Ap)
-    __attribute__((pure));
-double SimpleMSIS(double pbn[3], long Col) __attribute__((pure));
-double NRLMSISE00(DateType date, double PosW[3], double F10p7, double AP)
-    __attribute__((pure));
-double MarsAtmosphereModel(double r[3]) __attribute__((pure));
-void SimpleEarthPrecNute(double JD, double C_TEME_TETE[3][3],
-                         double C_TETE_J2000[3][3]);
-void HiFiEarthPrecNute(JDType JD, double C_TEME_TETE[3][3],
-                       double C_TETE_J2000[3][3]);
-void WGS84ToECEF(double glat, double glong, double alt, double p[3]);
-void ECEFToWGS84(double p[3], double *glat, double *glong, double *alt);
-long PolyhedronGravAcc(struct GeomType *G, double Density, double PosN[3],
-                       double CWN[3][3], double GravAccN[3]);
-long PolyhedronGravGrad(struct GeomType *G, double Density, double PosN[3],
-                        double CWN[3][3], double GravGradN[3][3]);
-void GravGradTimesInertia(double g[3][3], double I[3][3], double GGxI[3]);
+__attribute__((pure)) vec3 SphericalHarmGravForce(const long N, const long M,
+                                                  const struct WorldType *W,
+                                                  mat3x3 CWN, const double mass,
+                                                  const vec3 pbn);
+__attribute__((pure)) vec3 IGRFMagField(const char *ModelPath,
+                                        const DateType UTC, const long N,
+                                        const long M, const vec3 pbn,
+                                        const double PriMerAng);
+__attribute__((const)) vec3 DipoleMagField(double DipoleMoment, vec3 DipoleAxis,
+                                           vec3 DipoleOffset, vec3 p,
+                                           double PriMerAng);
+__attribute__((const)) double KpToAp(double Kp);
+__attribute__((pure)) double JacchiaRoberts(vec3 pbn, vec3 svn, double F10p7,
+                                            double Ap);
+__attribute__((const)) double SimpleMSIS(vec3 pbn, long Col);
+__attribute__((const)) double NRLMSISE00(DateType date, vec3 PosW, double F10p7,
+                                         double AP);
+__attribute__((const)) double MarsAtmosphereModel(vec3 r);
+void SimpleEarthPrecNute(double JD, mat3x3 *const C_TEME_TETE,
+                         mat3x3 *const C_TETE_J2000);
+void HiFiEarthPrecNute(JDType JD, mat3x3 *C_TEME_TETE, mat3x3 *C_TETE_J2000);
+__attribute__((const)) vec3 WGS84ToECEF(double glat, double glong, double alt);
+void ECEFToWGS84(vec3 p, double *glat, double *glong, double *alt);
+long PolyhedronGravAcc(struct GeomType *G, double Density, vec3 PosN,
+                       mat3x3 CWN, vec3 *const GravAccN);
+long PolyhedronGravGrad(struct GeomType *G, double Density, vec3 PosN,
+                        mat3x3 CWN, mat3x3 *const GravGradN);
+vec3 GravGradTimesInertia(mat3x3 g, mat3x3 I);
 
 /*
 ** #ifdef __cplusplus

@@ -14,32 +14,33 @@
 #ifndef __DCMKIT_H__
 #define __DCMKIT_H__
 
+#include "mathkit.h"
+
 /*
 ** #ifdef __cplusplus
 ** namespace Kit {
 ** #endif
 */
 
-void C2Q(const double C[3][3], double Q[4]);
-void Q2C(const double Q[4], double C[3][3]);
-void A2C(long SEQ, double TH1, double TH2, double TH3, double C[3][3]);
-void C2A(long SEQ, double C[3][3], double *TH1, double *TH2, double *TH3);
-void SimpRot(const double AXIS[3], const double THETA, double C[3][3]);
-void Q2AngleVec(double Q[4], double AngleVec[3]);
-void QW2QDOT(const double Q[4], const double W[3], double QDOT[4]);
-void PARAXIS(double IB[3][3], double CBA[3][3], double m, double pba[3],
-             double IBA[3][3]);
-void PrincipalMOI(double Ib[3][3], double Ip[3], double CPB[3][3]);
-void Q2W(double q[4], double qdot[4], double w[3]);
+__attribute__((const)) quat C2Q(const mat3x3 C);
+__attribute__((const)) mat3x3 Q2C(const quat Q);
+__attribute__((const)) mat3x3 A2C(long SEQ, double TH1, double TH2, double TH3);
+void C2A(long SEQ, mat3x3 C, double *TH1, double *TH2, double *TH3);
+__attribute__((const)) mat3x3 SimpRot(const vec3 AXIS, const double THETA);
+__attribute__((const)) vec3 Q2AngleVec(quat Q);
+__attribute__((const)) quat QW2QDOT(const quat Q, const vec3 W);
+__attribute__((const)) mat3x3 PARAXIS(mat3x3 IB, mat3x3 CBA, double m,
+                                      vec3 pba);
+void PrincipalMOI(mat3x3 Ib, vec3 *const Ip, mat3x3 *const CPB);
+__attribute__((const)) vec3 Q2W(quat q, quat qdot);
 void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
-                   double ang[3], double sig[3], double Gamma[3][3],
-                   double Gs[3], double Gds[3], double s[3], double Delta[3][3],
-                   double Ds[3], double Dds[3]);
-void ADOT2W(long IsSpherical, long Seq, double ang[3], double u[3],
-            double w[3]);
-void W2ADOT(long Seq, double ang[3], double w[3], double adot[3]);
-void W2CDOT(double w[3], double C[3][3], double Cdot[3][3]);
-void CDOT2W(double C[3][3], double Cdot[3][3], double w[3]);
+                   vec3 ang, vec3 sig, mat3x3 *Gamma, vec3 *Gs, vec3 *Gds,
+                   vec3 s, mat3x3 *Delta, vec3 *Ds, vec3 *Dds);
+__attribute__((const)) vec3 ADOT2W(long IsSpherical, long Seq, vec3 ang,
+                                   vec3 u);
+__attribute__((const)) vec3 W2ADOT(long Seq, vec3 ang, vec3 w);
+__attribute__((const)) mat3x3 W2CDOT(vec3 w, mat3x3 C);
+__attribute__((const)) vec3 CDOT2W(mat3x3 C, mat3x3 Cdot);
 
 /*
 ** #ifdef __cplusplus

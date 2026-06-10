@@ -23,25 +23,25 @@
 void PassiveJoint(struct JointType *G, struct SCType *S __attribute__((unused)))
 {
    long i;
-   double a[3];
+   vec3 a;
 
    if (G->IsSpherical) {
-      Q2AngleVec(G->q, a);
+      a = Q2AngleVec(G->q);
       for (i = 0; i < 3; i++) {
-         G->Trq[i] =
-             -G->RotDampCoef[i] * G->AngRate[i] - G->RotSpringCoef[i] * a[i];
+         G->Trq.v[i] = -G->RotDampCoef.v[i] * G->AngRate.v[i] -
+                       G->RotSpringCoef.v[i] * a.v[i];
       }
    }
    else {
       for (i = 0; i < G->RotDOF; i++) {
-         G->Trq[i] = -G->RotDampCoef[i] * G->AngRate[i] -
-                     G->RotSpringCoef[i] * G->Ang[i];
+         G->Trq.v[i] = -G->RotDampCoef.v[i] * G->AngRate.v[i] -
+                       G->RotSpringCoef.v[i] * G->Ang.v[i];
       }
    }
 
    for (i = 0; i < G->TrnDOF; i++) {
-      G->Frc[i] =
-          -G->TrnDampCoef[i] * G->PosRate[i] - G->TrnSpringCoef[i] * G->Pos[i];
+      G->Frc.v[i] = -G->TrnDampCoef.v[i] * G->PosRate.v[i] -
+                    G->TrnSpringCoef.v[i] * G->Pos.v[i];
    }
 }
 /**********************************************************************/
@@ -53,15 +53,17 @@ void ActuatedJoint(struct JointType *G,
    long i;
 
    for (i = 0; i < G->RotDOF; i++) {
-      RateCmd   = Limit(G->AngRateCmd[i], -G->MaxAngRate[i], G->MaxAngRate[i]);
-      G->Trq[i] = Limit(-G->AngRateGain[i] * (G->AngRate[i] - RateCmd),
-                        -G->MaxTrq[i], G->MaxTrq[i]);
+      RateCmd =
+          Limit(G->AngRateCmd.v[i], -G->MaxAngRate.v[i], G->MaxAngRate.v[i]);
+      G->Trq.v[i] = Limit(-G->AngRateGain.v[i] * (G->AngRate.v[i] - RateCmd),
+                          -G->MaxTrq.v[i], G->MaxTrq.v[i]);
    }
 
    for (i = 0; i < G->TrnDOF; i++) {
-      RateCmd   = Limit(G->PosRateCmd[i], -G->MaxPosRate[i], G->MaxPosRate[i]);
-      G->Frc[i] = Limit(-G->PosRateGain[i] * (G->PosRate[i] - RateCmd),
-                        -G->MaxFrc[i], G->MaxFrc[i]);
+      RateCmd =
+          Limit(G->PosRateCmd.v[i], -G->MaxPosRate.v[i], G->MaxPosRate.v[i]);
+      G->Frc.v[i] = Limit(-G->PosRateGain.v[i] * (G->PosRate.v[i] - RateCmd),
+                          -G->MaxFrc.v[i], G->MaxFrc.v[i]);
    }
 }
 /**********************************************************************/
@@ -97,15 +99,15 @@ void AdHocJoint(struct JointType *G, struct SCType *S __attribute__((unused)))
 
    if (G->IsSpherical) {
       for (i = 0; i < 3; i++)
-         G->Trq[i] = 0.0;
+         G->Trq.v[i] = 0.0;
    }
    else {
       for (i = 0; i < G->RotDOF; i++)
-         G->Trq[i] = 0.0;
+         G->Trq.v[i] = 0.0;
    }
 
    for (i = 0; i < G->TrnDOF; i++)
-      G->Frc[i] = 0.0;
+      G->Frc.v[i] = 0.0;
 }
 /**********************************************************************/
 void JointFrcTrq(struct JointType *G, struct SCType *S)

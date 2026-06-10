@@ -127,108 +127,95 @@ void InitAC(struct AcType *AC)
 void GyroProcessing(struct AcType *AC)
 {
    struct AcGyroType *G;
-   double A0xA1[3];
-   double A[3][3], b[3], Ai[3][3];
-   double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Atb[3]    = {0.0, 0.0, 0.0};
-   double AtAi[3][3];
+   mat3x3 A, Ai, AtAi, AtA = MAT3X3_ZERO;
+   vec3 A0xA1, b, Atb = VEC3_ZERO;
    long Ig, i, j;
 
    if (AC->Ngyro == 0) {
       /* AC->wbn populated by true S->B[0].wn in 42sensors.c */
    }
    else if (AC->Ngyro == 1) {
-      G = &AC->Gyro[0];
-      for (i = 0; i < 3; i++)
-         AC->wbn[i] = G->Rate * G->Axis[i];
+      G       = &AC->Gyro[0];
+      AC->wbn = SxV(G->Rate, G->Axis);
    }
    else if (AC->Ngyro == 2) {
-      VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
-      for (i = 0; i < 3; i++) {
-         A[0][i] = AC->Gyro[0].Axis[i];
-         A[1][i] = AC->Gyro[1].Axis[i];
-         A[2][i] = A0xA1[i];
-      }
-      b[0] = AC->Gyro[0].Rate;
-      b[1] = AC->Gyro[1].Rate;
-      b[2] = 0.0;
-      MINV3(A, Ai);
-      MxV(Ai, b, AC->wbn);
+      A0xA1     = VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis);
+      A.rows[0] = AC->Gyro[0].Axis;
+      A.rows[1] = AC->Gyro[1].Axis;
+      A.rows[2] = A0xA1;
+
+      b.v[0]  = AC->Gyro[0].Rate;
+      b.v[1]  = AC->Gyro[1].Rate;
+      b.v[2]  = 0.0;
+      Ai      = MINV3(A);
+      AC->wbn = MxV(Ai, b);
    }
    else if (AC->Ngyro > 2) {
       /* Normal Equations */
       for (Ig = 0; Ig < AC->Ngyro; Ig++) {
          G = &AC->Gyro[Ig];
          for (i = 0; i < 3; i++) {
-            Atb[i] += G->Rate * G->Axis[i];
-            for (j = 0; j < 3; j++) {
-               AtA[i][j] += G->Axis[i] * G->Axis[j];
-            }
+            Atb.v[i] += G->Rate * G->Axis.v[i];
+            for (j = 0; j < 3; j++)
+               AtA.mat[i][j] += G->Axis.v[i] * G->Axis.v[j];
          }
       }
-      MINV3(AtA, AtAi);
-      MxV(AtAi, Atb, AC->wbn);
+      AtAi    = MINV3(AtA);
+      AC->wbn = MxV(AtAi, Atb);
    }
 }
 /**********************************************************************/
 void MagnetometerProcessing(struct AcType *AC)
 {
    struct AcMagnetometerType *M;
-   double A0xA1[3];
-   double A[3][3], b[3], Ai[3][3];
-   double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-   double Atb[3]    = {0.0, 0.0, 0.0};
-   double AtAi[3][3];
+   mat3x3 A, Ai, AtAi, AtA = MAT3X3_ZERO;
+   vec3 A0xA1, b, Atb = VEC3_ZERO;
    long Im, i, j;
 
    if (AC->Nmag == 0) {
       /* AC->bvb populated by true S->bvb in 42sensors.c */
    }
    else if (AC->Nmag == 1) {
-      M = &AC->MAG[0];
-      for (i = 0; i < 3; i++)
-         AC->bvb[i] = M->Field * M->Axis[i];
+      M       = &AC->MAG[0];
+      AC->bvb = SxV(M->Field, M->Axis);
    }
    else if (AC->Nmag == 2) {
-      VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
-      for (i = 0; i < 3; i++) {
-         A[0][i] = AC->MAG[0].Axis[i];
-         A[1][i] = AC->MAG[1].Axis[i];
-         A[2][i] = A0xA1[i];
-      }
-      b[0] = AC->MAG[0].Field;
-      b[1] = AC->MAG[1].Field;
-      b[2] = 0.0;
-      MINV3(A, Ai);
-      MxV(Ai, b, AC->bvb);
+      A0xA1     = VxV(AC->MAG[0].Axis, AC->MAG[1].Axis);
+      A.rows[0] = AC->MAG[0].Axis;
+      A.rows[1] = AC->MAG[1].Axis;
+      A.rows[2] = A0xA1;
+
+      b.v[0]  = AC->MAG[0].Field;
+      b.v[1]  = AC->MAG[1].Field;
+      b.v[2]  = 0.0;
+      Ai      = MINV3(A);
+      AC->bvb = MxV(Ai, b);
    }
    else if (AC->Nmag > 2) {
       /* Normal Equations */
       for (Im = 0; Im < AC->Nmag; Im++) {
          M = &AC->MAG[Im];
          for (i = 0; i < 3; i++) {
-            Atb[i] += M->Field * M->Axis[i];
-            for (j = 0; j < 3; j++) {
-               AtA[i][j] += M->Axis[i] * M->Axis[j];
-            }
+            Atb.v[i] += M->Field * M->Axis.v[i];
+            for (j = 0; j < 3; j++)
+               AtA.mat[i][j] += M->Axis.v[i] * M->Axis.v[j];
          }
       }
-      MINV3(AtA, AtAi);
-      MxV(AtAi, Atb, AC->bvb);
+      AtAi    = MINV3(AtA);
+      AC->bvb = MxV(AtAi, Atb);
    }
 }
 /**********************************************************************/
 void CssProcessing(struct AcType *AC)
 {
    struct AcCssType *Css;
-   double AtA[3][3]  = {{0.0}};
-   double Atb[3]     = {0.0};
-   double AtAi[3][3] = {{0.0}};
-   double A[2][3] = {{0.0}}, b[2] = {0.0};
+   vec3 Atb = VEC3_ZERO;
+   mat3x3 AtA, AtAi;
+   vec3 A[2];
+   double b[2] = {0.0};
    long Ic, i, j;
-   long Nvalid          = 0;
-   double InvalidSVB[3] = {1.0, 0.0,
-                           0.0}; /* Safe vector if SunValid == FALSE */
+   long Nvalid     = 0;
+   vec3 InvalidSVB = VEC3_PXAXIS; /* Safe vector if SunValid == FALSE */
 
    if (AC->Ncss == 0) {
       /* AC->svb populated by true S->svb in 42sensors.c */
@@ -238,45 +225,41 @@ void CssProcessing(struct AcType *AC)
          Css = &AC->CSS[Ic];
          if (Css->Valid) {
             Nvalid++;
-            /* Normal equations, assuming Nvalid will end up > 2 */
-            for (i = 0; i < 3; i++) {
-               Atb[i] += Css->Axis[i] * Css->Illum / Css->Scale;
 
-               for (j = 0; j < 3; j++) {
-                  AtA[i][j] += Css->Axis[i] * Css->Axis[j];
-               }
-            }
-            /* In case Nvalid ends up == 2 */
-            for (i = 0; i < 3; i++) {
-               A[0][i] = A[1][i];
-               A[1][i] = Css->Axis[i];
-            }
             b[0] = b[1];
             b[1] = Css->Illum / Css->Scale;
+            /* Normal equations, assuming Nvalid will end up > 2 */
+            for (i = 0; i < 3; i++) {
+               Atb.v[i] += Css->Axis.v[i] * Css->Illum / Css->Scale;
+               for (j = 0; j < 3; j++)
+                  AtA.mat[i][j] += Css->Axis.v[i] * Css->Axis.v[j];
+            }
+
+            /* In case Nvalid ends up == 2 */
+            A[0] = A[1];
+            A[1] = Css->Axis;
          }
       }
       if (Nvalid > 2) {
          AC->SunValid = TRUE;
-         MINV3(AtA, AtAi);
-         MxV(AtAi, Atb, AC->svb);
-         UNITV(AC->svb);
+         AtAi         = MINV3(AtA);
+         AC->svb      = MxV(AtAi, Atb);
+         UNITV(&AC->svb);
       }
       else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
-            AC->svb[i] = b[0] * A[0][i] + b[1] * A[1][i];
-         UNITV(AC->svb);
+            AC->svb.v[i] = b[0] * A[0].v[i] + b[1] * A[1].v[i];
+         UNITV(&AC->svb);
       }
       else if (Nvalid == 1) {
          AC->SunValid = TRUE;
-         for (i = 0; i < 3; i++)
-            AC->svb[i] = Atb[i];
-         UNITV(AC->svb);
+         AC->svb      = Atb;
+         UNITV(&AC->svb);
       }
       else {
          AC->SunValid = FALSE;
-         for (i = 0; i < 3; i++)
-            AC->svb[i] = InvalidSVB[i];
+         AC->svb      = InvalidSVB;
       }
    }
 }
@@ -286,21 +269,20 @@ void FssProcessing(struct AcType *AC)
 {
    struct AcFssType *FSS;
    double tanx, tany, z;
-   long Ifss, i;
+   long Ifss;
 
    for (Ifss = 0; Ifss < AC->Nfss; Ifss++) {
       FSS = &AC->FSS[Ifss];
       if (FSS->Valid) {
-         AC->SunValid    = 1;
-         tanx            = tan(FSS->SunAng[0]);
-         tany            = tan(FSS->SunAng[1]);
-         z               = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
-         FSS->SunVecS[0] = z * tanx;
-         FSS->SunVecS[1] = z * tany;
-         FSS->SunVecS[2] = z;
-         MTxV(FSS->CB, FSS->SunVecS, FSS->SunVecB);
-         for (i = 0; i < 3; i++)
-            AC->svb[i] = FSS->SunVecB[i];
+         AC->SunValid   = 1;
+         tanx           = tan(FSS->SunAng[0]);
+         tany           = tan(FSS->SunAng[1]);
+         z              = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
+         FSS->SunVecS.x = z * tanx;
+         FSS->SunVecS.y = z * tany;
+         FSS->SunVecS.z = z;
+         FSS->SunVecB   = MTxV(FSS->CB, FSS->SunVecS);
+         AC->svb        = FSS->SunVecB;
       }
    }
 }
@@ -311,7 +293,7 @@ void StarTrackerProcessing(struct AcType *AC)
    long Ist, i;
    struct AcStarTrackerType *ST;
    long Nvalid = 0;
-   double qbn[4];
+   quat qbn;
 
    if (AC->Nst == 0) {
       /* AC->qbn populated by true S->B[0].qn in 42sensors.c */
@@ -319,25 +301,24 @@ void StarTrackerProcessing(struct AcType *AC)
    }
    else {
       /* Naive averaging */
-      for (i = 0; i < 4; i++)
-         AC->qbn[i] = 0.0;
+      AC->qbn = QUAT_ZERO;
       for (Ist = 0; Ist < AC->Nst; Ist++) {
          ST = &AC->ST[Ist];
          if (ST->Valid) {
             Nvalid++;
-            QTxQ(ST->qb, ST->qn, qbn);
-            RECTIFYQ(qbn);
+            qbn = QTxQ(ST->qb, ST->qn);
+            qbn = RECTIFYQ(qbn);
             for (i = 0; i < 4; i++)
-               AC->qbn[i] += qbn[i];
+               AC->qbn.q[i] += qbn.q[i];
          }
       }
       if (Nvalid > 0) {
          AC->StValid = TRUE;
-         UNITQ(AC->qbn);
+         AC->qbn     = UNITQ(AC->qbn);
       }
       else {
          AC->StValid = FALSE;
-         AC->qbn[3]  = 1.0;
+         AC->qbn.qs  = 1.0;
       }
    }
 }
@@ -346,7 +327,6 @@ void GpsProcessing(struct AcType *AC)
 {
    struct AcGpsType *G;
    double DaysSinceWeek, DaysSinceRollover, DaysSinceEpoch, JD;
-   long i;
 
    if (AC->Ngps == 0) {
       /* AC->Time, AC->PosN, AC->VelN */
@@ -364,10 +344,8 @@ void GpsProcessing(struct AcType *AC)
       AC->Time = (JD - 2451545.0) * 86400.0;
 
       /* Position, Velocity */
-      for (i = 0; i < 3; i++) {
-         AC->PosN[i] = AC->GPS[0].PosN[i];
-         AC->VelN[i] = AC->GPS[0].VelN[i];
-      }
+      AC->PosN = AC->GPS[0].PosN;
+      AC->VelN = AC->GPS[0].VelN;
    }
 }
 /**********************************************************************/
@@ -407,8 +385,8 @@ void AcFsw(struct AcType *AC)
 {
    struct AcCfsCtrlType *C;
    struct AcJointType *G;
-   double L1[3], L2[3], L3[3];
-   double HxB[3];
+   vec3 L1, L2, L3;
+   vec3 HxB;
    double AngErr;
    long i, j;
 
@@ -418,11 +396,11 @@ void AcFsw(struct AcType *AC)
    if (C->Init) {
       C->Init = 0;
       for (i = 0; i < 3; i++)
-         FindPDGains(AC->MOI[i][i], 0.1, 0.7, &C->Kr[i], &C->Kp[i]);
+         FindPDGains(AC->MOI.mat[i][i], 0.1, 0.7, &C->Kr.v[i], &C->Kp.v[i]);
       C->Kunl = 1.0E6;
-      FindPDGains(100.0, 0.2, 1.0, &G->AngRateGain[0], &G->AngGain[0]);
-      G->MaxAngRate[0] = 1.0 * D2R;
-      G->MaxTrq[0]     = 10.0;
+      FindPDGains(100.0, 0.2, 1.0, &G->AngRateGain.v[0], &G->AngGain.v[0]);
+      G->MaxAngRate.x = 1.0 * D2R;
+      G->MaxTrq.x     = 10.0;
    }
 
    /* .. Sensor Processing */
@@ -435,74 +413,62 @@ void AcFsw(struct AcType *AC)
 
    /* .. Commanded Attitude */
    if (AC->GPS[0].Valid) {
-      CopyUnitV(AC->PosN, L3);
-      VxV(AC->PosN, AC->VelN, L2);
-      UNITV(L2);
-      UNITV(L3);
-      for (i = 0; i < 3; i++) {
-         L2[i] = -L2[i];
-         L3[i] = -L3[i];
-      }
-      VxV(L2, L3, L1);
-      UNITV(L1);
-      for (i = 0; i < 3; i++) {
-         AC->CLN[0][i] = L1[i];
-         AC->CLN[1][i] = L2[i];
-         AC->CLN[2][i] = L3[i];
-      }
-      C2Q(AC->CLN, AC->qln);
-      AC->wln[0] = 0.0;
-      AC->wln[1] = -MAGV(AC->VelN) / MAGV(AC->PosN);
-      AC->wln[2] = 0.0;
+      CopyUnitV(AC->PosN, &L3);
+      L2 = VxV(AC->PosN, AC->VelN);
+      UNITV(&L2);
+      UNITV(&L3);
+      L2 = VNegElem(L2);
+      L3 = VNegElem(L3);
+
+      L1 = VxV(L2, L3);
+      UNITV(&L1);
+      AC->CLN.rows[0] = L1;
+      AC->CLN.rows[1] = L2;
+      AC->CLN.rows[2] = L3;
+      AC->qln         = C2Q(AC->CLN);
+      AC->wln.v[0]    = 0.0;
+      AC->wln.v[1]    = -MAGV(AC->VelN) / MAGV(AC->PosN);
+      AC->wln.v[2]    = 0.0;
    }
    else {
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++) {
-            AC->CLN[i][j] = 0.0;
-         }
-         AC->CLN[i][i] = 1.0;
-         AC->qln[i]    = 0.0;
-         AC->wln[i]    = 0.0;
-      }
-      AC->qln[3] = 1.0;
+      AC->CLN = MAT3X3_EYE;
+      AC->qln = QUAT_EYE;
+      AC->wln = VEC3_ZERO;
    }
 
    /* .. Attitude Control */
    if (AC->StValid) {
-      QxQT(AC->qbn, AC->qln, AC->qbr);
-      RECTIFYQ(AC->qbr);
+      AC->qbr = QxQT(AC->qbn, AC->qln);
+      AC->qbr = RECTIFYQ(AC->qbr);
    }
-   else {
-      for (i = 0; i < 3; i++)
-         AC->qbr[i] = 0.0;
-      AC->qbr[3] = 1.0;
-   }
+   else
+      AC->qbr = QUAT_EYE;
+
+   C->werr = VmVElem(AC->wbn, AC->wln);
    for (i = 0; i < 3; i++) {
-      C->therr[i] = Limit(2.0 * AC->qbr[i], -0.1, 0.1);
-      C->werr[i]  = AC->wbn[i] - AC->wln[i];
-      AC->Tcmd[i] =
-          Limit(-C->Kr[i] * C->werr[i] - C->Kp[i] * C->therr[i], -0.1, 0.1);
+      C->therr.v[i] = Limit(2.0 * AC->qbr.qv.v[i], -0.1, 0.1);
+      AC->Tcmd.v[i] = Limit(
+          -C->Kr.v[i] * C->werr.v[i] - C->Kp.v[i] * C->therr.v[i], -0.1, 0.1);
    }
    /* .. Momentum Management */
    for (i = 0; i < 3; i++) {
-      AC->Hvb[i] = AC->MOI[i][i] * AC->wbn[i];
+      AC->Hvb.v[i] = AC->MOI.mat[i][i] * AC->wbn.v[i];
       for (j = 0; j < AC->Nwhl; j++)
-         AC->Hvb[i] += AC->Whl[j].Axis[i] * AC->Whl[j].H;
+         AC->Hvb.v[i] += AC->Whl[j].Axis.v[i] * AC->Whl[j].H;
    }
-   VxV(AC->Hvb, AC->bvb, HxB);
-   for (i = 0; i < 3; i++)
-      AC->Mcmd[i] = C->Kunl * HxB[i];
+   HxB      = VxV(AC->Hvb, AC->bvb);
+   AC->Mcmd = SxV(C->Kunl, HxB);
 
    /* .. Solar Array Steering */
-   G->Cmd.Ang[0] = atan2(AC->svb[0], AC->svb[2]);
-   AngErr        = fmod(G->Ang[0] - G->Cmd.Ang[0], AC->TwoPi);
+   G->Cmd.Ang.x = atan2(AC->svb.x, AC->svb.z);
+   AngErr       = fmod(G->Ang.x - G->Cmd.Ang.x, AC->TwoPi);
    if (AngErr > AC->Pi)
       AngErr -= AC->TwoPi;
    if (AngErr < -AC->Pi)
       AngErr += AC->TwoPi;
-   G->Cmd.AngRate[0] = -G->AngGain[0] / G->AngRateGain[0] * AngErr;
-   G->Cmd.AngRate[0] =
-       Limit(G->Cmd.AngRate[0], -G->MaxAngRate[0], G->MaxAngRate[0]);
+   G->Cmd.AngRate.x = -G->AngGain.x / G->AngRateGain.x * AngErr;
+   G->Cmd.AngRate.x =
+       Limit(G->Cmd.AngRate.x, -G->MaxAngRate.x, G->MaxAngRate.x);
 
    /* .. Actuator Processing */
    WheelProcessing(AC);

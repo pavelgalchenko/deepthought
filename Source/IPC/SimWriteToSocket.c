@@ -31,7 +31,7 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(line, "SC[%ld].PosR = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].PosR[0], SC[Isc].PosR[1], SC[Isc].PosR[2]);
+                    SC[Isc].PosR.v[0], SC[Isc].PosR.v[1], SC[Isc].PosR.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -41,7 +41,7 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].VelR = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].VelR[0], SC[Isc].VelR[1], SC[Isc].VelR[2]);
+                    SC[Isc].VelR.v[0], SC[Isc].VelR.v[1], SC[Isc].VelR.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -51,7 +51,7 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].svb = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].svb[0], SC[Isc].svb[1], SC[Isc].svb[2]);
+                    SC[Isc].svb.v[0], SC[Isc].svb.v[1], SC[Isc].svb.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -61,7 +61,7 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].bvb = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].bvb[0], SC[Isc].bvb[1], SC[Isc].bvb[2]);
+                    SC[Isc].bvb.v[0], SC[Isc].bvb.v[1], SC[Isc].bvb.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -71,7 +71,7 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].Hvb = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].Hvb[0], SC[Isc].Hvb[1], SC[Isc].Hvb[2]);
+                    SC[Isc].Hvb.v[0], SC[Isc].Hvb.v[1], SC[Isc].Hvb.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -103,8 +103,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             for (i = 0; i < SC[Isc].AC.Ng; i++) {
                sprintf(line,
                        "SC[%ld].AC.G[%ld].Ang = %18.12le %18.12le %18.12le\n",
-                       Isc, i, SC[Isc].AC.G[i].Ang[0], SC[Isc].AC.G[i].Ang[1],
-                       SC[Isc].AC.G[i].Ang[2]);
+                       Isc, i, SC[Isc].AC.G[i].Ang.v[0],
+                       SC[Isc].AC.G[i].Ang.v[1], SC[Isc].AC.G[i].Ang.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -197,8 +197,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(line,
                        "SC[%ld].AC.ST[%ld].qn = %18.12le %18.12le %18.12le "
                        "%18.12le\n",
-                       Isc, i, SC[Isc].AC.ST[i].qn[0], SC[Isc].AC.ST[i].qn[1],
-                       SC[Isc].AC.ST[i].qn[2], SC[Isc].AC.ST[i].qn[3]);
+                       Isc, i, SC[Isc].AC.ST[i].qn.q[0],
+                       SC[Isc].AC.ST[i].qn.q[1], SC[Isc].AC.ST[i].qn.q[2],
+                       SC[Isc].AC.ST[i].qn.q[3]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -252,8 +253,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.GPS[%ld].PosN = %18.12le %18.12le %18.12le\n",
-                   Isc, i, SC[Isc].AC.GPS[i].PosN[0], SC[Isc].AC.GPS[i].PosN[1],
-                   SC[Isc].AC.GPS[i].PosN[2]);
+                   Isc, i, SC[Isc].AC.GPS[i].PosN.v[0],
+                   SC[Isc].AC.GPS[i].PosN.v[1], SC[Isc].AC.GPS[i].PosN.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -265,8 +266,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.GPS[%ld].VelN = %18.12le %18.12le %18.12le\n",
-                   Isc, i, SC[Isc].AC.GPS[i].VelN[0], SC[Isc].AC.GPS[i].VelN[1],
-                   SC[Isc].AC.GPS[i].VelN[2]);
+                   Isc, i, SC[Isc].AC.GPS[i].VelN.v[0],
+                   SC[Isc].AC.GPS[i].VelN.v[1], SC[Isc].AC.GPS[i].VelN.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -278,8 +279,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.GPS[%ld].PosW = %18.12le %18.12le %18.12le\n",
-                   Isc, i, SC[Isc].AC.GPS[i].PosW[0], SC[Isc].AC.GPS[i].PosW[1],
-                   SC[Isc].AC.GPS[i].PosW[2]);
+                   Isc, i, SC[Isc].AC.GPS[i].PosW.v[0],
+                   SC[Isc].AC.GPS[i].PosW.v[1], SC[Isc].AC.GPS[i].PosW.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -291,8 +292,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.GPS[%ld].VelW = %18.12le %18.12le %18.12le\n",
-                   Isc, i, SC[Isc].AC.GPS[i].VelW[0], SC[Isc].AC.GPS[i].VelW[1],
-                   SC[Isc].AC.GPS[i].VelW[2]);
+                   Isc, i, SC[Isc].AC.GPS[i].VelW.v[0],
+                   SC[Isc].AC.GPS[i].VelW.v[1], SC[Isc].AC.GPS[i].VelW.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -388,8 +389,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
             for (i = 0; i < SC[Isc].Nb; i++) {
                sprintf(line, "SC[%ld].B[%ld].wn = %18.12le %18.12le %18.12le\n",
-                       Isc, i, SC[Isc].B[i].wn[0], SC[Isc].B[i].wn[1],
-                       SC[Isc].B[i].wn[2]);
+                       Isc, i, SC[Isc].B[i].wn.v[0], SC[Isc].B[i].wn.v[1],
+                       SC[Isc].B[i].wn.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -401,8 +402,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].B[%ld].qn = %18.12le %18.12le %18.12le %18.12le\n",
-                   Isc, i, SC[Isc].B[i].qn[0], SC[Isc].B[i].qn[1],
-                   SC[Isc].B[i].qn[2], SC[Isc].B[i].qn[3]);
+                   Isc, i, SC[Isc].B[i].qn.q[0], SC[Isc].B[i].qn.q[1],
+                   SC[Isc].B[i].qn.q[2], SC[Isc].B[i].qn.q[3]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -415,8 +416,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             for (i = 0; i < SC[Isc].Ng; i++) {
                sprintf(line,
                        "SC[%ld].G[%ld].Pos = %18.12le %18.12le %18.12le\n", Isc,
-                       i, SC[Isc].G[i].Pos[0], SC[Isc].G[i].Pos[1],
-                       SC[Isc].G[i].Pos[2]);
+                       i, SC[Isc].G[i].Pos.v[0], SC[Isc].G[i].Pos.v[1],
+                       SC[Isc].G[i].Pos.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -427,8 +428,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].G[%ld].PosRate = %18.12le %18.12le %18.12le\n",
-                       Isc, i, SC[Isc].G[i].PosRate[0], SC[Isc].G[i].PosRate[1],
-                       SC[Isc].G[i].PosRate[2]);
+                       Isc, i, SC[Isc].G[i].PosRate.v[0],
+                       SC[Isc].G[i].PosRate.v[1], SC[Isc].G[i].PosRate.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -439,8 +440,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].G[%ld].Ang = %18.12le %18.12le %18.12le\n", Isc,
-                       i, SC[Isc].G[i].Ang[0], SC[Isc].G[i].Ang[1],
-                       SC[Isc].G[i].Ang[2]);
+                       i, SC[Isc].G[i].Ang.v[0], SC[Isc].G[i].Ang.v[1],
+                       SC[Isc].G[i].Ang.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -451,8 +452,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].G[%ld].AngRate = %18.12le %18.12le %18.12le\n",
-                       Isc, i, SC[Isc].G[i].AngRate[0], SC[Isc].G[i].AngRate[1],
-                       SC[Isc].G[i].AngRate[2]);
+                       Isc, i, SC[Isc].G[i].AngRate.v[0],
+                       SC[Isc].G[i].AngRate.v[1], SC[Isc].G[i].AngRate.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -463,7 +464,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].GN.Pos = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].GN.Pos[0], SC[Isc].GN.Pos[1], SC[Isc].GN.Pos[2]);
+                    SC[Isc].GN.Pos.v[0], SC[Isc].GN.Pos.v[1],
+                    SC[Isc].GN.Pos.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -473,8 +475,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].GN.PosRate = %18.12le %18.12le %18.12le\n",
-                    Isc, SC[Isc].GN.PosRate[0], SC[Isc].GN.PosRate[1],
-                    SC[Isc].GN.PosRate[2]);
+                    Isc, SC[Isc].GN.PosRate.v[0], SC[Isc].GN.PosRate.v[1],
+                    SC[Isc].GN.PosRate.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -484,7 +486,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].GN.Ang = %18.12le %18.12le %18.12le\n", Isc,
-                    SC[Isc].GN.Ang[0], SC[Isc].GN.Ang[1], SC[Isc].GN.Ang[2]);
+                    SC[Isc].GN.Ang.v[0], SC[Isc].GN.Ang.v[1],
+                    SC[Isc].GN.Ang.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -494,8 +497,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "SC[%ld].GN.AngRate = %18.12le %18.12le %18.12le\n",
-                    Isc, SC[Isc].GN.AngRate[0], SC[Isc].GN.AngRate[1],
-                    SC[Isc].GN.AngRate[2]);
+                    Isc, SC[Isc].GN.AngRate.v[0], SC[Isc].GN.AngRate.v[1],
+                    SC[Isc].GN.AngRate.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -533,7 +536,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
       for (Iw = 1; Iw < NWORLD; Iw++) {
          if (World[Iw].Exists) {
             sprintf(line, "World[%ld].PosH = %18.12le %18.12le %18.12le\n", Iw,
-                    World[Iw].PosH[0], World[Iw].PosH[1], World[Iw].PosH[2]);
+                    World[Iw].PosH.v[0], World[Iw].PosH.v[1],
+                    World[Iw].PosH.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -543,8 +547,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "World[%ld].eph.PosN = %18.12le %18.12le %18.12le\n",
-                    Iw, World[Iw].eph.PosN[0], World[Iw].eph.PosN[1],
-                    World[Iw].eph.PosN[2]);
+                    Iw, World[Iw].eph.PosN.v[0], World[Iw].eph.PosN.v[1],
+                    World[Iw].eph.PosN.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -554,8 +558,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "World[%ld].eph.VelN = %18.12le %18.12le %18.12le\n",
-                    Iw, World[Iw].eph.VelN[0], World[Iw].eph.VelN[1],
-                    World[Iw].eph.VelN[2]);
+                    Iw, World[Iw].eph.VelN.v[0], World[Iw].eph.VelN.v[1],
+                    World[Iw].eph.VelN.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -569,7 +573,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
       for (Iorb = 0; Iorb < Norb; Iorb++) {
          if (Orb[Iorb].Exists) {
             sprintf(line, "Orb[%ld].PosN = %18.12le %18.12le %18.12le\n", Iorb,
-                    Orb[Iorb].PosN[0], Orb[Iorb].PosN[1], Orb[Iorb].PosN[2]);
+                    Orb[Iorb].PosN.v[0], Orb[Iorb].PosN.v[1],
+                    Orb[Iorb].PosN.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -579,7 +584,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
             }
 
             sprintf(line, "Orb[%ld].VelN = %18.12le %18.12le %18.12le\n", Iorb,
-                    Orb[Iorb].VelN[0], Orb[Iorb].VelN[1], Orb[Iorb].VelN[2]);
+                    Orb[Iorb].VelN.v[0], Orb[Iorb].VelN.v[1],
+                    Orb[Iorb].VelN.v[2]);
             if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                LineLen = strlen(line);
                memcpy(&Msg[MsgLen], line, LineLen);
@@ -768,8 +774,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                }
 
                sprintf(line, "SC[%ld].AC.cm = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.cm[0], SC[Isc].AC.cm[1],
-                       SC[Isc].AC.cm[2]);
+                       Isc, SC[Isc].AC.cm.v[0], SC[Isc].AC.cm.v[1],
+                       SC[Isc].AC.cm.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -781,11 +787,11 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(line,
                        "SC[%ld].AC.MOI = %18.12le %18.12le %18.12le %18.12le "
                        "%18.12le %18.12le %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.MOI[0][0], SC[Isc].AC.MOI[0][1],
-                       SC[Isc].AC.MOI[0][2], SC[Isc].AC.MOI[1][0],
-                       SC[Isc].AC.MOI[1][1], SC[Isc].AC.MOI[1][2],
-                       SC[Isc].AC.MOI[2][0], SC[Isc].AC.MOI[2][1],
-                       SC[Isc].AC.MOI[2][2]);
+                       Isc, SC[Isc].AC.MOI.mat[0][0], SC[Isc].AC.MOI.mat[0][1],
+                       SC[Isc].AC.MOI.mat[0][2], SC[Isc].AC.MOI.mat[1][0],
+                       SC[Isc].AC.MOI.mat[1][1], SC[Isc].AC.MOI.mat[1][2],
+                       SC[Isc].AC.MOI.mat[2][0], SC[Isc].AC.MOI.mat[2][1],
+                       SC[Isc].AC.MOI.mat[2][2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -807,8 +813,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                   sprintf(line,
                           "SC[%ld].AC.B[%ld].cm = %18.12le %18.12le %18.12le\n",
-                          Isc, i, SC[Isc].AC.B[i].cm[0], SC[Isc].AC.B[i].cm[1],
-                          SC[Isc].AC.B[i].cm[2]);
+                          Isc, i, SC[Isc].AC.B[i].cm.v[0],
+                          SC[Isc].AC.B[i].cm.v[1], SC[Isc].AC.B[i].cm.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -821,11 +827,15 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                       line,
                       "SC[%ld].AC.B[%ld].MOI = %18.12le %18.12le %18.12le "
                       "%18.12le %18.12le %18.12le %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.B[i].MOI[0][0],
-                      SC[Isc].AC.B[i].MOI[0][1], SC[Isc].AC.B[i].MOI[0][2],
-                      SC[Isc].AC.B[i].MOI[1][0], SC[Isc].AC.B[i].MOI[1][1],
-                      SC[Isc].AC.B[i].MOI[1][2], SC[Isc].AC.B[i].MOI[2][0],
-                      SC[Isc].AC.B[i].MOI[2][1], SC[Isc].AC.B[i].MOI[2][2]);
+                      Isc, i, SC[Isc].AC.B[i].MOI.mat[0][0],
+                      SC[Isc].AC.B[i].MOI.mat[0][1],
+                      SC[Isc].AC.B[i].MOI.mat[0][2],
+                      SC[Isc].AC.B[i].MOI.mat[1][0],
+                      SC[Isc].AC.B[i].MOI.mat[1][1],
+                      SC[Isc].AC.B[i].MOI.mat[1][2],
+                      SC[Isc].AC.B[i].MOI.mat[2][0],
+                      SC[Isc].AC.B[i].MOI.mat[2][1],
+                      SC[Isc].AC.B[i].MOI.mat[2][2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -890,11 +900,15 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                       line,
                       "SC[%ld].AC.G[%ld].CGiBi = %18.12le %18.12le %18.12le "
                       "%18.12le %18.12le %18.12le %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.G[i].CGiBi[0][0],
-                      SC[Isc].AC.G[i].CGiBi[0][1], SC[Isc].AC.G[i].CGiBi[0][2],
-                      SC[Isc].AC.G[i].CGiBi[1][0], SC[Isc].AC.G[i].CGiBi[1][1],
-                      SC[Isc].AC.G[i].CGiBi[1][2], SC[Isc].AC.G[i].CGiBi[2][0],
-                      SC[Isc].AC.G[i].CGiBi[2][1], SC[Isc].AC.G[i].CGiBi[2][2]);
+                      Isc, i, SC[Isc].AC.G[i].CGiBi.mat[0][0],
+                      SC[Isc].AC.G[i].CGiBi.mat[0][1],
+                      SC[Isc].AC.G[i].CGiBi.mat[0][2],
+                      SC[Isc].AC.G[i].CGiBi.mat[1][0],
+                      SC[Isc].AC.G[i].CGiBi.mat[1][1],
+                      SC[Isc].AC.G[i].CGiBi.mat[1][2],
+                      SC[Isc].AC.G[i].CGiBi.mat[2][0],
+                      SC[Isc].AC.G[i].CGiBi.mat[2][1],
+                      SC[Isc].AC.G[i].CGiBi.mat[2][2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -907,11 +921,15 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                       line,
                       "SC[%ld].AC.G[%ld].CBoGo = %18.12le %18.12le %18.12le "
                       "%18.12le %18.12le %18.12le %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.G[i].CBoGo[0][0],
-                      SC[Isc].AC.G[i].CBoGo[0][1], SC[Isc].AC.G[i].CBoGo[0][2],
-                      SC[Isc].AC.G[i].CBoGo[1][0], SC[Isc].AC.G[i].CBoGo[1][1],
-                      SC[Isc].AC.G[i].CBoGo[1][2], SC[Isc].AC.G[i].CBoGo[2][0],
-                      SC[Isc].AC.G[i].CBoGo[2][1], SC[Isc].AC.G[i].CBoGo[2][2]);
+                      Isc, i, SC[Isc].AC.G[i].CBoGo.mat[0][0],
+                      SC[Isc].AC.G[i].CBoGo.mat[0][1],
+                      SC[Isc].AC.G[i].CBoGo.mat[0][2],
+                      SC[Isc].AC.G[i].CBoGo.mat[1][0],
+                      SC[Isc].AC.G[i].CBoGo.mat[1][1],
+                      SC[Isc].AC.G[i].CBoGo.mat[1][2],
+                      SC[Isc].AC.G[i].CBoGo.mat[2][0],
+                      SC[Isc].AC.G[i].CBoGo.mat[2][1],
+                      SC[Isc].AC.G[i].CBoGo.mat[2][2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -923,9 +941,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.G[%ld].AngGain = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.G[i].AngGain[0],
-                          SC[Isc].AC.G[i].AngGain[1],
-                          SC[Isc].AC.G[i].AngGain[2]);
+                          Isc, i, SC[Isc].AC.G[i].AngGain.v[0],
+                          SC[Isc].AC.G[i].AngGain.v[1],
+                          SC[Isc].AC.G[i].AngGain.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -937,9 +955,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.G[%ld].AngRateGain = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.G[i].AngRateGain[0],
-                          SC[Isc].AC.G[i].AngRateGain[1],
-                          SC[Isc].AC.G[i].AngRateGain[2]);
+                          Isc, i, SC[Isc].AC.G[i].AngRateGain.v[0],
+                          SC[Isc].AC.G[i].AngRateGain.v[1],
+                          SC[Isc].AC.G[i].AngRateGain.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -951,9 +969,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.G[%ld].PosGain = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.G[i].PosGain[0],
-                          SC[Isc].AC.G[i].PosGain[1],
-                          SC[Isc].AC.G[i].PosGain[2]);
+                          Isc, i, SC[Isc].AC.G[i].PosGain.v[0],
+                          SC[Isc].AC.G[i].PosGain.v[1],
+                          SC[Isc].AC.G[i].PosGain.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -965,9 +983,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.G[%ld].PosRateGain = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.G[i].PosRateGain[0],
-                          SC[Isc].AC.G[i].PosRateGain[1],
-                          SC[Isc].AC.G[i].PosRateGain[2]);
+                          Isc, i, SC[Isc].AC.G[i].PosRateGain.v[0],
+                          SC[Isc].AC.G[i].PosRateGain.v[1],
+                          SC[Isc].AC.G[i].PosRateGain.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -979,9 +997,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.G[%ld].MaxAngRate = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.G[i].MaxAngRate[0],
-                          SC[Isc].AC.G[i].MaxAngRate[1],
-                          SC[Isc].AC.G[i].MaxAngRate[2]);
+                          Isc, i, SC[Isc].AC.G[i].MaxAngRate.v[0],
+                          SC[Isc].AC.G[i].MaxAngRate.v[1],
+                          SC[Isc].AC.G[i].MaxAngRate.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -993,9 +1011,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.G[%ld].MaxPosRate = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.G[i].MaxPosRate[0],
-                          SC[Isc].AC.G[i].MaxPosRate[1],
-                          SC[Isc].AC.G[i].MaxPosRate[2]);
+                          Isc, i, SC[Isc].AC.G[i].MaxPosRate.v[0],
+                          SC[Isc].AC.G[i].MaxPosRate.v[1],
+                          SC[Isc].AC.G[i].MaxPosRate.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1007,8 +1025,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.G[%ld].MaxTrq = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.G[i].MaxTrq[0],
-                      SC[Isc].AC.G[i].MaxTrq[1], SC[Isc].AC.G[i].MaxTrq[2]);
+                      Isc, i, SC[Isc].AC.G[i].MaxTrq.v[0],
+                      SC[Isc].AC.G[i].MaxTrq.v[1], SC[Isc].AC.G[i].MaxTrq.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1020,8 +1038,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.G[%ld].MaxFrc = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.G[i].MaxFrc[0],
-                      SC[Isc].AC.G[i].MaxFrc[1], SC[Isc].AC.G[i].MaxFrc[2]);
+                      Isc, i, SC[Isc].AC.G[i].MaxFrc.v[0],
+                      SC[Isc].AC.G[i].MaxFrc.v[1], SC[Isc].AC.G[i].MaxFrc.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1035,9 +1053,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.Gyro[%ld].Axis = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.Gyro[i].Axis[0],
-                          SC[Isc].AC.Gyro[i].Axis[1],
-                          SC[Isc].AC.Gyro[i].Axis[2]);
+                          Isc, i, SC[Isc].AC.Gyro[i].Axis.v[0],
+                          SC[Isc].AC.Gyro[i].Axis.v[1],
+                          SC[Isc].AC.Gyro[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1051,8 +1069,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.MAG[%ld].Axis = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.MAG[i].Axis[0],
-                      SC[Isc].AC.MAG[i].Axis[1], SC[Isc].AC.MAG[i].Axis[2]);
+                      Isc, i, SC[Isc].AC.MAG[i].Axis.v[0],
+                      SC[Isc].AC.MAG[i].Axis.v[1], SC[Isc].AC.MAG[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1076,8 +1094,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.CSS[%ld].Axis = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.CSS[i].Axis[0],
-                      SC[Isc].AC.CSS[i].Axis[1], SC[Isc].AC.CSS[i].Axis[2]);
+                      Isc, i, SC[Isc].AC.CSS[i].Axis.v[0],
+                      SC[Isc].AC.CSS[i].Axis.v[1], SC[Isc].AC.CSS[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1101,9 +1119,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.FSS[%ld].qb = %18.12le %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.FSS[i].qb[0],
-                          SC[Isc].AC.FSS[i].qb[1], SC[Isc].AC.FSS[i].qb[2],
-                          SC[Isc].AC.FSS[i].qb[3]);
+                          Isc, i, SC[Isc].AC.FSS[i].qb.q[0],
+                          SC[Isc].AC.FSS[i].qb.q[1], SC[Isc].AC.FSS[i].qb.q[2],
+                          SC[Isc].AC.FSS[i].qb.q[3]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1116,11 +1134,15 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                       line,
                       "SC[%ld].AC.FSS[%ld].CB = %18.12le %18.12le %18.12le "
                       "%18.12le %18.12le %18.12le %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.FSS[i].CB[0][0],
-                      SC[Isc].AC.FSS[i].CB[0][1], SC[Isc].AC.FSS[i].CB[0][2],
-                      SC[Isc].AC.FSS[i].CB[1][0], SC[Isc].AC.FSS[i].CB[1][1],
-                      SC[Isc].AC.FSS[i].CB[1][2], SC[Isc].AC.FSS[i].CB[2][0],
-                      SC[Isc].AC.FSS[i].CB[2][1], SC[Isc].AC.FSS[i].CB[2][2]);
+                      Isc, i, SC[Isc].AC.FSS[i].CB.mat[0][0],
+                      SC[Isc].AC.FSS[i].CB.mat[0][1],
+                      SC[Isc].AC.FSS[i].CB.mat[0][2],
+                      SC[Isc].AC.FSS[i].CB.mat[1][0],
+                      SC[Isc].AC.FSS[i].CB.mat[1][1],
+                      SC[Isc].AC.FSS[i].CB.mat[1][2],
+                      SC[Isc].AC.FSS[i].CB.mat[2][0],
+                      SC[Isc].AC.FSS[i].CB.mat[2][1],
+                      SC[Isc].AC.FSS[i].CB.mat[2][2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1134,9 +1156,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.ST[%ld].qb = %18.12le %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.ST[i].qb[0],
-                          SC[Isc].AC.ST[i].qb[1], SC[Isc].AC.ST[i].qb[2],
-                          SC[Isc].AC.ST[i].qb[3]);
+                          Isc, i, SC[Isc].AC.ST[i].qb.q[0],
+                          SC[Isc].AC.ST[i].qb.q[1], SC[Isc].AC.ST[i].qb.q[2],
+                          SC[Isc].AC.ST[i].qb.q[3]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1149,11 +1171,15 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                       line,
                       "SC[%ld].AC.ST[%ld].CB = %18.12le %18.12le %18.12le "
                       "%18.12le %18.12le %18.12le %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.ST[i].CB[0][0],
-                      SC[Isc].AC.ST[i].CB[0][1], SC[Isc].AC.ST[i].CB[0][2],
-                      SC[Isc].AC.ST[i].CB[1][0], SC[Isc].AC.ST[i].CB[1][1],
-                      SC[Isc].AC.ST[i].CB[1][2], SC[Isc].AC.ST[i].CB[2][0],
-                      SC[Isc].AC.ST[i].CB[2][1], SC[Isc].AC.ST[i].CB[2][2]);
+                      Isc, i, SC[Isc].AC.ST[i].CB.mat[0][0],
+                      SC[Isc].AC.ST[i].CB.mat[0][1],
+                      SC[Isc].AC.ST[i].CB.mat[0][2],
+                      SC[Isc].AC.ST[i].CB.mat[1][0],
+                      SC[Isc].AC.ST[i].CB.mat[1][1],
+                      SC[Isc].AC.ST[i].CB.mat[1][2],
+                      SC[Isc].AC.ST[i].CB.mat[2][0],
+                      SC[Isc].AC.ST[i].CB.mat[2][1],
+                      SC[Isc].AC.ST[i].CB.mat[2][2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1167,9 +1193,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.Accel[%ld].PosB = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.Accel[i].PosB[0],
-                          SC[Isc].AC.Accel[i].PosB[1],
-                          SC[Isc].AC.Accel[i].PosB[2]);
+                          Isc, i, SC[Isc].AC.Accel[i].PosB.v[0],
+                          SC[Isc].AC.Accel[i].PosB.v[1],
+                          SC[Isc].AC.Accel[i].PosB.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1181,9 +1207,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.Accel[%ld].Axis = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.Accel[i].Axis[0],
-                          SC[Isc].AC.Accel[i].Axis[1],
-                          SC[Isc].AC.Accel[i].Axis[2]);
+                          Isc, i, SC[Isc].AC.Accel[i].Axis.v[0],
+                          SC[Isc].AC.Accel[i].Axis.v[1],
+                          SC[Isc].AC.Accel[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1207,8 +1233,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.Whl[%ld].Axis = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.Whl[i].Axis[0],
-                      SC[Isc].AC.Whl[i].Axis[1], SC[Isc].AC.Whl[i].Axis[2]);
+                      Isc, i, SC[Isc].AC.Whl[i].Axis.v[0],
+                      SC[Isc].AC.Whl[i].Axis.v[1], SC[Isc].AC.Whl[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1220,9 +1246,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.Whl[%ld].DistVec = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.Whl[i].DistVec[0],
-                          SC[Isc].AC.Whl[i].DistVec[1],
-                          SC[Isc].AC.Whl[i].DistVec[2]);
+                          Isc, i, SC[Isc].AC.Whl[i].DistVec.v[0],
+                          SC[Isc].AC.Whl[i].DistVec.v[1],
+                          SC[Isc].AC.Whl[i].DistVec.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1266,8 +1292,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.MTB[%ld].Axis = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.MTB[i].Axis[0],
-                      SC[Isc].AC.MTB[i].Axis[1], SC[Isc].AC.MTB[i].Axis[2]);
+                      Isc, i, SC[Isc].AC.MTB[i].Axis.v[0],
+                      SC[Isc].AC.MTB[i].Axis.v[1], SC[Isc].AC.MTB[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1279,9 +1305,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(line,
                           "SC[%ld].AC.MTB[%ld].DistVec = %18.12le %18.12le "
                           "%18.12le\n",
-                          Isc, i, SC[Isc].AC.MTB[i].DistVec[0],
-                          SC[Isc].AC.MTB[i].DistVec[1],
-                          SC[Isc].AC.MTB[i].DistVec[2]);
+                          Isc, i, SC[Isc].AC.MTB[i].DistVec.v[0],
+                          SC[Isc].AC.MTB[i].DistVec.v[1],
+                          SC[Isc].AC.MTB[i].DistVec.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1315,8 +1341,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.Thr[%ld].PosB = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.Thr[i].PosB[0],
-                      SC[Isc].AC.Thr[i].PosB[1], SC[Isc].AC.Thr[i].PosB[2]);
+                      Isc, i, SC[Isc].AC.Thr[i].PosB.v[0],
+                      SC[Isc].AC.Thr[i].PosB.v[1], SC[Isc].AC.Thr[i].PosB.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1328,8 +1354,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.Thr[%ld].Axis = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.Thr[i].Axis[0],
-                      SC[Isc].AC.Thr[i].Axis[1], SC[Isc].AC.Thr[i].Axis[2]);
+                      Isc, i, SC[Isc].AC.Thr[i].Axis.v[0],
+                      SC[Isc].AC.Thr[i].Axis.v[1], SC[Isc].AC.Thr[i].Axis.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1341,8 +1367,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                   sprintf(
                       line,
                       "SC[%ld].AC.Thr[%ld].rxA = %18.12le %18.12le %18.12le\n",
-                      Isc, i, SC[Isc].AC.Thr[i].rxA[0],
-                      SC[Isc].AC.Thr[i].rxA[1], SC[Isc].AC.Thr[i].rxA[2]);
+                      Isc, i, SC[Isc].AC.Thr[i].rxA.v[0],
+                      SC[Isc].AC.Thr[i].rxA.v[1], SC[Isc].AC.Thr[i].rxA.v[2]);
                   if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                      LineLen = strlen(line);
                      memcpy(&Msg[MsgLen], line, LineLen);
@@ -1414,8 +1440,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.AdHocCtrl.Kr = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.AdHocCtrl.Kr[0],
-                       SC[Isc].AC.AdHocCtrl.Kr[1], SC[Isc].AC.AdHocCtrl.Kr[2]);
+                       Isc, SC[Isc].AC.AdHocCtrl.Kr.v[0],
+                       SC[Isc].AC.AdHocCtrl.Kr.v[1],
+                       SC[Isc].AC.AdHocCtrl.Kr.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1426,8 +1453,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.AdHocCtrl.Kp = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.AdHocCtrl.Kp[0],
-                       SC[Isc].AC.AdHocCtrl.Kp[1], SC[Isc].AC.AdHocCtrl.Kp[2]);
+                       Isc, SC[Isc].AC.AdHocCtrl.Kp.v[0],
+                       SC[Isc].AC.AdHocCtrl.Kp.v[1],
+                       SC[Isc].AC.AdHocCtrl.Kp.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1489,9 +1517,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.ThreeAxisCtrl.Kr = %18.12le %18.12le %18.12le\n",
-                   Isc, SC[Isc].AC.ThreeAxisCtrl.Kr[0],
-                   SC[Isc].AC.ThreeAxisCtrl.Kr[1],
-                   SC[Isc].AC.ThreeAxisCtrl.Kr[2]);
+                   Isc, SC[Isc].AC.ThreeAxisCtrl.Kr.v[0],
+                   SC[Isc].AC.ThreeAxisCtrl.Kr.v[1],
+                   SC[Isc].AC.ThreeAxisCtrl.Kr.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1503,9 +1531,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.ThreeAxisCtrl.Kp = %18.12le %18.12le %18.12le\n",
-                   Isc, SC[Isc].AC.ThreeAxisCtrl.Kp[0],
-                   SC[Isc].AC.ThreeAxisCtrl.Kp[1],
-                   SC[Isc].AC.ThreeAxisCtrl.Kp[2]);
+                   Isc, SC[Isc].AC.ThreeAxisCtrl.Kp.v[0],
+                   SC[Isc].AC.ThreeAxisCtrl.Kp.v[1],
+                   SC[Isc].AC.ThreeAxisCtrl.Kp.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1526,8 +1554,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.IssCtrl.Kr = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.IssCtrl.Kr[0], SC[Isc].AC.IssCtrl.Kr[1],
-                       SC[Isc].AC.IssCtrl.Kr[2]);
+                       Isc, SC[Isc].AC.IssCtrl.Kr.v[0],
+                       SC[Isc].AC.IssCtrl.Kr.v[1], SC[Isc].AC.IssCtrl.Kr.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1538,8 +1566,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.IssCtrl.Kp = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.IssCtrl.Kp[0], SC[Isc].AC.IssCtrl.Kp[1],
-                       SC[Isc].AC.IssCtrl.Kp[2]);
+                       Isc, SC[Isc].AC.IssCtrl.Kp.v[0],
+                       SC[Isc].AC.IssCtrl.Kp.v[1], SC[Isc].AC.IssCtrl.Kp.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1560,8 +1588,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.CmgCtrl.Kr = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.CmgCtrl.Kr[0], SC[Isc].AC.CmgCtrl.Kr[1],
-                       SC[Isc].AC.CmgCtrl.Kr[2]);
+                       Isc, SC[Isc].AC.CmgCtrl.Kr.v[0],
+                       SC[Isc].AC.CmgCtrl.Kr.v[1], SC[Isc].AC.CmgCtrl.Kr.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1572,8 +1600,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.CmgCtrl.Kp = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.CmgCtrl.Kp[0], SC[Isc].AC.CmgCtrl.Kp[1],
-                       SC[Isc].AC.CmgCtrl.Kp[2]);
+                       Isc, SC[Isc].AC.CmgCtrl.Kp.v[0],
+                       SC[Isc].AC.CmgCtrl.Kp.v[1], SC[Isc].AC.CmgCtrl.Kp.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1584,8 +1612,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.ThrCtrl.Kw = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.ThrCtrl.Kw[0], SC[Isc].AC.ThrCtrl.Kw[1],
-                       SC[Isc].AC.ThrCtrl.Kw[2]);
+                       Isc, SC[Isc].AC.ThrCtrl.Kw.v[0],
+                       SC[Isc].AC.ThrCtrl.Kw.v[1], SC[Isc].AC.ThrCtrl.Kw.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1596,8 +1624,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.ThrCtrl.Kth = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.ThrCtrl.Kth[0],
-                       SC[Isc].AC.ThrCtrl.Kth[1], SC[Isc].AC.ThrCtrl.Kth[2]);
+                       Isc, SC[Isc].AC.ThrCtrl.Kth.v[0],
+                       SC[Isc].AC.ThrCtrl.Kth.v[1],
+                       SC[Isc].AC.ThrCtrl.Kth.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1628,8 +1657,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.CfsCtrl.Kr = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.CfsCtrl.Kr[0], SC[Isc].AC.CfsCtrl.Kr[1],
-                       SC[Isc].AC.CfsCtrl.Kr[2]);
+                       Isc, SC[Isc].AC.CfsCtrl.Kr.v[0],
+                       SC[Isc].AC.CfsCtrl.Kr.v[1], SC[Isc].AC.CfsCtrl.Kr.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1640,8 +1669,8 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
 
                sprintf(line,
                        "SC[%ld].AC.CfsCtrl.Kp = %18.12le %18.12le %18.12le\n",
-                       Isc, SC[Isc].AC.CfsCtrl.Kp[0], SC[Isc].AC.CfsCtrl.Kp[1],
-                       SC[Isc].AC.CfsCtrl.Kp[2]);
+                       Isc, SC[Isc].AC.CfsCtrl.Kp.v[0],
+                       SC[Isc].AC.CfsCtrl.Kp.v[1], SC[Isc].AC.CfsCtrl.Kp.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1663,9 +1692,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.ThrSteerCtrl.Kr = %18.12le %18.12le %18.12le\n",
-                   Isc, SC[Isc].AC.ThrSteerCtrl.Kr[0],
-                   SC[Isc].AC.ThrSteerCtrl.Kr[1],
-                   SC[Isc].AC.ThrSteerCtrl.Kr[2]);
+                   Isc, SC[Isc].AC.ThrSteerCtrl.Kr.v[0],
+                   SC[Isc].AC.ThrSteerCtrl.Kr.v[1],
+                   SC[Isc].AC.ThrSteerCtrl.Kr.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);
@@ -1677,9 +1706,9 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
                sprintf(
                    line,
                    "SC[%ld].AC.ThrSteerCtrl.Kp = %18.12le %18.12le %18.12le\n",
-                   Isc, SC[Isc].AC.ThrSteerCtrl.Kp[0],
-                   SC[Isc].AC.ThrSteerCtrl.Kp[1],
-                   SC[Isc].AC.ThrSteerCtrl.Kp[2]);
+                   Isc, SC[Isc].AC.ThrSteerCtrl.Kp.v[0],
+                   SC[Isc].AC.ThrSteerCtrl.Kp.v[1],
+                   SC[Isc].AC.ThrSteerCtrl.Kp.v[2]);
                if (!strncmp(line, Prefix[Ipfx], PfxLen)) {
                   LineLen = strlen(line);
                   memcpy(&Msg[MsgLen], line, LineLen);

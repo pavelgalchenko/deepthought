@@ -33,7 +33,7 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
    double Val;
    long Iorb, i;
    char DvFrame;
-   double Vec[3], DVN[3];
+   vec3 Vec, DVN;
    struct OrbitType *O;
    struct SCType *S;
 
@@ -68,19 +68,19 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
    if (sscanf(CmdLine,
               "%lf Impart Impulsive Delta-V of [%lf %lf %lf] m/s in Frame %c "
               "to Orb[%ld]",
-              CmdTime, &Vec[0], &Vec[1], &Vec[2], &DvFrame, &Iorb) == 6) {
+              CmdTime, &Vec.x, &Vec.y, &Vec.z, &DvFrame, &Iorb) == 6) {
       NewCmdProcessed = TRUE;
       O               = &Orb[Iorb];
       if (DvFrame == 'L') {
-         MTxV(O->CLN, Vec, DVN);
-         O->VelN[0] += DVN[0];
-         O->VelN[1] += DVN[1];
-         O->VelN[2] += DVN[2];
+         DVN        = MTxV(O->CLN, Vec);
+         O->VelN.x += DVN.x;
+         O->VelN.y += DVN.y;
+         O->VelN.z += DVN.z;
       }
       else if (DvFrame == 'N') {
-         O->VelN[0] += Vec[0];
-         O->VelN[1] += Vec[1];
-         O->VelN[2] += Vec[2];
+         O->VelN.x += Vec.x;
+         O->VelN.y += Vec.y;
+         O->VelN.z += Vec.z;
       }
       else {
          fprintf(stderr, "Bogus DvFrame %c in SimCmdInterpreter\n", DvFrame);

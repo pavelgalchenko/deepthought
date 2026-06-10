@@ -71,27 +71,30 @@ struct KalmanFilterType {
 };
 
 void FindPDGains(double I, double w, double z, double *Kr, double *Kp);
-double Limit(double x, double min, double max);
 double SpinGainCostFunction(double p[2], double CostParm[2]);
 void FindSpinnerGains(double J, double It, double Tc, double OrbPer,
                       double alpha, double *SpinRate, double *Knute,
                       double *Kprec);
-void TRIAD(double Va[3], double Wa[3], double Vb[3], double Wb[3],
-           double CBA[3][3]);
-void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4]);
-void FilterQuest(long n, double *Weight, double **Ref, double **Meas, double dt,
-                 double memory, double wbn[3], double qmr[4]);
-void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
-                         double tvi[3], double bvo[3], double GimAngCmd[3]);
-void CollisionAvoidanceLaw(double x[3], double v[3], double xg[3], double xa[3],
-                           double Ra, double vmax, double amax, double wc,
-                           double zc, double a[3]);
-double BangBangSettle(double x, double v, double w0, double amax, double vmax);
-double RampCoastGlide(double x, double v, double w0, double amax, double vmax);
-double RateControl(double v, double amax, double w0);
-void VectorRampCoastGlide(double Xvec[3], double Vvec[3], double w0,
-                          double amax, double vmax, double Avec[3]);
-double SolarBeta(double svn[3], double psn[3], double vsn[3]);
+__attribute__((const)) mat3x3 TRIAD(vec3 Va, vec3 Wa, vec3 Vb, vec3 Wb);
+__attribute__((pure)) quat Quest(long n, double *Weight, vec3 *Ref, vec3 *Meas);
+quat FilterQuest(long n, double *Weight, vec3 *Ref, vec3 *Meas, double dt,
+                 double memory, vec3 wbn);
+__attribute__((const)) vec3 PointGimbalToTarget(long Seq, mat3x3 CGiBi,
+                                                mat3x3 CBoGo, vec3 tvi,
+                                                vec3 bvo);
+__attribute__((const)) vec3 CollisionAvoidanceLaw(vec3 x, vec3 v, vec3 xg,
+                                                  vec3 xa, double Ra,
+                                                  double vmax, double amax,
+                                                  double wc, double zc);
+__attribute__((const)) double BangBangSettle(double x, double v, double w0,
+                                             double amax, double vmax);
+__attribute__((const)) double RampCoastGlide(double x, double v, double w0,
+                                             double amax, double vmax);
+__attribute__((const)) double RateControl(double v, double amax, double w0);
+__attribute__((const)) vec3 VectorRampCoastGlide(vec3 Xvec, vec3 Vvec,
+                                                 double w0, double amax,
+                                                 double vmax);
+__attribute__((const)) double SolarBeta(vec3 svn, vec3 psn, vec3 vsn);
 double ThrusterSelection(double **A, double *f, double *t, double tmax, long m,
                          long n, long OffPulse);
 void StateEstimator(double **PHI, double **GAMMA, double **H, double **L,
@@ -106,8 +109,8 @@ struct KalmanFilterType *CreateKalmanFilter(long Nx, long Nu, long Nw, long Nm);
 void PopulateKalmanFilterWorkspace(struct KalmanFilterType *KF);
 void KalmanFilterMeasUpdate(struct KalmanFilterType *KF, struct KFMeasType *M);
 void KalmanFilterTimeUpdate(struct KalmanFilterType *KF);
-double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
-                    double h[4], double AngRateCmd[4]);
+double CMGLaw4x1DOF(vec3 Tcmd, vec3 Axis[4], vec3 Gim[4], quat h,
+                    quat *AngRateCmd);
 
 /*
 ** #ifdef __cplusplus

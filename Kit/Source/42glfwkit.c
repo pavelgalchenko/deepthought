@@ -545,7 +545,8 @@ void OrreryMouseButtonHandler(GLFWwindow *Window, int Button, int Action,
 {
    struct SpotType *S;
    long i, j, Pick;
-   double rwn[3], rwh[3], rw[3], xw, yw, dx, dy, d, LPrh[3];
+   vec3 rwn, rwh, rw, LPrh;
+   double xw, yw, dx, dy, d;
    long Iw, Is, Ip;
    struct WorldType *W;
    struct LagrangeSystemType *LS;

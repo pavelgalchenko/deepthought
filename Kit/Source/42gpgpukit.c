@@ -132,9 +132,9 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
    struct BodyType *B;
    struct WorldType *W;
    struct AlbedoFBOType *A;
-   double CEB[3][3], CEN[3][3], CWE[3][3], PosEyeW[3], WorldVecN[3], WorldDist;
-   double UnitWorldVecE[3], CosWorldAng;
-   double SunVecE[3];
+   mat3x3 CEB, CEN, CWE;
+   vec3 PosEyeW, WorldVecN, UnitWorldVecE, SunVecE;
+   double WorldDist, CosWorldAng;
    float TexWidth;
    unsigned int AlbedoCubeTag;
    GLint UniLoc;
@@ -144,16 +144,18 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
 
    /* E is "eye" frame, F is "face" frame */
    /* Faces are faces of a cube centered on Eye */
-   double CEF[5][3][3] = {/* Ceiling */
-                          EYE3_MAT,
-                          /* North Wall */
-                          {{1.0, 0.0, 0.0}, {0.0, 0.0, -1.0}, {0.0, 1.0, 0.0}},
-                          /* South Wall */
-                          {{1.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, -1.0, 0.0}},
-                          /* East Wall */
-                          {{0.0, 0.0, -1.0}, {0.0, 1.0, 0.0}, {1.0, 0.0, 0.0}},
-                          /* West Wall */
-                          {{0.0, 0.0, 1.0}, {0.0, 1.0, 0.0}, {-1.0, 0.0, 0.0}}};
+   mat3x3 CEF[5] = {
+       /* Ceiling */
+       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}}),
+       /* North Wall */
+       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_NZAXIS, VEC3_PYAXIS}}),
+       /* South Wall */
+       ((mat3x3){.rows = {VEC3_PXAXIS, VEC3_PZAXIS, VEC3_NYAXIS}}),
+       /* East Wall */
+       ((mat3x3){.rows = {VEC3_NZAXIS, VEC3_PYAXIS, VEC3_PXAXIS}}),
+       /* West Wall */
+       ((mat3x3){.rows = {VEC3_PZAXIS, VEC3_PYAXIS, VEC3_NXAXIS}}),
+   };
 
    if (First) {
       First = 0;
@@ -167,17 +169,17 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
 
    /* .. Setup geometry for Shader */
    for (i = 0; i < 3; i++)
-      CEB[2][i] = -CSS->Axis[i];
-   PerpBasis(CEB[2], CEB[0], CEB[1]);
-   MxM(CEB, B->CN, CEN);
-   MxMT(W->CWN, CEN, CWE);
-   MxV(W->CWN, S->PosN, PosEyeW);
+      CEB.mat[2][i] = -CSS->Axis.v[i];
+   CEB.rows[1] = PerpBasis(CEB.rows[2], &CEB.rows[0]);
+   CEN         = MxM(CEB, B->CN);
+   CWE         = MxMT(W->CWN, CEN);
+   PosEyeW     = MxV(W->CWN, S->PosN);
    for (i = 0; i < 3; i++)
-      WorldVecN[i] = -S->PosN[i];
-   WorldDist = UNITV(WorldVecN);
-   MxV(CEN, WorldVecN, UnitWorldVecE);
-   MxV(CEN, S->svn, SunVecE);
-   CosWorldAng = sqrt(1.0 - W->rad * W->rad / (WorldDist * WorldDist));
+      WorldVecN.v[i] = -S->PosN.v[i];
+   WorldDist     = UNITV(&WorldVecN);
+   UnitWorldVecE = MxV(CEN, WorldVecN);
+   SunVecE       = MxV(CEN, S->svn);
+   CosWorldAng   = sqrt(1.0 - W->rad * W->rad / (WorldDist * WorldDist));
 
    if (Orb[S->RefOrb].World == EARTH)
       AlbedoCubeTag = EarthAlbedoCubeTag;
@@ -202,10 +204,10 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
    glBindTexture(GL_TEXTURE_CUBE_MAP, W->CloudGlossCubeTag);
 
    UniLoc = glGetUniformLocation(AlbedoShaderProgram, "UnitWorldVecE");
-   glUniform3f(UniLoc, UnitWorldVecE[0], UnitWorldVecE[1], UnitWorldVecE[2]);
+   glUniform3f(UniLoc, UnitWorldVecE.x, UnitWorldVecE.y, UnitWorldVecE.z);
 
    UniLoc = glGetUniformLocation(AlbedoShaderProgram, "SunVecE");
-   glUniform3f(UniLoc, SunVecE[0], SunVecE[1], SunVecE[2]);
+   glUniform3f(UniLoc, SunVecE.x, SunVecE.y, SunVecE.z);
 
    UniLoc = glGetUniformLocation(AlbedoShaderProgram, "CosWorldAng");
    glUniform1f(UniLoc, CosWorldAng);
@@ -217,12 +219,12 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
    glUniform1f(UniLoc, W->rad);
 
    UniLoc = glGetUniformLocation(AlbedoShaderProgram, "PosEyeW");
-   glUniform3f(UniLoc, PosEyeW[0], PosEyeW[1], PosEyeW[2]);
+   glUniform3f(UniLoc, PosEyeW.x, PosEyeW.y, PosEyeW.z);
 
    UniLoc = glGetUniformLocation(AlbedoShaderProgram, "CWE");
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++)
-         CWEarray[3 * i + j] = CWE[i][j];
+         CWEarray[3 * i + j] = CWE.mat[i][j];
    }
    glUniformMatrix3fv(UniLoc, 1, 1, CWEarray);
 
@@ -242,7 +244,7 @@ void FindCssAlbedo(struct SCType *S, struct CssType *CSS)
       UniLoc = glGetUniformLocation(AlbedoShaderProgram, "CEF");
       for (i = 0; i < 3; i++) {
          for (j = 0; j < 3; j++)
-            CEFarray[3 * i + j] = CEF[If][i][j];
+            CEFarray[3 * i + j] = CEF[If].mat[i][j];
       }
       glUniformMatrix3fv(UniLoc, 1, 1, CEFarray);
 

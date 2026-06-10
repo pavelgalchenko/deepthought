@@ -137,11 +137,11 @@ EXTERN struct WorldType World[NWORLD];
 EXTERN struct LagrangeSystemType LagSys[NLAGSYS];
 
 /* Galactic Coordinate Frame */
-EXTERN double CGJ[3][3];
-EXTERN double CGH[3][3];
+EXTERN mat3x3 CGJ;
+EXTERN mat3x3 CGH;
 
 /* J2000 to Heliocentric Ecliptic */
-EXTERN double qjh[4];
+EXTERN quat qjh;
 
 /* SC structure manages attitude and translation wrt Reference Orbit */
 EXTERN struct SCType *SC;
@@ -203,17 +203,17 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
 
 void GravPertForceRK4(struct WorldType *const worlds,
                       struct OrbitType *const orbs, struct SCType *S,
-                      double u[6], double FrcN[3], double RKFdt);
-void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
-                        double Frc[3]);
-void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *const worlds,
-                  double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
-                  double trgtCNH[3][3]);
+                      double u[6], vec3 *FrcN, double RKFdt);
+__attribute__((const)) vec3 ThirdBodyGravForce(vec3 p, vec3 s, double mu,
+                                               double mass);
+void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
+                  vec3 *trgtPosN, vec3 *trgtPosH, double *trgtPriMerAng,
+                  mat3x3 *trgtCNH);
 long SimStep_New(void);
-long SimStep_Old(void) __attribute__((deprecated));
+__attribute__((deprecated)) long SimStep_Old(void);
 void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);
-ephemType GetEphemType(const char *s) __attribute__((pure));
+__attribute__((pure)) ephemType GetEphemType(const char *s);
 void WorldEphemerides(JDType jd_tdb_j2000, JDType jd_tt_j2000, ephemType ephem,
                       struct WorldType *const worlds, struct RegionType *rgn,
                       struct LagrangeSystemType *lagsys);
@@ -259,10 +259,10 @@ void Cleanup(void);
 void FindInterBodyDCMs(struct SCType *S);
 void FindPathVectors(struct SCType *S);
 void FindTotalAngMom(struct SCType *S);
-double FindTotalKineticEnergy(struct OrbitType *orbs, struct SCType *S)
-    __attribute__((pure));
+__attribute__((pure)) double FindTotalKineticEnergy(struct OrbitType *orbs,
+                                                    struct SCType *S);
 void UpdateScBoundingBox(struct SCType *S);
-void FindUnshadedAreas(struct SCType *S, double DirVecN[3]);
+void FindUnshadedAreas(struct SCType *S, vec3 DirVecN);
 void RadBelt(float RadiusKm, float MagLatDeg, int NumEnergies,
              float *ElectronEnergy, float *ProtonEnergy, double **Flux);
 void InitAlbedo(void);
@@ -272,12 +272,11 @@ void JointFrcTrq(struct JointType *G, struct SCType *S);
 void InitActuatedJoint(struct JointType *G, struct SCType *S);
 void WheelJitter(struct WhlType *W, struct SCType *S);
 void ShakerJitter(struct ShakerType *Sh, struct SCType *S);
-long OpticalFieldPoint(double StarVecB[3], struct OpticsType *O,
-                       double FldPntB[3], double FldDirB[3]);
-long OpticalTrain(long FldSC, long FldBody, double FldPntB[3],
-                  double FldDirB[3], long Nopt, struct OpticsType *Opt,
-                  long *OutSC, long *OutBody, double OutPntB[3],
-                  double OutDirB[3]);
+long OpticalFieldPoint(vec3 StarVecB, struct OpticsType *O, vec3 *FldPntB,
+                       vec3 *FldDirB);
+long OpticalTrain(long FldSC, long FldBody, vec3 FldPntB, vec3 FldDirB,
+                  long Nopt, struct OpticsType *Opt, long *OutSC, long *OutBody,
+                  vec3 *OutPntB, vec3 *OutDirB);
 
 /* Debug Function Prototypes */
 void EchoPVel(struct SCType *S);
@@ -298,8 +297,9 @@ long LoadEphems(const ephemType ephem, const JDType jd,
 long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
                   JDType jd_tt_j2000, struct WorldType *const worlds);
 /* read JPLHeaderType to get data from the 1041 header */
-double getDEHeader1041Data(const JPLHeaderType *const hdr_data,
-                           const char *grp_1040_name) __attribute__((pure));
+__attribute__((pure)) double
+getDEHeader1041Data(const JPLHeaderType *const hdr_data,
+                    const char *grp_1040_name);
 /* Load appropriate JPL Ephem (421,424,430,440, +GMAT varients)
 to get Chebyshev coefficients for current JD range (TDB) */
 long LoadJplEphems(ephemType ephem, char EphemPath[128],
@@ -312,14 +312,14 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
 long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                       struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
-long UpdateMinorBodies(const JDType jd, struct WorldType *const worlds,
-                       const double earth_CNH[3][3]);
+long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
+                       struct WorldType *const worlds, const mat3x3 earth_CNH);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
 long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                          struct WorldType *const worlds,
-                         const double earth_CNH[3][3]);
-long DecodeString(char *s) __attribute__((pure));
-WorldID GetWorldID(const char *s) __attribute__((pure));
+                         const mat3x3 earth_CNH);
+__attribute__((pure)) long DecodeString(char *s);
+__attribute__((pure)) WorldID GetWorldID(const char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);
 void InitDSM(struct SCType *S);

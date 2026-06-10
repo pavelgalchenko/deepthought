@@ -67,22 +67,22 @@ typedef struct CCSDSTime {
    ccsdsFine fine;
 } CCSDSTime;
 
-CCSDSTime CCSDSSub(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time)
-    __attribute__((const));
-CCSDSTime CCSDSAdd(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time)
-    __attribute__((const));
-CCSDSTime CCSDSAddSeconds(const CCSDSTime time, const double dt)
-    __attribute__((const));
-double ccsds2seconds(const CCSDSTime ccsds) __attribute__((const));
-CCSDSTime seconds2ccsds(const double) __attribute__((const));
-double ccsds2time(const CCSDSTime ccsds_time) __attribute__((const));
-int isequal_ccsds(const CCSDSTime a_ccsds_time, const CCSDSTime b_ccsds_time)
-    __attribute__((const));
-int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
-    __attribute__((const));
+__attribute__((const)) CCSDSTime CCSDSSub(const CCSDSTime a_ccsds_time,
+                                          const CCSDSTime b_ccsds_time);
+__attribute__((const)) CCSDSTime CCSDSAdd(const CCSDSTime a_ccsds_time,
+                                          const CCSDSTime b_ccsds_time);
+__attribute__((const)) CCSDSTime CCSDSAddSeconds(const CCSDSTime time,
+                                                 const double dt);
+__attribute__((const)) double ccsds2seconds(const CCSDSTime ccsds);
+__attribute__((const)) CCSDSTime seconds2ccsds(const double);
+__attribute__((const)) double ccsds2time(const CCSDSTime ccsds_time);
+__attribute__((const)) int isequal_ccsds(const CCSDSTime a_ccsds_time,
+                                         const CCSDSTime b_ccsds_time);
+__attribute__((const)) int isless_ccsds(const CCSDSTime a_ccsds,
+                                        const CCSDSTime b_ccsds);
 
-JDType ccsds2jd(const CCSDSTime ccsds_time) __attribute__((const));
-CCSDSTime jd2ccsds(JDType jd) __attribute__((const));
+__attribute__((const)) JDType ccsds2jd(const CCSDSTime ccsds_time);
+__attribute__((const)) CCSDSTime jd2ccsds(JDType jd);
 
 typedef struct {
    TimeSystem system;
@@ -103,35 +103,37 @@ typedef struct {
 // double DateToMJD(long Year, long Month, long Day, long Hour, long Minute,
 //                  double Second);
 
-DateType DateTypeInit(const TimeSystem system, const long Year,
-                      const long Month, const long Day, const long Hour,
-                      const long Minute, const Rational Second)
-    __attribute__((const));
+__attribute__((const)) DateType DateTypeInit(const TimeSystem system,
+                                             const long Year, const long Month,
+                                             const long Day, const long Hour,
+                                             const long Minute,
+                                             const Rational Second);
 
-CCSDSTime date2ccsds(const DateType date) __attribute__((const));
-DateType ccsds2date(const CCSDSTime ccsds_time, TimeSystem system)
-    __attribute__((const));
+__attribute__((const)) CCSDSTime date2ccsds(const DateType date);
+__attribute__((const)) DateType ccsds2date(const CCSDSTime ccsds_time,
+                                           TimeSystem system);
 
-double Date2Time(const DateType date) __attribute__((const));
-double Date2TimeSystem(const DateType date, const TimeSystem system)
-    __attribute__((const));
-double DateToTime(const DateType date) __attribute__((const));
-DateType DateChangeSystem(const TimeSystem new_system, DateType date)
-    __attribute__((const));
-JDType DateToJD(const DateType date, const TimeSystem system,
-                const EpochTT epoch) __attribute__((const));
+__attribute__((const)) double Date2Time(const DateType date);
+__attribute__((const)) double Date2TimeSystem(const DateType date,
+                                              const TimeSystem system);
+__attribute__((const)) double DateToTime(const DateType date);
+__attribute__((const)) DateType DateChangeSystem(const TimeSystem new_system,
+                                                 DateType date);
+__attribute__((const)) JDType DateToJD(const DateType date,
+                                       const TimeSystem system,
+                                       const EpochTT epoch);
 JDType Date2JD(const DateType date, const EpochTT epoch);
-CCSDSTime TimeToCCSDS(double UTC) __attribute__((const));
-DateType JDToDate(const JDType jd, const TimeSystem system)
-    __attribute__((const));
-DateType TimeToDate(double Time, TimeSystem system) __attribute__((const));
-long MD2DOY(long Year, long Month, long Day) __attribute__((const));
+__attribute__((const)) CCSDSTime TimeToCCSDS(double UTC);
+__attribute__((const)) DateType JDToDate(const JDType jd,
+                                         const TimeSystem system);
+__attribute__((const)) DateType TimeToDate(double Time, TimeSystem system);
+__attribute__((const)) long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
-double JD2GMST(JDType JD) __attribute__((const));
+__attribute__((const)) double JD2GMST(JDType JD);
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
-double GpsDateToGpsTime(long GpsRollover, long GpsWeek, double GpsSecond)
-    __attribute__((const));
+__attribute__((const)) double GpsDateToGpsTime(long GpsRollover, long GpsWeek,
+                                               double GpsSecond);
 double usec(void);
 DateType RealSystemTime();
 double RealRunTime(double *RealTimeDT);

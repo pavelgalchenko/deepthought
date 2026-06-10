@@ -14,6 +14,7 @@
 #include "AcTypes.h"
 #include "DSMTypes.h"
 #include "geomkit.h"
+#include "mathkit.h"
 #include "orbkit.h"
 #include "rkkit.h"
 #include "sigkit.h"
@@ -59,9 +60,9 @@ enum fswType {
 struct FormationType {
    /*~ Internal Variables ~*/
    char FixedInFrame;
-   double CN[3][3];
-   double CL[3][3];
-   double PosR[3]; /* Position of F wrt R, expressed in N */
+   mat3x3 CN;
+   mat3x3 CL;
+   vec3 PosR; /* Position of F wrt R, expressed in N */
 };
 
 /* Store information about the JPL DE file by parsing the header file */
@@ -87,14 +88,14 @@ typedef struct JPLHeaderType {
 struct NodeType {
    /*~ Internal Variables ~*/
    char comment[80];
-   double NomPosB[3];
-   double PosCm[3];       /* Pos wrt B's cm, expressed in B */
+   vec3 NomPosB;
+   vec3 PosCm;            /* Pos wrt B's cm, expressed in B */
    double **PSI, **THETA; /* Mode shapes, 3 x B.Nf */
-   double Frc[3], Trq[3]; /* Both expressed in B */
+   vec3 Frc, Trq;         /* Both expressed in B */
    double *FlexFrc;       /* "Fbendy + Tbendy", B.Nf x 1 */
-   double FlexPos[3], FlexVel[3], FlexAng[3],
-       FlexAngRate[3]; /* Deflection variables */
-   double PosB[3], VelB[3], VelN[3], qb[4], AngVelB[3];
+   vec3 FlexPos, FlexVel, FlexAng, FlexAngRate; /* Deflection variables */
+   vec3 PosB, VelB, VelN, AngVelB;
+   quat qb;
 };
 
 struct ShakerType {
@@ -102,7 +103,7 @@ struct ShakerType {
    long Body;
    long Node;
    long FrcTrq;
-   double Axis[3];
+   vec3 Axis;
    long Ntone;
    long RandomActive;
    double *ToneAmp;   /* N or Nm */
@@ -123,76 +124,76 @@ struct ShakerType {
 struct BodyType {
    /*~ Internal Variables ~*/
    double mass;
-   double cm[3];   /* wrt origin of convenience, expressed in B frame */
-   double c[3];    /* First mass moment about ref pt, expressed in B */
-   double I[3][3]; /* Moment of Inertia, about ref pt, expressed in B frame */
-   double EmbeddedMom[3]; /* Constant embedded momentum, for CMGs and rotating
+   vec3 cm;          /* wrt origin of convenience, expressed in B frame */
+   vec3 c;           /* First mass moment about ref pt, expressed in B */
+   mat3x3 I;         /* Moment of Inertia, about ref pt, expressed in B frame */
+   vec3 EmbeddedMom; /* Constant embedded momentum, for CMGs and rotating
                              instruments */
-   double EmbeddedDipole[3]; /* Constant embedded magnetic moment [[A-m^2]] */
-   double wn[3]; /* Angular Velocity of B wrt N expressed in B frame [[rad/sec]]
-                    [~=~] */
-   double qn[4]; /* [~=~] */
-   double vn[3]; /* velocity of B ref pt expressed in N frame */
-   double pn[3]; /* position of B ref pt in N frame expressed in N frame */
-   double CN[3][3];         /* Direction Cosine of B frame in N frame */
-   double Trq[3];           /* expressed in B */
-   double SCContactTrq[3];  /* expressed in B */
-   double FrcN[3];          /* expressed in N */
-   double SCContactFrcN[3]; /* expressed in N */
-   double alpha[3]; /* Angular acceleration of B wrt N, expressed in B */
-   double accel[3]; /* Linear acceleration of B wrt N, expressed in N */
+   vec3 EmbeddedDipole; /* Constant embedded magnetic moment [[A-m^2]] */
+   vec3 wn;   /* Angular Velocity of B wrt N expressed in B frame [[rad/sec]]
+                      [~=~] */
+   quat qn;   /* [~=~] */
+   vec3 vn;   /* velocity of B ref pt expressed in N frame */
+   vec3 pn;   /* position of B ref pt in N frame expressed in N frame */
+   mat3x3 CN; /* Direction Cosine of B frame in N frame */
+   vec3 Trq;  /* expressed in B */
+   vec3 SCContactTrq;  /* expressed in B */
+   vec3 FrcN;          /* expressed in N */
+   vec3 SCContactFrcN; /* expressed in N */
+   vec3 alpha;         /* Angular acceleration of B wrt N, expressed in B */
+   vec3 accel;         /* Linear acceleration of B wrt N, expressed in N */
    char GeomFileName[40];
    char NodeFileName[40];
    char FlexFileName[40];
    float ModelMatrix[16]; /* For OpenGL */
    long GeomTag;
    /* For KaneNBody Dynamics */
-   long Gin;         /* Joint that B is Bout of */
-   double beta[3];   /* Vector from B ref pt to B[0] ref pt, expressed in N */
-   double AlphaR[3]; /* Remainder alpha, expressed in B */
-   double AccR[3];   /* Remainder acc, expressed in N */
-   double InertiaTrq[3];
-   double InertiaFrc[3];
-   double JointTrq[3]; /* From all joints exerting trq on this body */
+   long Gin;    /* Joint that B is Bout of */
+   vec3 beta;   /* Vector from B ref pt to B[0] ref pt, expressed in N */
+   vec3 AlphaR; /* Remainder alpha, expressed in B */
+   vec3 AccR;   /* Remainder acc, expressed in N */
+   vec3 InertiaTrq;
+   vec3 InertiaFrc;
+   vec3 JointTrq; /* From all joints exerting trq on this body */
 
    /* For OrderN Dynamics */
    long Nd;  /* Number of distal joints (i.e. for which this body is Bi) */
    long *Gd; /* Indices of distal joints (i.e. for which this body is Bi) */
-   double RemAlf[3];
-   double RemAcc[3];
-   double alfn[3];
-   double accn[3];
-   double H[3];
+   vec3 RemAlf;
+   vec3 RemAcc;
+   vec3 alfn;
+   vec3 accn;
+   vec3 H;
    double RemInertiaFrc[6];
-   double WhlMom[3];
-   double FrcB[3];          /* Expressed in B */
-   double SCContactFrcB[3]; /* Expressed in B */
-   double SpatFrc[6];       /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
+   vec3 WhlMom;
+   vec3 FrcB;          /* Expressed in B */
+   vec3 SCContactFrcB; /* Expressed in B */
+   double SpatFrc[6];  /* [Trq;Frc] + [PassiveTrq;PassiveFrc] */
 
    double AccU[6];
 
    /* For Flex Formulation */
-   long Nf;                /* Number of flex modes superimposed on this body */
-   double *xi;             /* Flex speed coordinate, Nf x 1 */
-   double *eta;            /* Flex position coordinate, Nf x 1 */
-   double **Mf;            /* Flex Mass Matrix, Nf x Nf */
-   double **Kf;            /* Flex Stiffness Matrix, Nf x Nf */
-   double **Cf;            /* Flex Damping Matrix, Nf x Nf */
-   double **Pf;            /* Flex tensor, 3 x Nf */
-   double **Hf;            /* Flex tensor, 3 x Nf */
-   double *Qf;             /* Flex tensor, 3 x Nf x Nf */
-   double *Rf;             /* Flex tensor, 3 x Nf x 3 */
-   double *Sf;             /* Flex tensor, 3 x Nf x Nf x 3 */
-   long f0;                /* Index of first element in uf */
-   double Peta[3];         /* Pf*eta */
-   double cplusPeta[3][3]; /* SkewMatrix of (c + Pf*eta) */
-   double **CnbP;          /* CNB*Pf, 3 x Nf */
-   double **HplusQeta;     /* Hf + Qf*eta, 3 x Nf */
-   double **Qxi;           /* Qf*xi, 3 x Nf */
-   double **Rw;            /* Rf*w, 3 x Nf */
-   double *Sw;             /* Sf*w, 3 x Nf * Nf */
-   double **Swe;           /* Sf*w*eta, 3 x Nf */
-   long NumNodes;          /* Number of flex "analysis" nodes on Body */
+   long Nf;            /* Number of flex modes superimposed on this body */
+   double *xi;         /* Flex speed coordinate, Nf x 1 */
+   double *eta;        /* Flex position coordinate, Nf x 1 */
+   double **Mf;        /* Flex Mass Matrix, Nf x Nf */
+   double **Kf;        /* Flex Stiffness Matrix, Nf x Nf */
+   double **Cf;        /* Flex Damping Matrix, Nf x Nf */
+   double **Pf;        /* Flex tensor, 3 x Nf */
+   double **Hf;        /* Flex tensor, 3 x Nf */
+   double *Qf;         /* Flex tensor, 3 x Nf x Nf */
+   double *Rf;         /* Flex tensor, 3 x Nf x 3 */
+   double *Sf;         /* Flex tensor, 3 x Nf x Nf x 3 */
+   long f0;            /* Index of first element in uf */
+   vec3 Peta;          /* Pf*eta */
+   mat3x3 cplusPeta;   /* SkewMatrix of (c + Pf*eta) */
+   double **CnbP;      /* CNB*Pf, 3 x Nf */
+   double **HplusQeta; /* Hf + Qf*eta, 3 x Nf */
+   double **Qxi;       /* Qf*xi, 3 x Nf */
+   double **Rw;        /* Rf*w, 3 x Nf */
+   double *Sw;         /* Sf*w, 3 x Nf * Nf */
+   double **Swe;       /* Sf*w*eta, 3 x Nf */
+   long NumNodes;      /* Number of flex "analysis" nodes on Body */
    struct NodeType *Node;
    long MfIsDiagonal; /* Simpler EOM for One-body case if Mf is diagonal */
 };
@@ -210,66 +211,65 @@ struct JointType {
    struct BodyType *Bo;
    long
        Nanc; /* Number of "ancestor" joints: joints between this one and B[0] */
-   long *Anc;           /* Indices of ancestor joints */
-   double RigidRin[3];  /* Position wrt inner body ref pt (rigid) */
-   double RigidRout[3]; /* Position wrt outer body ref pt (rigid) */
-   double ri[3];      /* Position wrt inner body ref pt (incl flex & TrnDOF) */
-   double ro[3];      /* Position wrt outer body ref pt (incl flex) */
+   long *Anc;         /* Indices of ancestor joints */
+   vec3 RigidRin;     /* Position wrt inner body ref pt (rigid) */
+   vec3 RigidRout;    /* Position wrt outer body ref pt (rigid) */
+   vec3 ri;           /* Position wrt inner body ref pt (incl flex & TrnDOF) */
+   vec3 ro;           /* Position wrt outer body ref pt (incl flex) */
    long RotSeq;       /* Joint Euler sequence */
    long RotLocked[3]; /* Set TRUE if individual DOF is to be locked in place */
    long TrnSeq;       /* Translational joint sequence */
    long TrnLocked[3];
-   double Pos[3];        /* translational kinematic state variables [~=~] */
-   double PosRate[3];    /* translational dynamic state variables [~=~] */
-   double xb[3];         /* translational displacement in the Bi frame */
-   double xn[3];         /* translational displacement in the N frame */
-   double Ang[3];        /* Joint Euler angles [~=~] */
-   double AngRate[3];    /* Euler angle rates about gim axes [~=~] */
-   double AngRateCmd[3]; /* Euler angle rate commands, rad/sec */
-   double PosRateCmd[3]; /* Translation rate commands, m/sec */
-   double AngRateGain[3];
-   double PosRateGain[3];
-   double MaxAngRate[3];
-   double MaxPosRate[3];
-   double MaxTrq[3];
-   double MaxFrc[3];
-   double RotSpringCoef[3]; /* For passive joint torques */
-   double RotDampCoef[3];   /* For passive joint torques */
-   double TrnSpringCoef[3]; /* For passive joint forces */
-   double TrnDampCoef[3];   /* For passive joint forces */
+   vec3 Pos;        /* translational kinematic state variables [~=~] */
+   vec3 PosRate;    /* translational dynamic state variables [~=~] */
+   vec3 xb;         /* translational displacement in the Bi frame */
+   vec3 xn;         /* translational displacement in the N frame */
+   vec3 Ang;        /* Joint Euler angles [~=~] */
+   vec3 AngRate;    /* Euler angle rates about gim axes [~=~] */
+   vec3 AngRateCmd; /* Euler angle rate commands, rad/sec */
+   vec3 PosRateCmd; /* Translation rate commands, m/sec */
+   vec3 AngRateGain;
+   vec3 PosRateGain;
+   vec3 MaxAngRate;
+   vec3 MaxPosRate;
+   vec3 MaxTrq;
+   vec3 MaxFrc;
+   vec3 RotSpringCoef; /* For passive joint torques */
+   vec3 RotDampCoef;   /* For passive joint torques */
+   vec3 TrnSpringCoef; /* For passive joint forces */
+   vec3 TrnDampCoef;   /* For passive joint forces */
    /* Frames involved in a joint: Bo <-> (Bfo) <-> Go <-> Gi <-> (Bfi) <-> Bi */
-   double CGiBi[3][3];  /* Constant orientation of joint in Bi (Bfi) */
-   double CBoGo[3][3];  /* Constant orientation of joint in Bo (Bfo) */
-   double CGoGi[3][3];  /* Euler rot through ang[0], ang[1], ang[2] */
-   double CTrqBo[3][3]; /* Used for transforming joint torques or forces from Go
+   mat3x3 CGiBi;  /* Constant orientation of joint in Bi (Bfi) */
+   mat3x3 CBoGo;  /* Constant orientation of joint in Bo (Bfo) */
+   mat3x3 CGoGi;  /* Euler rot through ang[0], ang[1], ang[2] */
+   mat3x3 CTrqBo; /* Used for transforming joint torques or forces from Go
                            to Bo */
-   double CTrqBi[3][3]; /* Used for transforming joint torques from Go to Bi */
-   double COI[3][3];    /* DCM from inner body to outer body, (incl flex) */
-   double Trq[3];       /* Exerted on Bout, components along gimbal axes */
-   double
-       Frc[3]; /* Force exerted on Bout, components along translational axes */
-   double Gamma[3][3]; /* w = Gamma*sigma */
-   double Delta[3][3]; /* v = Delta*s -- matrix of joint partials for
-                          translational joints */
-   double Gs[3];       /* Gamma*sigma */
-   double Gds[3];      /* Gammadot*sigma */
-   double Ds[3];       /* Delta*s */
-   double Dds[3];      /* Deltadot*s */
-   long Rotu0;         /* Index of first Rot element in u */
-   long Rotx0;         /* Index of first Rot element in x */
-   long Trnu0;         /* Index of first Trn element in u */
-   long Trnx0;         /* Index of first Trn element in x */
-   long ActiveRotu0;   /* Index in DynStateIdx of first unlocked Rot DOF in
-                          DynState */
-   long ActiveTrnu0;   /* Index in DynStateIdx of first unlocked Trn DOF in
-                          DynState */
-   long ActiveRotDOF;  /* Number of unlocked RotDOF */
-   long ActiveTrnDOF;  /* Number of unlocked TrnDOF */
+   mat3x3 CTrqBi; /* Used for transforming joint torques from Go to Bi */
+   mat3x3 COI;    /* DCM from inner body to outer body, (incl flex) */
+   vec3 Trq;      /* Exerted on Bout, components along gimbal axes */
+   vec3 Frc; /* Force exerted on Bout, components along translational axes */
+   mat3x3 Gamma;      /* w = Gamma*sigma */
+   mat3x3 Delta;      /* v = Delta*s -- matrix of joint partials for
+                               translational joints */
+   vec3 Gs;           /* Gamma*sigma */
+   vec3 Gds;          /* Gammadot*sigma */
+   vec3 Ds;           /* Delta*s */
+   vec3 Dds;          /* Deltadot*s */
+   long Rotu0;        /* Index of first Rot element in u */
+   long Rotx0;        /* Index of first Rot element in x */
+   long Trnu0;        /* Index of first Trn element in u */
+   long Trnx0;        /* Index of first Trn element in x */
+   long ActiveRotu0;  /* Index in DynStateIdx of first unlocked Rot DOF in
+                         DynState */
+   long ActiveTrnu0;  /* Index in DynStateIdx of first unlocked Trn DOF in
+                         DynState */
+   long ActiveRotDOF; /* Number of unlocked RotDOF */
+   long ActiveTrnDOF; /* Number of unlocked TrnDOF */
 
    /* For OrderN Dynamics */
-   double Pw[3][3];
-   double Pv[3][3];
-   double Pwdot[3][3];
+   mat3x3 Pw;
+   mat3x3 Pv;
+   mat3x3 Pwdot;
    double P[6][6];         /* [Pw 0; 0 Pv] */
    double ArtFrc[6];       /* Articulated Body Force */
    double ArtMass[6][6];   /* Articulated Body Mass */
@@ -278,32 +278,32 @@ struct JointType {
    double InvDynPT[6][6];  /* Nu x 6 */
    double AbsorpMtx[6][6];
    double TransMtx[6][6];
-   double riplusPx[3]; /* r_{ik} + P_{vk}x_k */
-   long Nu;            /* RotDOF + TrnDOF */
-   double q[4]; /* Quaternion or angle states, depending on IsSpherical */
+   vec3 riplusPx; /* r_{ik} + P_{vk}x_k */
+   long Nu;       /* RotDOF + TrnDOF */
+   quat q;        /* Quaternion or angle states, depending on IsSpherical */
    double udot[6];
-   double qdot[4];
-   double xdot[3];
+   quat qdot;
+   vec3 xdot;
    double RKum[6];
-   double RKqm[4];
-   double RKxm[3];
+   quat RKqm;
+   vec3 RKxm;
    double RKdu[6];
-   double RKdq[4];
-   double RKdx[3];
+   quat RKdq;
+   vec3 RKdx;
 
    /* For Flex */
-   double **PSIi;         /* Translation Mode Shapes, 3 x Bi.Nf */
-   double **THETAi;       /* Rotational Mode Shapes, 3 x Bi.Nf */
-   double **PSIo;         /* Translation Mode Shapes, 3 x Bo.Nf */
-   double **THETAo;       /* Rotational Mode Shapes, 3 x Bo.Nf */
-   double FlexPosi[3];    /* Translational Flex Deflection of Bi at G (d) */
-   double FlexVeli[3];    /* Translational Flex Velocity of Bi at G   (e) */
-   double FlexAngi[3];    /* Rotational Flex Deflection of Bi at G    (delta) */
-   double FlexAngVeli[3]; /* Rotational Flex Velocity of Bi at G      (eta) */
-   double FlexPoso[3];    /* Translational Flex Deflection of Bo at G (d) */
-   double FlexVelo[3];    /* Translational Flex Velocity of Bo at G   (e) */
-   double FlexAngo[3];    /* Rotational Flex Deflection of Bo at G    (delta) */
-   double FlexAngVelo[3]; /* Rotational Flex Velocity of Bo at G      (eta) */
+   double **PSIi;    /* Translation Mode Shapes, 3 x Bi.Nf */
+   double **THETAi;  /* Rotational Mode Shapes, 3 x Bi.Nf */
+   double **PSIo;    /* Translation Mode Shapes, 3 x Bo.Nf */
+   double **THETAo;  /* Rotational Mode Shapes, 3 x Bo.Nf */
+   vec3 FlexPosi;    /* Translational Flex Deflection of Bi at G (d) */
+   vec3 FlexVeli;    /* Translational Flex Velocity of Bi at G   (e) */
+   vec3 FlexAngi;    /* Rotational Flex Deflection of Bi at G    (delta) */
+   vec3 FlexAngVeli; /* Rotational Flex Velocity of Bi at G      (eta) */
+   vec3 FlexPoso;    /* Translational Flex Deflection of Bo at G (d) */
+   vec3 FlexVelo;    /* Translational Flex Velocity of Bo at G   (e) */
+   vec3 FlexAngo;    /* Rotational Flex Deflection of Bo at G    (delta) */
+   vec3 FlexAngVelo; /* Rotational Flex Velocity of Bo at G      (eta) */
    /* For Constraints */
    long Rotc0;
    long Trnc0;
@@ -328,14 +328,14 @@ struct WhlHarmType {
 
 struct WhlType {
    /*~ Internal Variables ~*/
-   long Body;       /* Body that wheel is mounted in */
-   double H;        /* Angular Momentum, [[Nms]] [~=~] */
-   double J;        /* Rotary inertia, kg-m^2 */
-   double w;        /* Angular speed, rad/sec */
-   double Ang;      /* Spin phase angle, rad */
-   double A[3];     /* Axis vector wrt Body */
-   double Uaxis[3]; /* Transverse axes */
-   double Vaxis[3]; /* Transverse axes */
+   long Body;  /* Body that wheel is mounted in */
+   double H;   /* Angular Momentum, [[Nms]] [~=~] */
+   double J;   /* Rotary inertia, kg-m^2 */
+   double w;   /* Angular speed, rad/sec */
+   double Ang; /* Spin phase angle, rad */
+   vec3 A;     /* Axis vector wrt Body */
+   vec3 Uaxis; /* Transverse axes */
+   vec3 Vaxis; /* Transverse axes */
    double Tmax;
    double Hmax;
    double Tcmd;
@@ -366,8 +366,8 @@ struct WhlType {
    double RockDamp;
    long NumHarm;
    struct WhlHarmType *Harm;
-   double JitFrc[3];
-   double JitTrq[3];
+   vec3 JitFrc;
+   vec3 JitTrq;
 
    /* For OrderN Dynamics */
    double Hdot;
@@ -378,10 +378,10 @@ struct WhlType {
 struct MTBType {
    /*~ Internal Variables ~*/
    double M;
-   double A[3]; /* Axis vector wrt Body 0 */
+   vec3 A; /* Axis vector wrt Body 0 */
    double Mmax;
    double Mcmd;
-   double Trq[3]; /* Exerted on Body 0, expressed in B[0] frame */
+   vec3 Trq; /* Exerted on Body 0, expressed in B[0] frame */
    long Node;
    struct DelayType *Delay; /* For injecting delay into control loops */
 };
@@ -393,12 +393,12 @@ struct ThrType {
    double F;
    long Body; /* Body that thruster is mounted on */
    long Node;
-   double A[3]; /* Axis vector wrt Body 0 */
+   vec3 A; /* Axis vector wrt Body 0 */
    JDType PulseWidthFinTimeStamp;
    double PulseWidthCmd;    /* [[sec]], for THR_PULSED */
    double ThrustLevelCmd;   /* [{0.0:1.0}], for THR_PROPORTIONAL */
-   double Frc[3];           /* Force exerted */
-   double Trq[3];           /* Torque exerted */
+   vec3 Frc;                /* Force exerted */
+   vec3 Trq;                /* Torque exerted */
    struct DelayType *Delay; /* For injecting delay into control loops */
 };
 
@@ -406,7 +406,7 @@ struct GyroType {
    /*~ Parameters ~*/
    double SampleTime;
    long MaxCounter;
-   double Axis[3];
+   vec3 Axis;
    double MaxRate;
    double Scale;
    double Quant;
@@ -432,7 +432,7 @@ struct MagnetometerType {
    /*~ Parameters ~*/
    double SampleTime;
    long MaxCounter;
-   double Axis[3];
+   vec3 Axis;
    double Saturation;
    double Scale;
    double Quant;
@@ -449,7 +449,7 @@ struct CssType {
    double SampleTime;
    long MaxCounter;
    long Body;
-   double Axis[3];
+   vec3 Axis;
    double FovHalfAng;
    double CosFov;
    double Scale;
@@ -467,8 +467,8 @@ struct FssType {
    /*~ Parameters ~*/
    double SampleTime;
    long MaxCounter;
-   double qb[4];
-   double CB[3][3];
+   quat qb;
+   mat3x3 CB;
    double FovHalfAng[2];
    double NEA;
    double Quant;
@@ -482,8 +482,8 @@ struct FssType {
    long Valid;
    enum fssTypes type;
    double SunAng[2];
-   double SunVecS[3];
-   double SunVecB[3];
+   vec3 SunVecS;
+   vec3 SunVecB;
    double AlbA;
    double AlbB;
    double AlbC;
@@ -494,8 +494,8 @@ struct StarTrackerType {
    /*~ Parameters ~*/
    double SampleTime;
    long MaxCounter;
-   double qb[4];
-   double CB[3][3];
+   quat qb;
+   mat3x3 CB;
    double FovHalfAng[2];
    double CosFov[2];
    double SunExclAng;
@@ -513,7 +513,7 @@ struct StarTrackerType {
    /*~ Internal Variables ~*/
    long SampleCounter;
    long Valid;
-   double qn[4];
+   quat qn;
 };
 
 struct GpsType {
@@ -531,10 +531,10 @@ struct GpsType {
    long Rollover;
    long Week;
    double Sec;
-   double PosN[3];
-   double VelN[3];
-   double PosW[3];
-   double VelW[3];
+   vec3 PosN;
+   vec3 VelN;
+   vec3 PosW;
+   vec3 VelW;
    double Lng, Lat, Alt;          /* Geocentric */
    double WgsLng, WgsLat, WgsAlt; /* Geodetic, WGS-84 */
 };
@@ -545,7 +545,7 @@ struct AccelType {
    long SampleCounter;
    long MaxCounter;
    long Node;
-   double Axis[3]; /* Mounting matrix */
+   vec3 Axis; /* Mounting matrix */
    double Quant;
    double Scale;
    double SigV; /* DVRW m/s/rt-sec */
@@ -553,10 +553,10 @@ struct AccelType {
    double SigE; /* DV Readout Noise, m/s  */
 
    /*~ Internal Variables ~*/
-   double AccumAccN[3];
-   double Bias;        /* m/s^2 */
-   double PrevVelN[3]; /* m/s */
-   double PrevQN[4];
+   vec3 AccumAccN;
+   double Bias;   /* m/s^2 */
+   vec3 PrevVelN; /* m/s */
+   quat PrevQN;
    double DV;      /* Change in velocity m/s */
    double TrueAcc; /* m/s^2 */
    double MeasAcc; /* m/s^2 */
@@ -576,7 +576,7 @@ struct OpticsType {
    long Body;
    long Node;
    long Type;
-   double Axis[3];
+   vec3 Axis;
    double FocLen;
    double ConicConst;
    double ConicSign;
@@ -607,10 +607,10 @@ struct FgsType {
    long HasOptics;
    double SampleTime;
    long MaxCounter;
-   double qb[4];
-   double CB[3][3];
-   double qr[4];    /* q_fr_r */
-   double CR[3][3]; /* CFrR */
+   quat qb;
+   mat3x3 CB;
+   quat qr;   /* q_fr_r */
+   mat3x3 CR; /* CFrR */
    double NEA;
    long Body;
    long Node;
@@ -625,10 +625,10 @@ struct FgsType {
    /*~ Internal Variables ~*/
    long SampleCounter;
    long Valid;
-   double StarVecR[3];
+   vec3 StarVecR;
    double H;
    double V;
-   double Ang[3];
+   vec3 Ang;
    char OpticsFileName[40];
    char PsfFileName[40];
 
@@ -644,13 +644,13 @@ struct FgsType {
 struct JointPathTableType { /* tells if joint is in path of body*/
    /*~ Internal Variables ~*/
    long InPath;
-   double rho[3];
+   vec3 rho;
 };
 
 struct BodyPathTableType { /* tells if inner body is in path of outer body*/
    /*~ Internal Variables ~*/
    long InPath;
-   double Coi[3][3];
+   mat3x3 Coi;
 };
 
 struct DynType {
@@ -703,7 +703,7 @@ struct EnvTrqType {
    /*~ Internal Variables ~*/
    long First;
    FILE *envfile;
-   double Hs[3];
+   vec3 Hs;
 };
 
 struct TargetType {
@@ -713,10 +713,10 @@ struct TargetType {
    long RefOrb;
    long SC;
    long Body;
-   double PosR[3];
-   double PosN[3];
-   double PosH[3];
-   double CN[3][3];
+   vec3 PosR;
+   vec3 PosN;
+   vec3 PosH;
+   mat3x3 CN;
 };
 
 struct POVType {
@@ -733,32 +733,32 @@ struct POVType {
    double Height; /* Height of POV Field of View */
    double Near, Far; /* Near and Far limits of POV FOV */
    double CosFov, SinFov;
-   double Angle;          /* Angle subtended in vertical, deg */
-   double AR;             /* Aspect ratio of POV FOV */
-   double PosLeftEye[3];  /* in POV frame, expressed in POV */
-   double PosRightEye[3]; /* in POV frame, expressed in POV */
-   double w[3];           /* Angular velocity */
-   double q[4];           /* Quaternion */
-   double PosB[3];        /* Position wrt Host, expressed in Host B[0] Frame */
+   double Angle;     /* Angle subtended in vertical, deg */
+   double AR;        /* Aspect ratio of POV FOV */
+   vec3 PosLeftEye;  /* in POV frame, expressed in POV */
+   vec3 PosRightEye; /* in POV frame, expressed in POV */
+   vec3 w;           /* Angular velocity */
+   quat q;           /* Quaternion */
+   vec3 PosB;        /* Position wrt Host, expressed in Host B[0] Frame */
    double Range;
    double GridSpacing; /* For ProxOps Grid */
-   double wmax[3];
-   double C[3][3];
-   double CN[3][3];
-   double CH[3][3];
-   double CL[3][3];
-   double CF[3][3];
-   double CB[3][3];
-   double PosR[3]; /* Position vector in R, expressed in N */
-   double PosN[3]; /* Position vector in N, expressed in N */
-   double PosH[3]; /* Position vector in H, expressed in H */
+   vec3 wmax;
+   mat3x3 C;
+   mat3x3 CN;
+   mat3x3 CH;
+   mat3x3 CL;
+   mat3x3 CF;
+   mat3x3 CB;
+   vec3 PosR; /* Position vector in R, expressed in N */
+   vec3 PosN; /* Position vector in N, expressed in N */
+   vec3 PosH; /* Position vector in H, expressed in H */
    float ViewMatrix[16];
    /* For PanZoomPOV */
    double TimeToGo;
    long CmdSeq;
-   double CmdAngle[3];
+   vec3 CmdAngle;
    double CmdRange;
-   double CmdPermute[3][3];
+   mat3x3 CmdPermute;
 };
 
 struct RegionType {
@@ -766,12 +766,12 @@ struct RegionType {
    long Exists;
    WorldID World;
    double Lng, Lat, Alt; /* Origin location */
-   double PosW[3];
-   double CW[3][3]; /* Region frame is East-North-Up */
-   double PosN[3];
-   double VelN[3];
-   double CN[3][3];
-   double wn[3]; /* Expressed in R frame */
+   vec3 PosW;
+   mat3x3 CW; /* Region frame is East-North-Up */
+   vec3 PosN;
+   vec3 VelN;
+   mat3x3 CN;
+   vec3 wn; /* Expressed in R frame */
    double ElastCoef, DampCoef, FricCoef;
    char Name[20];
    char GeomFileName[40];
@@ -808,16 +808,16 @@ struct SCType {
 
    double aeroProjectedArea;
    double srpProjectedArea;
-   double gravTrqB[3];
-   double gravTrqN[3];
-   double srpTrqB[3];
-   double srpTrqN[3];
-   double aeroTrqB[3];
-   double aeroTrqN[3];
-   double srpFrcB[3];
-   double srpFrcN[3];
-   double aeroFrcB[3];
-   double aeroFrcN[3];
+   vec3 gravTrqB;
+   vec3 gravTrqN;
+   vec3 srpTrqB;
+   vec3 srpTrqN;
+   vec3 aeroTrqB;
+   vec3 aeroTrqN;
+   vec3 srpFrcB;
+   vec3 srpFrcN;
+   vec3 aeroFrcB;
+   vec3 aeroFrcN;
 
    long Nb; /* Number of bodies */
    long Ng; /* Number of joints, = Nb-1 */
@@ -837,31 +837,30 @@ struct SCType {
    long Nsh;   /* Number of shakers */
 
    double mass;
-   double cm[3];     /* wrt B0 origin, expressed in B0 frame */
-   double I[3][3];   /* Inertia matrix, wrt SC.cm, expressed in B0 frame */
-   double PosR[3];   /* Position of cm wrt Reference Orbit [[m]], expressed in N
-                        [~=~] */
-   double VelR[3];   /* Velocity of cm wrt R [[m/s]], expressed in N [~=~] */
-   double PosEH[3];  /* Position of cm wrt R, m, in Euler-Hill coords */
-   double VelEH[3];  /* Velocity of cm wrt R, m, in Euler-Hill coords */
-   double PosN[3];   /* Position of cm wrt origin of N, m, expressed in N */
-   double VelN[3];   /* Velocity of cm wrt origin of N, m/sec, expressed in N */
-   double CLN[3][3]; /* Note that SC.CLN != Orb[RefOrb].CLN if SC.PosR != 0.0 */
-   double CEN[3]
-             [3];  /* E = Equatorial frame: e1 = North, e2 = East, e3 = Nadir */
-   double wln[3];  /* Expressed in N */
-   double PosH[3]; /* Position of cm wrt H frame, expressed in H */
-   double VelH[3]; /* Velocity of cm wrt H frame, expressed in H */
-   double FrcN[3]; /* Force, N, expressed in N */
-   double AccN[3]; /* Acceleration due to external force, for accelerometer
-                      model */
-   double svn[3];  /* Sun-pointing unit vector, expressed in N */
-   double svb[3];  /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
-   double bvn[3];  /* Magfield, Tesla, expressed in N */
-   double bvb[3];  /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
-   double Hvn[3];  /* Total SC angular momentum, Nms, expressed in N */
-   double Hvb[3];  /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
-                      [~=~] */
+   vec3 cm;    /* wrt B0 origin, expressed in B0 frame */
+   mat3x3 I;   /* Inertia matrix, wrt SC.cm, expressed in B0 frame */
+   vec3 PosR;  /* Position of cm wrt Reference Orbit [[m]], expressed in N
+                       [~=~] */
+   vec3 VelR;  /* Velocity of cm wrt R [[m/s]], expressed in N [~=~] */
+   vec3 PosEH; /* Position of cm wrt R, m, in Euler-Hill coords */
+   vec3 VelEH; /* Velocity of cm wrt R, m, in Euler-Hill coords */
+   vec3 PosN;  /* Position of cm wrt origin of N, m, expressed in N */
+   vec3 VelN;  /* Velocity of cm wrt origin of N, m/sec, expressed in N */
+   mat3x3 CLN; /* Note that SC.CLN != Orb[RefOrb].CLN if SC.PosR != 0.0 */
+   mat3x3 CEN; /* E = Equatorial frame: e1 = North, e2 = East, e3 = Nadir */
+   vec3 wln;   /* Expressed in N */
+   vec3 PosH;  /* Position of cm wrt H frame, expressed in H */
+   vec3 VelH;  /* Velocity of cm wrt H frame, expressed in H */
+   vec3 FrcN;  /* Force, N, expressed in N */
+   vec3 AccN;  /* Acceleration due to external force, for accelerometer
+                       model */
+   vec3 svn;   /* Sun-pointing unit vector, expressed in N */
+   vec3 svb;   /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
+   vec3 bvn;   /* Magfield, Tesla, expressed in N */
+   vec3 bvb;   /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
+   vec3 Hvn;   /* Total SC angular momentum, Nms, expressed in N */
+   vec3 Hvb;   /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
+                       [~=~] */
    long Eclipse;
    double AtmoDensity;
    double DragCoef;
@@ -869,9 +868,9 @@ struct SCType {
    char SpriteFileName[40];
    unsigned int SpriteTexTag;
    /* The following are for OSCAR */
-   double PosF[3];  /* Position of B0 origin wrt F, expressed in F */
-   double VelF[3];  /* Velocity of B0 origin wrt F, expressed in F */
-   double CF[3][3]; /* Attitude of B0 wrt F */
+   vec3 PosF; /* Position of B0 origin wrt F, expressed in F */
+   vec3 VelF; /* Velocity of B0 origin wrt F, expressed in F */
+   mat3x3 CF; /* Attitude of B0 wrt F */
    /* Constraint forces and torques are computed if requested */
    long ConstraintsRequested;
    /* Mass and flex properties referred to REFPT_CM or REFPT_JOINT */
@@ -957,8 +956,8 @@ struct FovType {
    double Width;  /* X angular dimension, rad */
    double Height; /* Y angular dimension, rad */
    double Length;
-   double pb[3];
-   double CB[3][3];
+   vec3 pb;
+   mat3x3 CB;
    float Color[4];
 };
 
@@ -966,9 +965,9 @@ struct TdrsType {
    /*~ Internal Variables ~*/
    long Exists;
    double JD;
-   double rw[3];   /* Position vector in ECEF frame */
-   double PosN[3]; /* Position vector in N frame */
-   double VelN[3]; /* Velocity vector in N frame (never used?) */
+   vec3 rw;   /* Position vector in ECEF frame */
+   vec3 PosN; /* Position vector in N frame */
+   vec3 VelN; /* Velocity vector in N frame (never used?) */
    double lat;
    double lng;
    char Designation[40];
@@ -980,7 +979,7 @@ struct GroundStationType {
    WorldID World;
    long Show;
    double lng, lat;
-   double PosW[3]; /* Position vector in World frame */
+   vec3 PosW; /* Position vector in World frame */
    char Label[40];
 };
 
@@ -1012,16 +1011,16 @@ struct OrreryPOVType {
    long LagSys;
    long MinorBody;
    long LP;
-   double PosN[3]; /* Position wrt World, expressed in World N */
+   vec3 PosN; /* Position wrt World, expressed in World N */
    double Radius;
    long Zoom;
    double Scale[30];
    char ScaleLabel[30][8];
    double Angle;
-   double CNH[3][3];
-   double CN[3][3];
-   double CH[3][3];
-   double CL[3][3];
+   mat3x3 CNH;
+   mat3x3 CN;
+   mat3x3 CH;
+   mat3x3 CL;
 };
 
 struct ConstellationType {
@@ -1029,7 +1028,7 @@ struct ConstellationType {
    long Class; /* MAJOR, ZODIAC, or MINOR */
    long Nstars;
    long Nlines;
-   double **StarVec;
+   vec3 *StarVec;
    /* For each line */
    long *Star1;
    long *Star2;

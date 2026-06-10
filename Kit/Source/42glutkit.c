@@ -76,9 +76,7 @@ void Idle(void)
       glutPostRedisplay();
    }
    else {
-      POV.w[0] = 0.0;
-      POV.w[1] = 0.0;
-      POV.w[2] = 0.0;
+      POV.w = VEC3_ZERO;
       if (TimerHasExpired) {
          TimerHasExpired = 0;
          glutTimerFunc(TimerDuration, TimerHandler, 0);
@@ -540,8 +538,8 @@ void CamMouseButtonHandler(int Button, int State, int x, int y)
          if (PausedByMouse)
             PauseFlag = 0;
          PausedByMouse = 0;
-         POV.w[1]      = 0.0;
-         POV.w[0]      = 0.0;
+         POV.w.y       = 0.0;
+         POV.w.x       = 0.0;
       }
    }
 
@@ -554,9 +552,9 @@ void CamMouseButtonHandler(int Button, int State, int x, int y)
 void CamMouseActiveMotionHandler(int x, int y)
 {
    if (POV.Mode == TRACK_HOST) {
-      POV.w[1] = MouseScaleFactor * (double)(x - MouseClickX);
-      POV.w[0] = MouseScaleFactor * (double)(y - MouseClickY);
-      POV.w[2] = 0.0;
+      POV.w.y = MouseScaleFactor * (double)(x - MouseClickX);
+      POV.w.x = MouseScaleFactor * (double)(y - MouseClickY);
+      POV.w.z = 0.0;
    }
 }
 /**********************************************************************/
@@ -568,8 +566,9 @@ void CamMousePassiveMotionHandler(int x __attribute__((unused)),
 void OrreryMouseButtonHandler(int Button, int State, int x, int y)
 {
    struct SpotType *S;
-   long i, j, Pick;
-   double rwn[3], rwh[3], rw[3], xw, yw, dx, dy, d, LPrh[3];
+   long i, Pick;
+   vec3 rwn, rwh, rw, LPrh;
+   double xw, yw, dx, dy, d;
    long Iw, Is, Ip;
    struct WorldType *W;
    struct LagrangeSystemType *LS;
@@ -608,39 +607,39 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
                   break;
                case 2: /* Pan Up */
                   if (O->Regime == ORB_CENTRAL) {
-                     O->PosN[1] += 0.5 * O->Radius;
+                     O->PosN.v[1] += 0.5 * O->Radius;
                   }
                   else {
                      for (i = 0; i < 3; i++)
-                        O->PosN[i] +=
-                            0.5 * O->Radius * LagSys[O->LagSys].CLN[1][i];
+                        O->PosN.v[i] +=
+                            0.5 * O->Radius * LagSys[O->LagSys].CLN.mat[1][i];
                   }
                   break;
                case 3: /* Pan Down */
                   if (O->Regime == ORB_CENTRAL)
-                     O->PosN[1] -= 0.5 * O->Radius;
+                     O->PosN.v[1] -= 0.5 * O->Radius;
                   else {
                      for (i = 0; i < 3; i++)
-                        O->PosN[i] -=
-                            0.5 * O->Radius * LagSys[O->LagSys].CLN[1][i];
+                        O->PosN.v[i] -=
+                            0.5 * O->Radius * LagSys[O->LagSys].CLN.mat[1][i];
                   }
                   break;
                case 4: /* Pan Left */
                   if (O->Regime == ORB_CENTRAL)
-                     O->PosN[0] -= 0.5 * O->Radius;
+                     O->PosN.v[0] -= 0.5 * O->Radius;
                   else {
                      for (i = 0; i < 3; i++)
-                        O->PosN[i] -=
-                            0.5 * O->Radius * LagSys[O->LagSys].CLN[0][i];
+                        O->PosN.v[i] -=
+                            0.5 * O->Radius * LagSys[O->LagSys].CLN.mat[0][i];
                   }
                   break;
                case 5: /* Pan Right */
                   if (O->Regime == ORB_CENTRAL)
-                     O->PosN[0] += 0.5 * O->Radius;
+                     O->PosN.v[0] += 0.5 * O->Radius;
                   else {
                      for (i = 0; i < 3; i++)
-                        O->PosN[i] +=
-                            0.5 * O->Radius * LagSys[O->LagSys].CLN[0][i];
+                        O->PosN.v[i] +=
+                            0.5 * O->Radius * LagSys[O->LagSys].CLN.mat[0][i];
                   }
                   break;
                case 6: /* Rotate CW */
@@ -667,26 +666,27 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
                if (World[Iw].Exists) {
                   if (O->Regime == ORB_CENTRAL) {
                      for (i = 0; i < 3; i++)
-                        rwh[i] = World[Iw].PosH[i] - World[O->World].PosH[i];
-                     MxV(O->CNH, rwh, rwn);
+                        rwh.v[i] =
+                            World[Iw].PosH.v[i] - World[O->World].PosH.v[i];
+                     rwn = MxV(O->CNH, rwh);
                      for (i = 0; i < 3; i++)
-                        rw[i] = rwn[i] - O->PosN[i];
+                        rw.v[i] = rwn.v[i] - O->PosN.v[i];
                   }
                   else {
                      LS = &LagSys[O->LagSys];
                      LP = &LS->LP[O->LP];
                      for (i = 0; i < 3; i++)
-                        rwh[i] = World[Iw].PosH[i] - World[LS->Body1].PosH[i];
-                     MxV(O->CNH, rwh, rwn);
+                        rwh.v[i] =
+                            World[Iw].PosH.v[i] - World[LS->Body1].PosH.v[i];
+                     rwn = MxV(O->CNH, rwh);
                      for (i = 0; i < 3; i++)
-                        rwn[i] -= LP->PosN[i] + O->PosN[i];
-                     MxV(LagSys[O->LagSys].CLN, rwn, rw);
+                        rwn.v[i] -= LP->PosN.v[i] + O->PosN.v[i];
+                     rw = MxV(LagSys[O->LagSys].CLN, rwn);
                   }
-                  xw = 0.5 * (1.0 + rw[0] / O->Radius) * OrreryWidth;
-                  yw =
-                      0.5 *
-                      (1.0 - rw[1] / (O->Radius * OrreryHeight / OrreryWidth)) *
-                      OrreryHeight;
+                  xw = 0.5 * (1.0 + rw.x / O->Radius) * OrreryWidth;
+                  yw = 0.5 *
+                       (1.0 - rw.y / (O->Radius * OrreryHeight / OrreryWidth)) *
+                       OrreryHeight;
                   dx = ((double)x) - xw;
                   dy = ((double)y) - yw;
                   d  = sqrt(dx * dx + dy * dy);
@@ -694,15 +694,10 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
                      Done      = 1;
                      O->Regime = ORB_CENTRAL;
                      O->World  = Iw;
-                     for (i = 0; i < 3; i++) {
-                        for (j = 0; j < 3; j++) {
-                           O->CNH[i][j] = World[Iw].CNH[i][j];
-                           O->CN[i][j]  = 0.0;
-                        }
-                        O->CN[i][i] = 1.0;
-                        O->PosN[i]  = 0.0;
-                     }
-                     MxM(O->CN, O->CNH, O->CH);
+                     O->CNH    = World[Iw].CNH;
+                     O->CN     = MAT3X3_EYE;
+                     O->PosN   = VEC3_ZERO;
+                     O->CH     = MxM(O->CN, O->CNH);
                   }
                }
             }
@@ -712,28 +707,28 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
                   Iw = LagSys[Is].Body1;
                   W  = &World[Iw];
                   for (Ip = 0; Ip < 5; Ip++) {
-                     LP = &LagSys[Is].LP[Ip];
-                     MTxV(W->CNH, LP->PosN, LPrh);
-                     LPrh[0] += W->PosH[0];
-                     LPrh[1] += W->PosH[1];
-                     LPrh[2] += W->PosH[2];
+                     LP      = &LagSys[Is].LP[Ip];
+                     LPrh    = MTxV(W->CNH, LP->PosN);
+                     LPrh.x += W->PosH.x;
+                     LPrh.y += W->PosH.y;
+                     LPrh.z += W->PosH.z;
                      for (i = 0; i < 3; i++)
-                        rwh[i] = LPrh[i] - World[O->World].PosH[i];
-                     MxV(O->CNH, rwh, rwn);
+                        rwh.v[i] = LPrh.v[i] - World[O->World].PosH.v[i];
+                     rwn = MxV(O->CNH, rwh);
                      if (O->Regime == ORB_CENTRAL) {
                         for (i = 0; i < 3; i++)
-                           rw[i] = rwn[i] - O->PosN[i];
+                           rw.v[i] = rwn.v[i] - O->PosN.v[i];
                      }
                      else {
                         for (i = 0; i < 3; i++)
-                           rwn[i] -=
-                               LagSys[O->LagSys].LP[O->LP].PosN[i] + O->PosN[i];
-                        MxV(LagSys[Is].CLN, rwn, rw);
+                           rwn.v[i] -= LagSys[O->LagSys].LP[O->LP].PosN.v[i] +
+                                       O->PosN.v[i];
+                        rw = MxV(LagSys[Is].CLN, rwn);
                      }
-                     xw = 0.5 * (1.0 + rw[0] / O->Radius) * OrreryWidth;
+                     xw = 0.5 * (1.0 + rw.x / O->Radius) * OrreryWidth;
                      yw = 0.5 *
                           (1.0 -
-                           rw[1] / (O->Radius * OrreryHeight / OrreryWidth)) *
+                           rw.y / (O->Radius * OrreryHeight / OrreryWidth)) *
                           OrreryHeight;
                      dx = ((double)x) - xw;
                      dy = ((double)y) - yw;
@@ -743,14 +738,10 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
                         O->World  = Iw;
                         O->LagSys = Is;
                         O->LP     = Ip;
-                        for (i = 0; i < 3; i++) {
-                           for (j = 0; j < 3; j++) {
-                              O->CNH[i][j] = W->CNH[i][j];
-                              O->CN[i][j]  = LagSys[Is].CLN[i][j];
-                              O->CH[i][j]  = LagSys[Is].CLH[i][j];
-                           }
-                           O->PosN[i] = 0.0;
-                        }
+                        O->CNH    = W->CNH;
+                        O->CN     = LagSys[Is].CLN;
+                        O->CH     = LagSys[Is].CLH;
+                        O->PosN   = VEC3_ZERO;
                      }
                   }
                }
@@ -1193,12 +1184,10 @@ void InitOrreryWindow(void)
    O->LP        = LAGPT_L1;
    strcpy(OrreryTitle, "42 Orrery");
 
-   for (i = 0; i < 3; i++) {
-      O->PosN[i]   = 0.0;
-      O->CN[i][i]  = 1.0;
-      O->CH[i][i]  = 1.0;
-      O->CNH[i][i] = 1.0;
-   }
+   O->PosN = VEC3_ZERO;
+   O->CN   = MAT3X3_EYE;
+   O->CH   = MAT3X3_EYE;
+   O->CNH  = MAT3X3_EYE;
 
    for (i = 0; i < 30; i++) {
       O->Scale[i] = Scale[i];
@@ -1410,19 +1399,19 @@ long GuiCmdInterpreter(char CmdLine[512], double *CmdTime)
    }
    if (sscanf(CmdLine,
               "%lf POV CmdPermute = [%lf %lf %lf; %lf %lf %lf; %lf %lf %lf]",
-              CmdTime, &POV.CmdPermute[0][0], &POV.CmdPermute[0][1],
-              &POV.CmdPermute[0][2], &POV.CmdPermute[1][0],
-              &POV.CmdPermute[1][1], &POV.CmdPermute[1][2],
-              &POV.CmdPermute[2][0], &POV.CmdPermute[2][1],
-              &POV.CmdPermute[2][2]) == 10) {
+              CmdTime, &POV.CmdPermute.mat[0][0], &POV.CmdPermute.mat[0][1],
+              &POV.CmdPermute.mat[0][2], &POV.CmdPermute.mat[1][0],
+              &POV.CmdPermute.mat[1][1], &POV.CmdPermute.mat[1][2],
+              &POV.CmdPermute.mat[2][0], &POV.CmdPermute.mat[2][1],
+              &POV.CmdPermute.mat[2][2]) == 10) {
       NewCmdProcessed = TRUE;
    }
    if (sscanf(CmdLine, "%lf POV CmdAngle = [%lf %lf %lf] deg", CmdTime, &Ang1,
               &Ang2, &Ang3) == 4) {
       NewCmdProcessed = TRUE;
-      POV.CmdAngle[0] = Ang1 * D2R;
-      POV.CmdAngle[1] = Ang2 * D2R;
-      POV.CmdAngle[2] = Ang3 * D2R;
+      POV.CmdAngle.x  = Ang1 * D2R;
+      POV.CmdAngle.y  = Ang2 * D2R;
+      POV.CmdAngle.z  = Ang3 * D2R;
    }
    if (sscanf(CmdLine, "%lf POV TimeToGo = %lf", CmdTime, &POV.TimeToGo) == 2) {
       NewCmdProcessed = TRUE;

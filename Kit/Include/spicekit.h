@@ -59,26 +59,25 @@ typedef const char ConstSpiceChar;
 ** #endif
 */
 
-SpiceInt WorldID2NAIFID(WorldID w_id) __attribute__((const));
+__attribute__((const)) SpiceInt WorldID2NAIFID(WorldID w_id);
 void WorldID2IAUFrameWorld(WorldID w_id,
                            SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 void WorldID2IAUFrame(WorldID w_id,
                       SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 int SpiceCheckAndGetDbl(WorldID Iw, ConstSpiceChar *item, SpiceInt start,
                         SpiceInt n, SpiceDouble *vals);
-int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3]);
-int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, double CWJ[3][3]);
+int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3 *CWH);
+int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3 *CWJ);
 int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
-                   double C[3][3]);
-AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
-    __attribute__((pure));
+                   mat3x3 *C);
+__attribute__((pure)) AngDataType SpiceGetAngData(const WorldID world,
+                                                  ConstSpiceChar *item);
 int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
-                        double earth_CNH[3][3]);
+                        mat3x3 earth_CNH);
 void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
-                    struct WorldType *const worlds, double trgtPosN[3],
-                    double trgtPosH[3], double *trgtPriMerAng,
-                    double trgtCNH[3][3]);
-void SpicePosN2RLngLat(const double cwn[3][3], const double posn[3], double *r,
+                    struct WorldType *const worlds, vec3 *trgtPosN,
+                    vec3 *trgtPosH, double *trgtPriMerAng, mat3x3 *trgtCNH);
+void SpicePosN2RLngLat(const mat3x3 cwn, const vec3 posn, double *r,
                        double *lng, double *lat);
 /* Load defined SPICE kernels from Model/spice_kernels/kernels.txt */
 long SpiceLoadKernels(char SpicePath[80]);

@@ -169,7 +169,7 @@ static SpiceBoolean _frame_found(WorldID world)
    return frm_found[world];
 }
 
-int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3])
+int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3 *CWH)
 {
    const SpiceBoolean found = _frame_found(world);
    if (found) {
@@ -178,7 +178,7 @@ int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3])
 
       JDType jd_tdb_j2000 =
           JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
-      pxform_c("ECLIPJ2000", frm_name, JDToSeconds(jd_tdb_j2000), CWH);
+      pxform_c("ECLIPJ2000", frm_name, JDToSeconds(jd_tdb_j2000), CWH->mat);
    }
 
    return found;
@@ -186,7 +186,7 @@ int SpiceGetCWH(const JDType jd_epoch, const WorldID world, double CWH[3][3])
 /**********************************************************************/
 /* Compute the fixed frame orientaion of 'world' relative to the      */
 /* J2000 frame as CWN                                                 */
-int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, double CWJ[3][3])
+int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3 *CWJ)
 {
    const SpiceBoolean found = _frame_found(world);
    if (found) {
@@ -195,14 +195,14 @@ int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, double CWJ[3][3])
 
       JDType jd_tdb_j2000 =
           JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
-      pxform_c("J2000", frm_name, JDToSeconds(jd_tdb_j2000), CWJ);
+      pxform_c("J2000", frm_name, JDToSeconds(jd_tdb_j2000), CWJ->mat);
    }
 
    return found;
 }
 /**********************************************************************/
 int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
-                   double C[3][3])
+                   mat3x3 *C)
 {
    const SpiceBoolean found_v[2] = {_frame_found(from), _frame_found(to)};
    const SpiceBoolean found      = all_int(2, found_v);
@@ -214,7 +214,7 @@ int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
       WorldID2IAUFrame(to, to_name);
       JDType jd_tdb_j2000 =
           JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
-      pxform_c(from_name, to_name, JDToSeconds(jd_tdb_j2000), C);
+      pxform_c(from_name, to_name, JDToSeconds(jd_tdb_j2000), C->mat);
    }
 
    return found;
@@ -296,46 +296,40 @@ AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
 }
 /**********************************************************************/
 int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
-                        double earth_CNH[3][3])
+                        mat3x3 earth_CNH)
 {
    if (!W->OrientWorld)
       return 1;
-   double CWJ[3][3];
+   mat3x3 CWJ;
 
    jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    if (Iw == EARTH) {
       /* .. Earth rotation is a special case */
-      SpiceGetCWJ(jd, Iw, W->CWN);
-      pxform_c("ECLIPJ2000", "J2000", JDToTime(jd), W->CNH);
-      for (int i = 0; i < 3; i++) {
-         W->qnj[i] = 0.0;
-         for (int j = 0; j < 3; j++)
-            W->CNJ[i][j] = 0.0;
-         W->CNJ[i][i] = 1.0;
-      }
-      W->qnj[3] = 1.0;
+      SpiceGetCWJ(jd, Iw, &W->CWN);
+      pxform_c("ECLIPJ2000", "J2000", JDToTime(jd), W->CNH.mat);
+      W->qnj = QUAT_EYE;
+      W->CNJ = MAT3X3_EYE;
    }
    else {
-      GetWorldCNJ(jd, W->ang_data, W->CNJ);
-      MxM(W->CNJ, earth_CNH, W->CNH);
-      SpiceGetCWJ(jd, Iw, CWJ);
-      MxMT(CWJ, W->CNJ, W->CWN);
+      W->CNJ = GetWorldCNJ(jd, W->ang_data);
+      W->CNH = MxM(W->CNJ, earth_CNH);
+      SpiceGetCWJ(jd, Iw, &CWJ);
+      W->CWN = MxMT(CWJ, W->CNJ);
 
-      C2Q(W->CNJ, W->qnj);
+      W->qnj = C2Q(W->CNJ);
    }
    W->PriMerAng = GetWorldAng(jd, &W->ang_data[0]);
 
-   C2Q(W->CWN, W->qwn);
-   C2Q(W->CNH, W->qnh);
+   W->qwn = C2Q(W->CWN);
+   W->qnh = C2Q(W->CNH);
    return 1;
 }
 /**********************************************************************/
-void SpicePosN2RLngLat(const double cwn[3][3], const double posn[3], double *r,
+void SpicePosN2RLngLat(const mat3x3 cwn, const vec3 posn, double *r,
                        double *lng, double *lat)
 {
-   double pw[3] = {0.0};
-   MxV(cwn, posn, pw);
-   reclat_c(pw, r, lng, lat);
+   vec3 pw = MxV(cwn, posn);
+   reclat_c(pw.v, r, lng, lat);
 }
 /**********************************************************************/
 long SpiceLoadKernels(char SpicePath[80])
@@ -377,12 +371,14 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
                  WorldID2NAIFID(SOL), Nstate, &light_time);
 
          // Inertial pos & vel (m & m/s)
-         SxV(1.0e3, Nstate, Eph->PosN);
-         SxV(1.0e3, &Nstate[3], Eph->VelN);
+         for (int i = 0; i < 3; i++) {
+            Eph->PosN.v[i] = 1.0e3 * Nstate[i];
+            Eph->VelN.v[i] = 1.0e3 * Nstate[i + 3];
+         }
 
          // Heliocentric pos & vel = inertial pos & vel (m & m/s)
-         CopyVG(W->PosH, Eph->PosN, 3);
-         CopyVG(W->VelH, Eph->VelN, 3);
+         W->PosH = Eph->PosN;
+         W->VelH = Eph->VelN;
       }
    }
 
@@ -392,11 +388,11 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
    /*   (THIS SHOULD NOT BE NEEDED DUE TO FRAMES IN ABOVE LOOP)   */
    for (Iw = PLUTO; Iw >= SOL && Iw <= PLUTO; Iw--) {
       // WorldID is typically unsigned, so (((0)--) >= SOL) can be true
-      W = &worlds[Iw];
-      axpy(-1.0, sol->eph.PosN, W->eph.PosN, 3);
-      axpy(-1.0, sol->eph.VelN, W->eph.VelN, 3);
-      CopyVG(W->PosH, W->eph.PosN, 3);
-      CopyVG(W->VelH, W->eph.VelN, 3);
+      W           = &worlds[Iw];
+      W->eph.PosN = VmVElem(W->eph.PosN, sol->eph.PosN);
+      W->eph.VelN = VmVElem(W->eph.VelN, sol->eph.VelN);
+      W->PosH     = W->eph.PosN;
+      W->VelH     = W->eph.VelN;
    }
 
    // Read all moons
@@ -420,14 +416,14 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
             }
 
             // Inertial pos & vel (m & m/s)
-            SxV(1.0e3, Nstate, Eph->PosN);
-            SxV(1.0e3, &Nstate[3], Eph->VelN);
+            for (int i = 0; i < 3; i++) {
+               Eph->PosN.v[i] = 1.0e3 * Nstate[i];
+               Eph->VelN.v[i] = 1.0e3 * Nstate[i + 3];
+            }
 
             // Heliocentric pos & vel = inertial pos & vel (m & m/s)
-            CopyVG(W->PosH, Eph->PosN, 3);
-            CopyVG(W->VelH, Eph->VelN, 3);
-            axpy(1.0, P->PosH, W->PosH, 3);
-            axpy(1.0, P->VelH, W->VelH, 3);
+            W->PosH = VpVElem(Eph->PosN, P->PosH);
+            W->VelH = VpVElem(Eph->VelN, P->VelH);
          }
       }
    }
@@ -450,15 +446,14 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 /**********************************************************************/
 void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
                     struct WorldType *const worlds __attribute__((unused)),
-                    double trgtPosN[3], double trgtPosH[3],
+                    vec3 *trgtPosN, vec3 *trgtPosH,
                     double *trgtPriMerAng __attribute__((unused)),
-                    double trgtCNH[3][3])
+                    mat3x3 *trgtCNH)
 {
-   double CNH[3][3];
    double Nstate[6], Hstate[6];
    double light_time;
    char trgtCNH_STRING[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
-   int i, j;
+   int i;
 
    jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    const double jd_tdb_j2000_sec = JDToTime(jd);
@@ -472,24 +467,19 @@ void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
       spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "J2000", "NONE",
               WorldID2NAIFID(EARTH), Nstate, &light_time);
       for (i = 0; i < 3; i++) {
-         trgtPosH[i] = Hstate[i] * 1e3;
-         trgtPosN[i] = Nstate[i] * 1e3;
+         trgtPosH->v[i] = Hstate[i] * 1e3;
+         trgtPosN->v[i] = Nstate[i] * 1e3;
       }
    }
    else {
       spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "ECLIPJ2000", "NONE",
               WorldID2NAIFID(SOL), Nstate, &light_time);
       for (i = 0; i < 3; i++) {
-         trgtPosH[i] = Nstate[i] * 1e3;
-         trgtPosN[i] = Nstate[i] * 1e3;
+         trgtPosH->v[i] = Nstate[i] * 1e3;
+         trgtPosN->v[i] = Nstate[i] * 1e3;
       }
    }
-   pxform_c("J2000", trgtCNH_STRING, jd_tdb_j2000_sec, CNH);
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++) {
-         trgtCNH[i][j] = CNH[i][j];
-      }
-   }
+   pxform_c("J2000", trgtCNH_STRING, jd_tdb_j2000_sec, trgtCNH->mat);
 }
 
 #ifndef _ENABLE_SPICE_

@@ -29,7 +29,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
 {
    struct WorldType *P;
    double Alt;
-   double PosW[3];
+   vec3 PosW;
 #ifdef _RADBELT_
    int NumEnergies         = 5;
    float ElectronEnergy[5] = {0.15, 0.5, 1.0, 3.0, 4.0};    /* MeV */
@@ -51,21 +51,18 @@ void Environment(JDType jd, struct WorldType *const worlds,
 
    /* .. Magnetic Field */
    if (MagModel.Type == DIPOLE) {
-      DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset, S->PosN,
-                     P->PriMerAng, S->bvn);
+      S->bvn = DipoleMagField(P->DipoleMoment, P->DipoleAxis, P->DipoleOffset,
+                              S->PosN, P->PriMerAng);
    }
    else if (MagModel.Type == IGRF && orb->World == EARTH) {
       DateType utc_date = JDToDate(jd, UTC_TIME);
-      IGRFMagField(ModelPath, utc_date, MagModel.N, MagModel.M, S->PosN,
-                   P->PriMerAng, S->bvn);
+      S->bvn = IGRFMagField(ModelPath, utc_date, MagModel.N, MagModel.M,
+                            S->PosN, P->PriMerAng);
    }
-   else {
-      S->bvn[0] = 0.0;
-      S->bvn[1] = 0.0;
-      S->bvn[2] = 0.0;
-   }
+   else
+      S->bvn = VEC3_ZERO;
 
-   MxV(S->B[0].CN, S->bvn, S->bvb);
+   S->bvb = MxV(S->B[0].CN, S->bvn);
 
    /* .. Atmospheric Density */
    if (orb->World == EARTH) {
@@ -82,8 +79,8 @@ void Environment(JDType jd, struct WorldType *const worlds,
       }
       /* else USER_ATMO: Flux10p7, GeomagIndex read from Inp_Sim.txt */
 
-      MxV(worlds[EARTH].CWN, S->PosN, PosW);
-      Alt = MAGV(PosW) - worlds[EARTH].rad;
+      PosW = MxV(worlds[EARTH].CWN, S->PosN);
+      Alt  = MAGV(PosW) - worlds[EARTH].rad;
       if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
          S->AtmoDensity = NRLMSISE00(date_tt, PosW, Flux10p7, GeomagIndex);
       }

@@ -92,40 +92,41 @@ static inline RationalLL _iden_rationalll(RationalLL x)
        Rational *: _rat_int_mod_rat,                                           \
        RationalLL *: _rat_int_mod_ratll)((rat), (mod))
 
-Rational _rat_to_rational(const RationalLL rat_ll) __attribute__((const));
-RationalLL _rat_to_rationalll(const Rational rat) __attribute__((const));
-Rat_Long _rat_int_mod_rat(Rational *const rat, const Rat_Long mod)
-    __attribute__((pure));
-Rat_LongLong _rat_int_mod_ratll(RationalLL *const rat, const Rat_LongLong mod)
-    __attribute__((pure));
+__attribute__((const)) Rational _rat_to_rational(const RationalLL rat_ll);
+__attribute__((const)) RationalLL _rat_to_rationalll(const Rational rat);
+__attribute__((pure)) Rat_Long _rat_int_mod_rat(Rational *const rat,
+                                                const Rat_Long mod);
+__attribute__((pure)) Rat_LongLong _rat_int_mod_ratll(RationalLL *const rat,
+                                                      const Rat_LongLong mod);
+__attribute__((const)) Rational _int_rat_mult(const Rat_LongLong mul,
+                                              RationalLL rat);
+__attribute__((pure)) Rational _int_rat_mult_mod(const Rat_LongLong mul,
+                                                 RationalLL rat, Rat_Long mod,
+                                                 Rat_Long *const carry);
 
-Rational _int_rat_mult(const Rat_LongLong mul, RationalLL rat)
-    __attribute__((const));
-Rational _int_rat_mult_mod(const Rat_LongLong mul, RationalLL rat, Rat_Long mod,
-                           Rat_Long *const carry) __attribute__((pure));
+__attribute__((const)) RationalLL _rat_mult(RationalLL a, RationalLL b);
+__attribute__((const)) RationalLL _rat_divide(RationalLL a, RationalLL b);
 
-RationalLL _rat_mult(RationalLL a, RationalLL b) __attribute__((const));
-RationalLL _rat_divide(RationalLL a, RationalLL b) __attribute__((const));
+__attribute__((const)) RationalLL _rat_add(RationalLL a, RationalLL b);
+__attribute__((const)) RationalLL _rat_sub(RationalLL a, RationalLL b);
 
-RationalLL _rat_add(RationalLL a, RationalLL b) __attribute__((const));
-RationalLL _rat_sub(RationalLL a, RationalLL b) __attribute__((const));
+__attribute__((const)) Rat_Long _rat_round_up(const Rational rat);
+__attribute__((const)) Rat_Long _rat_round_down(const Rational rat);
 
-Rat_Long _rat_round_up(const Rational rat) __attribute__((const));
-Rat_Long _rat_round_down(const Rational rat) __attribute__((const));
+__attribute__((const)) Rational InitRational(const Rat_Long whole,
+                                             const Rat_Long num,
+                                             const Rat_Long den);
+__attribute__((const)) Rational ReduceRational(Rational rat);
 
-Rational InitRational(const Rat_Long whole, const Rat_Long num,
-                      const Rat_Long den) __attribute__((const));
-Rational ReduceRational(Rational rat) __attribute__((const));
-
-Rational double2rational(const double val) __attribute__((const));
-double rational2double(const Rational rat) __attribute__((const));
-Rational RationalAbs(Rational rat) __attribute__((const));
-Rational RationalNegate(Rational rat) __attribute__((const));
-int ispos_rational(Rational a) __attribute__((const));
-int isequal_rational(const Rational a, const Rational b) __attribute__((const));
-int isless_rational(const Rational a, const Rational b) __attribute__((const));
-int isgreater_rational(const Rational a, const Rational b)
-    __attribute__((const));
+__attribute__((const)) Rational double2rational(const double val);
+__attribute__((const)) double rational2double(const Rational rat);
+__attribute__((const)) Rational RationalAbs(Rational rat);
+__attribute__((const)) Rational RationalNegate(Rational rat);
+__attribute__((const)) int ispos_rational(Rational a);
+__attribute__((const)) int isequal_rational(const Rational a, const Rational b);
+__attribute__((const)) int isless_rational(const Rational a, const Rational b);
+__attribute__((const)) int isgreater_rational(const Rational a,
+                                              const Rational b);
 void rat2str(Rational rat, char str[RATIONAL_STR_LEN]);
 
 #endif /* __RATIONALKIT_H__ */

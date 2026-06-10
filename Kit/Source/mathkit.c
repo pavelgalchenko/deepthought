@@ -97,121 +97,238 @@ double smootherstep(const double x)
    return x * x * x * (x * (6.0 * x - 15.0) + 10.0);
 }
 /**********************************************************************/
-/*   3x3 Matrix Product                                               */
-void MxM(const double A[3][3], const double B[3][3], double C[3][3])
+double Limit(double x, double min, double max)
 {
-   C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
-   C[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1];
-   C[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2];
-   C[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0];
-   C[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1];
-   C[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2];
-   C[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0];
-   C[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1];
-   C[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2];
+   return (x < min ? min : (x > max ? max : x));
+}
+/**********************************************************************/
+/*   3x3 Matrix Product                                               */
+mat3x3 MxM(const mat3x3 A, const mat3x3 B)
+{
+   mat3x3 C;
+   C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[0][1] * B.mat[1][0] +
+                 A.mat[0][2] * B.mat[2][0];
+   C.mat[0][1] = A.mat[0][0] * B.mat[0][1] + A.mat[0][1] * B.mat[1][1] +
+                 A.mat[0][2] * B.mat[2][1];
+   C.mat[0][2] = A.mat[0][0] * B.mat[0][2] + A.mat[0][1] * B.mat[1][2] +
+                 A.mat[0][2] * B.mat[2][2];
+   C.mat[1][0] = A.mat[1][0] * B.mat[0][0] + A.mat[1][1] * B.mat[1][0] +
+                 A.mat[1][2] * B.mat[2][0];
+   C.mat[1][1] = A.mat[1][0] * B.mat[0][1] + A.mat[1][1] * B.mat[1][1] +
+                 A.mat[1][2] * B.mat[2][1];
+   C.mat[1][2] = A.mat[1][0] * B.mat[0][2] + A.mat[1][1] * B.mat[1][2] +
+                 A.mat[1][2] * B.mat[2][2];
+   C.mat[2][0] = A.mat[2][0] * B.mat[0][0] + A.mat[2][1] * B.mat[1][0] +
+                 A.mat[2][2] * B.mat[2][0];
+   C.mat[2][1] = A.mat[2][0] * B.mat[0][1] + A.mat[2][1] * B.mat[1][1] +
+                 A.mat[2][2] * B.mat[2][1];
+   C.mat[2][2] = A.mat[2][0] * B.mat[0][2] + A.mat[2][1] * B.mat[1][2] +
+                 A.mat[2][2] * B.mat[2][2];
+   return C;
 }
 /**********************************************************************/
 /* 3x3 Matrix times Transpose of Matrix                               */
-void MxMT(const double A[3][3], const double B[3][3], double C[3][3])
+mat3x3 MxMT(const mat3x3 A, const mat3x3 B)
 {
-   C[0][0] = A[0][0] * B[0][0] + A[0][1] * B[0][1] + A[0][2] * B[0][2];
-   C[0][1] = A[0][0] * B[1][0] + A[0][1] * B[1][1] + A[0][2] * B[1][2];
-   C[0][2] = A[0][0] * B[2][0] + A[0][1] * B[2][1] + A[0][2] * B[2][2];
-   C[1][0] = A[1][0] * B[0][0] + A[1][1] * B[0][1] + A[1][2] * B[0][2];
-   C[1][1] = A[1][0] * B[1][0] + A[1][1] * B[1][1] + A[1][2] * B[1][2];
-   C[1][2] = A[1][0] * B[2][0] + A[1][1] * B[2][1] + A[1][2] * B[2][2];
-   C[2][0] = A[2][0] * B[0][0] + A[2][1] * B[0][1] + A[2][2] * B[0][2];
-   C[2][1] = A[2][0] * B[1][0] + A[2][1] * B[1][1] + A[2][2] * B[1][2];
-   C[2][2] = A[2][0] * B[2][0] + A[2][1] * B[2][1] + A[2][2] * B[2][2];
+   mat3x3 C;
+   C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[0][1] * B.mat[0][1] +
+                 A.mat[0][2] * B.mat[0][2];
+   C.mat[0][1] = A.mat[0][0] * B.mat[1][0] + A.mat[0][1] * B.mat[1][1] +
+                 A.mat[0][2] * B.mat[1][2];
+   C.mat[0][2] = A.mat[0][0] * B.mat[2][0] + A.mat[0][1] * B.mat[2][1] +
+                 A.mat[0][2] * B.mat[2][2];
+   C.mat[1][0] = A.mat[1][0] * B.mat[0][0] + A.mat[1][1] * B.mat[0][1] +
+                 A.mat[1][2] * B.mat[0][2];
+   C.mat[1][1] = A.mat[1][0] * B.mat[1][0] + A.mat[1][1] * B.mat[1][1] +
+                 A.mat[1][2] * B.mat[1][2];
+   C.mat[1][2] = A.mat[1][0] * B.mat[2][0] + A.mat[1][1] * B.mat[2][1] +
+                 A.mat[1][2] * B.mat[2][2];
+   C.mat[2][0] = A.mat[2][0] * B.mat[0][0] + A.mat[2][1] * B.mat[0][1] +
+                 A.mat[2][2] * B.mat[0][2];
+   C.mat[2][1] = A.mat[2][0] * B.mat[1][0] + A.mat[2][1] * B.mat[1][1] +
+                 A.mat[2][2] * B.mat[1][2];
+   C.mat[2][2] = A.mat[2][0] * B.mat[2][0] + A.mat[2][1] * B.mat[2][1] +
+                 A.mat[2][2] * B.mat[2][2];
+   return C;
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Matrix                              */
-void MTxM(const double A[3][3], const double B[3][3], double C[3][3])
+mat3x3 MTxM(const mat3x3 A, const mat3x3 B)
 {
-   C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[1][0] + A[2][0] * B[2][0];
-   C[0][1] = A[0][0] * B[0][1] + A[1][0] * B[1][1] + A[2][0] * B[2][1];
-   C[0][2] = A[0][0] * B[0][2] + A[1][0] * B[1][2] + A[2][0] * B[2][2];
-   C[1][0] = A[0][1] * B[0][0] + A[1][1] * B[1][0] + A[2][1] * B[2][0];
-   C[1][1] = A[0][1] * B[0][1] + A[1][1] * B[1][1] + A[2][1] * B[2][1];
-   C[1][2] = A[0][1] * B[0][2] + A[1][1] * B[1][2] + A[2][1] * B[2][2];
-   C[2][0] = A[0][2] * B[0][0] + A[1][2] * B[1][0] + A[2][2] * B[2][0];
-   C[2][1] = A[0][2] * B[0][1] + A[1][2] * B[1][1] + A[2][2] * B[2][1];
-   C[2][2] = A[0][2] * B[0][2] + A[1][2] * B[1][2] + A[2][2] * B[2][2];
+   mat3x3 C;
+   C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[1][0] * B.mat[1][0] +
+                 A.mat[2][0] * B.mat[2][0];
+   C.mat[0][1] = A.mat[0][0] * B.mat[0][1] + A.mat[1][0] * B.mat[1][1] +
+                 A.mat[2][0] * B.mat[2][1];
+   C.mat[0][2] = A.mat[0][0] * B.mat[0][2] + A.mat[1][0] * B.mat[1][2] +
+                 A.mat[2][0] * B.mat[2][2];
+   C.mat[1][0] = A.mat[0][1] * B.mat[0][0] + A.mat[1][1] * B.mat[1][0] +
+                 A.mat[2][1] * B.mat[2][0];
+   C.mat[1][1] = A.mat[0][1] * B.mat[0][1] + A.mat[1][1] * B.mat[1][1] +
+                 A.mat[2][1] * B.mat[2][1];
+   C.mat[1][2] = A.mat[0][1] * B.mat[0][2] + A.mat[1][1] * B.mat[1][2] +
+                 A.mat[2][1] * B.mat[2][2];
+   C.mat[2][0] = A.mat[0][2] * B.mat[0][0] + A.mat[1][2] * B.mat[1][0] +
+                 A.mat[2][2] * B.mat[2][0];
+   C.mat[2][1] = A.mat[0][2] * B.mat[0][1] + A.mat[1][2] * B.mat[1][1] +
+                 A.mat[2][2] * B.mat[2][1];
+   C.mat[2][2] = A.mat[0][2] * B.mat[0][2] + A.mat[1][2] * B.mat[1][2] +
+                 A.mat[2][2] * B.mat[2][2];
+   return C;
 }
 /**********************************************************************/
 /*  3x3 Transpose of Matrix times Transpose of Matrix                 */
-void MTxMT(const double A[3][3], const double B[3][3], double C[3][3])
+mat3x3 MTxMT(const mat3x3 A, const mat3x3 B)
 {
-   C[0][0] = A[0][0] * B[0][0] + A[1][0] * B[0][1] + A[2][0] * B[0][2];
-   C[0][1] = A[0][0] * B[1][0] + A[1][0] * B[1][1] + A[2][0] * B[1][2];
-   C[0][2] = A[0][0] * B[2][0] + A[1][0] * B[2][1] + A[2][0] * B[2][2];
-   C[1][0] = A[0][1] * B[0][0] + A[1][1] * B[0][1] + A[2][1] * B[0][2];
-   C[1][1] = A[0][1] * B[1][0] + A[1][1] * B[1][1] + A[2][1] * B[1][2];
-   C[1][2] = A[0][1] * B[2][0] + A[1][1] * B[2][1] + A[2][1] * B[2][2];
-   C[2][0] = A[0][2] * B[0][0] + A[1][2] * B[0][1] + A[2][2] * B[0][2];
-   C[2][1] = A[0][2] * B[1][0] + A[1][2] * B[1][1] + A[2][2] * B[1][2];
-   C[2][2] = A[0][2] * B[2][0] + A[1][2] * B[2][1] + A[2][2] * B[2][2];
+   mat3x3 C;
+   C.mat[0][0] = A.mat[0][0] * B.mat[0][0] + A.mat[1][0] * B.mat[0][1] +
+                 A.mat[2][0] * B.mat[0][2];
+   C.mat[0][1] = A.mat[0][0] * B.mat[1][0] + A.mat[1][0] * B.mat[1][1] +
+                 A.mat[2][0] * B.mat[1][2];
+   C.mat[0][2] = A.mat[0][0] * B.mat[2][0] + A.mat[1][0] * B.mat[2][1] +
+                 A.mat[2][0] * B.mat[2][2];
+   C.mat[1][0] = A.mat[0][1] * B.mat[0][0] + A.mat[1][1] * B.mat[0][1] +
+                 A.mat[2][1] * B.mat[0][2];
+   C.mat[1][1] = A.mat[0][1] * B.mat[1][0] + A.mat[1][1] * B.mat[1][1] +
+                 A.mat[2][1] * B.mat[1][2];
+   C.mat[1][2] = A.mat[0][1] * B.mat[2][0] + A.mat[1][1] * B.mat[2][1] +
+                 A.mat[2][1] * B.mat[2][2];
+   C.mat[2][0] = A.mat[0][2] * B.mat[0][0] + A.mat[1][2] * B.mat[0][1] +
+                 A.mat[2][2] * B.mat[0][2];
+   C.mat[2][1] = A.mat[0][2] * B.mat[1][0] + A.mat[1][2] * B.mat[1][1] +
+                 A.mat[2][2] * B.mat[1][2];
+   C.mat[2][2] = A.mat[0][2] * B.mat[2][0] + A.mat[1][2] * B.mat[2][1] +
+                 A.mat[2][2] * B.mat[2][2];
+   return C;
 }
 /**********************************************************************/
 /*  1x3 Vector times 3x3 Matrix                                       */
-void VxM(const double V[3], const double M[3][3], double W[3])
+vec3 VxM(const vec3 V, const mat3x3 M)
 {
-   W[0] = V[0] * M[0][0] + V[1] * M[1][0] + V[2] * M[2][0];
-   W[1] = V[0] * M[0][1] + V[1] * M[1][1] + V[2] * M[2][1];
-   W[2] = V[0] * M[0][2] + V[1] * M[1][2] + V[2] * M[2][2];
+   vec3 W;
+   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[1][0] + V.v[2] * M.mat[2][0];
+   W.v[1] = V.v[0] * M.mat[0][1] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[2][1];
+   W.v[2] = V.v[0] * M.mat[0][2] + V.v[1] * M.mat[1][2] + V.v[2] * M.mat[2][2];
+   return W;
 }
 /**********************************************************************/
 /*  3x3 Matrix times 3x1 Vector                                       */
-void MxV(const double M[3][3], const double V[3], double W[3])
+vec3 MxV(const mat3x3 M, const vec3 V)
 {
-   W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
-   W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
-   W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
+   vec3 W;
+   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[0][1] + V.v[2] * M.mat[0][2];
+   W.v[1] = V.v[0] * M.mat[1][0] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[1][2];
+   W.v[2] = V.v[0] * M.mat[2][0] + V.v[1] * M.mat[2][1] + V.v[2] * M.mat[2][2];
+   return W;
 }
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
-void VxMT(const double V[3], const double M[3][3], double W[3])
+vec3 VxMT(const vec3 V, const mat3x3 M)
 {
-   W[0] = V[0] * M[0][0] + V[1] * M[0][1] + V[2] * M[0][2];
-   W[1] = V[0] * M[1][0] + V[1] * M[1][1] + V[2] * M[1][2];
-   W[2] = V[0] * M[2][0] + V[1] * M[2][1] + V[2] * M[2][2];
+   vec3 W;
+   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[0][1] + V.v[2] * M.mat[0][2];
+   W.v[1] = V.v[0] * M.mat[1][0] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[1][2];
+   W.v[2] = V.v[0] * M.mat[2][0] + V.v[1] * M.mat[2][1] + V.v[2] * M.mat[2][2];
+   return W;
 }
 /**********************************************************************/
 /*  Transpose of 3x3 Matrix times 3x1 Vector                          */
-void MTxV(const double M[3][3], const double V[3], double W[3])
+vec3 MTxV(const mat3x3 M, const vec3 V)
 {
-   W[0] = M[0][0] * V[0] + M[1][0] * V[1] + M[2][0] * V[2];
-   W[1] = M[0][1] * V[0] + M[1][1] * V[1] + M[2][1] * V[2];
-   W[2] = M[0][2] * V[0] + M[1][2] * V[1] + M[2][2] * V[2];
+   vec3 W;
+   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[1][0] + V.v[2] * M.mat[2][0];
+   W.v[1] = V.v[0] * M.mat[0][1] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[2][1];
+   W.v[2] = V.v[0] * M.mat[0][2] + V.v[1] * M.mat[1][2] + V.v[2] * M.mat[2][2];
+   return W;
 }
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
-void SxV(const double S, const double V[3], double W[3])
+vec3 SxV(const double S, const vec3 V)
 {
-   W[0] = S * V[0];
-   W[1] = S * V[1];
-   W[2] = S * V[2];
+   vec3 W;
+   W.v[0] = S * V.v[0];
+   W.v[1] = S * V.v[1];
+   W.v[2] = S * V.v[2];
+   return W;
+}
+/**********************************************************************/
+vec3 VNegElem(const vec3 A)
+{
+   vec3 out;
+   out.v[0] = -A.v[0];
+   out.v[1] = -A.v[1];
+   out.v[2] = -A.v[2];
+   return out;
+}
+/**********************************************************************/
+vec3 VpVElem(const vec3 A, const vec3 B)
+{
+   vec3 out  = A;
+   out.v[0] += B.v[0];
+   out.v[1] += B.v[1];
+   out.v[2] += B.v[2];
+   return out;
+}
+/**********************************************************************/
+vec3 VmVElem(const vec3 A, const vec3 B)
+{
+   vec3 out  = A;
+   out.v[0] -= B.v[0];
+   out.v[1] -= B.v[1];
+   out.v[2] -= B.v[2];
+   return out;
+}
+/**********************************************************************/
+vec3 VxVElem(const vec3 A, const vec3 B)
+{
+   vec3 out  = A;
+   out.v[0] *= B.v[0];
+   out.v[1] *= B.v[1];
+   out.v[2] *= B.v[2];
+   return out;
+}
+/**********************************************************************/
+vec3 VdVElem(const vec3 A, const vec3 B)
+{
+   vec3 out  = A;
+   out.v[0] /= (fabs(B.v[0]) > __DBL_EPSILON__) ? B.v[0] : 0.0;
+   out.v[1] /= (fabs(B.v[1]) > __DBL_EPSILON__) ? B.v[1] : 0.0;
+   out.v[2] /= (fabs(B.v[2]) > __DBL_EPSILON__) ? B.v[2] : 0.0;
+   return out;
+}
+/**********************************************************************/
+vec3 LimitElem_bidir(vec3 x, const vec3 lim)
+{
+   for (int i = 0; i < 3; i++)
+      if (lim.v[i] > 0)
+         x.v[i] = Limit(x.v[i], -lim.v[i], lim.v[i]);
+
+   return x;
 }
 /**********************************************************************/
 /*  Scalar times 3x3 Matrix                                           */
-void SxM(const double S, const double A[3][3], double B[3][3])
+mat3x3 SxM(const double S, const mat3x3 A)
 {
-   B[0][0] = S * A[0][0];
-   B[0][1] = S * A[0][1];
-   B[0][2] = S * A[0][2];
-   B[1][0] = S * A[1][0];
-   B[1][1] = S * A[1][1];
-   B[1][2] = S * A[1][2];
-   B[2][0] = S * A[2][0];
-   B[2][1] = S * A[2][1];
-   B[2][2] = S * A[2][2];
+   mat3x3 B;
+   B.mat[0][0] = S * A.mat[0][0];
+   B.mat[0][1] = S * A.mat[0][1];
+   B.mat[0][2] = S * A.mat[0][2];
+   B.mat[1][0] = S * A.mat[1][0];
+   B.mat[1][1] = S * A.mat[1][1];
+   B.mat[1][2] = S * A.mat[1][2];
+   B.mat[2][0] = S * A.mat[2][0];
+   B.mat[2][1] = S * A.mat[2][1];
+   B.mat[2][2] = S * A.mat[2][2];
+   return B;
 }
 /******************************************************************************/
-double det3x3(const double M[3][3])
+double det3x3(const mat3x3 M)
 {
-   return M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) -
-          M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) +
-          M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
+   return M.mat[0][0] *
+              (M.mat[1][1] * M.mat[2][2] - M.mat[1][2] * M.mat[2][1]) -
+          M.mat[0][1] *
+              (M.mat[1][0] * M.mat[2][2] - M.mat[1][2] * M.mat[2][0]) +
+          M.mat[0][2] * (M.mat[1][0] * M.mat[2][1] - M.mat[1][1] * M.mat[2][0]);
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
@@ -254,13 +371,12 @@ void MINV4(const double A[4][4], double B[4][4])
 }
 /******************************************************************************/
 /*  Inverse of a 3x3 Matrix                                                   */
-void MINV3(const double A[3][3], double B[3][3])
+mat3x3 MINV3(const mat3x3 A)
 {
+   mat3x3 B;
    double DET;
 
-   DET = A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] +
-         A[0][2] * A[1][0] * A[2][1] - A[2][0] * A[1][1] * A[0][2] -
-         A[2][1] * A[1][2] * A[0][0] - A[2][2] * A[1][0] * A[0][1];
+   DET = det3x3(A);
 
    if (DET == 0.0) {
       fprintf(
@@ -269,16 +385,26 @@ void MINV3(const double A[3][3], double B[3][3])
       exit(EXIT_FAILURE);
    }
    else {
-      B[0][0] = (A[1][1] * A[2][2] - A[2][1] * A[1][2]) / DET;
-      B[0][1] = (A[2][1] * A[0][2] - A[0][1] * A[2][2]) / DET;
-      B[0][2] = (A[0][1] * A[1][2] - A[1][1] * A[0][2]) / DET;
-      B[1][0] = (A[2][0] * A[1][2] - A[1][0] * A[2][2]) / DET;
-      B[1][1] = (A[0][0] * A[2][2] - A[2][0] * A[0][2]) / DET;
-      B[1][2] = (A[1][0] * A[0][2] - A[0][0] * A[1][2]) / DET;
-      B[2][0] = (A[1][0] * A[2][1] - A[2][0] * A[1][1]) / DET;
-      B[2][1] = (A[2][0] * A[0][1] - A[0][0] * A[2][1]) / DET;
-      B[2][2] = (A[0][0] * A[1][1] - A[1][0] * A[0][1]) / DET;
+      B.mat[0][0] =
+          (A.mat[1][1] * A.mat[2][2] - A.mat[2][1] * A.mat[1][2]) / DET;
+      B.mat[0][1] =
+          (A.mat[2][1] * A.mat[0][2] - A.mat[0][1] * A.mat[2][2]) / DET;
+      B.mat[0][2] =
+          (A.mat[0][1] * A.mat[1][2] - A.mat[1][1] * A.mat[0][2]) / DET;
+      B.mat[1][0] =
+          (A.mat[2][0] * A.mat[1][2] - A.mat[1][0] * A.mat[2][2]) / DET;
+      B.mat[1][1] =
+          (A.mat[0][0] * A.mat[2][2] - A.mat[2][0] * A.mat[0][2]) / DET;
+      B.mat[1][2] =
+          (A.mat[1][0] * A.mat[0][2] - A.mat[0][0] * A.mat[1][2]) / DET;
+      B.mat[2][0] =
+          (A.mat[1][0] * A.mat[2][1] - A.mat[2][0] * A.mat[1][1]) / DET;
+      B.mat[2][1] =
+          (A.mat[2][0] * A.mat[0][1] - A.mat[0][0] * A.mat[2][1]) / DET;
+      B.mat[2][2] =
+          (A.mat[0][0] * A.mat[1][1] - A.mat[1][0] * A.mat[0][1]) / DET;
    }
+   return B;
 }
 /******************************************************************************/
 /*  Inverse of a 2x2 Matrix                                                   */
@@ -305,304 +431,327 @@ void MINV2(const double A[2][2], double B[2][2])
 /*  Pseudo-inverse of a 4x3 matrix                                    */
 void PINV4x3(const double A[4][3], double Aplus[3][4])
 {
-   double AtA[3][3], AtAi[3][3];
+   mat3x3 AtA = {0};
 
-   AtA[0][0] = A[0][0] * A[0][0] + A[1][0] * A[1][0] + A[2][0] * A[2][0] +
-               A[3][0] * A[3][0];
-   AtA[0][1] = A[0][0] * A[0][1] + A[1][0] * A[1][1] + A[2][0] * A[2][1] +
-               A[3][0] * A[3][1];
-   AtA[0][2] = A[0][0] * A[0][2] + A[1][0] * A[1][2] + A[2][0] * A[2][2] +
-               A[3][0] * A[3][2];
-   AtA[1][0] = A[0][1] * A[0][0] + A[1][1] * A[1][0] + A[2][1] * A[2][0] +
-               A[3][1] * A[3][0];
-   AtA[1][1] = A[0][1] * A[0][1] + A[1][1] * A[1][1] + A[2][1] * A[2][1] +
-               A[3][1] * A[3][1];
-   AtA[1][2] = A[0][1] * A[0][2] + A[1][1] * A[1][2] + A[2][1] * A[2][2] +
-               A[3][1] * A[3][2];
-   AtA[2][0] = A[0][2] * A[0][0] + A[1][2] * A[1][0] + A[2][2] * A[2][0] +
-               A[3][2] * A[3][0];
-   AtA[2][1] = A[0][2] * A[0][1] + A[1][2] * A[1][1] + A[2][2] * A[2][1] +
-               A[3][2] * A[3][1];
-   AtA[2][2] = A[0][2] * A[0][2] + A[1][2] * A[1][2] + A[2][2] * A[2][2] +
-               A[3][2] * A[3][2];
+   AtA.mat[0][0] = A[0][0] * A[0][0] + A[1][0] * A[1][0] + A[2][0] * A[2][0] +
+                   A[3][0] * A[3][0];
+   AtA.mat[0][1] = A[0][0] * A[0][1] + A[1][0] * A[1][1] + A[2][0] * A[2][1] +
+                   A[3][0] * A[3][1];
+   AtA.mat[0][2] = A[0][0] * A[0][2] + A[1][0] * A[1][2] + A[2][0] * A[2][2] +
+                   A[3][0] * A[3][2];
+   AtA.mat[1][0] = A[0][1] * A[0][0] + A[1][1] * A[1][0] + A[2][1] * A[2][0] +
+                   A[3][1] * A[3][0];
+   AtA.mat[1][1] = A[0][1] * A[0][1] + A[1][1] * A[1][1] + A[2][1] * A[2][1] +
+                   A[3][1] * A[3][1];
+   AtA.mat[1][2] = A[0][1] * A[0][2] + A[1][1] * A[1][2] + A[2][1] * A[2][2] +
+                   A[3][1] * A[3][2];
+   AtA.mat[2][0] = A[0][2] * A[0][0] + A[1][2] * A[1][0] + A[2][2] * A[2][0] +
+                   A[3][2] * A[3][0];
+   AtA.mat[2][1] = A[0][2] * A[0][1] + A[1][2] * A[1][1] + A[2][2] * A[2][1] +
+                   A[3][2] * A[3][1];
+   AtA.mat[2][2] = A[0][2] * A[0][2] + A[1][2] * A[1][2] + A[2][2] * A[2][2] +
+                   A[3][2] * A[3][2];
 
-   MINV3(AtA, AtAi);
+   mat3x3 AtAi = MINV3(AtA);
 
-   Aplus[0][0] =
-       AtAi[0][0] * A[0][0] + AtAi[0][1] * A[0][1] + AtAi[0][2] * A[0][2];
-   Aplus[0][1] =
-       AtAi[0][0] * A[1][0] + AtAi[0][1] * A[1][1] + AtAi[0][2] * A[1][2];
-   Aplus[0][2] =
-       AtAi[0][0] * A[2][0] + AtAi[0][1] * A[2][1] + AtAi[0][2] * A[2][2];
-   Aplus[0][3] =
-       AtAi[0][0] * A[3][0] + AtAi[0][1] * A[3][1] + AtAi[0][2] * A[3][2];
-   Aplus[1][0] =
-       AtAi[1][0] * A[0][0] + AtAi[1][1] * A[0][1] + AtAi[1][2] * A[0][2];
-   Aplus[1][1] =
-       AtAi[1][0] * A[1][0] + AtAi[1][1] * A[1][1] + AtAi[1][2] * A[1][2];
-   Aplus[1][2] =
-       AtAi[1][0] * A[2][0] + AtAi[1][1] * A[2][1] + AtAi[1][2] * A[2][2];
-   Aplus[1][3] =
-       AtAi[1][0] * A[3][0] + AtAi[1][1] * A[3][1] + AtAi[1][2] * A[3][2];
-   Aplus[2][0] =
-       AtAi[2][0] * A[0][0] + AtAi[2][1] * A[0][1] + AtAi[2][2] * A[0][2];
-   Aplus[2][1] =
-       AtAi[2][0] * A[1][0] + AtAi[2][1] * A[1][1] + AtAi[2][2] * A[1][2];
-   Aplus[2][2] =
-       AtAi[2][0] * A[2][0] + AtAi[2][1] * A[2][1] + AtAi[2][2] * A[2][2];
-   Aplus[2][3] =
-       AtAi[2][0] * A[3][0] + AtAi[2][1] * A[3][1] + AtAi[2][2] * A[3][2];
+   Aplus[0][0] = AtAi.mat[0][0] * A[0][0] + AtAi.mat[0][1] * A[0][1] +
+                 AtAi.mat[0][2] * A[0][2];
+   Aplus[0][1] = AtAi.mat[0][0] * A[1][0] + AtAi.mat[0][1] * A[1][1] +
+                 AtAi.mat[0][2] * A[1][2];
+   Aplus[0][2] = AtAi.mat[0][0] * A[2][0] + AtAi.mat[0][1] * A[2][1] +
+                 AtAi.mat[0][2] * A[2][2];
+   Aplus[0][3] = AtAi.mat[0][0] * A[3][0] + AtAi.mat[0][1] * A[3][1] +
+                 AtAi.mat[0][2] * A[3][2];
+   Aplus[1][0] = AtAi.mat[1][0] * A[0][0] + AtAi.mat[1][1] * A[0][1] +
+                 AtAi.mat[1][2] * A[0][2];
+   Aplus[1][1] = AtAi.mat[1][0] * A[1][0] + AtAi.mat[1][1] * A[1][1] +
+                 AtAi.mat[1][2] * A[1][2];
+   Aplus[1][2] = AtAi.mat[1][0] * A[2][0] + AtAi.mat[1][1] * A[2][1] +
+                 AtAi.mat[1][2] * A[2][2];
+   Aplus[1][3] = AtAi.mat[1][0] * A[3][0] + AtAi.mat[1][1] * A[3][1] +
+                 AtAi.mat[1][2] * A[3][2];
+   Aplus[2][0] = AtAi.mat[2][0] * A[0][0] + AtAi.mat[2][1] * A[0][1] +
+                 AtAi.mat[2][2] * A[0][2];
+   Aplus[2][1] = AtAi.mat[2][0] * A[1][0] + AtAi.mat[2][1] * A[1][1] +
+                 AtAi.mat[2][2] * A[1][2];
+   Aplus[2][2] = AtAi.mat[2][0] * A[2][0] + AtAi.mat[2][1] * A[2][1] +
+                 AtAi.mat[2][2] * A[2][2];
+   Aplus[2][3] = AtAi.mat[2][0] * A[3][0] + AtAi.mat[2][1] * A[3][1] +
+                 AtAi.mat[2][2] * A[3][2];
 }
 /**********************************************************************/
 /*  Transpose of a 3x3 Matrix                                         */
-void MT(const double A[3][3], double B[3][3])
+mat3x3 MT(const mat3x3 A)
 {
-   B[0][0] = A[0][0];
-   B[0][1] = A[1][0];
-   B[0][2] = A[2][0];
-   B[1][0] = A[0][1];
-   B[1][1] = A[1][1];
-   B[1][2] = A[2][1];
-   B[2][0] = A[0][2];
-   B[2][1] = A[1][2];
-   B[2][2] = A[2][2];
+   mat3x3 B;
+   B.mat[0][0] = A.mat[0][0];
+   B.mat[0][1] = A.mat[1][0];
+   B.mat[0][2] = A.mat[2][0];
+   B.mat[1][0] = A.mat[0][1];
+   B.mat[1][1] = A.mat[1][1];
+   B.mat[1][2] = A.mat[2][1];
+   B.mat[2][0] = A.mat[0][2];
+   B.mat[2][1] = A.mat[1][2];
+   B.mat[2][2] = A.mat[2][2];
+   return B;
 }
 /**********************************************************************/
 /*  Vector Dot Product                                                */
-double VoV(const double A[3], const double B[3])
+double VoV(const vec3 A, const vec3 B)
 {
-   return (A[0] * B[0] + A[1] * B[1] + A[2] * B[2]);
+   return (A.v[0] * B.v[0] + A.v[1] * B.v[1] + A.v[2] * B.v[2]);
 }
 /**********************************************************************/
 /*  Vector Cross Product                                              */
-void VxV(const double A[3], const double B[3], double C[3])
+vec3 VxV(const vec3 A, const vec3 B)
 {
-   C[0] = A[1] * B[2] - A[2] * B[1];
-   C[1] = A[2] * B[0] - A[0] * B[2];
-   C[2] = A[0] * B[1] - A[1] * B[0];
+   vec3 C;
+   C.v[0] = A.v[1] * B.v[2] - A.v[2] * B.v[1];
+   C.v[1] = A.v[2] * B.v[0] - A.v[0] * B.v[2];
+   C.v[2] = A.v[0] * B.v[1] - A.v[1] * B.v[0];
+   return C;
 }
 /**********************************************************************/
 /*  Vector cross Matrix dot Vector                                    */
-void vxMov(const double w[3], const double M[3][3], double wxMow[3])
+vec3 vxMov(const vec3 w, const mat3x3 M)
 {
-   double Mow[3];
+   vec3 wxMow, Mow;
 
-   Mow[0] = M[0][0] * w[0] + M[0][1] * w[1] + M[0][2] * w[2];
-   Mow[1] = M[1][0] * w[0] + M[1][1] * w[1] + M[1][2] * w[2];
-   Mow[2] = M[2][0] * w[0] + M[2][1] * w[1] + M[2][2] * w[2];
+   Mow.v[0] =
+       M.mat[0][0] * w.v[0] + M.mat[0][1] * w.v[1] + M.mat[0][2] * w.v[2];
+   Mow.v[1] =
+       M.mat[1][0] * w.v[0] + M.mat[1][1] * w.v[1] + M.mat[1][2] * w.v[2];
+   Mow.v[2] =
+       M.mat[2][0] * w.v[0] + M.mat[2][1] * w.v[1] + M.mat[2][2] * w.v[2];
 
-   wxMow[0] = w[1] * Mow[2] - w[2] * Mow[1];
-   wxMow[1] = w[2] * Mow[0] - w[0] * Mow[2];
-   wxMow[2] = w[0] * Mow[1] - w[1] * Mow[0];
+   wxMow.v[0] = w.v[1] * Mow.v[2] - w.v[2] * Mow.v[1];
+   wxMow.v[1] = w.v[2] * Mow.v[0] - w.v[0] * Mow.v[2];
+   wxMow.v[2] = w.v[0] * Mow.v[1] - w.v[1] * Mow.v[0];
+   return wxMow;
 }
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */
-double MAGV(const double V[3])
+double MAGV(const vec3 V)
 {
-   return (sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]));
+   return (sqrt(VoV(V, V)));
 }
 /**********************************************************************/
 /*  Normalize a 3-vector.  Return its (pre-normalization) magnitude   */
-double UNITV(double V[3])
+double UNITV(vec3 *V)
 {
    double A;
 
-   A = sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
+   A = MAGV(*V);
    if (A > 0.0) {
-      V[0] /= A;
-      V[1] /= A;
-      V[2] /= A;
+      V->v[0] /= A;
+      V->v[1] /= A;
+      V->v[2] /= A;
    }
    else {
       printf("Attempted divide by zero in UNITV (Line %d of mathkit.c)\n",
              __LINE__);
-      V[0] = 0.0;
-      V[1] = 0.0;
-      V[2] = 0.0;
+      V->v[0] = 0.0;
+      V->v[1] = 0.0;
+      V->v[2] = 0.0;
    }
    return (A);
 }
 /**********************************************************************/
 /*  Copy and normalize a 3-vector.  Return its magnitude              */
-double CopyUnitV(const double V[3], double W[3])
+double CopyUnitV(const vec3 V, vec3 *W)
 {
-   double A;
-
-   A = sqrt(V[0] * V[0] + V[1] * V[1] + V[2] * V[2]);
-   if (A > 0.0) {
-      W[0] = V[0] / A;
-      W[1] = V[1] / A;
-      W[2] = V[2] / A;
-   }
-   else {
-      printf("Attempted divide by zero in COPYUNITV (Line %d of mathkit.c)\n",
-             __LINE__);
-      W[0] = 0.0;
-      W[1] = 0.0;
-      W[2] = 0.0;
-   }
+   *W       = V;
+   double A = UNITV(W);
    return (A);
 }
 /**********************************************************************/
 /*  Form a skew-symmetric matrix M from a vector V such that the      */
 /*  product MxA equals the cross product VxA for any vector A.        */
-void V2CrossM(const double V[3], double M[3][3])
+mat3x3 V2CrossM(const vec3 V)
 {
-   M[0][0] = 0.0;
-   M[1][1] = 0.0;
-   M[2][2] = 0.0;
-   M[2][1] = V[0];
-   M[0][2] = V[1];
-   M[1][0] = V[2];
-   M[1][2] = -V[0];
-   M[2][0] = -V[1];
-   M[0][1] = -V[2];
+   mat3x3 M;
+   M.mat[0][0] = 0.0;
+   M.mat[1][1] = 0.0;
+   M.mat[2][2] = 0.0;
+   M.mat[2][1] = V.v[0];
+   M.mat[0][2] = V.v[1];
+   M.mat[1][0] = V.v[2];
+   M.mat[1][2] = -V.v[0];
+   M.mat[2][0] = -V.v[1];
+   M.mat[0][1] = -V.v[2];
+   return M;
 }
 /**********************************************************************/
 /*  Form a symmetric matrix M from a vector V such that the           */
 /*  product M*A equals the product Vx(VxA) for any vector A.          */
-void V2DoubleCrossM(const double V[3], double M[3][3])
+mat3x3 V2DoubleCrossM(const vec3 V)
 {
-   M[0][0] = -V[1] * V[1] - V[2] * V[2];
-   M[1][1] = -V[2] * V[2] - V[0] * V[0];
-   M[2][2] = -V[0] * V[0] - V[1] * V[1];
-   M[2][1] = V[2] * V[1];
-   M[0][2] = V[0] * V[2];
-   M[1][0] = V[1] * V[0];
-   M[1][2] = V[1] * V[2];
-   M[2][0] = V[2] * V[0];
-   M[0][1] = V[0] * V[1];
+   mat3x3 M;
+   M.mat[0][0] = -V.v[1] * V.v[1] - V.v[2] * V.v[2];
+   M.mat[1][1] = -V.v[2] * V.v[2] - V.v[0] * V.v[0];
+   M.mat[2][2] = -V.v[0] * V.v[0] - V.v[1] * V.v[1];
+   M.mat[2][1] = V.v[2] * V.v[1];
+   M.mat[0][2] = V.v[0] * V.v[2];
+   M.mat[1][0] = V.v[1] * V.v[0];
+   M.mat[1][2] = V.v[1] * V.v[2];
+   M.mat[2][0] = V.v[2] * V.v[0];
+   M.mat[0][1] = V.v[0] * V.v[1];
+   return M;
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by M       */
-void VcrossM(const double V[3], const double M[3][3], double A[3][3])
+mat3x3 VcrossM(const vec3 V, const mat3x3 M)
 {
-
-   A[0][0] = V[1] * M[2][0] - V[2] * M[1][0];
-   A[0][1] = V[1] * M[2][1] - V[2] * M[1][1];
-   A[0][2] = V[1] * M[2][2] - V[2] * M[1][2];
-   A[1][0] = V[2] * M[0][0] - V[0] * M[2][0];
-   A[1][1] = V[2] * M[0][1] - V[0] * M[2][1];
-   A[1][2] = V[2] * M[0][2] - V[0] * M[2][2];
-   A[2][0] = V[0] * M[1][0] - V[1] * M[0][0];
-   A[2][1] = V[0] * M[1][1] - V[1] * M[0][1];
-   A[2][2] = V[0] * M[1][2] - V[1] * M[0][2];
+   mat3x3 A;
+   A.mat[0][0] = V.v[1] * M.mat[2][0] - V.v[2] * M.mat[1][0];
+   A.mat[0][1] = V.v[1] * M.mat[2][1] - V.v[2] * M.mat[1][1];
+   A.mat[0][2] = V.v[1] * M.mat[2][2] - V.v[2] * M.mat[1][2];
+   A.mat[1][0] = V.v[2] * M.mat[0][0] - V.v[0] * M.mat[2][0];
+   A.mat[1][1] = V.v[2] * M.mat[0][1] - V.v[0] * M.mat[2][1];
+   A.mat[1][2] = V.v[2] * M.mat[0][2] - V.v[0] * M.mat[2][2];
+   A.mat[2][0] = V.v[0] * M.mat[1][0] - V.v[1] * M.mat[0][0];
+   A.mat[2][1] = V.v[0] * M.mat[1][1] - V.v[1] * M.mat[0][1];
+   A.mat[2][2] = V.v[0] * M.mat[1][2] - V.v[1] * M.mat[0][2];
+   return A;
 }
 /**********************************************************************/
 /*  Save a step.  Form a skew matrix from V, then multiply by MT      */
-void VcrossMT(const double V[3], const double M[3][3], double A[3][3])
+mat3x3 VcrossMT(const vec3 V, const mat3x3 M)
 {
-
-   A[0][0] = V[1] * M[0][2] - V[2] * M[0][1];
-   A[0][1] = V[1] * M[1][2] - V[2] * M[1][1];
-   A[0][2] = V[1] * M[2][2] - V[2] * M[2][1];
-   A[1][0] = V[2] * M[0][0] - V[0] * M[0][2];
-   A[1][1] = V[2] * M[1][0] - V[0] * M[1][2];
-   A[1][2] = V[2] * M[2][0] - V[0] * M[2][2];
-   A[2][0] = V[0] * M[0][1] - V[1] * M[0][0];
-   A[2][1] = V[0] * M[1][1] - V[1] * M[1][0];
-   A[2][2] = V[0] * M[2][1] - V[1] * M[2][0];
+   mat3x3 A;
+   A.mat[0][0] = V.v[1] * M.mat[0][2] - V.v[2] * M.mat[0][1];
+   A.mat[0][1] = V.v[1] * M.mat[1][2] - V.v[2] * M.mat[1][1];
+   A.mat[0][2] = V.v[1] * M.mat[2][2] - V.v[2] * M.mat[2][1];
+   A.mat[1][0] = V.v[2] * M.mat[0][0] - V.v[0] * M.mat[0][2];
+   A.mat[1][1] = V.v[2] * M.mat[1][0] - V.v[0] * M.mat[1][2];
+   A.mat[1][2] = V.v[2] * M.mat[2][0] - V.v[0] * M.mat[2][2];
+   A.mat[2][0] = V.v[0] * M.mat[0][1] - V.v[1] * M.mat[0][0];
+   A.mat[2][1] = V.v[0] * M.mat[1][1] - V.v[1] * M.mat[1][0];
+   A.mat[2][2] = V.v[0] * M.mat[2][1] - V.v[1] * M.mat[2][0];
+   return A;
 }
 /**********************************************************************/
 /*  Quaternion product                                                */
-void QxQ(const double A[4], const double B[4], double C[4])
+quat QxQ(const quat A, const quat B)
 {
-   C[0] = A[3] * B[0] + A[2] * B[1] - A[1] * B[2] + A[0] * B[3];
-   C[1] = -A[2] * B[0] + A[3] * B[1] + A[0] * B[2] + A[1] * B[3];
-   C[2] = A[1] * B[0] - A[0] * B[1] + A[3] * B[2] + A[2] * B[3];
-   C[3] = -A[0] * B[0] - A[1] * B[1] - A[2] * B[2] + A[3] * B[3];
+   quat C;
+   C.q[0] =
+       A.q[3] * B.q[0] + A.q[2] * B.q[1] - A.q[1] * B.q[2] + A.q[0] * B.q[3];
+   C.q[1] =
+       -A.q[2] * B.q[0] + A.q[3] * B.q[1] + A.q[0] * B.q[2] + A.q[1] * B.q[3];
+   C.q[2] =
+       A.q[1] * B.q[0] - A.q[0] * B.q[1] + A.q[3] * B.q[2] + A.q[2] * B.q[3];
+   C.q[3] =
+       -A.q[0] * B.q[0] - A.q[1] * B.q[1] - A.q[2] * B.q[2] + A.q[3] * B.q[3];
+   return C;
 }
 /**********************************************************************/
 /* Product of the Complement of a Quaternion (A) with a Quaternion (B)*/
-void QTxQ(const double A[4], const double B[4], double C[4])
+quat QTxQ(const quat A, const quat B)
 {
-   C[0] = A[3] * B[0] - A[2] * B[1] + A[1] * B[2] - A[0] * B[3];
-   C[1] = A[2] * B[0] + A[3] * B[1] - A[0] * B[2] - A[1] * B[3];
-   C[2] = -A[1] * B[0] + A[0] * B[1] + A[3] * B[2] - A[2] * B[3];
-   C[3] = A[0] * B[0] + A[1] * B[1] + A[2] * B[2] + A[3] * B[3];
+   quat C;
+   C.q[0] =
+       A.q[3] * B.q[0] - A.q[2] * B.q[1] + A.q[1] * B.q[2] - A.q[0] * B.q[3];
+   C.q[1] =
+       A.q[2] * B.q[0] + A.q[3] * B.q[1] - A.q[0] * B.q[2] - A.q[1] * B.q[3];
+   C.q[2] =
+       -A.q[1] * B.q[0] + A.q[0] * B.q[1] + A.q[3] * B.q[2] - A.q[2] * B.q[3];
+   C.q[3] =
+       A.q[0] * B.q[0] + A.q[1] * B.q[1] + A.q[2] * B.q[2] + A.q[3] * B.q[3];
+   return C;
 }
 /**********************************************************************/
 /* Product of a Quaternion (A) with the Complement of a Quaternion (B)*/
-void QxQT(const double A[4], const double B[4], double C[4])
+quat QxQT(const quat A, const quat B)
 {
-   C[0] = -A[3] * B[0] - A[2] * B[1] + A[1] * B[2] + A[0] * B[3];
-   C[1] = A[2] * B[0] - A[3] * B[1] - A[0] * B[2] + A[1] * B[3];
-   C[2] = -A[1] * B[0] + A[0] * B[1] - A[3] * B[2] + A[2] * B[3];
-   C[3] = A[0] * B[0] + A[1] * B[1] + A[2] * B[2] + A[3] * B[3];
+   quat C;
+   C.q[0] =
+       -A.q[3] * B.q[0] - A.q[2] * B.q[1] + A.q[1] * B.q[2] + A.q[0] * B.q[3];
+   C.q[1] =
+       A.q[2] * B.q[0] - A.q[3] * B.q[1] - A.q[0] * B.q[2] + A.q[1] * B.q[3];
+   C.q[2] =
+       -A.q[1] * B.q[0] + A.q[0] * B.q[1] - A.q[3] * B.q[2] + A.q[2] * B.q[3];
+   C.q[3] =
+       A.q[0] * B.q[0] + A.q[1] * B.q[1] + A.q[2] * B.q[2] + A.q[3] * B.q[3];
+   return C;
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-void VxQ(const double Va[3], const double QAB[4], double Vb[3])
+vec3 VxQ(const vec3 Va, const quat QAB)
 {
+   vec3 Vb;
    double qq[4][4];
    long i, j;
 
    for (i = 0; i < 4; i++) {
       for (j = i; j < 4; j++)
-         qq[i][j] = QAB[i] * QAB[j];
+         qq[i][j] = QAB.q[i] * QAB.q[j];
    }
 
-   Vb[0] =
-       (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Va[0] +
-       2.0 * ((qq[0][1] - qq[2][3]) * Va[1] + (qq[0][2] + qq[1][3]) * Va[2]);
-   Vb[1] =
-       (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Va[1] +
-       2.0 * ((qq[1][2] - qq[0][3]) * Va[2] + (qq[0][1] + qq[2][3]) * Va[0]);
-   Vb[2] =
-       (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Va[2] +
-       2.0 * ((qq[0][2] - qq[1][3]) * Va[0] + (qq[1][2] + qq[0][3]) * Va[1]);
+   Vb.v[0] = (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Va.v[0] +
+             2.0 * ((qq[0][1] - qq[2][3]) * Va.v[1] +
+                    (qq[0][2] + qq[1][3]) * Va.v[2]);
+   Vb.v[1] = (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Va.v[1] +
+             2.0 * ((qq[1][2] - qq[0][3]) * Va.v[2] +
+                    (qq[0][1] + qq[2][3]) * Va.v[0]);
+   Vb.v[2] = (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Va.v[2] +
+             2.0 * ((qq[0][2] - qq[1][3]) * Va.v[0] +
+                    (qq[1][2] + qq[0][3]) * Va.v[1]);
+   return Vb;
 }
 /**********************************************************************/
 /* Find components of V in A, given components of V in B, and qab     */
-void QxV(const double QAB[4], const double Vb[3], double Va[3])
+vec3 QxV(const quat QAB, const vec3 Vb)
 {
+   vec3 Va;
    double qq[4][4];
    long i, j;
 
    for (i = 0; i < 4; i++) {
       for (j = i; j < 4; j++)
-         qq[i][j] = QAB[i] * QAB[j];
+         qq[i][j] = QAB.q[i] * QAB.q[j];
    }
 
-   Va[0] =
-       (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Vb[0] +
-       2.0 * ((qq[0][1] + qq[2][3]) * Vb[1] + (qq[0][2] - qq[1][3]) * Vb[2]);
-   Va[1] =
-       (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Vb[1] +
-       2.0 * ((qq[1][2] + qq[0][3]) * Vb[2] + (qq[0][1] - qq[2][3]) * Vb[0]);
-   Va[2] =
-       (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Vb[2] +
-       2.0 * ((qq[0][2] + qq[1][3]) * Vb[0] + (qq[1][2] - qq[0][3]) * Vb[1]);
+   Va.v[0] = (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Vb.v[0] +
+             2.0 * ((qq[0][1] + qq[2][3]) * Vb.v[1] +
+                    (qq[0][2] - qq[1][3]) * Vb.v[2]);
+   Va.v[1] = (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Vb.v[1] +
+             2.0 * ((qq[1][2] + qq[0][3]) * Vb.v[2] +
+                    (qq[0][1] - qq[2][3]) * Vb.v[0]);
+   Va.v[2] = (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Vb.v[2] +
+             2.0 * ((qq[0][2] + qq[1][3]) * Vb.v[0] +
+                    (qq[1][2] - qq[0][3]) * Vb.v[1]);
+   return Va;
 }
 /**********************************************************************/
 /* Find components of V in B, given components of V in A, and qab     */
-void QTxV(const double QAB[4], const double Va[3], double Vb[3])
+vec3 QTxV(const quat QAB, const vec3 Va)
 {
+   vec3 Vb;
    double qq[4][4];
    long i, j;
 
    for (i = 0; i < 4; i++) {
       for (j = i; j < 4; j++)
-         qq[i][j] = QAB[i] * QAB[j];
+         qq[i][j] = QAB.q[i] * QAB.q[j];
    }
 
-   Vb[0] =
-       (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Va[0] +
-       2.0 * ((qq[0][1] - qq[2][3]) * Va[1] + (qq[0][2] + qq[1][3]) * Va[2]);
-   Vb[1] =
-       (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Va[1] +
-       2.0 * ((qq[1][2] - qq[0][3]) * Va[2] + (qq[0][1] + qq[2][3]) * Va[0]);
-   Vb[2] =
-       (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Va[2] +
-       2.0 * ((qq[0][2] - qq[1][3]) * Va[0] + (qq[1][2] + qq[0][3]) * Va[1]);
+   Vb.v[0] = (qq[0][0] - qq[1][1] - qq[2][2] + qq[3][3]) * Va.v[0] +
+             2.0 * ((qq[0][1] - qq[2][3]) * Va.v[1] +
+                    (qq[0][2] + qq[1][3]) * Va.v[2]);
+   Vb.v[1] = (-qq[0][0] + qq[1][1] - qq[2][2] + qq[3][3]) * Va.v[1] +
+             2.0 * ((qq[1][2] - qq[0][3]) * Va.v[2] +
+                    (qq[0][1] + qq[2][3]) * Va.v[0]);
+   Vb.v[2] = (-qq[0][0] - qq[1][1] + qq[2][2] + qq[3][3]) * Va.v[2] +
+             2.0 * ((qq[0][2] - qq[1][3]) * Va.v[0] +
+                    (qq[1][2] + qq[0][3]) * Va.v[1]);
+   return Vb;
 }
 /**********************************************************************/
 /*  Normalize a quaternion                                            */
-void UNITQ(double Q[4])
+quat UNITQ(quat Q)
 {
-   double A;
-
-   A = sqrt(Q[0] * Q[0] + Q[1] * Q[1] + Q[2] * Q[2] + Q[3] * Q[3]);
+   double A = sqrt(VoV(Q.qv, Q.qv) + Q.qs * Q.qs);
    if (A == 0.0) {
       fprintf(stderr,
               "Divide by zero in UNITQ (Line %d of mathkit.c).  You'll want to "
@@ -611,46 +760,49 @@ void UNITQ(double Q[4])
       exit(EXIT_FAILURE);
    }
    else {
-      Q[0] /= A;
-      Q[1] /= A;
-      Q[2] /= A;
-      Q[3] /= A;
+      Q.q[0] /= A;
+      Q.q[1] /= A;
+      Q.q[2] /= A;
+      Q.q[3] /= A;
    }
+   return Q;
 }
 /**********************************************************************/
 /*  Rectify a quaternion, forcing q[3] to be positive                 */
-void RECTIFYQ(double Q[4])
+quat RECTIFYQ(quat Q)
 {
-   if (Q[3] < 0.0) {
-      Q[0] = -Q[0];
-      Q[1] = -Q[1];
-      Q[2] = -Q[2];
-      Q[3] = -Q[3];
+   if (Q.q[3] < 0.0) {
+      Q.q[0] = -Q.q[0];
+      Q.q[1] = -Q.q[1];
+      Q.q[2] = -Q.q[2];
+      Q.q[3] = -Q.q[3];
    }
+   return Q;
 }
 /*********************************************************************/
 /* Given vector A, find vectors B, C to form orthogonal basis        */
-void PerpBasis(const double A[3], double B[3], double C[3])
+vec3 PerpBasis(const vec3 A, vec3 *B)
 {
    long i;
-   double V[3] = {0.0, 0.0, 0.0};
+   vec3 V = VEC3_ZERO;
    double Amin;
 
-   Amin = fabs(A[0]);
+   Amin = fabs(A.v[0]);
    i    = 0;
-   if (fabs(A[1]) < Amin) {
-      Amin = A[1];
+   if (fabs(A.v[1]) < Amin) {
+      Amin = A.v[1];
       i    = 1;
    }
-   if (fabs(A[2]) < Amin) {
+   if (fabs(A.v[2]) < Amin) {
       i = 2;
    }
 
-   V[i] = 1.0;
-   VxV(A, V, B);
+   V.v[i] = 1.0;
+   *B     = VxV(A, V);
    UNITV(B);
-   VxV(A, B, C);
-   UNITV(C);
+   vec3 C = VxV(A, *B);
+   UNITV(&C);
+   return C;
 }
 /**********************************************************************/
 double fact(long const n)
@@ -784,9 +936,9 @@ void Legendre(const long N, const long M, const double x,
 /* gradV[0] = Radial (positive outward)                               */
 /* gradV[1] = Latitudinal (positive south)                            */
 /* gradV[2] = Longitudinal (positive east)                            */
-void SphericalHarmonics(const long N, const long M, const double r,
+vec3 SphericalHarmonics(const long N, const long M, const double r,
                         const double trigs[4], const double Re, const double K,
-                        double **C, double **S, double **Norm, double gradV[3])
+                        double **C, double **S, double **Norm)
 {
 
    double P[N + 1][M + 1], sdP[N + 1][M + 1];
@@ -840,17 +992,14 @@ void SphericalHarmonics(const long N, const long M, const double r,
    dVdphi   *= K;
    dVdtheta *= K;
 
-   gradV[0] = dVdr;
-   gradV[1] = dVdtheta / r;
+   vec3 gradV;
+   gradV.v[0] = dVdr;
+   gradV.v[1] = dVdtheta / r;
    if (sth == 0.0)
-      gradV[2] = 0.0;
+      gradV.v[2] = 0.0;
    else
-      gradV[2] = dVdphi / (r * sth);
-
-   /*printf("N,M,n,m: %ld %ld %ld %ld\n",N,M,n,m);
-   **printf("Rern1,CcSs,ScCs: %lf %lf %lf \n",Rern1,CcSs,ScCs);
-   **printf("gradV: %lf %lf %lf\n",gradV[0],gradV[1],gradV[2]);
-   */
+      gradV.v[2] = dVdphi / (r * sth);
+   return gradV;
 }
 /**********************************************************************/
 /*  A is NxK, B is KxM, C is NxM                                      */
@@ -918,9 +1067,9 @@ void SxVG(const double S, const double *V, double *W, const long n)
       W[i] = S * V[i];
 }
 /**********************************************************************/
+/* the operation y := a * x + y for an n-dimensional vec              */
 void axpy(const double a, const double *const x, double *const y, const long n)
 {
-   // the operation y := a * x + y for an n-dimensional vec
    for (long i = 0; i < n; i++)
       y[i] += a * x[i];
 }
@@ -1613,18 +1762,18 @@ double Amoeba(const long N, double *P,
 }
 /**********************************************************************/
 /*  Find unit normal vector to plane defined by points V1, V2, V3     */
-void FindNormal(const double V1[3], const double V2[3], const double V3[3],
-                double N[3])
+vec3 FindNormal(const vec3 V1, const vec3 V2, const vec3 V3)
 {
    long i;
-   double D1[3], D2[3];
+   vec3 D1, D2;
 
    for (i = 0; i < 3; i++) {
-      D1[i] = V2[i] - V1[i];
-      D2[i] = V3[i] - V2[i];
+      D1.v[i] = V2.v[i] - V1.v[i];
+      D2.v[i] = V3.v[i] - V2.v[i];
    }
-   VxV(D1, D2, N);
-   UNITV(N);
+   vec3 N = VxV(D1, D2);
+   UNITV(&N);
+   return N;
 }
 /**********************************************************************/
 /*  Output clamped at ends of interval                                */
@@ -1663,16 +1812,17 @@ double LinInterp(const double *X, const double *Y, const double x, const long n)
 /*  A constant-rate interpolation for quaternions                     */
 /*  Ref: Ken Shoemake, "Animating Rotation with Quaternion Curves"    */
 /*  q(u=0.0) = q1, q(u=1.0) = q2                                      */
-void SphereInterp(double q1[4], double q2[4], const double u, double q[4])
+quat SphereInterp(quat q1, quat q2, const double u)
 {
+   quat q = QUAT_ZERO;
    double Theta, CosTheta, SinTheta;
    double SinU, Sin1mU;
    long k;
 
-   CosTheta = q1[0] * q2[0] + q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3];
+   CosTheta = VoV(q1.qv, q2.qv) + q1.qs * q2.qs;
    if (CosTheta >= 1.0) {
       for (k = 0; k < 4; k++)
-         q[k] = q1[k];
+         q.q[k] = q1.q[k];
    }
    else {
       SinTheta = sqrt(1.0 - CosTheta * CosTheta);
@@ -1680,8 +1830,9 @@ void SphereInterp(double q1[4], double q2[4], const double u, double q[4])
       SinU     = sin(u * Theta);
       Sin1mU   = sin((1.0 - u) * Theta);
       for (k = 0; k < 4; k++)
-         q[k] = (SinU * q2[k] + Sin1mU * q1[k]) / SinTheta;
+         q.q[k] = (SinU * q2.q[k] + Sin1mU * q1.q[k]) / SinTheta;
    }
+   return q;
 }
 /**********************************************************************/
 double CubicInterp1D(double f0, double f1, double x)
@@ -1707,30 +1858,30 @@ double CubicInterp3D(double f000, double f100, double f010, double f110,
    return (CubicInterp1D(f0, f1, z));
 }
 /**********************************************************************/
-double DistanceToLine(double LineEnd1[3], double LineEnd2[3], double Point[3],
-                      double VecToLine[3])
+double DistanceToLine(vec3 LineEnd1, vec3 LineEnd2, vec3 Point, vec3 *VecToLine)
 {
-   double Axis[3], Vec[3], VoA;
+   vec3 Axis, Vec;
+   double VoA;
    long i;
 
    for (i = 0; i < 3; i++) {
-      Axis[i] = LineEnd2[i] - LineEnd1[i];
-      Vec[i]  = Point[i] - LineEnd1[i];
+      Axis.v[i] = LineEnd2.v[i] - LineEnd1.v[i];
+      Vec.v[i]  = Point.v[i] - LineEnd1.v[i];
    }
-   UNITV(Axis);
+   UNITV(&Axis);
    VoA = VoV(Vec, Axis);
 
    for (i = 0; i < 3; i++)
-      VecToLine[i] = VoA * Axis[i] - Vec[i];
-   return (MAGV(VecToLine));
+      VecToLine->v[i] = VoA * Axis.v[i] - Vec.v[i];
+   return (MAGV(*VecToLine));
 }
 /**********************************************************************/
-long ProjectPointOntoPoly(double Point[3], double DirVec[3], double **Vtx,
-                          long Nvtx, double ProjPoint[3], double *Distance)
+long ProjectPointOntoPoly(vec3 Point, vec3 DirVec, vec3 *Vtx, long Nvtx,
+                          vec3 *ProjPoint, double *Distance)
 {
-   double Axis[3], a1[3], a2[3];
+   vec3 Axis, a1, a2, s1, s2, S1xS2, Norm;
    static double **COEF, *RHS, *x;
-   double SumAng, s1[3], s2[3], S1xS2[3], Norm[3], SinAng, CosAng;
+   double SumAng, SinAng, CosAng;
    long i, j, Iv, Nwrap;
    static long First = 1;
    long OnEdge;
@@ -1742,50 +1893,50 @@ long ProjectPointOntoPoly(double Point[3], double DirVec[3], double **Vtx,
       x     = (double *)calloc(4, sizeof(double));
    }
 
-   CopyUnitV(DirVec, Axis);
+   CopyUnitV(DirVec, &Axis);
    for (i = 0; i < 3; i++) {
-      a1[i] = Vtx[1][i] - Vtx[0][i];
-      a2[i] = Vtx[2][i] - Vtx[0][i];
+      a1.v[i] = Vtx[1].v[i] - Vtx[0].v[i];
+      a2.v[i] = Vtx[2].v[i] - Vtx[0].v[i];
    }
-   COEF[0][0] = a1[1] * a2[2] - a1[2] * a2[1];
-   COEF[0][1] = a1[2] * a2[0] - a1[0] * a2[2];
-   COEF[0][2] = a1[0] * a2[1] - a1[1] * a2[0];
+   COEF[0][0] = a1.y * a2.z - a1.z * a2.y;
+   COEF[0][1] = a1.z * a2.x - a1.x * a2.z;
+   COEF[0][2] = a1.x * a2.y - a1.y * a2.x;
    COEF[0][3] = 0.0;
    RHS[0] =
-       COEF[0][0] * Vtx[0][0] + COEF[0][1] * Vtx[0][1] + COEF[0][2] * Vtx[0][2];
+       COEF[0][0] * Vtx[0].x + COEF[0][1] * Vtx[0].y + COEF[0][2] * Vtx[0].z;
    COEF[1][0] = 1.0;
    COEF[1][1] = 0.0;
    COEF[1][2] = 0.0;
-   COEF[1][3] = -Axis[0];
-   RHS[1]     = Point[0];
+   COEF[1][3] = -Axis.x;
+   RHS[1]     = Point.x;
    COEF[2][0] = 0.0;
    COEF[2][1] = 1.0;
    COEF[2][2] = 0.0;
-   COEF[2][3] = -Axis[1];
-   RHS[2]     = Point[1];
+   COEF[2][3] = -Axis.y;
+   RHS[2]     = Point.y;
    COEF[3][0] = 0.0;
    COEF[3][1] = 0.0;
    COEF[3][2] = 1.0;
-   COEF[3][3] = -Axis[2];
-   RHS[3]     = Point[2];
+   COEF[3][3] = -Axis.z;
+   RHS[3]     = Point.z;
    LINSOLVE(COEF, x, RHS, 4);
    for (i = 0; i < 3; i++)
-      ProjPoint[i] = x[i];
+      ProjPoint->v[i] = x[i];
    *Distance = x[3];
 
    /* Find whether ProjPoint lies in polygon */
-   VxV(a1, a2, Norm);
-   UNITV(Norm);
+   Norm = VxV(a1, a2);
+   UNITV(&Norm);
    SumAng = 0.0;
    OnEdge = 0;
    for (Iv = 0; Iv < Nvtx; Iv++) {
       for (j = 0; j < 3; j++) {
-         s1[j] = Vtx[Iv][j] - ProjPoint[j];
-         s2[j] = Vtx[(Iv + 1) % Nvtx][j] - ProjPoint[j];
+         s1.v[j] = Vtx[Iv].v[j] - ProjPoint->v[j];
+         s2.v[j] = Vtx[(Iv + 1) % Nvtx].v[j] - ProjPoint->v[j];
       }
-      UNITV(s1);
-      UNITV(s2);
-      VxV(s1, s2, S1xS2);
+      UNITV(&s1);
+      UNITV(&s2);
+      S1xS2  = VxV(s1, s2);
       SinAng = VoV(S1xS2, Norm);
       CosAng = VoV(s1, s2);
       if (fabs(SinAng) < 1.0E-6 && CosAng < -0.9)
@@ -1802,69 +1953,75 @@ long ProjectPointOntoPoly(double Point[3], double DirVec[3], double **Vtx,
 /* find the projection of Pt onto ABC.  Barycentric coords have      */
 /* fourth element, so that                                           */
 /* Pt = Bary[0]*A + Bary[1]*B + Bary[2]*C + Bary[3]*DirVec           */
-long ProjectPointOntoTriangle(double A[3], double B[3], double C[3],
-                              double DirVec[3], double Pt[3], double ProjPt[3],
-                              double Bary[4])
+long ProjectPointOntoTriangle(vec3 A, vec3 B, vec3 C, vec3 DirVec, vec3 Pt,
+                              vec3 *ProjPt, vec4 *Bary)
 {
    double Den, NumA, NumB, NumC, NumD;
-   double AxB[3], CxD[3], PxB[3], AxP[3], CxP[3], PxD[3];
+   vec3 AxB, CxD, PxB, AxP, CxP, PxD;
    double M[4][3], Mplus[3][4];
    long InPoly, i;
 
-   VxV(A, B, AxB);
-   VxV(C, DirVec, CxD);
+   AxB = VxV(A, B);
+   CxD = VxV(C, DirVec);
 
-   Den = (A[0] - B[0]) * CxD[0] + (A[1] - B[1]) * CxD[1] +
-         (A[2] - B[2]) * CxD[2] - DirVec[0] * AxB[0] - DirVec[1] * AxB[1] -
-         DirVec[2] * AxB[2];
+   Den = (A.v[0] - B.v[0]) * CxD.v[0] + (A.v[1] - B.v[1]) * CxD.v[1] +
+         (A.v[2] - B.v[2]) * CxD.v[2] - DirVec.v[0] * AxB.v[0] -
+         DirVec.v[1] * AxB.v[1] - DirVec.v[2] * AxB.v[2];
 
    if (fabs(Den) < 1.0E-12) {
       /* If DirVec is in plane of ABC, then problem reduces to... */
       for (i = 0; i < 3; i++) {
-         M[i][0] = A[i];
-         M[i][1] = B[i];
-         M[i][2] = C[i];
+         M[i][0] = A.v[i];
+         M[i][1] = B.v[i];
+         M[i][2] = C.v[i];
          M[3][i] = 1.0;
       }
       PINV4x3(M, Mplus);
-      Bary[0] = Mplus[0][0] * Pt[0] + Mplus[0][1] * Pt[1] + Mplus[0][2] * Pt[2];
-      Bary[1] = Mplus[1][0] * Pt[0] + Mplus[1][1] * Pt[1] + Mplus[1][2] * Pt[2];
-      Bary[2] = Mplus[2][0] * Pt[0] + Mplus[2][1] * Pt[1] + Mplus[2][2] * Pt[2];
-      Bary[3] = 0.0;
+      Bary->q[0] =
+          Mplus[0][0] * Pt.v[0] + Mplus[0][1] * Pt.v[1] + Mplus[0][2] * Pt.v[2];
+      Bary->q[1] =
+          Mplus[1][0] * Pt.v[0] + Mplus[1][1] * Pt.v[1] + Mplus[1][2] * Pt.v[2];
+      Bary->q[2] =
+          Mplus[2][0] * Pt.v[0] + Mplus[2][1] * Pt.v[1] + Mplus[2][2] * Pt.v[2];
+      Bary->q[3] = 0.0;
    }
    else {
-      VxV(Pt, B, PxB);
-      VxV(A, Pt, AxP);
-      VxV(C, Pt, CxP);
-      VxV(Pt, DirVec, PxD);
+      PxB = VxV(Pt, B);
+      AxP = VxV(A, Pt);
+      CxP = VxV(C, Pt);
+      PxD = VxV(Pt, DirVec);
 
-      NumA = (Pt[0] - B[0]) * CxD[0] + (Pt[1] - B[1]) * CxD[1] +
-             (Pt[2] - B[2]) * CxD[2] - DirVec[0] * PxB[0] - DirVec[1] * PxB[1] -
-             DirVec[2] * PxB[2];
+      NumA = (Pt.v[0] - B.v[0]) * CxD.v[0] + (Pt.v[1] - B.v[1]) * CxD.v[1] +
+             (Pt.v[2] - B.v[2]) * CxD.v[2] - DirVec.v[0] * PxB.v[0] -
+             DirVec.v[1] * PxB.v[1] - DirVec.v[2] * PxB.v[2];
 
-      NumB = (A[0] - Pt[0]) * CxD[0] + (A[1] - Pt[1]) * CxD[1] +
-             (A[2] - Pt[2]) * CxD[2] - DirVec[0] * AxP[0] - DirVec[1] * AxP[1] -
-             DirVec[2] * AxP[2];
+      NumB = (A.v[0] - Pt.v[0]) * CxD.v[0] + (A.v[1] - Pt.v[1]) * CxD.v[1] +
+             (A.v[2] - Pt.v[2]) * CxD.v[2] - DirVec.v[0] * AxP.v[0] -
+             DirVec.v[1] * AxP.v[1] - DirVec.v[2] * AxP.v[2];
 
-      NumC = (A[0] - B[0]) * PxD[0] + (A[1] - B[1]) * PxD[1] +
-             (A[2] - B[2]) * PxD[2] - DirVec[0] * AxB[0] - DirVec[1] * AxB[1] -
-             DirVec[2] * AxB[2];
+      NumC = (A.v[0] - B.v[0]) * PxD.v[0] + (A.v[1] - B.v[1]) * PxD.v[1] +
+             (A.v[2] - B.v[2]) * PxD.v[2] - DirVec.v[0] * AxB.v[0] -
+             DirVec.v[1] * AxB.v[1] - DirVec.v[2] * AxB.v[2];
 
-      NumD = (A[0] - B[0]) * CxP[0] + (A[1] - B[1]) * CxP[1] +
-             (A[2] - B[2]) * CxP[2] - (Pt[0] - C[0]) * AxB[0] -
-             (Pt[1] - C[1]) * AxB[1] - (Pt[2] - C[2]) * AxB[2];
+      NumD = (A.v[0] - B.v[0]) * CxP.v[0] + (A.v[1] - B.v[1]) * CxP.v[1] +
+             (A.v[2] - B.v[2]) * CxP.v[2] - (Pt.v[0] - C.v[0]) * AxB.v[0] -
+             (Pt.v[1] - C.v[1]) * AxB.v[1] - (Pt.v[2] - C.v[2]) * AxB.v[2];
 
-      Bary[0] = NumA / Den;
-      Bary[1] = NumB / Den;
-      Bary[2] = NumC / Den;
-      Bary[3] = NumD / Den;
+      Bary->q[0] = NumA / Den;
+      Bary->q[1] = NumB / Den;
+      Bary->q[2] = NumC / Den;
+      Bary->q[3] = NumD / Den;
    }
 
-   ProjPt[0] = Bary[0] * A[0] + Bary[1] * B[0] + Bary[2] * C[0];
-   ProjPt[1] = Bary[0] * A[1] + Bary[1] * B[1] + Bary[2] * C[1];
-   ProjPt[2] = Bary[0] * A[2] + Bary[1] * B[2] + Bary[2] * C[2];
+   ProjPt->v[0] =
+       Bary->q[0] * A.v[0] + Bary->q[1] * B.v[0] + Bary->q[2] * C.v[0];
+   ProjPt->v[1] =
+       Bary->q[0] * A.v[1] + Bary->q[1] * B.v[1] + Bary->q[2] * C.v[1];
+   ProjPt->v[2] =
+       Bary->q[0] * A.v[2] + Bary->q[1] * B.v[2] + Bary->q[2] * C.v[2];
 
-   InPoly = (Bary[0] >= 0.0 && Bary[1] >= 0.0 && Bary[2] >= 0.0 ? 1 : 0);
+   InPoly =
+       (Bary->q[0] >= 0.0 && Bary->q[1] >= 0.0 && Bary->q[2] >= 0.0 ? 1 : 0);
 
    return (InPoly);
 }
@@ -1992,18 +2149,18 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20])
    free(Atb);
 }
 /******************************************************************************/
-void VecToLngLat(double A[3], double *lng, double *lat)
+void VecToLngLat(vec3 A, double *lng, double *lat)
 {
-   double B[3];
+   vec3 B;
 
    if (MAGV(A) > 0.0) {
-      CopyUnitV(A, B);
+      CopyUnitV(A, &B);
 
-      *lng = atan2(B[1], B[0]);
+      *lng = atan2(B.v[1], B.v[0]);
 
-      if (fabs(B[2]) < 1.0)
-         *lat = asin(B[2]);
-      else if (B[2] > 0.0)
+      if (fabs(B.v[2]) < 1.0)
+         *lat = asin(B.v[2]);
+      else if (B.v[2] > 0.0)
          *lat = 2.0 * atan(1.0);
       else
          *lat = -2.0 * atan(1.0);
@@ -2152,68 +2309,71 @@ double BrentsMethod(double a, double b, const double tol,
 /******************************************************************************/
 /* Get Trigonometric values of Azimuth and Elevation and magnitude from 3D    */
 /* vector                                                                     */
-void getTrigSphericalCoords(const double pbe[3], double *const cth,
+void getTrigSphericalCoords(const vec3 pbe, double *const cth,
                             double *const sth, double *const cph,
                             double *const sph, double *const r)
 {
    *r                 = MAGV(pbe);
-   const double denom = sqrt(pbe[1] * pbe[1] + pbe[0] * pbe[0]);
-   *cth               = pbe[2] / (*r);               // cos(theta)
+   const double denom = sqrt(pbe.v[1] * pbe.v[1] + pbe.v[0] * pbe.v[0]);
+   *cth               = pbe.v[2] / (*r);             // cos(theta)
    *sth               = sqrt(1.0 - (*cth) * (*cth)); // sin(theta);
-   *cph               = pbe[0] / denom;              // cos(phi);
-   *sph               = pbe[1] / denom;              // sin(phi);
+   *cph               = pbe.v[0] / denom;            // cos(phi);
+   *sph               = pbe.v[1] / denom;            // sin(phi);
 }
 /******************************************************************************/
 // Calculate SO(3) adjoint operation: for rotation matrix C and matrix A,
 // calculate C*A*C^T
-void Adjoint(const double C[3][3], const double A[3][3], double CACT[3][3])
+mat3x3 Adjoint(const mat3x3 C, const mat3x3 A)
 {
+   mat3x3 CACT;
    long i, j, k, l;
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++) {
-         CACT[i][j] = 0.0;
+         CACT.mat[i][j] = 0.0;
          for (l = 0; l < 3; l++)
             for (k = 0; k < 3; k++)
-               CACT[i][j] += C[i][l] * A[l][k] * C[j][k];
+               CACT.mat[i][j] += C.mat[i][l] * A.mat[l][k] * C.mat[j][k];
       }
+   return CACT;
 }
 /******************************************************************************/
 // Calculate SO(3) adjoint operation for transpose rotation: for rotation matrix
 // C and matrix A, calculate C^T*A*C
-void AdjointT(const double C[3][3], const double A[3][3], double CTAC[3][3])
+mat3x3 AdjointT(const mat3x3 C, const mat3x3 A)
 {
+   mat3x3 CTAC;
    long i, j, k, l;
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++) {
-         CTAC[i][j] = 0.0;
+         CTAC.mat[i][j] = 0.0;
          for (l = 0; l < 3; l++)
             for (k = 0; k < 3; k++)
-               CTAC[i][j] += C[k][j] * A[l][k] * C[l][i];
+               CTAC.mat[i][j] += C.mat[k][j] * A.mat[l][k] * C.mat[l][i];
       }
+   return CTAC;
 }
 /******************************************************************************/
 // Invert 3x3 matrix A and right multiply by 3xm matrix B, returning 3xm matrix
 // C
-void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m])
+void MINVxM3(mat3x3 A, long m, double B[3][m], double C[3][m])
 {
    long I, J, ROW;
    long IPIVOT = 0;
-   double M[3][3];
+   mat3x3 M;
    double PIVOT, K;
 
-   for (I = 0; I < 3; I++) {
+   M = A;
+   for (I = 0; I < 3; I++)
       for (J = 0; J < 3; J++)
-         M[I][J] = A[I][J];
-      for (J = 0; J < m; J++)
-         C[I][J] = B[I][J];
-   }
+         for (J = 0; J < m; J++)
+            C[I][J] = B[I][J];
 
    for (ROW = 0; ROW < 3; ROW++) {
-      PIVOT  = M[ROW][ROW];
+      PIVOT  = M.mat[ROW][ROW];
       IPIVOT = ROW;
       for (I = ROW + 1; I < 3; I++) {
-         if (fabs(M[I][ROW]) >= fabs(PIVOT)) {
-            PIVOT  = M[I][ROW];
+         if (fabs(M.mat[I][ROW]) >= fabs(PIVOT)) {
+            PIVOT  = M.mat[I][ROW];
             IPIVOT = I;
          }
       }
@@ -2222,20 +2382,18 @@ void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m])
          exit(EXIT_FAILURE);
       }
 
-      for (J = 0; J < 3; J++) {
-         double t     = M[IPIVOT][J];
-         M[IPIVOT][J] = M[ROW][J];
-         M[ROW][J]    = t / PIVOT;
-      }
+      vec3 tv        = M.rows[IPIVOT];
+      M.rows[IPIVOT] = M.rows[ROW];
+      M.rows[ROW]    = SxV(1.0 / PIVOT, tv);
       for (J = 0; J < m; J++) {
          double t     = C[IPIVOT][J];
          C[IPIVOT][J] = C[ROW][J];
          C[ROW][J]    = t / PIVOT;
       }
       for (I = ROW + 1; I < 3; I++) {
-         K = M[I][ROW];
+         K = M.mat[I][ROW];
          for (J = 3 - 1; J >= ROW; J--)
-            M[I][J] -= K * M[ROW][J];
+            M.mat[I][J] -= K * M.mat[ROW][J];
          for (J = 0; J < m; J++)
             C[I][J] -= K * C[ROW][J];
       }
@@ -2244,9 +2402,9 @@ void MINVxM3(double A[3][3], long m, double B[3][m], double C[3][m])
    /*    M is now upper triangular */
    for (ROW = 3 - 1; ROW >= 0; ROW--) {
       for (I = 0; I < ROW; I++) {
-         K = M[I][ROW];
+         K = M.mat[I][ROW];
          for (J = 0; J < 3; J++)
-            M[I][J] -= K * M[ROW][J];
+            M.mat[I][J] -= K * M.mat[ROW][J];
          for (J = 0; J < m; J++)
             C[I][J] -= K * C[ROW][J];
       }
@@ -2348,87 +2506,79 @@ void MxMINVG(double **A, double **B, double **C, long N, long m)
 }
 /******************************************************************************/
 // Matrix Exponential for Special Orthogonal Group of dimension 3 (SO(3))
-void expmso3(double theta[3], double R[3][3])
+mat3x3 expmso3(vec3 theta)
 {
    double tMag, sTMag, cTMagM1;
-   double tCross[3][3], tCrossCross[3][3];
+   mat3x3 R = MAT3X3_EYE, tCross, tCrossCross;
    long i, j;
 
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++)
-         R[i][j] = 0.0;
-      R[i][i] = 1.0;
-   }
    tMag = MAGV(theta);
    if (tMag >= __DBL_EPSILON__) {
-      double thetaHat[3] = {0.0};
+      vec3 thetaHat;
       for (i = 0; i < 3; i++)
-         thetaHat[i] = theta[i] / tMag;
+         thetaHat.v[i] = theta.v[i] / tMag;
       sTMag   = sin(tMag);
       cTMagM1 = cos(tMag) - 1.0;
 
-      V2CrossM(thetaHat, tCross);
-      V2DoubleCrossM(thetaHat, tCrossCross);
+      tCross      = V2CrossM(thetaHat);
+      tCrossCross = V2DoubleCrossM(thetaHat);
 
       for (i = 0; i < 3; i++)
          for (j = 0; j < 3; j++)
-            R[i][j] += sTMag * tCross[i][j] - cTMagM1 * tCrossCross[i][j];
+            R.mat[i][j] +=
+                sTMag * tCross.mat[i][j] - cTMagM1 * tCrossCross.mat[i][j];
    }
+   return R;
 }
 /******************************************************************************/
 // Matrix Logarithm for SO(3)
-void logso3(double const R[3][3], double theta[3])
+vec3 logso3(mat3x3 const R)
 {
    double tMag, dSincTMag;
 
-   tMag      = acos((R[0][0] + R[1][1] + R[2][2] - 1) / 2.0);
+   tMag      = acos((R.mat[0][0] + R.mat[1][1] + R.mat[2][2] - 1) / 2.0);
    dSincTMag = 2.0;
    if (tMag > __DBL_EPSILON__)
       dSincTMag *= sinc(tMag);
-   theta[0] = (R[2][1] - R[1][2]) / dSincTMag;
-   theta[1] = (R[0][2] - R[2][0]) / dSincTMag;
-   theta[2] = (R[1][0] - R[0][1]) / dSincTMag;
+   vec3 theta;
+   theta.v[0] = (R.mat[2][1] - R.mat[1][2]) / dSincTMag;
+   theta.v[1] = (R.mat[0][2] - R.mat[2][0]) / dSincTMag;
+   theta.v[2] = (R.mat[1][0] - R.mat[0][1]) / dSincTMag;
+   return theta;
 }
 /******************************************************************************/
 // Calculate matrix exponential on two-frames-group (SO(3)xR^((n+m)x3))
-void expmTFG(double theta[3], long const n, long const m, double x[n][3],
-             double xbar[m][3], double R[3][3])
+void expmTFG(vec3 *theta, long const n, long const m, vec3 x[n], vec3 xbar[m],
+             mat3x3 *R)
 {
-   double tCross[3][3] = {{0.0}}, tCrossCross[3][3] = {{0.0}},
-          intR[3][3] = {{0.0}}, intmR[3][3] = {{0.0}};
+   mat3x3 tCross, tCrossCross, intmR, intR = MAT3X3_EYE;
    double tMag, scTMag, cTMagM1;
    long i, j;
 
-   expmso3(theta, R);
+   *R = expmso3(*theta);
 
-   tMag = MAGV(theta);
+   tMag = MAGV(*theta);
    if (tMag > __DBL_EPSILON__) {
       UNITV(theta);
       scTMag  = sinc(tMag);
       cTMagM1 = cos(tMag) - 1.0;
 
-      V2CrossM(theta, tCross);
-      V2DoubleCrossM(theta, tCrossCross);
+      tCross      = V2CrossM(*theta);
+      tCrossCross = V2DoubleCrossM(*theta);
 
       for (i = 0; i < 3; i++) {
-         intR[i][i] = 1.0;
          for (j = 0; j < 3; j++) {
-            intR[i][j]  += (1.0 - scTMag) * tCrossCross[i][j];
-            intmR[i][j]  = intR[i][j] + cTMagM1 * tCross[i][j] / tMag;
-            intR[i][j]  -= cTMagM1 * tCross[i][j] / tMag;
+            intR.mat[i][j] += (1.0 - scTMag) * tCrossCross.mat[i][j];
+            intmR.mat[i][j] =
+                intR.mat[i][j] + cTMagM1 * tCross.mat[i][j] / tMag;
+            intR.mat[i][j] -= cTMagM1 * tCross.mat[i][j] / tMag;
          }
       }
-      double tmp3V[3] = {0.0};
-      for (j = 0; j < n; j++) {
-         MxV(intR, x[j], tmp3V);
-         for (i = 0; i < 3; i++)
-            x[j][i] = tmp3V[i];
-      }
-      for (j = 0; j < m; j++) {
-         MxV(intmR, xbar[j], tmp3V);
-         for (i = 0; i < 3; i++)
-            xbar[j][i] = tmp3V[i];
-      }
+      for (j = 0; j < n; j++)
+         x[j] = MxV(intR, x[j]);
+
+      for (j = 0; j < m; j++)
+         xbar[j] = MxV(intmR, xbar[j]);
    }
 }
 /******************************************************************************/

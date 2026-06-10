@@ -236,41 +236,44 @@ double gpsTime2J2000Sec(long const gpsRollover, long const gpsWk,
 /**********************************************************************/
 /* Given a time in seconds since J2000 TT, find the orientation of    */
 /* the world fixed frame relative to the world's inertial frame       */
-void NavGetWorldCWN(const long orbCenter, const DateType *date,
-                    double CWN[3][3])
+mat3x3 NavGetWorldCWN(const long orbCenter, const DateType date)
+    __attribute__((pure));
+mat3x3 NavGetWorldCWN(const long orbCenter, const DateType date)
 {
    // TODO: don't use worlds and getworldCWN directly
    struct WorldType *W = &World[orbCenter];
-   JDType jd           = Date2JD(*date, J2000_EPOCH);
+   JDType jd           = Date2JD(date, J2000_EPOCH);
+   mat3x3 CWN          = MAT3X3_EYE;
 
    switch (orbCenter) {
       case EARTH: {
          if (EphemOption == EPH_SPICE)
-            SpiceGetCWJ(jd, EARTH, CWN);
+            SpiceGetCWJ(jd, EARTH, &CWN);
          else {
             /* .. Earth rotation is a special case */
-            double C_TETE_J2000[3][3], C_W_TETE[3][3];
-            const double ZAxis[3] = {0.0, 0.0, 1.0};
+            mat3x3 C_TETE_J2000, C_W_TETE;
+            const vec3 ZAxis   = VEC3_PZAXIS;
             JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
             double PriMerAng = TwoPi * JD2GMST(jd_tt_j2000);
-            HiFiEarthPrecNute(jd_tt_j2000, CWN, C_TETE_J2000);
-            SimpRot(ZAxis, PriMerAng, C_W_TETE);
-            MxM(C_W_TETE, C_TETE_J2000, CWN);
+            HiFiEarthPrecNute(jd_tt_j2000, &CWN, &C_TETE_J2000);
+            C_W_TETE = SimpRot(ZAxis, PriMerAng);
+            CWN      = MxM(C_W_TETE, C_TETE_J2000);
          }
       } break;
       default:
-         GetWorldCWN(jd, W->ang_data, CWN);
+         CWN = GetWorldCWN(jd, W->ang_data);
          break;
    }
+   return CWN;
 }
 //------------------------------------------------------------------------------
 // Acceleration perturbation functions
 //------------------------------------------------------------------------------
-void SphericalHarmonicsJacobian(const long N, const long M, const double r,
-                                const double trigs[4], const double Re,
-                                const double K, double **C, double **S,
-                                double **Norm, double HV[3][3])
+mat3x3 SphericalHarmonicsJacobian(const long N, const long M, const double r,
+                                  const double trigs[4], const double Re,
+                                  const double K, double **C, double **S,
+                                  double **Norm)
 {
    double P[N + 1][M + 1], sdP[N + 1][M + 1];
    long n, m;
@@ -340,116 +343,123 @@ void SphericalHarmonicsJacobian(const long N, const long M, const double r,
    d2Vdrdtheta     *= Kr;
    d2Vdphidtheta   *= K;
 
-   HV[0][0] = d2Vdr2;
-   HV[1][1] = d2Vdtheta2 / r2;
-   HV[2][2] = d2Vdphi2 / rsth2;
-   HV[0][1] = d2Vdrdtheta / r;
-   HV[0][2] = d2Vdrdphi / rsth;
-   HV[1][2] = d2Vdphidtheta / (r * rsth);
-   HV[1][0] = HV[0][1];
-   HV[2][0] = HV[0][2];
-   HV[2][1] = HV[1][2];
+   mat3x3 HV;
+   HV.mat[0][0] = d2Vdr2;
+   HV.mat[1][1] = d2Vdtheta2 / r2;
+   HV.mat[2][2] = d2Vdphi2 / rsth2;
+   HV.mat[0][1] = d2Vdrdtheta / r;
+   HV.mat[0][2] = d2Vdrdphi / rsth;
+   HV.mat[1][2] = d2Vdphidtheta / (r * rsth);
+   HV.mat[1][0] = HV.mat[0][1];
+   HV.mat[2][0] = HV.mat[0][2];
+   HV.mat[2][1] = HV.mat[1][2];
+   return HV;
 }
 
-void SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
-                               double CWN[3][3], double pbn[3],
-                               double HgeoN[3][3])
+mat3x3 SphericalHarmonicsHessian(long N, long M, struct WorldType *W,
+                                 mat3x3 CWN, vec3 pbn)
 {
-   double cth, sth, cph, sph, pbw[3], HV[3][3] = {{0.0}};
+   double cth, sth, cph, sph;
    double r;
    long i, j, k;
    const struct SphereHarmType *GravModel = &W->GravModel;
 
-   double gradV[3] = {0.0};
+   mat3x3 HV;
+   vec3 gradV = VEC3_ZERO, pbw;
 
    /*    Transform p to ECEF */
-   MxV(CWN, pbn, pbw);
+   pbw = MxV(CWN, pbn);
 
-   const double denom = sqrt(pbw[1] * pbw[1] + pbw[0] * pbw[0]);
+   const double denom = sqrt(pbw.y * pbw.y + pbw.x * pbw.x);
    getTrigSphericalCoords(pbw, &cth, &sth, &cph, &sph, &r);
    const double trigs[4] = {cth, sth, cph, sph};
 
-   const double MSE[3][3] = {{pbw[0] / r, pbw[1] / r, cth},
-                             {cth * cph, cth * sph, -sth},
-                             {-sph, cph, 0.0}};
+   const mat3x3 MSE = {.flat = {pbw.x / r, pbw.y / r, cth, cth * cph, cth * sph,
+                                -sth, -sph, cph, 0.0}};
 
    /*    Find Jacobian */
-   SphericalHarmonicsJacobian(N, M, r, trigs, W->rad, W->mu / W->rad,
-                              GravModel->C, GravModel->S, GravModel->Norm, HV);
+   HV = SphericalHarmonicsJacobian(N, M, r, trigs, W->rad, W->mu / W->rad,
+                                   GravModel->C, GravModel->S, GravModel->Norm);
 
    /*   Calculate scaled Christoffel Symbols */
    /*     sCS^k_{ij} = CS^k_{ij} * sqrt(g_{kk}) / (sqrt(g_{ii})*sqrt(g_{jj})) */
    /*     due to scaling of gradV and scaling in polar transform */
-   double sCS[3][3][3] = {{{0.0}}};
+   mat3x3 sCS[3] = {MAT3X3_ZERO};
 
-   sCS[0][1][1] = -1.0 / r;      // -r * 1 / (r*r) = -1 / r
-   sCS[0][2][2] = sCS[0][1][1];  // -rsth*sth * 1 / (rsth*rsth) = -1/r
-   sCS[1][0][1] = -sCS[0][1][1]; // 1/r * r / (1*r) = 1/r
-   sCS[1][1][0] = sCS[1][0][1];
-   sCS[1][2][2] =
-       -pbw[2] / (r * denom);    // -sth*cth * r / (rsth*rsth) = -cth / rsth
-   sCS[2][0][2] = sCS[1][0][1];  // 1/r * rsth / (1*rsth) = 1 / r
-   sCS[2][1][2] = -sCS[1][2][2]; // cth/sth * rsth / (r*rsth) = cth / rsth
-   sCS[2][2][0] = sCS[2][0][2];
-   sCS[2][2][1] = sCS[2][1][2];
+   sCS[0].mat[1][1] = -1.0 / r;          // -r * 1 / (r*r) = -1 / r
+   sCS[0].mat[2][2] = sCS[0].mat[1][1];  // -rsth*sth * 1 / (rsth*rsth) = -1/r
+   sCS[1].mat[0][1] = -sCS[0].mat[1][1]; // 1/r * r / (1*r) = 1/r
+   sCS[1].mat[1][0] = sCS[1].mat[0][1];
+   sCS[1].mat[2][2] =
+       -pbw.z / (r * denom); // -sth*cth * r / (rsth*rsth) = -cth / rsth
+   sCS[2].mat[0][2] = sCS[1].mat[0][1]; // 1/r * rsth / (1*rsth) = 1 / r
+   sCS[2].mat[1][2] =
+       -sCS[1].mat[2][2]; // cth/sth * rsth / (r*rsth) = cth / rsth
+   sCS[2].mat[2][0] = sCS[2].mat[0][2];
+   sCS[2].mat[2][1] = sCS[2].mat[1][2];
 
-   SphericalHarmonics(N, M, r, trigs, W->rad, W->mu / W->rad, GravModel->C,
-                      GravModel->S, GravModel->Norm, gradV);
+   gradV = SphericalHarmonics(N, M, r, trigs, W->rad, W->mu / W->rad,
+                              GravModel->C, GravModel->S, GravModel->Norm);
    for (k = 0; k < 3; k++)
       for (i = 0; i < 3; i++)
          for (j = 0; j < 3; j++)
-            HV[i][j] -= gradV[k] * sCS[k][i][j];
+            HV.mat[i][j] -= gradV.v[k] * sCS[k].mat[i][j];
 
    /*    Transform back to cartesian coords in Newtonian frame */
-   double CSN[3][3];
-   MxM(MSE, CWN, CSN);
-   AdjointT(CSN, HV, HgeoN);
+   mat3x3 CSN = MxM(MSE, CWN);
+   return AdjointT(CSN, HV);
 }
 
-void getGravAccel(double const mu, double const pos[3], double gravFrc[3])
+vec3 getGravAccel(const double mu, const vec3 pos) __attribute__((const));
+vec3 getGravAccel(const double mu, const vec3 pos)
 {
    int i;
-   double posHat[3];
-   const double posMag    = CopyUnitV(pos, posHat);
+   vec3 posHat, gravFrc;
+   const double posMag    = CopyUnitV(pos, &posHat);
    const double gravScale = -mu / (posMag * posMag);
    for (i = 0; i < 3; i++)
-      gravFrc[i] = posHat[i] * gravScale;
+      gravFrc.v[i] = posHat.v[i] * gravScale;
+   return gravFrc;
 }
 
-void getDGravFrcDPos(double const mu, double const pos[3],
-                     double dGravFrcdPos[3][3])
+mat3x3 getDGravFrcDPos(const double mu, const vec3 pos) __attribute__((const));
+mat3x3 getDGravFrcDPos(const double mu, const vec3 pos)
 {
    int i, j;
-   double posHat[3];
-   for (i = 0; i < 3; i++)
-      posHat[i] = pos[i];
-   const double posMag    = UNITV(posHat);
+   vec3 posHat;
+   posHat                 = pos;
+   const double posMag    = UNITV(&posHat);
    const double gravScale = -mu / (posMag * posMag * posMag);
 
-   for (i = 0; i < 3; i++) {
+   mat3x3 dGravFrcdPos = MAT3X3_EYE;
+   for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++)
-         dGravFrcdPos[i][j] = -posHat[i] * posHat[j] * 3.0;
-      dGravFrcdPos[i][i] += 1.0;
-      for (j = 0; j < 3; j++)
-         dGravFrcdPos[i][j] *= gravScale;
-   }
+         dGravFrcdPos.mat[i][j] += -posHat.v[i] * posHat.v[j] * 3.0;
+   return SxM(gravScale, dGravFrcdPos);
 }
 
-void ThirdBodyGravAccel(double p[3], double s[3], double mu, double accel[3])
+vec3 ThirdBodyGravAccel(vec3 p, vec3 s, double mu) __attribute__((const));
+vec3 ThirdBodyGravAccel(vec3 p, vec3 s, double mu)
 {
    const double magp = MAGV(p);
    const double mags = MAGV(s);
    const double p3   = magp * magp * magp;
    const double s3   = mags * mags * mags;
+   vec3 accel;
    for (long j = 0; j < 3; j++)
-      accel[j] = mu * (s[j] / s3 - p[j] / p3);
+      accel.v[j] = mu * (s.v[j] / s3 - p.v[j] / p3);
+   return accel;
 }
 
-void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
-                      const double PosR[3], const double mass,
-                      const struct OrbitType *O, double VelRdot[3])
+vec3 NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
+                      const vec3 PosR, const double mass,
+                      const struct OrbitType *O) __attribute__((pure));
+vec3 NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
+                      const vec3 PosR, const double mass,
+                      const struct OrbitType *O)
 {
-   double ph[3], pn[3], pr[3], s[3], accelR[3];
+   vec3 VelRdot = VEC3_ZERO;
+   vec3 ph, pn, pr, s, accelR;
    long Iw, Im, j;
    long OrbCenter, SecCenter;
 
@@ -463,20 +473,18 @@ void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    }
 
    struct WorldType *WCenter = &World[OrbCenter];
-   for (j = 0; j < 3; j++)
-      VelRdot[j] = 0.0;
 
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
          for (j = 0; j < 3; j++)
-            ph[j] = World[Iw].PosH[j] - WCenter->PosH[j];
-         MxV(WCenter->CNH, ph, pn);
-         MxV(Nav->refCRN, pn, pr);
+            ph.v[j] = World[Iw].PosH.v[j] - WCenter->PosH.v[j];
+         pn = MxV(WCenter->CNH, ph);
+         pr = MxV(Nav->refCRN, pn);
          for (j = 0; j < 3; j++)
-            s[j] = pr[j] - PosR[j];
-         ThirdBodyGravAccel(pr, s, World[Iw].mu, accelR);
+            s.v[j] = pr.v[j] - PosR.v[j];
+         accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
          for (j = 0; j < 3; j++)
-            VelRdot[j] += accelR[j];
+            VelRdot.v[j] += accelR.v[j];
       }
    }
    /* Moons of OrbCenter (but not SecCenter) */
@@ -485,13 +493,13 @@ void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
             for (j = 0; j < 3; j++)
-               pn[j] = World[Iw].eph.PosN[j];
-            MxV(Nav->refCRN, pn, pr);
+               pn.v[j] = World[Iw].eph.PosN.v[j];
+            pr = MxV(Nav->refCRN, pn);
             for (j = 0; j < 3; j++)
-               s[j] = pr[j] - PosR[j];
-            ThirdBodyGravAccel(pr, s, World[Iw].mu, accelR);
+               s.v[j] = pr.v[j] - PosR.v[j];
+            accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
             for (j = 0; j < 3; j++)
-               VelRdot[j] += accelR[j];
+               VelRdot.v[j] += accelR.v[j];
          }
       }
    }
@@ -499,19 +507,18 @@ void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    if (O->Regime == ORB_THREE_BODY) {
       for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
          Iw = World[SecCenter].Sat[Im];
+         pn = World[Iw].eph.PosN;
+         ph = MTxV(World[SecCenter].CNH, pn);
+         pn = MxV(WCenter->CNH, ph);
          for (j = 0; j < 3; j++)
-            pn[j] = World[Iw].eph.PosN[j];
-         MTxV(World[SecCenter].CNH, pn, ph);
-         MxV(WCenter->CNH, ph, pn);
+            pn.v[j] += World[SecCenter].eph.PosN.v[j];
+         pr = MxV(Nav->refCRN, pn);
          for (j = 0; j < 3; j++)
-            pn[j] += World[SecCenter].eph.PosN[j];
-         MxV(Nav->refCRN, pn, pr);
-         for (j = 0; j < 3; j++)
-            s[j] = pr[j] - PosR[j];
+            s.v[j] = pr.v[j] - PosR.v[j];
 
-         ThirdBodyGravAccel(pr, s, World[Iw].mu, accelR);
+         accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
          for (j = 0; j < 3; j++)
-            VelRdot[j] += accelR[j];
+            VelRdot.v[j] += accelR.v[j];
       }
    }
 
@@ -519,23 +526,23 @@ void NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      double CWN[3][3] = {{0.0}};
-      NavGetWorldCWN(OrbCenter, date, CWN);
-      double fGeoN[3], fGeoR[3], PosN[3];
-      MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, CWN, mass,
-                             PosN, fGeoN);
-      MxV(Nav->refCRN, fGeoN, fGeoR);
+      mat3x3 CWN = NavGetWorldCWN(OrbCenter, *date);
+      vec3 fGeoN, fGeoR, PosN;
+      PosN  = MTxV(Nav->refCRN, PosR);
+      fGeoN = SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, CWN,
+                                     mass, PosN);
+      fGeoR = MxV(Nav->refCRN, fGeoN);
       for (j = 0; j < 3; j++)
-         VelRdot[j] += fGeoR[j] / mass;
+         VelRdot.v[j] += fGeoR.v[j] / mass;
    }
+   return VelRdot;
 }
 
-void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
-                           double PosR[3], struct OrbitType const *O,
-                           double dGravDPos[3][3])
+mat3x3 NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
+                             vec3 PosR, struct OrbitType const *O)
 {
-   double ph[3], pn[3], pr[3], s[3], dGdR[3][3];
+   mat3x3 dGravDPos = MAT3X3_ZERO, dGdR;
+   vec3 ph, pn, pr, s;
    long Iw, Im, i, j;
    long OrbCenter, SecCenter;
 
@@ -548,22 +555,19 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
       SecCenter = O->Body2;
    }
    struct WorldType *WCenter = &World[OrbCenter];
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
-         dGravDPos[i][j] = 0.0;
 
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
          for (j = 0; j < 3; j++)
-            ph[j] = World[Iw].PosH[j] - WCenter->PosH[j];
-         MxV(WCenter->CNH, ph, pn);
-         MxV(Nav->refCRN, pn, pr);
+            ph.v[j] = World[Iw].PosH.v[j] - WCenter->PosH.v[j];
+         pn = MxV(WCenter->CNH, ph);
+         pr = MxV(Nav->refCRN, pn);
          for (j = 0; j < 3; j++)
-            s[j] = pr[j] - PosR[j];
-         getDGravFrcDPos(World[Iw].mu, s, dGdR);
+            s.v[j] = pr.v[j] - PosR.v[j];
+         dGdR = getDGravFrcDPos(World[Iw].mu, s);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               dGravDPos[i][j] += dGdR[i][j];
+               dGravDPos.mat[i][j] += dGdR.mat[i][j];
       }
    }
    /* Moons of OrbCenter (but not SecCenter) */
@@ -571,15 +575,14 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
       for (Im = 0; Im < WCenter->Nsat; Im++) {
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
+            pn = World[Iw].eph.PosN;
+            pr = MxV(Nav->refCRN, pn);
             for (j = 0; j < 3; j++)
-               pn[j] = World[Iw].eph.PosN[j];
-            MxV(Nav->refCRN, pn, pr);
-            for (j = 0; j < 3; j++)
-               s[j] = pr[j] - PosR[j];
-            getDGravFrcDPos(World[Iw].mu, s, dGdR);
+               s.v[j] = pr.v[j] - PosR.v[j];
+            dGdR = getDGravFrcDPos(World[Iw].mu, s);
             for (i = 0; i < 3; i++)
                for (j = 0; j < 3; j++)
-                  dGravDPos[i][j] += dGdR[i][j];
+                  dGravDPos.mat[i][j] += dGdR.mat[i][j];
          }
       }
    }
@@ -587,20 +590,20 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    if (O->Regime == ORB_THREE_BODY) {
       for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
          Iw = World[SecCenter].Sat[Im];
+         pn = World[Iw].eph.PosN;
          for (j = 0; j < 3; j++)
-            pn[j] = World[Iw].eph.PosN[j];
-         MTxV(World[SecCenter].CNH, pn, ph);
-         MxV(WCenter->CNH, ph, pn);
+            ph = MTxV(World[SecCenter].CNH, pn);
+         pn = MxV(WCenter->CNH, ph);
          for (j = 0; j < 3; j++)
-            pn[j] += World[SecCenter].eph.PosN[j];
-         MxV(Nav->refCRN, pn, pr);
+            pn.v[j] += World[SecCenter].eph.PosN.v[j];
+         pr = MxV(Nav->refCRN, pn);
          for (j = 0; j < 3; j++)
-            s[j] = pr[j] - PosR[j];
+            s.v[j] = pr.v[j] - PosR.v[j];
 
-         getDGravFrcDPos(World[Iw].mu, s, dGdR);
+         dGdR = getDGravFrcDPos(World[Iw].mu, s);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               dGravDPos[i][j] += dGdR[i][j];
+               dGravDPos.mat[i][j] += dGdR.mat[i][j];
       }
    }
 
@@ -608,31 +611,32 @@ void NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    /* Perturbations due to non-spherical gravity potential */
    const struct SphereHarmType *GravModel = &WCenter->GravModel;
    if (GravModel->N >= 2) {
-      double CWN[3][3] = {{0.0}};
-      NavGetWorldCWN(OrbCenter, date, CWN);
-      double HgeoN[3][3] = {{0.0}}, HgeoR[3][3] = {{0.0}}, PosN[3] = {0.0};
-      MTxV(Nav->refCRN, PosR, PosN);
-      SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter, CWN, PosN,
-                                HgeoN);
+      mat3x3 CWN, HgeoN, HgeoR;
+      vec3 PosN;
+      CWN   = NavGetWorldCWN(OrbCenter, *date);
+      PosN  = MTxV(Nav->refCRN, PosR);
+      HgeoN = SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter,
+                                        CWN, PosN);
       if (Nav->refFrame != FRAME_N) {
-         Adjoint(Nav->refCRN, HgeoN, HgeoR);
+         HgeoR = Adjoint(Nav->refCRN, HgeoN);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               dGravDPos[i][j] += HgeoR[i][j];
+               dGravDPos.mat[i][j] += HgeoR.mat[i][j];
       }
       else {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               dGravDPos[i][j] += HgeoN[i][j];
+               dGravDPos.mat[i][j] += HgeoN.mat[i][j];
       }
    }
+   return dGravDPos;
 }
 
 void getAeroForceAndTorque(struct DSMType *const DSM,
-                           double const CRB[3][3] __attribute__((unused)),
-                           double const PosR[3], double const VelR[3],
+                           const mat3x3 CRB __attribute__((unused)),
+                           const vec3 PosR, const vec3 VelR,
                            double const worldW, double const AtmoDensity,
-                           double frcR[3], double trq[3])
+                           vec3 *frcR, vec3 *trq)
 {
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
@@ -640,32 +644,29 @@ void getAeroForceAndTorque(struct DSMType *const DSM,
    // Higher fidelity model requires information that exists only in SCType
 
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   double worldWR[3] = {0.0}, VrelR[3] = {0.0};
-   double PosRWorld[3] = {0.0};
+   vec3 worldWR, VrelR, PosRWorld, VrelRHat;
    for (int i = 0; i < 3; i++)
-      PosRWorld[i] = PosR[i] + Nav->refPos[i];
+      PosRWorld.v[i] = PosR.v[i] + Nav->refPos.v[i];
    for (int i = 0; i < 3; i++)
-      worldWR[i] = -Nav->refCRN[i][2] * worldW;
-   VxV(worldWR, PosRWorld, VrelR);
+      worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldW;
+   VrelR = VxV(worldWR, PosRWorld);
    for (int i = 0; i < 3; i++)
-      VrelR[i] += VelR[i] + Nav->refVel[i];
+      VrelR.v[i] += VelR.v[i] + Nav->refVel.v[i];
 
-   double VrelRHat[3]     = {0.0};
-   const double WindSpeed = CopyUnitV(VrelR, VrelRHat);
+   const double WindSpeed = CopyUnitV(VrelR, &VrelRHat);
    const double Coef1 = -0.5 * AtmoDensity * WindSpeed * WindSpeed * DSM->mass /
                         Nav->ballisticCoef;
-   for (int i = 0; i < 3; i++) {
-      frcR[i] = Coef1 * VrelRHat[i];
-      trq[i]  = 0.0;
-   }
+   for (int i = 0; i < 3; i++)
+      frcR->v[i] = Coef1 * VrelRHat.v[i];
+   *trq = VEC3_ZERO;
 }
 
 void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
-                            double const CRB[3][3] __attribute__((unused)),
-                            double const PosR[3], double const VelR[3],
-                            double const worldW, double const AtmoDensity,
-                            double dAeroFrcdVRel[3][3],
-                            double dAeroTrqdVRel[3][3])
+                            const mat3x3 CRB __attribute__((unused)),
+                            const vec3 PosR, const vec3 VelR,
+                            const double worldW, const double AtmoDensity,
+                            mat3x3 *const dAeroFrcdVRel,
+                            mat3x3 *const dAeroTrqdVRel)
 {
    // TODO: be able to choose between ballistic coef model and more accurate
    // model basllistic coef is noticeably faster and simplification doesn't
@@ -673,26 +674,25 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
    // Higher fidelity model requires information that exists only in SCType
 
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   double worldWR[3] = {0.0}, VrelR[3] = {0.0};
-   double PosRWorld[3] = {0.0};
+   vec3 worldWR, VrelR, PosRWorld;
    for (int i = 0; i < 3; i++)
-      PosRWorld[i] = PosR[i] + Nav->refPos[i];
+      PosRWorld.v[i] = PosR.v[i] + Nav->refPos.v[i];
    for (int i = 0; i < 3; i++)
-      worldWR[i] = -Nav->refCRN[i][2] * worldW;
-   VxV(worldWR, PosRWorld, VrelR);
+      worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldW;
+   VrelR = VxV(worldWR, PosRWorld);
    for (int i = 0; i < 3; i++)
-      VrelR[i] += VelR[i] + Nav->refVel[i];
+      VrelR.v[i] += VelR.v[i] + Nav->refVel.v[i];
 
-   double VrelRHat[3]     = {0.0};
-   const double WindSpeed = CopyUnitV(VrelR, VrelRHat);
+   vec3 VrelRHat;
+   const double WindSpeed = CopyUnitV(VrelR, &VrelRHat);
    const double Coef1 =
        -0.5 * AtmoDensity * WindSpeed * DSM->mass / Nav->ballisticCoef;
+
+   *dAeroTrqdVRel = MAT3X3_ZERO;
    for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-         dAeroFrcdVRel[i][j] = VrelRHat[i] * VrelRHat[j] * Coef1;
-         dAeroTrqdVRel[i][j] = 0.0;
-      }
-      dAeroFrcdVRel[i][i] += Coef1;
+      for (int j = 0; j < 3; j++)
+         dAeroFrcdVRel->mat[i][j] = VrelRHat.v[i] * VrelRHat.v[j] * Coef1;
+      dAeroFrcdVRel->mat[i][i] += Coef1;
    }
 }
 
@@ -703,7 +703,7 @@ void getDAeroFrcAndTrqDVRel(struct DSMType *const DSM,
 double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                          const long Igyro, double **N __attribute__((unused)))
 {
-   double tmp[3] = {0.0}, tmp2[3] = {0.0};
+   vec3 tmp, tmp2;
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    const struct DSMNavType *Nav  = &DSM->DsmNav;
@@ -721,40 +721,39 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    switch (Nav->type) {
       case LIEKF_NAV:
-         MTxV(Nav->CRB, Nav->refOmega, tmp);
+         tmp = MTxV(Nav->CRB, Nav->refOmega);
          for (i = 0; i < 3; i++)
-            tmp[i] += Nav->wbr[i];
-         VxV(tmp, gyro->Axis, tmp2);
+            tmp.v[i] += Nav->wbr.v[i];
+         tmp2 = VxV(tmp, gyro->Axis);
 
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp2[i] * R2D;
+            B[0][i] = tmp2.v[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          for (i = 0; i < 3; i++)
-            B[0][i] = -gyro->Axis[i] * R2D;
+            B[0][i] = -gyro->Axis.v[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
          break;
       case RIEKF_NAV: {
-         double axisR[3] = {0.0};
-         MxV(Nav->CRB, gyro->Axis, axisR);
+         vec3 axisR = MxV(Nav->CRB, gyro->Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = -axisR[i] * R2D;
+            B[0][i] = -axisR.v[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
 
-         VxV(Nav->refOmega, axisR, tmp2);
+         tmp2 = VxV(Nav->refOmega, axisR);
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp2[i] * R2D;
+            B[0][i] = tmp2.v[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
       } break;
       case MEKF_NAV:
          for (i = 0; i < 3; i++)
-            B[0][i] = -gyro->Axis[i] * R2D;
+            B[0][i] = -gyro->Axis.v[i] * R2D;
          subMatAdd(jacobian, B, 0, Nav->navInd[OMEGA_STATE], 1, 3);
          if (Nav->refFrame != FRAME_N) {
-            QxV(Nav->qbr, Nav->refOmega, tmp);
-            VxV(tmp, gyro->Axis, tmp2);
+            tmp  = QxV(Nav->qbr, Nav->refOmega);
+            tmp2 = VxV(tmp, gyro->Axis);
 
             for (i = 0; i < 3; i++)
-               B[0][i] = tmp2[i] * R2D;
+               B[0][i] = tmp2.v[i] * R2D;
             subMatAdd(jacobian, B, 0, Nav->navInd[QUAT_STATE], 1, 3);
          }
          break;
@@ -770,7 +769,7 @@ double **gyroJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Imag, double **N __attribute__((unused)))
 {
-   double tmp[3] = {0.0}, tmp2[3] = {0.0};
+   vec3 tmp, tmp2;
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    const struct DSMNavType *Nav         = &DSM->DsmNav;
@@ -789,28 +788,27 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    switch (Nav->type) {
       case LIEKF_NAV:
-         MxV(Nav->refCRN, AC->bvn, tmp);
-         MTxV(Nav->CRB, tmp, tmp2);
-         VxV(tmp2, mag->Axis, tmp);
+         tmp  = MxV(Nav->refCRN, AC->bvn);
+         tmp2 = MTxV(Nav->CRB, tmp);
+         tmp  = VxV(tmp2, mag->Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp[i] * T2mG;
+            B[0][i] = tmp.v[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
       case RIEKF_NAV: {
-         double axisR[3] = {0.0};
-         MxV(Nav->refCRN, AC->bvn, tmp2);
-         MxV(Nav->CRB, mag->Axis, axisR);
-         VxV(tmp2, axisR, tmp);
+         tmp2       = MxV(Nav->refCRN, AC->bvn);
+         vec3 axisR = MxV(Nav->CRB, mag->Axis);
+         tmp        = VxV(tmp2, axisR);
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp[i] * T2mG;
+            B[0][i] = tmp.v[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
       } break;
       case MEKF_NAV:
-         MxV(Nav->refCRN, AC->bvn, tmp);
-         QxV(Nav->qbr, tmp, tmp2);
-         VxV(tmp2, mag->Axis, tmp);
+         tmp  = MxV(Nav->refCRN, AC->bvn);
+         tmp2 = QxV(Nav->qbr, tmp);
+         tmp  = VxV(tmp2, mag->Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp[i] * T2mG;
+            B[0][i] = tmp.v[i] * T2mG;
          subMatAdd(jacobian, B, 0, Nav->navInd[QUAT_STATE], 1, 3);
          break;
       default:
@@ -825,7 +823,7 @@ double **magJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Icss, double **N __attribute__((unused)))
 {
-   double tmp[3] = {0.0}, svb[3] = {0.0}, svr[3] = {0.0};
+   vec3 tmp, svb, svr;
    static double **B = NULL; // if its static, just need to allocate once,
                              // instead of allocate/deallocate
    const struct DSMNavType *Nav = &DSM->DsmNav;
@@ -838,7 +836,7 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    for (i = 0; i < 3; i++)
       B[0][i] = 0.0;
 
-   MxV(Nav->refCRN, AC->svn, svr);
+   svr = MxV(Nav->refCRN, AC->svn);
 
    double **jacobian =
        CreateMatrix(Nav->measTypes[CSS_SENSOR][Icss].dim, Nav->navDim);
@@ -846,24 +844,24 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    switch (Nav->type) { // will need to figure something out with albedo if that
                         // is active
       case LIEKF_NAV:
-         MTxV(Nav->CRB, svr, svb);
-         VxV(svb, css->Axis, tmp);
+         svb = MTxV(Nav->CRB, svr);
+         tmp = VxV(svb, css->Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp[i] * css->Scale;
+            B[0][i] = tmp.v[i] * css->Scale;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
       case RIEKF_NAV:
-         MxV(Nav->CRB, css->Axis, tmp);
-         VxV(svr, tmp, svb);
+         tmp = MxV(Nav->CRB, css->Axis);
+         svb = VxV(svr, tmp);
          for (i = 0; i < 3; i++)
-            B[0][i] = svb[i] * css->Scale;
+            B[0][i] = svb.v[i] * css->Scale;
          subMatAdd(jacobian, B, 0, Nav->navInd[ROTMAT_STATE], 1, 3);
          break;
       case MEKF_NAV:
-         QxV(Nav->qbr, svr, svb);
-         VxV(svb, css->Axis, tmp);
+         svb = QxV(Nav->qbr, svr);
+         tmp = VxV(svb, css->Axis);
          for (i = 0; i < 3; i++)
-            B[0][i] = tmp[i] * css->Scale;
+            B[0][i] = tmp.v[i] * css->Scale;
          subMatAdd(jacobian, B, 0, Nav->navInd[QUAT_STATE], 1, 3);
          break;
       default:
@@ -878,14 +876,13 @@ double **cssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                         const long Ifss, double **N __attribute__((unused)))
 {
-   double B[3][3] = {{0.0}}, tmp3x3[3][3] = {{0.0}};
+   mat3x3 B, tmp3x3, CBN;
    const struct AcFssType *fss  = &AC->FSS[Ifss];
    const struct DSMNavType *Nav = &DSM->DsmNav;
    static double **tmpAssign    = NULL;
-   double svb[3], svs[3], CBN[3][3];
-   double bhat[3] = {0.0}, hhat[3] = {0.0}, vhat[3] = {0.0};
-   double bxsvs[3], hxsvs[3], vxsvs[3];
-   long i, j;
+   vec3 svb, svs, bhat = VEC3_ZERO, hhat = VEC3_ZERO, vhat = VEC3_ZERO;
+   vec3 bxsvs, hxsvs, vxsvs;
+   long i;
 
    const long BoreAxis = fss->BoreAxis;
    const long H_Axis   = fss->H_Axis;
@@ -894,41 +891,39 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(2, 3);
 
-   for (i = 0; i < 2; i++)
-      for (j = 0; j < 3; j++)
-         tmpAssign[i][j] = 0.0;
+   memset(tmpAssign[0], 0, sizeof(double) * 6);
 
-   MTxM(Nav->CRB, Nav->refCRN, CBN);
-   MxV(CBN, AC->svn, svb);
-   MxV(fss->CB, svb, svs);
+   CBN = MTxM(Nav->CRB, Nav->refCRN);
+   svb = MxV(CBN, AC->svn);
+   svs = MxV(fss->CB, svb);
 
-   bhat[BoreAxis] = 1.0;
-   hhat[H_Axis]   = 1.0;
-   vhat[V_Axis]   = 1.0;
+   bhat.v[BoreAxis] = 1.0;
+   hhat.v[H_Axis]   = 1.0;
+   vhat.v[V_Axis]   = 1.0;
 
-   VxV(bhat, svs, bxsvs);
-   VxV(hhat, svs, hxsvs);
-   VxV(vhat, svs, vxsvs);
+   bxsvs = VxV(bhat, svs);
+   hxsvs = VxV(hhat, svs);
+   vxsvs = VxV(vhat, svs);
 
-   const double svsb = svs[BoreAxis];
-   const double svsh = svs[H_Axis];
-   const double svsv = svs[V_Axis];
+   const double svsb = svs.v[BoreAxis];
+   const double svsh = svs.v[H_Axis];
+   const double svsv = svs.v[V_Axis];
 
    switch (fss->type) {
       case CONVENTIONAL_FSS: {
          const double denomA = 1.0 / (svsb * svsb + svsh * svsh);
          const double denomB = 1.0 / (svsb * svsb + svsv * svsv);
          for (i = 0; i < 3; i++) {
-            B[0][i] = (svsh * bxsvs[i] - svsb * hxsvs[i]) * denomA;
-            B[1][i] = (svsv * bxsvs[i] - svsb * vxsvs[i]) * denomB;
+            B.mat[0][i] = (svsh * bxsvs.v[i] - svsb * hxsvs.v[i]) * denomA;
+            B.mat[1][i] = (svsv * bxsvs.v[i] - svsb * vxsvs.v[i]) * denomB;
          }
       } break;
       case GS_FSS: {
          const double denomA = -1.0 / sqrt(1.0 - svsb * svsb);
          const double denomB = 1.0 / (svsh * svsh + svsv * svsv);
          for (i = 0; i < 3; i++) {
-            B[0][i] = bxsvs[i] * denomA;
-            B[1][i] = (svsh * vxsvs[i] - svsv * hxsvs[i]) * denomB;
+            B.mat[0][i] = bxsvs.v[i] * denomA;
+            B.mat[1][i] = (svsh * vxsvs.v[i] - svsv * hxsvs.v[i]) * denomB;
          }
       } break;
       default:
@@ -942,25 +937,19 @@ double **fssJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    switch (Nav->type) {
       case LIEKF_NAV:
-         MxM(B, fss->CB, tmp3x3);
-         for (i = 0; i < 2; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = tmp3x3[i][j];
+         tmp3x3 = MxM(B, fss->CB);
+         CopyVG(tmpAssign[0], tmp3x3.flat, 6);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[ROTMAT_STATE], 2, 3);
          break;
       case RIEKF_NAV:
-         MxM(B, fss->CB, tmp3x3);
-         MxMT(tmp3x3, Nav->CRB, B);
-         for (i = 0; i < 2; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = B[i][j];
+         tmp3x3 = MxM(B, fss->CB);
+         B      = MxMT(tmp3x3, Nav->CRB);
+         CopyVG(tmpAssign[0], B.flat, 6);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[ROTMAT_STATE], 2, 3);
          break;
       case MEKF_NAV:
-         MxM(B, fss->CB, tmp3x3);
-         for (i = 0; i < 2; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = tmp3x3[i][j];
+         tmp3x3 = MxM(B, fss->CB);
+         CopyVG(tmpAssign[0], tmp3x3.flat, 6);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[QUAT_STATE], 2, 3);
          break;
       default:
@@ -976,39 +965,30 @@ double **startrackJacobianFun(struct AcType *const AC,
                               struct DSMType *const DSM, const long Ist,
                               double **N __attribute__((unused)))
 {
-   double tmpM[3][3]                  = {{0.0}}, CSB[3][3];
+   mat3x3 tmpM, CSB;
    static double **tmpAssign          = NULL;
    const struct DSMNavType *Nav       = &DSM->DsmNav;
    const struct AcStarTrackerType *st = &AC->ST[Ist];
-   long i, j;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
 
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
-         tmpAssign[i][j] = 0.0;
-
    double **jacobian =
        CreateMatrix(Nav->measTypes[STARTRACK_SENSOR][Ist].errDim, Nav->navDim);
-   Q2C(st->qb, CSB);
+   CSB = Q2C(st->qb);
 
    switch (Nav->type) {
       case LIEKF_NAV:
       case MEKF_NAV:
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -CSB[i][j];
+         CopyVG(tmpAssign[0], SxM(-1.0, CSB).flat, 9);
          if (Nav->type == LIEKF_NAV)
             subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[ROTMAT_STATE], 3, 3);
          else
             subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[QUAT_STATE], 3, 3);
          break;
       case RIEKF_NAV:
-         MxMT(CSB, Nav->CRB, tmpM);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -tmpM[i][j];
+         tmpM = MxMT(CSB, Nav->CRB);
+         CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[ROTMAT_STATE], 3, 3);
          break;
       default:
@@ -1024,102 +1004,70 @@ double **gpsJacobianFun(struct AcType *const AC __attribute__((unused)),
                         struct DSMType *const DSM, const long Igps,
                         double **N __attribute__((unused)))
 {
-   double tmp1[3][3] = {{0.0}}, tmp2[3][3] = {{0.0}}, tmp3[3][3] = {{0.0}},
-          tmpX[3][3] = {{0.0}}, tmpV[3] = {0.0};
+   mat3x3 tmp1, tmp2, tmp3, tmpX;
+   vec3 tmpV;
    static double **tmpAssign    = NULL;
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   long i, j;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
-
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
-         tmpAssign[i][j] = 0.0;
 
    double **jacobian =
        CreateMatrix(Nav->measTypes[GPS_SENSOR][Igps].dim, Nav->navDim);
 
    switch (Nav->type) {
       case LIEKF_NAV:
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmp1[i][j] = Nav->CRB[i][j];
+         tmp1 = Nav->CRB;
          if (Nav->refFrame != FRAME_N) {
-            MTxM(Nav->refCRN, tmp1, tmp2);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  tmp1[i][j] = tmp2[i][j];
+            tmp1 = MTxM(Nav->refCRN, tmp1);
 
-            MTxV(Nav->refCRN, Nav->refOmega, tmpV);
-            V2CrossM(tmpV, tmpX);
-            MTxM(Nav->refCRN, tmpX, tmp2);
-            MxM(tmp2, tmp1, tmpX);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  tmpAssign[i][j] = -tmpX[i][j];
+            tmpV = MTxV(Nav->refCRN, Nav->refOmega);
+            tmpX = V2CrossM(tmpV);
+            tmp2 = MTxM(Nav->refCRN, tmpX);
+            tmpX = MxM(tmp2, tmp1);
+            CopyVG(tmpAssign[0], SxM(-1.0, tmpX).flat, 9);
             subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[POS_STATE], 3, 3);
          }
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -tmp1[i][j];
+         CopyVG(tmpAssign[0], SxM(-1.0, tmp1).flat, 9);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[POS_STATE], 3, 3);
          subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[VEL_STATE], 3, 3);
          break;
       case RIEKF_NAV:
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmp1[i][j] = Nav->refCRN[j][i];
+         tmp1 = Nav->refCRN;
          if (Nav->refFrame != FRAME_N) {
-            V2CrossM(Nav->refOmega, tmpX);
-            MTxM(Nav->refCRN, tmpX, tmp2);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  tmpAssign[i][j] = -tmp2[i][j];
+            tmpX = V2CrossM(Nav->refOmega);
+            tmp2 = MTxM(Nav->refCRN, tmpX);
+            CopyVG(tmpAssign[0], SxM(-1.0, tmp2).flat, 9);
             subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[POS_STATE], 3, 3);
          }
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -tmp1[i][j];
+         CopyVG(tmpAssign[0], SxM(-1.0, tmp1).flat, 9);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[POS_STATE], 3, 3);
          subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[VEL_STATE], 3, 3);
 
-         V2CrossM(Nav->PosR, tmpX);
-         MxM(tmp1, tmpX, tmp3);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = tmp3[i][j];
+         tmpX = V2CrossM(Nav->PosR);
+         tmp3 = MxM(tmp1, tmpX);
+         CopyVG(tmpAssign[0], tmp3.flat, 9);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[ROTMAT_STATE], 3, 3);
          if (Nav->refFrame != FRAME_N) {
-            MxM(tmp2, tmpX, tmp3);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  tmpAssign[i][j] = tmp3[i][j];
+            tmp3 = MxM(tmp2, tmpX);
+            CopyVG(tmpAssign[0], tmp3.flat, 9);
             subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[ROTMAT_STATE], 3, 3);
          }
 
-         V2CrossM(Nav->VelR, tmpX);
-         MxM(tmp1, tmpX, tmp3);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = tmp3[i][j];
+         tmpX = V2CrossM(Nav->VelR);
+         tmp3 = MxM(tmp1, tmpX);
+         CopyVG(tmpAssign[0], tmp3.flat, 9);
          subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[ROTMAT_STATE], 3, 3);
          break;
       case MEKF_NAV:
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmp1[i][j] = Nav->refCRN[j][i];
+         tmp1 = Nav->refCRN;
          if (Nav->refFrame != FRAME_N) {
-            V2CrossM(Nav->refOmega, tmpX);
-            MTxM(Nav->refCRN, tmpX, tmp2);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  tmpAssign[i][j] = -tmp2[i][j];
+            tmpX = V2CrossM(Nav->refOmega);
+            tmp2 = MTxM(Nav->refCRN, tmpX);
+            CopyVG(tmpAssign[0], SxM(-1.0, tmp2).flat, 9);
             subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[POS_STATE], 3, 3);
          }
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -tmp1[i][j];
+         CopyVG(tmpAssign[0], SxM(-1.0, tmp1).flat, 9);
          subMatAdd(jacobian, tmpAssign, 0, Nav->navInd[POS_STATE], 3, 3);
          subMatAdd(jacobian, tmpAssign, 3, Nav->navInd[VEL_STATE], 3, 3);
          break;
@@ -1163,14 +1111,14 @@ double *gyroFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcGyroType *G   = &AC->Gyro[Ig];
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   double wbn[3], wrn[3];
+   vec3 wbn, wrn;
    long i;
 
    double *gyroEst = calloc(1, sizeof(double));
 
-   MTxV(Nav->CRB, Nav->refOmega, wrn);
+   wrn = MTxV(Nav->CRB, Nav->refOmega);
    for (i = 0; i < 3; i++)
-      wbn[i] = Nav->wbr[i] + wrn[i];
+      wbn.v[i] = Nav->wbr.v[i] + wrn.v[i];
    gyroEst[0] = VoV(G->Axis, wbn) * R2D;
    return (gyroEst);
 }
@@ -1180,18 +1128,17 @@ double *magFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcMagnetometerType *MAG = &AC->MAG[Imag];
    const struct DSMNavType *Nav         = &DSM->DsmNav;
-   double bvb[3], bvn[3], CBN[3][3];
+   vec3 bvb, bvn;
+   mat3x3 CBN;
    const double T2mG = 1.0e7; // tesla to milligauss
-   long i;
 
    double *magEst = calloc(1, sizeof(double));
 
    // Not to really be used.
-   for (i = 0; i < 3; i++)
-      bvn[i] = AC->bvn[i];
+   bvn = AC->bvn;
 
-   MTxM(Nav->CRB, Nav->refCRN, CBN);
-   MxV(CBN, bvn, bvb);
+   CBN       = MTxM(Nav->CRB, Nav->refCRN);
+   bvb       = MxV(CBN, bvn);
    magEst[0] = VoV(MAG->Axis, bvb) * T2mG;
 
    return (magEst);
@@ -1202,12 +1149,13 @@ double *cssFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcCssType *css  = &AC->CSS[Icss];
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   double svb[3], CBN[3][3];
+   vec3 svb;
+   mat3x3 CBN;
 
    double *IllumEst = calloc(1, sizeof(double));
 
-   MTxM(Nav->CRB, Nav->refCRN, CBN);
-   MxV(CBN, AC->svn, svb);
+   CBN         = MTxM(Nav->CRB, Nav->refCRN);
+   svb         = MxV(CBN, AC->svn);
    IllumEst[0] = VoV(svb, css->Axis) * css->Scale;
 
    return (IllumEst);
@@ -1218,7 +1166,8 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcFssType *fss  = &AC->FSS[Ifss];
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   double svb[3], svs[3], CBN[3][3];
+   vec3 svb, svs;
+   mat3x3 CBN;
 
    double *SunAngEst = calloc(2, sizeof(double));
 
@@ -1226,20 +1175,20 @@ double *fssFun(struct AcType *const AC, struct DSMType *const DSM,
    const long H_Axis   = fss->H_Axis;
    const long V_Axis   = fss->V_Axis;
 
-   MTxM(Nav->CRB, Nav->refCRN, CBN);
-   MxV(CBN, AC->svn, svb);
-   MxV(fss->CB, svb, svs);
+   CBN = MTxM(Nav->CRB, Nav->refCRN);
+   svb = MxV(CBN, AC->svn);
+   svs = MxV(fss->CB, svb);
 
    switch (fss->type) {
       case CONVENTIONAL_FSS: {
-         SunAngEst[0] = atan2(svs[H_Axis], svs[BoreAxis]);
-         SunAngEst[1] = atan2(svs[V_Axis], svs[BoreAxis]);
+         SunAngEst[0] = atan2(svs.v[H_Axis], svs.v[BoreAxis]);
+         SunAngEst[1] = atan2(svs.v[V_Axis], svs.v[BoreAxis]);
       } break;
       case GS_FSS: {
-         SunAngEst[0] = atan2(svs[V_Axis], svs[H_Axis]);
-         SunAngEst[1] =
-             atan2(sqrt(svs[V_Axis] * svs[V_Axis] + svs[H_Axis] * svs[H_Axis]),
-                   svs[BoreAxis]);
+         SunAngEst[0] = atan2(svs.v[V_Axis], svs.v[H_Axis]);
+         SunAngEst[1] = atan2(sqrt(svs.v[V_Axis] * svs.v[V_Axis] +
+                                   svs.v[H_Axis] * svs.v[H_Axis]),
+                              svs.v[BoreAxis]);
       } break;
       default:
          fprintf(stderr,
@@ -1255,15 +1204,16 @@ double *startrackFun(struct AcType *const AC, struct DSMType *const DSM,
 {
    const struct AcStarTrackerType *st = &AC->ST[Ist];
    const struct DSMNavType *Nav       = &DSM->DsmNav;
-   double qbn[4], qrn[4];
+   quat qbn, qrn, qsnEst;
 
-   double *qsnEst = calloc(4, sizeof(double));
+   double *q = calloc(4, sizeof(double));
 
-   C2Q(Nav->refCRN, qrn);
-   QxQ(Nav->qbr, qrn, qbn);
-   QxQ(st->qb, qbn, qsnEst);
+   qrn    = C2Q(Nav->refCRN);
+   qbn    = QxQ(Nav->qbr, qrn);
+   qsnEst = QxQ(st->qb, qbn);
+   CopyVG(q, qsnEst.q, 4);
 
-   return (qsnEst);
+   return (q);
 }
 
 double *gpsFun(struct AcType *const AC __attribute__((unused)),
@@ -1271,28 +1221,28 @@ double *gpsFun(struct AcType *const AC __attribute__((unused)),
                const long Igps __attribute__((unused)))
 {
    const struct DSMNavType *Nav = &DSM->DsmNav;
-   double tmp3V[3], tmpPosN[3], tmpVelN[3];
+   vec3 tmp3V, tmpPosN, tmpVelN;
    long i;
 
    double *posNVelNEst = calloc(6, sizeof(double));
 
    for (i = 0; i < 3; i++)
-      tmp3V[i] = Nav->PosR[i] + Nav->refPos[i];
-   MTxV(Nav->refCRN, tmp3V, tmpPosN);
+      tmp3V.v[i] = Nav->PosR.v[i] + Nav->refPos.v[i];
+   tmpPosN = MTxV(Nav->refCRN, tmp3V);
    for (i = 0; i < 3; i++)
-      tmp3V[i] = Nav->VelR[i] + Nav->refVel[i];
-   MTxV(Nav->refCRN, tmp3V, tmpVelN);
+      tmp3V.v[i] = Nav->VelR.v[i] + Nav->refVel.v[i];
+   tmpVelN = MTxV(Nav->refCRN, tmp3V);
    if (Nav->refFrame != FRAME_N) {
-      double wrn[3], wxr[3];
-      MTxV(Nav->refCRN, Nav->refOmega, wrn);
-      VxV(wrn, tmpPosN, wxr);
+      vec3 wrn, wxr;
+      wrn = MTxV(Nav->refCRN, Nav->refOmega);
+      wxr = VxV(wrn, tmpPosN);
       for (i = 0; i < 3; i++)
-         tmpVelN[i] += wxr[i];
+         tmpVelN.v[i] += wxr.v[i];
    }
 
    for (i = 0; i < 3; i++) {
-      posNVelNEst[i]     = tmpPosN[i];
-      posNVelNEst[3 + i] = tmpVelN[i];
+      posNVelNEst[i]     = tmpPosN.v[i];
+      posNVelNEst[3 + i] = tmpVelN.v[i];
    }
 
    return (posNVelNEst);
@@ -1407,17 +1357,17 @@ void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
 /*--------------------------------------------------------------------*/
 
 void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const DateType *date, const double CRB[3][3],
-                         const double qbr[4] __attribute__((unused)),
-                         const double PosR[3], const double VelR[3],
-                         const double wbr[3], const double whlH[AC->Nwhl],
-                         const double AtmoDensity, double **jacobian)
+                         const DateType *date, const mat3x3 CRB,
+                         const quat qbr __attribute__((unused)),
+                         const vec3 PosR, const vec3 VelR, const vec3 wbr,
+                         const double whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian)
 {
-   double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
-          tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
+   mat3x3 tmpM, tmpM2, tmpM3;
+   vec3 tmpV, tmpV2, tmpV3;
    static double **tmpAssign = NULL;
-   double wrnd[3]            = {0.0};
-   struct DSMNavType *Nav    = &DSM->DsmNav;
+   vec3 wrnd;
+   struct DSMNavType *Nav = &DSM->DsmNav;
    long i, j, rowInd;
 
    if (tmpAssign == NULL)
@@ -1425,8 +1375,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
    switch (Nav->refFrame) {
       case FRAME_N:
-         for (i = 0; i < 3; i++)
-            wrnd[i] = 0.0;
+         wrnd = VEC3_ZERO;
          break;
       case FRAME_L:
          break;
@@ -1434,17 +1383,14 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          break;
    }
 
-   for (i = 0; i < Nav->navDim; i++)
-      for (j = 0; j < Nav->navDim; j++)
-         jacobian[i][j] = 0.0;
+   memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE]) {
       FOR_STATES(state)
       {
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = 0.0;
+         memset(tmpAssign[0], 0, sizeof(double) * 9);
+
          if (Nav->stateActive[state] == TRUE) {
             rowInd = Nav->navInd[state];
             switch (state) {
@@ -1454,11 +1400,10 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   break;
                case ROTMAT_STATE:
                   if (Nav->stateActive[OMEGA_STATE]) {
-                     for (i = 0; i < 3; i++) {
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = 0.0;
+                     memset(tmpAssign[0], 0, sizeof(double) * 9);
+                     for (i = 0; i < 3; i++)
                         tmpAssign[i][i] = 1.0;
-                     }
+
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[OMEGA_STATE], 3, 3);
                   }
@@ -1466,122 +1411,98 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                case QUAT_STATE:
                   break;
                case OMEGA_STATE:
-                  MxV(CRB, wbr, tmpV);
-                  V2CrossM(tmpV, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM[i][j];
+                  tmpV = MxV(CRB, wbr);
+                  tmpM = V2CrossM(tmpV);
+                  CopyVG(tmpAssign[0], tmpM.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                   // calculate dwbn_dot/dwbn
-                  MTxV(CRB, Nav->refOmega, tmpV3);
+                  tmpV3 = MTxV(CRB, Nav->refOmega);
                   for (i = 0; i < 3; i++)
-                     tmpV3[i] += wbr[i];
-                  V2CrossM(tmpV3, tmpM2);
-                  MxM(tmpM2, DSM->MOI, tmpM3);
-                  MxV(DSM->MOI, tmpV3, tmpV2);
+                     tmpV3.v[i] += wbr.v[i];
+                  tmpM2 = V2CrossM(tmpV3);
+                  tmpM3 = MxM(tmpM2, DSM->MOI);
+                  tmpV2 = MxV(DSM->MOI, tmpV3);
                   for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                      for (i = 0; i < 3; i++)
-                        tmpV2[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
+                        tmpV2.v[i] += whlH[Iw] * AC->Whl[Iw].Axis.v[i];
 
-                  V2CrossM(tmpV2, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpM[i][j] -= tmpM3[i][j];
+                  tmpM = V2CrossM(tmpV2);
+                  for (i = 0; i < 9; i++)
+                     tmpM.flat[i] -= tmpM3.flat[i];
 
-                  MINVxM3(DSM->MOI, 3, tmpM, tmpM2);
-                  Adjoint(CRB, tmpM2, tmpM);
+                  MINVxM3(DSM->MOI, 3, tmpM.mat, tmpM2.mat);
+                  tmpM = Adjoint(CRB, tmpM2);
                   // use tmpM = dwbn_dot/dwbn to calc a few derivs
                   if (Nav->refFrame != FRAME_N) {
-                     V2CrossM(Nav->refOmega, tmpM2);
-                     MxM(tmpM, tmpM2, tmpM3);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM3[i][j];
+                     tmpM2 = V2CrossM(Nav->refOmega);
+                     tmpM3 = MxM(tmpM, tmpM2);
+                     CopyVG(tmpAssign[0], tmpM3.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
                      for (i = 0; i < 3; i++)
                         for (j = 0; j < 3; j++)
-                           tmpM[i][j] -= tmpM2[i][j];
+                           tmpM.mat[i][j] -= tmpM2.mat[i][j];
                   }
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM[i][j];
+                  CopyVG(tmpAssign[0], tmpM.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   break;
                case POS_STATE:
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = 0.0;
+                  memset(tmpAssign[0], 0, sizeof(double) * 9);
+                  for (i = 0; i < 3; i++)
                      tmpAssign[i][i] = 1.0;
-                  }
+
                   subMatAdd(jacobian, tmpAssign, rowInd, Nav->navInd[VEL_STATE],
                             3, 3);
                   if (Nav->stateActive[VEL_STATE] == FALSE) {
-                     V2CrossM(VelR, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM[i][j];
+                     tmpM = V2CrossM(VelR);
+                     CopyVG(tmpAssign[0], tmpM.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
                   }
                   if (Nav->stateActive[OMEGA_STATE] == TRUE) {
-                     V2CrossM(PosR, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM[i][j];
+                     tmpM = V2CrossM(PosR);
+                     CopyVG(tmpAssign[0], tmpM.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[OMEGA_STATE], 3, 3);
                   }
                   break;
                case VEL_STATE:
                   if (Nav->refFrame != FRAME_N) {
-                     SxV(2.0, Nav->refOmega, tmpV2);
-                     V2CrossM(tmpV2, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpV2 = SxV(2.0, Nav->refOmega);
+                     tmpM  = V2CrossM(tmpV2);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
-                     V2CrossM(VelR, tmpM2);
-                     MxM(tmpM, tmpM2, tmpM3);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM3[i][j];
+
+                     tmpM2 = V2CrossM(VelR);
+                     tmpM3 = MxM(tmpM, tmpM2);
+                     CopyVG(tmpAssign[0], tmpM3.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
 
-                     V2DoubleCrossM(Nav->refOmega, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpM = V2DoubleCrossM(Nav->refOmega);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
-                     V2CrossM(PosR, tmpM2);
-                     MxM(tmpM, tmpM2, tmpM3);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM3[i][j];
+
+                     tmpM2 = V2CrossM(PosR);
+                     tmpM3 = MxM(tmpM, tmpM2);
+                     CopyVG(tmpAssign[0], tmpM3.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
 
-                     V2CrossM(wrnd, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpM = V2CrossM(wrnd);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
-                     MxM(tmpM, tmpM2, tmpM3);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM3[i][j];
+                     tmpM3 = MxM(tmpM, tmpM2);
+                     CopyVG(tmpAssign[0], tmpM3.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
                   }
                   if (Nav->stateActive[OMEGA_STATE] == TRUE) {
-                     V2CrossM(VelR, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM[i][j];
+                     tmpM = V2CrossM(VelR);
+                     CopyVG(tmpAssign[0], tmpM.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[OMEGA_STATE], 3, 3);
                   }
@@ -1592,21 +1513,18 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       if (DSM->refOrb->Regime == ORB_CENTRAL) {
-         long orbCenter             = DSM->refOrb->World;
-         double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
-         double worldWR[3] = {0.0};
+         long orbCenter       = DSM->refOrb->World;
+         mat3x3 dAeroFrcdVRel = MAT3X3_ZERO, dAeroTrqdVRel = MAT3X3_ZERO;
+         vec3 worldWR = VEC3_ZERO;
          if (AeroActive) {
             double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
-               worldWR[i] = -Nav->refCRN[i][2] * worldW;
+               worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldW;
             getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
-                                   dAeroFrcdVRel, dAeroTrqdVRel);
-            MxM(Nav->CRB, dAeroTrqdVRel, tmpM);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++) {
-                  dAeroTrqdVRel[i][j]  = tmpM[i][j];
-                  dAeroFrcdVRel[i][j] /= DSM->mass;
-               }
+                                   &dAeroFrcdVRel, &dAeroTrqdVRel);
+            tmpM          = MxM(Nav->CRB, dAeroTrqdVRel);
+            dAeroTrqdVRel = tmpM;
+            dAeroFrcdVRel = SxM(1.0 / DSM->mass, dAeroFrcdVRel);
          }
          FOR_STATES(state)
          {
@@ -1615,113 +1533,92 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                switch (state) {
                   case VEL_STATE:
                      if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
-                        double VelRdot[3] = {0.0};
+                        vec3 VelRdot = VEC3_ZERO;
                         if (GravPertActive) {
-                           double accelR[3] = {0.0};
+                           vec3 accelR = VEC3_ZERO;
                            for (i = 0; i < 3; i++)
-                              tmpV[i] = PosR[i] + Nav->refPos[i];
-                           NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb,
-                                            accelR);
+                              tmpV.v[i] = PosR.v[i] + Nav->refPos.v[i];
+                           accelR = NavGravPertAccel(Nav, date, tmpV, 1.0,
+                                                     DSM->refOrb);
                            for (i = 0; i < 3; i++)
-                              VelRdot[i] += accelR[i];
+                              VelRdot.v[i] += accelR.v[i];
                         }
                         // TODO: transition to Encke's method, but refAccel for
                         // SC reference would need to be gravity free
                         for (i = 0; i < 3; i++)
-                           tmpV[i] = PosR[i] + Nav->refPos[i];
-                        getGravAccel(DSM->refOrb->mu, tmpV, tmpV2);
+                           tmpV.v[i] = PosR.v[i] + Nav->refPos.v[i];
+                        tmpV2 = getGravAccel(DSM->refOrb->mu, tmpV);
                         for (i = 0; i < 3; i++)
-                           VelRdot[i] += tmpV2[i];
+                           VelRdot.v[i] += tmpV2.v[i];
                         if (Nav->refOriType != ORI_WORLD) {
                            for (i = 0; i < 3; i++)
-                              VelRdot[i] -= Nav->refAccel[i];
+                              VelRdot.v[i] -= Nav->refAccel.v[i];
                         }
-                        V2CrossM(VelRdot, tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM[i][j];
+                        tmpM = V2CrossM(VelRdot);
+                        CopyVG(tmpAssign[0], tmpM.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                      }
 
                      for (i = 0; i < 3; i++)
-                        tmpV2[i] = PosR[i] + Nav->refPos[i];
-                     getDGravFrcDPos(World[orbCenter].mu, tmpV2, tmpM2);
+                        tmpV2.v[i] = PosR.v[i] + Nav->refPos.v[i];
+                     tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
                      if (GravPertActive) {
-                        NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
-                                              tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpM2[i][j] += tmpM[i][j];
+                        tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
+                                                     DSM->refOrb);
+                        for (i = 0; i < 9; i++)
+                           tmpM2.flat[i] += tmpM.flat[i];
                      }
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM2[i][j];
+                     CopyVG(tmpAssign[0], tmpM2.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
-                     V2CrossM(PosR, tmpM);
-                     MxM(tmpM2, tmpM, tmpM3);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM3[i][j];
+                     tmpM  = V2CrossM(PosR);
+                     tmpM3 = MxM(tmpM2, tmpM);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM3).flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[ROTMAT_STATE], 3, 3);
 
                      if (AeroActive) {
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = dAeroFrcdVRel[i][j];
+                        CopyVG(tmpAssign[0], dAeroFrcdVRel.flat, 9);
 
                         subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
-                        V2CrossM(VelR, tmpM2);
-                        MxM(dAeroFrcdVRel, tmpM2, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = -tmpM3[i][j];
+                        tmpM2 = V2CrossM(VelR);
+                        tmpM3 = MxM(dAeroFrcdVRel, tmpM2);
+                        CopyVG(tmpAssign[0], SxM(-1.0, tmpM3).flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
-                        V2CrossM(worldWR, tmpM2);
-                        MxM(dAeroFrcdVRel, tmpM2, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM3[i][j];
+
+                        tmpM2 = V2CrossM(worldWR);
+                        tmpM3 = MxM(dAeroFrcdVRel, tmpM2);
+                        CopyVG(tmpAssign[0], tmpM3.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
-                        V2CrossM(PosR, tmpM2);
-                        MxM(tmpM3, tmpM2, tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = -tmpM[i][j];
+                        tmpM2 = V2CrossM(PosR);
+                        tmpM  = MxM(tmpM3, tmpM2);
+                        CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                      }
                      break;
                   case OMEGA_STATE:
                      if (AeroActive) {
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = dAeroTrqdVRel[i][j];
+                        CopyVG(tmpAssign[0], dAeroTrqdVRel.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[VEL_STATE], 3, 3);
-                        V2CrossM(VelR, tmpM2);
-                        MxM(dAeroTrqdVRel, tmpM2, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = -tmpM3[i][j];
+                        tmpM2 = V2CrossM(VelR);
+                        tmpM3 = MxM(dAeroTrqdVRel, tmpM2);
+                        CopyVG(tmpAssign[0], SxM(-1.0, tmpM3).flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
-                        V2CrossM(worldWR, tmpM2);
-                        MxM(dAeroTrqdVRel, tmpM2, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM3[i][j];
+
+                        tmpM2 = V2CrossM(worldWR);
+                        tmpM3 = MxM(dAeroTrqdVRel, tmpM2);
+                        CopyVG(tmpAssign[0], tmpM3.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
-                        V2CrossM(PosR, tmpM2);
-                        MxM(tmpM3, tmpM2, tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = -tmpM[i][j];
+                        tmpM2 = V2CrossM(PosR);
+                        tmpM  = MxM(tmpM3, tmpM2);
+                        CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[ROTMAT_STATE], 3, 3);
                      }
@@ -1748,52 +1645,49 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 {
-   double theta[3] = {0.0}, tmpM[3][3] = {{0.0}}, tmpV[3] = {0.0};
-   double dR[3][3] = {{0.0}}, dr[3] = {0.0}, dv[3] = {0.0}, dw[3] = {0.0};
-   long i, j;
+   vec3 theta, tmpV, dr, dv, dw;
+   mat3x3 dR, tmpM;
+   long i;
 
    const long nRVec = Nav->stateActive[POS_STATE] + Nav->stateActive[VEL_STATE];
    const long nBVec = Nav->stateActive[OMEGA_STATE];
 
-   double x[nRVec][3];
-   double xbar[nBVec][3];
+   vec3 x[nRVec];
+   vec3 xbar[nBVec];
 
    long curRInd = 0, curBInd = 0;
    FOR_STATES(state)
    {
       if (state == POS_STATE || state == VEL_STATE) {
          for (i = 0; i < 3; i++)
-            x[curRInd][i] = -Nav->delta[i + Nav->navInd[state]];
+            x[curRInd].v[i] = -Nav->delta[i + Nav->navInd[state]];
          curRInd++;
       }
       else if (state == OMEGA_STATE) {
          for (i = 0; i < 3; i++)
-            xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[state]];
+            xbar[curBInd].v[i] = -Nav->delta[i + Nav->navInd[state]];
          curBInd++;
       }
    }
 
    for (i = 0; i < 3; i++)
-      theta[i] = -Nav->delta[i + Nav->navInd[ROTMAT_STATE]];
+      theta.v[i] = -Nav->delta[i + Nav->navInd[ROTMAT_STATE]];
 
-   expmTFG(theta, nRVec, nBVec, x, xbar, dR);
+   expmTFG(&theta, nRVec, nBVec, x, xbar, &dR);
    curRInd = 0, curBInd = 0;
    FOR_STATES(state)
    {
       switch (state) {
          case POS_STATE:
-            for (i = 0; i < 3; i++)
-               dr[i] = x[curRInd][i];
+            dr = x[curRInd];
             curRInd++;
             break;
          case VEL_STATE:
-            for (i = 0; i < 3; i++)
-               dv[i] = x[curRInd][i];
+            dv = x[curRInd];
             curRInd++;
             break;
          case OMEGA_STATE:
-            for (i = 0; i < 3; i++)
-               dw[i] = xbar[curBInd][i];
+            dw = xbar[curBInd];
             curBInd++;
             break;
          default:
@@ -1801,23 +1695,18 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
       }
    }
 
-   MxV(dR, Nav->PosR, tmpV);
-   for (i = 0; i < 3; i++)
-      Nav->PosR[i] = dr[i] + tmpV[i];
-   MxV(dR, Nav->VelR, tmpV);
-   for (i = 0; i < 3; i++)
-      Nav->VelR[i] = dv[i] + tmpV[i];
+   tmpV      = MxV(dR, Nav->PosR);
+   Nav->PosR = VpVElem(dr, tmpV);
+   tmpV      = MxV(dR, Nav->VelR);
+   Nav->VelR = VpVElem(dv, tmpV);
 
-   MTxV(Nav->CRB, dw, tmpV);
+   tmpV = MTxV(Nav->CRB, dw);
    for (i = 0; i < 3; i++)
-      Nav->wbr[i] += tmpV[i];
+      Nav->wbr.v[i] += tmpV.v[i];
 
-   MxM(dR, Nav->CRB, tmpM);
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
-         Nav->CRB[i][j] = tmpM[i][j];
-   MT(Nav->CRB, tmpM);
-   C2Q(tmpM, Nav->qbr);
+   Nav->CRB = MxM(dR, Nav->CRB);
+   tmpM     = MT(Nav->CRB);
+   Nav->qbr = C2Q(tmpM);
 }
 
 /*--------------------------------------------------------------------*/
@@ -1825,44 +1714,39 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                         const DateType *date, const double CRB[3][3],
-                         const double qbr[4] __attribute__((unused)),
-                         const double PosR[3], const double VelR[3],
-                         const double wbr[3], const double whlH[AC->Nwhl],
-                         const double AtmoDensity, double **jacobian)
+                         const DateType *date, const mat3x3 CRB,
+                         const quat qbr __attribute__((unused)),
+                         const vec3 PosR, const vec3 VelR, const vec3 wbr,
+                         const double whlH[AC->Nwhl], const double AtmoDensity,
+                         double **jacobian)
 {
-   double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
-          tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
+   mat3x3 tmpM, tmpM2, tmpM3;
+   vec3 tmpV, tmpV2, tmpV3, wrnd = VEC3_ZERO;
    static double **tmpAssign = NULL;
-   double wrnd[3]            = {0.0};
    struct DSMNavType *Nav    = &DSM->DsmNav;
-   long i, j, rowInd;
+   long i, rowInd;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
 
    switch (Nav->refFrame) {
       case FRAME_N:
-         for (i = 0; i < 3; i++)
-            wrnd[i] = 0.0;
+         wrnd = VEC3_ZERO;
          break;
       case FRAME_L:
          break;
       case FRAME_F:
          break;
    }
+   memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
-   for (i = 0; i < Nav->navDim; i++)
-      for (j = 0; j < Nav->navDim; j++)
-         jacobian[i][j] = 0.0;
-   double aeroTrq[3] = {0.0}, aeroFrc[3] = {0.0};
+   vec3 aeroTrq, aeroFrc;
    if (AeroActive) {
       const long orbCenter = DSM->refOrb->World;
       getAeroForceAndTorque(DSM, CRB, PosR, VelR,
                             GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]),
-                            AtmoDensity, aeroFrc, aeroTrq);
-      for (i = 0; i < 3; i++)
-         tmpV2[i] += aeroTrq[i];
+                            AtmoDensity, &aeroFrc, &aeroTrq);
+      tmpV2 = VpVElem(tmpV2, aeroTrq);
    }
 
    if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[POS_STATE] &&
@@ -1870,9 +1754,8 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
        !Nav->stateActive[QUAT_STATE]) {
       FOR_STATES(state)
       {
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = 0.0;
+         memset(tmpAssign[0], 0, sizeof(double) * 9);
+
          if (Nav->stateActive[state] == TRUE) {
             rowInd = Nav->navInd[state];
             switch (state) {
@@ -1881,11 +1764,10 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 1, 1);
                   break;
                case ROTMAT_STATE:
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = 0.0;
+                  memset(tmpAssign[0], 0, sizeof(double) * 9);
+                  for (i = 0; i < 3; i++)
                      tmpAssign[i][i] = 1.0;
-                  }
+
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
                   // this is if wbr is not being filtered
@@ -1897,138 +1779,117 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                case QUAT_STATE:
                   break;
                case OMEGA_STATE:
-                  V2CrossM(wbr, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = -tmpM[i][j];
+                  tmpM = V2CrossM(wbr);
+                  CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
-                  MTxV(CRB, Nav->refOmega, tmpV3);
-                  for (i = 0; i < 3; i++)
-                     tmpV3[i] += wbr[i];
-                  MxV(DSM->MOI, tmpV3, tmpV);
-                  for (long Iw = 0; Iw < AC->Nwhl; Iw++) {
+                  tmpV3 = MTxV(CRB, Nav->refOmega);
+                  tmpV3 = VpVElem(tmpV3, wbr);
+                  tmpV  = MxV(DSM->MOI, tmpV3);
+                  for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                      for (i = 0; i < 3; i++)
-                        tmpV[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
-                  }
-                  VxV(tmpV, tmpV3, tmpV2);
-                  for (i = 0; i < 3; i++) {
-                     tmpV2[i] += Nav->torqueB[i];
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = DSM->MOI[i][j];
-                  }
+                        tmpV.v[i] += whlH[Iw] * AC->Whl[Iw].Axis.v[i];
+
+                  tmpV2 = VxV(tmpV, tmpV3);
+                  for (i = 0; i < 3; i++)
+                     tmpV2.v[i] += Nav->torqueB.v[i];
+                  CopyVG(tmpAssign[0], DSM->MOI.flat, 9);
+
                   // tmpV = wbn_dot (expressed in B, wrt N)
-                  LINSOLVE(tmpAssign, tmpV, tmpV2, 3);
+                  LINSOLVE(tmpAssign, tmpV.v, tmpV2.v, 3);
                   // find wbr_dot (expressed in B, wrt R)
                   if (Nav->refFrame != FRAME_N) {
-                     MTxV(CRB, Nav->refOmega, tmpV2);
-                     VxV(tmpV2, wbr, tmpV3);
-                     MTxV(CRB, wrnd, tmpV2);
+                     tmpV2 = MTxV(CRB, Nav->refOmega);
+                     tmpV3 = VxV(tmpV2, wbr);
+                     tmpV2 = MTxV(CRB, wrnd);
                      for (i = 0; i < 3; i++)
-                        tmpV[i] -= (tmpV3[i] + tmpV2[i]);
+                        tmpV.v[i] -= tmpV2.v[i] + tmpV3.v[i];
                   }
-                  V2CrossM(tmpV, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = -tmpM[i][j];
+                  tmpM = V2CrossM(tmpV);
+                  CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
 
                   // calculate dwbn_dot/dwbn
-                  MTxV(CRB, Nav->refOmega, tmpV3);
-                  for (i = 0; i < 3; i++)
-                     tmpV3[i] += wbr[i];
-                  V2CrossM(tmpV3, tmpM2);
-                  MxM(tmpM2, DSM->MOI, tmpM3);
-                  MxV(DSM->MOI, tmpV3, tmpV2);
-                  for (long Iw = 0; Iw < AC->Nwhl; Iw++) {
+                  tmpV3 = MTxV(CRB, Nav->refOmega);
+                  tmpV3 = VpVElem(tmpV3, wbr);
+                  tmpM2 = V2CrossM(tmpV3);
+                  tmpM3 = MxM(tmpM2, DSM->MOI);
+                  tmpV2 = MxV(DSM->MOI, tmpV3);
+                  for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                      for (i = 0; i < 3; i++)
-                        tmpV2[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
-                  }
-                  V2CrossM(tmpV2, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpM[i][j] -= tmpM3[i][j];
-                  MINVxM3(DSM->MOI, 3, tmpM, tmpM2);
+                        tmpV2.v[i] += whlH[Iw] * AC->Whl[Iw].Axis.v[i];
+
+                  tmpM = V2CrossM(tmpV2);
+                  for (i = 0; i < 9; i++)
+                     tmpM.flat[i] -= tmpM3.flat[i];
+                  MINVxM3(DSM->MOI, 3, tmpM.mat, tmpM2.mat);
                   // use tmpM2=dwbn_dot/dwbn to calc a few derivs
-                  MTxV(CRB, Nav->refOmega, tmpV);
-                  V2CrossM(tmpV, tmpM);
-                  MxM(tmpM2, tmpM, tmpM3);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM3[i][j];
+                  tmpV  = MTxV(CRB, Nav->refOmega);
+                  tmpM  = V2CrossM(tmpV);
+                  tmpM3 = MxM(tmpM2, tmpM);
+                  CopyVG(tmpAssign[0], tmpM3.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpM3[i][j] = -tmpM[i][j] + tmpM2[i][j];
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM3[i][j];
+
+                  for (i = 0; i < 9; i++)
+                     tmpM3.flat[i] = tmpM2.flat[i] - tmpM.flat[i];
+                  CopyVG(tmpAssign[0], tmpM3.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
-                  V2CrossM(wbr, tmpM);
-                  MxM(tmpM3, tmpM, tmpM2);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM2[i][j];
+                  tmpM  = V2CrossM(wbr);
+                  tmpM2 = MxM(tmpM3, tmpM);
+                  CopyVG(tmpAssign[0], tmpM2.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
                   break;
                case POS_STATE:
-                  V2CrossM(wbr, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = -tmpM[i][j];
+                  tmpM = V2CrossM(wbr);
+                  CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = 0.0;
+                  memset(tmpAssign[0], 0, sizeof(double) * 9);
+                  for (i = 0; i < 3; i++)
                      tmpAssign[i][i] = 1.0;
-                  }
+
                   subMatAdd(jacobian, tmpAssign, rowInd, Nav->navInd[VEL_STATE],
                             3, 3);
                   break;
                case VEL_STATE:
-                  V2CrossM(wbr, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = -tmpM[i][j];
+                  tmpM = V2CrossM(wbr);
+                  CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
-                  for (i = 0; i < 3; i++) {
-                     tmpV[i] = Nav->forceB[i] / DSM->mass;
-                  }
-                  V2CrossM(tmpV, tmpM);
-                  MxM(CRB, tmpM, tmpM2);
-                  V2CrossM(aeroFrc, tmpM3);
                   for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] =
-                            tmpM2[i][j] + tmpM3[i][j] / (DSM->mass * DSM->mass);
+                     tmpV.v[i] = Nav->forceB.v[i] / DSM->mass;
+                  tmpM  = V2CrossM(tmpV);
+                  tmpM2 = MxM(CRB, tmpM);
+                  tmpM3 = V2CrossM(aeroFrc);
+
+                  const double mass2 = DSM->mass * DSM->mass;
+                  for (i = 0; i < 9; i++)
+                     tmpAssign[0][i] = tmpM2.flat[i] + tmpM3.flat[i] / mass2;
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
 
                   if (Nav->refFrame != FRAME_N) {
-                     MTxV(CRB, Nav->refOmega, tmpV);
-                     SxV(2.0, tmpV, tmpV2);
-                     V2CrossM(tmpV2, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpV  = MTxV(CRB, Nav->refOmega);
+                     tmpV2 = SxV(2.0, tmpV);
+                     tmpM  = V2CrossM(tmpV2);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                      subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
-                     V2DoubleCrossM(tmpV, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpM = V2DoubleCrossM(tmpV);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
 
-                     MTxV(CRB, wrnd, tmpV);
-                     V2CrossM(tmpV, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpV = MTxV(CRB, wrnd);
+                     tmpM = V2CrossM(tmpV);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                   }
@@ -2039,18 +1900,16 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       if (DSM->refOrb->Regime == ORB_CENTRAL) {
-         long orbCenter             = DSM->refOrb->World;
-         double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
-         double worldWR[3] = {0.0};
+         long orbCenter       = DSM->refOrb->World;
+         mat3x3 dAeroFrcdVRel = MAT3X3_ZERO, dAeroTrqdVRel = MAT3X3_ZERO;
+         vec3 worldWR = VEC3_ZERO;
          if (AeroActive) {
             double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
-               worldWR[i] = -Nav->refCRN[i][2] * worldW;
+               worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldW;
             getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
-                                   dAeroFrcdVRel, dAeroTrqdVRel);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  dAeroFrcdVRel[i][j] /= DSM->mass;
+                                   &dAeroFrcdVRel, &dAeroTrqdVRel);
+            dAeroFrcdVRel = SxM(1.0 / DSM->mass, dAeroFrcdVRel);
          }
          FOR_STATES(state)
          {
@@ -2058,55 +1917,42 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                rowInd = Nav->navInd[state];
                switch (state) {
                   case VEL_STATE: {
-                     for (i = 0; i < 3; i++)
-                        tmpV2[i] = PosR[i] + Nav->refPos[i];
-                     getDGravFrcDPos(World[orbCenter].mu, tmpV2, tmpM2);
+                     tmpV2 = VpVElem(PosR, Nav->refPos);
+                     tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
                      if (GravPertActive) {
-                        for (i = 0; i < 3; i++)
-                           tmpV2[i] = PosR[i] + Nav->refPos[i];
-                        NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
-                                              tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpM2[i][j] += tmpM[i][j];
+                        tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
+                                                     DSM->refOrb);
+                        for (i = 0; i < 9; i++)
+                           tmpM2.flat[i] += tmpM.flat[i];
                      }
-                     AdjointT(CRB, tmpM2, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM[i][j];
+                     tmpM = AdjointT(CRB, tmpM2);
+                     CopyVG(tmpAssign[0], tmpM.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      if (AeroActive) {
-                        AdjointT(CRB, dAeroFrcdVRel, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM3[i][j];
+                        tmpM3 = AdjointT(CRB, dAeroFrcdVRel);
+                        CopyVG(tmpAssign[0], tmpM3.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
-                        V2CrossM(worldWR, tmpM2);
+
+                        tmpM2 = V2CrossM(worldWR);
                         // TODO: double check these two lines
-                        MxM(tmpM3, tmpM2, tmpM);
-                        MxM(tmpM, CRB, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM[i][j];
+                        tmpM  = MxM(tmpM3, tmpM2);
+                        tmpM3 = MxM(tmpM, CRB);
+                        CopyVG(tmpAssign[0], tmpM.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
                   } break;
                   case OMEGA_STATE:
                      if (AeroActive) {
-                        MxM(dAeroTrqdVRel, CRB, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM3[i][j];
+                        tmpM3 = MxM(dAeroTrqdVRel, CRB);
+                        CopyVG(tmpAssign[0], tmpM3.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[VEL_STATE], 3, 3);
-                        V2CrossM(worldWR, tmpM);
-                        MxM(dAeroTrqdVRel, tmpM, tmpM3);
-                        MxM(tmpM3, CRB, tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM[i][j];
+                        tmpM  = V2CrossM(worldWR);
+                        tmpM3 = MxM(dAeroTrqdVRel, tmpM);
+                        tmpM  = MxM(tmpM3, CRB);
+                        CopyVG(tmpAssign[0], tmpM.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
@@ -2133,52 +1979,49 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 {
-   double theta[3] = {0.0}, tmpM[3][3] = {{0.0}}, tmpV[3] = {0.0};
-   double dR[3][3] = {{0.0}}, dr[3] = {0.0}, dv[3] = {0.0}, dw[3] = {0.0};
-   long i, j;
+   mat3x3 dR, tmpM;
+   vec3 theta, dr, dv, dw, tmpV;
+   long i;
 
    long nRVec = Nav->stateActive[POS_STATE] + Nav->stateActive[VEL_STATE];
    long nBVec = Nav->stateActive[OMEGA_STATE];
 
-   double x[nRVec][3];
-   double xbar[nBVec][3];
+   vec3 x[nRVec];
+   vec3 xbar[nBVec];
 
    long curRInd = 0, curBInd = 0;
    FOR_STATES(state)
    {
       if (state == POS_STATE || state == VEL_STATE) {
          for (i = 0; i < 3; i++)
-            x[curRInd][i] = -Nav->delta[i + Nav->navInd[state]];
+            x[curRInd].v[i] = -Nav->delta[i + Nav->navInd[state]];
          curRInd++;
       }
       else if (state == OMEGA_STATE) {
          for (i = 0; i < 3; i++)
-            xbar[curBInd][i] = -Nav->delta[i + Nav->navInd[state]];
+            xbar[curBInd].v[i] = -Nav->delta[i + Nav->navInd[state]];
          curBInd++;
       }
    }
 
    for (i = 0; i < 3; i++)
-      theta[i] = -Nav->delta[i + Nav->navInd[ROTMAT_STATE]];
+      theta.v[i] = -Nav->delta[i + Nav->navInd[ROTMAT_STATE]];
 
-   expmTFG(theta, nRVec, nBVec, x, xbar, dR);
+   expmTFG(&theta, nRVec, nBVec, x, xbar, &dR);
    curRInd = 0, curBInd = 0;
    FOR_STATES(state)
    {
       switch (state) {
          case POS_STATE:
-            for (i = 0; i < 3; i++)
-               dr[i] = x[curRInd][i];
+            dr = x[curRInd];
             curRInd++;
             break;
          case VEL_STATE:
-            for (i = 0; i < 3; i++)
-               dv[i] = x[curRInd][i];
+            dv = x[curRInd];
             curRInd++;
             break;
          case OMEGA_STATE:
-            for (i = 0; i < 3; i++)
-               dw[i] = xbar[curBInd][i];
+            dw = xbar[curBInd];
             curBInd++;
             break;
          default:
@@ -2186,23 +2029,20 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
       }
    }
 
-   MxV(Nav->CRB, dr, tmpV);
+   tmpV = MxV(Nav->CRB, dr);
    for (i = 0; i < 3; i++)
-      Nav->PosR[i] += tmpV[i];
-   MxV(Nav->CRB, dv, tmpV);
+      Nav->PosR.v[i] += tmpV.v[i];
+   tmpV = MxV(Nav->CRB, dv);
    for (i = 0; i < 3; i++)
-      Nav->VelR[i] += tmpV[i];
+      Nav->VelR.v[i] += tmpV.v[i];
 
-   MxM(Nav->CRB, dR, tmpM);
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
-         Nav->CRB[i][j] = tmpM[i][j];
+   Nav->CRB = MxM(Nav->CRB, dR);
 
-   MTxV(dR, Nav->wbr, tmpV);
+   tmpV = MTxV(dR, Nav->wbr);
    for (i = 0; i < 3; i++)
-      Nav->wbr[i] = tmpV[i] + dw[i];
-   MT(Nav->CRB, tmpM);
-   C2Q(tmpM, Nav->qbr);
+      Nav->wbr.v[i] = tmpV.v[i] + dw.v[i];
+   tmpM     = MT(Nav->CRB);
+   Nav->qbr = C2Q(tmpM);
 }
 
 /*--------------------------------------------------------------------*/
@@ -2210,18 +2050,17 @@ void LIEKFUpdateLaw(struct DSMNavType *const Nav)
 /*--------------------------------------------------------------------*/
 
 void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
-                        const DateType *date, const double CRB[3][3],
-                        const double qbr[4], const double PosR[3],
-                        const double VelR[3], const double wbr[3],
+                        const DateType *date, const mat3x3 CRB, const quat qbr,
+                        const vec3 PosR, const vec3 VelR, const vec3 wbr,
                         const double whlH[AC->Nwhl], const double AtmoDensity,
                         double **jacobian)
 {
-   double tmpM[3][3] = {{0.0}}, tmpM2[3][3] = {{0.0}}, tmpM3[3][3] = {{0.0}},
-          tmpV[3] = {0.0}, tmpV2[3] = {0.0}, tmpV3[3] = {0.0};
+   mat3x3 tmpM, tmpM2, tmpM3;
+   vec3 tmpV, tmpV2, tmpV3;
+   vec3 wrnd                 = VEC3_ZERO;
    static double **tmpAssign = NULL;
-   double wrnd[3]            = {0.0};
    struct DSMNavType *Nav    = &DSM->DsmNav;
-   long i, j, rowInd;
+   long i, rowInd;
 
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
@@ -2229,7 +2068,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
    switch (Nav->refFrame) {
       case FRAME_N:
          for (i = 0; i < 3; i++)
-            wrnd[i] = 0.0;
+            wrnd = VEC3_ZERO;
          break;
       case FRAME_L:
          break;
@@ -2237,17 +2076,14 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          break;
    }
 
-   for (i = 0; i < Nav->navDim; i++)
-      for (j = 0; j < Nav->navDim; j++)
-         jacobian[i][j] = 0.0;
+   memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    if (Nav->stateActive[QUAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE]) {
       FOR_STATES(state)
       {
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = 0.0;
+         memset(tmpAssign[0], 0, sizeof(double) * 9);
+
          if (Nav->stateActive[state] == TRUE) {
             rowInd = Nav->navInd[state];
             switch (state) {
@@ -2258,88 +2094,71 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                case ROTMAT_STATE:
                   break;
                case QUAT_STATE:
-                  V2CrossM(wbr, tmpM);
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = -tmpM[i][j];
-                  }
-                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  tmpM = V2CrossM(wbr);
+                  CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
 
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = 0.0;
+                  subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
+                  memset(tmpAssign[0], 0, sizeof(double) * 9);
+                  for (i = 0; i < 3; i++)
                      tmpAssign[i][i] = 1.0;
-                  }
+
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
                   break;
                case OMEGA_STATE:
                   // calculate dwbn_dot/dwbn
-                  QxV(qbr, Nav->refOmega, tmpV3);
-                  for (i = 0; i < 3; i++)
-                     tmpV3[i] += wbr[i];
-                  V2CrossM(tmpV3, tmpM2);
-                  MxM(tmpM2, DSM->MOI, tmpM3);
-                  MxV(DSM->MOI, tmpV3, tmpV2);
-                  for (long Iw = 0; Iw < AC->Nwhl; Iw++) {
+                  tmpV3 = QxV(qbr, Nav->refOmega);
+                  tmpV3 = VpVElem(tmpV3, wbr);
+                  tmpM2 = V2CrossM(tmpV3);
+                  tmpM3 = MxM(tmpM2, DSM->MOI);
+                  tmpV2 = MxV(DSM->MOI, tmpV3);
+                  for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                      for (i = 0; i < 3; i++)
-                        tmpV2[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
-                  }
-                  V2CrossM(tmpV2, tmpM);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpM[i][j] -= tmpM3[i][j];
-                  MINVxM3(DSM->MOI, 3, tmpM, tmpM2);
+                        tmpV2.v[i] += whlH[Iw] * AC->Whl[Iw].Axis.v[i];
+
+                  tmpM = V2CrossM(tmpV2);
+                  for (i = 0; i < 9; i++)
+                     tmpM.flat[i] -= tmpM3.flat[i];
+
+                  MINVxM3(DSM->MOI, 3, tmpM.mat, tmpM2.mat);
                   // MINV3(DSM->MOI, tmpM3);
                   // MxM(tmpM3, tmpM, tmpM2);
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM2[i][j];
-                  }
+                  CopyVG(tmpAssign[0], tmpM2.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
                   break;
                case POS_STATE:
-                  for (i = 0; i < 3; i++) {
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = 0.0;
+                  memset(tmpAssign[0], 0, sizeof(double) * 9);
+                  for (i = 0; i < 3; i++)
                      tmpAssign[i][i] = 1.0;
-                  }
+
                   subMatAdd(jacobian, tmpAssign, rowInd, Nav->navInd[VEL_STATE],
                             3, 3);
                   break;
                case VEL_STATE:
-                  for (i = 0; i < 3; i++) {
-                     tmpV[i] = Nav->forceB[i] / DSM->mass;
-                  }
-                  V2CrossM(tmpV, tmpM);
-                  MxM(CRB, tmpM, tmpM2);
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        tmpAssign[i][j] = tmpM2[i][j];
+                  tmpV  = SxV(1.0 / DSM->mass, Nav->forceB);
+                  tmpM  = V2CrossM(tmpV);
+                  tmpM2 = MxM(CRB, tmpM);
+                  CopyVG(tmpAssign[0], tmpM2.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[QUAT_STATE], 3, 3);
 
                   if (Nav->refFrame != FRAME_N) {
-                     MTxV(CRB, Nav->refOmega, tmpV);
-                     SxV(2.0, tmpV, tmpV2);
-                     V2CrossM(tmpV2, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpV  = MTxV(CRB, Nav->refOmega);
+                     tmpV2 = SxV(2.0, tmpV);
+                     tmpM  = V2CrossM(tmpV2);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                      subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
-                     V2DoubleCrossM(tmpV, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpM = V2DoubleCrossM(tmpV);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
+
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
 
-                     MTxV(CRB, wrnd, tmpV);
-                     V2CrossM(tmpV, tmpM);
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = -tmpM[i][j];
+                     tmpV = MTxV(CRB, wrnd);
+                     tmpM = V2CrossM(tmpV);
+                     CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                   }
@@ -2350,18 +2169,16 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          }
       }
       if (DSM->refOrb->Regime == ORB_CENTRAL) {
-         long orbCenter             = DSM->refOrb->World;
-         double dAeroFrcdVRel[3][3] = {{0.0}}, dAeroTrqdVRel[3][3] = {{0.0}};
-         double worldWR[3] = {0.0};
+         long orbCenter = DSM->refOrb->World;
+         mat3x3 dAeroFrcdVRel, dAeroTrqdVRel;
+         vec3 worldWR = VEC3_ZERO;
          if (AeroActive) {
             double worldW = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
             for (i = 0; i < 3; i++)
-               worldWR[i] = -Nav->refCRN[i][2] * worldW;
+               worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldW;
             getDAeroFrcAndTrqDVRel(DSM, CRB, PosR, VelR, worldW, AtmoDensity,
-                                   dAeroFrcdVRel, dAeroTrqdVRel);
-            for (i = 0; i < 3; i++)
-               for (j = 0; j < 3; j++)
-                  dAeroFrcdVRel[i][j] /= DSM->mass;
+                                   &dAeroFrcdVRel, &dAeroTrqdVRel);
+            dAeroFrcdVRel = SxM(1.0 / DSM->mass, dAeroFrcdVRel);
          }
          FOR_STATES(state)
          {
@@ -2369,52 +2186,39 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                rowInd = Nav->navInd[state];
                switch (state) {
                   case VEL_STATE: {
-                     for (i = 0; i < 3; i++)
-                        tmpV2[i] = PosR[i] + Nav->refPos[i];
-                     getDGravFrcDPos(World[orbCenter].mu, tmpV2, tmpM2);
+                     tmpV2 = VpVElem(PosR, Nav->refPos);
+                     tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
                      if (GravPertActive) {
-                        for (i = 0; i < 3; i++)
-                           tmpV2[i] = PosR[i] + Nav->refPos[i];
-                        NavDGravPertAccelDPos(Nav, date, tmpV2, DSM->refOrb,
-                                              tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpM2[i][j] += tmpM[i][j];
+                        tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
+                                                     DSM->refOrb);
+                        for (i = 0; i < 9; i++)
+                           tmpM2.flat[i] += tmpM.flat[i];
                      }
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           tmpAssign[i][j] = tmpM2[i][j];
+                     CopyVG(tmpAssign[0], tmpM2.flat, 9);
                      subMatAdd(jacobian, tmpAssign, rowInd,
                                Nav->navInd[POS_STATE], 3, 3);
                      if (AeroActive) {
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = dAeroFrcdVRel[i][j];
-
+                        CopyVG(tmpAssign[0], dAeroFrcdVRel.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
-                        V2CrossM(worldWR, tmpM2);
-                        MxM(dAeroFrcdVRel, tmpM2, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM3[i][j];
+
+                        tmpM2 = V2CrossM(worldWR);
+                        tmpM3 = MxM(dAeroFrcdVRel, tmpM2);
+                        CopyVG(tmpAssign[0], tmpM3.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
                   } break;
                   case OMEGA_STATE:
                      if (AeroActive) {
-                        MxM(dAeroTrqdVRel, CRB, tmpM3);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM3[i][j];
+                        tmpM3 = MxM(dAeroTrqdVRel, CRB);
+                        CopyVG(tmpAssign[0], tmpM3.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[VEL_STATE], 3, 3);
-                        V2CrossM(worldWR, tmpM);
-                        MxM(dAeroTrqdVRel, tmpM, tmpM3);
-                        MxM(tmpM3, CRB, tmpM);
-                        for (i = 0; i < 3; i++)
-                           for (j = 0; j < 3; j++)
-                              tmpAssign[i][j] = tmpM[i][j];
+
+                        tmpM  = V2CrossM(worldWR);
+                        tmpM3 = MxM(dAeroTrqdVRel, tmpM);
+                        tmpM  = MxM(tmpM3, CRB);
+                        CopyVG(tmpAssign[0], tmpM.flat, 9);
                         subMatAdd(jacobian, tmpAssign, rowInd,
                                   Nav->navInd[POS_STATE], 3, 3);
                      }
@@ -2442,22 +2246,20 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
 void MEKFUpdateLaw(struct DSMNavType *const Nav)
 {
-   double q[4] = {0.0}, dq[4] = {0.0}, tmpM[3][3] = {{0.0}};
-   long i;
+   quat q, dq = QUAT_EYE;
+   mat3x3 tmpM;
 
-   for (i = 0; i < 3; i++) {
-      dq[i]         = -Nav->delta[i + Nav->navInd[QUAT_STATE]] / 2.0;
-      Nav->PosR[i] += -Nav->delta[i + Nav->navInd[POS_STATE]];
-      Nav->VelR[i] += -Nav->delta[i + Nav->navInd[VEL_STATE]];
-      Nav->wbr[i]  += -Nav->delta[i + Nav->navInd[OMEGA_STATE]];
+   for (int i = 0; i < 3; i++) {
+      dq.qv.v[i]      = -Nav->delta[i + Nav->navInd[QUAT_STATE]] / 2.0;
+      Nav->PosR.v[i] += -Nav->delta[i + Nav->navInd[POS_STATE]];
+      Nav->VelR.v[i] += -Nav->delta[i + Nav->navInd[VEL_STATE]];
+      Nav->wbr.v[i]  += -Nav->delta[i + Nav->navInd[OMEGA_STATE]];
    }
-   dq[3] = 1.0;
-   QxQ(dq, Nav->qbr, q);
-   UNITQ(q);
-   for (i = 0; i < 4; i++)
-      Nav->qbr[i] = q[i];
-   Q2C(Nav->qbr, tmpM);
-   MT(tmpM, Nav->CRB);
+   dq.qs    = 1.0;
+   q        = QxQ(dq, Nav->qbr);
+   Nav->qbr = UNITQ(q);
+   tmpM     = Q2C(Nav->qbr);
+   Nav->CRB = MT(tmpM);
 }
 
 /******************************************************************************/
@@ -2465,88 +2267,73 @@ void MEKFUpdateLaw(struct DSMNavType *const Nav)
 /******************************************************************************/
 double **GetStateLinTForm(struct DSMNavType *const Nav)
 {
-   double **tForm, tmpM[3][3] = {{0.0}};
+   mat3x3 tmpM;
+   double **tForm;
    static double **tmpAssign = NULL;
-   long i, j;
+   long i;
 
    tForm = CreateMatrix(Nav->navDim, Nav->navDim);
    if (tmpAssign == NULL)
       tmpAssign = CreateMatrix(3, 3);
 
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
-         tmpAssign[i][j] = 0.0;
+   memset(tmpAssign[0], 0, sizeof(double) * 9);
 
    switch (Nav->type) {
       case LIEKF_NAV:
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -Nav->CRB[i][j];
+         CopyVG(tmpAssign[0], SxM(-1.0, Nav->CRB).flat, 9);
          subMatAdd(tForm, tmpAssign, Nav->navInd[ROTMAT_STATE],
                    Nav->navInd[ROTMAT_STATE], 3, 3);
          subMatAdd(tForm, tmpAssign, Nav->navInd[POS_STATE],
                    Nav->navInd[POS_STATE], 3, 3);
          subMatAdd(tForm, tmpAssign, Nav->navInd[VEL_STATE],
                    Nav->navInd[VEL_STATE], 3, 3);
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = 0.0;
+         memset(tmpAssign[0], 0, sizeof(double) * 9);
+         for (i = 0; i < 3; i++)
             tmpAssign[i][i] = -1.0;
-         }
+
          subMatAdd(tForm, tmpAssign, Nav->navInd[OMEGA_STATE],
                    Nav->navInd[OMEGA_STATE], 3, 3);
-         V2CrossM(Nav->wbr, tmpM);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -tmpM[i][j];
+         tmpM = V2CrossM(Nav->wbr);
+         CopyVG(tmpAssign[0], SxM(-1.0, tmpM).flat, 9);
          subMatAdd(tForm, tmpAssign, Nav->navInd[OMEGA_STATE],
                    Nav->navInd[ROTMAT_STATE], 3, 3);
          break;
       case RIEKF_NAV:
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = 0.0;
+         memset(tmpAssign[0], 0, sizeof(double) * 9);
+         for (i = 0; i < 3; i++)
             tmpAssign[i][i] = -1.0;
-         }
+
          subMatAdd(tForm, tmpAssign, Nav->navInd[ROTMAT_STATE],
                    Nav->navInd[ROTMAT_STATE], 3, 3);
          subMatAdd(tForm, tmpAssign, Nav->navInd[POS_STATE],
                    Nav->navInd[POS_STATE], 3, 3);
          subMatAdd(tForm, tmpAssign, Nav->navInd[VEL_STATE],
                    Nav->navInd[VEL_STATE], 3, 3);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = -Nav->CRB[j][i];
+         CopyVG(tmpAssign[0], SxM(-1.0, Nav->CRB).flat, 9);
          subMatAdd(tForm, tmpAssign, Nav->navInd[OMEGA_STATE],
                    Nav->navInd[OMEGA_STATE], 3, 3);
-         V2CrossM(Nav->PosR, tmpM);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = tmpM[i][j];
+
+         tmpM = V2CrossM(Nav->PosR);
+         CopyVG(tmpAssign[0], tmpM.flat, 9);
          subMatAdd(tForm, tmpAssign, Nav->navInd[POS_STATE],
                    Nav->navInd[ROTMAT_STATE], 3, 3);
-         V2CrossM(Nav->VelR, tmpM);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = tmpM[i][j];
+
+         tmpM = V2CrossM(Nav->VelR);
+         CopyVG(tmpAssign[0], tmpM.flat, 9);
          subMatAdd(tForm, tmpAssign, Nav->navInd[VEL_STATE],
                    Nav->navInd[ROTMAT_STATE], 3, 3);
          break;
       case MEKF_NAV:
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = 0.0;
+         memset(tmpAssign[0], 0, sizeof(double) * 9);
+         for (i = 0; i < 3; i++)
             tmpAssign[i][i] = -1.0;
-         }
          subMatAdd(tForm, tmpAssign, Nav->navInd[POS_STATE],
                    Nav->navInd[POS_STATE], 3, 3);
          subMatAdd(tForm, tmpAssign, Nav->navInd[VEL_STATE],
                    Nav->navInd[VEL_STATE], 3, 3);
          subMatAdd(tForm, tmpAssign, Nav->navInd[OMEGA_STATE],
                    Nav->navInd[OMEGA_STATE], 3, 3);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               tmpAssign[i][j] = Nav->CRB[i][j];
+         CopyVG(tmpAssign[0], Nav->CRB.flat, 9);
          subMatAdd(tForm, tmpAssign, Nav->navInd[QUAT_STATE],
                    Nav->navInd[QUAT_STATE], 3, 3);
          break;
@@ -2585,19 +2372,15 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
                        const long reset)
 {
    // set up reference frame. Not a fan of effectively using truth data for it
-   long i, j;
-   double targetPosN[3] = {0.0};
-   double targetVelN[3] = {0.0};
+   vec3 targetPosN, targetVelN;
 
    if (reset == TRUE)
       *lerp_alpha = 1.0;
    else
       *lerp_alpha += dLerpAlpha;
 
-   if (Nav->Init == FALSE) {
-      for (i = 0; i < 3; i++)
-         Nav->refAccel[i] = 0.0;
-   }
+   if (Nav->Init == FALSE)
+      Nav->refAccel = VEC3_ZERO;
 
    // Set the position and velocity of reference frame in N frame
    switch (Nav->refOriType) {
@@ -2614,10 +2397,8 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
       } break;
       case ORI_OP: {
          const struct OrbitType *O = Nav->refOriPtr;
-         for (i = 0; i < 3; i++) {
-            targetPosN[i] = O->PosN[i];
-            targetVelN[i] = O->VelN[i];
-         }
+         targetPosN                = O->PosN;
+         targetVelN                = O->VelN;
       } break;
       default: {
          // make sure if you do sc relative nav, you initialize that sc's nav
@@ -2625,31 +2406,28 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
          // TODO: due to comm state, this is a time step behind...
          const struct DSMStateType *TrgState = Nav->refOriPtr;
          const struct BodyType *TrgSB        = Nav->refBodyPtr;
-         for (i = 0; i < 3; i++) {
-            // pn is position of body origin relative to sc origin
-            targetPosN[i] = TrgState->PosN[i] + TrgSB->pn[i];
-            targetVelN[i] = TrgState->VelN[i] + TrgSB->vn[i];
-         }
+         // pn is position of body origin relative to sc origin
+         targetPosN = VpVElem(TrgState->PosN, TrgSB->pn);
+         targetVelN = VpVElem(TrgState->VelN, TrgSB->vn);
       } break;
    }
 
    const double one_m_alpha = 1.0 - *lerp_alpha;
-   for (i = 0; i < 3; i++) {
-      Nav->refPos[i] =
-          one_m_alpha * Nav->oldRefPos[i] + *lerp_alpha * targetPosN[i];
-      Nav->refVel[i] =
-          one_m_alpha * Nav->oldRefVel[i] + *lerp_alpha * targetVelN[i];
+
+   Nav->refPos = VEC3_ZERO;
+   Nav->refVel = VEC3_ZERO;
+   for (int i = 0; i < 3; i++) {
+      Nav->refPos.v[i] =
+          one_m_alpha * Nav->oldRefPos.v[i] + *lerp_alpha * targetPosN.v[i];
+      Nav->refVel.v[i] =
+          one_m_alpha * Nav->oldRefVel.v[i] + *lerp_alpha * targetVelN.v[i];
    }
 
    switch (Nav->refFrame) {
       case FRAME_N:
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               Nav->refCRN[i][j] = 0.0;
-            Nav->refCRN[i][i]   = 1.0;
-            Nav->refOmega[i]    = 0.0;
-            Nav->refOmegaDot[i] = 0.0;
-         }
+         Nav->refCRN      = MAT3X3_EYE;
+         Nav->refOmega    = VEC3_ZERO;
+         Nav->refOmegaDot = VEC3_ZERO;
          break;
       // case FRAME_B:
       //    break;
@@ -2663,45 +2441,37 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
          break;
    }
    if (Nav->refFrame != FRAME_N) {
-      double refPos[3] = {0.0}, refVel[3] = {0.0}, wxr[3] = {0.0};
-      MxV(Nav->refCRN, Nav->refPos, refPos);
-      for (i = 0; i < 3; i++)
-         Nav->refPos[i] = refPos[i];
-      MxV(Nav->refCRN, Nav->refVel, refVel);
-      VxV(Nav->refOmega, Nav->refPos, wxr);
-      for (i = 0; i < 3; i++)
-         Nav->refVel[i] = refVel[i] - wxr[i];
+      vec3 refPos, refVel, wxr;
+      refPos      = MxV(Nav->refCRN, Nav->refPos);
+      Nav->refPos = refPos;
+      refVel      = MxV(Nav->refCRN, Nav->refVel);
+      wxr         = VxV(Nav->refOmega, Nav->refPos);
+      Nav->refVel = VmVElem(refVel, wxr);
    }
 
    if (Nav->Init == TRUE && fabs(one_m_alpha) > __DBL_EPSILON__) {
       const double dt = one_m_alpha * Nav->DT;
-      for (i = 0; i < 3; i++)
-         Nav->refAccel[i] = (targetVelN[i] - Nav->refVel[i]) / dt;
+      for (int i = 0; i < 3; i++)
+         Nav->refAccel.v[i] = (targetVelN.v[i] - Nav->refVel.v[i]) / dt;
    }
    if (reset == TRUE) {
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            Nav->oldRefCRN[i][j] = Nav->refCRN[i][j];
-         Nav->oldRefPos[i]      = Nav->refPos[i];
-         Nav->oldRefVel[i]      = Nav->refVel[i];
-         Nav->oldRefOmega[i]    = Nav->refOmega[i];
-         Nav->oldRefOmegaDot[i] = Nav->refOmegaDot[i];
-      }
-      *lerp_alpha = 0.0;
+      Nav->oldRefCRN      = Nav->refCRN;
+      Nav->oldRefPos      = Nav->refPos;
+      Nav->oldRefVel      = Nav->refVel;
+      Nav->oldRefOmega    = Nav->refOmega;
+      Nav->oldRefOmegaDot = Nav->refOmegaDot;
+      *lerp_alpha         = 0.0;
    }
 }
 
 void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
-          const double CRB[3][3], const double qbr[4] __attribute__((unused)),
-          const double PosR[3], const double VelR[3], const double wbr[3],
-          double **M)
+          const mat3x3 CRB, const quat qbr __attribute__((unused)),
+          const vec3 PosR, const vec3 VelR, const vec3 wbr, double **M)
 {
-   double tmp3x3[3][3] = {{0.0}}, MOIInv[3][3] = {{0.0}};
+   mat3x3 tmp3x3, MOIInv;
    long i, j;
 
-   for (i = 0; i < Nav->navDim; i++)
-      for (j = 0; j < Nav->navDim; j++)
-         M[i][j] = 0.0;
+   memset(M, 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    switch (Nav->type) {
       case LIEKF_NAV: {
@@ -2710,59 +2480,59 @@ void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
                M[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + j] =
-                   -CRB[j][i];
+                   -CRB.mat[j][i];
                M[Nav->navInd[VEL_STATE] + i][Nav->navInd[VEL_STATE] + j] =
-                   -CRB[j][i];
+                   -CRB.mat[j][i];
             }
          }
-         MINV3(AC->MOI, MOIInv);
+         MOIInv = MINV3(AC->MOI);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[OMEGA_STATE] + j] =
-                   -MOIInv[i][j];
+                   -MOIInv.mat[i][j];
 
-         V2CrossM(wbr, tmp3x3);
+         tmp3x3 = V2CrossM(wbr);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
-                   tmp3x3[i][j];
+                   tmp3x3.mat[i][j];
       } break;
       case RIEKF_NAV: {
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[ROTMAT_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
-                   -CRB[i][j];
+                   -CRB.mat[i][j];
          for (i = 0; i < 3; i++) {
             M[Nav->navInd[POS_STATE] + i][Nav->navInd[POS_STATE] + i] = -1.0;
             M[Nav->navInd[VEL_STATE] + i][Nav->navInd[VEL_STATE] + i] = -1.0;
          }
-         V2CrossM(PosR, MOIInv);
-         MxM(MOIInv, CRB, tmp3x3);
+         MOIInv = V2CrossM(PosR);
+         tmp3x3 = MxM(MOIInv, CRB);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[POS_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
-                   -tmp3x3[i][j];
-         V2CrossM(VelR, MOIInv);
-         MxM(MOIInv, CRB, tmp3x3);
+                   -tmp3x3.mat[i][j];
+         MOIInv = V2CrossM(VelR);
+         tmp3x3 = MxM(MOIInv, CRB);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[VEL_STATE] + i][Nav->navInd[ROTMAT_STATE] + j] =
-                   -tmp3x3[i][j];
-         MINV3(AC->MOI, MOIInv);
-         MxM(CRB, MOIInv, tmp3x3);
+                   -tmp3x3.mat[i][j];
+         MOIInv = MINV3(AC->MOI);
+         tmp3x3 = MxM(CRB, MOIInv);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[OMEGA_STATE] + j] =
-                   -tmp3x3[i][j];
+                   -tmp3x3.mat[i][j];
       } break;
       case MEKF_NAV: {
          for (i = 0; i < Nav->navDim; i++)
             M[i][i] = -1.0;
-         MINV3(AC->MOI, MOIInv);
+         MOIInv = MINV3(AC->MOI);
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
                M[Nav->navInd[OMEGA_STATE] + i][Nav->navInd[OMEGA_STATE] + j] =
-                   -MOIInv[i][j];
+                   -MOIInv.mat[i][j];
       } break;
       default:
          fprintf(stderr, "Navigation active with undefined or ideal navigation "
@@ -2773,21 +2543,20 @@ void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
 }
 
 void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
-                       const double CRB[3][3], const double *whlH)
+                       const mat3x3 CRB, const double *whlH)
 {
-   long i, j;
+   long j;
 
-   for (i = 0; i < 3; i++) {
-      Nav->forceB[i]  = AC->IdealFrc[i];
-      Nav->torqueB[i] = AC->IdealTrq[i];
-   }
+   Nav->forceB  = AC->IdealFrc;
+   Nav->torqueB = AC->IdealTrq;
+
    for (j = 0; j < AC->Nthr; j++) {
       const struct AcThrType *thr = &AC->Thr[j];
       if (thr->ThrustLevelCmd > 0.0) {
          const double appliedForce = thr->ThrustLevelCmd * thr->Fmax;
-         for (i = 0; i < 3; i++) {
-            Nav->forceB[i]  += thr->Axis[i] * appliedForce;
-            Nav->torqueB[i] += thr->rxA[i] * appliedForce;
+         for (int i = 0; i < 3; i++) {
+            Nav->forceB.v[i]  += appliedForce * thr->Axis.v[i];
+            Nav->torqueB.v[i] += appliedForce * thr->rxA.v[i];
          }
       }
    }
@@ -2795,18 +2564,19 @@ void getForceAndTorque(struct AcType *const AC, struct DSMNavType *const Nav,
    for (j = 0; j < AC->Nwhl; j++) {
       const struct AcWhlType *whl = &AC->Whl[j];
       if ((whlH[j] * signum(whl->Tcmd)) < whl->Hmax)
-         for (i = 0; i < 3; i++)
-            Nav->torqueB[i] -= whl->Axis[i] * whl->Tcmd;
+         for (int i = 0; i < 3; i++)
+            Nav->torqueB.v[i] -= whl->Tcmd * whl->Axis.v[i];
    }
-   double bvb[3] = {0.0}, CBN[3][3] = {{0.0}};
-   MTxM(CRB, Nav->refCRN, CBN);
-   MxV(CBN, AC->bvn, bvb);
+   vec3 bvb;
+   mat3x3 CBN;
+   CBN = MTxM(CRB, Nav->refCRN);
+   bvb = MxV(CBN, AC->bvn);
    for (j = 0; j < AC->Nmtb; j++) {
       const struct AcMtbType *mtb = &AC->MTB[j];
-      double AxBvb[3]             = {0.0};
-      VxV(mtb->Axis, bvb, AxBvb);
-      for (i = 0; i < 3; i++)
-         Nav->torqueB[i] += AxBvb[i] * mtb->Mcmd;
+
+      vec3 AxBvb = VxV(mtb->Axis, bvb);
+      for (int i = 0; i < 3; i++)
+         Nav->torqueB.v[i] -= mtb->Mcmd * AxBvb.v[i];
    }
 }
 
@@ -2841,22 +2611,20 @@ void NavSkDot(const long nav_dim, double **sk, double **F, double **M_sqrtQ,
    MxMG(sk, sk_dot, F, nav_dim, nav_dim, nav_dim);
 
    // transfer F to sk_dot, ensuring lower triangular
+   memset(sk_dot, 0, sizeof(double) * nav_dim * nav_dim);
    for (long i = 0; i < nav_dim; i++) {
-      for (long j = i + 1; j < nav_dim; j++) {
-         sk_dot[i][j] = 0.0;
+      for (long j = i + 1; j < nav_dim; j++)
          sk_dot[j][i] = F[j][i];
-      }
       sk_dot[i][i] = F[i][i];
    }
 }
 
 void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
-             const DateType *date, const double CRB[3][3], const double qbr[4],
-             const double PosR[3], const double VelR[3], const double wbr[3],
-             const double *whlH, double **Sk, double CRBdot[3][3],
-             double qbrdot[4], double PosRdot[3], double VelRdot[3],
-             double wbrdot[3], double *whlHdot, double **Skdot,
-             const double AtmoDensity)
+             const DateType *date, const mat3x3 CRB, const quat qbr,
+             const vec3 PosR, const vec3 VelR, const vec3 wbr,
+             const double *whlH, double **Sk, mat3x3 *CRBdot, quat *qbrdot,
+             vec3 *PosRdot, vec3 *VelRdot, vec3 *wbrdot, double *whlHdot,
+             double **Skdot, const double AtmoDensity)
 {
    long i, j;
 
@@ -2872,73 +2640,68 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
 
    NavSkDot(navDim, Sk, Nav->NxN, Nav->NxN2, Skdot);
 
-   double aeroFrc[3] = {0.0}, aeroTrq[3] = {0.0};
+   vec3 aeroFrc, aeroTrq;
    const long orbCenter          = DSM->refOrb->World;
    enum orbitRegime const regime = DSM->refOrb->Regime;
    if (AeroActive && regime == ORB_CENTRAL) {
       getAeroForceAndTorque(DSM, CRB, PosR, VelR,
                             GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]),
-                            AtmoDensity, aeroFrc, aeroTrq);
+                            AtmoDensity, &aeroFrc, &aeroTrq);
    }
    getForceAndTorque(AC, Nav, CRB, whlH);
 
    FOR_STATES(iState)
    {
       if (Nav->stateActive[iState] == TRUE) {
-         double **pM3x3, wbrX[3][3] = {{0.0}}, tmpV[3] = {0.0},
-                         tmpV2[3] = {0.0}, wbn[3] = {0.0};
+         double **pM3x3;
+         mat3x3 wbrX;
+         vec3 tmpV, tmpV2, wbn;
          switch (iState) {
             case TIME_STATE:
                break;
             case ROTMAT_STATE:
-               V2CrossM(wbr, wbrX);
-               MxM(CRB, wbrX, CRBdot);
+               wbrX    = V2CrossM(wbr);
+               *CRBdot = MxM(CRB, wbrX);
                break;
             case QUAT_STATE:
-               QW2QDOT(qbr, wbr, qbrdot);
+               *qbrdot = QW2QDOT(qbr, wbr);
                break;
             case OMEGA_STATE: {
-               double Hb[3] = {0.0};
-               for (i = 0; i < 3; i++)
-                  wbn[i] = wbr[i];
+               wbn = wbr;
                if (Nav->refFrame != FRAME_N) {
-                  MTxV(CRB, Nav->refOmega, tmpV);
-                  for (i = 0; i < 3; i++)
-                     wbn[i] += tmpV[i];
+                  tmpV = MTxV(CRB, Nav->refOmega);
+                  wbn  = VpVElem(wbn, tmpV);
                }
-               MxV(DSM->MOI, wbn, Hb);
+               vec3 Hb = MxV(DSM->MOI, wbn);
 
                for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                   for (i = 0; i < 3; i++)
-                     Hb[i] += AC->Whl[Iw].Axis[i] * whlH[Iw];
-               VxV(Hb, wbn, tmpV);
+                     Hb.v[i] += whlH[Iw] * AC->Whl[Iw].Axis.v[i];
+               tmpV = VxV(Hb, wbn);
+               for (i = 0; i < 3; i++)
+                  tmpV.v[i] += Nav->torqueB.v[i];
 
-               for (i = 0; i < 3; i++) {
-                  tmpV[i] += Nav->torqueB[i];
-                  if (AeroActive && regime == ORB_CENTRAL)
-                     tmpV[i] += aeroTrq[i];
-               }
+               if (AeroActive && regime == ORB_CENTRAL)
+                  for (i = 0; i < 3; i++)
+                     tmpV.v[i] += aeroTrq.v[i];
 
                pM3x3 = CreateMatrix(3, 3);
-               for (i = 0; i < 3; i++)
-                  for (j = 0; j < 3; j++)
-                     pM3x3[i][j] = DSM->MOI[i][j];
-               LINSOLVE(pM3x3, wbrdot, tmpV, 3);
+               CopyVG(pM3x3[0], DSM->MOI.flat, 9);
+               LINSOLVE(pM3x3, wbrdot->v, tmpV.v, 3);
                DestroyMatrix(pM3x3);
                if (Nav->refFrame != FRAME_N) {
-                  MTxV(CRB, Nav->refOmegaDot, tmpV);
+                  tmpV = MTxV(CRB, Nav->refOmegaDot);
                   for (i = 0; i < 3; i++)
-                     wbrdot[i] -= tmpV[i];
+                     wbrdot->v[i] -= tmpV.v[i];
                }
             } break;
             case POS_STATE:
-               for (i = 0; i < 3; i++)
-                  PosRdot[i] = VelR[i];
+               *PosRdot = VelR;
                break;
             case VEL_STATE:
-               MxV(CRB, Nav->forceB, VelRdot);
+               *VelRdot = MxV(CRB, Nav->forceB);
                for (i = 0; i < 3; i++)
-                  VelRdot[i] /= DSM->mass;
+                  VelRdot->v[i] /= DSM->mass;
                if (Nav->refFrame != FRAME_N) {
                   fprintf(stderr, "Frame types other than Inertial are still "
                                   "in development for filtering. Exiting...\n");
@@ -2946,29 +2709,23 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                }
 
                if (GravPertActive) {
-                  double accelR[3] = {0.0};
-                  for (i = 0; i < 3; i++)
-                     tmpV[i] = PosR[i] + Nav->refPos[i];
-                  NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb, accelR);
-                  for (i = 0; i < 3; i++)
-                     VelRdot[i] += accelR[i];
+                  vec3 accelR;
+                  tmpV   = VpVElem(PosR, Nav->refPos);
+                  accelR = NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb);
+                  *VelRdot = VpVElem(*VelRdot, accelR);
                }
 
                switch (regime) {
                   case ORB_CENTRAL: {
-                     for (i = 0; i < 3; i++)
-                        tmpV[i] = PosR[i] + Nav->refPos[i];
-                     getGravAccel(DSM->refOrb->mu, tmpV, tmpV2);
-                     for (i = 0; i < 3; i++)
-                        VelRdot[i] += tmpV2[i];
-                     if (Nav->refOriType != ORI_WORLD) {
-                        for (i = 0; i < 3; i++)
-                           VelRdot[i] -= Nav->refAccel[i];
-                     }
+                     tmpV     = VpVElem(PosR, Nav->refPos);
+                     tmpV2    = getGravAccel(DSM->refOrb->mu, tmpV);
+                     *VelRdot = VpVElem(*VelRdot, tmpV2);
+                     if (Nav->refOriType != ORI_WORLD)
+                        *VelRdot = VpVElem(*VelRdot, Nav->refAccel);
 
                      if (AeroActive)
                         for (i = 0; i < 3; i++)
-                           VelRdot[i] += aeroFrc[i] / DSM->mass;
+                           VelRdot->v[i] += aeroFrc.v[i] / DSM->mass;
                      break;
                   }
                   default:
@@ -3012,30 +2769,30 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    if (init == TRUE) {
       if (AeroActive) {
          const long orbCenter = DSM->refOrb->World;
-         double worldWR[3]    = {0.0};
-         double VrelR[3] = {0.0}, PosN[3] = {0.0}, PosRWorld[3] = {0.0};
+         vec3 worldWR, VrelR, PosN, PosRWorld;
+         PosRWorld           = VpVElem(Nav->PosR, Nav->refPos);
+         const double worldw = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
          for (i = 0; i < 3; i++)
-            PosRWorld[i] = Nav->PosR[i] + Nav->refPos[i];
+            worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldw;
+         VrelR = VxV(worldWR, PosRWorld);
          for (i = 0; i < 3; i++)
-            worldWR[i] = -Nav->refCRN[i][2] *
-                         GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
-         VxV(worldWR, PosRWorld, VrelR);
-         for (i = 0; i < 3; i++)
-            VrelR[i] += Nav->VelR[i] + Nav->refVel[i];
-         MTxV(Nav->refCRN, PosRWorld, PosN);
+            VrelR.v[i] += Nav->VelR.v[i] + Nav->refVel.v[i];
+         PosN = MTxV(Nav->refCRN, PosRWorld);
          if (orbCenter == EARTH) {
             double NavFlux10p7, NavGeomagIndex;
-            double Alt, PosW[3] = {0.0}, CWN[3][3] = {{0.0}};
+            double Alt;
+            vec3 PosW;
+            mat3x3 CWN;
 
             if (EphemOption == 3) {
                JDType jd = ccsds2jd(*cur_ccsds);
-               SpiceGetCWJ(jd, EARTH, CWN);
+               SpiceGetCWJ(jd, EARTH, &CWN);
             }
             else
-               NavGetWorldCWN(orbCenter, &Nav->Date, CWN);
+               CWN = NavGetWorldCWN(orbCenter, Nav->Date);
 
-            MxV(CWN, PosN, PosW);
-            Alt = MAGV(PosW) - World[orbCenter].rad;
+            PosW = MxV(CWN, PosN);
+            Alt  = MAGV(PosW) - World[orbCenter].rad;
             if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
                JDType jd = Date2JD(Nav->Date, MJD_EPOCH);
                jd        = JDChangeSystem(TT_TIME, jd);
@@ -3058,8 +2815,9 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    double dLerpAlpha = 0.0;
    double lerpAlphak = Nav->refLerpAlpha;
    // RK4
-   double CRBk[ORDRK][3][3], qbrk[ORDRK][4], PosRk[ORDRK][3], VelRk[ORDRK][3],
-       wbrk[ORDRK][3];
+   mat3x3 CRBk[ORDRK];
+   quat qbrk[ORDRK];
+   vec3 PosRk[ORDRK], VelRk[ORDRK], wbrk[ORDRK];
    double **Skk[ORDRK] = {NULL};
    for (k = 0; k < ORDRK; k++)
       Skk[k] = CreateMatrix(Nav->navDim, Nav->navDim);
@@ -3077,66 +2835,60 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       date          = updateTime(date, dateOffset + DTk[k]);
       lerpAlphak    = Nav->refLerpAlpha;
       dLerpAlpha    = DTk[k] / Nav->DT;
-      double CRB[3][3], qbr[4], PosR[3], VelR[3], wbr[3], whlH[AC->Nwhl];
-      if (k == 0) {
-         for (i = 0; i < Nav->navDim; i++)
-            for (j = 0; j <= i; j++)
-               Sk[i][j] = Nav->S[i][j];
-         for (i = 0; i < 3; i++) {
-            qbr[i]  = Nav->qbr[i];
-            PosR[i] = Nav->PosR[i];
-            VelR[i] = Nav->VelR[i];
-            wbr[i]  = Nav->wbr[i];
-            for (j = 0; j < 3; j++)
-               CRB[i][j] = Nav->CRB[i][j];
-         }
-         qbr[3] = Nav->qbr[3];
+      mat3x3 CRB;
+      quat qbr;
+      vec3 PosR, VelR, wbr;
+      double whlH[AC->Nwhl];
 
-         for (i = 0; i < AC->Nwhl; i++)
-            whlH[i] = Nav->whlH[i];
-      }
-      else {
-         for (i = 0; i < Nav->navDim; i++)
-            for (j = 0; j <= i; j++)
-               Sk[i][j] = Nav->S[i][j] + Skk[k - 1][i][j] * DTk[k];
+      for (i = 0; i < Nav->navDim; i++)
+         for (j = 0; j <= i; j++)
+            Sk[i][j] = Nav->S[i][j];
+      CRB  = Nav->CRB;
+      qbr  = Nav->qbr;
+      PosR = Nav->PosR;
+      VelR = Nav->VelR;
+      wbr  = Nav->wbr;
+      for (i = 0; i < AC->Nwhl; i++)
+         whlH[i] = Nav->whlH[i];
+
+      if (k > 0) {
+         for (i = 0; i < Nav->navDim * Nav->navDim; i++)
+            Sk[0][i] += DTk[k] * Skk[k - 1][0][i];
 
          FOR_STATES(Istate)
          {
             if (Nav->stateActive[Istate] == TRUE) {
-               double CBR[3][3] = {{0.0}};
+               mat3x3 CBR;
                switch (Istate) {
                   case TIME_STATE:
                      // incremented by DT after this function is called
                      break;
                   case ROTMAT_STATE:
-                     for (i = 0; i < 3; i++)
-                        for (j = 0; j < 3; j++)
-                           CRB[i][j] =
-                               Nav->CRB[i][j] + CRBk[k - 1][i][j] * DTk[k];
-                     MT(CRB, CBR);
-                     C2Q(CBR, qbr);
-                     UNITQ(qbr);
-                     Q2C(qbr, CBR);
-                     MT(CBR, CRB);
+                     for (i = 0; i < 9; i++)
+                        CRB.flat[i] += DTk[k] * CRBk[k - 1].flat[i];
+                     CBR = MT(CRB);
+                     qbr = UNITQ(C2Q(CBR));
+                     CBR = Q2C(qbr);
+                     CRB = MT(CBR);
                      break;
                   case QUAT_STATE:
                      for (i = 0; i < 4; i++)
-                        qbr[i] = Nav->qbr[i] + qbrk[k - 1][i] * DTk[k];
-                     UNITQ(qbr);
-                     Q2C(qbr, CBR);
-                     MT(CBR, CRB);
+                        qbr.q[i] += DTk[k] * qbrk[k - 1].q[i];
+                     qbr = UNITQ(qbr);
+                     CBR = Q2C(qbr);
+                     CRB = MT(CBR);
                      break;
                   case OMEGA_STATE:
                      for (i = 0; i < 3; i++)
-                        wbr[i] = Nav->wbr[i] + wbrk[k - 1][i] * DTk[k];
+                        wbr.v[i] += DTk[k] * wbrk[k - 1].v[i];
                      break;
                   case POS_STATE:
                      for (i = 0; i < 3; i++)
-                        PosR[i] = Nav->PosR[i] + PosRk[k - 1][i] * DTk[k];
+                        PosR.v[i] += DTk[k] * PosRk[k - 1].v[i];
                      break;
                   case VEL_STATE:
                      for (i = 0; i < 3; i++)
-                        VelR[i] = Nav->VelR[i] + VelRk[k - 1][i] * DTk[k];
+                        VelR.v[i] += DTk[k] * VelRk[k - 1].v[i];
                      break;
                   default:
                      break;
@@ -3149,8 +2901,8 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       }
       configureRefFrame(Nav, &lerpAlphak, DSM->refOrb, dLerpAlpha, FALSE);
       getForceAndTorque(AC, Nav, CRB, whlH);
-      NavEOMs(AC, DSM, &date, CRB, qbr, PosR, VelR, wbr, whlH, Sk, CRBk[k],
-              qbrk[k], PosRk[k], VelRk[k], wbrk[k], whlHk[k], Skk[k],
+      NavEOMs(AC, DSM, &date, CRB, qbr, PosR, VelR, wbr, whlH, Sk, &CRBk[k],
+              &qbrk[k], &PosRk[k], &VelRk[k], &wbrk[k], whlHk[k], Skk[k],
               AtmoDensity);
    }
 
@@ -3165,7 +2917,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
    FOR_STATES(Istate)
    {
       if (Nav->stateActive[Istate] == TRUE) {
-         double CBR[3][3] = {{0.0}};
+         mat3x3 CBR;
          switch (Istate) {
             case TIME_STATE:
                // incremented by DT at end of this function
@@ -3173,63 +2925,58 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
             case ROTMAT_STATE: {
 #if ORDRK == 4
                for (k = 0; k < ORDRK; k++)
-                  for (i = 0; i < 3; i++)
-                     for (j = 0; j < 3; j++)
-                        Nav->CRB[i][j] += CRBk[k][i][j] * rkScale[k];
+                  for (i = 0; i < 9; i++)
+                     Nav->CRB.flat[i] += rkScale[k] * CRBk->flat[i];
 #elif ORDRK == 1
-               MTxM(Nav->CRB, CRBk[0], CRB);
-               double tmpV[3];
-               tmpV[0] = CRB[2][1] * rkScale[0];
-               tmpV[1] = CRB[0][2] * rkScale[0];
-               tmpV[2] = CRB[1][0] * rkScale[0];
-               expmso3(tmpV, CRB);
-               for (i = 0; i < 3; i++)
-                  for (j = 0; j < 3; j++)
-                     CBR[i][j] = Nav->CRB[i][j];
-               MxM(CBR, CRB, Nav->CRB);
+               CRB = MTxM(Nav->CRB, CRBk[0]);
+               vec3 tmpV;
+               tmpV.x   = CRB.mat[2][1] * rkScale[0];
+               tmpV.y   = CRB.mat[0][2] * rkScale[0];
+               tmpV.z   = CRB.mat[1][0] * rkScale[0];
+               CRB      = expmso3(tmpV);
+               CBR      = Nav.CRB;
+               Nav->CRB = MxM(CBR, CRB);
 #endif
-               MT(Nav->CRB, CBR);
-               C2Q(CBR, Nav->qbr);
-               UNITQ(Nav->qbr);
-               Q2C(Nav->qbr, CBR);
-               MT(CBR, Nav->CRB);
+               CBR      = MT(Nav->CRB);
+               Nav->qbr = C2Q(CBR);
+               Nav->qbr = UNITQ(Nav->qbr);
+               CBR      = Q2C(Nav->qbr);
+               Nav->CRB = MT(CBR);
             } break;
             case QUAT_STATE: {
 #if ORDRK == 4
-               for (i = 0; i < 4; i++)
-                  for (k = 0; k < ORDRK; k++)
-                     Nav->qbr[i] += qbrk[k][i] * rkScale[k];
+               for (k = 0; k < ORDRK; k++)
+                  for (i = 0; i < 4; i++)
+                     Nav->qbr.q[i] += rkScale[k] * qbrk[k].q[i];
 #elif ORDRK == 1
-               QxQT(qbrk[0], Nav->qbr, qbr);
+               qbr         = QxQT(qbrk[0], Nav->qbr);
                double tmag = UNITV(qbr) * rkScale[0];
                if (tmag > __DBL_EPSILON__) {
                   double stmag = sin(tmag);
-                  for (i = 0; i < 3; i++)
-                     qbrk[0][i] = qbr[i] * stmag;
-                  qbrk[0][3] = cos(tmag);
-                  for (i = 0; i < 4; i++)
-                     qbr[i] = Nav->qbr[i];
-                  QxQ(qbrk[0], qbr, Nav->qbr);
+                  qbrk[0].qv   = SxV(stmag, qbr.qv);
+                  qbrk[0].qs   = cos(tmag);
+                  qbr          = Nav->qbr;
+                  Nav->qbr     = QxQ(qbrk[0], qbr);
                }
 #endif
-               UNITQ(Nav->qbr);
-               Q2C(Nav->qbr, CBR);
-               MT(CBR, Nav->CRB);
+               Nav->qbr = UNITQ(Nav->qbr);
+               CBR      = Q2C(Nav->qbr);
+               Nav->CRB = MT(CBR);
             } break;
             case OMEGA_STATE:
-               for (i = 0; i < 3; i++)
-                  for (k = 0; k < ORDRK; k++)
-                     Nav->wbr[i] += wbrk[k][i] * rkScale[k];
+               for (k = 0; k < ORDRK; k++)
+                  for (i = 0; i < 3; i++)
+                     Nav->wbr.v[i] += rkScale[k] * wbrk[k].v[i];
                break;
             case POS_STATE:
-               for (i = 0; i < 3; i++)
-                  for (k = 0; k < ORDRK; k++)
-                     Nav->PosR[i] += PosRk[k][i] * rkScale[k];
+               for (k = 0; k < ORDRK; k++)
+                  for (i = 0; i < 3; i++)
+                     Nav->PosR.v[i] += rkScale[k] * PosRk[k].v[i];
                break;
             case VEL_STATE:
-               for (i = 0; i < 3; i++)
-                  for (k = 0; k < ORDRK; k++)
-                     Nav->VelR[i] += VelRk[k][i] * rkScale[k];
+               for (k = 0; k < ORDRK; k++)
+                  for (i = 0; i < 3; i++)
+                     Nav->VelR.v[i] += rkScale[k] * VelRk[k].v[i];
                break;
             default:
                break;
@@ -3253,12 +3000,21 @@ void CalcInnovation(const enum SensorType type,
 {
    switch (type) {
       case STARTRACK_SENSOR: {
-         double tmpq[4];
-         QxQT(meas->data, meas_est, tmpq);
-         Q2AngleVec(tmpq, innovation);
+         const quat q_data = {.x = meas->data[0],
+                              .y = meas->data[1],
+                              .z = meas->data[2],
+                              .s = meas->data[3]};
+         const quat q_est  = {.x = meas_est[0],
+                              .y = meas_est[1],
+                              .z = meas_est[2],
+                              .s = meas_est[3]};
+         vec3 inn_v        = Q2AngleVec(QxQT(q_data, q_est));
+         innovation[0]     = inn_v.x;
+         innovation[1]     = inn_v.y;
+         innovation[2]     = inn_v.z;
       } break;
       default:
-         for (long i = 0; i < meas->errDim; i++)
+         for (int i = 0; i < meas->errDim; i++)
             innovation[i] = meas->data[i] - meas_est[i];
          break;
    }

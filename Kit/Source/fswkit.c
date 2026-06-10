@@ -26,11 +26,6 @@ void FindPDGains(double I, double w, double z, double *Kr, double *Kp)
    *Kp = I * w * w;
 }
 /**********************************************************************/
-double Limit(double x, double min, double max)
-{
-   return (x < min ? min : (x > max ? max : x));
-}
-/**********************************************************************/
 double SpinGainCostFunction(double p[2], double CostParm[2])
 {
    double Coef[5], Real[4], Imag[4], Cost;
@@ -101,49 +96,47 @@ void FindSpinnerGains(double J, double It, double Tc, double OrbPer,
 /*                                                                    */
 /*  Given components of two vectors (V and W) defined in A frame and  */
 /*  in B frame, find the direction cosine matrix CBA.                 */
-void TRIAD(double Va[3], double Wa[3], double Vb[3], double Wb[3],
-           double CBA[3][3])
+mat3x3 TRIAD(vec3 Va, vec3 Wa, vec3 Vb, vec3 Wb)
 {
-   double u[3], v[3], q[3], r[3], s[3], Ma[3][3], Mb[3][3];
+   vec3 u, v, q, r, s;
+   mat3x3 Ma, Mb;
    long i;
 
+   u = Va;
+   v = Wa;
+   q = u;
+
+   UNITV(&u);
+   UNITV(&v);
+   UNITV(&q);
+   r = VxV(u, v);
+   UNITV(&r);
+   s = VxV(q, r);
+   UNITV(&s);
    for (i = 0; i < 3; i++) {
-      u[i] = Va[i];
-      v[i] = Wa[i];
-      q[i] = u[i];
-   }
-   UNITV(u);
-   UNITV(v);
-   UNITV(q);
-   VxV(u, v, r);
-   UNITV(r);
-   VxV(q, r, s);
-   UNITV(s);
-   for (i = 0; i < 3; i++) {
-      Ma[i][0] = q[i];
-      Ma[i][1] = r[i];
-      Ma[i][2] = s[i];
+      Ma.mat[i][0] = q.v[i];
+      Ma.mat[i][1] = r.v[i];
+      Ma.mat[i][2] = s.v[i];
    }
 
+   u = Vb;
+   v = Wb;
+   q = u;
+
+   UNITV(&u);
+   UNITV(&v);
+   UNITV(&q);
+   r = VxV(u, v);
+   UNITV(&r);
+   s = VxV(q, r);
+   UNITV(&s);
    for (i = 0; i < 3; i++) {
-      u[i] = Vb[i];
-      v[i] = Wb[i];
-      q[i] = u[i];
-   }
-   UNITV(u);
-   UNITV(v);
-   UNITV(q);
-   VxV(u, v, r);
-   UNITV(r);
-   VxV(q, r, s);
-   UNITV(s);
-   for (i = 0; i < 3; i++) {
-      Mb[i][0] = q[i];
-      Mb[i][1] = r[i];
-      Mb[i][2] = s[i];
+      Mb.mat[i][0] = q.v[i];
+      Mb.mat[i][1] = r.v[i];
+      Mb.mat[i][2] = s.v[i];
    }
 
-   MxMT(Mb, Ma, CBA);
+   return MxMT(Mb, Ma);
 }
 /**********************************************************************/
 /*                                                                    */
@@ -154,17 +147,17 @@ void TRIAD(double Va[3], double Wa[3], double Vb[3], double Wb[3],
 /* routine finds the optimal estimate of q, the quaternion expressing */
 /* the rotation from the reference frame (where Ref's are given) to   */
 /* the body frame (where Meas's are given).                           */
-void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
+quat Quest(long n, double *Weight, vec3 *Ref, vec3 *Meas)
 {
    long i, j, k;
 
-   double B[3][3], S[3][3];
-   double Z[3] = {0.0, 0.0, 0.0};
+   mat3x3 B = MAT3X3_ZERO, XX = MAT3X3_ZERO, S, SS;
+   vec3 Z = VEC3_ZERO;
    double sigma, kappa, delta;
    double aa, bb, cc, dd;
    double lam, f0, f1, f2, f, fp, lam2;
-   double alpha, beta, gamma;
-   double WxV[3], SZ[3], XX[3][3], X[3], mag, SS[3][3], SSZ[3];
+   double mag, alpha, beta, gamma;
+   vec3 WxV, SZ, X, SSZ;
 
    /* .. Normalize weights and measurements */
    mag = 0.0;
@@ -174,50 +167,50 @@ void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
       Weight[i] /= mag;
 
    for (i = 0; i < n; i++) {
-      UNITV(Ref[i]);
-      UNITV(Meas[i]);
+      UNITV(&Ref[i]);
+      UNITV(&Meas[i]);
    }
+
+   for (j = 0; j < 3; j++)
+      for (k = 0; k < 3; k++)
+         for (i = 0; i < n; i++)
+            B.mat[j][k] += Weight[i] * Meas[i].v[j] * Ref[i].v[k];
+
+   S = B;
+   for (j = 0; j < 3; j++)
+      for (k = 0; k < 3; k++)
+         S.mat[j][k] += B.mat[k][j];
 
    for (j = 0; j < 3; j++) {
       for (k = 0; k < 3; k++) {
-         B[j][k] = 0.0;
-         for (i = 0; i < n; i++) {
-            B[j][k] = B[j][k] + Weight[i] * Meas[i][j] * Ref[i][k];
-         }
-      }
-   }
-
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         S[j][k] = B[j][k] + B[k][j];
-      }
-   }
-
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         SS[j][k] = S[j][0] * S[0][k] + S[j][1] * S[1][k] + S[j][2] * S[2][k];
+         SS.mat[j][k] = S.mat[j][0] * S.mat[0][k] + S.mat[j][1] * S.mat[1][k] +
+                        S.mat[j][2] * S.mat[2][k];
       }
    }
 
    for (i = 0; i < n; i++) {
-      VxV(Meas[i], Ref[i], WxV);
+      WxV = VxV(Meas[i], Ref[i]);
       for (j = 0; j < 3; j++)
-         Z[j] += Weight[i] * WxV[j];
+         Z.v[j] += Weight[i] * WxV.v[j];
    }
 
-   sigma = B[0][0] + B[1][1] + B[2][2];
-   kappa = S[1][1] * S[2][2] - S[1][2] * S[2][1] + S[0][0] * S[2][2] -
-           S[0][2] * S[2][0] + S[0][0] * S[1][1] - S[0][1] * S[1][0];
-   delta = S[0][0] * S[1][1] * S[2][2] + S[0][1] * S[1][2] * S[2][0] +
-           S[1][0] * S[2][1] * S[0][2] - S[0][0] * S[2][1] * S[1][2] -
-           S[0][1] * S[1][0] * S[2][2] - S[0][2] * S[1][1] * S[2][0];
+   sigma = B.mat[0][0] + B.mat[1][1] + B.mat[2][2];
+   kappa = S.mat[1][1] * S.mat[2][2] - S.mat[1][2] * S.mat[2][1] +
+           S.mat[0][0] * S.mat[2][2] - S.mat[0][2] * S.mat[2][0] +
+           S.mat[0][0] * S.mat[1][1] - S.mat[0][1] * S.mat[1][0];
+   delta = S.mat[0][0] * S.mat[1][1] * S.mat[2][2] +
+           S.mat[0][1] * S.mat[1][2] * S.mat[2][0] +
+           S.mat[1][0] * S.mat[2][1] * S.mat[0][2] -
+           S.mat[0][0] * S.mat[2][1] * S.mat[1][2] -
+           S.mat[0][1] * S.mat[1][0] * S.mat[2][2] -
+           S.mat[0][2] * S.mat[1][1] * S.mat[2][0];
 
    aa = sigma * sigma - kappa;
 
    bb = sigma * sigma + VoV(Z, Z);
 
-   MxV(S, Z, SZ);
-   MxV(SS, Z, SSZ);
+   SZ  = MxV(S, Z);
+   SSZ = MxV(SS, Z);
 
    cc = delta + VoV(Z, SZ);
 
@@ -242,19 +235,17 @@ void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
 
    for (j = 0; j < 3; j++) {
       for (k = 0; k < 3; k++) {
-         XX[j][k] = beta * S[j][k] + SS[j][k];
+         XX.mat[j][k] = beta * S.mat[j][k] + SS.mat[j][k];
       }
-      XX[j][j] += alpha;
+      XX.mat[j][j] += alpha;
    }
 
-   MxV(XX, Z, X);
+   X = MxV(XX, Z);
 
-   mag = sqrt(X[0] * X[0] + X[1] * X[1] + X[2] * X[2] + gamma * gamma);
+   mag = sqrt(VoV(X, X) + gamma * gamma);
 
-   qmr[0] = X[0] / mag;
-   qmr[1] = X[1] / mag;
-   qmr[2] = X[2] / mag;
-   qmr[3] = gamma / mag;
+   quat qmr = QUAT_ZERO;
+   return qmr;
 }
 /**********************************************************************/
 /*                                                                    */
@@ -271,21 +262,20 @@ void Quest(long n, double *Weight, double **Ref, double **Meas, double qmr[4])
 /*  this routine finds the optimal estimate of qmr, the quaternion    */
 /*  expressing the rotation from the reference frame (where Ref's are */
 /*  given) to the body frame (where Meas's are given).                */
-void FilterQuest(long n, double *Weight, double **Ref, double **Meas,
-                 double dt __attribute__((unused)), double memory,
-                 double wbn[3], double qmr[4])
+quat FilterQuest(long n, double *Weight, vec3 *Ref, vec3 *Meas,
+                 double dt __attribute__((unused)), double memory, vec3 wbn)
 {
-   double *a, **W, **V, rho;
+   double *a, rho;
    long i, j, k;
 
-   double phi[3][3], aVW[3][3], phiB[3][3];
-   double th, U[3];
-   double B[3][3], S[3][3], Z[3];
-   double sigma, kappa, delta;
+   mat3x3 B, S, phi, aVW, phiB;
+   vec3 U, Z, *W, *V;
+   double th, sigma, kappa, delta;
    double aa, bb, cc, dd;
    double lam, f0, f1, f2, f, fp, lam2;
-   double alpha, beta, gamma;
-   double SZ[3], XX[3][3], X[3], mag, SS[3][3], SSZ[3];
+   double alpha, beta, gamma, mag;
+   vec3 SZ, X, SSZ;
+   mat3x3 XX, SS;
 
    a = (double *)calloc(n, sizeof(double));
    if (a == NULL) {
@@ -293,8 +283,8 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas,
               "calloc returned null pointer in FilterQuest.  Bailing out!\n");
       exit(EXIT_FAILURE);
    }
-   W = CreateMatrix(n, 3);
-   V = CreateMatrix(n, 3);
+   W = malloc(n * sizeof(vec3));
+   V = malloc(n * sizeof(vec3));
 
    /*.. Normalize weights and measurements */
    mag = 0.0;
@@ -311,62 +301,63 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas,
       a[i] *= (1.0 - memory) / mag;
 
    for (i = 0; i < n; i++) {
-      CopyUnitV(Ref[i], V[i]);
-      CopyUnitV(Meas[i], W[i]);
+      CopyUnitV(Ref[i], &V[i]);
+      CopyUnitV(Meas[i], &W[i]);
    }
 
    /* .. Build transition matrix, phi */
-   th = CopyUnitV(wbn, U);
-   SimpRot(U, th, phi);
+   th  = CopyUnitV(wbn, &U);
+   phi = SimpRot(U, th);
 
    /* .. Debug this.  Where does B come from? */
-   MxM(phi, B, phiB);
+   phiB = MxM(phi, B);
 
    /* .. Update B with measurements */
+   aVW = MAT3X3_ZERO;
    for (j = 0; j < 3; j++) {
       for (k = 0; k < 3; k++) {
-         aVW[j][k] = 0.0;
+         aVW.mat[j][k] = 0.0;
          for (i = 0; i < n; i++)
-            aVW[j][k] += a[i] * V[i][k] * W[i][j];
+            aVW.mat[j][k] += a[i] * V[i].v[k] * W[i].v[j];
       }
    }
 
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         B[j][k] = rho * phiB[j][k] + aVW[j][k];
-      }
-   }
+   for (j = 0; j < 3; j++)
+      for (k = 0; k < 3; k++)
+         B.mat[j][k] = rho * phiB.mat[j][k] + aVW.mat[j][k];
 
+   S = B;
    /* .. Find quaternion */
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         S[j][k] = B[j][k] + B[k][j];
-      }
-   }
+   for (j = 0; j < 3; j++)
+      for (k = 0; k < 3; k++)
+         S.mat[j][k] += B.mat[k][j];
 
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         SS[j][k] = S[j][0] * S[0][k] + S[j][1] * S[1][k] + S[j][2] * S[2][k];
-      }
-   }
+   for (j = 0; j < 3; j++)
+      for (k = 0; k < 3; k++)
+         SS.mat[j][k] = S.mat[j][0] * S.mat[0][k] + S.mat[j][1] * S.mat[1][k] +
+                        S.mat[j][2] * S.mat[2][k];
 
-   Z[0] = B[1][2] - B[2][1];
-   Z[1] = B[2][0] - B[0][2];
-   Z[2] = B[0][1] - B[1][0];
+   Z.x = B.mat[1][2] - B.mat[2][1];
+   Z.y = B.mat[2][0] - B.mat[0][2];
+   Z.z = B.mat[0][1] - B.mat[1][0];
 
-   sigma = B[0][0] + B[1][1] + B[2][2];
-   kappa = S[1][1] * S[2][2] - S[1][2] * S[2][1] + S[0][0] * S[2][2] -
-           S[0][2] * S[2][0] + S[0][0] * S[1][1] - S[0][1] * S[1][0];
-   delta = S[0][0] * S[1][1] * S[2][2] + S[0][1] * S[1][2] * S[2][0] +
-           S[1][0] * S[2][1] * S[0][2] - S[0][0] * S[2][1] * S[1][2] -
-           S[0][1] * S[1][0] * S[2][2] - S[0][2] * S[1][1] * S[2][0];
+   sigma = B.mat[0][0] + B.mat[1][1] + B.mat[2][2];
+   kappa = S.mat[1][1] * S.mat[2][2] - S.mat[1][2] * S.mat[2][1] +
+           S.mat[0][0] * S.mat[2][2] - S.mat[0][2] * S.mat[2][0] +
+           S.mat[0][0] * S.mat[1][1] - S.mat[0][1] * S.mat[1][0];
+   delta = S.mat[0][0] * S.mat[1][1] * S.mat[2][2] +
+           S.mat[0][1] * S.mat[1][2] * S.mat[2][0] +
+           S.mat[1][0] * S.mat[2][1] * S.mat[0][2] -
+           S.mat[0][0] * S.mat[2][1] * S.mat[1][2] -
+           S.mat[0][1] * S.mat[1][0] * S.mat[2][2] -
+           S.mat[0][2] * S.mat[1][1] * S.mat[2][0];
 
    aa = sigma * sigma - kappa;
 
    bb = sigma * sigma + VoV(Z, Z);
 
-   MxV(S, Z, SZ);
-   MxV(SS, Z, SSZ);
+   SZ  = MxV(S, Z);
+   SSZ = MxV(SS, Z);
 
    cc = delta + VoV(Z, SZ);
 
@@ -391,35 +382,35 @@ void FilterQuest(long n, double *Weight, double **Ref, double **Meas,
 
    for (j = 0; j < 3; j++) {
       for (k = 0; k < 3; k++) {
-         XX[j][k] = beta * S[j][k] + SS[j][k];
+         XX.mat[j][k] = beta * S.mat[j][k] + SS.mat[j][k];
       }
-      XX[j][j] += alpha;
+      XX.mat[j][j] += alpha;
    }
 
-   MxV(XX, Z, X);
+   X = MxV(XX, Z);
 
-   mag = sqrt(X[0] * X[0] + X[1] * X[1] + X[2] * X[2] + gamma * gamma);
+   mag = sqrt(VoV(X, X) + gamma * gamma);
 
-   qmr[0] = X[0] / mag;
-   qmr[1] = X[1] / mag;
-   qmr[2] = X[2] / mag;
-   qmr[3] = gamma / mag;
+   quat qmr = QUAT_ZERO;
+   for (i = 0; i < 3; i++)
+      qmr.qv.v[i] += X.v[i] / mag;
+   qmr.qs = gamma / mag;
 
    free(a);
-   DestroyMatrix(W);
-   DestroyMatrix(V);
+   free(W);
+   free(V);
+   return qmr;
 }
 /**********************************************************************/
 /* Find the Euler Angles to point a given boresight vector fixed in   */
 /* a joint's outer body (bvo) parallel to a target vector fixed in    */
 /* the joint's inner body (tvi).                                      */
-void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
-                         double tvi[3], double bvo[3], double GimAngCmd[3])
+vec3 PointGimbalToTarget(long Seq, mat3x3 CGiBi, mat3x3 CBoGo, vec3 tvi,
+                         vec3 bvo)
 {
-   double *a1, *a2;
-   double a3[3];
-   double Axis[3][3] = EYE3_MAT;
-   double TargVec[3], BoreVec[3];
+   vec3 *a1, *a2;
+   mat3x3 Axis = MAT3X3_EYE;
+   vec3 TargVec, BoreVec, a3;
    double TargAng1, BoreAng1, TargAng2, BoreAng2;
    double t1, t2, t3, b1, b2, b3;
    double Cycle;
@@ -431,166 +422,156 @@ void PointGimbalToTarget(long Seq, double CGiBi[3][3], double CBoGo[3][3],
       case 12:
       case 123:
       case 121:
-         a1    = Axis[0];
-         a2    = Axis[1];
+         a1    = &Axis.rows[0];
+         a2    = &Axis.rows[1];
          Cycle = 1.0;
          break;
       case 13:
       case 132:
       case 131:
-         a1    = Axis[0];
-         a2    = Axis[2];
+         a1    = &Axis.rows[0];
+         a2    = &Axis.rows[2];
          Cycle = -1.0;
          break;
       case 2:
       case 23:
       case 231:
       case 232:
-         a1    = Axis[1];
-         a2    = Axis[2];
+         a1    = &Axis.rows[1];
+         a2    = &Axis.rows[2];
          Cycle = 1.0;
          break;
       case 21:
       case 213:
       case 212:
-         a1    = Axis[1];
-         a2    = Axis[0];
+         a1    = &Axis.rows[1];
+         a2    = &Axis.rows[0];
          Cycle = -1.0;
          break;
       case 3:
       case 31:
       case 312:
       case 313:
-         a1    = Axis[2];
-         a2    = Axis[0];
+         a1    = &Axis.rows[2];
+         a2    = &Axis.rows[0];
          Cycle = 1.0;
          break;
       case 32:
       case 321:
       case 323:
-         a1    = Axis[2];
-         a2    = Axis[1];
+         a1    = &Axis.rows[2];
+         a2    = &Axis.rows[1];
          Cycle = -1.0;
          break;
       default:
-         a1    = Axis[0];
-         a2    = Axis[1];
+         a1    = &Axis.rows[0];
+         a2    = &Axis.rows[1];
          Cycle = 1.0;
    }
-   VxV(a1, a2, a3);
+   a3 = VxV(*a1, *a2);
 
    /* Transform target and boresight into unrotated Go (=Gi) frame */
-   MxV(CGiBi, tvi, TargVec);
-   MTxV(CBoGo, bvo, BoreVec);
+   TargVec = MxV(CGiBi, tvi);
+   BoreVec = MTxV(CBoGo, bvo);
 
    /* Find components of TargVec in A */
-   t1 = VoV(TargVec, a1);
-   t2 = VoV(TargVec, a2);
+   t1 = VoV(TargVec, *a1);
+   t2 = VoV(TargVec, *a2);
    t3 = VoV(TargVec, a3);
 
    /* Find components of BoreVec in A */
-   b1 = VoV(BoreVec, a1);
-   b2 = VoV(BoreVec, a2);
+   b1 = VoV(BoreVec, *a1);
+   b2 = VoV(BoreVec, *a2);
    b3 = VoV(BoreVec, a3);
 
    /* Find rotation about a1 to move BoreVec into TargVec */
    TargAng1 = atan2(-t2, t3);
    BoreAng1 = atan2(-b2, b3);
 
-   GimAngCmd[0] = TargAng1 - BoreAng1;
-   if (GimAngCmd[0] < -PI)
-      GimAngCmd[0] += TWOPI;
-   if (GimAngCmd[0] > PI)
-      GimAngCmd[0] -= TWOPI;
+   vec3 GimAngCmd;
+   GimAngCmd.x = WrapTo2Pi(TargAng1 - BoreAng1) - PI;
 
    /* Find rotation about a2 to move BoreVec into TargVec */
    TargAng2 = Cycle * asin(t1);
    BoreAng2 = Cycle * asin(b1);
 
-   GimAngCmd[1] = TargAng2 - BoreAng2;
-   if (GimAngCmd[1] < -PI)
-      GimAngCmd[1] += TWOPI;
-   if (GimAngCmd[1] > PI)
-      GimAngCmd[1] -= TWOPI;
+   GimAngCmd.y = WrapTo2Pi(TargAng2 - BoreAng2) - PI;
 
    /* Always */
-   GimAngCmd[2] = 0.0;
+   GimAngCmd.z = 0.0;
+   return GimAngCmd;
 #undef PI
 #undef TWOPI
 }
 /**********************************************************************/
 /*   Find control acceleration to seek goal at xg while staying at    */
 /*   least Ra away from obstacle at xa.                               */
-void CollisionAvoidanceLaw(double x[3], double v[3], double xg[3], double xa[3],
-                           double Ra, double vmax, double amax, double wc,
-                           double zc, double a[3])
+vec3 CollisionAvoidanceLaw(vec3 x, vec3 v, vec3 xg, vec3 xa, double Ra,
+                           double vmax, double amax, double wc, double zc)
 {
-
-   double Kx, Kv, d[3], xhat[3], xga[3], magx, dox, zhat[3], magz;
-   double yhat[3], cosa, sina, lam1[3], lam2[3], magvcmd, maga, vcmd[3];
+   vec3 a;
+   double Kx, Kv, cosa, sina, magx, dox, magvcmd, maga, magz;
+   vec3 yhat, d, xhat, xga, lam1, lam2, vcmd, zhat;
    long i;
 
    Kx = wc * wc;
    Kv = 2.0 * zc * wc;
 
    for (i = 0; i < 3; i++) {
-      d[i]    = xg[i] - x[i];
-      xhat[i] = x[i] - xa[i];
-      xga[i]  = xg[i] - xa[i];
+      d.v[i]    = xg.v[i] - x.v[i];
+      xhat.v[i] = x.v[i] - xa.v[i];
+      xga.v[i]  = xg.v[i] - xa.v[i];
    }
-   UNITV(d);
-   magx = UNITV(xhat);
+   UNITV(&d);
+   magx = UNITV(&xhat);
    dox  = VoV(d, xhat);
-   VxV(xga, xhat, zhat);
-   magz = UNITV(zhat);
+   zhat = VxV(xga, xhat);
+   magz = UNITV(&zhat);
    if (magz < 1.0E-3) {
-      yhat[0] = 0.0;
-      yhat[1] = 0.0;
-      yhat[2] = 1.0;
-      VxV(xhat, yhat, zhat);
+      yhat = VEC3_PYAXIS;
+      zhat = VxV(xhat, yhat);
    }
-   VxV(zhat, xhat, yhat);
+   yhat = VxV(zhat, xhat);
    cosa = Ra / magx;
    sina = sqrt(1.0 - cosa * cosa);
    for (i = 0; i < 3; i++) {
-      lam1[i] = -xhat[i] * sina - yhat[i] * cosa;
-      lam2[i] = -yhat[i];
+      lam1.v[i] = -xhat.v[i] * sina - yhat.v[i] * cosa;
+      lam2.v[i] = -yhat.v[i];
    }
 
    if (magx < 0.95 * Ra) {
       /* Get out! */
       for (i = 0; i < 3; i++)
-         a[i] = -Kv * (v[i] - vmax * xhat[i]);
+         a.v[i] = -Kv * (v.v[i] - vmax * xhat.v[i]);
    }
    else if (dox > 0.0 || ((Ra / magx * Ra / magx) + dox * dox < 1.0)) {
       /* Path is clear */
       for (i = 0; i < 3; i++)
-         vcmd[i] = -Kx / Kv * (x[i] - xg[i]);
+         vcmd.v[i] = -Kx / Kv * (x.v[i] - xg.v[i]);
       magvcmd = MAGV(vcmd);
-      if (magvcmd > vmax) {
-         for (i = 0; i < 3; i++)
-            vcmd[i] *= vmax / magvcmd;
-      }
+      if (magvcmd > vmax)
+         vcmd = SxV(vmax / magvcmd, vcmd);
+
       for (i = 0; i < 3; i++)
-         a[i] = -Kv * (v[i] - vcmd[i]);
+         a.v[i] = -Kv * (v.v[i] - vcmd.v[i]);
    }
    else if (fabs(magx / Ra - 1.0) < 0.01) {
       /* Turn on avoidance circle */
       for (i = 0; i < 3; i++)
-         a[i] = -vmax * vmax / Ra * xhat[i] - Kv * (v[i] - vmax * lam2[i]);
+         a.v[i] =
+             -vmax * vmax / Ra * xhat.v[i] - Kv * (v.v[i] - vmax * lam2.v[i]);
    }
    else {
       /* Go to tangent on avoidance circle */
       for (i = 0; i < 3; i++)
-         a[i] = -Kv * (v[i] - vmax * lam1[i]);
+         a.v[i] = -Kv * (v.v[i] - vmax * lam1.v[i]);
    }
 
    /* Limit control */
    maga = MAGV(a);
-   if (maga > amax) {
-      for (i = 0; i < 3; i++)
-         a[i] *= amax / maga;
-   }
+   if (maga > amax)
+      a = SxV(amax / maga, a);
+   return a;
 }
 /**********************************************************************/
 double BangBangSettle(double x, double v, double w0, double amax, double vmax)
@@ -702,40 +683,40 @@ double RateControl(double v, double amax, double w0)
    return (Limit(a, -amax, amax));
 }
 /**********************************************************************/
-void VectorRampCoastGlide(double Xvec[3], double Vvec[3], double w0,
-                          double amax, double vmax, double Avec[3])
+vec3 VectorRampCoastGlide(vec3 Xvec, vec3 Vvec, double w0, double amax,
+                          double vmax)
 {
-   double Axis[3], Xaxis[3], Yaxis[3];
+   vec3 Axis, Xaxis, Yaxis;
    double x, v, a, avx, avy;
    long i;
 
+   vec3 Avec;
+
    if (MAGV(Xvec) > 0.0) {
       /* RampCoastGlide on line parallel to Xvec */
-      x = CopyUnitV(Xvec, Axis);
+      x = CopyUnitV(Xvec, &Axis);
       v = VoV(Vvec, Axis);
       a = RampCoastGlide(x, v, w0, amax, vmax);
       /* RateControl on transverse axes */
-      PerpBasis(Axis, Xaxis, Yaxis);
-      avx = RateControl(VoV(Vvec, Xaxis), amax, w0);
-      avy = RateControl(VoV(Vvec, Yaxis), amax, w0);
+      Yaxis = PerpBasis(Axis, &Xaxis);
+      avx   = RateControl(VoV(Vvec, Xaxis), amax, w0);
+      avy   = RateControl(VoV(Vvec, Yaxis), amax, w0);
 
       for (i = 0; i < 3; i++)
-         Avec[i] = a * Axis[i] + avx * Xaxis[i] + avy * Yaxis[i];
+         Avec.v[i] = a * Axis.v[i] + avx * Xaxis.v[i] + avy * Yaxis.v[i];
    }
-   else {
+   else
       for (i = 0; i < 3; i++)
-         Avec[i] = RateControl(Vvec[i], amax, w0);
-   }
+         Avec.v[i] = RateControl(Vvec.v[i], amax, w0);
+   return Avec;
 }
 /**********************************************************************/
 /* Beta is angle between Sun vector and the orbit plane.              */
 /* It is positive toward the positive orbit normal.                   */
-double SolarBeta(double svn[3], double psn[3], double vsn[3])
+double SolarBeta(vec3 svn, vec3 psn, vec3 vsn)
 {
-   double h[3];
-
-   VxV(psn, vsn, h);
-   UNITV(h);
+   vec3 h = VxV(psn, vsn);
+   UNITV(&h);
    return (asin(VoV(svn, h)));
 }
 /**********************************************************************/
@@ -1447,8 +1428,8 @@ void KalmanFilterTimeUpdate(struct KalmanFilterType *KF)
 /**********************************************************************/
 /*  Ref Wie, "Singularity Escape/Avoidance Steering Logic for         */
 /*  Control Moment Gyro Systems", JGCD, Sep-Oct 2005                  */
-double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
-                    double h[4], double AngRateCmd[4])
+double CMGLaw4x1DOF(vec3 Tcmd, vec3 Axis[4], vec3 Gim[4], quat h,
+                    quat *AngRateCmd)
 {
    double eps0  = 0.1;
    double lam0  = 0.01;
@@ -1459,15 +1440,16 @@ double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
    double A[3][4], AAt[3][3], Asharp[4][3], Gain;
    static double wt = 0.0;
    double lam, eps;
-   double V[3][3], W[4][4], AW[3][4], Den[3][3], InvDen[3][3];
+   double W[4][4], AW[3][4];
+   mat3x3 V, Den, InvDen;
 
    long i, j;
 
    /* Output axis A = (gxa) */
    for (i = 0; i < 4; i++) {
-      A[0][i] = (Gim[i][1] * Axis[i][2] - Gim[i][2] * Axis[i][1]);
-      A[1][i] = (Gim[i][2] * Axis[i][0] - Gim[i][0] * Axis[i][2]);
-      A[2][i] = (Gim[i][0] * Axis[i][1] - Gim[i][1] * Axis[i][0]);
+      A[0][i] = (Gim[i].v[1] * Axis[i].v[2] - Gim[i].v[2] * Axis[i].v[1]);
+      A[1][i] = (Gim[i].v[2] * Axis[i].v[0] - Gim[i].v[0] * Axis[i].v[2]);
+      A[2][i] = (Gim[i].v[0] * Axis[i].v[1] - Gim[i].v[1] * Axis[i].v[0]);
    }
 
    for (i = 0; i < 3; i++) {
@@ -1491,10 +1473,10 @@ double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
    /* V */
    for (i = 0; i < 3; i++) {
       for (j = 0; j < i; j++) {
-         V[i][j] = lam * eps;
-         V[j][i] = V[i][j];
+         V.mat[i][j] = lam * eps;
+         V.mat[j][i] = V.mat[i][j];
       }
-      V[i][i] = lam;
+      V.mat[i][i] = lam;
    }
    /* W */
    for (i = 0; i < 4; i++) {
@@ -1513,26 +1495,28 @@ double CMGLaw4x1DOF(double Tcmd[3], double Axis[4][3], double Gim[4][3],
       }
    }
    /* Den = AWAt + V*/
+   Den = V;
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         Den[i][j] = AW[i][0] * A[j][0] + AW[i][1] * A[j][1] +
-                     AW[i][2] * A[j][2] + AW[i][3] * A[j][3] + V[i][j];
+         Den.mat[i][j] = AW[i][0] * A[j][0] + AW[i][1] * A[j][1] +
+                         AW[i][2] * A[j][2] + AW[i][3] * A[j][3];
       }
    }
-   MINV3(Den, InvDen);
+   InvDen = MINV3(Den);
 
    /* Asharp = (AW)^T*inv(Den) */
    for (i = 0; i < 4; i++) {
       for (j = 0; j < 3; j++) {
-         Asharp[i][j] = AW[0][i] * InvDen[0][j] + AW[1][i] * InvDen[1][j] +
-                        AW[2][i] * InvDen[2][j];
+         Asharp[i][j] = AW[0][i] * InvDen.mat[0][j] +
+                        AW[1][i] * InvDen.mat[1][j] +
+                        AW[2][i] * InvDen.mat[2][j];
       }
    }
 
    for (i = 0; i < 4; i++)
-      AngRateCmd[i] = -(Asharp[i][0] * Tcmd[0] + Asharp[i][1] * Tcmd[1] +
-                        Asharp[i][2] * Tcmd[2]) /
-                      h[i];
+      AngRateCmd->q[i] = -(Asharp[i][0] * Tcmd.v[0] + Asharp[i][1] * Tcmd.v[1] +
+                           Asharp[i][2] * Tcmd.v[2]) /
+                         h.q[i];
 
    return (Gain);
 }

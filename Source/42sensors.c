@@ -34,20 +34,18 @@ void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
    struct AccelType *A;
    struct BodyType *B;
    struct NodeType *N;
-   double p[3];
-   double r, Coef, rhatn[3], rhat[3], rhatop;
-   double AccGGB[3], AccGG, Axis[3];
-   double NodeQN[4], AvgQN[4];
-   double dvn[3], dvb[3], AvgAcc;
-   long i;
+   double r, Coef, rhatop, AccGG, AvgAcc;
+   vec3 AccGGB, Axis, rhatn, rhat, p;
+   vec3 dvn, dvb;
+   quat NodeQN, AvgQN;
    long Ia;
    double PrevBias;
 
    for (Ia = 0; Ia < S->Nacc; Ia++) {
       A = &S->Accel[Ia];
 
-      for (i = 0; i < 3; i++)
-         A->AccumAccN[i] += S->AccN[i] * DTSIM;
+      for (int i = 0; i < 3; i++)
+         A->AccumAccN.v[i] += S->AccN.v[i] * DTSIM;
       A->SampleCounter++;
       if (A->SampleCounter >= A->MaxCounter) {
          A->SampleCounter = 0;
@@ -55,37 +53,32 @@ void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
          N                = &B->Node[A->Node];
 
          /* Grav-grad force (see Hughes, p.246, eq (56)) */
-         for (i = 0; i < 3; i++)
-            AccGGB[i] = 0.0;
+         AccGGB = VEC3_ZERO;
          if (GGActive) {
             r    = MAGV(S->PosN);
             Coef = -3.0 * orb->mu / (r * r * r);
-            CopyUnitV(S->PosN, rhatn);
-            MxV(B->CN, rhatn, rhat);
-            MxV(B->CN, B->pn, p);
-            for (i = 0; i < 3; i++)
-               p[i] += N->PosB[i];
+            CopyUnitV(S->PosN, &rhatn);
+            rhat   = MxV(B->CN, rhatn);
+            p      = MxV(B->CN, B->pn);
+            p      = VpVElem(p, N->PosB);
             rhatop = VoV(rhat, p);
-            for (i = 0; i < 3; i++) {
-               AccGGB[i] = Coef * (p[i] - 3.0 * rhat[i] * rhatop);
-            }
+            for (int i = 0; i < 3; i++)
+               AccGGB.v[i] = Coef * (p.v[i] - 3.0 * rhat.v[i] * rhatop);
          }
 
-         QTxV(N->qb, A->Axis, Axis);
+         Axis  = QTxV(N->qb, A->Axis);
          AccGG = VoV(AccGGB, Axis);
+         for (int i = 0; i < 3; i++)
+            dvn.v[i] = A->AccumAccN.v[i] + N->VelN.v[i] - A->PrevVelN.v[i];
 
-         for (i = 0; i < 3; i++) {
-            dvn[i]          = A->AccumAccN[i] + N->VelN[i] - A->PrevVelN[i];
-            A->PrevVelN[i]  = N->VelN[i];
-            A->AccumAccN[i] = 0.0;
-         }
-         QxQ(N->qb, B->qn, NodeQN);
-         for (i = 0; i < 4; i++)
-            AvgQN[i] = A->PrevQN[i] + NodeQN[i];
-         UNITQ(AvgQN);
-         for (i = 0; i < 4; i++)
-            A->PrevQN[i] = NodeQN[i];
-         QxV(AvgQN, dvn, dvb);
+         A->PrevVelN  = N->VelN;
+         A->AccumAccN = VEC3_ZERO;
+         NodeQN       = QxQ(N->qb, B->qn);
+         for (int i = 0; i < 4; i++)
+            AvgQN.q[i] = A->PrevQN.q[i] + NodeQN.q[i];
+         AvgQN      = UNITQ(AvgQN);
+         A->PrevQN  = NodeQN;
+         dvb        = QxV(AvgQN, dvn);
          A->DV      = VoV(dvb, Axis);
          AvgAcc     = A->DV / A->SampleTime;
          A->TrueAcc = AvgAcc + AccGG;
@@ -119,7 +112,7 @@ void GyroModel(struct SCType *S)
    struct BodyType *B;
    struct NodeType *N;
    long Ig;
-   double Axis[3];
+   vec3 Axis;
    double PrevBias, RateError, PrevAngle;
    long Counts, PrevCounts;
 
@@ -131,8 +124,8 @@ void GyroModel(struct SCType *S)
          G->SampleCounter = 0;
          B                = &S->B[0];
          N                = &B->Node[G->Node];
-         QTxV(N->qb, G->Axis, Axis);
-         G->TrueRate = VoV(N->AngVelB, Axis);
+         Axis             = QTxV(N->qb, G->Axis);
+         G->TrueRate      = VoV(N->AngVelB, Axis);
 
          PrevBias = G->CorrCoef * G->Bias;
          G->Bias  = PrevBias + G->BiasStabCoef * GaussianRandom(RNG);
@@ -194,7 +187,7 @@ void CssModel(struct SCType *S)
    long Counts, Icss;
    double Signal;
    double SoA;
-   double svb[3];
+   vec3 svb;
 
    for (Icss = 0; Icss < S->Ncss; Icss++) {
       CSS = &S->CSS[Icss];
@@ -208,7 +201,7 @@ void CssModel(struct SCType *S)
             CSS->Illum = 0.0;
          }
          else {
-            MxV(S->B[CSS->Body].CN, S->svn, svb);
+            svb = MxV(S->B[CSS->Body].CN, S->svn);
             SoA = VoV(svb, CSS->Axis);
             if (SoA > CSS->CosFov) {
                /* Sun within FOV */
@@ -249,7 +242,8 @@ void FssModel(struct SCType *S)
 {
    struct FssType *FSS;
    static struct RandomProcessType *FssNoise;
-   double svs[3], SunAng[2], Signal;
+   vec3 svs;
+   double SunAng[2], Signal;
    long Counts;
    static long First = 1;
    long Ifss, i;
@@ -270,11 +264,11 @@ void FssModel(struct SCType *S)
             FSS->Valid = FALSE;
          }
          else {
-            MxV(FSS->CB, S->svb, svs);
+            svs                = MxV(FSS->CB, S->svb);
             long fov_condition = TRUE;
-            const double svsh  = svs[FSS->H_Axis];
-            const double svsv  = svs[FSS->V_Axis];
-            const double svsb  = svs[FSS->BoreAxis];
+            const double svsh  = svs.v[FSS->H_Axis];
+            const double svsv  = svs.v[FSS->V_Axis];
+            const double svsb  = svs.v[FSS->BoreAxis];
 
             switch (FSS->type) {
                case CONVENTIONAL_FSS: {
@@ -293,7 +287,7 @@ void FssModel(struct SCType *S)
                                   "Exiting...\n");
                   exit(EXIT_FAILURE);
             }
-            if (fov_condition && svs[FSS->BoreAxis] > 0.0) {
+            if (fov_condition && svs.v[FSS->BoreAxis] > 0.0) {
                FSS->Valid = TRUE;
             }
             else {
@@ -330,10 +324,9 @@ void StarTrackerModel(struct WorldType *const worlds,
    struct NodeType *N;
    static struct RandomProcessType *StNoise;
    struct WorldType *W;
-   double qsn[4], Qnoise[4];
-   double BoS, OrbRad, LimbAng, NadirVecB[3], BoN;
-   double mvn[3], MoonDist, mvb[3], BoM;
-   double qsb[4];
+   quat qsn, Qnoise, qsb;
+   double BoS, OrbRad, LimbAng, BoN, MoonDist, BoM;
+   vec3 mvn, mvb, NadirVecB;
    static long First = 1;
    long Ist, i;
 
@@ -352,43 +345,41 @@ void StarTrackerModel(struct WorldType *const worlds,
 
          ST->Valid = TRUE;
          /* Sun Occultation? */
-         BoS = VoV(ST->CB[ST->BoreAxis], S->svb);
+         BoS = VoV(ST->CB.rows[ST->BoreAxis], S->svb);
          if (BoS > ST->CosSunExclAng)
             ST->Valid = FALSE;
-         /* Earth Occultation? (Generalized to whatever world we're orbiting) */
-         W       = &worlds[orb->World];
-         OrbRad  = MAGV(S->PosN);
-         LimbAng = asin(W->rad / OrbRad);
-         MxV(S->B[0].CN, S->CLN[2], NadirVecB);
-         BoN = VoV(ST->CB[ST->BoreAxis], NadirVecB);
+         /* Earth Occultation? (Generalized to whatever world we're orbiting)
+          */
+         W         = &worlds[orb->World];
+         OrbRad    = MAGV(S->PosN);
+         LimbAng   = asin(W->rad / OrbRad);
+         NadirVecB = MxV(S->B[0].CN, S->CLN.rows[2]);
+         BoN       = VoV(ST->CB.rows[ST->BoreAxis], NadirVecB);
          if (BoN > cos(LimbAng + ST->EarthExclAng))
             ST->Valid = FALSE;
-         /* Moon Occultation? (Only worked out if orbiting Earth.  Customize as
-          * needed)*/
+         /* Moon Occultation? (Only worked out if orbiting Earth.  Customize
+          * as needed)*/
          if ((ST->Valid == TRUE) && (orb->World == EARTH)) {
-            for (i = 0; i < 3; i++)
-               mvn[i] = worlds[LUNA].eph.PosN[i] - S->PosN[i];
-            MoonDist = UNITV(mvn);
+            mvn      = VmVElem(worlds[LUNA].eph.PosN, S->PosN);
+            MoonDist = UNITV(&mvn);
             LimbAng  = asin(worlds[LUNA].rad / MoonDist);
-            MxV(S->B[0].CN, mvn, mvb);
-            BoM = VoV(ST->CB[ST->BoreAxis], mvb);
+            mvb      = MxV(S->B[0].CN, mvn);
+            BoM      = VoV(ST->CB.rows[ST->BoreAxis], mvb);
             if (BoM > cos(LimbAng + ST->MoonExclAng))
                ST->Valid = FALSE;
          }
          if (ST->Valid) {
-            QxQ(ST->qb, N->qb, qsb);
-            QxQ(qsb, S->B[0].qn, qsn);
+            qsb = QxQ(ST->qb, N->qb);
+            qsn = QxQ(qsb, S->B[0].qn);
             /* Add Noise in ST frame */
             for (i = 0; i < 3; i++)
-               Qnoise[i] = 0.5 * ST->NEA[i] * GaussianRandom(StNoise);
-            Qnoise[3] = 1.0;
-            UNITQ(Qnoise);
-            QxQ(Qnoise, qsn, ST->qn);
+               Qnoise.qv.v[i] = 0.5 * ST->NEA[i] * GaussianRandom(StNoise);
+            Qnoise.qs = 1.0;
+            Qnoise    = UNITQ(Qnoise);
+            ST->qn    = QxQ(Qnoise, qsn);
          }
 
-         for (i = 0; i < 4; i++) {
-            S->AC.ST[Ist].qn[i] = ST->qn[i];
-         }
+         S->AC.ST[Ist].qn = ST->qn;
       }
       else
          ST->Valid = FALSE;
@@ -402,7 +393,8 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
 {
    struct GpsType *GPS;
    static struct RandomProcessType *GpsNoise;
-   double PosW[3], MagPosW;
+   vec3 PosW;
+   double MagPosW;
    long Ig, i;
    static long First = 1;
 
@@ -429,23 +421,23 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
             GPS->Sec = GpsSecond + GPS->TimeNoise * GaussianRandom(GpsNoise);
 
             for (i = 0; i < 3; i++) {
-               GPS->PosN[i] =
-                   S->PosN[i] + GPS->PosNoise * GaussianRandom(GpsNoise);
-               GPS->VelN[i] =
-                   S->VelN[i] + GPS->VelNoise * GaussianRandom(GpsNoise);
+               GPS->PosN.v[i] =
+                   S->PosN.v[i] + GPS->PosNoise * GaussianRandom(GpsNoise);
+               GPS->VelN.v[i] =
+                   S->VelN.v[i] + GPS->VelNoise * GaussianRandom(GpsNoise);
             }
-            MxV(worlds[EARTH].CWN, S->PosN, PosW);
-            MxV(worlds[EARTH].CWN, GPS->PosN, GPS->PosW);
-            MxV(worlds[EARTH].CWN, GPS->VelN, GPS->VelW);
+            PosW      = MxV(worlds[EARTH].CWN, S->PosN);
+            GPS->PosW = MxV(worlds[EARTH].CWN, GPS->PosN);
+            GPS->VelW = MxV(worlds[EARTH].CWN, GPS->VelN);
             /* Subtract Earth rotation velocity */
             const double W_w = GetWorldW(JD_TDB_MJD, &worlds[EARTH]);
 
-            GPS->VelW[0] -= -W_w * PosW[1];
-            GPS->VelW[1] -= W_w * PosW[0];
+            GPS->VelW.v[0] -= -W_w * PosW.v[1];
+            GPS->VelW.v[1] -= W_w * PosW.v[0];
 
             MagPosW  = MAGV(GPS->PosW);
-            GPS->Lng = atan2(GPS->PosW[1], GPS->PosW[0]);
-            GPS->Lat = asin(GPS->PosW[2] / MagPosW);
+            GPS->Lng = atan2(GPS->PosW.y, GPS->PosW.x);
+            GPS->Lat = asin(GPS->PosW.z / MagPosW);
             GPS->Alt = MagPosW - worlds[EARTH].rad;
             ECEFToWGS84(GPS->PosW, &GPS->WgsLat, &GPS->WgsLng, &GPS->WgsAlt);
 
@@ -453,12 +445,11 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
             S->AC.GPS[Ig].Week     = GPS->Week;
             S->AC.GPS[Ig].Sec      = GPS->Sec;
 
-            for (i = 0; i < 3; i++) {
-               S->AC.GPS[Ig].PosN[i] = GPS->PosN[i];
-               S->AC.GPS[Ig].VelN[i] = GPS->VelN[i];
-               S->AC.GPS[Ig].PosW[i] = GPS->PosW[i];
-               S->AC.GPS[Ig].VelW[i] = GPS->VelW[i];
-            }
+            S->AC.GPS[Ig].PosN = GPS->PosN;
+            S->AC.GPS[Ig].VelN = GPS->VelN;
+            S->AC.GPS[Ig].PosW = GPS->PosW;
+            S->AC.GPS[Ig].VelW = GPS->VelW;
+
             S->AC.GPS[Ig].Lng    = GPS->Lng;
             S->AC.GPS[Ig].Lat    = GPS->Lat;
             S->AC.GPS[Ig].Alt    = GPS->Alt;
@@ -485,32 +476,33 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
    struct OpticsType *O;
    struct BodyType *B;
    struct NodeType *N;
-   double ar, StarVecFr[3];
-   double qbb0[4], qb0r[4], qbr[4];
-   double StarVecB[3], StarPosB[3];
-   double FldPntB[3], FldDirB[3], OutPntB[3], OutDirB[3];
-   double x, y, qfb[4], CFB[3][3];
+   double ar;
+   quat qbb0, qb0r, qbr, qfb;
+   vec3 StarVecB, StarPosB, StarVecFr;
+   vec3 FldPntB, FldDirB, OutPntB, OutDirB;
+   mat3x3 CFB;
+   double x, y;
    long i;
    long OutSC, OutBody;
    long InAp, NumOptPassed;
 
    /* Create Guide Star in Fr, transform to R */
-   ar                     = sqrt(1.0 - F->Hr * F->Hr - F->Vr * F->Vr);
-   StarVecFr[F->H_Axis]   = F->Hr;
-   StarVecFr[F->V_Axis]   = F->Vr;
-   StarVecFr[F->BoreAxis] = ar;
+   ar                       = sqrt(1.0 - F->Hr * F->Hr - F->Vr * F->Vr);
+   StarVecFr.v[F->H_Axis]   = F->Hr;
+   StarVecFr.v[F->V_Axis]   = F->Vr;
+   StarVecFr.v[F->BoreAxis] = ar;
 
-   QTxV(F->qr, StarVecFr, F->StarVecR);
+   F->StarVecR = QTxV(F->qr, StarVecFr);
 
    /* Create FldPntB, FldDirB from StarVecR */
-   O = &F->Opt[0];
-   B = &S->B[O->Body];
-   QxQT(B->qn, S->B[0].qn, qbb0);
-   QxQT(S->B[0].qn, S->AC.qrn, qb0r);
-   QxQ(qbb0, qb0r, qbr);
-   QxV(qbr, F->StarVecR, StarVecB);
+   O        = &F->Opt[0];
+   B        = &S->B[O->Body];
+   qbb0     = QxQT(B->qn, S->B[0].qn);
+   qb0r     = QxQT(S->B[0].qn, S->AC.qrn);
+   qbr      = QxQ(qbb0, qb0r);
+   StarVecB = QxV(qbr, F->StarVecR);
 
-   InAp = OpticalFieldPoint(StarVecB, O, FldPntB, FldDirB);
+   InAp = OpticalFieldPoint(StarVecB, O, &FldPntB, &FldDirB);
    if (!InAp) {
       fprintf(stderr, "Hmm.  FGS field point is not within aperture.\n");
       exit(EXIT_FAILURE);
@@ -518,7 +510,7 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
 
    NumOptPassed =
        OpticalTrain(F->Opt[0].SC, F->Opt[0].Body, FldPntB, FldDirB, F->Nopt,
-                    F->Opt, &OutSC, &OutBody, OutPntB, OutDirB);
+                    F->Opt, &OutSC, &OutBody, &OutPntB, &OutDirB);
 
    if (NumOptPassed == F->Nopt)
       F->Valid = TRUE;
@@ -526,18 +518,17 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
       F->Valid = FALSE;
 
    /* Find H,V from OutPntB */
-   O = &F->Opt[F->Nopt - 1];
-   B = &S->B[O->Body];
-   N = &B->Node[O->Node];
-   QxQ(F->qb, N->qb, qfb);
-   Q2C(qfb, CFB);
-   x = 0.0;
-   y = 0.0;
-   for (i = 0; i < 3; i++)
-      StarPosB[i] = OutPntB[i] - N->PosB[i];
+   O        = &F->Opt[F->Nopt - 1];
+   B        = &S->B[O->Body];
+   N        = &B->Node[O->Node];
+   qfb      = QxQ(F->qb, N->qb);
+   CFB      = Q2C(qfb);
+   x        = 0.0;
+   y        = 0.0;
+   StarPosB = VmVElem(OutPntB, N->PosB);
    for (i = 0; i < 3; i++) {
-      x += CFB[F->H_Axis][i] * StarPosB[i];
-      y += CFB[F->V_Axis][i] * StarPosB[i];
+      x += CFB.mat[F->H_Axis][i] * StarPosB.v[i];
+      y += CFB.mat[F->V_Axis][i] * StarPosB.v[i];
    }
    F->H = x / O->FocLen;
    F->V = y / O->FocLen;
@@ -550,9 +541,9 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
       F->SampleCounter = 0;
       /* Centroiding */
       /* Output Angles */
-      F->Ang[F->BoreAxis] = 0.0;
-      F->Ang[F->H_Axis]   = (F->V - F->Vr);
-      F->Ang[F->V_Axis]   = -(F->H - F->Hr);
+      F->Ang.v[F->BoreAxis] = 0.0;
+      F->Ang.v[F->H_Axis]   = (F->V - F->Vr);
+      F->Ang.v[F->V_Axis]   = -(F->H - F->Hr);
    }
 }
 /**********************************************************************/
@@ -561,9 +552,8 @@ void SimpleFgsModel(struct FgsType *F, struct SCType *S)
    struct BodyType *B;
    struct NodeType *N;
    double ar;
-   double StarVecFr[3];
-   double qbb0[4], qb0r[4], qbr[4], qfb[4];
-   double StarVecB[3], StarVecF[3];
+   quat qbb0, qb0r, qbr, qfb;
+   vec3 StarVecFr, StarVecB, StarVecF;
 
    F->SampleCounter++;
    if (F->SampleCounter >= F->MaxCounter) {
@@ -572,31 +562,31 @@ void SimpleFgsModel(struct FgsType *F, struct SCType *S)
       N                = &B->Node[F->Node];
 
       /* Create Guide Star in Fr, transform to R */
-      F->Hr                  = 0.0;
-      F->Vr                  = 0.0;
-      ar                     = sqrt(1.0 - F->Hr * F->Hr - F->Vr * F->Vr);
-      StarVecFr[F->H_Axis]   = F->Hr;
-      StarVecFr[F->V_Axis]   = F->Vr;
-      StarVecFr[F->BoreAxis] = ar;
+      F->Hr                    = 0.0;
+      F->Vr                    = 0.0;
+      ar                       = sqrt(1.0 - F->Hr * F->Hr - F->Vr * F->Vr);
+      StarVecFr.v[F->H_Axis]   = F->Hr;
+      StarVecFr.v[F->V_Axis]   = F->Vr;
+      StarVecFr.v[F->BoreAxis] = ar;
 
       /* CFrR = CFB */
-      QTxV(F->qb, StarVecFr, F->StarVecR);
+      F->StarVecR = QTxV(F->qb, StarVecFr);
 
       /* Transform Guide Star from Fr to F */
-      QxQT(B->qn, S->B[0].qn, qbb0);
-      QxQT(S->B[0].qn, S->AC.qrn, qb0r);
-      QxQ(qbb0, qb0r, qbr);
-      QxV(qbr, F->StarVecR, StarVecB);
-      QxQ(F->qb, N->qb, qfb);
-      QxV(qfb, StarVecB, StarVecF);
-      F->H = StarVecF[F->H_Axis] + F->NEA * GaussianRandom(RNG);
-      F->V = StarVecF[F->V_Axis] + F->NEA * GaussianRandom(RNG);
+      qbb0     = QxQT(B->qn, S->B[0].qn);
+      qb0r     = QxQT(S->B[0].qn, S->AC.qrn);
+      qbr      = QxQ(qbb0, qb0r);
+      StarVecB = QxV(qbr, F->StarVecR);
+      qfb      = QxQ(F->qb, N->qb);
+      StarVecF = QxV(qfb, StarVecB);
+      F->H     = StarVecF.v[F->H_Axis] + F->NEA * GaussianRandom(RNG);
+      F->V     = StarVecF.v[F->V_Axis] + F->NEA * GaussianRandom(RNG);
 
-      F->Ang[F->BoreAxis] = 0.0;
-      F->Ang[F->H_Axis]   = (F->V - F->Vr);
-      F->Ang[F->V_Axis]   = -(F->H - F->Hr);
+      F->Ang.v[F->BoreAxis] = 0.0;
+      F->Ang.v[F->H_Axis]   = (F->V - F->Vr);
+      F->Ang.v[F->V_Axis]   = -(F->H - F->Hr);
 
-      if (StarVecF[F->BoreAxis] > 0.0 && fabs(F->H) < F->FovHalfAng[0] &&
+      if (StarVecF.v[F->BoreAxis] > 0.0 && fabs(F->H) < F->FovHalfAng[0] &&
           fabs(F->V) < F->FovHalfAng[1]) {
          F->Valid = TRUE;
       }
@@ -629,8 +619,8 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
              struct SCType *S)
 {
 
-   double evn[3], evb[3];
-   long i, j, k, DOF;
+   vec3 evn, evb;
+   long i, j, DOF;
    struct AcType *AC;
    struct JointType *G;
 
@@ -638,10 +628,8 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
 
    /* Ephemeris */
    AC->EphValid = 1;
-   for (i = 0; i < 3; i++) {
-      AC->svn[i] = S->svn[i];
-      AC->bvn[i] = S->bvn[i];
-   }
+   AC->svn      = S->svn;
+   AC->bvn      = S->bvn;
 
    /* Accelerometer */
    if (S->Nacc > 0) {
@@ -649,24 +637,18 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
    }
 
    /* Gyro */
-   if (S->Ngyro == 0) {
-      for (i = 0; i < 3; i++)
-         AC->wbn[i] = S->B[0].wn[i];
-   }
-   else {
+   if (S->Ngyro == 0)
+      AC->wbn = S->B[0].wn;
+   else
       GyroModel(S);
-   }
 
    /* Magnetometer */
    if (orb->World == EARTH) {
       AC->MagValid = TRUE;
-      if (S->Nmag == 0) {
-         for (i = 0; i < 3; i++)
-            AC->bvb[i] = S->bvb[i];
-      }
-      else {
+      if (S->Nmag == 0)
+         AC->bvb = S->bvb;
+      else
          MagnetometerModel(S);
-      }
    }
    else {
       AC->MagValid = FALSE;
@@ -674,52 +656,43 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
 
    /* Sun Sensors */
    if (S->Ncss == 0 && S->Nfss == 0) {
-      if (S->Eclipse) {
+      if (S->Eclipse)
          AC->SunValid = FALSE;
-      }
       else {
          AC->SunValid = TRUE;
-         MxV(S->B[0].CN, S->svn, AC->svb);
+         AC->svb      = MxV(S->B[0].CN, S->svn);
       }
    }
-   if (S->Ncss > 0) {
+   if (S->Ncss > 0)
       CssModel(S);
-   }
-   if (S->Nfss > 0) {
+   if (S->Nfss > 0)
       FssModel(S);
-   }
 
    /* Star Tracker */
    if (S->Nst == 0) {
-      for (i = 0; i < 4; i++)
-         AC->qbn[i] = S->B[0].qn[i];
-      Q2C(AC->qbn, AC->CBN);
+      AC->qbn = S->B[0].qn;
+      AC->CBN = Q2C(AC->qbn);
    }
-   else {
+   else
       StarTrackerModel(worlds, orb, S);
-   }
 
    /* GPS Receiver (or ephem model) */
    if (S->Ngps == 0) {
       AC->Time = DynTime;
-      for (i = 0; i < 3; i++) {
-         AC->PosN[i] = S->PosN[i];
-         AC->VelN[i] = S->VelN[i];
-      }
+      AC->PosN = S->PosN;
+      AC->VelN = S->VelN;
    }
-   else {
+   else
       GpsModel(worlds, orb, S);
-   }
 
    /* Earth Sensor */
-   for (i = 0; i < 3; i++)
-      evn[i] = -S->PosN[i];
-   UNITV(evn);
-   MxV(S->B[0].CN, evn, evb);
-   if (evb[2] > 0.866) {
+   evn = VNegElem(S->PosN);
+   UNITV(&evn);
+   evb = MxV(S->B[0].CN, evn);
+   if (evb.z > 0.866) {
       AC->ES.Valid = TRUE;
-      AC->ES.Roll  = evb[1];
-      AC->ES.Pitch = -evb[0];
+      AC->ES.Roll  = evb.y;
+      AC->ES.Pitch = -evb.x;
    }
    else {
       AC->ES.Valid = FALSE;
@@ -732,18 +705,15 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
       G   = &S->G[i];
       DOF = AC->G[i].RotDOF;
       for (j = 0; j < DOF; j++) {
-         AC->G[i].Ang[j]     = G->Ang[j];
-         AC->G[i].AngRate[j] = G->AngRate[j];
+         AC->G[i].Ang.v[j]     = G->Ang.v[j];
+         AC->G[i].AngRate.v[j] = G->AngRate.v[j];
       }
-      for (j = 0; j < 3; j++) {
-         for (k = 0; k < 3; k++) {
-            AC->G[i].COI[j][k] = G->COI[j][k];
-         }
-      }
+      AC->G[i].COI = G->COI;
+
       DOF = AC->G[i].TrnDOF;
       for (j = 0; j < DOF; j++) {
-         AC->G[i].Pos[j]     = G->Pos[j];
-         AC->G[i].PosRate[j] = G->PosRate[j];
+         AC->G[i].Pos.v[j]     = G->Pos.v[j];
+         AC->G[i].PosRate.v[j] = G->PosRate.v[j];
       }
    }
 

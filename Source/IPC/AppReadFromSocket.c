@@ -67,9 +67,9 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
       if (sscanf(line, "SC[%ld].AC.G[%ld].Ang = %le %le %le", &Isc, &i,
                  &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
          if (Isc == AC->ID) {
-            AC->G[i].Ang[0] = DbleVal[0];
-            AC->G[i].Ang[1] = DbleVal[1];
-            AC->G[i].Ang[2] = DbleVal[2];
+            AC->G[i].Ang.v[0] = DbleVal[0];
+            AC->G[i].Ang.v[1] = DbleVal[1];
+            AC->G[i].Ang.v[2] = DbleVal[2];
          }
       }
 
@@ -126,10 +126,10 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
       if (sscanf(line, "SC[%ld].AC.ST[%ld].qn = %le %le %le %le", &Isc, &i,
                  &DbleVal[0], &DbleVal[1], &DbleVal[2], &DbleVal[3]) == 6) {
          if (Isc == AC->ID) {
-            AC->ST[i].qn[0] = DbleVal[0];
-            AC->ST[i].qn[1] = DbleVal[1];
-            AC->ST[i].qn[2] = DbleVal[2];
-            AC->ST[i].qn[3] = DbleVal[3];
+            AC->ST[i].qn.q[0] = DbleVal[0];
+            AC->ST[i].qn.q[1] = DbleVal[1];
+            AC->ST[i].qn.q[2] = DbleVal[2];
+            AC->ST[i].qn.q[3] = DbleVal[3];
          }
       }
 
@@ -164,36 +164,36 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
       if (sscanf(line, "SC[%ld].AC.GPS[%ld].PosN = %le %le %le", &Isc, &i,
                  &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
          if (Isc == AC->ID) {
-            AC->GPS[i].PosN[0] = DbleVal[0];
-            AC->GPS[i].PosN[1] = DbleVal[1];
-            AC->GPS[i].PosN[2] = DbleVal[2];
+            AC->GPS[i].PosN.v[0] = DbleVal[0];
+            AC->GPS[i].PosN.v[1] = DbleVal[1];
+            AC->GPS[i].PosN.v[2] = DbleVal[2];
          }
       }
 
       if (sscanf(line, "SC[%ld].AC.GPS[%ld].VelN = %le %le %le", &Isc, &i,
                  &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
          if (Isc == AC->ID) {
-            AC->GPS[i].VelN[0] = DbleVal[0];
-            AC->GPS[i].VelN[1] = DbleVal[1];
-            AC->GPS[i].VelN[2] = DbleVal[2];
+            AC->GPS[i].VelN.v[0] = DbleVal[0];
+            AC->GPS[i].VelN.v[1] = DbleVal[1];
+            AC->GPS[i].VelN.v[2] = DbleVal[2];
          }
       }
 
       if (sscanf(line, "SC[%ld].AC.GPS[%ld].PosW = %le %le %le", &Isc, &i,
                  &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
          if (Isc == AC->ID) {
-            AC->GPS[i].PosW[0] = DbleVal[0];
-            AC->GPS[i].PosW[1] = DbleVal[1];
-            AC->GPS[i].PosW[2] = DbleVal[2];
+            AC->GPS[i].PosW.v[0] = DbleVal[0];
+            AC->GPS[i].PosW.v[1] = DbleVal[1];
+            AC->GPS[i].PosW.v[2] = DbleVal[2];
          }
       }
 
       if (sscanf(line, "SC[%ld].AC.GPS[%ld].VelW = %le %le %le", &Isc, &i,
                  &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
          if (Isc == AC->ID) {
-            AC->GPS[i].VelW[0] = DbleVal[0];
-            AC->GPS[i].VelW[1] = DbleVal[1];
-            AC->GPS[i].VelW[2] = DbleVal[2];
+            AC->GPS[i].VelW.v[0] = DbleVal[0];
+            AC->GPS[i].VelW.v[1] = DbleVal[1];
+            AC->GPS[i].VelW.v[2] = DbleVal[2];
          }
       }
 
@@ -372,9 +372,9 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.cm = %le %le %le", &Isc, &DbleVal[0],
                     &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->cm[0] = DbleVal[0];
-               AC->cm[1] = DbleVal[1];
-               AC->cm[2] = DbleVal[2];
+               AC->cm.v[0] = DbleVal[0];
+               AC->cm.v[1] = DbleVal[1];
+               AC->cm.v[2] = DbleVal[2];
             }
          }
 
@@ -384,15 +384,15 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
                     &DbleVal[4], &DbleVal[5], &DbleVal[6], &DbleVal[7],
                     &DbleVal[8]) == 10) {
             if (Isc == AC->ID) {
-               AC->MOI[0][0] = DbleVal[0];
-               AC->MOI[0][1] = DbleVal[1];
-               AC->MOI[0][2] = DbleVal[2];
-               AC->MOI[1][0] = DbleVal[3];
-               AC->MOI[1][1] = DbleVal[4];
-               AC->MOI[1][2] = DbleVal[5];
-               AC->MOI[2][0] = DbleVal[6];
-               AC->MOI[2][1] = DbleVal[7];
-               AC->MOI[2][2] = DbleVal[8];
+               AC->MOI.mat[0][0] = DbleVal[0];
+               AC->MOI.mat[0][1] = DbleVal[1];
+               AC->MOI.mat[0][2] = DbleVal[2];
+               AC->MOI.mat[1][0] = DbleVal[3];
+               AC->MOI.mat[1][1] = DbleVal[4];
+               AC->MOI.mat[1][2] = DbleVal[5];
+               AC->MOI.mat[2][0] = DbleVal[6];
+               AC->MOI.mat[2][1] = DbleVal[7];
+               AC->MOI.mat[2][2] = DbleVal[8];
             }
          }
 
@@ -406,9 +406,9 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.B[%ld].cm = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->B[i].cm[0] = DbleVal[0];
-               AC->B[i].cm[1] = DbleVal[1];
-               AC->B[i].cm[2] = DbleVal[2];
+               AC->B[i].cm.v[0] = DbleVal[0];
+               AC->B[i].cm.v[1] = DbleVal[1];
+               AC->B[i].cm.v[2] = DbleVal[2];
             }
          }
 
@@ -419,15 +419,15 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
                  &DbleVal[4], &DbleVal[5], &DbleVal[6], &DbleVal[7],
                  &DbleVal[8]) == 11) {
             if (Isc == AC->ID) {
-               AC->B[i].MOI[0][0] = DbleVal[0];
-               AC->B[i].MOI[0][1] = DbleVal[1];
-               AC->B[i].MOI[0][2] = DbleVal[2];
-               AC->B[i].MOI[1][0] = DbleVal[3];
-               AC->B[i].MOI[1][1] = DbleVal[4];
-               AC->B[i].MOI[1][2] = DbleVal[5];
-               AC->B[i].MOI[2][0] = DbleVal[6];
-               AC->B[i].MOI[2][1] = DbleVal[7];
-               AC->B[i].MOI[2][2] = DbleVal[8];
+               AC->B[i].MOI.mat[0][0] = DbleVal[0];
+               AC->B[i].MOI.mat[0][1] = DbleVal[1];
+               AC->B[i].MOI.mat[0][2] = DbleVal[2];
+               AC->B[i].MOI.mat[1][0] = DbleVal[3];
+               AC->B[i].MOI.mat[1][1] = DbleVal[4];
+               AC->B[i].MOI.mat[1][2] = DbleVal[5];
+               AC->B[i].MOI.mat[2][0] = DbleVal[6];
+               AC->B[i].MOI.mat[2][1] = DbleVal[7];
+               AC->B[i].MOI.mat[2][2] = DbleVal[8];
             }
          }
 
@@ -473,15 +473,15 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
                     &DbleVal[3], &DbleVal[4], &DbleVal[5], &DbleVal[6],
                     &DbleVal[7], &DbleVal[8]) == 11) {
             if (Isc == AC->ID) {
-               AC->G[i].CGiBi[0][0] = DbleVal[0];
-               AC->G[i].CGiBi[0][1] = DbleVal[1];
-               AC->G[i].CGiBi[0][2] = DbleVal[2];
-               AC->G[i].CGiBi[1][0] = DbleVal[3];
-               AC->G[i].CGiBi[1][1] = DbleVal[4];
-               AC->G[i].CGiBi[1][2] = DbleVal[5];
-               AC->G[i].CGiBi[2][0] = DbleVal[6];
-               AC->G[i].CGiBi[2][1] = DbleVal[7];
-               AC->G[i].CGiBi[2][2] = DbleVal[8];
+               AC->G[i].CGiBi.mat[0][0] = DbleVal[0];
+               AC->G[i].CGiBi.mat[0][1] = DbleVal[1];
+               AC->G[i].CGiBi.mat[0][2] = DbleVal[2];
+               AC->G[i].CGiBi.mat[1][0] = DbleVal[3];
+               AC->G[i].CGiBi.mat[1][1] = DbleVal[4];
+               AC->G[i].CGiBi.mat[1][2] = DbleVal[5];
+               AC->G[i].CGiBi.mat[2][0] = DbleVal[6];
+               AC->G[i].CGiBi.mat[2][1] = DbleVal[7];
+               AC->G[i].CGiBi.mat[2][2] = DbleVal[8];
             }
          }
 
@@ -492,105 +492,105 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
                     &DbleVal[3], &DbleVal[4], &DbleVal[5], &DbleVal[6],
                     &DbleVal[7], &DbleVal[8]) == 11) {
             if (Isc == AC->ID) {
-               AC->G[i].CBoGo[0][0] = DbleVal[0];
-               AC->G[i].CBoGo[0][1] = DbleVal[1];
-               AC->G[i].CBoGo[0][2] = DbleVal[2];
-               AC->G[i].CBoGo[1][0] = DbleVal[3];
-               AC->G[i].CBoGo[1][1] = DbleVal[4];
-               AC->G[i].CBoGo[1][2] = DbleVal[5];
-               AC->G[i].CBoGo[2][0] = DbleVal[6];
-               AC->G[i].CBoGo[2][1] = DbleVal[7];
-               AC->G[i].CBoGo[2][2] = DbleVal[8];
+               AC->G[i].CBoGo.mat[0][0] = DbleVal[0];
+               AC->G[i].CBoGo.mat[0][1] = DbleVal[1];
+               AC->G[i].CBoGo.mat[0][2] = DbleVal[2];
+               AC->G[i].CBoGo.mat[1][0] = DbleVal[3];
+               AC->G[i].CBoGo.mat[1][1] = DbleVal[4];
+               AC->G[i].CBoGo.mat[1][2] = DbleVal[5];
+               AC->G[i].CBoGo.mat[2][0] = DbleVal[6];
+               AC->G[i].CBoGo.mat[2][1] = DbleVal[7];
+               AC->G[i].CBoGo.mat[2][2] = DbleVal[8];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].AngGain = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].AngGain[0] = DbleVal[0];
-               AC->G[i].AngGain[1] = DbleVal[1];
-               AC->G[i].AngGain[2] = DbleVal[2];
+               AC->G[i].AngGain.v[0] = DbleVal[0];
+               AC->G[i].AngGain.v[1] = DbleVal[1];
+               AC->G[i].AngGain.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].AngRateGain = %le %le %le", &Isc,
                     &i, &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].AngRateGain[0] = DbleVal[0];
-               AC->G[i].AngRateGain[1] = DbleVal[1];
-               AC->G[i].AngRateGain[2] = DbleVal[2];
+               AC->G[i].AngRateGain.v[0] = DbleVal[0];
+               AC->G[i].AngRateGain.v[1] = DbleVal[1];
+               AC->G[i].AngRateGain.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].PosGain = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].PosGain[0] = DbleVal[0];
-               AC->G[i].PosGain[1] = DbleVal[1];
-               AC->G[i].PosGain[2] = DbleVal[2];
+               AC->G[i].PosGain.v[0] = DbleVal[0];
+               AC->G[i].PosGain.v[1] = DbleVal[1];
+               AC->G[i].PosGain.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].PosRateGain = %le %le %le", &Isc,
                     &i, &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].PosRateGain[0] = DbleVal[0];
-               AC->G[i].PosRateGain[1] = DbleVal[1];
-               AC->G[i].PosRateGain[2] = DbleVal[2];
+               AC->G[i].PosRateGain.v[0] = DbleVal[0];
+               AC->G[i].PosRateGain.v[1] = DbleVal[1];
+               AC->G[i].PosRateGain.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].MaxAngRate = %le %le %le", &Isc,
                     &i, &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].MaxAngRate[0] = DbleVal[0];
-               AC->G[i].MaxAngRate[1] = DbleVal[1];
-               AC->G[i].MaxAngRate[2] = DbleVal[2];
+               AC->G[i].MaxAngRate.v[0] = DbleVal[0];
+               AC->G[i].MaxAngRate.v[1] = DbleVal[1];
+               AC->G[i].MaxAngRate.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].MaxPosRate = %le %le %le", &Isc,
                     &i, &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].MaxPosRate[0] = DbleVal[0];
-               AC->G[i].MaxPosRate[1] = DbleVal[1];
-               AC->G[i].MaxPosRate[2] = DbleVal[2];
+               AC->G[i].MaxPosRate.v[0] = DbleVal[0];
+               AC->G[i].MaxPosRate.v[1] = DbleVal[1];
+               AC->G[i].MaxPosRate.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].MaxTrq = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].MaxTrq[0] = DbleVal[0];
-               AC->G[i].MaxTrq[1] = DbleVal[1];
-               AC->G[i].MaxTrq[2] = DbleVal[2];
+               AC->G[i].MaxTrq.v[0] = DbleVal[0];
+               AC->G[i].MaxTrq.v[1] = DbleVal[1];
+               AC->G[i].MaxTrq.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.G[%ld].MaxFrc = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->G[i].MaxFrc[0] = DbleVal[0];
-               AC->G[i].MaxFrc[1] = DbleVal[1];
-               AC->G[i].MaxFrc[2] = DbleVal[2];
+               AC->G[i].MaxFrc.v[0] = DbleVal[0];
+               AC->G[i].MaxFrc.v[1] = DbleVal[1];
+               AC->G[i].MaxFrc.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.Gyro[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Gyro[i].Axis[0] = DbleVal[0];
-               AC->Gyro[i].Axis[1] = DbleVal[1];
-               AC->Gyro[i].Axis[2] = DbleVal[2];
+               AC->Gyro[i].Axis.v[0] = DbleVal[0];
+               AC->Gyro[i].Axis.v[1] = DbleVal[1];
+               AC->Gyro[i].Axis.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.MAG[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->MAG[i].Axis[0] = DbleVal[0];
-               AC->MAG[i].Axis[1] = DbleVal[1];
-               AC->MAG[i].Axis[2] = DbleVal[2];
+               AC->MAG[i].Axis.v[0] = DbleVal[0];
+               AC->MAG[i].Axis.v[1] = DbleVal[1];
+               AC->MAG[i].Axis.v[2] = DbleVal[2];
             }
          }
 
@@ -604,9 +604,9 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.CSS[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->CSS[i].Axis[0] = DbleVal[0];
-               AC->CSS[i].Axis[1] = DbleVal[1];
-               AC->CSS[i].Axis[2] = DbleVal[2];
+               AC->CSS[i].Axis.v[0] = DbleVal[0];
+               AC->CSS[i].Axis.v[1] = DbleVal[1];
+               AC->CSS[i].Axis.v[2] = DbleVal[2];
             }
          }
 
@@ -620,10 +620,10 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.FSS[%ld].qb = %le %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2], &DbleVal[3]) == 6) {
             if (Isc == AC->ID) {
-               AC->FSS[i].qb[0] = DbleVal[0];
-               AC->FSS[i].qb[1] = DbleVal[1];
-               AC->FSS[i].qb[2] = DbleVal[2];
-               AC->FSS[i].qb[3] = DbleVal[3];
+               AC->FSS[i].qb.q[0] = DbleVal[0];
+               AC->FSS[i].qb.q[1] = DbleVal[1];
+               AC->FSS[i].qb.q[2] = DbleVal[2];
+               AC->FSS[i].qb.q[3] = DbleVal[3];
             }
          }
 
@@ -634,25 +634,25 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
                  &DbleVal[4], &DbleVal[5], &DbleVal[6], &DbleVal[7],
                  &DbleVal[8]) == 11) {
             if (Isc == AC->ID) {
-               AC->FSS[i].CB[0][0] = DbleVal[0];
-               AC->FSS[i].CB[0][1] = DbleVal[1];
-               AC->FSS[i].CB[0][2] = DbleVal[2];
-               AC->FSS[i].CB[1][0] = DbleVal[3];
-               AC->FSS[i].CB[1][1] = DbleVal[4];
-               AC->FSS[i].CB[1][2] = DbleVal[5];
-               AC->FSS[i].CB[2][0] = DbleVal[6];
-               AC->FSS[i].CB[2][1] = DbleVal[7];
-               AC->FSS[i].CB[2][2] = DbleVal[8];
+               AC->FSS[i].CB.mat[0][0] = DbleVal[0];
+               AC->FSS[i].CB.mat[0][1] = DbleVal[1];
+               AC->FSS[i].CB.mat[0][2] = DbleVal[2];
+               AC->FSS[i].CB.mat[1][0] = DbleVal[3];
+               AC->FSS[i].CB.mat[1][1] = DbleVal[4];
+               AC->FSS[i].CB.mat[1][2] = DbleVal[5];
+               AC->FSS[i].CB.mat[2][0] = DbleVal[6];
+               AC->FSS[i].CB.mat[2][1] = DbleVal[7];
+               AC->FSS[i].CB.mat[2][2] = DbleVal[8];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.ST[%ld].qb = %le %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2], &DbleVal[3]) == 6) {
             if (Isc == AC->ID) {
-               AC->ST[i].qb[0] = DbleVal[0];
-               AC->ST[i].qb[1] = DbleVal[1];
-               AC->ST[i].qb[2] = DbleVal[2];
-               AC->ST[i].qb[3] = DbleVal[3];
+               AC->ST[i].qb.q[0] = DbleVal[0];
+               AC->ST[i].qb.q[1] = DbleVal[1];
+               AC->ST[i].qb.q[2] = DbleVal[2];
+               AC->ST[i].qb.q[3] = DbleVal[3];
             }
          }
 
@@ -663,33 +663,33 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
                  &DbleVal[4], &DbleVal[5], &DbleVal[6], &DbleVal[7],
                  &DbleVal[8]) == 11) {
             if (Isc == AC->ID) {
-               AC->ST[i].CB[0][0] = DbleVal[0];
-               AC->ST[i].CB[0][1] = DbleVal[1];
-               AC->ST[i].CB[0][2] = DbleVal[2];
-               AC->ST[i].CB[1][0] = DbleVal[3];
-               AC->ST[i].CB[1][1] = DbleVal[4];
-               AC->ST[i].CB[1][2] = DbleVal[5];
-               AC->ST[i].CB[2][0] = DbleVal[6];
-               AC->ST[i].CB[2][1] = DbleVal[7];
-               AC->ST[i].CB[2][2] = DbleVal[8];
+               AC->ST[i].CB.mat[0][0] = DbleVal[0];
+               AC->ST[i].CB.mat[0][1] = DbleVal[1];
+               AC->ST[i].CB.mat[0][2] = DbleVal[2];
+               AC->ST[i].CB.mat[1][0] = DbleVal[3];
+               AC->ST[i].CB.mat[1][1] = DbleVal[4];
+               AC->ST[i].CB.mat[1][2] = DbleVal[5];
+               AC->ST[i].CB.mat[2][0] = DbleVal[6];
+               AC->ST[i].CB.mat[2][1] = DbleVal[7];
+               AC->ST[i].CB.mat[2][2] = DbleVal[8];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.Accel[%ld].PosB = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Accel[i].PosB[0] = DbleVal[0];
-               AC->Accel[i].PosB[1] = DbleVal[1];
-               AC->Accel[i].PosB[2] = DbleVal[2];
+               AC->Accel[i].PosB.v[0] = DbleVal[0];
+               AC->Accel[i].PosB.v[1] = DbleVal[1];
+               AC->Accel[i].PosB.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.Accel[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Accel[i].Axis[0] = DbleVal[0];
-               AC->Accel[i].Axis[1] = DbleVal[1];
-               AC->Accel[i].Axis[2] = DbleVal[2];
+               AC->Accel[i].Axis.v[0] = DbleVal[0];
+               AC->Accel[i].Axis.v[1] = DbleVal[1];
+               AC->Accel[i].Axis.v[2] = DbleVal[2];
             }
          }
 
@@ -703,18 +703,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.Whl[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Whl[i].Axis[0] = DbleVal[0];
-               AC->Whl[i].Axis[1] = DbleVal[1];
-               AC->Whl[i].Axis[2] = DbleVal[2];
+               AC->Whl[i].Axis.v[0] = DbleVal[0];
+               AC->Whl[i].Axis.v[1] = DbleVal[1];
+               AC->Whl[i].Axis.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.Whl[%ld].DistVec = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Whl[i].DistVec[0] = DbleVal[0];
-               AC->Whl[i].DistVec[1] = DbleVal[1];
-               AC->Whl[i].DistVec[2] = DbleVal[2];
+               AC->Whl[i].DistVec.v[0] = DbleVal[0];
+               AC->Whl[i].DistVec.v[1] = DbleVal[1];
+               AC->Whl[i].DistVec.v[2] = DbleVal[2];
             }
          }
 
@@ -742,18 +742,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.MTB[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->MTB[i].Axis[0] = DbleVal[0];
-               AC->MTB[i].Axis[1] = DbleVal[1];
-               AC->MTB[i].Axis[2] = DbleVal[2];
+               AC->MTB[i].Axis.v[0] = DbleVal[0];
+               AC->MTB[i].Axis.v[1] = DbleVal[1];
+               AC->MTB[i].Axis.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.MTB[%ld].DistVec = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->MTB[i].DistVec[0] = DbleVal[0];
-               AC->MTB[i].DistVec[1] = DbleVal[1];
-               AC->MTB[i].DistVec[2] = DbleVal[2];
+               AC->MTB[i].DistVec.v[0] = DbleVal[0];
+               AC->MTB[i].DistVec.v[1] = DbleVal[1];
+               AC->MTB[i].DistVec.v[2] = DbleVal[2];
             }
          }
 
@@ -774,27 +774,27 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.Thr[%ld].PosB = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Thr[i].PosB[0] = DbleVal[0];
-               AC->Thr[i].PosB[1] = DbleVal[1];
-               AC->Thr[i].PosB[2] = DbleVal[2];
+               AC->Thr[i].PosB.v[0] = DbleVal[0];
+               AC->Thr[i].PosB.v[1] = DbleVal[1];
+               AC->Thr[i].PosB.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.Thr[%ld].Axis = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Thr[i].Axis[0] = DbleVal[0];
-               AC->Thr[i].Axis[1] = DbleVal[1];
-               AC->Thr[i].Axis[2] = DbleVal[2];
+               AC->Thr[i].Axis.v[0] = DbleVal[0];
+               AC->Thr[i].Axis.v[1] = DbleVal[1];
+               AC->Thr[i].Axis.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.Thr[%ld].rxA = %le %le %le", &Isc, &i,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 5) {
             if (Isc == AC->ID) {
-               AC->Thr[i].rxA[0] = DbleVal[0];
-               AC->Thr[i].rxA[1] = DbleVal[1];
-               AC->Thr[i].rxA[2] = DbleVal[2];
+               AC->Thr[i].rxA.v[0] = DbleVal[0];
+               AC->Thr[i].rxA.v[1] = DbleVal[1];
+               AC->Thr[i].rxA.v[2] = DbleVal[2];
             }
          }
 
@@ -843,18 +843,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.AdHocCtrl.Kr = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->AdHocCtrl.Kr[0] = DbleVal[0];
-               AC->AdHocCtrl.Kr[1] = DbleVal[1];
-               AC->AdHocCtrl.Kr[2] = DbleVal[2];
+               AC->AdHocCtrl.Kr.v[0] = DbleVal[0];
+               AC->AdHocCtrl.Kr.v[1] = DbleVal[1];
+               AC->AdHocCtrl.Kr.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.AdHocCtrl.Kp = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->AdHocCtrl.Kp[0] = DbleVal[0];
-               AC->AdHocCtrl.Kp[1] = DbleVal[1];
-               AC->AdHocCtrl.Kp[2] = DbleVal[2];
+               AC->AdHocCtrl.Kp.v[0] = DbleVal[0];
+               AC->AdHocCtrl.Kp.v[1] = DbleVal[1];
+               AC->AdHocCtrl.Kp.v[2] = DbleVal[2];
             }
          }
 
@@ -896,18 +896,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.ThreeAxisCtrl.Kr = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->ThreeAxisCtrl.Kr[0] = DbleVal[0];
-               AC->ThreeAxisCtrl.Kr[1] = DbleVal[1];
-               AC->ThreeAxisCtrl.Kr[2] = DbleVal[2];
+               AC->ThreeAxisCtrl.Kr.v[0] = DbleVal[0];
+               AC->ThreeAxisCtrl.Kr.v[1] = DbleVal[1];
+               AC->ThreeAxisCtrl.Kr.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.ThreeAxisCtrl.Kp = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->ThreeAxisCtrl.Kp[0] = DbleVal[0];
-               AC->ThreeAxisCtrl.Kp[1] = DbleVal[1];
-               AC->ThreeAxisCtrl.Kp[2] = DbleVal[2];
+               AC->ThreeAxisCtrl.Kp.v[0] = DbleVal[0];
+               AC->ThreeAxisCtrl.Kp.v[1] = DbleVal[1];
+               AC->ThreeAxisCtrl.Kp.v[2] = DbleVal[2];
             }
          }
 
@@ -921,18 +921,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.IssCtrl.Kr = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->IssCtrl.Kr[0] = DbleVal[0];
-               AC->IssCtrl.Kr[1] = DbleVal[1];
-               AC->IssCtrl.Kr[2] = DbleVal[2];
+               AC->IssCtrl.Kr.v[0] = DbleVal[0];
+               AC->IssCtrl.Kr.v[1] = DbleVal[1];
+               AC->IssCtrl.Kr.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.IssCtrl.Kp = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->IssCtrl.Kp[0] = DbleVal[0];
-               AC->IssCtrl.Kp[1] = DbleVal[1];
-               AC->IssCtrl.Kp[2] = DbleVal[2];
+               AC->IssCtrl.Kp.v[0] = DbleVal[0];
+               AC->IssCtrl.Kp.v[1] = DbleVal[1];
+               AC->IssCtrl.Kp.v[2] = DbleVal[2];
             }
          }
 
@@ -946,36 +946,36 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.CmgCtrl.Kr = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->CmgCtrl.Kr[0] = DbleVal[0];
-               AC->CmgCtrl.Kr[1] = DbleVal[1];
-               AC->CmgCtrl.Kr[2] = DbleVal[2];
+               AC->CmgCtrl.Kr.v[0] = DbleVal[0];
+               AC->CmgCtrl.Kr.v[1] = DbleVal[1];
+               AC->CmgCtrl.Kr.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.CmgCtrl.Kp = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->CmgCtrl.Kp[0] = DbleVal[0];
-               AC->CmgCtrl.Kp[1] = DbleVal[1];
-               AC->CmgCtrl.Kp[2] = DbleVal[2];
+               AC->CmgCtrl.Kp.v[0] = DbleVal[0];
+               AC->CmgCtrl.Kp.v[1] = DbleVal[1];
+               AC->CmgCtrl.Kp.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.ThrCtrl.Kw = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->ThrCtrl.Kw[0] = DbleVal[0];
-               AC->ThrCtrl.Kw[1] = DbleVal[1];
-               AC->ThrCtrl.Kw[2] = DbleVal[2];
+               AC->ThrCtrl.Kw.v[0] = DbleVal[0];
+               AC->ThrCtrl.Kw.v[1] = DbleVal[1];
+               AC->ThrCtrl.Kw.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.ThrCtrl.Kth = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->ThrCtrl.Kth[0] = DbleVal[0];
-               AC->ThrCtrl.Kth[1] = DbleVal[1];
-               AC->ThrCtrl.Kth[2] = DbleVal[2];
+               AC->ThrCtrl.Kth.v[0] = DbleVal[0];
+               AC->ThrCtrl.Kth.v[1] = DbleVal[1];
+               AC->ThrCtrl.Kth.v[2] = DbleVal[2];
             }
          }
 
@@ -996,18 +996,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.CfsCtrl.Kr = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->CfsCtrl.Kr[0] = DbleVal[0];
-               AC->CfsCtrl.Kr[1] = DbleVal[1];
-               AC->CfsCtrl.Kr[2] = DbleVal[2];
+               AC->CfsCtrl.Kr.v[0] = DbleVal[0];
+               AC->CfsCtrl.Kr.v[1] = DbleVal[1];
+               AC->CfsCtrl.Kr.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.CfsCtrl.Kp = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->CfsCtrl.Kp[0] = DbleVal[0];
-               AC->CfsCtrl.Kp[1] = DbleVal[1];
-               AC->CfsCtrl.Kp[2] = DbleVal[2];
+               AC->CfsCtrl.Kp.v[0] = DbleVal[0];
+               AC->CfsCtrl.Kp.v[1] = DbleVal[1];
+               AC->CfsCtrl.Kp.v[2] = DbleVal[2];
             }
          }
 
@@ -1021,18 +1021,18 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
          if (sscanf(line, "SC[%ld].AC.ThrSteerCtrl.Kr = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->ThrSteerCtrl.Kr[0] = DbleVal[0];
-               AC->ThrSteerCtrl.Kr[1] = DbleVal[1];
-               AC->ThrSteerCtrl.Kr[2] = DbleVal[2];
+               AC->ThrSteerCtrl.Kr.v[0] = DbleVal[0];
+               AC->ThrSteerCtrl.Kr.v[1] = DbleVal[1];
+               AC->ThrSteerCtrl.Kr.v[2] = DbleVal[2];
             }
          }
 
          if (sscanf(line, "SC[%ld].AC.ThrSteerCtrl.Kp = %le %le %le", &Isc,
                     &DbleVal[0], &DbleVal[1], &DbleVal[2]) == 4) {
             if (Isc == AC->ID) {
-               AC->ThrSteerCtrl.Kp[0] = DbleVal[0];
-               AC->ThrSteerCtrl.Kp[1] = DbleVal[1];
-               AC->ThrSteerCtrl.Kp[2] = DbleVal[2];
+               AC->ThrSteerCtrl.Kp.v[0] = DbleVal[0];
+               AC->ThrSteerCtrl.Kp.v[1] = DbleVal[1];
+               AC->ThrSteerCtrl.Kp.v[2] = DbleVal[2];
             }
          }
       }
@@ -1053,6 +1053,12 @@ void ReadFromSocket(SOCKET Socket, struct AcType *AC)
    if (RequestTimeRefresh) {
       /* Update AC->Time */
       DOY2MD(Year, doy, &Month, &Day);
-      AC->Time = Date2Time(Year, Month, Day, Hour, Minute, Second);
+      AC->Time = Date2Time((DateType){.Year   = Year,
+                                      .Month  = Month,
+                                      .Day    = Day,
+                                      .Hour   = Hour,
+                                      .Minute = Minute,
+                                      .Second = Second,
+                                      .doy    = doy});
    }
 }

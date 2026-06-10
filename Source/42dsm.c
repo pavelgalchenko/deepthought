@@ -71,10 +71,8 @@ void ThrProcessingMinPower(struct AcType *AC)
    long i, j;
    double cmdVec[6], distDotCmd;
 
-   for (i = 0; i < 3; i++) {
-      cmdVec[i]     = AC->Fcmd[i];
-      cmdVec[i + 3] = AC->Tcmd[i];
-   }
+   VEC3_TO_DBL(cmdVec, AC->Fcmd);
+   VEC3_TO_DBL(&cmdVec[3], AC->Tcmd);
 
    // Assigning PulseWidth to each Thruster
    for (i = 0; i < AC->Nthr; i++) {
@@ -111,26 +109,23 @@ void InitThrDistVecs(struct AcType *AC, int DOF, enum CtrlState controllerState)
    for (i = 0; i < AC->Nthr; i++) {
       for (j = 0; j < 3; j++) {
          if (DOF == 3) {
-            if (controllerState == TRN_STATE) {
-               A[j][i] = AC->Thr[i].Axis[j];
-            }
+            if (controllerState == TRN_STATE)
+               A[j][i] = AC->Thr[i].Axis.v[j];
             else if (controllerState == ATT_STATE ||
                      controllerState == DMP_STATE) {
-               A[j][i] = AC->Thr[i].rxA[j];
+               A[j][i] = AC->Thr[i].rxA.v[j];
             }
          }
          else if (DOF == 6) {
-            A[j][i]     = AC->Thr[i].Axis[j];
-            A[j + 3][i] = AC->Thr[i].rxA[j];
+            A[j][i]     = AC->Thr[i].Axis.v[j];
+            A[j + 3][i] = AC->Thr[i].rxA.v[j];
          }
       }
    }
-   for (i = 0; i < AC->Nthr; i++) {
-      for (j = 0; j < DOF; j++) {
-         A[j][i] *= AC->Thr[i].Fmax; // Without this, errors would arise if
-                                     // thrusters have different max thrusts
-      }
-   }
+   // Without this, errors would arise if thrusters have different max thrusts
+   for (i = 0; i < AC->Nthr; i++)
+      for (j = 0; j < DOF; j++)
+         A[j][i] *= AC->Thr[i].Fmax;
 
    PINVG(A, APlus, DOF, AC->Nthr);
 
@@ -139,20 +134,16 @@ void InitThrDistVecs(struct AcType *AC, int DOF, enum CtrlState controllerState)
          // Unused entries of DistVec will be zero, so won't cause issues with
          // eventual dot product
          for (j = 0; j < DOF; j++) {
-            if (controllerState == TRN_STATE) {
+            if (controllerState == TRN_STATE)
                AC->Thr[i].DistVec[j] = APlus[i][j];
-            }
             else if (controllerState == ATT_STATE ||
-                     controllerState == DMP_STATE) {
+                     controllerState == DMP_STATE)
                AC->Thr[i].DistVec[j + 3] = APlus[i][j];
-            }
          }
       }
-      else if (DOF == 6) {
-         for (j = 0; j < DOF; j++) {
+      else if (DOF == 6)
+         for (j = 0; j < DOF; j++)
             AC->Thr[i].DistVec[j] = APlus[i][j];
-         }
-      }
    }
    DestroyMatrix(A);
    DestroyMatrix(APlus);
@@ -178,9 +169,8 @@ void InitDSM(struct SCType *S)
    DSM->DT                  = S->AC.DT;
    DSM->mass                = S->AC.mass;
    DSM->refOrb              = &Orb[S->RefOrb];
-   for (int i = 0; i < 3; i++)
-      for (int j = 0; j < 3; j++)
-         DSM->MOI[i][j] = S->AC.MOI[i][j];
+
+   DSM->MOI = S->AC.MOI;
 
    double avgArea = 0.0;
    long nPoly     = 0;
@@ -258,17 +248,15 @@ void InitDSM(struct SCType *S)
    Nav->refOriType = 0;
    Nav->refOriPtr  = NULL;
    Nav->refBodyPtr = NULL;
-   for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++)
-         Nav->oldRefCRN[i][j] = 0.0;
-      Nav->oldRefCRN[i][i]   = 1.0;
-      Nav->oldRefPos[i]      = 0.0;
-      Nav->oldRefVel[i]      = 0.0;
-      Nav->oldRefOmega[i]    = 0.0;
-      Nav->oldRefOmegaDot[i] = 0.0;
-      Nav->forceB[i]         = 0.0;
-      Nav->torqueB[i]        = 0.0;
-   }
+
+   Nav->oldRefCRN      = MAT3X3_EYE;
+   Nav->oldRefPos      = VEC3_ZERO;
+   Nav->oldRefVel      = VEC3_ZERO;
+   Nav->oldRefOmega    = VEC3_ZERO;
+   Nav->oldRefOmegaDot = VEC3_ZERO;
+   Nav->forceB         = VEC3_ZERO;
+   Nav->torqueB        = VEC3_ZERO;
+
    Nav->reportConfigured = FALSE;
 }
 //------------------------------------------------------------------------------
@@ -289,24 +277,24 @@ long GetGains(struct DSMType *const DSM, struct fy_node *gainsNode,
    switch (controllerState) {
       case TRN_STATE:
          controller = &Cmd->trn_controller;
-         kp         = Cmd->trn_kp;
-         kr         = Cmd->trn_kr;
-         ki         = Cmd->trn_ki;
-         limit_vec  = Cmd->trn_kilimit;
+         kp         = Cmd->trn_kp.v;
+         kr         = Cmd->trn_kr.v;
+         ki         = Cmd->trn_ki.v;
+         limit_vec  = Cmd->trn_kilimit.v;
          break;
       case ATT_STATE:
          controller = &Cmd->att_controller;
-         kp         = Cmd->att_kp;
-         kr         = Cmd->att_kr;
-         ki         = Cmd->att_ki;
-         limit_vec  = Cmd->att_kilimit;
+         kp         = Cmd->att_kp.v;
+         kr         = Cmd->att_kr.v;
+         ki         = Cmd->att_ki.v;
+         limit_vec  = Cmd->att_kilimit.v;
          break;
       case FULL_STATE:
          // PLACEHOLDER
          break;
       case DMP_STATE:
          controller = &Cmd->dmp_controller;
-         kp         = Cmd->dmp_kp;
+         kp         = Cmd->dmp_kp.v;
          break;
       default:
          break;
@@ -349,9 +337,9 @@ long GetGains(struct DSMType *const DSM, struct fy_node *gainsNode,
                break;
             case ATT_STATE:
                for (i = 0; i < 3; i++) {
-                  kp[i] *= DSM->MOI[i][i];
-                  kr[i] *= DSM->MOI[i][i];
-                  ki[i] *= DSM->MOI[i][i];
+                  kp[i] *= DSM->MOI.mat[i][i];
+                  kr[i] *= DSM->MOI.mat[i][i];
+                  ki[i] *= DSM->MOI.mat[i][i];
                }
                break;
             case FULL_STATE:
@@ -387,7 +375,7 @@ long GetGains(struct DSMType *const DSM, struct fy_node *gainsNode,
                              &k_lya);
                for (i = 0; i < 3; i++) {
                   kp[i] = k_lya;
-                  kr[i] = sqrt(2.0 * k_lya * DSM->MOI[i][i]);
+                  kr[i] = sqrt(2.0 * k_lya * DSM->MOI.mat[i][i]);
                }
                GainsProcessed = TRUE;
             }
@@ -433,20 +421,20 @@ long GetLimits(struct DSMType *const DSM, struct fy_node *limsNode,
    switch (controllerState) {
       case TRN_STATE:
          controller = &Cmd->trn_controller;
-         fMax       = Cmd->FrcB_max;
-         vMax       = Cmd->vel_max;
+         fMax       = Cmd->FrcB_max.v;
+         vMax       = Cmd->vel_max.v;
          break;
       case ATT_STATE:
          controller = &Cmd->att_controller;
-         fMax       = Cmd->Trq_max;
-         vMax       = Cmd->w_max;
+         fMax       = Cmd->Trq_max.v;
+         vMax       = Cmd->w_max.v;
          break;
       case FULL_STATE:
          // PLACEHOLDER
          break;
       case DMP_STATE:
          controller = &Cmd->dmp_controller;
-         fMax       = Cmd->dTrq_max;
+         fMax       = Cmd->dTrq_max.v;
          break;
       default:
          break;
@@ -657,7 +645,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
       else {
          isGood &=
              assignYAMLToDoubleArray(
-                 3, fy_node_by_path_def(cmdNode, "/Position"), Cmd->Pos) == 3;
+                 3, fy_node_by_path_def(cmdNode, "/Position"), Cmd->Pos.v) == 3;
       }
       ctrlNode  = fy_node_by_path_def(cmdNode, "/Controller");
       actNode   = fy_node_by_path_def(cmdNode, "/Actuator");
@@ -718,7 +706,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
       actNode     = fy_node_by_path_def(cmdNode, "/Actuator");
       isGood &=
           assignYAMLToDoubleArray(3, fy_node_by_path_def(cmdNode, "/Delta V"),
-                                  Cmd->DeltaV) == 3;
+                                  Cmd->DeltaV.v) == 3;
       if (isGood) {
          TranslationCmdProcessed = TRUE;
          Cmd->BurnStopTime       = DsmCmdTime + Cmd->BurnTime;
@@ -853,7 +841,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       for (int k = 0; k < kMax; k++) {
          struct fy_node *tgtNode = fy_node_by_path_def(nodes[k], "/Target");
          assignYAMLToDoubleArray(3, fy_node_by_path_def(nodes[k], "/Axis"),
-                                 vecs[k]->cmd_axis);
+                                 vecs[k]->cmd_axis.v);
          char tgtType[50] = {0};
          fy_node_scanf(tgtNode, "/Type %49s", tgtType);
 
@@ -867,13 +855,11 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                strcpy(GroundStationCmd, "GroundStation_[%ld]");
                if (sscanf(target, GroundStationCmd, &gsNum) == 1) {
                   vecs[k]->TrgWorld = GroundStation[gsNum].World;
-                  for (int i = 0; i < 3; i++)
-                     vecs[k]->W[i] = GroundStation[gsNum].PosW[i];
+                  vecs[k]->W        = GroundStation[gsNum].PosW;
                }
                else {
                   vecs[k]->TrgWorld = GetWorldID(target);
-                  for (int i = 0; i < 3; i++)
-                     vecs[k]->W[i] = 0.0;
+                  vecs[k]->W        = VEC3_ZERO;
                }
             }
             else if (!strcmp(tgtType, "SC")) {
@@ -922,7 +908,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
                 fy_node_scanf(tgtNode, "/Frame %19s", cmdRefFrm[k]);
             *attcmdProc[k] &= assignYAMLToDoubleArray(
                                   3, fy_node_by_path_def(tgtNode, "/Axis"),
-                                  vecs[k]->cmd_vec) == 3;
+                                  vecs[k]->cmd_vec.v) == 3;
             if (*attcmdProc[k] == FALSE) {
                fprintf(stderr,
                        "%s Vector for command %s has improper format for VEC "
@@ -953,7 +939,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       AttitudeCmdProcessed =
           assignYAMLToDoubleArray(
-              4, fy_node_by_path_def(cmdNode, "/Quaternion"), Cmd->q) == 4;
+              4, fy_node_by_path_def(cmdNode, "/Quaternion"), Cmd->q.q) == 4;
       AttitudeCmdProcessed &=
           fy_node_scanf(cmdNode, "/Frame %19s", Cmd->AttRefFrame) == 1;
       ctrlNode              = fy_node_by_path_def(cmdNode, "/Controller");
@@ -1037,7 +1023,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       struct DSMCmdVecType *vec = &Cmd->PriVec;
       struct fy_node *tgtNode   = fy_node_by_path_def(cmdNode, "/Target");
       assignYAMLToDoubleArray(3, fy_node_by_path_def(cmdNode, "/Axis"),
-                              vec->cmd_axis);
+                              vec->cmd_axis.v);
       char tgtType[50] = {0};
       fy_node_scanf(tgtNode, "/Type %49s", tgtType);
 
@@ -1051,13 +1037,11 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
             strcpy(GroundStationCmd, "GroundStation_[%ld]");
             if (sscanf(target, GroundStationCmd, &gsNum) == 1) {
                vec->TrgWorld = GroundStation[gsNum].World;
-               for (int i = 0; i < 3; i++)
-                  vec->W[i] = GroundStation[gsNum].PosW[i];
+               vec->W        = GroundStation[gsNum].PosW;
             }
             else {
                vec->TrgWorld = DecodeString(target);
-               for (int i = 0; i < 3; i++)
-                  vec->W[i] = 0.0;
+               vec->W        = VEC3_ZERO;
             }
          }
          else if (!strcmp(tgtType, "SC")) {
@@ -1104,7 +1088,7 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
              fy_node_scanf(tgtNode, "/Frame %19s", Cmd->PriAttRefFrame);
          AttitudeCmdProcessed &=
              assignYAMLToDoubleArray(3, fy_node_by_path_def(tgtNode, "/Axis"),
-                                     vec->cmd_vec) == 3;
+                                     vec->cmd_vec.v) == 3;
          if (AttitudeCmdProcessed == FALSE) {
             fprintf(stderr,
                     "Vector for command %s has improper format for VEC "
@@ -1123,10 +1107,9 @@ long GetAttitudeCmd(struct AcType *const AC, struct DSMType *const DSM,
       // Load Desired Angular Rate in Cmd->AngRate[2], then construct vector as
       // parallel to Cmd->PriVec.cmd_axis
       AttitudeCmdProcessed &=
-          fy_node_scanf(cmdNode, "/Rate %lf", &Cmd->AngRate[2]) == 1;
-      Cmd->AngRate[2] *= D2R;
-      for (int i = 0; i < 3; i++)
-         Cmd->AngRate[i] = Cmd->PriVec.cmd_axis[i] * Cmd->AngRate[2];
+          fy_node_scanf(cmdNode, "/Rate %lf", &Cmd->AngRate.z) == 1;
+      Cmd->AngRate.z *= D2R;
+      Cmd->AngRate    = SxV(Cmd->AngRate.z, Cmd->PriVec.cmd_axis);
 
       Cmd->AttitudeCtrlActive = TRUE;
       ctrlNode                = fy_node_by_path_def(cmdNode, "/Controller");
@@ -1598,7 +1581,7 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                   double ang[3] = {0.0};
                   long SEQ;
                   getYAMLEulerAngles(tmpNode, ang, &SEQ);
-                  A2C(SEQ, ang[0], ang[1], ang[2], Nav->CRB);
+                  Nav->CRB = A2C(SEQ, ang[0], ang[1], ang[2]);
                }
                else
                   assignYAMLToDoubleArray(maxI, tmpNode, &dataDest[startInd]);
@@ -1639,21 +1622,17 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                   } break;
                   case ROTMAT_STATE:
                   case QUAT_STATE: {
-                     double tmpM[3][3] = {{0.0}};
-                     MT(Nav->CRB, tmpM);
-                     C2Q(tmpM, Nav->qbr);
+                     mat3x3 tmpM = MT(Nav->CRB);
+                     Nav->qbr    = C2Q(tmpM);
                   } break;
                   case POS_STATE:
-                     for (i = 0; i < 3; i++)
-                        Nav->PosR[i] = dataDest[startInd + i];
+                     CopyVG(Nav->PosR.v, &dataDest[startInd], 3);
                      break;
                   case VEL_STATE:
-                     for (i = 0; i < 3; i++)
-                        Nav->VelR[i] = dataDest[startInd + i];
+                     CopyVG(Nav->VelR.v, &dataDest[startInd], 3);
                      break;
                   case OMEGA_STATE:
-                     for (i = 0; i < 3; i++)
-                        Nav->wbr[i] = dataDest[startInd + i];
+                     CopyVG(Nav->wbr.v, &dataDest[startInd], 3);
                      break;
                   default:
                      break;
@@ -1923,18 +1902,17 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
             Nav->navInd[state]   = -1;
             switch (state) {
                case POS_STATE:
-                  for (j = 0; j < 3; j++)
-                     Nav->PosR[j] =
-                         0; // S->PosR[j] + (S->PosN[j] - AC->PosN[j]);
+                  Nav->PosR = VEC3_ZERO;
+                  // for (j = 0; j < 3; j++)
+                  //    Nav->PosR[j] = S->PosR[j] + (S->PosN[j] - AC->PosN[j]);
                   break;
                case VEL_STATE:
-                  for (j = 0; j < 3; j++)
-                     Nav->VelR[j] =
-                         0; // S->VelR[j] + (S->VelN[j] - AC->VelN[j]);
+                  Nav->VelR = VEC3_ZERO;
+                  // for (j = 0; j < 3; j++)
+                  //    Nav->VelR[j] = S->VelR[j] + (S->VelN[j] - AC->VelN[j]);
                   break;
                case OMEGA_STATE:
-                  for (j = 0; j < 3; j++)
-                     Nav->wbr[j] = AC->wbn[j];
+                  Nav->wbr = AC->wbn;
                   break;
                default:
                   break;
@@ -1949,8 +1927,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       Nav->stateDim = stateInd;
       Nav->navDim   = navInd;
       if (!Nav->stateActive[ROTMAT_STATE] && !Nav->stateActive[QUAT_STATE])
-         for (j = 0; j < 4; j++)
-            Nav->qbr[j] = AC->qbn[j];
+         Nav->qbr = AC->qbn;
 
       // sqrQ and P0 diagonal elements from Inp_DSM.txt
       Nav->sqrQ  = calloc(Nav->navDim, sizeof(double));
@@ -1977,23 +1954,23 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
 
       if (Nav->refOriType == ORI_WORLD && Nav->refFrame == FRAME_N) {
-         for (i = 0; i < 3; i++) {
-            Nav->PosR[i] += DSM->refOrb->PosN[i];
-            Nav->VelR[i] += DSM->refOrb->VelN[i];
-         }
+         Nav->PosR = VpVElem(Nav->PosR, DSM->refOrb->PosN);
+         Nav->VelR = VpVElem(Nav->VelR, DSM->refOrb->VelN);
       }
 
       if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
          // Simple test if given rot mat is a rot mat
-         double testM[3][3] = {{0.0}}, test = 0.0;
-         MTxM(Nav->CRB, Nav->CRB,
-              testM); // if Nav->CRB is valid, testM should be identity
+         mat3x3 testM;
+         double test = 0.0;
+         // if Nav->CRB is valid, testM should be identity
+         testM = MTxM(Nav->CRB, Nav->CRB);
+         // if Nav->CRB is valid, testM should now be zero matrix
          for (i = 0; i < 3; i++)
-            testM[i][i] -=
-                1.0; // if Nav->CRB is valid, testM should now be zero matrix
+            testM.mat[i][i] -= 1.0;
+
          for (i = 0; i < 3; i++)
             for (j = 0; j < 3; j++)
-               test += fabs(testM[i][j]); // 1-norm of vec(testM)
+               test += fabs(testM.mat[i][j]); // 1-norm of vec(testM)
          if (test >= EPS_DSM) {
             printf("The supplied initial rotation matrix for Navigation "
                    "Command %s is not a valid Rotation Matrix. "
@@ -2247,7 +2224,7 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
 {
 
    long i;
-   double unit_bvb[3];
+   vec3 unit_bvb;
 
    struct DSMCmdType *Cmd = &DSM->Cmd;
 
@@ -2270,29 +2247,25 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
       for (i = 0; i < AC->Nmtb; i++)
          AC->MTB[i].Mcmd = 0.0;
 
-   for (i = 0; i < 3; i++) {
-      AC->IdealFrc[i] = 0.0;
-      AC->IdealTrq[i] = 0.0;
-      AC->Fcmd[i]     = 0.0;
-      AC->Tcmd[i]     = 0.0;
-      AC->Mcmd[i]     = 0.0;
-   }
+   AC->IdealFrc = VEC3_ZERO;
+   AC->IdealTrq = VEC3_ZERO;
+   AC->Fcmd     = VEC3_ZERO;
+   AC->Tcmd     = VEC3_ZERO;
+   AC->Mcmd     = VEC3_ZERO;
 
    // Translation
    if (Cmd->TranslationCtrlActive == TRUE) {
       if ((!strcmp(Cmd->trn_actuator, "THR_3DOF") ||
            !strcmp(Cmd->trn_actuator, "THR_6DOF")) &&
           AC->Nthr > 0) {
-         for (i = 0; i < 3; i++)
-            AC->Fcmd[i] = DSM->FcmdB[i];
+         AC->Fcmd = DSM->FcmdB;
          ThrProcessingMinPower(AC);
       }
-      else if (!strcmp(Cmd->trn_actuator, "Ideal")) {
-         for (i = 0; i < 3; i++)
-            AC->IdealFrc[i] = DSM->FcmdB[i];
-      }
+      else if (!strcmp(Cmd->trn_actuator, "Ideal"))
+         AC->IdealFrc = DSM->FcmdB;
       else {
-      } // What is Cmd->trn_actuator if no valid Cmd->ActuatorMode?? Error????
+         // What is Cmd->trn_actuator if no valid Cmd->ActuatorMode?? Error????
+      }
    }
 
    // Attitude
@@ -2300,30 +2273,27 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
       if ((!strcmp(Cmd->att_actuator, "THR_3DOF") ||
            !strcmp(Cmd->att_actuator, "THR_6DOF")) &&
           AC->Nthr > 0) {
-         for (i = 0; i < 3; i++)
-            AC->Tcmd[i] = DSM->Tcmd[i];
+         AC->Tcmd = DSM->Tcmd;
          // if THR_TRN, this does both force & torque since AC->Fcmd set
          ThrProcessingMinPower(AC);
       }
       else if (!strcmp(Cmd->att_actuator, "WHL") && AC->Nwhl > 0) {
-         for (i = 0; i < 3; i++)
-            AC->Tcmd[i] = DSM->Tcmd[i];
+         AC->Tcmd = DSM->Tcmd;
          DSM_WheelProcessing(AC);
       }
       else if (!strcmp(Cmd->att_actuator, "MTB") && AC->Nmtb > 0) {
-         CopyUnitV(AC->bvb, unit_bvb);
-         VxV(unit_bvb, DSM->Tcmd, DSM->Mcmd);
-         for (i = 0; i < 3; i++)
-            AC->Mcmd[i] = DSM->Mcmd[i] / MAGV(AC->bvb);
+         CopyUnitV(AC->bvb, &unit_bvb);
+         DSM->Mcmd = VxV(unit_bvb, DSM->Tcmd);
+         AC->Mcmd  = SxV(1.0 / MAGV(AC->bvb), DSM->Mcmd);
          DSM_MtbProcessing(AC);
       }
-      else if (!strcmp(Cmd->att_actuator, "Ideal")) {
-         for (i = 0; i < 3; i++)
-            AC->IdealTrq[i] = DSM->Tcmd[i];
-      }
+      else if (!strcmp(Cmd->att_actuator, "Ideal"))
+         AC->IdealTrq = DSM->Tcmd;
+
       else {
-      } // What is Cmd->att_actuator if no valid Cmd->AttActuatorMode??
-        // Error????
+         // What is Cmd->att_actuator if no valid Cmd->AttActuatorMode??
+         // Error????
+      }
    }
 
    // TODO: move momentum dumping to its own type
@@ -2339,10 +2309,9 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
       }
       if (DSM->DsmCtrl.H_DumpActive == TRUE &&
           !strcmp(Cmd->dmp_actuator, "MTB") && AC->Nmtb > 0) {
-         CopyUnitV(AC->bvb, unit_bvb);
-         VxV(unit_bvb, DSM->dTcmd, DSM->Mcmd);
-         for (i = 0; i < 3; i++)
-            AC->Mcmd[i] = DSM->Mcmd[i] / MAGV(AC->bvb);
+         CopyUnitV(AC->bvb, &unit_bvb);
+         DSM->Mcmd = VxV(unit_bvb, DSM->dTcmd);
+         AC->Mcmd  = SxV(1.0 / MAGV(AC->bvb), DSM->Mcmd);
          DSM_MtbProcessing(AC);
       }
       else if (DSM->DsmCtrl.H_DumpActive == TRUE &&
@@ -2352,16 +2321,13 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
          // maybe have thrusters just thrust at
          // min(thrustertorquemax,SCALE*AC->Whl[i].Tmax)??? this could run into
          // issues if Thruster is being used for translation
-         for (i = 0; i < 3; i++)
-            AC->Tcmd[i] = DSM->dTcmd[i];
+         AC->Tcmd = DSM->dTcmd;
          // if THR_TRN, this does both force & torque since AC->Fcmd set
          ThrProcessingMinPower(AC);
       }
       else if (DSM->DsmCtrl.H_DumpActive == TRUE &&
-               !strcmp(Cmd->dmp_actuator, "Ideal")) {
-         for (i = 0; i < 3; i++)
-            AC->IdealTrq[i] = DSM->dTcmd[i];
-      }
+               !strcmp(Cmd->dmp_actuator, "Ideal"))
+         AC->IdealTrq = DSM->dTcmd;
    }
 
    // Process ActuatorCmd
@@ -2392,12 +2358,12 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
    /*Clone of FindCmdVecN()from 42fsw.c with new structure type */
 
    // TODO: find angular rate of command vector
-   double RelPosB[3], vb[3];
-   double RelPosN[3], RelPosH[3], RelVelN[3], RelVelH[3];
-   double pn[3], vn[3], ph[3], vh[3];
+   vec3 RelPosB, vb, Rhat;
+   vec3 RelPosN, RelPosH, RelVelN, RelVelH;
+   vec3 pn, vn, ph, vh;
    double CosPriMerAng, SinPriMerAng;
-   double MaxToS, Rhat[3], ToS;
-   long It, i;
+   double MaxToS, ToS;
+   long It;
 
    struct OrbitType const *RefOrb = DSM->refOrb;
    struct DSMStateType *state     = &DSM->state;
@@ -2407,33 +2373,36 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          struct WorldType *TrgW = &World[CV->TrgWorld];
          CosPriMerAng           = cos(TrgW->PriMerAng);
          SinPriMerAng           = sin(TrgW->PriMerAng);
-         pn[0] = CV->W[0] * CosPriMerAng - CV->W[1] * SinPriMerAng;
-         pn[1] = CV->W[0] * SinPriMerAng + CV->W[1] * CosPriMerAng;
-         pn[2] = CV->W[2];
-         vn[0] = -CV->W[0] * SinPriMerAng - CV->W[1] * CosPriMerAng;
-         vn[1] = CV->W[0] * CosPriMerAng - CV->W[1] * SinPriMerAng;
-         vn[2] = 0.0;
+         pn.x = CV->W.x * CosPriMerAng - CV->W.y * SinPriMerAng;
+         pn.y = CV->W.x * SinPriMerAng + CV->W.y * CosPriMerAng;
+         pn.z = CV->W.z;
+         vn.x = -CV->W.x * SinPriMerAng - CV->W.y * CosPriMerAng;
+         vn.y = CV->W.x * CosPriMerAng - CV->W.y * SinPriMerAng;
+         vn.z = 0.0;
          if (CV->TrgWorld == RefOrb->World) {
-            for (i = 0; i < 3; i++) {
-               RelPosN[i] = pn[i] - state->PosN[i];
-               RelVelN[i] = vn[i] - state->VelN[i];
-            }
+            RelPosN = VmVElem(pn, state->PosN);
+            RelVelN = VmVElem(vn, state->VelN);
          }
          else {
-            MTxV(TrgW->CNH, pn, ph);
-            MTxV(TrgW->CNH, vn, vh);
             struct WorldType *W = &World[RefOrb->World];
-            MTxV(W->CNH, state->PosN, RelPosH);
-            MTxV(W->CNH, state->VelN, RelVelH);
-            for (i = 0; i < 3; i++) {
-               RelPosH[i] = (TrgW->PosH[i] - W->PosH[i]) + (ph[i] - RelPosH[i]);
-               RelVelH[i] = (TrgW->VelH[i] - W->VelH[i]) + (vh[i] - RelVelH[i]);
+
+            ph      = MTxV(TrgW->CNH, pn);
+            vh      = MTxV(TrgW->CNH, vn);
+            RelPosH = MTxV(W->CNH, state->PosN);
+            RelVelH = MTxV(W->CNH, state->VelN);
+
+            for (int i = 0; i < 3; i++) {
+               RelPosH.v[i] =
+                   (TrgW->PosH.v[i] - W->PosH.v[i]) + (ph.v[i] - RelPosH.v[i]);
+               RelVelH.v[i] =
+                   (TrgW->VelH.v[i] - W->VelH.v[i]) + (vh.v[i] - RelVelH.v[i]);
             }
-            MxV(W->CNH, RelPosH, RelPosN);
-            MxV(W->CNH, RelVelH, RelVelN);
+
+            RelPosN = MxV(W->CNH, RelPosH);
+            RelVelN = MxV(W->CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, CV->N);
-         DSM_RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
+         CopyUnitV(RelPosN, &CV->N);
+         CV->wn = DSM_RelMotionToAngRate(RelPosN, RelVelN);
       } break;
       case TARGET_SC: {
          struct DSMStateType *TrgState = NULL;
@@ -2446,41 +2415,40 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
             TrgState               = &TrgDSM->commState;
          }
          if (TrgOrb == RefOrb) {
-            for (i = 0; i < 3; i++) {
-               RelPosN[i] = TrgState->PosR[i] - state->PosR[i];
-               RelVelN[i] = TrgState->VelR[i] - state->VelR[i];
-            }
+            RelPosN = VmVElem(TrgState->PosR, state->PosR);
+            RelVelN = VmVElem(TrgState->VelR, state->VelR);
          }
          else if (TrgOrb->World == RefOrb->World) {
-            for (i = 0; i < 3; i++) {
-               RelPosN[i] = TrgState->PosN[i] - state->PosN[i];
-               RelVelN[i] = TrgState->VelN[i] - state->VelN[i];
-            }
+            RelPosN = VmVElem(TrgState->PosN, state->PosN);
+            RelVelN = VmVElem(TrgState->VelN, state->VelN);
          }
          else {
             struct WorldType *TrgW = &World[TrgOrb->World];
             struct WorldType *W    = &World[RefOrb->World];
-            MTxV(TrgW->CNH, TrgState->PosN, RelPosH);
-            MTxV(TrgW->CNH, TrgState->VelN, RelVelH);
-            MTxV(TrgW->CNH, state->PosN, ph);
-            MTxV(TrgW->CNH, state->VelN, vh);
-            for (i = 0; i < 3; i++) {
-               RelPosH[i] -= ph[i];
-               RelVelH[i] -= vh[i];
-               RelPosH[i] += (TrgW->PosH[i] - W->PosH[i]);
-               RelVelH[i] += (TrgW->VelH[i] - W->VelH[i]);
+
+            RelPosH = MTxV(TrgW->CNH, TrgState->PosN);
+            RelVelH = MTxV(TrgW->CNH, TrgState->VelN);
+            ph      = MTxV(TrgW->CNH, state->PosN);
+            vh      = MTxV(TrgW->CNH, state->VelN);
+
+            for (int i = 0; i < 3; i++) {
+               RelPosH.v[i] -= ph.v[i];
+               RelVelH.v[i] -= vh.v[i];
+               RelPosH.v[i] += (TrgW->PosH.v[i] - W->PosH.v[i]);
+               RelVelH.v[i] += (TrgW->VelH.v[i] - W->VelH.v[i]);
             }
-            MxV(W->CNH, RelPosH, RelPosN);
-            MxV(W->CNH, RelVelH, RelVelN);
+
+            RelPosN = MxV(W->CNH, RelPosH);
+            RelVelN = MxV(W->CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, CV->N);
-         DSM_RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
+         CopyUnitV(RelPosN, &CV->N);
+         CV->wn = DSM_RelMotionToAngRate(RelPosN, RelVelN);
       } break;
       case TARGET_BODY: {
          struct OrbitType *TrgOrb      = NULL;
          struct DSMStateType *TrgState = NULL;
          struct BodyType *TrgSB        = NULL;
-         double pcmn[3]                = {0.0};
+         vec3 pcmn;
          {
             // Limit the scope where SC is accessed
             struct SCType *TrgS    = &SC[CV->TrgSC];
@@ -2489,86 +2457,75 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
             TrgOrb                 = TrgDSM->refOrb;
             TrgState               = &TrgDSM->commState;
             // TODO: don't like accessing SCType::cm
-            QTxV(TrgState->qbn, TrgS->cm, pcmn);
+            pcmn = QTxV(TrgState->qbn, TrgS->cm);
          }
          // TODO: make this better
-         double qBb[4] = {0.0}, qbN[4] = {0.0};
-         QxQT(TrgSB[0].qn, TrgSB[CV->TrgBody].qn, qBb);
-         QTxQ(qBb, TrgState->qbn, qbN);
-         for (i = 0; i < 3; i++)
-            RelPosB[i] = CV->T[i] - TrgSB[CV->TrgBody].cm[i];
-         VxV(TrgSB[CV->TrgBody].wn, RelPosB, vb);
-         QTxV(qbN, CV->T, pn);
-         QTxV(qbN, vb, vn);
-         for (i = 0; i < 3; i++) {
-            pn[i] += TrgSB[CV->TrgBody].pn[i] - pcmn[i];
-            vn[i] += TrgSB[CV->TrgBody].vn[i];
-         }
+         quat qBb, qbN;
+         qBb = QxQT(TrgSB[0].qn, TrgSB[CV->TrgBody].qn);
+         qbN = QTxQ(qBb, TrgState->qbn);
+
+         pn = VmVElem(VpVElem(QTxV(qbN, CV->T), TrgSB[CV->TrgBody].pn), pcmn);
+
+         RelPosB = VmVElem(CV->T, TrgSB[CV->TrgBody].cm);
+         vb      = VxV(TrgSB[CV->TrgBody].wn, RelPosB);
+         vn      = VpVElem(QTxV(qbN, vb), TrgSB[CV->TrgBody].vn);
 
          if (TrgOrb == RefOrb) {
-            for (i = 0; i < 3; i++) {
-               RelPosN[i] = TrgState->PosR[i] + pn[i] - state->PosR[i];
-               RelVelN[i] = TrgState->VelR[i] + vn[i] - state->VelR[i];
+            for (int i = 0; i < 3; i++) {
+               RelPosN.v[i] = TrgState->PosR.v[i] + pn.v[i] - state->PosR.v[i];
+               RelVelN.v[i] = TrgState->VelR.v[i] + vn.v[i] - state->VelR.v[i];
             }
          }
          else if (TrgOrb->World == RefOrb->World) {
-            for (i = 0; i < 3; i++) {
-               RelPosN[i] = TrgState->PosN[i] + pn[i] - state->PosN[i];
-               RelVelN[i] = TrgState->VelN[i] + vn[i] - state->VelN[i];
+            for (int i = 0; i < 3; i++) {
+               RelPosN.v[i] = TrgState->PosN.v[i] + pn.v[i] - state->PosN.v[i];
+               RelVelN.v[i] = TrgState->VelN.v[i] + vn.v[i] - state->VelN.v[i];
             }
          }
          else {
-            for (i = 0; i < 3; i++) {
-               pn[i] += TrgState->PosN[i];
-               vn[i] += TrgState->VelN[i];
-            }
             struct WorldType *TrgW = &World[TrgOrb->World];
-            MTxV(TrgW->CNH, pn, RelPosH);
-            MTxV(TrgW->CNH, vn, RelVelH);
-            struct WorldType *W = &World[RefOrb->World];
-            MTxV(W->CNH, state->PosN, ph);
-            MTxV(W->CNH, state->VelN, ph);
-            for (i = 0; i < 3; i++) {
-               RelPosH[i] -= ph[i];
-               RelVelH[i] -= vh[i];
-               RelPosH[i] += (TrgW->PosH[i] - W->PosH[i]);
-               RelVelH[i] += (TrgW->VelH[i] - W->VelH[i]);
+            pn                     = VpVElem(pn, TrgState->PosN);
+            vn                     = VpVElem(vn, TrgState->VelN);
+            RelPosH                = MTxV(TrgW->CNH, pn);
+            RelVelH                = MTxV(TrgW->CNH, vn);
+            struct WorldType *W    = &World[RefOrb->World];
+            ph                     = MTxV(W->CNH, state->PosN);
+            vh                     = MTxV(W->CNH, state->VelN);
+            for (int i = 0; i < 3; i++) {
+               RelPosH.v[i] -= ph.v[i];
+               RelVelH.v[i] -= vh.v[i];
+               RelPosH.v[i] += (TrgW->PosH.v[i] - W->PosH.v[i]);
+               RelVelH.v[i] += (TrgW->VelH.v[i] - W->VelH.v[i]);
             }
-            MxV(W->CNH, RelPosH, RelPosN);
-            MxV(W->CNH, RelVelH, RelVelN);
+            RelPosN = MxV(W->CNH, RelPosH);
+            RelVelN = MxV(W->CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, CV->N);
-         DSM_RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
+         CopyUnitV(RelPosN, &CV->N);
+         CV->wn = DSM_RelMotionToAngRate(RelPosN, RelVelN);
       } break;
       case TARGET_VELOCITY:
-         for (i = 0; i < 3; i++)
-            CV->N[i] = state->VelN[i];
-         UNITV(CV->N);
+         CV->N = state->VelN;
+         UNITV(&CV->N);
          break;
       case TARGET_MAGFIELD:
-         for (i = 0; i < 3; i++)
-            CV->N[i] = state->bvn[i];
-         UNITV(CV->N);
+         CV->N = state->bvn;
+         UNITV(&CV->N);
          break;
       case TARGET_TDRS:
-         CV->N[0] = 0.0;
-         CV->N[1] = 0.0;
-         CV->N[2] = 1.0;
-         for (i = 0; i < 3; i++)
-            CV->wn[i] = 0.0;
+         CV->N  = VEC3_PZAXIS;
+         CV->wn = VEC3_ZERO;
+
          MaxToS = -2.0; /* Bogus */
-         CopyUnitV(state->PosN, Rhat);
+         CopyUnitV(state->PosN, &Rhat);
          /* Aim at TDRS closest to Zenith */
          for (It = 0; It < 10; It++) {
             if (Tdrs[It].Exists) {
-               for (i = 0; i < 3; i++)
-                  RelPosN[i] = Tdrs[It].PosN[i] - state->PosN[i];
-               UNITV(RelPosN);
+               RelPosN = VmVElem(Tdrs[It].PosN, state->PosN);
+               UNITV(&RelPosN);
                ToS = VoV(RelPosN, Rhat);
                if (ToS > MaxToS) {
                   MaxToS = ToS;
-                  for (i = 0; i < 3; i++)
-                     CV->N[i] = RelPosN[i];
+                  CV->N  = RelPosN;
                }
             }
          }
@@ -2584,7 +2541,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    if (Cmd->TranslationCtrlActive == FALSE || Cmd->ManeuverMode != INACTIVE)
       return;
 
-   long i, Isc_Ref, goodOriginFrame = FALSE;
+   long Isc_Ref, goodOriginFrame = FALSE;
    long frame_body, origin_body;
    struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
    struct DSMStateType *state = &DSM->state;
@@ -2592,19 +2549,17 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    // Convert Disp vec into N/R coords.
    switch (Cmd->RefFrame[0]) {
       case 'F': {
-         double wfn[3] = {0.0};
-         MTxV(F->CN, Cmd->Pos, CTRL->CmdPosR); // Convert F to R Inertial
+         vec3 wfn;
+         CTRL->CmdPosR = MTxV(F->CN, Cmd->Pos); // Convert F to R Inertial
          switch (F->FixedInFrame) {
             case 'L': {
                // L rotates wrt R
-               for (i = 0; i < 3; i++)
-                  wfn[i] = DSM->refOrb->wln[i];
+               wfn             = DSM->refOrb->wln;
                goodOriginFrame = TRUE;
             } break;
             case 'N': {
                // R does not rotate wrt R Inertial
-               for (i = 0; i < 3; i++)
-                  wfn[i] = 0.0;
+               wfn             = VEC3_ZERO;
                goodOriginFrame = TRUE;
             } break;
             default: {
@@ -2614,37 +2569,35 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                exit(EXIT_FAILURE);
             } break;
          }
-         VxV(wfn, CTRL->CmdPosR, CTRL->CmdVelR);
+         CTRL->CmdVelR = VxV(wfn, CTRL->CmdPosR);
       } break;
       case 'N': {
-         for (i = 0; i < 3; i++)
-            CTRL->CmdPosR[i] = Cmd->Pos[i]; // Already in R Inertial
-         for (i = 0; i < 3; i++)
-            CTRL->CmdVelR[i] = 0.0; // R does not rotate wrt R Inertial
+         CTRL->CmdPosR   = Cmd->Pos;  // Already in R Inertial
+         CTRL->CmdVelR   = VEC3_ZERO; // R does not rotate wrt R Inertial
          goodOriginFrame = TRUE;
       } break;
       case 'L': {
          // Convert LVLH to R Inertial
-         MTxV(DSM->refOrb->CLN, Cmd->Pos, CTRL->CmdPosR);
-         VxV(DSM->refOrb->wln, CTRL->CmdPosR, CTRL->CmdVelR);
+         CTRL->CmdPosR   = MTxV(DSM->refOrb->CLN, Cmd->Pos);
+         CTRL->CmdVelR   = VxV(DSM->refOrb->wln, CTRL->CmdPosR);
          goodOriginFrame = TRUE;
       } break;
       case 'E': {
          // Hailey's EH Code Begin ****************************************
-         double cmd_pos_EH[3] = {0.0};
-         double cmd_vel_EH[3] = {0.0};
-         double wln[3]        = {0.0};
+         vec3 cmd_pos_EH = VEC3_ZERO;
+         vec3 cmd_vel_EH = VEC3_ZERO;
+         vec3 wln        = VEC3_ZERO;
 
          double n = sqrt(DSM->refOrb->mu / pow(DSM->refOrb->SMA, 3));
 
          if (!strcmp(Cmd->TranslationType, "Position")) {
-            cmd_pos_EH[0] = -Cmd->Distance * cos(Cmd->Phase) / 2;
-            cmd_pos_EH[1] = Cmd->Distance * sin(Cmd->Phase);
-            cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(Cmd->Phase) / 2;
+            cmd_pos_EH.x = -Cmd->Distance * cos(Cmd->Phase) / 2;
+            cmd_pos_EH.y = Cmd->Distance * sin(Cmd->Phase);
+            cmd_pos_EH.z = Cmd->Distance * sqrt(3) * cos(Cmd->Phase) / 2;
 
-            cmd_vel_EH[0] = Cmd->Distance * n * sin(Cmd->Phase) / 2;
-            cmd_vel_EH[1] = Cmd->Distance * n * cos(Cmd->Phase);
-            cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(Cmd->Phase) / 2;
+            cmd_vel_EH.x = Cmd->Distance * n * sin(Cmd->Phase) / 2;
+            cmd_vel_EH.y = Cmd->Distance * n * cos(Cmd->Phase);
+            cmd_vel_EH.z = -Cmd->Distance * n * sqrt(3) * sin(Cmd->Phase) / 2;
          }
          else if (!strcmp(Cmd->TranslationType, "Circumnavigation")) {
             /* "Development and Flight of a Stereoscopic Imager for Use in
@@ -2666,17 +2619,16 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                }
                /* Calculate coefficients */
                double tau_k = n * Cmd->CurrentTimer + Cmd->Phase;
-               for (i = 0; i < 3; i++)
-                  wln[i] = DSM->refOrb->wln[i];
+               wln          = DSM->refOrb->wln;
 
                /* CW equations (note: vel. is incorrect in paper) */
-               cmd_pos_EH[0] = -Cmd->Distance * cos(tau_k) / 2;
-               cmd_pos_EH[1] = Cmd->Distance * sin(tau_k);
-               cmd_pos_EH[2] = Cmd->Distance * sqrt(3) * cos(tau_k) / 2;
+               cmd_pos_EH.x = -Cmd->Distance * cos(tau_k) / 2;
+               cmd_pos_EH.y = Cmd->Distance * sin(tau_k);
+               cmd_pos_EH.z = Cmd->Distance * sqrt(3) * cos(tau_k) / 2;
 
-               cmd_vel_EH[0] = Cmd->Distance * n * sin(tau_k) / 2;
-               cmd_vel_EH[1] = Cmd->Distance * n * cos(tau_k);
-               cmd_vel_EH[2] = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
+               cmd_vel_EH.x = Cmd->Distance * n * sin(tau_k) / 2;
+               cmd_vel_EH.y = Cmd->Distance * n * cos(tau_k);
+               cmd_vel_EH.z = -Cmd->Distance * n * sqrt(3) * sin(tau_k) / 2;
             }
             else {
                fprintf(stderr, "Invalid Translational Control Reference Frame. "
@@ -2702,62 +2654,60 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                   Cmd->InitTime   = state->Time;
                   Cmd->ResetTimer = 0;
                   /* R Interial -> LVLH */
-                  MxV(SC[Isc_Ref].CLN, state->PosR, Cmd->Pos);
+                  Cmd->Pos = MxV(SC[Isc_Ref].CLN, state->PosR);
 
-                  Cmd->PosRate[1] =
-                      ((6 * Cmd->Pos[0] *
+                  Cmd->PosRate.y =
+                      ((6 * Cmd->Pos.x *
                             (n * Cmd->TimeDock - sin(n * Cmd->TimeDock)) -
-                        Cmd->Pos[1]) *
+                        Cmd->Pos.y) *
                            n * sin(n * Cmd->TimeDock) -
-                       2 * n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) *
+                       2 * n * Cmd->Pos.x * (4 - 3 * cos(n * Cmd->TimeDock)) *
                            (1 - cos(n * Cmd->TimeDock))) /
                       ((4 * sin(n * Cmd->TimeDock) - 3 * n * Cmd->TimeDock) *
                            sin(n * Cmd->TimeDock) +
                        4 * pow(1 - cos(n * Cmd->TimeDock), 2));
-                  Cmd->PosRate[0] =
-                      -(n * Cmd->Pos[0] * (4 - 3 * cos(n * Cmd->TimeDock)) +
-                        2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate[1]) /
+                  Cmd->PosRate.x =
+                      -(n * Cmd->Pos.x * (4 - 3 * cos(n * Cmd->TimeDock)) +
+                        2 * (1 - cos(n * Cmd->TimeDock)) * Cmd->PosRate.y) /
                       sin(n * Cmd->TimeDock);
-                  Cmd->PosRate[2] = -Cmd->Pos[2] * n / tan(n * Cmd->TimeDock);
+                  Cmd->PosRate.z = -Cmd->Pos.z * n / tan(n * Cmd->TimeDock);
                }
-               for (i = 0; i < 3; i++)
-                  wln[i] = DSM->refOrb->wln[i];
+
+               wln               = DSM->refOrb->wln;
                Cmd->CurrentTimer = state->Time - Cmd->InitTime;
                if (Cmd->CurrentTimer <= Cmd->TimeDock) {
                   /* Update Position */
-                  cmd_pos_EH[0] =
-                      (Cmd->PosRate[0] / n) * sin(n * Cmd->CurrentTimer) -
-                      (3 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n) *
+                  cmd_pos_EH.x =
+                      (Cmd->PosRate.x / n) * sin(n * Cmd->CurrentTimer) -
+                      (3 * Cmd->Pos.x + 2 * Cmd->PosRate.y / n) *
                           cos(n * Cmd->CurrentTimer) +
-                      4 * Cmd->Pos[0] + 2 * Cmd->PosRate[1] / n;
-                  cmd_pos_EH[1] =
-                      (6 * Cmd->Pos[0] + 4 * Cmd->PosRate[1] / n) *
+                      4 * Cmd->Pos.x + 2 * Cmd->PosRate.y / n;
+                  cmd_pos_EH.y =
+                      (6 * Cmd->Pos.x + 4 * Cmd->PosRate.y / n) *
                           sin(n * Cmd->CurrentTimer) +
-                      (2 * Cmd->PosRate[0] / n) * cos(n * Cmd->CurrentTimer) -
-                      (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]) *
+                      (2 * Cmd->PosRate.x / n) * cos(n * Cmd->CurrentTimer) -
+                      (6 * n * Cmd->Pos.x + 3 * Cmd->PosRate.y) *
                           Cmd->CurrentTimer +
-                      Cmd->Pos[1] - 2 * Cmd->PosRate[0] / n;
-                  cmd_pos_EH[2] =
-                      Cmd->Pos[2] * cos(n * Cmd->CurrentTimer) +
-                      (Cmd->PosRate[2] / n) * sin(n * Cmd->CurrentTimer);
+                      Cmd->Pos.y - 2 * Cmd->PosRate.x / n;
+                  cmd_pos_EH.z =
+                      Cmd->Pos.z * cos(n * Cmd->CurrentTimer) +
+                      (Cmd->PosRate.z / n) * sin(n * Cmd->CurrentTimer);
                   /* Update Velocity */
-                  cmd_vel_EH[0] = Cmd->PosRate[0] * cos(n * Cmd->CurrentTimer) +
-                                  (3 * n * Cmd->Pos[0] + 2 * Cmd->PosRate[1]) *
-                                      sin(n * Cmd->CurrentTimer);
-                  cmd_vel_EH[1] =
-                      (6 * n * Cmd->Pos[0] + 4 * Cmd->PosRate[1]) *
+                  cmd_vel_EH.x = Cmd->PosRate.x * cos(n * Cmd->CurrentTimer) +
+                                 (3 * n * Cmd->Pos.x + 2 * Cmd->PosRate.y) *
+                                     sin(n * Cmd->CurrentTimer);
+                  cmd_vel_EH.y =
+                      (6 * n * Cmd->Pos.x + 4 * Cmd->PosRate.y) *
                           cos(n * Cmd->CurrentTimer) -
-                      (2 * Cmd->PosRate[0]) * sin(n * Cmd->CurrentTimer) -
-                      (6 * n * Cmd->Pos[0] + 3 * Cmd->PosRate[1]);
-                  cmd_vel_EH[2] =
-                      (-Cmd->Pos[2] * n) * sin(n * Cmd->CurrentTimer) +
-                      Cmd->PosRate[2] * cos(n * Cmd->CurrentTimer);
+                      (2 * Cmd->PosRate.x) * sin(n * Cmd->CurrentTimer) -
+                      (6 * n * Cmd->Pos.x + 3 * Cmd->PosRate.y);
+                  cmd_vel_EH.z =
+                      (-Cmd->Pos.z * n) * sin(n * Cmd->CurrentTimer) +
+                      Cmd->PosRate.z * cos(n * Cmd->CurrentTimer);
                }
                else { // arrived at docking location
-                  for (i = 0; i < 3; i++) {
-                     cmd_pos_EH[i] = 0;
-                     cmd_vel_EH[i] = 0;
-                  }
+                  cmd_pos_EH = VEC3_ZERO;
+                  cmd_vel_EH = VEC3_ZERO;
                }
             }
             else {
@@ -2767,12 +2717,10 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             }
          }
          /* LVLH -> R Inertial */
-         MTxV(DSM->refOrb->CLN, cmd_pos_EH, CTRL->CmdPosR);
-         VxV(wln, CTRL->CmdPosR, CTRL->CmdVelR);
-         double temp[3];
-         MTxV(DSM->refOrb->CLN, cmd_vel_EH, temp);
-         for (i = 0; i < 3; i++)
-            CTRL->CmdVelR[i] += temp[i];
+         CTRL->CmdPosR   = MTxV(DSM->refOrb->CLN, cmd_pos_EH);
+         CTRL->CmdVelR   = VxV(wln, CTRL->CmdPosR);
+         const vec3 temp = MTxV(DSM->refOrb->CLN, cmd_vel_EH);
+         CTRL->CmdVelR   = VpVElem(CTRL->CmdVelR, temp);
       } break;
       default: {
          // Decode ref SC ID Number
@@ -2803,7 +2751,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
                exit(EXIT_FAILURE);
             }
             // TODO: don't use other sc truth
-            double qbn[4] = {0.0}, wbn[3] = {0.0};
+            quat qbn;
+            vec3 wbn;
             struct BodyType *TrgSB        = NULL;
             struct DSMStateType *TrgState = NULL;
             {
@@ -2816,32 +2765,29 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
             if (frame_body != 0) {
                // get relative orientation of body to B[0] then apply this to
                // AC.qbn
-               double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbAC[3] = {0.0};
-               QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
-               QxQ(qbB, TrgState->qbn, qbn);
+               vec3 wBnb, wBnbAC;
+               quat qbB = QxQT(TrgSB[frame_body].qn, TrgSB[0].qn);
+               qbn      = QxQ(qbB, TrgState->qbn);
 
                // get angular velocity of body relative to B[0], then apply
                // this to AC.wbn; all in B[frame_body] frame
-               QxV(qbB, TrgSB[0].wn, wBnb);
-               QxV(qbB, TrgState->wbn, wBnbAC);
-               for (i = 0; i < 3; i++) {
-                  // TODO: double check what BodyType::wn actually is
-                  wbn[i] = wBnbAC[i] + (TrgSB[frame_body].wn[i] - wBnb[i]);
-               }
+               wBnb   = QxV(qbB, TrgSB[0].wn);
+               wBnbAC = QxV(qbB, TrgState->wbn);
+               // TODO: double check what BodyType::wn actually is
+               for (int i = 0; i < 3; i++)
+                  wbn.v[i] =
+                      wBnbAC.v[i] + (TrgSB[frame_body].wn.v[i] - wBnb.v[i]);
             }
             else {
-               for (i = 0; i < 3; i++) {
-                  qbn[i] = TrgState->qbn[i];
-                  wbn[i] = TrgState->wbn[i];
-               }
-               qbn[3] = TrgState->qbn[3];
+               qbn = TrgState->qbn;
+               wbn = TrgState->wbn;
             }
             // angular velocity of trgDSM wrt N expressed in N
-            double wbnn[3] = {0.0};
+            vec3 wbnn;
             // Convert SC# B to R Inertial
-            QTxV(qbn, Cmd->Pos, CTRL->CmdPosR);
-            QTxV(qbn, wbn, wbnn); // SC rotates wrt R
-            VxV(wbnn, CTRL->CmdPosR, CTRL->CmdVelR);
+            CTRL->CmdPosR   = QTxV(qbn, Cmd->Pos);
+            wbnn            = QTxV(qbn, wbn); // SC rotates wrt R
+            CTRL->CmdVelR   = VxV(wbnn, CTRL->CmdPosR);
             goodOriginFrame = TRUE;
          }
          else {
@@ -2855,8 +2801,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    if (!strcmp(Cmd->RefOrigin, "OP")) {
       // Specify disp from OP, in X frame directions, control to OP
       // Add pos of F frame origin in R frame
-      for (i = 0; i < 3; i++)
-         CTRL->CmdPosR[i] += F->PosR[i];
+      CTRL->CmdPosR   = VpVElem(CTRL->CmdPosR, F->PosR);
       goodOriginFrame = TRUE;
    }
    else if (!strncmp(Cmd->RefOrigin, "SC", 2)) {
@@ -2887,9 +2832,9 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          struct DSMType *TrgDSM = &TrgS->DSM;
          TrgState               = &TrgDSM->commState;
       }
-      for (i = 0; i < 3; i++) {
-         CTRL->CmdPosR[i] += TrgState->PosR[i] + TrgSB[origin_body].pn[i];
-         CTRL->CmdVelR[i] += TrgState->VelR[i] + TrgSB[origin_body].vn[i];
+      for (int i = 0; i < 3; i++) {
+         CTRL->CmdPosR.v[i] += TrgState->PosR.v[i] + TrgSB[origin_body].pn.v[i];
+         CTRL->CmdVelR.v[i] += TrgState->VelR.v[i] + TrgSB[origin_body].vn.v[i];
       }
       goodOriginFrame = TRUE;
    }
@@ -2904,23 +2849,19 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
               Cmd->RefOrigin, Cmd->RefFrame, SimTime);
       exit(EXIT_FAILURE);
    }
-   for (i = 0; i < 3; i++) {
-      CTRL->CmdPosN[i] = CTRL->CmdPosR[i] + state->PosN[i];
-      CTRL->CmdVelN[i] = CTRL->CmdVelR[i] + state->VelN[i];
-   }
-   for (i = 0; i < 3; i++) {
-      CTRL->trn_kp[i]   = Cmd->trn_kp[i];
-      CTRL->trn_kr[i]   = Cmd->trn_kr[i];
-      CTRL->trn_ki[i]   = Cmd->trn_ki[i];
-      CTRL->FrcB_max[i] = Cmd->FrcB_max[i];
-      CTRL->vel_max[i]  = Cmd->vel_max[i];
-   }
+   CTRL->CmdPosN = VpVElem(CTRL->CmdPosR, state->PosN);
+   CTRL->CmdVelN = VpVElem(CTRL->CmdVelR, state->VelN);
+
+   CTRL->trn_kp   = Cmd->trn_kp;
+   CTRL->trn_kr   = Cmd->trn_kr;
+   CTRL->trn_ki   = Cmd->trn_ki;
+   CTRL->FrcB_max = Cmd->FrcB_max;
+   CTRL->vel_max  = Cmd->vel_max;
 }
 //------------------------------------------------------------------------------
 long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
                 struct DSMCmdVecType *vec, const char *attRefFrame,
-                struct DSMStateType *state, double cmdVecB[3],
-                double cmdVecN[3])
+                struct DSMStateType *state, vec3 *cmdVecB, vec3 *cmdVecN)
 {
    switch (vec->TrgType) {
       case TARGET_SC:
@@ -2928,43 +2869,42 @@ long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
          // to get PV->wn, PV->N (in F Frame)
          FindDsmCmdVecN(DSM, vec);
          // (Converting Cmd vec to body frame)
-         QxV(state->qbn, vec->N, cmdVecB);
+         *cmdVecB = QxV(state->qbn, vec->N);
       } break;
       case TARGET_VEC: {
          switch (attRefFrame[0]) {
             case 'N': {
                // (Converting Cmd vec to body frame)
-               QxV(state->qbn, vec->cmd_vec, cmdVecB);
+               *cmdVecB = QxV(state->qbn, vec->cmd_vec);
             } break;
             case 'F': {
                // (Converting to Inertial frame)
-               MTxV(F->CN, vec->cmd_vec, cmdVecN);
+               *cmdVecN = MTxV(F->CN, vec->cmd_vec);
                // (Converting to body frame)
-               QxV(state->qbn, cmdVecN, cmdVecB);
+               *cmdVecB = QxV(state->qbn, *cmdVecN);
             } break;
             case 'L': {
                // (Converting to LVLH to Inertial frame)
-               MTxV(DSM->refOrb->CLN, vec->cmd_vec, cmdVecN);
+               *cmdVecN = MTxV(DSM->refOrb->CLN, vec->cmd_vec);
                // (Converting to body frame)
-               QxV(state->qbn, cmdVecN, cmdVecB);
+               *cmdVecB = QxV(state->qbn, *cmdVecN);
             } break;
             case 'M': {
                /* Magnetic field frame                               */
                /*    x: magnetic field line                          */
                /*    y: radial cross magnetic field                  */
                /*    z: completes  triad                             */
-               double CbN[3][3] = {{0.0}};
-               for (int i = 0; i < 3; i++)
-                  CbN[0][i] = state->bvn[i];
-               UNITV(CbN[0]);
-               VxV(state->PosN, CbN[0], CbN[1]);
-               UNITV(CbN[1]);
-               VxV(CbN[0], CbN[1], CbN[2]);
-               UNITV(CbN[2]);
+               mat3x3 CbN;
+               CbN.rows[0] = state->bvn;
+               UNITV(&CbN.rows[0]);
+               CbN.rows[1] = VxV(state->PosN, CbN.rows[0]);
+               UNITV(&CbN.rows[1]);
+               CbN.rows[2] = VxV(CbN.rows[0], CbN.rows[1]);
+               UNITV(&CbN.rows[2]);
                // (Converting from magnetic frame to Inertial frame)
-               MTxV(CbN, vec->cmd_vec, cmdVecN);
+               *cmdVecN = MTxV(CbN, vec->cmd_vec);
                // (Converting to body frame)
-               QxV(state->qbn, cmdVecN, cmdVecB);
+               *cmdVecB = QxV(state->qbn, *cmdVecN);
             } break;
             default: {
                long frame_body = 0;
@@ -2996,7 +2936,7 @@ long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
                      exit(EXIT_FAILURE);
                   }
                   // TODO: don't use other sc truth
-                  double qbn[4]                 = {0.0};
+                  quat qbn;
                   struct BodyType *TrgSB        = NULL;
                   struct DSMStateType *TrgState = NULL;
                   {
@@ -3009,20 +2949,17 @@ long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
                   if (frame_body != 0) {
                      // get relative orientation of body to B[0]
                      // then apply this to AC.qbn
-                     double qbB[4] = {0.0};
-                     QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
-                     QxQ(qbB, TrgState->qbn, qbn);
+                     quat qbB;
+                     qbB = QxQT(TrgSB[frame_body].qn, TrgSB[0].qn);
+                     qbn = QxQ(qbB, TrgState->qbn);
                   }
-                  else {
-                     for (int i = 0; i < 3; i++) {
-                        qbn[i] = TrgState->qbn[i];
-                     }
-                     qbn[3] = TrgState->qbn[3];
-                  }
+                  else
+                     qbn = TrgState->qbn;
+
                   // rotation from trg Body to DSM body frame
-                  double qbbs[4] = {0.0};
-                  QxQT(state->qbn, qbn, qbbs);
-                  QxV(qbbs, vec->cmd_vec, cmdVecB);
+                  quat qbbs;
+                  qbbs     = QxQT(state->qbn, qbn);
+                  *cmdVecB = QxV(qbbs, vec->cmd_vec);
                }
                else {
                   fprintf(stderr, "Invalid attitude reference frame for "
@@ -3037,7 +2974,7 @@ long getCmdVecs(struct DSMType *DSM, struct FormationType *F,
          break;
    }
    UNITV(cmdVecB);
-   QTxV(state->qbn, cmdVecB, cmdVecN);
+   *cmdVecN = QTxV(state->qbn, *cmdVecB);
    UNITV(cmdVecN);
    return TRUE;
 }
@@ -3049,21 +2986,21 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
       return;
 
    long i, target_num;
-   double qfn[4], qrn[4], qfl[4], qrf[4];
+   quat qfn, qrn, qfl, qrf;
    struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
    struct DSMStateType *state = &DSM->state;
 
    switch (Cmd->Method) {
       case (PARM_VECTORS): {
-         double cmdVecB[2][3]          = {{0.0}};
-         double cmdVecN[2][3]          = {{0.0}};
+         vec3 cmdVecB[2]               = {VEC3_ZERO};
+         vec3 cmdVecN[2]               = {VEC3_ZERO};
          struct DSMCmdVecType *vecs[2] = {&Cmd->PriVec, &Cmd->SecVec};
          char *attRefFrame[2] = {Cmd->PriAttRefFrame, Cmd->SecAttRefFrame};
-         double C_tb[3][3], C_tn[3][3], dC[3][3];
-         double q_tb[4] = {0, 0, 0, 1}, q_tn[4] = {0, 0, 0, 1}, qbn_cmd[4];
+         mat3x3 C_tb, C_tn, dC;
+         quat q_tb = QUAT_EYE, q_tn = QUAT_EYE, qbn_cmd;
          for (int k = 0; k < 2; k++) {
-            if (!getCmdVecs(DSM, F, vecs[k], attRefFrame[k], state, cmdVecB[k],
-                            cmdVecN[k])) {
+            if (!getCmdVecs(DSM, F, vecs[k], attRefFrame[k], state, &cmdVecB[k],
+                            &cmdVecN[k])) {
                fprintf(stderr,
                        "Invalid Target type for %s vector. Exiting...\n",
                        k == 0 ? "Primary" : "Secondary");
@@ -3072,20 +3009,18 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          }
 
          /*construct body to target DCM and Inertial to Target DCMS*/
-         for (i = 0; i < 3; i++) {
-            C_tb[0][i] = vecs[0]->cmd_axis[i]; // = PV->cmd_axis
-            C_tn[0][i] = cmdVecN[0][i];        // = PriCmdVec
-         }
+         C_tb.rows[0] = vecs[0]->cmd_axis; // = PV->cmd_axis
+         C_tn.rows[0] = cmdVecN[0];        // = PriCmdVec
 
          if (fabs(VoV(vecs[0]->cmd_axis, vecs[1]->cmd_axis) - 1.0) < EPS_DSM) {
             fprintf(stderr,
                     "PV Axis [%lf  %lf  %lf] in %s and SV Axis [%lf  %lf  %lf] "
                     "in %s are parallel, resulting in an infeasible attitude "
                     "command. Exiting...\n",
-                    vecs[0]->cmd_axis[0], vecs[0]->cmd_axis[1],
-                    vecs[0]->cmd_axis[2], Cmd->PriAttRefFrame,
-                    vecs[1]->cmd_axis[0], vecs[1]->cmd_axis[1],
-                    vecs[1]->cmd_axis[2], Cmd->SecAttRefFrame);
+                    vecs[0]->cmd_axis.x, vecs[0]->cmd_axis.y,
+                    vecs[0]->cmd_axis.z, Cmd->PriAttRefFrame,
+                    vecs[1]->cmd_axis.x, vecs[1]->cmd_axis.y,
+                    vecs[1]->cmd_axis.z, Cmd->SecAttRefFrame);
             exit(EXIT_FAILURE);
          }
 
@@ -3100,13 +3035,13 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                   case TARGET_WORLD: {
                      sprintf(tgts[i],
                              "World %s, Position [%.3le, %.3le, %.3le]",
-                             World[vecs[i]->TrgWorld].Name, vecs[i]->W[0],
-                             vecs[i]->W[1], vecs[i]->W[2]);
+                             World[vecs[i]->TrgWorld].Name, vecs[i]->W.x,
+                             vecs[i]->W.y, vecs[i]->W.z);
                   } break;
                   case TARGET_VEC: {
                      sprintf(tgts[i], "Vector [%.3le, %.3le, %.3le]",
-                             vecs[i]->cmd_vec[0], vecs[i]->cmd_vec[1],
-                             vecs[i]->cmd_vec[2]);
+                             vecs[i]->cmd_vec.x, vecs[i]->cmd_vec.y,
+                             vecs[i]->cmd_vec.z);
                   } break;
                   default:
                      strcpy(tgts[i], "ERROR");
@@ -3120,55 +3055,49 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             exit(EXIT_FAILURE);
          }
 
-         VxV(vecs[0]->cmd_axis, vecs[1]->cmd_axis, C_tb[2]);
-         VxV(cmdVecN[0], cmdVecN[1], C_tn[2]);
-         VxV(C_tb[2], C_tb[0], C_tb[1]);
-         VxV(C_tn[2], C_tn[0], C_tn[1]);
+         C_tb.rows[2] = VxV(vecs[0]->cmd_axis, vecs[1]->cmd_axis);
+         C_tn.rows[2] = VxV(cmdVecN[0], cmdVecN[1]);
+         C_tb.rows[1] = VxV(C_tb.rows[2], C_tb.rows[0]);
+         C_tn.rows[1] = VxV(C_tn.rows[2], C_tn.rows[0]);
 
          for (i = 0; i < 3; i++) {
-            UNITV(C_tb[i]);
-            UNITV(C_tn[i]);
+            UNITV(&C_tb.rows[i]);
+            UNITV(&C_tn.rows[i]);
          }
-         C2Q(C_tb, q_tb);
-         C2Q(C_tn, q_tn);
+         q_tb = C2Q(C_tb);
+         q_tn = C2Q(C_tn);
 
          /* Approximation of log map from SO(3) to so(3) to calculate Cmd->wrn*/
-         MTxM(C_tn, Cmd->OldCRN, dC);
-         logso3(dC, Cmd->wrn);
-         for (i = 0; i < 3; i++)
-            Cmd->wrn[i] /= DSM->DT;
-         memcpy(Cmd->OldCRN, C_tn, sizeof(Cmd->OldCRN));
+         dC       = MTxM(C_tn, Cmd->OldCRN);
+         Cmd->wrn = logso3(dC);
+         Cmd->wrn = SxV(1.0 / DSM->DT, Cmd->wrn);
+         memcpy(Cmd->OldCRN.flat, C_tn.flat, sizeof(Cmd->OldCRN));
 
          /* Calculate Inertial to Body Quaternion */
-         QTxQ(q_tb, q_tn, qbn_cmd);
-         UNITQ(qbn_cmd);
-         QxQT(state->qbn, qbn_cmd, Cmd->qbr);
+         qbn_cmd  = UNITQ(QTxQ(q_tb, q_tn));
+         Cmd->qbr = QxQT(state->qbn, qbn_cmd);
       } break;
       case (PARM_AXIS_SPIN): {
-         double cmdVecB[3] = {0.0};
-         double cmdVecN[3] = {0.0};
+         vec3 cmdVecB;
+         vec3 cmdVecN;
 
          if (!getCmdVecs(DSM, F, &Cmd->PriVec, Cmd->PriAttRefFrame, state,
-                         cmdVecB, cmdVecN)) {
+                         &cmdVecB, &cmdVecN)) {
             fprintf(
                 stderr,
                 "Invalid Target type for Primary Spin vector. Exiting...\n");
             exit(EXIT_FAILURE);
          }
 
-         double therr[3] = {0.0};
-         for (i = 0; i < 3; i++)
-            therr[i] = cmdVecB[i] - Cmd->PriVec.cmd_axis[i];
-         double therr_o_axis = VoV(Cmd->PriVec.cmd_axis, therr);
-         for (i = 0; i < 3; i++)
-            therr[i] -= Cmd->PriVec.cmd_axis[i] * therr_o_axis;
-         double therr_mag = UNITV(therr);
-         Cmd->qbr[3]      = cos(therr_mag / 2);
-         double tmp       = sqrt(1.0 - Cmd->qbr[3] * Cmd->qbr[3]);
-         for (i = 0; i < 3; i++)
-            Cmd->qbr[i] = tmp * therr[i];
+         vec3 therr                = VmVElem(cmdVecB, Cmd->PriVec.cmd_axis);
+         const double therr_o_axis = VoV(Cmd->PriVec.cmd_axis, therr);
+         therr = VpVElem(therr, SxV(-therr_o_axis, Cmd->PriVec.cmd_axis));
+         const double therr_mag = UNITV(&therr);
 
-         QTxV(state->qbn, Cmd->AngRate, Cmd->wrn);
+         Cmd->qbr.qs      = cos(therr_mag / 2);
+         const double tmp = sqrt(1.0 - Cmd->qbr.qs * Cmd->qbr.qs);
+         Cmd->qbr.qv      = SxV(tmp, therr);
+         Cmd->wrn         = QTxV(state->qbn, Cmd->AngRate);
       } break;
       case (PARM_UNITVECTOR): {
          fprintf(stderr,
@@ -3179,28 +3108,23 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
       case (PARM_QUATERNION): {
          switch (Cmd->AttRefFrame[0]) {
             case 'N': {
-               for (i = 0; i < 4; i++)
-                  Cmd->qrn[i] = Cmd->q[i];
-               QxQT(state->qbn, Cmd->qrn, Cmd->qbr);
-               for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] = 0.0;
+               Cmd->qrn = Cmd->q;
+               Cmd->qbr = QxQT(state->qbn, Cmd->qrn);
+               Cmd->wrn = VEC3_ZERO;
             } break;
             case 'F': {
-               for (i = 0; i < 4; i++)
-                  Cmd->qrf[i] = Cmd->q[i];
-               C2Q(F->CN, qfn);
-               QxQ(Cmd->qrf, qfn, qrn);
-               QxQT(state->qbn, qrn, Cmd->qbr);
+               Cmd->qrf = Cmd->q;
+               qfn      = C2Q(F->CN);
+               qrn      = QxQ(Cmd->qrf, qfn);
+               Cmd->qbr = QxQT(state->qbn, qrn);
                switch (F->FixedInFrame) {
                   case 'L': {
                      // F rotates wrt N
-                     for (i = 0; i < 3; i++)
-                        Cmd->wrn[i] = DSM->refOrb->wln[i];
+                     Cmd->wrn = DSM->refOrb->wln;
                   } break;
                   case 'N': {
                      // N does not rotate wrt N Inertial
-                     for (i = 0; i < 3; i++)
-                        Cmd->wrn[i] = 0.0;
+                     Cmd->wrn = VEC3_ZERO;
                   } break;
                   default: {
                      fprintf(stderr,
@@ -3211,15 +3135,13 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                }
             } break;
             case 'L': {
-               for (i = 0; i < 4; i++)
-                  Cmd->qrl[i] = Cmd->q[i];
-               C2Q(F->CL, qfl);
-               QxQT(Cmd->qrl, qfl, qrf);
-               C2Q(F->CN, qfn);
-               QxQ(qrf, qfn, qrn);
-               QxQT(state->qbn, qrn, Cmd->qbr);
-               for (i = 0; i < 3; i++)
-                  Cmd->wrn[i] = DSM->refOrb->wln[i];
+               Cmd->qrl = Cmd->q;
+               qfl      = C2Q(F->CL);
+               qrf      = QxQT(Cmd->qrl, qfl);
+               qfn      = C2Q(F->CN);
+               qrn      = QxQ(qrf, qfn);
+               Cmd->qbr = QxQT(state->qbn, qrn);
+               Cmd->wrn = DSM->refOrb->wln;
             } break;
             default: {
                long frame_body = 0;
@@ -3251,7 +3173,7 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                      exit(EXIT_FAILURE);
                   }
                   // TODO: don't use other sc truth
-                  double qbn[4]                 = {0.0};
+                  quat qbn;
                   struct BodyType *TrgSB        = NULL;
                   struct DSMStateType *TrgState = NULL;
                   {
@@ -3264,20 +3186,15 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
                   if (frame_body != 0) {
                      // get relative orientation of body to B[0]
                      // then apply this to AC.qbn
-                     double qbB[4] = {0.0};
-                     QxQT(TrgSB[frame_body].qn, TrgSB[0].qn, qbB);
-                     QxQ(qbB, TrgState->qbn, qbn);
+                     quat qbB = QxQT(TrgSB[frame_body].qn, TrgSB[0].qn);
+                     qbn      = QxQ(qbB, TrgState->qbn);
                   }
-                  else {
-                     for (i = 0; i < 3; i++) {
-                        qbn[i] = TrgState->qbn[i];
-                     }
-                     qbn[3] = TrgState->qbn[3];
-                  }
+                  else
+                     qbn = TrgState->qbn;
+
                   // rotation from trg Body to DSM body frame
-                  double qbbs[4] = {0.0};
-                  QxQT(state->qbn, qbn, qbbs);
-                  QxQT(qbbs, Cmd->q, Cmd->qbr);
+                  quat qbbs = QxQT(state->qbn, qbn);
+                  Cmd->qbr  = QxQT(qbbs, Cmd->q);
                }
                else {
                   fprintf(stderr,
@@ -3308,7 +3225,8 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             exit(EXIT_FAILURE);
          }
          // TODO: not truth of other body
-         double qbn[4] = {0.0}, wbn[3] = {0.0};
+         quat qbn;
+         vec3 wbn;
          struct BodyType *TrgSB        = NULL;
          struct DSMStateType *TrgState = NULL;
          {
@@ -3321,33 +3239,29 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          if (target_num != 0) {
             // get relative orientation of body to B[0] then apply this to
             // AC.qbn
-            double qbB[4] = {0.0}, wBnb[3] = {0.0}, wBnbDSM[3] = {0.0};
-            QxQT(TrgSB[target_num].qn, TrgSB[0].qn, qbB);
-            QxQ(qbB, TrgState->qbn, qbn);
+            vec3 wBnb, wBnbDSM;
+            quat qbB = QxQT(TrgSB[target_num].qn, TrgSB[0].qn);
+            qbn      = QxQ(qbB, TrgState->qbn);
 
             // get relative angular velocity of body to B[0], then apply this
             // to AC.wbn; all in B[frame_body] frame
-            QxV(qbB, TrgSB[0].wn, wBnb);
-            QxV(qbB, TrgState->wbn, wBnbDSM);
+            wBnb    = QxV(qbB, TrgSB[0].wn);
+            wBnbDSM = QxV(qbB, TrgState->wbn);
+
             for (i = 0; i < 3; i++)
-               wbn[i] = wBnbDSM[i] + (TrgSB[target_num].wn[i] - wBnb[i]);
+               wbn.v[i] =
+                   wBnbDSM.v[i] + (TrgSB[target_num].wn.v[i] - wBnb.v[i]);
          }
          else {
-            for (i = 0; i < 3; i++) {
-               qbn[i] = TrgState->qbn[i];
-               wbn[i] = TrgState->wbn[i];
-            }
-            qbn[3] = TrgState->qbn[3];
+            qbn = TrgState->qbn;
+            wbn = TrgState->wbn;
          }
-         QxQT(state->qbn, qbn, Cmd->qbr);
-         QTxV(TrgState->qbn, wbn, Cmd->wrn);
+         Cmd->qbr = QxQT(state->qbn, qbn);
+         Cmd->wrn = QTxV(TrgState->qbn, wbn);
       } break;
       case (PARM_DETUMBLE): {
-         for (i = 0; i < 3; i++)
-            Cmd->qbr[i] = 0;
-         Cmd->qbr[3] = 1;
-         for (i = 0; i < 3; i++)
-            Cmd->wrn[i] = 0.0;
+         Cmd->qbr = QUAT_EYE;
+         Cmd->wrn = VEC3_ZERO;
       } break;
       default:
          fprintf(stderr,
@@ -3356,17 +3270,14 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          break;
    }
 
-   for (i = 0; i < 4; i++)
-      CTRL->qbr[i] = Cmd->qbr[i];
-   for (i = 0; i < 3; i++) {
-      CTRL->dmp_kp[i]   = Cmd->dmp_kp[i];
-      CTRL->att_kp[i]   = Cmd->att_kp[i];
-      CTRL->att_kr[i]   = Cmd->att_kr[i];
-      CTRL->att_ki[i]   = Cmd->att_ki[i];
-      CTRL->Trq_max[i]  = Cmd->Trq_max[i];
-      CTRL->dTrq_max[i] = Cmd->dTrq_max[i];
-      CTRL->w_max[i]    = Cmd->w_max[i];
-   }
+   CTRL->qbr      = Cmd->qbr;
+   CTRL->dmp_kp   = Cmd->dmp_kp;
+   CTRL->att_kp   = Cmd->att_kp;
+   CTRL->att_kr   = Cmd->att_kr;
+   CTRL->att_ki   = Cmd->att_ki;
+   CTRL->Trq_max  = Cmd->Trq_max;
+   CTRL->dTrq_max = Cmd->dTrq_max;
+   CTRL->w_max    = Cmd->w_max;
 }
 //------------------------------------------------------------------------------
 //                                NAVIGATION
@@ -3379,23 +3290,19 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    if (Nav->NavigationActive == FALSE) {
       // TODO
       DSMState->Time = AC->Time;
-      for (int i = 0; i < 3; i++) {
-         DSMState->PosN[i] = AC->PosN[i];
-         DSMState->VelN[i] = AC->VelN[i];
-         DSMState->PosR[i] = DSMState->PosN[i] - DSM->refOrb->PosN[i];
-         DSMState->VelR[i] = DSMState->VelN[i] - DSM->refOrb->VelN[i];
+      DSMState->PosN = AC->PosN;
+      DSMState->VelN = AC->VelN;
+      DSMState->PosR = VmVElem(DSMState->PosN, DSM->refOrb->PosN);
+      DSMState->VelR = VmVElem(DSMState->VelN, DSM->refOrb->VelN);
 
-         for (int j = 0; j < 3; j++)
-            DSMState->CBN[i][j] = AC->CBN[i][j];
-         DSMState->qbn[i] = AC->qbn[i];
-         DSMState->wbn[i] = AC->wbn[i];
+      DSMState->CBN = AC->CBN;
+      DSMState->qbn = AC->qbn;
+      DSMState->wbn = AC->wbn;
 
-         DSMState->svb[i] = AC->svb[i];
-         DSMState->svn[i] = AC->svn[i];
-         DSMState->bvb[i] = AC->bvb[i];
-         DSMState->bvn[i] = AC->bvn[i];
-      }
-      DSMState->qbn[3] = AC->qbn[3];
+      DSMState->svb = AC->svb;
+      DSMState->svn = AC->svn;
+      DSMState->bvb = AC->bvb;
+      DSMState->bvn = AC->bvn;
       return;
    }
 
@@ -3407,39 +3314,36 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    {
       if (Nav->stateActive[state] == TRUE) {
          // TODO: what to do for states that are not active in Nav?
-         double tmp3Vec[3] = {0.0}, tmpQ[4] = {0.0};
+         vec3 tmp3Vec;
+         quat tmpQ;
          switch (state) {
             case TIME_STATE:
                // AC->Time = Nav->Time;
                break;
             case ROTMAT_STATE:
-               MTxM(Nav->CRB, Nav->refCRN, DSMState->CBN);
-               C2Q(DSMState->CBN, DSMState->qbn);
+               DSMState->CBN = MTxM(Nav->CRB, Nav->refCRN);
+               DSMState->qbn = C2Q(DSMState->CBN);
                break;
             case QUAT_STATE:
-               C2Q(Nav->refCRN, tmpQ);
-               QxQ(Nav->qbr, tmpQ, DSMState->qbn);
-               Q2C(DSMState->qbn, DSMState->CBN);
+               tmpQ          = C2Q(Nav->refCRN);
+               DSMState->qbn = QxQ(Nav->qbr, tmpQ);
+               DSMState->CBN = Q2C(DSMState->qbn);
                break;
             case POS_STATE:
-               for (int i = 0; i < 3; i++)
-                  tmp3Vec[i] = Nav->PosR[i] + Nav->refPos[i];
-               MTxV(Nav->refCRN, tmp3Vec, DSMState->PosN);
-               for (int i = 0; i < 3; i++)
-                  DSMState->PosR[i] = DSMState->PosN[i] - DSM->refOrb->PosN[i];
+               tmp3Vec        = VpVElem(Nav->PosR, Nav->refPos);
+               DSMState->PosN = MTxV(Nav->refCRN, tmp3Vec);
+               DSMState->PosR = VmVElem(DSMState->PosN, DSM->refOrb->PosN);
                break;
             case VEL_STATE:
                // will need more (BKE) for non-inertial frame
-               for (int i = 0; i < 3; i++)
-                  tmp3Vec[i] = Nav->VelR[i] + Nav->refVel[i];
-               MTxV(Nav->refCRN, tmp3Vec, DSMState->VelN);
-               for (int i = 0; i < 3; i++)
-                  DSMState->VelR[i] = DSMState->VelN[i] - DSM->refOrb->VelN[i];
+               tmp3Vec        = VpVElem(Nav->VelR, Nav->refVel);
+               DSMState->VelN = MTxV(Nav->refCRN, tmp3Vec);
+
+               DSMState->VelR = VmVElem(DSMState->VelN, DSM->refOrb->VelN);
                break;
             case OMEGA_STATE:
-               MTxV(Nav->CRB, Nav->refOmega, tmp3Vec);
-               for (int i = 0; i < 3; i++)
-                  DSMState->wbn[i] = Nav->wbr[i] + tmp3Vec[i];
+               tmp3Vec       = MTxV(Nav->CRB, Nav->refOmega);
+               DSMState->wbn = VpVElem(Nav->wbr, tmp3Vec);
                break;
             default:
                break;
@@ -3450,40 +3354,30 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
    if (Nav->stateActive[ROTMAT_STATE] == TRUE ||
        Nav->stateActive[QUAT_STATE] == TRUE) {
       if (any_int(Nav->nSensor[MAG_SENSOR], Nav->sensorActive[MAG_SENSOR])) {
-         for (int i = 0; i < 3; i++)
-            DSMState->bvn[i] = AC->bvn[i];
-         MxV(DSMState->CBN, DSMState->bvn, DSMState->bvb);
-         for (int i = 0; i < 3; i++)
-            AC->bvb[i] = DSMState->bvb[i];
+         DSMState->bvn = AC->bvn;
+         DSMState->bvb = MxV(DSMState->CBN, DSMState->bvn);
+         AC->bvb       = DSMState->bvb;
       }
       if (any_int(Nav->nSensor[CSS_SENSOR], Nav->sensorActive[CSS_SENSOR]) ||
           any_int(Nav->nSensor[FSS_SENSOR], Nav->sensorActive[FSS_SENSOR])) {
-         for (int i = 0; i < 3; i++)
-            DSMState->svn[i] = AC->svn[i];
-         MxV(DSMState->CBN, DSMState->svn, DSMState->svb);
-         for (int i = 0; i < 3; i++)
-            AC->svb[i] = DSMState->svb[i];
+         DSMState->svn = AC->svn;
+         DSMState->svb = MxV(DSMState->CBN, DSMState->svn);
+         AC->svb       = DSMState->svb;
       }
    }
 }
 //------------------------------------------------------------------------------
 void TranslationalNavigation(struct AcType *AC, struct DSMStateType *state)
 {
-   for (int i = 0; i < 3; i++) {
-      AC->PosN[i] = state->PosN[i];
-      AC->VelN[i] = state->VelN[i];
-   }
+   AC->PosN = state->PosN;
+   AC->VelN = state->VelN;
 }
 //------------------------------------------------------------------------------
 void AttitudeNavigation(struct AcType *AC, struct DSMStateType *state)
 {
-   for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++)
-         AC->CBN[i][j] = state->CBN[i][j];
-      AC->qbn[i] = state->qbn[i];
-      AC->wbn[i] = state->wbn[i];
-   }
-   AC->qbn[3] = state->qbn[3];
+   AC->CBN = state->CBN;
+   AC->qbn = state->qbn;
+   AC->wbn = state->wbn;
 }
 //------------------------------------------------------------------------------
 void MurAKF(struct AcType *AC __attribute__((unused)),
@@ -3517,8 +3411,6 @@ void MurAKF(struct AcType *AC __attribute__((unused)),
 //------------------------------------------------------------------------------
 void TranslationCtrl(struct DSMType *DSM)
 {
-   long i;
-
    struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
    struct DSMCmdType *Cmd     = &DSM->Cmd;
    struct DSMStateType *state = &DSM->state;
@@ -3528,81 +3420,68 @@ void TranslationCtrl(struct DSMType *DSM)
          case PID_CNTRL: {
             // PID Controller
             if (Cmd->NewTrnGainsProcessed == TRUE) {
-               for (i = 0; i < 3; i++)
-                  DSM->trn_ei[i] = 0.0;
+               DSM->trn_ei               = VEC3_ZERO;
                Cmd->NewTrnGainsProcessed = FALSE;
             }
 
-            for (i = 0; i < 3; i++) {
-               DSM->perr[i] =
-                   state->PosR[i] - CTRL->CmdPosR[i]; // Position Error
-               DSM->verr[i] =
-                   state->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
-               DSM->trn_ei[i] += (DSM->Oldperr[i] + DSM->perr[i]) / 2.0 *
-                                 DSM->DT; // Integrated Error
+            // Position Error
+            DSM->perr = VmVElem(state->PosR, CTRL->CmdPosR);
 
-               if (fabs(Cmd->trn_kilimit[i]) > EPS_DSM &&
-                   fabs(CTRL->trn_ki[i]) > EPS_DSM)
-                  DSM->trn_ei[i] = Limit(
-                      DSM->trn_ei[i], -Cmd->trn_kilimit[i] / CTRL->trn_ki[i],
-                      Cmd->trn_kilimit[i] /
-                          CTRL->trn_ki[i]); // limits integrated error to
-                                            // limit/ki, since limit is given
-                                            // in terms of force
+            // Velocity Error
+            DSM->verr = VmVElem(state->VelR, CTRL->CmdVelR);
 
-               CTRL->u1[i] = CTRL->trn_kp[i] / CTRL->trn_kr[i] * DSM->perr[i];
-               if (CTRL->vel_max[i] > 0) {
-                  CTRL->u1[i] =
-                      Limit(CTRL->u1[i], -CTRL->vel_max[i], CTRL->vel_max[i]);
-               }
-               CTRL->FcmdN[i] =
-                   -CTRL->trn_kr[i] * (CTRL->u1[i] + DSM->verr[i]) -
-                   CTRL->trn_ki[i] * DSM->trn_ei[i];
-            }
-            QxV(state->qbn, CTRL->FcmdN,
-                CTRL->FcmdB); // Converting from Inertial to body frame for
-                              // Report
-            for (i = 0; i < 3; i++) {
-               if (CTRL->FrcB_max[i] > 0)
-                  CTRL->FcmdB[i] = Limit(
-                      CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                      CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-            }
-            QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
+            // Integrated Error
+            for (int i = 0; i < 3; i++)
+               DSM->trn_ei.v[i] =
+                   (DSM->perr.v[i] + DSM->Oldperr.v[i]) * DSM->DT / 2.0;
+
+            DSM->trn_ei = LimitElem_bidir(
+                DSM->trn_ei, VdVElem(Cmd->trn_kilimit, CTRL->trn_ki));
+
+            for (int i = 0; i < 3; i++)
+               CTRL->u1.v[i] =
+                   CTRL->trn_kp.v[i] / CTRL->trn_kr.v[i] * DSM->perr.v[i];
+
+            CTRL->u1 = LimitElem_bidir(CTRL->u1, CTRL->vel_max);
+
+            for (int i = 0; i < 3; i++)
+               CTRL->FcmdN.v[i] =
+                   -CTRL->trn_kr.v[i] * (CTRL->u1.v[i] + DSM->verr.v[i]) -
+                   CTRL->trn_ki.v[i] * DSM->trn_ei.v[i];
+
+            // Converting from Inertial to body frame for Report
+            CTRL->FcmdB = QxV(state->qbn, CTRL->FcmdN);
+
+            // Limiting AC->Frc in body frame
+            CTRL->FcmdB = LimitElem_bidir(CTRL->FcmdB, CTRL->FrcB_max);
+            CTRL->FcmdN = QTxV(state->qbn, CTRL->FcmdB);
          } break;
          case LYA_2BODY_CNTRL: {
             // Calculate relative radius, velocity
-            for (i = 0; i < 3; i++) {
-               DSM->perr[i] = state->PosR[i] -
-                              CTRL->CmdPosR[i]; // Position Error, Relative
-               DSM->verr[i] =
-                   state->VelR[i] - CTRL->CmdVelR[i]; // Velocity Error
+            // Position Error, Relative
+            DSM->perr = VmVElem(state->PosR, CTRL->CmdPosR);
+
+            // Velocity Error
+            DSM->verr = VmVElem(state->VelR, CTRL->CmdVelR);
+
+            const double r_norm  = MAGV(state->PosN);
+            const double r_cntrl = MAGV(CTRL->CmdPosN);
+            const double mu      = DSM->refOrb->mu;
+
+            for (int i = 0; i < 3; i++) {
+               const double dg  = -mu / pow(r_norm, 3) * state->PosN.v[i] +
+                                  mu / pow(r_cntrl, 3) * CTRL->CmdPosN.v[i];
+               CTRL->FcmdN.v[i] = -CTRL->trn_kp.v[i] * DSM->perr.v[i] -
+                                  CTRL->trn_kr.v[i] * DSM->verr.v[i] -
+                                  dg * DSM->mass;
             }
 
-            double r_norm  = MAGV(state->PosN);
-            double r_cntrl = MAGV(CTRL->CmdPosN);
-            double mu      = DSM->refOrb->mu;
+            // Converting from Inertial to body frame for Report
+            CTRL->FcmdB = QxV(state->qbn, CTRL->FcmdN);
 
-            double dg[3];
-            for (i = 0; i < 3; i++)
-               dg[i] = -mu / pow(r_norm, 3) * state->PosN[i] +
-                       mu / pow(r_cntrl, 3) * CTRL->CmdPosN[i];
-
-            for (i = 0; i < 3; i++) {
-               CTRL->FcmdN[i] = -CTRL->trn_kp[i] * DSM->perr[i] -
-                                CTRL->trn_kr[i] * DSM->verr[i] -
-                                dg[i] * DSM->mass;
-            }
-            QxV(state->qbn, CTRL->FcmdN,
-                CTRL->FcmdB); // Converting from Inertial to body frame for
-                              // Report
-            for (i = 0; i < 3; i++) {
-               if (CTRL->FrcB_max[i] > 0)
-                  CTRL->FcmdB[i] = Limit(
-                      CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                      CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-            }
-            QTxV(state->qbn, CTRL->FcmdB, CTRL->FcmdN);
+            // Limiting AC->Frc in body frame
+            CTRL->FcmdB = LimitElem_bidir(CTRL->FcmdB, CTRL->FrcB_max);
+            CTRL->FcmdN = QTxV(state->qbn, CTRL->FcmdB);
          } break;
          default:
             fprintf(stderr,
@@ -3610,8 +3489,7 @@ void TranslationCtrl(struct DSMType *DSM)
             exit(EXIT_FAILURE);
             break;
       }
-      for (i = 0; i < 3; i++)
-         DSM->Oldperr[i] = DSM->perr[i];
+      DSM->Oldperr = DSM->perr;
    }
    else if (Cmd->TranslationCtrlActive == TRUE &&
             Cmd->ManeuverMode != INACTIVE) {
@@ -3619,71 +3497,44 @@ void TranslationCtrl(struct DSMType *DSM)
          switch (Cmd->ManeuverMode) {
             case CONSTANT: {
                if (!strcmp(Cmd->RefFrame, "N")) {
-                  for (i = 0; i < 3; i++) {
-                     CTRL->FcmdN[i] =
-                         DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
-                  }
-                  QxV(state->qbn, CTRL->FcmdN,
-                      CTRL->FcmdB); // Converting from Inertial to body frame
-                                    // for Report
+                  CTRL->FcmdN = SxV(DSM->mass / Cmd->BurnTime, Cmd->DeltaV);
+                  // Converting from Inertial to body frame for Report
+                  CTRL->FcmdB = QxV(state->qbn, CTRL->FcmdN);
                }
-               else if (!strcmp(Cmd->RefFrame, "B")) {
-                  for (i = 0; i < 3; i++) {
-                     CTRL->FcmdB[i] =
-                         DSM->mass * Cmd->DeltaV[i] / Cmd->BurnTime;
-                  }
-               }
-               for (i = 0; i < 3; i++) {
-                  if (CTRL->FrcB_max[i] > 0) {
-                     CTRL->FcmdB[i] = Limit(
-                         CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                         CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-                  }
-               }
-               QTxV(state->qbn, CTRL->FcmdB,
-                    CTRL->FcmdN); // Converting back to Inertial from body frame
+               else if (!strcmp(Cmd->RefFrame, "B"))
+                  CTRL->FcmdB = SxV(DSM->mass / Cmd->BurnTime, Cmd->DeltaV);
+
+               // Limiting AC->Frc in body frame
+               CTRL->FcmdB = LimitElem_bidir(CTRL->FcmdB, CTRL->FrcB_max);
+
+               // Converting back to Inertial from body frame
+               CTRL->FcmdN = QTxV(state->qbn, CTRL->FcmdB);
             } break;
             case SMOOTHED: {
-               const double coef =
-                   -2 *
-                   atanh(-0.99998); // .99998 corresponds to capturing 99.999%
-                                    // of the burn since tanh has an asymptote
-               double sharp = coef / Cmd->BurnTime;
-               double t_mid = Cmd->BurnStopTime - Cmd->BurnTime / 2.0;
-               double t_since_mid =
-                   SimTime - t_mid; // Time elapsed since middle of burn
-               double coshSharp  = cosh(sharp * t_since_mid);
-               double coshSharp2 = coshSharp * coshSharp;
+               // .99998 corresponds to capturing 99.999% of the burn since tanh
+               // has an asymptote
+               const double coef = -2 * atanh(-0.99998);
+
+               const double sharp = coef / Cmd->BurnTime;
+               const double t_mid = Cmd->BurnStopTime - Cmd->BurnTime / 2.0;
+               // Time elapsed since middle of burn
+               const double t_since_mid = SimTime - t_mid;
+               const double coshSharp   = cosh(sharp * t_since_mid);
+               const double coshSharp2  = coshSharp * coshSharp;
 
                if (!strcmp(Cmd->RefFrame, "N")) {
-                  for (i = 0; i < 3; i++) {
-                     CTRL->FcmdN[i] = DSM->mass *
-                                      (Cmd->DeltaV[i] * sharp / 2.0) /
-                                      coshSharp2;
-                     CTRL->FcmdN[i] = DSM->mass *
-                                      (Cmd->DeltaV[i] * sharp / 2.0) /
-                                      coshSharp2;
-                  }
-                  QxV(state->qbn, CTRL->FcmdN,
-                      CTRL->FcmdB); // Converting from Inertial to body frame
-                                    // for Report
+                  CTRL->FcmdN = SxV((DSM->mass * sharp) / (2.0 * coshSharp2),
+                                    Cmd->DeltaV);
+                  // Converting from Inertial to body frame for Report
+                  CTRL->FcmdB = QxV(state->qbn, CTRL->FcmdN);
                }
-               else if (!strcmp(Cmd->RefFrame, "B")) {
-                  for (i = 0; i < 3; i++) {
-                     CTRL->FcmdB[i] = DSM->mass *
-                                      (Cmd->DeltaV[i] * sharp / 2.0) /
-                                      coshSharp2;
-                  }
-               }
-               for (i = 0; i < 3; i++) {
-                  if (CTRL->FrcB_max[i] > 0) {
-                     CTRL->FcmdB[i] = Limit(
-                         CTRL->FcmdB[i], -CTRL->FrcB_max[i],
-                         CTRL->FrcB_max[i]); // Limiting AC->Frc in body frame
-                  }
-               }
-               QTxV(state->qbn, CTRL->FcmdB,
-                    CTRL->FcmdN); // Converting back to Inertial from body frame
+               else if (!strcmp(Cmd->RefFrame, "B"))
+                  CTRL->FcmdB = SxV((DSM->mass * sharp) / (2.0 * coshSharp2),
+                                    Cmd->DeltaV);
+               CTRL->FcmdB = LimitElem_bidir(CTRL->FcmdB, CTRL->FrcB_max);
+
+               // Converting back to Inertial from body frame
+               CTRL->FcmdN = QTxV(state->qbn, CTRL->FcmdB);
             } break;
             default:
                fprintf(stderr, "Invalid maneuver mode. Exiting...\n");
@@ -3694,29 +3545,22 @@ void TranslationCtrl(struct DSMType *DSM)
       else {
          Cmd->ManeuverMode          = INACTIVE;
          Cmd->TranslationCtrlActive = FALSE;
-         for (i = 0; i < 3; i++) {
-            CTRL->FcmdN[i] = 0;
-            CTRL->FcmdB[i] = 0;
-         }
+         CTRL->FcmdN                = VEC3_ZERO;
+         CTRL->FcmdB                = VEC3_ZERO;
       }
    }
    else {
-      for (i = 0; i < 3; i++) {
-         CTRL->FcmdN[i] = 0;
-         CTRL->FcmdB[i] = 0;
-      }
+      CTRL->FcmdN = VEC3_ZERO;
+      CTRL->FcmdB = VEC3_ZERO;
    }
    // Assigning CMDs to upper structure
-   for (i = 0; i < 3; i++) {
-      DSM->FcmdN[i] = CTRL->FcmdN[i];
-      DSM->FcmdB[i] = CTRL->FcmdB[i];
-   }
+   DSM->FcmdN = CTRL->FcmdN;
+   DSM->FcmdB = CTRL->FcmdB;
 }
 //------------------------------------------------------------------------------
 void AttitudeCtrl(struct DSMType *DSM)
 {
-   long i;
-   double wrb[3];
+   vec3 wrb;
 
    struct DSMCtrlType *CTRL   = &DSM->DsmCtrl;
    struct DSMCmdType *Cmd     = &DSM->Cmd;
@@ -3727,53 +3571,53 @@ void AttitudeCtrl(struct DSMType *DSM)
          case PID_CNTRL: {
             // PID Controller
             if (Cmd->NewAttGainsProcessed == TRUE) {
-               for (i = 0; i < 3; i++) {
-                  DSM->att_ei[i] = 0.0;
-               }
+               DSM->att_ei               = VEC3_ZERO;
                Cmd->NewAttGainsProcessed = FALSE;
             }
+            // Angular Position Error
+            DSM->therr = Q2AngleVec(CTRL->qbr);
+            // Rotate angular velocity into Body frame
+            wrb = QxV(state->qbn, Cmd->wrn);
 
-            Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
-            QxV(state->qbn, Cmd->wrn,
-                wrb); // Rotate angular velocity into Body frame
-            for (i = 0; i < 3; i++) {
-               DSM->werr[i] = state->wbn[i] -
-                              wrb[i]; // Angular Velocity Error (in body frame)
-               DSM->att_ei[i] += (DSM->Oldtherr[i] + DSM->therr[i]) / 2.0 *
-                                 DSM->DT; // Integrated angle error
+            // Angular Velocity Error (in body frame)
+            DSM->werr = VmVElem(state->wbn, wrb);
 
-               if (fabs(Cmd->att_kilimit[i]) > EPS_DSM &&
-                   CTRL->att_ki[i] > EPS_DSM)
-                  DSM->att_ei[i] = Limit(DSM->att_ei[i],
-                                         -Cmd->att_kilimit[i] / CTRL->att_ki[i],
-                                         Cmd->att_kilimit[i] / CTRL->att_ki[i]);
+            // Integrated angle error
+            for (int i = 0; i < 3; i++)
+               DSM->att_ei.v[i] +=
+                   (DSM->Oldtherr.v[i] + DSM->therr.v[i]) / 2.0 * DSM->DT;
 
-               CTRL->u2[i] = CTRL->att_kp[i] / CTRL->att_kr[i] * DSM->therr[i];
-               if (CTRL->w_max[i] > 0) {
-                  CTRL->u2[i] =
-                      Limit(CTRL->u2[i], -CTRL->w_max[i], CTRL->w_max[i]);
-               }
-               CTRL->Tcmd[i] = -CTRL->att_kr[i] * (CTRL->u2[i] + DSM->werr[i]) -
-                               CTRL->att_ki[i] * DSM->att_ei[i];
-            }
-            for (i = 0; i < 3; i++)
-               DSM->Oldtherr[i] = DSM->therr[i];
+            DSM->att_ei = LimitElem_bidir(
+                DSM->att_ei, VdVElem(Cmd->att_kilimit, CTRL->att_ki));
+
+            for (int i = 0; i < 3; i++)
+               CTRL->u2.v[i] =
+                   CTRL->att_kp.v[i] / CTRL->att_kr.v[i] * DSM->therr.v[i];
+
+            CTRL->u2 = LimitElem_bidir(CTRL->u2, CTRL->w_max);
+
+            for (int i = 0; i < 3; i++)
+               CTRL->Tcmd.v[i] =
+                   -CTRL->att_kr.v[i] * (CTRL->u2.v[i] + DSM->werr.v[i]) -
+                   CTRL->att_ki.v[i] * DSM->att_ei.v[i];
+
+            DSM->Oldtherr = DSM->therr;
          } break;
          case LYA_ATT_CNTRL: {
-            double om_x_I_om[3];
+            // Angular Position Error
+            DSM->therr = Q2AngleVec(CTRL->qbr);
+            // Rotate angular velocity into Body frame
+            wrb = QxV(state->qbn, Cmd->wrn);
 
-            Q2AngleVec(CTRL->qbr, DSM->therr); // Angular Position Error
-            QxV(state->qbn, Cmd->wrn,
-                wrb); // Rotate angular velocity into Body frame
-            for (i = 0; i < 3; i++)
-               DSM->werr[i] = state->wbn[i] -
-                              wrb[i]; // Angular Velocity Error (in body frame)
+            // Angular Velocity Error (in body frame)
+            DSM->werr = VmVElem(state->wbn, wrb);
+
             // calculate nonlinear term in Quaternion Lyapunov stability
-            vxMov(DSM->werr, DSM->MOI, om_x_I_om);
-
-            for (i = 0; i < 3; i++) {
-               CTRL->Tcmd[i] = -Cmd->att_kp[i] * CTRL->qbr[i] -
-                               Cmd->att_kr[i] * DSM->werr[i] + om_x_I_om[i];
+            vec3 om_x_I_om = vxMov(DSM->werr, DSM->MOI);
+            for (int i = 0; i < 3; i++) {
+               CTRL->Tcmd.v[i] = -Cmd->att_kp.v[i] * CTRL->qbr.qv.v[i] -
+                                 Cmd->att_kr.v[i] * DSM->werr.v[i] +
+                                 om_x_I_om.v[i];
             }
          } break;
          default:
@@ -3781,26 +3625,18 @@ void AttitudeCtrl(struct DSMType *DSM)
             exit(EXIT_FAILURE);
             break;
       }
-      for (i = 0; i < 3; i++) {
-         if (CTRL->Trq_max[i] > 0)
-            CTRL->Tcmd[i] =
-                Limit(CTRL->Tcmd[i], -CTRL->Trq_max[i], CTRL->Trq_max[i]);
-      }
+      CTRL->dTcmd = LimitElem_bidir(CTRL->dTcmd, CTRL->dTrq_max);
    }
-   else {
-      for (i = 0; i < 3; i++)
-         CTRL->Tcmd[i] = 0;
-   }
+   else
+      CTRL->Tcmd = VEC3_ZERO;
+
    // Assigning CMDs to upper structure
-   for (i = 0; i < 3; i++) {
-      DSM->Tcmd[i] = CTRL->Tcmd[i];
-      DSM->Mcmd[i] = 0.0; // For now, this is unused, so it needs to be cleared
-   }
+   DSM->Tcmd = CTRL->Tcmd;
+   DSM->Mcmd = VEC3_ZERO; // For now, this is unused, so it needs to be cleared
 }
 //------------------------------------------------------------------------------
-void MomentumDumpCtrl(struct DSMType *DSM, double TotalWhlH[3])
+void MomentumDumpCtrl(struct DSMType *DSM, vec3 TotalWhlH)
 {
-   long i;
    double whlHNorm = 0.0;
 
    struct DSMCmdType *Cmd;
@@ -3821,8 +3657,7 @@ void MomentumDumpCtrl(struct DSMType *DSM, double TotalWhlH[3])
    if (CTRL->H_DumpActive == TRUE) {
       switch (Cmd->dmp_controller) {
          case H_DUMP_CNTRL:
-            for (i = 0; i < 3; i++)
-               CTRL->dTcmd[i] = -CTRL->dmp_kp[i] * TotalWhlH[i];
+            CTRL->dTcmd = VNegElem(VxVElem(CTRL->dmp_kp, TotalWhlH));
             break;
          default:
             fprintf(
@@ -3833,19 +3668,12 @@ void MomentumDumpCtrl(struct DSMType *DSM, double TotalWhlH[3])
             break;
       }
 
-      for (i = 0; i < 3; i++) {
-         if (CTRL->dTrq_max[i] > 0)
-            CTRL->dTcmd[i] =
-                Limit(CTRL->dTcmd[i], -CTRL->dTrq_max[i], CTRL->dTrq_max[i]);
-      }
+      CTRL->dTcmd = LimitElem_bidir(CTRL->dTcmd, CTRL->dTrq_max);
    }
-   else {
-      for (i = 0; i < 3; i++)
-         CTRL->dTcmd[i] = 0.0;
-   }
+   else
+      CTRL->dTcmd = VEC3_ZERO;
 
-   for (i = 0; i < 3; i++)
-      DSM->dTcmd[i] = CTRL->dTcmd[i];
+   DSM->dTcmd = CTRL->dTcmd;
 }
 //------------------------------------------------------------------------------
 //                             FLIGHT SOFTWARE
@@ -3870,15 +3698,13 @@ void DsmFSW(struct SCType *S)
       DSM->CmdInit = 0;
       DsmCmdInterpreterMrk1(DSM, dsmCmds);
 
-      for (int i = 0; i < 3;
-           i++) { // put place holders in integrator "old" values, set ei
-                  // values to zero to initialize integrated error
-         DSM->Oldtherr[i] = 0.0;
-         DSM->Oldperr[i]  = 0.0;
+      // put place holders in integrator "old" values, set ei values to zero to
+      // initialize integrated error
+      DSM->Oldtherr = VEC3_ZERO;
+      DSM->Oldperr  = VEC3_ZERO;
 
-         DSM->att_ei[i] = 0.0;
-         DSM->trn_ei[i] = 0.0;
-      }
+      DSM->att_ei = VEC3_ZERO;
+      DSM->trn_ei = VEC3_ZERO;
    }
 
    if (DSM->CmdNum < DSM->CmdCnt && SimTime >= DSM->CmdNextTime) {
@@ -3904,12 +3730,11 @@ void DsmFSW(struct SCType *S)
    AttitudeCtrl(DSM);
    {
       // TODO: this
-      double TotalWhlH[3] = {0.0};
-      for (int i = 0; i < AC->Nwhl; i++) {
-         for (int j = 0; j < 3; j++) {
-            TotalWhlH[j] += AC->Whl[i].Axis[j] * AC->Whl[i].H;
-         }
-      }
+      vec3 TotalWhlH = VEC3_ZERO;
+      for (int i = 0; i < AC->Nwhl; i++)
+         for (int j = 0; j < 3; j++)
+            TotalWhlH.v[j] += AC->Whl[i].Axis.v[j] * AC->Whl[i].H;
+
       MomentumDumpCtrl(DSM, TotalWhlH);
    }
 

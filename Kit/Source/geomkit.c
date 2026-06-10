@@ -150,10 +150,9 @@ void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl)
 /*********************************************************************/
 void SurfaceForceProps(struct GeomType *G)
 {
-   double **uv;
-   double uhat[3], v2[3], nhat[3], vhat[3];
-   double C[3][3];
-   double uvbar[3];
+   vec3 *uv;
+   vec3 uhat, v2, nhat, vhat, uvbar;
+   mat3x3 C;
    double x1, y1, x2, y2, xA, yA;
    long Ip;
    long j;
@@ -162,20 +161,19 @@ void SurfaceForceProps(struct GeomType *G)
    for (Ip = 0; Ip < G->Npoly; Ip++) {
       P = &G->Poly[Ip];
 
-      uv = CreateMatrix(P->Nv + 1, 3);
+      uv = calloc(P->Nv + 1, sizeof(vec3));
 
       /* Compute Unit Normal Vector */
       for (j = 0; j < 3; j++) {
-         uhat[j] = G->V[P->V[1]][j] - G->V[P->V[0]][j];
-         v2[j]   = G->V[P->V[2]][j] - G->V[P->V[1]][j];
+         uhat.v[j] = G->V[P->V[1]].v[j] - G->V[P->V[0]].v[j];
+         v2.v[j]   = G->V[P->V[2]].v[j] - G->V[P->V[1]].v[j];
       }
-      UNITV(uhat);
-      VxV(uhat, v2, nhat);
-      UNITV(nhat);
-      VxV(nhat, uhat, vhat);
-      UNITV(vhat);
-      for (j = 0; j < 3; j++)
-         P->Norm[j] = nhat[j];
+      UNITV(&uhat);
+      nhat = VxV(uhat, v2);
+      UNITV(&nhat);
+      vhat = VxV(nhat, uhat);
+      UNITV(&vhat);
+      P->Norm = nhat;
       if (MAGV(nhat) == 0.0) {
          fprintf(stderr, "Zero-length unit vector in SurfaceForceProps. Check "
                          "for zero-area polys or polys with three colinear "
@@ -185,47 +183,42 @@ void SurfaceForceProps(struct GeomType *G)
       }
 
       /* Compute in-plane basis vectors */
-      PerpBasis(P->Norm, P->Uhat, P->Vhat);
+      P->Vhat = PerpBasis(P->Norm, &P->Uhat);
 
       /* Compute Polygon Area and Centroid */
-      for (j = 0; j < 3; j++) {
-         C[0][j] = uhat[j];
-         C[1][j] = vhat[j];
-         C[2][j] = nhat[j];
-      }
+      C.rows[0] = uhat;
+      C.rows[1] = vhat;
+      C.rows[2] = nhat;
+
       for (j = 0; j < P->Nv; j++)
-         MxV(C, G->V[P->V[j]], uv[j]);
-      MxV(C, G->V[P->V[0]], uv[P->Nv]);
-      P->Area  = 0.0;
-      uvbar[0] = 0.0;
-      uvbar[1] = 0.0;
-      uvbar[2] = 0.0;
+         uv[j] = MxV(C, G->V[P->V[j]]);
+      uv[P->Nv] = MxV(C, G->V[P->V[0]]);
+      P->Area   = 0.0;
+      uvbar     = VEC3_ZERO;
       for (j = 0; j < P->Nv; j++) {
-         x1 = uv[j][0];
-         y1 = uv[j][1];
-         x2 = uv[j + 1][0];
-         y2 = uv[j + 1][1];
+         x1 = uv[j].x;
+         y1 = uv[j].y;
+         x2 = uv[j + 1].x;
+         y2 = uv[j + 1].y;
          xA = (x2 - x1) * ((2.0 * x1 + x2) * y1 + (x1 + 2.0 * x2) * y2) / 6.0;
          yA = (x2 - x1) * (y1 * y1 + y1 * y2 + y2 * y2) / 6.0;
-         P->Area  -= 0.5 * (x2 - x1) * (y1 + y2);
-         uvbar[0] -= xA;
-         uvbar[1] -= yA;
-         uvbar[2] += uv[j][2];
+         P->Area -= 0.5 * (x2 - x1) * (y1 + y2);
+         uvbar.x -= xA;
+         uvbar.y -= yA;
+         uvbar.z += uv[j].z;
       }
-      uvbar[0] /= P->Area;
-      uvbar[1] /= P->Area;
-      uvbar[2] /= (double)P->Nv;
-      MTxV(C, uvbar, P->Centroid);
-      if (isnan(P->Centroid[0])) {
+      uvbar.x     /= P->Area;
+      uvbar.y     /= P->Area;
+      uvbar.z     /= (double)P->Nv;
+      P->Centroid  = MTxV(C, uvbar);
+      if (isnan(P->Centroid.x)) {
          fprintf(stderr, "NaN Centroid in SurfaceForceProps\n");
          exit(EXIT_FAILURE);
       }
-      P->UnshadedArea   = P->Area;
-      P->UnshadedCtr[0] = P->Centroid[0];
-      P->UnshadedCtr[1] = P->Centroid[1];
-      P->UnshadedCtr[2] = P->Centroid[2];
+      P->UnshadedArea = P->Area;
+      P->UnshadedCtr  = P->Centroid;
 
-      DestroyMatrix(uv);
+      free(uv);
    }
 }
 /*********************************************************************/
@@ -234,8 +227,8 @@ void EdgeAndPolyDyads(struct GeomType *G)
 {
    struct EdgeType *E;
    struct PolyType *P1, *P2, *P;
-   double *V1, *V2;
-   double Axis[3], N1[3], N2[3];
+   vec3 *V1, *V2;
+   vec3 Axis, N1, N2;
    long Ie, Ip, i, j;
 
    for (Ie = 0; Ie < G->Nedge; Ie++) {
@@ -243,19 +236,20 @@ void EdgeAndPolyDyads(struct GeomType *G)
       if (E->Poly2 >= 0) {
          P1 = &G->Poly[E->Poly1];
          P2 = &G->Poly[E->Poly2];
-         V1 = G->V[E->Vtx1];
-         V2 = G->V[E->Vtx2];
+         V1 = &G->V[E->Vtx1];
+         V2 = &G->V[E->Vtx2];
          for (i = 0; i < 3; i++)
-            Axis[i] = V2[i] - V1[i];
-         UNITV(Axis);
+            Axis.v[i] = V2->v[i] - V1->v[i];
+         UNITV(&Axis);
          /* Unit vectors in plane, pointing outward */
-         VxV(Axis, P1->Norm, N1);
-         VxV(P2->Norm, Axis, N2);
-         UNITV(N1);
-         UNITV(N2);
+         N1 = VxV(Axis, P1->Norm);
+         N2 = VxV(P2->Norm, Axis);
+         UNITV(&N1);
+         UNITV(&N2);
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
-               E->Dyad[i][j] = P1->Norm[i] * N1[j] + P2->Norm[i] * N2[j];
+               E->Dyad.mat[i][j] =
+                   P1->Norm.v[i] * N1.v[j] + P2->Norm.v[i] * N2.v[j];
             }
          }
       }
@@ -263,11 +257,9 @@ void EdgeAndPolyDyads(struct GeomType *G)
 
    for (Ip = 0; Ip < G->Npoly; Ip++) {
       P = &G->Poly[Ip];
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++) {
-            P->Dyad[i][j] = P->Norm[i] * P->Norm[j];
-         }
-      }
+      for (i = 0; i < 3; i++)
+         for (j = 0; j < 3; j++)
+            P->Dyad.mat[i][j] = P->Norm.v[i] * P->Norm.v[j];
    }
 }
 /*********************************************************************/
@@ -275,28 +267,28 @@ double PolyhedronVolume(struct GeomType *G)
 {
    double Vol;
    struct PolyType *P;
-   double *V1, *V2, *V3;
-   double V2xV3[3];
+   vec3 *V1, *V2, *V3;
+   vec3 V2xV3;
    long Ip;
 
    Vol = 0.0;
    for (Ip = 0; Ip < G->Npoly; Ip++) {
-      P  = &G->Poly[Ip];
-      V1 = G->V[P->V[0]];
-      V2 = G->V[P->V[1]];
-      V3 = G->V[P->V[2]];
-      VxV(V2, V3, V2xV3);
-      Vol += VoV(V1, V2xV3) / 6.0;
+      P      = &G->Poly[Ip];
+      V1     = &G->V[P->V[0]];
+      V2     = &G->V[P->V[1]];
+      V3     = &G->V[P->V[2]];
+      V2xV3  = VxV(*V2, *V3);
+      Vol   += VoV(*V1, V2xV3) / 6.0;
    }
    return (Vol);
 }
 /*********************************************************************/
-long PolyIsDegenerate(struct PolyType *P, double **V)
+long PolyIsDegenerate(struct PolyType *P, vec3 *V)
 {
 #define EPS (1.0E-6)
    long ZeroArea;
    long Iv, I1, I2, I3, i;
-   double E1[3], E2[3], E1xE2[3];
+   vec3 E1, E2, E1xE2;
 
    ZeroArea = 1;
    for (Iv = 0; Iv < P->Nv; Iv++) {
@@ -304,10 +296,10 @@ long PolyIsDegenerate(struct PolyType *P, double **V)
       I2 = P->V[(Iv + 1) % P->Nv];
       I3 = P->V[(Iv + 2) % P->Nv];
       for (i = 0; i < 3; i++) {
-         E1[i] = V[I2][i] - V[I1][i];
-         E2[i] = V[I3][i] - V[I2][i];
+         E1.v[i] = V[I2].v[i] - V[I1].v[i];
+         E2.v[i] = V[I3].v[i] - V[I2].v[i];
       }
-      VxV(E1, E2, E1xE2);
+      E1xE2 = VxV(E1, E2);
       if (MAGV(E1xE2) > EPS)
          ZeroArea = 0;
    }
@@ -316,109 +308,107 @@ long PolyIsDegenerate(struct PolyType *P, double **V)
 #undef EPS
 }
 /**********************************************************************/
-long RayHitsBBox(double Source[3], double DirVec[3], struct BoundingBoxType *BB)
+long RayHitsBBox(vec3 Source, vec3 DirVec, struct BoundingBoxType *BB)
 {
    double dx, dy, dz, x, y, z;
 
    /* Check +X face */
-   dx = BB->max[0] - Source[0];
-   if (dx * DirVec[0] > 0.0) {
-      dy = DirVec[1] / DirVec[0] * dx;
-      dz = DirVec[2] / DirVec[0] * dx;
-      y  = Source[1] + dy;
-      z  = Source[2] + dz;
-      if (BB->min[1] < y && y < BB->max[1] && BB->min[2] < z && z < BB->max[2])
+   dx = BB->max.x - Source.x;
+   if (dx * DirVec.x > 0.0) {
+      dy = DirVec.y / DirVec.x * dx;
+      dz = DirVec.z / DirVec.x * dx;
+      y  = Source.y + dy;
+      z  = Source.z + dz;
+      if (BB->min.y < y && y < BB->max.y && BB->min.z < z && z < BB->max.z)
          return (1);
    }
    /* Check +Y face */
-   dy = BB->max[1] - Source[1];
-   if (dy * DirVec[1] > 0.0) {
-      dz = DirVec[2] / DirVec[1] * dy;
-      dx = DirVec[0] / DirVec[1] * dy;
-      z  = Source[2] + dz;
-      x  = Source[0] + dx;
-      if (BB->min[2] < z && z < BB->max[2] && BB->min[0] < x && x < BB->max[0])
+   dy = BB->max.y - Source.y;
+   if (dy * DirVec.y > 0.0) {
+      dz = DirVec.z / DirVec.y * dy;
+      dx = DirVec.x / DirVec.y * dy;
+      z  = Source.z + dz;
+      x  = Source.x + dx;
+      if (BB->min.z < z && z < BB->max.z && BB->min.x < x && x < BB->max.x)
          return (1);
    }
    /* Check +Z face */
-   dz = BB->max[2] - Source[2];
-   if (dz * DirVec[2] > 0.0) {
-      dx = DirVec[0] / DirVec[2] * dz;
-      dy = DirVec[1] / DirVec[2] * dz;
-      x  = Source[0] + dx;
-      y  = Source[1] + dy;
-      if (BB->min[0] < x && x < BB->max[0] && BB->min[1] < y && y < BB->max[1])
+   dz = BB->max.z - Source.z;
+   if (dz * DirVec.z > 0.0) {
+      dx = DirVec.x / DirVec.z * dz;
+      dy = DirVec.y / DirVec.z * dz;
+      x  = Source.x + dx;
+      y  = Source.y + dy;
+      if (BB->min.x < x && x < BB->max.x && BB->min.y < y && y < BB->max.y)
          return (1);
    }
    /* Check -X face */
-   dx = BB->min[0] - Source[0];
-   if (dx * DirVec[0] > 0.0) {
-      dy = DirVec[1] / DirVec[0] * dx;
-      dz = DirVec[2] / DirVec[0] * dx;
-      y  = Source[1] + dy;
-      z  = Source[2] + dz;
-      if (BB->min[1] < y && y < BB->max[1] && BB->min[2] < z && z < BB->max[2])
+   dx = BB->min.x - Source.x;
+   if (dx * DirVec.x > 0.0) {
+      dy = DirVec.y / DirVec.x * dx;
+      dz = DirVec.z / DirVec.x * dx;
+      y  = Source.y + dy;
+      z  = Source.z + dz;
+      if (BB->min.y < y && y < BB->max.y && BB->min.z < z && z < BB->max.z)
          return (1);
    }
    /* Check -Y face */
-   dy = BB->min[1] - Source[1];
-   if (dy * DirVec[1] > 0.0) {
-      dz = DirVec[2] / DirVec[1] * dy;
-      dx = DirVec[0] / DirVec[1] * dy;
-      z  = Source[2] + dz;
-      x  = Source[0] + dx;
-      if (BB->min[2] < z && z < BB->max[2] && BB->min[0] < x && x < BB->max[0])
+   dy = BB->min.y - Source.y;
+   if (dy * DirVec.y > 0.0) {
+      dz = DirVec.z / DirVec.y * dy;
+      dx = DirVec.x / DirVec.y * dy;
+      z  = Source.z + dz;
+      x  = Source.x + dx;
+      if (BB->min.z < z && z < BB->max.z && BB->min.x < x && x < BB->max.x)
          return (1);
    }
    /* Check -Z face */
-   dz = BB->max[2] - Source[2];
-   if (dz * DirVec[2] > 0.0) {
-      dx = DirVec[0] / DirVec[2] * dz;
-      dy = DirVec[1] / DirVec[2] * dz;
-      x  = Source[0] + dx;
-      y  = Source[1] + dy;
-      if (BB->min[0] < x && x < BB->max[0] && BB->min[1] < y && y < BB->max[1])
+   dz = BB->max.z - Source.z;
+   if (dz * DirVec.z > 0.0) {
+      dx = DirVec.x / DirVec.z * dz;
+      dy = DirVec.y / DirVec.z * dz;
+      x  = Source.x + dx;
+      y  = Source.y + dy;
+      if (BB->min.x < x && x < BB->max.x && BB->min.y < y && y < BB->max.y)
          return (1);
    }
 
    return (0);
 }
 /**********************************************************************/
-long KDRayHitsLeaf(double Source[3], double DirVec[3], struct KDNodeType *KD,
-                   struct GeomType *G, long *HitPoly, double HitPoint[3],
+long KDRayHitsLeaf(vec3 Source, vec3 DirVec, struct KDNodeType *KD,
+                   struct GeomType *G, long *HitPoly, vec3 *HitPoint,
                    double *HitDist)
 {
    struct PolyType *P;
-   double **Vtx;
-   long Hit, Ip, Iv, i;
+   vec3 *Vtx;
+   long Hit, Ip, Iv;
    double Dist;
-   double ProjPoint[3];
+   vec3 ProjPoint;
 
    Hit = 0;
 
    for (Ip = 0; Ip < KD->Npoly; Ip++) {
       P   = &G->Poly[KD->Poly[Ip]];
-      Vtx = (double **)calloc(P->Nv, sizeof(double *));
-      for (Iv = 0; Iv < P->Nv; Iv++) {
+      Vtx = calloc(P->Nv, sizeof(vec3));
+      for (Iv = 0; Iv < P->Nv; Iv++)
          Vtx[Iv] = G->V[P->V[Iv]];
-      }
-      if (ProjectPointOntoPoly(Source, DirVec, Vtx, P->Nv, ProjPoint, &Dist)) {
+
+      if (ProjectPointOntoPoly(Source, DirVec, Vtx, P->Nv, &ProjPoint, &Dist)) {
          Hit = 1;
          if (Dist < *HitDist) {
-            *HitDist = Dist;
-            *HitPoly = KD->Poly[Ip];
-            for (i = 0; i < 3; i++)
-               HitPoint[i] = ProjPoint[i];
+            *HitDist  = Dist;
+            *HitPoly  = KD->Poly[Ip];
+            *HitPoint = ProjPoint;
          }
       }
       free(Vtx);
    }
-
    return (Hit);
 }
 /**********************************************************************/
-long KDRayHitsNode(double Source[3], double DirVec[3], struct KDNodeType *KD,
-                   struct GeomType *G, long *HitPoly, double HitPoint[3],
+long KDRayHitsNode(vec3 Source, vec3 DirVec, struct KDNodeType *KD,
+                   struct GeomType *G, long *HitPoly, vec3 HitPoint,
                    double *HitDist)
 {
    long HitLow, HitHigh;
@@ -426,7 +416,8 @@ long KDRayHitsNode(double Source[3], double DirVec[3], struct KDNodeType *KD,
 
    if (RayHitsBBox(Source, DirVec, &KD->BB)) {
       if (KD->IsLeaf) {
-         Hit = KDRayHitsLeaf(Source, DirVec, KD, G, HitPoly, HitPoint, HitDist);
+         Hit =
+             KDRayHitsLeaf(Source, DirVec, KD, G, HitPoly, &HitPoint, HitDist);
       }
       else { /* Recursively check child nodes */
          HitLow  = KDRayHitsNode(Source, DirVec, KD->LowChild, G, HitPoly,
@@ -440,8 +431,8 @@ long KDRayHitsNode(double Source[3], double DirVec[3], struct KDNodeType *KD,
 }
 /**********************************************************************/
 /* Source and DirVec must be expressed in G's coordinate system       */
-long KDProjectRayOntoGeom(double Source[3], double DirVec[3],
-                          struct GeomType *G, long *HitPoly, double HitPoint[3])
+long KDProjectRayOntoGeom(vec3 Source, vec3 DirVec, struct GeomType *G,
+                          long *HitPoly, vec3 HitPoint)
 {
    double HitDist = 1.0E12; /* Absurd large value */
    long RayHitsGeom;
@@ -460,11 +451,11 @@ long KDPartition(long *P, long LowEnd, long HighEnd, long Axis,
    double PivotVal;
 
    PivotIdx = HighEnd;
-   PivotVal = G->Poly[P[HighEnd]].Centroid[Axis];
+   PivotVal = G->Poly[P[HighEnd]].Centroid.v[Axis];
    LowIdx   = LowEnd;
 
    while (LowIdx < PivotIdx) {
-      if (G->Poly[P[LowIdx]].Centroid[Axis] > PivotVal) {
+      if (G->Poly[P[LowIdx]].Centroid.v[Axis] > PivotVal) {
          TempIdx         = P[PivotIdx];
          P[PivotIdx]     = P[LowIdx];
          P[LowIdx]       = P[PivotIdx - 1];
@@ -496,10 +487,12 @@ long KDSelectMedian(long *P, long N, long Axis, struct GeomType *G)
 }
 /**********************************************************************/
 long KDCompare(long P1, long P2, long Axis, struct GeomType *G)
+    __attribute__((pure));
+long KDCompare(long P1, long P2, long Axis, struct GeomType *G)
 {
-   if (G->Poly[P1].Centroid[Axis] < G->Poly[P2].Centroid[Axis])
+   if (G->Poly[P1].Centroid.v[Axis] < G->Poly[P2].Centroid.v[Axis])
       return (-1);
-   else if (G->Poly[P1].Centroid[Axis] > G->Poly[P2].Centroid[Axis])
+   else if (G->Poly[P1].Centroid.v[Axis] > G->Poly[P2].Centroid.v[Axis])
       return (1);
    else
       return (0);
@@ -582,22 +575,22 @@ void SplitKDNode(struct KDNodeType *KD, struct GeomType *G)
    HC->Depth     = KD->Depth + 1;
    /* Children inherit BBox limits on two axes */
    /* "Axis" axis gets overwritten below */
+   LC->BB.min = KD->BB.min;
+   LC->BB.max = KD->BB.max;
+   HC->BB.min = KD->BB.min;
+   HC->BB.max = KD->BB.max;
    for (i = 0; i < 3; i++) {
-      LC->BB.min[i]    = KD->BB.min[i];
-      LC->BB.max[i]    = KD->BB.max[i];
-      LC->BB.center[i] = 0.5 * (LC->BB.max[i] + LC->BB.min[i]);
-      HC->BB.min[i]    = KD->BB.min[i];
-      HC->BB.max[i]    = KD->BB.max[i];
-      HC->BB.center[i] = 0.5 * (HC->BB.max[i] + HC->BB.min[i]);
+      LC->BB.center.v[i] = 0.5 * (LC->BB.max.v[i] + LC->BB.min.v[i]);
+      HC->BB.center.v[i] = 0.5 * (HC->BB.max.v[i] + HC->BB.min.v[i]);
    }
 
    /* Split [Axis] BBox along Median Value */
-   MedIdx              = KDSelectMedian(KD->Poly, KD->Npoly, Axis, G);
-   MedVal              = G->Poly[KD->Poly[MedIdx]].Centroid[Axis];
-   LC->BB.max[Axis]    = MedVal;
-   HC->BB.min[Axis]    = MedVal;
-   LC->BB.center[Axis] = 0.5 * (LC->BB.max[Axis] + LC->BB.min[Axis]);
-   HC->BB.center[Axis] = 0.5 * (HC->BB.max[Axis] + HC->BB.min[Axis]);
+   MedIdx                = KDSelectMedian(KD->Poly, KD->Npoly, Axis, G);
+   MedVal                = G->Poly[KD->Poly[MedIdx]].Centroid.v[Axis];
+   LC->BB.max.v[Axis]    = MedVal;
+   HC->BB.min.v[Axis]    = MedVal;
+   LC->BB.center.v[Axis] = 0.5 * (LC->BB.max.v[Axis] + LC->BB.min.v[Axis]);
+   HC->BB.center.v[Axis] = 0.5 * (HC->BB.max.v[Axis] + HC->BB.min.v[Axis]);
 
    /* Assign Polys to Children */
    for (Ip = 0; Ip < KD->Npoly; Ip++) {
@@ -605,7 +598,7 @@ void SplitKDNode(struct KDNodeType *KD, struct GeomType *G)
       AnyVtxAboveMedian = 0;
       P                 = &G->Poly[KD->Poly[Ip]];
       for (Iv = 0; Iv < P->Nv; Iv++) {
-         if (G->V[P->V[Iv]][Axis] < MedVal)
+         if (G->V[P->V[Iv]].v[Axis] < MedVal)
             AnyVtxBelowMedian = 1;
          else
             AnyVtxAboveMedian = 1;
@@ -648,20 +641,19 @@ void LoadKDTree(struct GeomType *G)
 {
 
    struct KDNodeType *KD;
-   long i, Ip;
+   long Ip;
 
    /* .. Root Node coincides with Geom's Bounding Box */
-   G->KDTree  = (struct KDNodeType *)calloc(1, sizeof(struct KDNodeType));
-   KD         = G->KDTree;
-   KD->IsRoot = 1;
-   KD->IsLeaf = 0;
-   KD->Depth  = 0;
-   KD->Axis   = 0;
-   for (i = 0; i < 3; i++) {
-      KD->BB.min[i]    = G->BBox.min[i];
-      KD->BB.max[i]    = G->BBox.max[i];
-      KD->BB.center[i] = G->BBox.center[i];
-   }
+   G->KDTree     = (struct KDNodeType *)calloc(1, sizeof(struct KDNodeType));
+   KD            = G->KDTree;
+   KD->IsRoot    = 1;
+   KD->IsLeaf    = 0;
+   KD->Depth     = 0;
+   KD->Axis      = 0;
+   KD->BB.min    = G->BBox.min;
+   KD->BB.max    = G->BBox.max;
+   KD->BB.center = G->BBox.center;
+
    /* Root Node poly list is trivial: */
    KD->Npoly = G->Npoly;
    KD->Poly  = (long *)calloc(KD->Npoly, sizeof(long));
@@ -677,14 +669,15 @@ void LoadOctree(struct GeomType *G)
    struct OctreeCellType *OC, *C;
    struct BoundingBoxType *BB;
    struct PolyType *P;
-   double *V;
-   double sign[8][3] = {{-1.0, -1.0, -1.0}, {-1.0, -1.0, 1.0},
-                        {-1.0, 1.0, -1.0},  {-1.0, 1.0, 1.0},
-                        {1.0, -1.0, -1.0},  {1.0, -1.0, 1.0},
-                        {1.0, 1.0, -1.0},   {1.0, 1.0, 1.0}};
-   double r[3];
+   vec3 *V;
+   vec3 sign[8] = {
+       (vec3){.v = {-1.0, -1.0, -1.0}}, (vec3){.v = {-1.0, -1.0, 1.0}},
+       (vec3){.v = {-1.0, 1.0, -1.0}},  (vec3){.v = {-1.0, 1.0, 1.0}},
+       (vec3){.v = {1.0, -1.0, -1.0}},  (vec3){.v = {1.0, -1.0, 1.0}},
+       (vec3){.v = {1.0, 1.0, -1.0}},   (vec3){.v = {1.0, 1.0, 1.0}}};
+   vec3 r;
    long Ic, Io, i, j, k, Ipoly, Iv;
-   long AllPos[3], AllNeg[3];
+   long AllPos[3] = {0}, AllNeg[3] = {0};
    long NoChildHasAll;
 
    BB = &G->BBox;
@@ -723,24 +716,23 @@ void LoadOctree(struct GeomType *G)
       O->OctCell[i].NextOnMiss = 0;
 
    /* .. Find centers, min and max */
-   OC = &O->OctCell[0];
-   for (j = 0; j < 3; j++) {
-      OC->center[j] = BB->center[j];
-      OC->min[j]    = BB->min[j];
-      OC->max[j]    = BB->max[j];
-   }
+   OC         = &O->OctCell[0];
+   OC->center = BB->center;
+   OC->min    = BB->min;
+   OC->max    = BB->max;
+
    OC->radius = BB->radius;
    for (i = 0; i < 73; i++) {
       OC = &O->OctCell[i];
-      for (k = 0; k < 3; k++) {
-         r[k] = 0.5 * (OC->max[k] - OC->center[k]);
-      }
+      for (k = 0; k < 3; k++)
+         r.v[k] = 0.5 * (OC->max.v[k] - OC->center.v[k]);
+
       for (j = 0; j < 8; j++) {
          C = &O->OctCell[OC->Child[j]];
          for (k = 0; k < 3; k++) {
-            C->center[k] = OC->center[k] + sign[j][k] * r[k];
-            C->max[k]    = C->center[k] + r[k];
-            C->min[k]    = C->center[k] - r[k];
+            C->center.v[k] = OC->center.v[k] + sign[j].v[k] * r.v[k];
+            C->max.v[k]    = C->center.v[k] + r.v[k];
+            C->min.v[k]    = C->center.v[k] - r.v[k];
          }
          C->radius = MAGV(r);
       }
@@ -759,9 +751,9 @@ void LoadOctree(struct GeomType *G)
          }
          NoChildHasAll = 1;
          for (Iv = 0; Iv < P->Nv; Iv++) {
-            V = G->V[P->V[Iv]];
+            V = &G->V[P->V[Iv]];
             for (i = 0; i < 3; i++) {
-               if (V[i] < OC->center[i])
+               if (V->v[i] < OC->center.v[i])
                   AllPos[i] = 0;
                else
                   AllNeg[i] = 0;
@@ -845,28 +837,22 @@ void LoadOctree(struct GeomType *G)
 }
 /*********************************************************************/
 /* Point and DirVec have already been transformed into Geom frame      */
-long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
-                          double ProjPoint[3], long *ClosestPoly)
+long OCProjectRayOntoGeom(vec3 Point, vec3 DirVec, struct GeomType *G,
+                          vec3 *ProjPoint, long *ClosestPoly)
 {
    struct OctreeType *O;
    struct PolyType *P;
    struct OctreeCellType *OC;
-   double Point2[3], Dist, Vec[3], dr[3];
-   double MinDist, RoD;
-   static double **Vtx;
+   vec3 Point2, Vec, dr;
+   double Dist, MinDist, RoD;
+   vec3 Vtx[3];
    long Exhausted, Ip, Iv, InPoly, i;
    long FoundPoly;
-   static long First = 1;
-
-   if (First) {
-      First = 0;
-      Vtx   = CreateMatrix(3, 3);
-   }
 
    O = G->Octree;
 
    for (i = 0; i < 3; i++)
-      Point2[i] = Point[i] + DirVec[i];
+      Point2.v[i] = Point.v[i] + DirVec.v[i];
 
    OC           = &O->OctCell[0];
    MinDist      = 1.0E9;
@@ -875,10 +861,10 @@ long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
    FoundPoly    = 0;
    while (!Exhausted) {
       for (i = 0; i < 3; i++)
-         dr[i] = OC->center[i] - Point[i];
+         dr.v[i] = OC->center.v[i] - Point.v[i];
       RoD = VoV(dr, DirVec);
       if (RoD > 0.0) {
-         Dist = DistanceToLine(Point, Point2, OC->center, Vec);
+         Dist = DistanceToLine(Point, Point2, OC->center, &Vec);
          if (Dist < OC->radius) {
             /* Check against polys */
             for (Ip = 0; Ip < OC->Npoly; Ip++) {
@@ -892,17 +878,15 @@ long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
                   exit(EXIT_FAILURE);
                }
                for (Iv = 0; Iv < P->Nv; Iv++) {
-                  for (i = 0; i < 3; i++)
-                     Vtx[Iv][i] = G->V[P->V[Iv]][i];
+                  Vtx[Iv] = G->V[P->V[Iv]];
                }
                InPoly =
-                   ProjectPointOntoPoly(Point, DirVec, Vtx, P->Nv, Vec, &Dist);
+                   ProjectPointOntoPoly(Point, DirVec, Vtx, P->Nv, &Vec, &Dist);
                if (InPoly && Dist > 0.0 && Dist < MinDist) {
                   FoundPoly    = 1;
                   MinDist      = Dist;
                   *ClosestPoly = Ip;
-                  for (i = 0; i < 3; i++)
-                     ProjPoint[i] = Vec[i];
+                  *ProjPoint   = Vec;
                }
             }
             /* Next Cell on Hit */
@@ -940,8 +924,6 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    FILE *infile, *outfile;
    FILE *TmpFile;
    char *txtptr;
-   double V[3];
-   double r[3], magr;
    long V1, V2;
    long Ng, Ig, Iv, Im;
    long I, It, In, i, j, MatlIdx;
@@ -953,13 +935,13 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    struct MatlType *Matl;
    long BeenHereOnce;
    long NoArraySizesFound;
-   double Value, Scale = 1.0;
+   double Value, magr, Scale = 1.0;
    double Val1, Val2, Val3;
    char response[40];
    long Seq;
-   double RotM[3][3]  = EYE3_MAT;
-   double TransVec[3] = {0.0, 0.0, 0.0};
-   double Vr[3];
+   mat3x3 RotM   = MAT3X3_EYE;
+   vec3 TransVec = VEC3_ZERO;
+   vec3 V, r, Vr;
    long FirstUse;
 
    char line[512], vtxstring[512], *vtxtoken, MatlName[40];
@@ -1014,14 +996,14 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
                  &G->Nvt, &G->Nvn, &G->Npoly) == 4) {
          NoArraySizesFound = 0;
       }
-      else if (sscanf(line, "v  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      else if (sscanf(line, "v  %lf %lf %lf", &V.x, &V.y, &V.z) == 3) {
          G->Nv++;
       }
-      else if (sscanf(line, "vt %lf %lf", &V[0], &V[1]) == 2 ||
-               sscanf(line, "vt %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      else if (sscanf(line, "vt %lf %lf", &V.x, &V.y) == 2 ||
+               sscanf(line, "vt %lf %lf %lf", &V.x, &V.y, &V.z) == 3) {
          G->Nvt++;
       }
-      else if (sscanf(line, "vn  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
+      else if (sscanf(line, "vn  %lf %lf %lf", &V.x, &V.y, &V.z) == 3) {
          G->Nvn++;
       }
       else if (line[0] == 'f') {
@@ -1053,9 +1035,9 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    }
 
    /* .. Allocate arrays */
-   G->V    = CreateMatrix(G->Nv, 3);
-   G->Vt   = CreateMatrix(G->Nvt, 2);
-   G->Vn   = CreateMatrix(G->Nvn, 3);
+   G->V    = calloc(G->Nv, sizeof(vec3));
+   G->Vt   = calloc(G->Nvt, sizeof(vec3));
+   G->Vn   = calloc(G->Nvn, sizeof(vec3));
    G->Poly = (struct PolyType *)calloc(G->Npoly, sizeof(struct PolyType));
    if (G->Poly == NULL) {
       fprintf(stderr, "G->Poly calloc returned null pointer.  Bailing out!\n");
@@ -1086,36 +1068,34 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
       }
       else if (sscanf(line, "# Translate by [%lf %lf %lf]", &Val1, &Val2,
                       &Val3) == 3) {
-         TransVec[0] = Val1;
-         TransVec[1] = Val2;
-         TransVec[2] = Val3;
+         TransVec = (vec3){.v = {Val1, Val2, Val3}};
       }
       else if (sscanf(line, "# Rotate via Seq = %ld by [%lf %lf %lf] deg", &Seq,
                       &Val1, &Val2, &Val3) == 4) {
-         A2C(Seq, Val1 * D2R, Val2 * D2R, Val3 * D2R, RotM);
+         RotM = A2C(Seq, Val1 * D2R, Val2 * D2R, Val3 * D2R);
       }
-      else if (sscanf(line, "v  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
-         MTxV(RotM, V, Vr);
+      else if (sscanf(line, "v  %lf %lf %lf", &V.x, &V.y, &V.z) == 3) {
+         Vr = MTxV(RotM, V);
+         CopyVG(G->V[Ivtx].v, TransVec.v, 3);
          for (i = 0; i < 3; i++)
-            G->V[Ivtx][i] = Scale * Vr[i] + TransVec[i];
+            G->V[Ivtx].v[i] = Scale * Vr.v[i];
          Ivtx++;
       }
-      else if (sscanf(line, "vt %lf %lf", &V[0], &V[1]) == 2 ||
-               sscanf(line, "vt %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
-         G->Vt[Ivt][0] = V[0];
-         G->Vt[Ivt][1] = (1.0 - V[1]); /* Flip about horizontal axis */
+      else if (sscanf(line, "vt %lf %lf", &V.x, &V.y) == 2 ||
+               sscanf(line, "vt %lf %lf %lf", &V.x, &V.y, &V.z) == 3) {
+         G->Vt[Ivt].x = V.x;
+         G->Vt[Ivt].y = (1.0 - V.y); /* Flip about horizontal axis */
          Ivt++;
       }
-      else if (sscanf(line, "vn  %lf %lf %lf", &V[0], &V[1], &V[2]) == 3) {
-         if (V[0] == 0 && V[1] == 0 && V[2] == 0) {
+      else if (sscanf(line, "vn  %lf %lf %lf", &V.x, &V.y, &V.z) == 3) {
+         if (V.x == 0 && V.y == 0 && V.z == 0) {
             for (i = 0; i < 3; i++) {
-               V[i] = 1.0; /* Kludge.  Who defines a zero-length normal?? */
+               V.v[i] = 1.0; /* Kludge.  Who defines a zero-length normal?? */
             }
             /* printf("Zero-length normal in LoadWingsObjFile
              * %s\n",ObjFilename); */
          }
-         for (i = 0; i < 3; i++)
-            G->Vn[Ivn][i] = V[i];
+         G->Vn[Ivn] = V;
          Ivn++;
       }
       else if (line[0] == 'f') {
@@ -1227,40 +1207,39 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
    fclose(infile);
 
    /* Find Bounding Box */
-   for (j = 0; j < 3; j++) {
-      G->BBox.max[j] = G->V[0][j];
-      G->BBox.min[j] = G->V[0][j];
-   }
+   G->BBox.max = G->V[0];
+   G->BBox.min = G->V[0];
+
    for (i = 1; i < G->Nv; i++) {
       for (j = 0; j < 3; j++) {
-         if (G->V[i][j] < G->BBox.min[j])
-            G->BBox.min[j] = G->V[i][j];
-         if (G->V[i][j] > G->BBox.max[j])
-            G->BBox.max[j] = G->V[i][j];
+         if (G->V[i].v[j] < G->BBox.min.v[j])
+            G->BBox.min.v[j] = G->V[i].v[j];
+         if (G->V[i].v[j] > G->BBox.max.v[j])
+            G->BBox.max.v[j] = G->V[i].v[j];
       }
    }
    /* Expand BBox slightly to make sure all Vtx's are inside it */
    for (j = 0; j < 3; j++) {
-      G->BBox.max[j] += 0.01;
-      G->BBox.min[j] -= 0.01;
+      G->BBox.max.v[j] += 0.01;
+      G->BBox.min.v[j] -= 0.01;
    }
    for (j = 0; j < 3; j++) {
-      G->BBox.center[j] = 0.5 * (G->BBox.min[j] + G->BBox.max[j]);
+      G->BBox.center.v[j] = 0.5 * (G->BBox.min.v[j] + G->BBox.max.v[j]);
    }
    for (j = 0; j < 3; j++) {
-      r[j] = G->V[0][j] - G->BBox.center[j];
+      r.v[j] = G->V[0].v[j] - G->BBox.center.v[j];
    }
    G->BBox.radius = MAGV(r);
    for (i = 1; i < G->Nv; i++) {
       for (j = 0; j < 3; j++) {
-         r[j] = G->V[i][j] - G->BBox.center[j];
+         r.v[j] = G->V[i].v[j] - G->BBox.center.v[j];
       }
       if (MAGV(r) > G->BBox.radius)
          G->BBox.radius = MAGV(r);
    }
 
    for (i = 0; i < G->Nvn; i++)
-      UNITV(G->Vn[i]);
+      UNITV(&G->Vn[i]);
 
    if (EdgesEnabled) {
       /* Build Edge Tables */
@@ -1304,7 +1283,7 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
                G->Edge[G->Nedge - 1].Poly1 = Ip;
                G->Edge[G->Nedge - 1].Poly2 = -1;
                for (i = 0; i < 3; i++)
-                  V[i] = G->V[V1][i] - G->V[V2][i];
+                  V.v[i] = G->V[V1].v[i] - G->V[V2].v[i];
                G->Edge[G->Nedge - 1].Length = MAGV(V);
                P->E[Iv]                     = G->Nedge - 1;
             }
@@ -1326,7 +1305,7 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
       for (Iv = 0; Iv < P->Nv; Iv++) {
          Ivtx = P->V[Iv];
          for (i = 0; i < 3; i++)
-            r[i] = G->V[Ivtx][i] - P->Centroid[i];
+            r.v[i] = G->V[Ivtx].v[i] - P->Centroid.v[i];
          magr = MAGV(r);
          if (magr > P->radius)
             P->radius = magr;
@@ -1345,7 +1324,7 @@ void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
    FILE *MtlFile, *ObjFile;
    long Im, Iv, Ip;
    struct MatlType *M;
-   double *V;
+   vec3 *V;
    struct PolyType *P;
 
    strcpy(MtlFileName, FileName);
@@ -1407,18 +1386,18 @@ void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
 
    /* Vertices */
    for (Iv = 0; Iv < Geom->Nv; Iv++) {
-      V = Geom->V[Iv];
-      fprintf(ObjFile, "v %lf %lf %lf\n", V[0], V[1], V[2]);
+      V = &Geom->V[Iv];
+      fprintf(ObjFile, "v %lf %lf %lf\n", V->x, V->y, V->z);
    }
    /* Texture Vertices */
    for (Iv = 0; Iv < Geom->Nvt; Iv++) {
-      V = Geom->Vt[Iv];
-      fprintf(ObjFile, "vt %lf %lf %lf\n", V[0], V[1], V[2]);
+      V = &Geom->Vt[Iv];
+      fprintf(ObjFile, "vt %lf %lf %lf\n", V->x, V->y, V->z);
    }
    /* Normals */
    for (Iv = 0; Iv < Geom->Nvn; Iv++) {
-      V = Geom->Vn[Iv];
-      fprintf(ObjFile, "vn %lf %lf %lf\n", V[0], V[1], V[2]);
+      V = &Geom->Vn[Iv];
+      fprintf(ObjFile, "vn %lf %lf %lf\n", V->x, V->y, V->z);
    }
    fprintf(ObjFile, "\n");
 

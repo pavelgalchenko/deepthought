@@ -39,7 +39,9 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
    long Frame;
    struct CmdType *Cmd;
    struct CmdVecType *CV;
-   double q[4], Ang[3], C[3][3], VecR[3], Vec[3], VecH[3];
+   quat q;
+   vec3 Ang, VecR, Vec, VecH;
+   mat3x3 C;
    double RA, Dec;
    double Lng, Lat, Alt;
    double wc, amax, vmax;
@@ -49,23 +51,21 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
    double ThrLevelCmd;
 
    if (sscanf(CmdLine, "%lf SC[%ld] qrn = [%lf %lf %lf %lf]", CmdTime, &Isc,
-              &q[0], &q[1], &q[2], &q[3]) == 6) {
+              &q.x, &q.y, &q.z, &q.s) == 6) {
       NewCmdProcessed = TRUE;
       Cmd             = &SC[Isc].AC.Cmd;
       Cmd->Parm       = PARM_QUATERNION;
       Cmd->Frame      = FRAME_N;
-      for (i = 0; i < 4; i++)
-         Cmd->qrn[i] = q[i];
+      Cmd->qrn        = q;
    }
 
    else if (sscanf(CmdLine, "%lf SC[%ld] qrl = [%lf %lf %lf %lf]", CmdTime,
-                   &Isc, &q[0], &q[1], &q[2], &q[3]) == 6) {
+                   &Isc, &q.x, &q.y, &q.z, &q.s) == 6) {
       NewCmdProcessed = TRUE;
       Cmd             = &SC[Isc].AC.Cmd;
       Cmd->Parm       = PARM_QUATERNION;
       Cmd->Frame      = FRAME_L;
-      for (i = 0; i < 4; i++)
-         Cmd->qrl[i] = q[i];
+      Cmd->qrl        = q;
    }
 
    else if (sscanf(CmdLine, "%lf SC[%ld] FswTag = %s", CmdTime, &Isc,
@@ -77,7 +77,7 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
    else if (sscanf(CmdLine,
                    "%lf SC[%ld] Cmd Angles = [%lf %lf %lf] deg, Seq = %ld wrt "
                    "%c Frame",
-                   CmdTime, &Isc, &Ang[0], &Ang[1], &Ang[2], &RotSeq,
+                   CmdTime, &Isc, &Ang.z, &Ang.y, &Ang.z, &RotSeq,
                    &FrameChar) == 7) {
       NewCmdProcessed = TRUE;
       Cmd             = &SC[Isc].AC.Cmd;
@@ -87,26 +87,26 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       else
          Cmd->Frame = FRAME_N;
       for (i = 0; i < 3; i++)
-         Cmd->Ang[i] = Ang[i] * D2R;
+         Cmd->Ang.v[i] = Ang.v[i] * D2R;
       Cmd->RotSeq = RotSeq;
-      A2C(RotSeq, Ang[0] * D2R, Ang[1] * D2R, Ang[2] * D2R, C);
+      C           = A2C(RotSeq, Ang.x * D2R, Ang.y * D2R, Ang.z * D2R);
       if (Cmd->Frame == FRAME_L)
-         C2Q(C, Cmd->qrl);
+         Cmd->qrl = C2Q(C);
       else
-         C2Q(C, Cmd->qrn);
+         Cmd->qrn = C2Q(C);
    }
 
    else if (sscanf(CmdLine, "%lf SC[%ld].G[%ld] Cmd Angles = [%lf %lf %lf] deg",
-                   CmdTime, &Isc, &Ig, &Ang[0], &Ang[1], &Ang[2]) == 6) {
+                   CmdTime, &Isc, &Ig, &Ang.x, &Ang.y, &Ang.z) == 6) {
       NewCmdProcessed = TRUE;
       for (i = 0; i < 3; i++)
-         SC[Isc].AC.G[Ig].Cmd.Ang[i] = Ang[i] * D2R;
+         SC[Isc].AC.G[Ig].Cmd.Ang.v[i] = Ang.v[i] * D2R;
    }
 
    else if (sscanf(CmdLine,
                    "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at RA = "
                    "%lf deg, Dec = %lf deg",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
                    &RA, &Dec) == 9) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
@@ -123,18 +123,17 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          CV = &Cmd->SecVec;
       CV->Mode  = CMD_DIRECTION;
       CV->Frame = FRAME_N;
-      UNITV(VecR);
-      for (i = 0; i < 3; i++)
-         CV->R[i] = VecR[i];
-      CV->N[0] = cos(RA * D2R) * cos(Dec * D2R);
-      CV->N[1] = sin(RA * D2R) * cos(Dec * D2R);
-      CV->N[2] = sin(Dec * D2R);
+      UNITV(&VecR);
+      CV->R   = VecR;
+      CV->N.x = cos_deg(RA) * cos_deg(Dec);
+      CV->N.y = sin_deg(RA) * cos_deg(Dec);
+      CV->N.z = sin_deg(Dec);
    }
 
    else if (sscanf(CmdLine,
                    "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at "
                    "World[%ld] Lng = %lf deg, Lat = %lf deg, Alt = %lf km",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
                    &Iw, &Lng, &Lat, &Alt) == 11) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
@@ -154,25 +153,21 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame    = FRAME_N;
       CV->TrgType  = TARGET_WORLD;
       CV->TrgWorld = Iw;
-      UNITV(VecR);
-      for (i = 0; i < 3; i++)
-         CV->R[i] = VecR[i];
-      CV->W[0] =
-          (World[Iw].rad + 1000.0 * Alt) * cos(Lng * D2R) * cos(Lat * D2R);
-      CV->W[1] =
-          (World[Iw].rad + 1000.0 * Alt) * sin(Lng * D2R) * cos(Lat * D2R);
-      CV->W[2] = (World[Iw].rad + 1000.0 * Alt) * sin(Lat * D2R);
+      UNITV(&VecR);
+      CV->R   = VecR;
+      CV->W.x = (World[Iw].rad + 1000.0 * Alt) * cos_deg(Lng) * cos_deg(Lat);
+      CV->W.y = (World[Iw].rad + 1000.0 * Alt) * sin_deg(Lng) * cos_deg(Lat);
+      CV->W.z = (World[Iw].rad + 1000.0 * Alt) * sin_deg(Lat);
    }
 
    else if (sscanf(CmdLine,
                    "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at "
                    "World[%ld]",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
                    &Iw) == 8) {
       NewCmdProcessed = TRUE;
-      if (Ib == 0) {
+      if (Ib == 0)
          Cmd = &SC[Isc].AC.Cmd;
-      }
       else {
          Ig  = SC[Isc].B[Ib].Gin;
          Cmd = &SC[Isc].AC.G[Ig].Cmd;
@@ -187,17 +182,15 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame    = FRAME_N;
       CV->TrgType  = TARGET_WORLD;
       CV->TrgWorld = Iw;
-      UNITV(VecR);
-      for (i = 0; i < 3; i++)
-         CV->R[i] = VecR[i];
-      for (i = 0; i < 3; i++)
-         CV->W[i] = 0.0;
+      UNITV(&VecR);
+      CV->R = VecR;
+      CV->W = VEC3_ZERO;
    }
 
    else if (sscanf(CmdLine,
                    "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at "
                    "GroundStation[%ld]",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
                    &It) == 8) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
@@ -217,18 +210,16 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame    = FRAME_N;
       CV->TrgType  = TARGET_WORLD;
       CV->TrgWorld = GroundStation[It].World;
-      UNITV(VecR);
-      for (i = 0; i < 3; i++)
-         CV->R[i] = VecR[i];
-      for (i = 0; i < 3; i++)
-         CV->W[i] = GroundStation[It].PosW[i];
+      UNITV(&VecR);
+      CV->R = VecR;
+      CV->W = GroundStation[It].PosW;
    }
 
    else if (sscanf(CmdLine,
                    "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at "
                    "SC[%ld].B[%ld] point [%lf %lf %lf]",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
-                   &Isct, &Ibt, &Vec[0], &Vec[1], &Vec[2]) == 12) {
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
+                   &Isct, &Ibt, &Vec.x, &Vec.y, &Vec.z) == 12) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
@@ -248,15 +239,14 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->TrgType = TARGET_BODY;
       CV->TrgSC   = Isct;
       CV->TrgBody = Ibt;
-      CopyUnitV(VecR, CV->R);
-      for (i = 0; i < 3; i++)
-         CV->T[i] = Vec[i];
+      CopyUnitV(VecR, &CV->R);
+      CV->T = Vec;
    }
 
    else if (sscanf(
                 CmdLine,
                 "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at SC[%ld]",
-                CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
+                CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
                 &Isct) == 8) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
@@ -276,12 +266,12 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->Frame   = FRAME_N;
       CV->TrgType = TARGET_SC;
       CV->TrgSC   = Isct;
-      CopyUnitV(VecR, CV->R);
+      CopyUnitV(VecR, &CV->R);
    }
 
    else if (sscanf(CmdLine,
                    "%lf Point SC[%ld].B[%ld] %s Vector [%lf %lf %lf] at %s",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
                    TargetString) == 8) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
@@ -356,18 +346,16 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          CV->TrgType  = TARGET_WORLD;
          CV->TrgWorld = SOL;
       }
-      UNITV(VecR);
-      for (i = 0; i < 3; i++)
-         CV->R[i] = VecR[i];
-      for (i = 0; i < 3; i++)
-         CV->W[i] = 0.0;
+      UNITV(&VecR);
+      CV->R = VecR;
+      CV->W = VEC3_ZERO;
    }
 
    else if (sscanf(CmdLine,
                    "%lf Align SC[%ld].B[%ld] %s Vector [%lf %lf %lf] with "
                    "SC[%ld].B[%ld] vector [%lf %lf %lf]",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
-                   &Isct, &Ibt, &Vec[0], &Vec[1], &Vec[2]) == 12) {
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
+                   &Isct, &Ibt, &Vec.x, &Vec.y, &Vec.z) == 12) {
       NewCmdProcessed = TRUE;
       if (Ib == 0) {
          Cmd = &SC[Isc].AC.Cmd;
@@ -387,24 +375,22 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
       CV->TrgType = TARGET_BODY;
       CV->TrgSC   = Isct;
       CV->TrgBody = Ibt;
-      CopyUnitV(VecR, CV->R);
-      for (i = 0; i < 3; i++)
-         CV->T[i] = Vec[i];
+      CopyUnitV(VecR, &CV->R);
+      CV->T = Vec;
    }
 
    else if (sscanf(CmdLine,
                    "%lf Align SC[%ld].B[%ld] %s Vector [%lf %lf %lf] with "
                    "%c-frame Vector [%lf %lf %lf]",
-                   CmdTime, &Isc, &Ib, VecString, &VecR[0], &VecR[1], &VecR[2],
-                   &FrameChar, &Vec[0], &Vec[1], &Vec[2]) == 11) {
+                   CmdTime, &Isc, &Ib, VecString, &VecR.x, &VecR.y, &VecR.z,
+                   &FrameChar, &Vec.x, &Vec.y, &Vec.z) == 11) {
       NewCmdProcessed = TRUE;
       if (FrameChar == 'L')
          Frame = FRAME_L;
       else if (FrameChar == 'H') {
          Frame = FRAME_N;
-         for (i = 0; i < 3; i++)
-            VecH[i] = Vec[i];
-         MxV(World[Orb[SC[Isc].RefOrb].World].CNH, VecH, Vec);
+         VecH  = Vec;
+         Vec   = MxV(World[Orb[SC[Isc].RefOrb].World].CNH, VecH);
       }
       else
          Frame = FRAME_N;
@@ -422,18 +408,13 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          CV = &Cmd->SecVec;
       CV->Mode  = CMD_DIRECTION;
       CV->Frame = Frame;
-      UNITV(VecR);
-      UNITV(Vec);
-      for (i = 0; i < 3; i++)
-         CV->R[i] = VecR[i];
-      if (Frame == FRAME_L) {
-         for (i = 0; i < 3; i++)
-            CV->L[i] = Vec[i];
-      }
-      else {
-         for (i = 0; i < 3; i++)
-            CV->N[i] = Vec[i];
-      }
+      UNITV(&VecR);
+      UNITV(&Vec);
+      CV->R = VecR;
+      if (Frame == FRAME_L)
+         CV->L = Vec;
+      else
+         CV->N = Vec;
    }
 
    else if (sscanf(CmdLine, "%lf SC[%ld].AC.Thr[%ld].PulseWidthCmd = %lf",
@@ -452,7 +433,7 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
 
    else if (sscanf(CmdLine,
                    "Event Eclipse Entry SC[%ld] qrl = [%lf %lf %lf %lf]", &Isc,
-                   &q[0], &q[1], &q[2], &q[3]) == 5) {
+                   &q.x, &q.y, &q.z, &q.s) == 5) {
       *CmdTime =
           SimTime + DTSIM;   /* Allows exiting while loop in CmdInterpreter */
       if (SC[Isc].Eclipse) { /* Will pend on this command until this condition
@@ -461,13 +442,12 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          Cmd             = &SC[Isc].AC.Cmd;
          Cmd->Parm       = PARM_QUATERNION;
          Cmd->Frame      = FRAME_L;
-         for (i = 0; i < 4; i++)
-            Cmd->qrl[i] = q[i];
+         Cmd->qrl        = q;
       }
    }
    else if (sscanf(CmdLine,
                    "Event Eclipse Exit SC[%ld] qrl = [%lf %lf %lf %lf]", &Isc,
-                   &q[0], &q[1], &q[2], &q[3]) == 5) {
+                   &q.x, &q.y, &q.z, &q.s) == 5) {
       *CmdTime =
           SimTime + DTSIM;    /* Allows exiting while loop in CmdInterpreter */
       if (!SC[Isc].Eclipse) { /* Will pend on this command until this condition
@@ -476,15 +456,14 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          Cmd             = &SC[Isc].AC.Cmd;
          Cmd->Parm       = PARM_QUATERNION;
          Cmd->Frame      = FRAME_L;
-         for (i = 0; i < 4; i++)
-            Cmd->qrl[i] = q[i];
+         Cmd->qrl        = q;
       }
    }
 
    else if (sscanf(CmdLine,
                    "Event Eclipse Entry SC[%ld] Cmd Angles = [%lf %lf %lf] "
                    "deg, Seq = %ld wrt %c Frame",
-                   &Isc, &Ang[0], &Ang[1], &Ang[2], &RotSeq, &FrameChar) == 6) {
+                   &Isc, &Ang.x, &Ang.y, &Ang.z, &RotSeq, &FrameChar) == 6) {
       *CmdTime =
           SimTime + DTSIM;   /* Allows exiting while loop in CmdInterpreter */
       if (SC[Isc].Eclipse) { /* Will pend on this command until this condition
@@ -497,20 +476,20 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          else
             Cmd->Frame = FRAME_N;
          for (i = 0; i < 3; i++)
-            Cmd->Ang[i] = Ang[i] * D2R;
+            Cmd->Ang.v[i] = Ang.v[i] * D2R;
          Cmd->RotSeq = RotSeq;
-         A2C(RotSeq, Ang[0] * D2R, Ang[1] * D2R, Ang[2] * D2R, C);
+         C           = A2C(RotSeq, Ang.x * D2R, Ang.y * D2R, Ang.z * D2R);
          if (Cmd->Frame == FRAME_L)
-            C2Q(C, Cmd->qrl);
+            Cmd->qrl = C2Q(C);
          else
-            C2Q(C, Cmd->qrn);
+            Cmd->qrn = C2Q(C);
       }
    }
 
    else if (sscanf(CmdLine,
                    "Event Eclipse Exit SC[%ld] Cmd Angles = [%lf %lf %lf] deg, "
                    "Seq = %ld wrt %c Frame",
-                   &Isc, &Ang[0], &Ang[1], &Ang[2], &RotSeq, &FrameChar) == 6) {
+                   &Isc, &Ang.x, &Ang.y, &Ang.z, &RotSeq, &FrameChar) == 6) {
       *CmdTime =
           SimTime + DTSIM;    /* Allows exiting while loop in CmdInterpreter */
       if (!SC[Isc].Eclipse) { /* Will pend on this command until this condition
@@ -523,13 +502,13 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
          else
             Cmd->Frame = FRAME_N;
          for (i = 0; i < 3; i++)
-            Cmd->Ang[i] = Ang[i] * D2R;
+            Cmd->Ang.v[i] = Ang.v[i] * D2R;
          Cmd->RotSeq = RotSeq;
-         A2C(RotSeq, Ang[0] * D2R, Ang[1] * D2R, Ang[2] * D2R, C);
+         C           = A2C(RotSeq, Ang.x * D2R, Ang.y * D2R, Ang.z * D2R);
          if (Cmd->Frame == FRAME_L)
-            C2Q(C, Cmd->qrl);
+            Cmd->qrl = C2Q(C);
          else
-            C2Q(C, Cmd->qrn);
+            Cmd->qrn = C2Q(C);
       }
    }
 
@@ -558,153 +537,152 @@ long FswCmdInterpreter(char CmdLine[512], double *CmdTime)
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-void RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3])
+vec3 RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN) __attribute__((const));
+vec3 RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN)
 {
-   double magp, phat[3], Axis[3], Vpar, Vperp[3], magvp;
+   double magp, Vpar, magvp;
+   vec3 phat, Axis, Vperp, wn;
    long i;
 
-   magp = CopyUnitV(RelPosN, phat);
+   magp = CopyUnitV(RelPosN, &phat);
 
-   VxV(RelPosN, RelVelN, Axis);
-   UNITV(Axis);
+   Axis = VxV(RelPosN, RelVelN);
+   UNITV(&Axis);
 
    Vpar = VoV(RelVelN, phat);
    for (i = 0; i < 3; i++)
-      Vperp[i] = RelVelN[i] - Vpar * phat[i];
+      Vperp.v[i] = RelVelN.v[i] - Vpar * phat.v[i];
    magvp = MAGV(Vperp);
+
+   wn = VEC3_ZERO;
    for (i = 0; i < 3; i++)
-      wn[i] = magvp / magp * Axis[i];
+      wn.v[i] += magvp / magp * Axis.v[i];
+   return wn;
 }
 /**********************************************************************/
-void FindCmdVecN(struct SCType *S, struct CmdVecType *CV)
+struct CmdVecType FindCmdVecN(struct SCType *S, struct CmdVecType CV)
 {
    struct WorldType *W;
-   double RelPosB[3], vb[3];
-   double RelPosN[3], RelPosH[3], RelVelN[3], RelVelH[3];
-   double pcmn[3], pn[3], vn[3], ph[3], vh[3];
+   vec3 RelPosB, vb, Rhat;
+   vec3 RelPosN, RelPosH, RelVelN, RelVelH;
+   vec3 pcmn, pn, vn, ph, vh;
    double CosPriMerAng, SinPriMerAng;
-   double MaxToS, Rhat[3], ToS;
+   double MaxToS, ToS;
    long It, i;
 
-   switch (CV->TrgType) {
+   switch (CV.TrgType) {
       case TARGET_WORLD:
-         W            = &World[CV->TrgWorld];
+         W            = &World[CV.TrgWorld];
          CosPriMerAng = cos(W->PriMerAng);
          SinPriMerAng = sin(W->PriMerAng);
-         pn[0]        = CV->W[0] * CosPriMerAng - CV->W[1] * SinPriMerAng;
-         pn[1]        = CV->W[0] * SinPriMerAng + CV->W[1] * CosPriMerAng;
-         pn[2]        = CV->W[2];
-         vn[0]        = -CV->W[0] * SinPriMerAng - CV->W[1] * CosPriMerAng;
-         vn[1]        = CV->W[0] * CosPriMerAng - CV->W[1] * SinPriMerAng;
-         vn[2]        = 0.0;
-         if (CV->TrgWorld == Orb[SC->RefOrb].World) {
+         pn.x         = CV.W.x * CosPriMerAng - CV.W.y * SinPriMerAng;
+         pn.y         = CV.W.x * SinPriMerAng + CV.W.y * CosPriMerAng;
+         pn.z         = CV.W.z;
+         vn.x         = -CV.W.x * SinPriMerAng - CV.W.y * CosPriMerAng;
+         vn.y         = CV.W.x * CosPriMerAng - CV.W.y * SinPriMerAng;
+         vn.z         = 0.0;
+         if (CV.TrgWorld == Orb[SC->RefOrb].World) {
             for (i = 0; i < 3; i++) {
-               RelPosN[i] = pn[i] - S->PosN[i];
-               RelVelN[i] = vn[i] - S->VelN[i];
+               RelPosN.v[i] = pn.v[i] - S->PosN.v[i];
+               RelVelN.v[i] = vn.v[i] - S->VelN.v[i];
             }
          }
          else {
-            MTxV(W->CNH, pn, ph);
-            MTxV(W->CNH, vn, vh);
+            ph = MTxV(W->CNH, pn);
+            vh = MTxV(W->CNH, vn);
             for (i = 0; i < 3; i++) {
-               RelPosH[i] = (W->PosH[i] + ph[i]) - S->PosH[i];
-               RelVelH[i] = (W->VelH[i] + vh[i]) - S->VelH[i];
+               RelPosH.v[i] = (W->PosH.v[i] + ph.v[i]) - S->PosH.v[i];
+               RelVelH.v[i] = (W->VelH.v[i] + vh.v[i]) - S->VelH.v[i];
             }
-            MxV(World[Orb[S->RefOrb].World].CNH, RelPosH, RelPosN);
-            MxV(World[Orb[S->RefOrb].World].CNH, RelVelH, RelVelN);
+            RelPosN = MxV(World[Orb[S->RefOrb].World].CNH, RelPosH);
+            RelVelN = MxV(World[Orb[S->RefOrb].World].CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, CV->N);
-         RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
+         CopyUnitV(RelPosN, &CV.N);
+         CV.wn = RelMotionToAngRate(RelPosN, RelVelN);
          break;
       case TARGET_SC:
-         if (SC[CV->TrgSC].RefOrb == S->RefOrb) {
+         if (SC[CV.TrgSC].RefOrb == S->RefOrb) {
             for (i = 0; i < 3; i++) {
-               RelPosN[i] = SC[CV->TrgSC].PosR[i] - S->PosR[i];
-               RelVelN[i] = SC[CV->TrgSC].VelR[i] - S->VelR[i];
+               RelPosN.v[i] = SC[CV.TrgSC].PosR.v[i] - S->PosR.v[i];
+               RelVelN.v[i] = SC[CV.TrgSC].VelR.v[i] - S->VelR.v[i];
             }
          }
-         else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
+         else if (Orb[SC[CV.TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
             for (i = 0; i < 3; i++) {
-               RelPosN[i] = SC[CV->TrgSC].PosN[i] - S->PosN[i];
-               RelVelN[i] = SC[CV->TrgSC].VelN[i] - S->VelN[i];
+               RelPosN.v[i] = SC[CV.TrgSC].PosN.v[i] - S->PosN.v[i];
+               RelVelN.v[i] = SC[CV.TrgSC].VelN.v[i] - S->VelN.v[i];
             }
          }
          else {
             for (i = 0; i < 3; i++) {
-               RelPosH[i] = SC[CV->TrgSC].PosH[i] - S->PosH[i];
-               RelVelH[i] = SC[CV->TrgSC].VelH[i] - S->VelH[i];
+               RelPosH.v[i] = SC[CV.TrgSC].PosH.v[i] - S->PosH.v[i];
+               RelVelH.v[i] = SC[CV.TrgSC].VelH.v[i] - S->VelH.v[i];
             }
-            MxV(World[Orb[S->RefOrb].World].CNH, RelPosH, RelPosN);
-            MxV(World[Orb[S->RefOrb].World].CNH, RelVelH, RelVelN);
+            RelPosN = MxV(World[Orb[S->RefOrb].World].CNH, RelPosH);
+            RelVelN = MxV(World[Orb[S->RefOrb].World].CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, CV->N);
-         RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
+         CopyUnitV(RelPosN, &CV.N);
+         CV.wn = RelMotionToAngRate(RelPosN, RelVelN);
          break;
       case TARGET_BODY:
-         MTxV(SC[CV->TrgSC].B[0].CN, SC[CV->TrgSC].cm, pcmn);
-         MTxV(SC[CV->TrgSC].B[CV->TrgBody].CN, CV->T, pn);
+         pcmn = MTxV(SC[CV.TrgSC].B[0].CN, SC[CV.TrgSC].cm);
+         pn   = MTxV(SC[CV.TrgSC].B[CV.TrgBody].CN, CV.T);
          for (i = 0; i < 3; i++)
-            RelPosB[i] = CV->T[i] - SC[CV->TrgSC].B[CV->TrgBody].cm[i];
-         VxV(SC[CV->TrgSC].B[CV->TrgBody].wn, RelPosB, vb);
-         MTxV(SC[CV->TrgSC].B[CV->TrgBody].CN, vb, vn);
+            RelPosB.v[i] = CV.T.v[i] - SC[CV.TrgSC].B[CV.TrgBody].cm.v[i];
+         vb = VxV(SC[CV.TrgSC].B[CV.TrgBody].wn, RelPosB);
+         vn = MTxV(SC[CV.TrgSC].B[CV.TrgBody].CN, vb);
          for (i = 0; i < 3; i++) {
-            pn[i] += SC[CV->TrgSC].B[CV->TrgBody].pn[i] - pcmn[i];
-            vn[i] += SC[CV->TrgSC].B[CV->TrgBody].vn[i];
+            pn.v[i] += SC[CV.TrgSC].B[CV.TrgBody].pn.v[i] - pcmn.v[i];
+            vn.v[i] += SC[CV.TrgSC].B[CV.TrgBody].vn.v[i];
          }
-         if (SC[CV->TrgSC].RefOrb == S->RefOrb) {
+         if (SC[CV.TrgSC].RefOrb == S->RefOrb) {
             for (i = 0; i < 3; i++) {
-               RelPosN[i] = SC[CV->TrgSC].PosR[i] + pn[i] - S->PosR[i];
-               RelVelN[i] = SC[CV->TrgSC].VelR[i] + vn[i] - S->VelR[i];
+               RelPosN.v[i] = SC[CV.TrgSC].PosR.v[i] + pn.v[i] - S->PosR.v[i];
+               RelVelN.v[i] = SC[CV.TrgSC].VelR.v[i] + vn.v[i] - S->VelR.v[i];
             }
          }
-         else if (Orb[SC[CV->TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
+         else if (Orb[SC[CV.TrgSC].RefOrb].World == Orb[S->RefOrb].World) {
             for (i = 0; i < 3; i++) {
-               RelPosN[i] = SC[CV->TrgSC].PosN[i] + pn[i] - S->PosN[i];
-               RelVelN[i] = SC[CV->TrgSC].VelN[i] + vn[i] - S->VelN[i];
+               RelPosN.v[i] = SC[CV.TrgSC].PosN.v[i] + pn.v[i] - S->PosN.v[i];
+               RelVelN.v[i] = SC[CV.TrgSC].VelN.v[i] + vn.v[i] - S->VelN.v[i];
             }
          }
          else {
-            MTxV(World[Orb[SC[CV->TrgSC].RefOrb].World].CNH, pn, ph);
-            MTxV(World[Orb[SC[CV->TrgSC].RefOrb].World].CNH, vn, vh);
+            ph = MTxV(World[Orb[SC[CV.TrgSC].RefOrb].World].CNH, pn);
+            vh = MTxV(World[Orb[SC[CV.TrgSC].RefOrb].World].CNH, vn);
             for (i = 0; i < 3; i++) {
-               RelPosH[i] = SC[CV->TrgSC].PosH[i] + ph[i] - S->PosH[i];
-               RelVelH[i] = SC[CV->TrgSC].VelH[i] + vh[i] - S->VelH[i];
+               RelPosH.v[i] = SC[CV.TrgSC].PosH.v[i] + ph.v[i] - S->PosH.v[i];
+               RelVelH.v[i] = SC[CV.TrgSC].VelH.v[i] + vh.v[i] - S->VelH.v[i];
             }
-            MxV(World[Orb[S->RefOrb].World].CNH, RelPosH, RelPosN);
-            MxV(World[Orb[S->RefOrb].World].CNH, RelVelH, RelVelN);
+            RelPosN = MxV(World[Orb[S->RefOrb].World].CNH, RelPosH);
+            RelVelN = MxV(World[Orb[S->RefOrb].World].CNH, RelVelH);
          }
-         CopyUnitV(RelPosN, CV->N);
-         RelMotionToAngRate(RelPosN, RelVelN, CV->wn);
+         CopyUnitV(RelPosN, &CV.N);
+         CV.wn = RelMotionToAngRate(RelPosN, RelVelN);
          break;
       case TARGET_VELOCITY:
-         for (i = 0; i < 3; i++)
-            CV->N[i] = S->VelN[i];
-         UNITV(CV->N);
+         CV.N = S->VelN;
+         UNITV(&CV.N);
          break;
       case TARGET_MAGFIELD:
-         for (i = 0; i < 3; i++)
-            CV->N[i] = S->bvn[i];
-         UNITV(CV->N);
+         CV.N = S->bvn;
+         UNITV(&CV.N);
          break;
       case TARGET_TDRS:
-         CV->N[0] = 0.0;
-         CV->N[1] = 0.0;
-         CV->N[2] = 1.0;
-         for (i = 0; i < 3; i++)
-            CV->wn[i] = 0.0;
+         CV.N   = VEC3_PZAXIS;
+         CV.wn  = VEC3_ZERO;
          MaxToS = -2.0; /* Bogus */
-         CopyUnitV(S->PosN, Rhat);
+         CopyUnitV(S->PosN, &Rhat);
          /* Aim at TDRS closest to Zenith */
          for (It = 0; It < 10; It++) {
             if (Tdrs[It].Exists) {
                for (i = 0; i < 3; i++)
-                  RelPosN[i] = Tdrs[It].PosN[i] - S->PosN[i];
-               UNITV(RelPosN);
+                  RelPosN.v[i] = Tdrs[It].PosN.v[i] - S->PosN.v[i];
+               UNITV(&RelPosN);
                ToS = VoV(RelPosN, Rhat);
                if (ToS > MaxToS) {
                   MaxToS = ToS;
-                  for (i = 0; i < 3; i++)
-                     CV->N[i] = RelPosN[i];
+                  CV.N   = RelPosN;
                }
             }
          }
@@ -712,6 +690,7 @@ void FindCmdVecN(struct SCType *S, struct CmdVecType *CV)
       default:
          break;
    }
+   return CV;
 }
 /**********************************************************************/
 void ThreeAxisAttitudeCommand(struct SCType *S)
@@ -720,9 +699,9 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
    struct BodyType *B;
    struct CmdType *Cmd;
    struct CmdVecType *PV, *SV;
-   double CRN[3][3], C[3][3], qln[4], Cdot[3][3];
-   double PriVecBi[3], SecVecBi[3], PriVecGi[3], SecVecGi[3];
-   double PriVecGo[3], SecVecGo[3], CGoGi[3][3];
+   mat3x3 CRN, C, Cdot, CGoGi;
+   vec3 PriVecBi, SecVecBi, PriVecGi, SecVecGi, PriVecGo, SecVecGo;
+   quat qln;
    long Ig, Bi, i, j;
 
    Cmd = &S->AC.Cmd;
@@ -731,71 +710,64 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
 
    switch (Cmd->Parm) {
       case PARM_EULER_ANGLES:
-         A2C(Cmd->RotSeq, Cmd->Ang[0], Cmd->Ang[1], Cmd->Ang[2], C);
+         C = A2C(Cmd->RotSeq, Cmd->Ang.x, Cmd->Ang.y, Cmd->Ang.z);
          if (Cmd->Frame == FRAME_L)
-            C2Q(C, Cmd->qrl);
+            Cmd->qrl = C2Q(C);
          else
-            C2Q(C, Cmd->qrn);
+            Cmd->qrn = C2Q(C);
          [[fallthrough]];
       case PARM_QUATERNION:
-         C2Q(S->CLN, qln);
+         qln = C2Q(S->CLN);
          if (Cmd->Frame == FRAME_L) {
-            QxQ(Cmd->qrl, qln, Cmd->qrn);
-            QxV(Cmd->qrn, S->wln, Cmd->wrn);
+            Cmd->qrn = QxQ(Cmd->qrl, qln);
+            Cmd->wrn = QxV(Cmd->qrn, S->wln);
          }
          break;
       case PARM_VECTORS:
          if (PV->Mode == CMD_TARGET)
-            FindCmdVecN(S, PV);
-         else if (PV->Frame == FRAME_N) {
-            for (i = 0; i < 3; i++)
-               PV->wn[i] = 0.0;
-         }
+            *PV = FindCmdVecN(S, *PV);
+         else if (PV->Frame == FRAME_N)
+            PV->wn = VEC3_ZERO;
+
          else if (PV->Frame == FRAME_L) {
-            MTxV(S->CLN, PV->L, PV->N);
-            for (i = 0; i < 3; i++)
-               PV->wn[i] = S->wln[i];
+            PV->N  = MTxV(S->CLN, PV->L);
+            PV->wn = S->wln;
          }
          else if (PV->Frame == FRAME_B) {
-            MTxV(SC[PV->TrgSC].B[PV->TrgBody].CN, PV->T, PV->N);
-            MTxV(SC[PV->TrgSC].B[PV->TrgBody].CN,
-                 SC[PV->TrgSC].B[PV->TrgBody].wn, PV->wn);
+            PV->N  = MTxV(SC[PV->TrgSC].B[PV->TrgBody].CN, PV->T);
+            PV->wn = MTxV(SC[PV->TrgSC].B[PV->TrgBody].CN,
+                          SC[PV->TrgSC].B[PV->TrgBody].wn);
          }
 
          if (SV->Mode == CMD_TARGET)
-            FindCmdVecN(S, SV);
-         else if (SV->Frame == FRAME_N) {
-            for (i = 0; i < 3; i++)
-               SV->wn[i] = 0.0;
-         }
+            *SV = FindCmdVecN(S, *SV);
+         else if (SV->Frame == FRAME_N)
+            SV->wn = VEC3_ZERO;
          else if (SV->Frame == FRAME_L) {
-            MTxV(S->CLN, SV->L, SV->N);
-            for (i = 0; i < 3; i++)
-               SV->wn[i] = S->wln[i];
+            SV->N  = MTxV(S->CLN, SV->L);
+            SV->wn = S->wln;
          }
          else if (SV->Frame == FRAME_B) {
-            MTxV(SC[SV->TrgSC].B[SV->TrgBody].CN, SV->T, SV->N);
-            MTxV(SC[SV->TrgSC].B[SV->TrgBody].CN,
-                 SC[SV->TrgSC].B[SV->TrgBody].wn, SV->wn);
+            SV->N  = MTxV(SC[SV->TrgSC].B[SV->TrgBody].CN, SV->T);
+            SV->wn = MTxV(SC[SV->TrgSC].B[SV->TrgBody].CN,
+                          SC[SV->TrgSC].B[SV->TrgBody].wn);
          }
          if (MAGV(PV->N) == 0.0 || MAGV(PV->R) == 0.0)
             printf("Warning: Primary Vector not defined for SC[%ld]\n", S->ID);
          if (MAGV(SV->N) == 0.0 || MAGV(SV->R) == 0.0)
             printf("Warning: Secondary Vector not defined for SC[%ld]\n",
                    S->ID);
-         TRIAD(PV->N, SV->N, PV->R, SV->R, CRN);
-         C2Q(CRN, Cmd->qrn);
+         CRN      = TRIAD(PV->N, SV->N, PV->R, SV->R);
+         Cmd->qrn = C2Q(CRN);
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++) {
-               Cdot[i][j] = (CRN[i][j] - Cmd->OldCRN[i][j]) / S->AC.DT;
+               Cdot.mat[i][j] =
+                   (CRN.mat[i][j] - Cmd->OldCRN.mat[i][j]) / S->AC.DT;
             }
          }
-         CDOT2W(CRN, Cdot, Cmd->wrn);
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++) {
-               Cmd->OldCRN[i][j] = CRN[i][j];
-            }
-         }
+         Cmd->wrn    = CDOT2W(CRN, Cdot);
+         Cmd->OldCRN = CRN;
+
          break;
       default:
          break;
@@ -811,28 +783,28 @@ void ThreeAxisAttitudeCommand(struct SCType *S)
 
       if (Cmd->Parm == PARM_VECTORS) {
          if (PV->Mode == CMD_TARGET)
-            FindCmdVecN(S, PV);
+            *PV = FindCmdVecN(S, *PV);
          else if (PV->Frame == FRAME_L)
-            MTxV(S->CLN, PV->L, PV->N);
+            PV->N = MTxV(S->CLN, PV->L);
          if (SV->Mode == CMD_TARGET)
-            FindCmdVecN(S, SV);
+            *SV = FindCmdVecN(S, *SV);
          else if (SV->Frame == FRAME_L)
-            MTxV(S->CLN, SV->L, SV->N);
+            SV->N = MTxV(S->CLN, SV->L);
 
          if (G->RotDOF == 3) {
-            MxV(B->CN, PV->N, PriVecBi);
-            MxV(B->CN, SV->N, SecVecBi);
-            MxV(G->CGiBi, PriVecBi, PriVecGi);
-            MxV(G->CGiBi, SecVecBi, SecVecGi);
-            MTxV(G->CBoGo, PV->R, PriVecGo);
-            MTxV(G->CBoGo, SV->R, SecVecGo);
-            TRIAD(PriVecGi, SecVecGi, PriVecGo, SecVecGo, CGoGi);
-            C2A(G->RotSeq, CGoGi, &Cmd->Ang[0], &Cmd->Ang[1], &Cmd->Ang[2]);
+            PriVecBi = MxV(B->CN, PV->N);
+            SecVecBi = MxV(B->CN, SV->N);
+            PriVecGi = MxV(G->CGiBi, PriVecBi);
+            SecVecGi = MxV(G->CGiBi, SecVecBi);
+            PriVecGo = MTxV(G->CBoGo, PV->R);
+            SecVecGo = MTxV(G->CBoGo, SV->R);
+            CGoGi    = TRIAD(PriVecGi, SecVecGi, PriVecGo, SecVecGo);
+            C2A(G->RotSeq, CGoGi, &Cmd->Ang.x, &Cmd->Ang.y, &Cmd->Ang.z);
          }
          else {
-            MxV(B->CN, PV->N, PriVecBi);
-            PointGimbalToTarget(G->RotSeq, G->CGiBi, G->CBoGo, PriVecBi, PV->R,
-                                Cmd->Ang);
+            PriVecBi = MxV(B->CN, PV->N);
+            Cmd->Ang = PointGimbalToTarget(G->RotSeq, G->CGiBi, G->CBoGo,
+                                           PriVecBi, PV->R);
          }
       }
    }
@@ -854,14 +826,14 @@ void SpinnerCommand(struct SCType *S)
       exit(EXIT_FAILURE);
    }
 
-   FindCmdVecN(S, PV);
+   *PV = FindCmdVecN(S, *PV);
    for (i = 0; i < 3; i++) {
-      Cmd->wrn[i] = PV->R[i] * Cmd->SpinRate;
+      Cmd->wrn.v[i] = PV->R.v[i] * Cmd->SpinRate;
    }
-   MxV(S->I, Cmd->wrn, Cmd->Hvr);
-   MagH = MAGV(Cmd->Hvr);
+   Cmd->Hvr = MxV(S->I, Cmd->wrn);
+   MagH     = MAGV(Cmd->Hvr);
    for (i = 0; i < 3; i++) {
-      Cmd->Hvn[i] = PV->N[i] * MagH;
+      Cmd->Hvn.v[i] = PV->N.v[i] * MagH;
    }
 }
 /**********************************************************************/
@@ -872,7 +844,7 @@ void InitAC(struct SCType *S)
    long Ib, Ig, i, j, k;
    struct AcType *AC;
    double **A, **Aplus;
-   double r[3];
+   vec3 r;
 
    AC = &S->AC;
 
@@ -888,12 +860,8 @@ void InitAC(struct SCType *S)
    /* Time, Mass */
    AC->DT   = S->FswSampleTime;
    AC->mass = S->mass;
-   for (i = 0; i < 3; i++) {
-      AC->cm[i] = S->cm[i];
-      for (j = 0; j < 3; j++) {
-         AC->MOI[i][j] = S->I[i][j];
-      }
-   }
+   AC->cm   = S->cm;
+   AC->MOI  = S->I;
 
    /* Bodies */
    AC->Nb = S->Nb;
@@ -901,12 +869,8 @@ void InitAC(struct SCType *S)
       AC->B = (struct AcBodyType *)calloc(AC->Nb, sizeof(struct AcBodyType));
       for (Ib = 0; Ib < AC->Nb; Ib++) {
          AC->B[Ib].mass = S->B[Ib].mass;
-         for (i = 0; i < 3; i++) {
-            AC->B[Ib].cm[i] = S->B[Ib].cm[i];
-            for (j = 0; j < 3; j++) {
-               AC->B[Ib].MOI[i][j] = S->B[Ib].I[i][j];
-            }
-         }
+         AC->B[Ib].cm   = S->B[Ib].cm;
+         AC->B[Ib].MOI  = S->B[Ib].I;
       }
    }
 
@@ -918,12 +882,9 @@ void InitAC(struct SCType *S)
          AC->G[Ig].IsSpherical = S->G[Ig].IsSpherical;
          AC->G[Ig].RotDOF      = S->G[Ig].RotDOF;
          AC->G[Ig].TrnDOF      = S->G[Ig].TrnDOF;
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++) {
-               AC->G[Ig].CGiBi[i][j] = S->G[Ig].CGiBi[i][j];
-               AC->G[Ig].CBoGo[i][j] = S->G[Ig].CBoGo[i][j];
-            }
-         }
+         AC->G[Ig].CGiBi       = S->G[Ig].CGiBi;
+         AC->G[Ig].CBoGo       = S->G[Ig].CBoGo;
+
          AC->G[Ig].RotSeq = S->G[Ig].RotSeq;
          AC->G[Ig].TrnSeq = S->G[Ig].TrnSeq;
       }
@@ -935,9 +896,7 @@ void InitAC(struct SCType *S)
       AC->Gyro =
           (struct AcGyroType *)calloc(AC->Ngyro, sizeof(struct AcGyroType));
       for (i = 0; i < S->Ngyro; i++) {
-         for (j = 0; j < 3; j++) {
-            AC->Gyro[i].Axis[j] = S->Gyro[i].Axis[j];
-         }
+         AC->Gyro[i].Axis = S->Gyro[i].Axis;
       }
    }
 
@@ -947,9 +906,7 @@ void InitAC(struct SCType *S)
       AC->MAG = (struct AcMagnetometerType *)calloc(
           AC->Nmag, sizeof(struct AcMagnetometerType));
       for (i = 0; i < S->Nmag; i++) {
-         for (j = 0; j < 3; j++) {
-            AC->MAG[i].Axis[j] = S->MAG[i].Axis[j];
-         }
+         AC->MAG[i].Axis = S->MAG[i].Axis;
       }
    }
 
@@ -958,9 +915,8 @@ void InitAC(struct SCType *S)
    if (AC->Ncss > 0) {
       AC->CSS = (struct AcCssType *)calloc(AC->Ncss, sizeof(struct AcCssType));
       for (i = 0; i < S->Ncss; i++) {
-         AC->CSS[i].Body = S->CSS[i].Body;
-         for (j = 0; j < 3; j++)
-            AC->CSS[i].Axis[j] = S->CSS[i].Axis[j];
+         AC->CSS[i].Body  = S->CSS[i].Body;
+         AC->CSS[i].Axis  = S->CSS[i].Axis;
          AC->CSS[i].Scale = S->CSS[i].Scale;
       }
    }
@@ -970,12 +926,8 @@ void InitAC(struct SCType *S)
    if (AC->Nfss > 0) {
       AC->FSS = (struct AcFssType *)calloc(AC->Nfss, sizeof(struct AcFssType));
       for (k = 0; k < S->Nfss; k++) {
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               AC->FSS[k].CB[i][j] = S->FSS[k].CB[i][j];
-         }
-         for (i = 0; i < 4; i++)
-            AC->FSS[k].qb[i] = S->FSS[k].qb[i];
+         AC->FSS[k].CB       = S->FSS[k].CB;
+         AC->FSS[k].qb       = S->FSS[k].qb;
          AC->FSS[k].H_Axis   = S->FSS[k].H_Axis;
          AC->FSS[k].V_Axis   = S->FSS[k].V_Axis;
          AC->FSS[k].BoreAxis = S->FSS[k].BoreAxis;
@@ -989,12 +941,8 @@ void InitAC(struct SCType *S)
       AC->ST = (struct AcStarTrackerType *)calloc(
           AC->Nst, sizeof(struct AcStarTrackerType));
       for (k = 0; k < S->Nst; k++) {
-         for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               AC->ST[k].CB[i][j] = S->ST[k].CB[i][j];
-         }
-         for (i = 0; i < 4; i++)
-            AC->ST[k].qb[i] = S->ST[k].qb[i];
+         AC->ST[k].CB       = S->ST[k].CB;
+         AC->ST[k].qb       = S->ST[k].qb;
          AC->ST[k].BoreAxis = S->ST[k].BoreAxis;
       }
    }
@@ -1011,9 +959,7 @@ void InitAC(struct SCType *S)
       AC->Accel =
           (struct AcAccelType *)calloc(AC->Nacc, sizeof(struct AcAccelType));
       for (i = 0; i < S->Nacc; i++) {
-         for (j = 0; j < 3; j++) {
-            AC->Accel[i].Axis[j] = S->Accel[i].Axis[j];
-         }
+         AC->Accel[i].Axis = S->Accel[i].Axis;
       }
    }
 
@@ -1025,22 +971,19 @@ void InitAC(struct SCType *S)
       Aplus   = CreateMatrix(AC->Nwhl, 3);
       for (i = 0; i < S->Nw; i++) {
          AC->Whl[i].Body = S->Whl[i].Body;
+         AC->Whl[i].Axis = S->Whl[i].A;
          for (j = 0; j < 3; j++) {
-            AC->Whl[i].Axis[j] = S->Whl[i].A[j];
-            A[j][i]            = S->Whl[i].A[j];
+            A[j][i] = S->Whl[i].A.v[j];
          }
       }
       if (S->Nw == 1) {
-         for (i = 0; i < 3; i++)
-            AC->Whl[0].DistVec[i] = AC->Whl[0].Axis[i];
+         AC->Whl[0].DistVec = AC->Whl[0].Axis;
       }
       else if (S->Nw >= 2) {
          PINVG(A, Aplus, 3, S->Nw);
-         for (i = 0; i < AC->Nwhl; i++) {
-            for (j = 0; j < 3; j++) {
-               AC->Whl[i].DistVec[j] = Aplus[i][j];
-            }
-         }
+         for (i = 0; i < AC->Nwhl; i++)
+            for (j = 0; j < 3; j++)
+               AC->Whl[i].DistVec.v[j] = Aplus[i][j];
       }
       DestroyMatrix(A);
       DestroyMatrix(Aplus);
@@ -1058,21 +1001,18 @@ void InitAC(struct SCType *S)
       A       = CreateMatrix(3, AC->Nmtb);
       Aplus   = CreateMatrix(AC->Nmtb, 3);
       for (i = 0; i < S->Nmtb; i++) {
-         for (j = 0; j < 3; j++) {
-            AC->MTB[i].Axis[j] = S->MTB[i].A[j];
-            A[j][i]            = S->MTB[i].A[j];
-         }
+         AC->MTB[i].Axis = S->MTB[i].A;
+         for (j = 0; j < 3; j++)
+            A[j][i] = S->MTB[i].A.v[j];
       }
       if (S->Nmtb == 1) {
-         for (i = 0; i < 3; i++)
-            AC->MTB[0].DistVec[i] = AC->MTB[0].Axis[i];
+         AC->MTB[0].DistVec = AC->MTB[0].Axis;
       }
       else if (S->Nmtb >= 2) {
          PINVG(A, Aplus, 3, S->Nmtb);
          for (i = 0; i < AC->Nmtb; i++) {
-            for (j = 0; j < 3; j++) {
-               AC->MTB[i].DistVec[j] = Aplus[i][j];
-            }
+            for (j = 0; j < 3; j++)
+               AC->MTB[i].DistVec.v[j] = Aplus[i][j];
          }
       }
       DestroyMatrix(A);
@@ -1089,13 +1029,11 @@ void InitAC(struct SCType *S)
       for (i = 0; i < S->Nthr; i++) {
          AC->Thr[i].Body = S->Thr[i].Body;
          AC->Thr[i].Fmax = S->Thr[i].Fmax;
-         for (j = 0; j < 3; j++) {
-            AC->Thr[i].Axis[j] = S->Thr[i].A[j];
-            AC->Thr[i].PosB[j] =
-                S->B[S->Thr[i].Body].Node[S->Thr[i].Node].PosB[j];
-            r[j] = AC->Thr[i].PosB[j] - AC->cm[j];
-         }
-         VxV(r, AC->Thr[i].Axis, AC->Thr[i].rxA);
+         AC->Thr[i].Axis = S->Thr[i].A;
+         AC->Thr[i].PosB = S->B[S->Thr[i].Body].Node[S->Thr[i].Node].PosB;
+         for (j = 0; j < 3; j++)
+            r.v[j] = AC->Thr[i].PosB.v[j] - AC->cm.v[j];
+         AC->Thr[i].rxA = VxV(r, AC->Thr[i].Axis);
       }
    }
 
@@ -1117,65 +1055,57 @@ void InitAC(struct SCType *S)
 
    /* Initialize variables to avoid divide-by-zero before first sensor
     * measurements */
-   AC->qbn[3] = 1.0;
-   AC->svb[0] = 1.0;
-   AC->bvb[0] = 1.0E-4;
+   AC->qbn.qs = 1.0;
+   AC->svb.x  = 1.0;
+   AC->bvb.x  = 1.0E-4;
 }
 /**********************************************************************/
 /* The effective inertia for a gimbal is assumed to be the moment of  */
 /* inertia of the appendage depending from the joint (that is, all    */
 /* bodies for which that joint is in the JointPathTable) about that   */
 /* joint, with all joints undeflected.                                */
-void FindAppendageInertia(long Ig, struct SCType *S, double Iapp[3])
+vec3 FindAppendageInertia(long Ig, struct SCType *S)
 {
    struct DynType *D;
    struct JointType *G;
-   double rho[3], CBoBi[3][3], Coi[3][3], Cr[3], rhog[3], Csofar[3][3];
-   double CBoG[3][3], IBoG[3][3];
-   long Ib, Jg, j, k;
+   vec3 rho, Cr, rhog;
+   mat3x3 CBoG, IBoG, CBoBi, Coi, Csofar;
+   long Ib, Jg, k;
 
    D = &S->Dyn;
 
-   for (k = 0; k < 3; k++)
-      Iapp[k] = 0.0;
+   vec3 Iapp = VEC3_ZERO;
    for (Ib = 1; Ib < S->Nb; Ib++) {
       if (D->JointPathTable[Ib][Ig].InPath) {
          /* Build undeflected rho */
-         Jg = S->B[Ib].Gin;
-         for (k = 0; k < 3; k++)
-            rho[k] = 0.0;
-         for (j = 0; j < 3; j++) {
-            for (k = 0; k < 3; k++)
-               CBoBi[j][k] = 0.0;
-            CBoBi[j][j] = 1.0;
-         }
+         Jg    = S->B[Ib].Gin;
+         rho   = VEC3_ZERO;
+         CBoBi = MAT3X3_EYE;
          while (Jg > Ig) {
-            G = &S->G[Jg];
-            MxM(G->CBoGo, G->CGiBi, Coi);
+            G   = &S->G[Jg];
+            Coi = MxM(G->CBoGo, G->CGiBi);
             for (k = 0; k < 3; k++)
-               rho[k] -= G->ro[k];
-            MTxV(Coi, rho, Cr);
+               rho.v[k] -= G->ro.v[k];
+            Cr = MTxV(Coi, rho);
             for (k = 0; k < 3; k++)
-               rho[k] = Cr[k] + G->ri[k];
-            for (j = 0; j < 3; j++) {
-               for (k = 0; k < 3; k++)
-                  Csofar[j][k] = CBoBi[j][k];
-            }
-            MxM(Csofar, Coi, CBoBi);
-            Jg = S->B[G->Bin].Gin;
+               rho.v[k] = Cr.v[k] + G->ri.v[k];
+            Csofar = CBoBi;
+            CBoBi  = MxM(Csofar, Coi);
+            Jg     = S->B[G->Bin].Gin;
          }
          G = &S->G[Ig];
          for (k = 0; k < 3; k++)
-            rho[k] -= G->ro[k];
-         MTxV(G->CBoGo, rho, rhog);
-         MTxM(CBoBi, G->CBoGo, CBoG);
+            rho.v[k] -= G->ro.v[k];
+         rhog = MTxV(G->CBoGo, rho);
+         CBoG = MTxM(CBoBi, G->CBoGo);
          /* Parallel axis theorem */
-         PARAXIS(S->B[Ib].I, CBoG, S->B[Ib].mass, rhog, IBoG);
+         IBoG = PARAXIS(S->B[Ib].I, CBoG, S->B[Ib].mass, rhog);
          /* Accumulate */
          for (k = 0; k < 3; k++)
-            Iapp[k] += IBoG[k][k];
+            Iapp.v[k] += IBoG.mat[k][k];
       }
    }
+   return Iapp;
 }
 /**********************************************************************/
 void MapCmdsToActuators(struct SCType *S)
@@ -1192,8 +1122,8 @@ void MapCmdsToActuators(struct SCType *S)
    if (S->GainAndDelayActive) {
       for (i = 0; i < 3; i++) {
          I       = &S->IdealAct[i];
-         I->Fcmd = Delay(I->FrcDelay, S->LoopGain * AC->IdealFrc[i]);
-         I->Tcmd = Delay(I->TrqDelay, S->LoopGain * AC->IdealTrq[i]);
+         I->Fcmd = Delay(I->FrcDelay, S->LoopGain * AC->IdealFrc.v[i]);
+         I->Tcmd = Delay(I->TrqDelay, S->LoopGain * AC->IdealTrq.v[i]);
       }
 
       for (Iw = 0; Iw < AC->Nwhl; Iw++) {
@@ -1218,8 +1148,8 @@ void MapCmdsToActuators(struct SCType *S)
    }
    else if (S->FswSampleCounter == 0) {
       for (i = 0; i < 3; i++) {
-         S->IdealAct[i].Fcmd = AC->IdealFrc[i];
-         S->IdealAct[i].Tcmd = AC->IdealTrq[i];
+         S->IdealAct[i].Fcmd = AC->IdealFrc.v[i];
+         S->IdealAct[i].Tcmd = AC->IdealTrq.v[i];
       }
 
       for (Iw = 0; Iw < AC->Nwhl; Iw++) {
@@ -1247,8 +1177,7 @@ void PrototypeFSW(struct SCType *S)
    struct AcPrototypeCtrlType *C;
    struct BodyType *B;
    struct CmdType *Cmd;
-   double alpha[3], Iapp[3];
-   double Hvnb[3], Herr[3], werr[3];
+   vec3 alpha, Iapp, Hvnb, Herr, werr;
    long Ig, i, j;
 
    AC  = &S->AC;
@@ -1266,16 +1195,16 @@ void PrototypeFSW(struct SCType *S)
 
       B = &S->B[0];
 
-      MxV(B->CN, Cmd->Hvn, Hvnb);
+      Hvnb = MxV(B->CN, Cmd->Hvn);
 
       for (i = 0; i < 3; i++) {
-         Herr[i]    = S->Hvb[i] - Hvnb[i];
-         werr[i]    = AC->wbn[i] - Cmd->wrn[i];
-         C->Tcmd[i] = -C->Knute * werr[i];
+         Herr.v[i]    = S->Hvb.v[i] - Hvnb.v[i];
+         werr.v[i]    = AC->wbn.v[i] - Cmd->wrn.v[i];
+         C->Tcmd.v[i] = -C->Knute * werr.v[i];
          if (MAGV(Herr) < 0.5 * MAGV(Cmd->Hvn)) {
-            C->Tcmd[i] -= C->Kprec * Herr[i];
+            C->Tcmd.v[i] -= C->Kprec * Herr.v[i];
          }
-         AC->IdealTrq[i] = Limit(C->Tcmd[i], -0.1, 0.1);
+         AC->IdealTrq.v[i] = Limit(C->Tcmd.v[i], -0.1, 0.1);
       }
    }
    else {
@@ -1283,32 +1212,31 @@ void PrototypeFSW(struct SCType *S)
          C->Init = 0;
 
          for (Ig = 0; Ig < AC->Ng; Ig++) {
-            FindAppendageInertia(Ig, S, Iapp);
+            Iapp = FindAppendageInertia(Ig, S);
             for (j = 0; j < 3; j++) {
-               FindPDGains(Iapp[j], 0.05, 1.0, &AC->G[Ig].AngRateGain[j],
-                           &AC->G[Ig].AngGain[j]);
-               AC->G[Ig].MaxAngRate[j] = 0.5 * D2R;
-               AC->G[Ig].MaxTrq[j]     = 0.1;
+               FindPDGains(Iapp.v[j], 0.05, 1.0, &AC->G[Ig].AngRateGain.v[j],
+                           &AC->G[Ig].AngGain.v[j]);
+               AC->G[Ig].MaxAngRate.v[j] = 0.5 * D2R;
+               AC->G[Ig].MaxTrq.v[j]     = 0.1;
             }
          }
       }
 
       /* Find qrn, wrn and joint angle commands */
       ThreeAxisAttitudeCommand(S);
-      for (i = 0; i < 4; i++)
-         AC->qrn[i] = AC->Cmd.qrn[i];
+      AC->qrn = AC->Cmd.qrn;
 
       /* Form attitude error signals */
-      QxQT(AC->qbn, Cmd->qrn, AC->qbr);
-      Q2AngleVec(AC->qbr, C->therr);
-      Q2AngleVec(AC->qbr, C->therr);
+      AC->qbr  = QxQT(AC->qbn, Cmd->qrn);
+      C->therr = Q2AngleVec(AC->qbr);
+      C->therr = Q2AngleVec(AC->qbr);
       for (i = 0; i < 3; i++)
-         C->werr[i] = AC->wbn[i] - Cmd->wrn[i];
+         C->werr.v[i] = AC->wbn.v[i] - Cmd->wrn.v[i];
 
       /* Closed-loop attitude control */
-      VectorRampCoastGlide(C->therr, C->werr, C->wc, C->amax, C->vmax, alpha);
+      alpha = VectorRampCoastGlide(C->therr, C->werr, C->wc, C->amax, C->vmax);
       for (i = 0; i < 3; i++)
-         AC->IdealTrq[i] = AC->MOI[i][i] * alpha[i];
+         AC->IdealTrq.v[i] = AC->MOI.mat[i][i] * alpha.v[i];
    }
 }
 /**********************************************************************/
@@ -1341,68 +1269,62 @@ void SpinnerFSW(struct SCType *S)
       MaxPtgErr    = 1.0 * D2R;
       OrbPeriod =
           TwoPi / sqrt(Orb[S->RefOrb].mu / (pow(Orb[S->RefOrb].SMA, 3)));
-      FindSpinnerGains(AC->MOI[2][2], sqrt(AC->MOI[0][0] * AC->MOI[1][1]),
+      FindSpinnerGains(AC->MOI.mat[2][2],
+                       sqrt(AC->MOI.mat[0][0] * AC->MOI.mat[1][1]),
                        CyclicTorque, OrbPeriod, MaxPtgErr, &C->SpinRate,
                        &C->Knute, &C->Kprec);
 
-      C->Ispin  = AC->MOI[2][2];
-      C->Itrans = sqrt(AC->MOI[0][0] * AC->MOI[1][1]);
+      C->Ispin  = AC->MOI.mat[2][2];
+      C->Itrans = sqrt(AC->MOI.mat[0][0] * AC->MOI.mat[1][1]);
    }
 
    /* Sun-TAM Attitude Determination */
    if (AC->SunValid) {
-      TRIAD(AC->svn, AC->bvn, AC->svb, AC->bvb, AC->CBN);
-      for (i = 0; i < 3; i++)
-         C->rvn[i] = AC->svn[i];
-      MxV(AC->CBN, C->rvn, C->rvb);
-      x = C->rvb[0];
-      y = C->rvb[1];
+      AC->CBN = TRIAD(AC->svn, AC->bvn, AC->svb, AC->bvb);
+      C->rvn  = AC->svn;
+      C->rvb  = MxV(AC->CBN, C->rvn);
+      x       = C->rvb.x;
+      y       = C->rvb.y;
    }
 
    /* Spin rate control */
-   B1    = AC->bvb[0];
-   B2    = AC->bvb[1];
+   B1    = AC->bvb.x;
+   B2    = AC->bvb.y;
    magb  = sqrt(B1 * B1 + B2 * B2);
    B1   /= magb;
    B2   /= magb;
    w3    = (B1 * C->Bold2 - B2 * C->Bold1) / AC->DT - C->SpinRate;
    /*      w3 = AC->wbn[2] - C->SpinRate; */
-   C->Bold1   = B1;
-   C->Bold2   = B2;
-   C->Tcmd[2] = -C->Kprec * w3;
+   C->Bold1  = B1;
+   C->Bold2  = B2;
+   C->Tcmd.z = -C->Kprec * w3;
 
    /* Precession/nutation control */
    if (AC->SunValid && fabs(w3) < 0.5 * C->SpinRate) {
-      /*         w1 = AC->wbn[0]; */
-      /*         w2 = AC->wbn[1]; */
-      w1         = (y - C->yold) / AC->DT + C->SpinRate * x;
-      w2         = -(x - C->xold) / AC->DT + C->SpinRate * y;
-      C->Tcmd[0] = -C->Knute * w1 -
-                   C->Kprec * (C->Itrans * w1 - C->Ispin * C->SpinRate * x);
-      C->Tcmd[1] = -C->Knute * w2 -
-                   C->Kprec * (C->Itrans * w2 - C->Ispin * C->SpinRate * y);
-      C->xold    = x;
-      C->yold    = y;
+      w1        = (y - C->yold) / AC->DT + C->SpinRate * x;
+      w2        = -(x - C->xold) / AC->DT + C->SpinRate * y;
+      C->Tcmd.x = -C->Knute * w1 -
+                  C->Kprec * (C->Itrans * w1 - C->Ispin * C->SpinRate * x);
+      C->Tcmd.y = -C->Knute * w2 -
+                  C->Kprec * (C->Itrans * w2 - C->Ispin * C->SpinRate * y);
+      C->xold   = x;
+      C->yold   = y;
    }
    else {
-      C->Tcmd[0] = 0.0;
-      C->Tcmd[1] = 0.0;
+      C->Tcmd.x = 0.0;
+      C->Tcmd.y = 0.0;
    }
 
-   VxV(AC->bvb, C->Tcmd, C->Mcmd);
-   magb2 = VoV(AC->bvb, AC->bvb);
+   C->Mcmd = VxV(AC->bvb, C->Tcmd);
+   magb2   = VoV(AC->bvb, AC->bvb);
    for (i = 0; i < 3; i++)
-      C->Mcmd[i] /= magb2;
+      C->Mcmd.v[i] /= magb2;
 
    for (Imtb = 0; Imtb < AC->Nmtb; Imtb++) {
       M       = &AC->MTB[Imtb];
       M->Mcmd = VoV(M->DistVec, C->Mcmd);
       M->Mcmd = Limit(M->Mcmd, -M->Mmax, M->Mmax);
    }
-   /*      for(i=0;i<3;i++) { */
-   /*         AC->IdealFrc[i] = 0.0; */
-   /*         AC->IdealTrq[i] = M->Tcmd[i]; */
-   /*      } */
 }
 /**********************************************************************/
 /* Notional two-body momentum-biased Earth pointer                    */
@@ -1410,9 +1332,10 @@ void MomBiasFSW(struct SCType *S)
 {
 
    double PitchRateError, PitchTcmd;
-   double Tcmd[3], magb2, Mcmd[3];
-   double Bdot[3];
-   static double bvbold[3];
+   vec3 Zvec = VEC3_PZAXIS;
+   vec3 Tcmd, Bdot, Mcmd;
+   double magb2;
+   static vec3 bvbold;
    double PitchRateCmd = -0.001059;
    double Kry          = 5.0;
    double Kpy          = 0.1;
@@ -1421,7 +1344,6 @@ void MomBiasFSW(struct SCType *S)
    double Kunl         = 1.0E-4;
    double Kbdot        = 3.0E8;
    double Hwcmd        = -50.0;
-   double Zvec[3]      = {0.0, 0.0, 1.0};
    long i;
    struct AcType *AC;
    struct AcMomBiasCtrlType *C;
@@ -1435,62 +1357,61 @@ void MomBiasFSW(struct SCType *S)
 
    if (!AC->ES.Valid) { /* Bdot Acquisition */
 
-      AC->Whl[0].Tcmd = -Kry * (AC->Whl[0].H - Hwcmd);
+      AC->Whl[0].Tcmd      = -Kry * (AC->Whl[0].H - Hwcmd);
+      bvbold               = AC->bvb;
+      AC->G[0].Cmd.Ang     = VEC3_ZERO;
+      AC->G[0].Cmd.AngRate = VEC3_ZERO;
       for (i = 0; i < 3; i++) {
-         Bdot[i]         = (AC->bvb[i] - bvbold[i]) / AC->DT;
-         bvbold[i]       = AC->bvb[i];
-         AC->MTB[i].Mcmd = -Kbdot * Bdot[i];
-
-         AC->G[0].Cmd.Ang[i]     = 0.0;
-         AC->G[0].Cmd.AngRate[i] = 0.0;
+         Bdot.v[i]       = (AC->bvb.v[i] - bvbold.v[i]) / AC->DT;
+         AC->MTB[i].Mcmd = -Kbdot * Bdot.v[i];
       }
    }
    else { /* Nadir Point */
 
       /* Pitch Loop */
-      PitchRateError  = AC->wbn[1] - PitchRateCmd;
+      PitchRateError  = AC->wbn.y - PitchRateCmd;
       PitchTcmd       = -Kry * PitchRateError - Kpy * AC->ES.Pitch;
       AC->Whl[0].Tcmd = -PitchTcmd - Kunl * (AC->Whl[0].H - Hwcmd);
 
       /* Roll-Yaw Loop */
-      Tcmd[0] = -Krx * AC->wbn[0] - Kpx * AC->ES.Roll;
-      Tcmd[2] = -0.5 * Tcmd[0];
+      Tcmd.x = -Krx * AC->wbn.x - Kpx * AC->ES.Roll;
+      Tcmd.z = -0.5 * Tcmd.x;
 
       /* Wheel Unload */
-      Tcmd[1] = -Kunl * (AC->Whl[0].H - Hwcmd);
+      Tcmd.y = -Kunl * (AC->Whl[0].H - Hwcmd);
 
       /* M = BxT/B^2 */
-      VxV(AC->bvb, Tcmd, Mcmd);
-      magb2    = VoV(AC->bvb, AC->bvb);
-      Mcmd[0] /= magb2;
-      Mcmd[1] /= magb2;
-      Mcmd[2] /= magb2;
+      Mcmd    = VxV(AC->bvb, Tcmd);
+      magb2   = VoV(AC->bvb, AC->bvb);
+      Mcmd.x /= magb2;
+      Mcmd.y /= magb2;
+      Mcmd.z /= magb2;
       for (i = 0; i < 3; i++)
-         AC->MTB[i].Mcmd = Mcmd[i];
+         AC->MTB[i].Mcmd = Mcmd.v[i];
 
       /* Solar Array Gimbal */
-      AC->G[0].Cmd.AngRate[0] = -PitchRateCmd;
+      AC->G[0].Cmd.AngRate.x = -PitchRateCmd;
       if (AC->SunValid) {
-         PointGimbalToTarget(AC->G[0].RotSeq, AC->G[0].CGiBi, AC->G[0].CBoGo,
-                             AC->svb, Zvec, AC->G[0].Cmd.Ang);
+         AC->G[0].Cmd.Ang = PointGimbalToTarget(AC->G[0].RotSeq, AC->G[0].CGiBi,
+                                                AC->G[0].CBoGo, AC->svb, Zvec);
       }
       else {
-         AC->G[0].Cmd.Ang[0] += PitchRateCmd * AC->DT;
+         AC->G[0].Cmd.Ang.x += PitchRateCmd * AC->DT;
       }
-      if (AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0] > Pi)
-         AC->G[0].Cmd.Ang[0] += TwoPi;
-      if (AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0] < -Pi)
-         AC->G[0].Cmd.Ang[0] -= TwoPi;
+      if (AC->G[0].Ang.x - AC->G[0].Cmd.Ang.x > Pi)
+         AC->G[0].Cmd.Ang.x += TwoPi;
+      if (AC->G[0].Ang.x - AC->G[0].Cmd.Ang.x < -Pi)
+         AC->G[0].Cmd.Ang.x -= TwoPi;
    }
 }
 /**********************************************************************/
 /* SC_Aura is a three-body three-axis stabilized S/C                */
 void ThreeAxisFSW(struct SCType *S)
 {
-   double wln[3], CRN[3][3];
-   double qrn[4], qbr[4], svr[3];
-   double Herr[3], HxB[3];
-   double Zvec[3] = {0.0, 0.0, 1.0};
+   mat3x3 CRN;
+   quat qrn, qbr;
+   vec3 wln, Herr, HxB;
+   vec3 Zvec = VEC3_PZAXIS;
    double AngErr;
    long i, j;
    struct AcType *AC;
@@ -1501,65 +1422,65 @@ void ThreeAxisFSW(struct SCType *S)
 
    if (C->Init) {
       C->Init = 0;
+
+      AC->G[0].Cmd.AngRate = VEC3_ZERO;
+      AC->G[0].Cmd.Ang     = VEC3_ZERO;
       for (j = 0; j < 3; j++) {
-         AC->G[0].Cmd.AngRate[j] = 0.0;
-         AC->G[0].Cmd.Ang[j]     = 0.0;
-         AC->G[0].MaxAngRate[j]  = 0.2 * D2R;
-         AC->G[0].MaxTrq[j]      = 100.0;
-         FindPDGains(S->B[1].I[1][1], 0.02 * TwoPi, 1.0,
-                     &AC->G[0].AngRateGain[j], &AC->G[0].AngGain[j]);
+         AC->G[0].MaxAngRate.v[j] = 0.2 * D2R;
+         AC->G[0].MaxTrq.v[j]     = 100.0;
+         FindPDGains(S->B[1].I.mat[1][1], 0.02 * TwoPi, 1.0,
+                     &AC->G[0].AngRateGain.v[j], &AC->G[0].AngGain.v[j]);
       }
 
+      C->Hwcmd = VEC3_ZERO;
       for (i = 0; i < 3; i++) {
-         FindPDGains(AC->MOI[i][i], 0.1, 0.7, &C->Kr[i], &C->Kp[i]);
-         C->Hwcmd[i] = 0.0;
+         FindPDGains(AC->MOI.mat[i][i], 0.1, 0.7, &C->Kr.v[i], &C->Kp.v[i]);
       }
       C->Kunl = 1.0E6;
    }
 
    /* Find Attitude Command */
-   FindCLN(AC->PosN, AC->VelN, CRN, wln);
-   C2Q(CRN, qrn);
-   MxV(CRN, AC->svn, svr);
+   FindCLN(AC->PosN, AC->VelN, &CRN, &wln);
+   qrn = C2Q(CRN);
 
    /* Form Error Signals */
-   QxQT(AC->qbn, qrn, qbr);
-   RECTIFYQ(qbr);
+   qbr = QxQT(AC->qbn, qrn);
+   qbr = RECTIFYQ(qbr);
 
    /* PD Control */
    for (i = 0; i < 3; i++) {
-      C->Tcmd[i]      = -C->Kr[i] * AC->wbn[i] - C->Kp[i] * (2.0 * qbr[i]);
-      AC->Whl[i].Tcmd = -C->Tcmd[i];
+      C->Tcmd.v[i] =
+          -C->Kr.v[i] * AC->wbn.v[i] - C->Kp.v[i] * (2.0 * qbr.qv.v[i]);
+      AC->Whl[i].Tcmd = -C->Tcmd.v[i];
    }
 
    /* Momentum Management */
    for (i = 0; i < 3; i++) {
-      Herr[i] = AC->Whl[i].H - C->Hwcmd[i];
+      Herr.v[i] = AC->Whl[i].H - C->Hwcmd.v[i];
    }
-   VxV(Herr, AC->bvb, HxB);
+   HxB = VxV(Herr, AC->bvb);
    for (i = 0; i < 3; i++)
-      AC->MTB[i].Mcmd = C->Kunl * HxB[i];
+      AC->MTB[i].Mcmd = C->Kunl * HxB.v[i];
 
    /* Solar Array Gimbal */
-   AC->G[0].Cmd.AngRate[0] = wln[1];
+   AC->G[0].Cmd.AngRate.x = wln.y;
    if (AC->SunValid) {
-      PointGimbalToTarget(AC->G[0].RotSeq, AC->G[0].CGiBi, AC->G[0].CBoGo,
-                          AC->svb, Zvec, AC->G[0].Cmd.Ang);
+      AC->G[0].Cmd.Ang = PointGimbalToTarget(AC->G[0].RotSeq, AC->G[0].CGiBi,
+                                             AC->G[0].CBoGo, AC->svb, Zvec);
    }
    else {
-      AC->G[0].Cmd.Ang[0] += wln[1] * AC->DT;
+      AC->G[0].Cmd.Ang.x += wln.y * AC->DT;
    }
-   if (AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0] > Pi)
-      AC->G[0].Cmd.Ang[0] += TwoPi;
-   if (AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0] < -Pi)
-      AC->G[0].Cmd.Ang[0] -= TwoPi;
+   if (AC->G[0].Ang.x - AC->G[0].Cmd.Ang.x > Pi)
+      AC->G[0].Cmd.Ang.x += TwoPi;
+   if (AC->G[0].Ang.x - AC->G[0].Cmd.Ang.x < -Pi)
+      AC->G[0].Cmd.Ang.x -= TwoPi;
 
-   AngErr = AC->G[0].Ang[0] - AC->G[0].Cmd.Ang[0];
-   AC->G[0].Cmd.AngRate[0] -=
-       AC->G[0].AngGain[0] / AC->G[0].AngRateGain[0] * AngErr;
-   AC->G[0].Cmd.AngRate[0] =
-       Limit(AC->G[0].Cmd.AngRate[0], -AC->G[0].MaxAngRate[0],
-             AC->G[0].MaxAngRate[0]);
+   AngErr = AC->G[0].Ang.x - AC->G[0].Cmd.Ang.x;
+   AC->G[0].Cmd.AngRate.x -=
+       AC->G[0].AngGain.x / AC->G[0].AngRateGain.x * AngErr;
+   AC->G[0].Cmd.AngRate.x = Limit(
+       AC->G[0].Cmd.AngRate.x, -AC->G[0].MaxAngRate.x, AC->G[0].MaxAngRate.x);
 }
 /**********************************************************************/
 void IssFSW(struct SCType *S)
@@ -1567,14 +1488,11 @@ void IssFSW(struct SCType *S)
    long Ig, i, j;
    struct AcType *AC;
    struct AcIssCtrlType *C;
-   double Identity[3][3] = EYE3_MAT;
-   double Zvec[3]        = {0.0, 0.0, 1.0};
-   double GimCmd[3];
-   double AngErr;
-   double svb[3];
-   double Iapp[3];
-   double r[3], rb[3], tvb[3], MinRoZ, RoZ;
-   double CRL[3][3], CBL[3][3], CBR[3][3];
+   const mat3x3 Identity = MAT3X3_EYE;
+   const vec3 Zvec       = VEC3_PZAXIS;
+   double AngErr, MinRoZ, RoZ;
+   vec3 r, rb, tvb, svb, Iapp, GimCmd;
+   mat3x3 CRL, CBL, CBR;
 
    AC = &S->AC;
    C  = &AC->IssCtrl;
@@ -1582,61 +1500,63 @@ void IssFSW(struct SCType *S)
    if (C->Init) {
       C->Init = 0;
       for (Ig = 0; Ig < AC->Ng; Ig++) {
+         AC->G[Ig].Cmd.AngRate = VEC3_ZERO;
+         AC->G[Ig].Cmd.Ang     = VEC3_ZERO;
          for (j = 0; j < 3; j++) {
-            AC->G[Ig].Cmd.AngRate[j] = 0.0;
-            AC->G[Ig].Cmd.Ang[j]     = 0.0;
-            AC->G[Ig].MaxAngRate[j]  = 0.5 * D2R;
+            AC->G[Ig].MaxAngRate.v[j] = 0.5 * D2R;
          }
-         FindAppendageInertia(Ig, S, Iapp);
+         Iapp = FindAppendageInertia(Ig, S);
          for (j = 0; j < AC->G[Ig].RotDOF; j++) {
-            FindPDGains(Iapp[j], 0.02 * TwoPi, 1.0, &AC->G[Ig].AngRateGain[j],
-                        &AC->G[Ig].AngGain[j]);
-            AC->G[Ig].MaxTrq[j] = 0.1 * AC->G[Ig].AngGain[j];
+            FindPDGains(Iapp.v[j], 0.02 * TwoPi, 1.0,
+                        &AC->G[Ig].AngRateGain.v[j], &AC->G[Ig].AngGain.v[j]);
+            AC->G[Ig].MaxTrq.v[j] = 0.1 * AC->G[Ig].AngGain.v[j];
          }
       }
       for (i = 0; i < 3; i++)
-         FindPDGains(S->I[i][i], 0.02 * TwoPi, 0.7, &C->Kr[i], &C->Kp[i]);
-      C->Tmax = 0.1 * MAX(C->Kp[0], MAX(C->Kp[1], C->Kp[2]));
+         FindPDGains(S->I.mat[i][i], 0.02 * TwoPi, 0.7, &C->Kr.v[i],
+                     &C->Kp.v[i]);
+      C->Tmax = 0.1 * MAX(C->Kp.x, MAX(C->Kp.y, C->Kp.z));
    }
 
    /* .. Hold LVLH */
-   A2C(213, 0.0 * D2R, 0.0, 0.0, CRL);
-   MxMT(S->B[0].CN, S->CLN, CBL);
-   MxMT(CBL, CRL, CBR);
+   CRL = A2C(213, 0.0 * D2R, 0.0, 0.0);
+   CBL = MxMT(S->B[0].CN, S->CLN);
+   CBR = MxMT(CBL, CRL);
    /* XVV */
-   C2A(321, CBR, &C->therr[2], &C->therr[1], &C->therr[0]);
+   C2A(321, CBR, &C->therr.z, &C->therr.y, &C->therr.x);
    for (i = 0; i < 3; i++) {
-      C->werr[i]      = AC->wbn[i] - S->wln[i];
-      AC->IdealTrq[i] = -C->Kp[i] * C->therr[i] - C->Kr[i] * C->werr[i];
+      C->werr.v[i] = AC->wbn.v[i] - S->wln.v[i];
+      AC->IdealTrq.v[i] =
+          -C->Kp.v[i] * C->therr.v[i] - C->Kr.v[i] * C->werr.v[i];
    }
 
    /* .. Point Main Solar Arrays */
-   MxV(S->B[0].CN, AC->svn, svb);
-   PointGimbalToTarget(21, Identity, Identity, svb, Zvec, GimCmd);
-   GimCmd[0] += 5.0 * D2R; /* Avoid lighting artifacts from on-edge polys */
-   AC->G[0].Cmd.Ang[0]     = GimCmd[0];
-   AC->G[1].Cmd.Ang[0]     = -GimCmd[0];
-   AC->G[0].Cmd.AngRate[0] = -S->wln[1];
-   AC->G[1].Cmd.AngRate[0] = S->wln[1];
+   svb       = MxV(S->B[0].CN, AC->svn);
+   GimCmd    = PointGimbalToTarget(21, Identity, Identity, svb, Zvec);
+   GimCmd.x += 5.0 * D2R; /* Avoid lighting artifacts from on-edge polys */
+   AC->G[0].Cmd.Ang.x     = GimCmd.x;
+   AC->G[1].Cmd.Ang.x     = -GimCmd.x;
+   AC->G[0].Cmd.AngRate.x = -S->wln.y;
+   AC->G[1].Cmd.AngRate.x = S->wln.y;
 
-   AC->G[2].Cmd.Ang[0] = GimCmd[1];
-   AC->G[3].Cmd.Ang[0] = -GimCmd[1];
-   AC->G[4].Cmd.Ang[0] = GimCmd[1];
-   AC->G[5].Cmd.Ang[0] = -GimCmd[1];
+   AC->G[2].Cmd.Ang.x = GimCmd.y;
+   AC->G[3].Cmd.Ang.x = -GimCmd.y;
+   AC->G[4].Cmd.Ang.x = GimCmd.y;
+   AC->G[5].Cmd.Ang.x = -GimCmd.y;
 
-   AC->G[6].Cmd.Ang[0] = -GimCmd[1];
-   AC->G[7].Cmd.Ang[0] = GimCmd[1];
-   AC->G[8].Cmd.Ang[0] = -GimCmd[1];
-   AC->G[9].Cmd.Ang[0] = GimCmd[1];
+   AC->G[6].Cmd.Ang.x = -GimCmd.y;
+   AC->G[7].Cmd.Ang.x = GimCmd.y;
+   AC->G[8].Cmd.Ang.x = -GimCmd.y;
+   AC->G[9].Cmd.Ang.x = GimCmd.y;
 
    /* .. Point SM Solar Array */
-   AC->G[12].Cmd.Ang[0] = GimCmd[0];
-   AC->G[13].Cmd.Ang[0] = -GimCmd[0];
+   AC->G[12].Cmd.Ang.x = GimCmd.x;
+   AC->G[13].Cmd.Ang.x = -GimCmd.x;
 
    /* .. Point Radiators */
-   PointGimbalToTarget(1, Identity, Identity, svb, Zvec, GimCmd);
-   AC->G[10].Cmd.Ang[0] = GimCmd[0] + 90.0 * D2R;
-   AC->G[11].Cmd.Ang[0] = GimCmd[0] + 90.0 * D2R;
+   GimCmd              = PointGimbalToTarget(1, Identity, Identity, svb, Zvec);
+   AC->G[10].Cmd.Ang.x = GimCmd.x + 90.0 * D2R;
+   AC->G[11].Cmd.Ang.x = GimCmd.x + 90.0 * D2R;
 
    /* .. Point HGA */
    /* Select TDRS nearest Zenith */
@@ -1644,34 +1564,30 @@ void IssFSW(struct SCType *S)
    for (i = 0; i < 10; i++) {
       if (Tdrs[i].Exists) {
          for (j = 0; j < 3; j++)
-            r[j] = Tdrs[i].PosN[j] - S->PosN[j];
-         UNITV(r);
-         MxV(S->B[0].CN, r, rb);
+            r.v[j] = Tdrs[i].PosN.v[j] - S->PosN.v[j];
+         UNITV(&r);
+         rb  = MxV(S->B[0].CN, r);
          RoZ = VoV(rb, Zvec);
          if (RoZ < MinRoZ) {
             MinRoZ = RoZ;
-            for (j = 0; j < 3; j++)
-               tvb[j] = rb[j];
+            tvb    = rb;
          }
       }
    }
-   PointGimbalToTarget(21, S->G[14].CGiBi, Identity, tvb, Zvec, GimCmd);
+   GimCmd = PointGimbalToTarget(21, S->G[14].CGiBi, Identity, tvb, Zvec);
 
-   AC->G[14].Cmd.Ang[0] = Limit(GimCmd[0], -120.0 * D2R, 120.0 * D2R);
-   AC->G[14].Cmd.Ang[1] = Limit(GimCmd[1], -65.0 * D2R, 65.0 * D2R);
+   AC->G[14].Cmd.Ang.x = Limit(GimCmd.x, -120.0 * D2R, 120.0 * D2R);
+   AC->G[14].Cmd.Ang.y = Limit(GimCmd.y, -65.0 * D2R, 65.0 * D2R);
 
    for (Ig = 0; Ig < AC->Ng; Ig++) {
       for (j = 0; j < AC->G[Ig].RotDOF; j++) {
-         AngErr = AC->G[Ig].Ang[j] - AC->G[Ig].Cmd.Ang[j];
-         if (AngErr > Pi)
-            AngErr -= TwoPi;
-         if (AngErr < -Pi)
-            AngErr += TwoPi;
-         AC->G[Ig].Cmd.AngRate[j] =
-             -AC->G[Ig].AngGain[j] / AC->G[Ig].AngRateGain[j] * AngErr;
-         AC->G[Ig].Cmd.AngRate[j] =
-             Limit(AC->G[Ig].Cmd.AngRate[j], -AC->G[Ig].MaxAngRate[j],
-                   AC->G[Ig].MaxAngRate[j]);
+         AngErr = AC->G[Ig].Ang.v[j] - AC->G[Ig].Cmd.Ang.v[j];
+         AngErr = WrapTo2Pi(AngErr) - Pi;
+         AC->G[Ig].Cmd.AngRate.v[j] =
+             -AC->G[Ig].AngGain.v[j] / AC->G[Ig].AngRateGain.v[j] * AngErr;
+         AC->G[Ig].Cmd.AngRate.v[j] =
+             Limit(AC->G[Ig].Cmd.AngRate.v[j], -AC->G[Ig].MaxAngRate.v[j],
+                   AC->G[Ig].MaxAngRate.v[j]);
       }
    }
 }
@@ -1680,14 +1596,14 @@ void CmgFSW(struct SCType *S)
 {
    struct AcType *AC;
    struct AcCmgCtrlType *C;
-   double CBL[3][3], qbl[4], qbr[4];
-   double CRL[3][3];
-   double Axis[4][3], Gim[4][3], H[4];
-   static double MoveTime  = 200.0;
-   static double RPYCmd[3] = {1.0, 1.0, 1.0};
-   static double qrl[4];
-   static long Idx = 0;
-   long i, j;
+   quat qbl, qbr, H;
+   mat3x3 CBL, CRL;
+   vec3 Axis[4], Gim[4];
+   static double MoveTime = 200.0;
+   static vec3 RPYCmd     = {.v = {1.0, 1.0, 1.0}};
+   static quat qrl        = QUAT_EYE;
+   static long Idx        = 0;
+   long i;
 
    AC = &S->AC;
    C  = &AC->CmgCtrl;
@@ -1695,13 +1611,13 @@ void CmgFSW(struct SCType *S)
    if (C->Init) {
       C->Init = 0;
       for (i = 0; i < 3; i++)
-         FindPDGains(AC->MOI[i][i], 0.5, 0.7, &C->Kr[i], &C->Kp[i]);
+         FindPDGains(AC->MOI.mat[i][i], 0.5, 0.7, &C->Kr.v[i], &C->Kp.v[i]);
       for (i = 0; i < 4; i++) {
-         AC->G[i].Cmd.Ang[0]     = 0.0;
-         AC->G[i].AngGain[0]     = 0.0;
-         AC->G[i].AngRateGain[0] = 100.0;
-         AC->G[i].MaxAngRate[0]  = 1.0 * D2R;
-         AC->G[i].MaxTrq[0]      = 5.0;
+         AC->G[i].Cmd.Ang.x     = 0.0;
+         AC->G[i].AngGain.x     = 0.0;
+         AC->G[i].AngRateGain.x = 100.0;
+         AC->G[i].MaxAngRate.x  = 1.0 * D2R;
+         AC->G[i].MaxTrq.x      = 5.0;
       }
    }
 
@@ -1709,37 +1625,35 @@ void CmgFSW(struct SCType *S)
    if (MoveTime < 0.0) {
       MoveTime = 200.0;
       Idx      = (Idx + 1) % 3;
-      if (RPYCmd[Idx] > 0.0)
-         RPYCmd[Idx] = -60.0 * D2R;
+      if (RPYCmd.v[Idx] > 0.0)
+         RPYCmd.v[Idx] = -60.0 * D2R;
       else
-         RPYCmd[Idx] = 60.0 * D2R;
-      A2C(123, RPYCmd[0], RPYCmd[1], RPYCmd[2], CRL);
-      C2Q(CRL, qrl);
+         RPYCmd.v[Idx] = 60.0 * D2R;
+      CRL = A2C(123, RPYCmd.x, RPYCmd.y, RPYCmd.z);
+      qrl = C2Q(CRL);
    }
 
-   MxMT(S->B[0].CN, S->CLN, CBL);
-   C2Q(CBL, qbl);
-   QxQT(qbl, qrl, qbr);
-   RECTIFYQ(qbr);
+   CBL     = MxMT(S->B[0].CN, S->CLN);
+   qbl     = C2Q(CBL);
+   qbr     = QxQT(qbl, qrl);
+   qbr     = RECTIFYQ(qbr);
+   C->werr = S->B[0].wn;
    for (i = 0; i < 3; i++) {
-      C->therr[i] = 2.0 * qbr[i];
-      C->werr[i]  = S->B[0].wn[i];
-      C->Tcmd[i]  = -C->Kr[i] * C->werr[i] - C->Kp[i] * C->therr[i];
+      C->therr.v[i] = 2.0 * qbr.q[i];
+      C->Tcmd.v[i]  = -C->Kr.v[i] * C->werr.v[i] - C->Kp.v[i] * C->therr.v[i];
    }
 
    for (i = 0; i < 4; i++) {
-      for (j = 0; j < 3; j++) {
-         Axis[i][j] = AC->G[i].COI[2][j];
-         Gim[i][j]  = AC->G[i].COI[0][j];
-      }
-      H[i] = 75.0;
+      Axis[i] = AC->G[i].COI.rows[2];
+      Gim[i]  = AC->G[i].COI.rows[0];
+
+      H.q[i] = 75.0;
    }
 
-   CMGLaw4x1DOF(C->Tcmd, Axis, Gim, H, C->AngRateCmd);
+   CMGLaw4x1DOF(C->Tcmd, Axis, Gim, H, &C->AngRateCmd);
 
-   for (i = 0; i < 4; i++) {
-      AC->G[i].Cmd.AngRate[0] = C->AngRateCmd[i];
-   }
+   for (i = 0; i < 4; i++)
+      AC->G[i].Cmd.AngRate.x = C->AngRateCmd.q[i];
 }
 /**********************************************************************/
 void ThrFSW(struct SCType *S)
@@ -1754,9 +1668,10 @@ void ThrFSW(struct SCType *S)
    double PosXcmd[4]      = {0.0, 0.0, 0.0, 0.0};
    double PosYcmd[4]      = {24.0, 0.0, -24.0, 0.0};
    double PosZcmd[4]      = {0.0, 24.0, 0.0, -24.0};
-   static double CRL[3][3], PosRL[3];
-   double CRN[3][3], qrn[4], PosRN[3];
-   double FcmdB[3];
+   static mat3x3 CRL;
+   mat3x3 CRN;
+   vec3 PosRN, PosRL, FcmdB;
+   quat qrn;
    double FoA, TorxA;
    static long Idx = 0;
    long i;
@@ -1767,7 +1682,7 @@ void ThrFSW(struct SCType *S)
    if (C->Init) {
       C->Init = 0;
       for (i = 0; i < 3; i++)
-         FindPDGains(AC->MOI[i][i], 0.1, 0.7, &C->Kw[i], &C->Kth[i]);
+         FindPDGains(AC->MOI.mat[i][i], 0.1, 0.7, &C->Kw.v[i], &C->Kth.v[i]);
       FindPDGains(AC->mass, 0.05, 1.0, &C->Kv, &C->Kp);
    }
 
@@ -1776,27 +1691,30 @@ void ThrFSW(struct SCType *S)
    if (MoveTime < 0.0) {
       MoveTime = 1000.0;
       Idx      = (Idx + 1) % 4;
-      A2C(123, RollCmd[Idx] * D2R, PitchCmd[Idx] * D2R, YawCmd[Idx] * D2R, CRL);
-      PosRL[0] = PosXcmd[Idx];
-      PosRL[1] = PosYcmd[Idx];
-      PosRL[2] = PosZcmd[Idx];
+      CRL =
+          A2C(123, RollCmd[Idx] * D2R, PitchCmd[Idx] * D2R, YawCmd[Idx] * D2R);
+      PosRL.x = PosXcmd[Idx];
+      PosRL.y = PosYcmd[Idx];
+      PosRL.z = PosZcmd[Idx];
    }
-   MxM(CRL, S->CLN, CRN);
-   C2Q(CRN, qrn);
-   QxQT(AC->qbn, qrn, AC->qbr);
-   RECTIFYQ(AC->qbr);
-   MTxV(S->CLN, PosRL, PosRN);
+   CRN     = MxM(CRL, S->CLN);
+   qrn     = C2Q(CRN);
+   AC->qbr = QxQT(AC->qbn, qrn);
+   AC->qbr = RECTIFYQ(AC->qbr);
+   PosRN   = MTxV(S->CLN, PosRL);
 
    /* .. Force and Torque Commands */
    for (i = 0; i < 3; i++) {
-      AC->Tcmd[i] = -C->Kw[i] * S->B[0].wn[i] - C->Kth[i] * 2.0 * AC->qbr[i];
-      AC->Fcmd[i] = -C->Kv * S->VelR[i] - C->Kp * (S->PosR[i] - PosRN[i]);
-      AC->Tcmd[i] = Limit(AC->Tcmd[i], -4.0, 4.0);
+      AC->Tcmd.v[i] =
+          -C->Kw.v[i] * S->B[0].wn.v[i] - C->Kth.v[i] * 2.0 * AC->qbr.q[i];
+      AC->Fcmd.v[i] =
+          -C->Kv * S->VelR.v[i] - C->Kp * (S->PosR.v[i] - PosRN.v[i]);
+      AC->Tcmd.v[i] = Limit(AC->Tcmd.v[i], -4.0, 4.0);
    }
-   MxV(S->B[0].CN, AC->Fcmd, FcmdB);
+   FcmdB = MxV(S->B[0].CN, AC->Fcmd);
    for (i = 0; i < 3; i++)
-      FcmdB[i] = Limit(FcmdB[i], -2.0, 2.0);
-   MTxV(S->B[0].CN, FcmdB, AC->Fcmd);
+      FcmdB.v[i] = Limit(FcmdB.v[i], -2.0, 2.0);
+   AC->Fcmd = MTxV(S->B[0].CN, FcmdB);
 
 #if 0
 /* .. Ideal Actuators to check out controller before tackling thruster logic */
@@ -1905,8 +1823,10 @@ void AdHocFSW(struct SCType *S)
 {
    struct AcType *AC;
    struct AcAdHocCtrlType *C;
-   double CLN[3][3], CRN[3][3], qrn[4], wln[3];
-   double CRL[3][3] = {{0.0, 1.0, 0.0}, {0.0, 0.0, -1.0}, {-1.0, 0.0, 0.0}};
+   mat3x3 CLN, CRN;
+   quat qrn;
+   vec3 wln;
+   const mat3x3 CRL = {.rows = {VEC3_PYAXIS, VEC3_NZAXIS, VEC3_NXAXIS}};
    long i;
 
    AC = &S->AC;
@@ -1915,31 +1835,30 @@ void AdHocFSW(struct SCType *S)
    if (C->Init) {
       C->Init = 0;
       for (i = 0; i < 3; i++) {
-         FindPDGains(AC->MOI[i][i], 0.1 * TwoPi, 0.7, &C->Kr[i], &C->Kp[i]);
+         FindPDGains(AC->MOI.mat[i][i], 0.1 * TwoPi, 0.7, &C->Kr.v[i],
+                     &C->Kp.v[i]);
          // C->Kp[i] *= 0.5;
          // C->Kr[i] *= 0.5;
       }
    }
 
    /* .. Form attitude error signals */
-   FindCLN(AC->PosN, AC->VelN, CLN, wln);
-   MxM(CRL, CLN, CRN);
-   C2Q(CRN, qrn);
-   QxQT(AC->qbn, qrn, AC->qbr);
+   FindCLN(AC->PosN, AC->VelN, &CLN, &wln);
+   CRN     = MxM(CRL, CLN);
+   qrn     = C2Q(CRN);
+   AC->qbr = QxQT(AC->qbn, qrn);
    // for(i=0;i<4;i++) AC->qbr[i] = AC->qbn[i];
-   RECTIFYQ(AC->qbr);
+   AC->qbr = RECTIFYQ(AC->qbr);
    for (i = 0; i < 3; i++) {
-      C->therr[i] = Limit(2.0 * AC->qbr[i], -0.01, 0.01);
-      C->werr[i]  = AC->wbn[i] - wln[i];
+      C->therr.v[i] = Limit(2.0 * AC->qbr.qv.v[i], -0.01, 0.01);
+      C->werr.v[i]  = AC->wbn.v[i] - wln.v[i];
    }
 
    /* .. Closed-loop attitude control */
-   for (i = 0; i < 3; i++) {
-      C->Tcmd[i] = -C->Kr[i] * C->werr[i] - C->Kp[i] * C->therr[i];
-   }
-
    for (i = 0; i < 3; i++)
-      AC->IdealTrq[i] = C->Tcmd[i];
+      C->Tcmd.v[i] = -C->Kr.v[i] * C->werr.v[i] - C->Kp.v[i] * C->therr.v[i];
+
+   AC->IdealTrq = C->Tcmd;
    // for(i=0;i<3;i++) AC->Whl[i].Tcmd = -C->Tcmd[i];
 }
 /**********************************************************************/

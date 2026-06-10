@@ -339,8 +339,8 @@ static JDType _epoch_diff_tt(const EpochTT a, const EpochTT b)
    return jd_diff;
 }
 
-#define _jd_tt2tai(x) JDSubRationalSeconds((x), RATIONAL_NGCD(32, 23, 125))
-#define _jd_tai2tt(x) JDAddRationalSeconds((x), RATIONAL_NGCD(32, 23, 125))
+#define _jd_tt2tai(x) JDSubRationalSeconds((x), RATIONAL_RAW(32, 23, 125))
+#define _jd_tai2tt(x) JDAddRationalSeconds((x), RATIONAL_RAW(32, 23, 125))
 
 /**********************************************************************/
 //  time system low level conversion helpers

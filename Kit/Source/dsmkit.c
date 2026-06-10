@@ -23,22 +23,25 @@
 /**********************************************************************/
 /* Given a relative position and velocity vector, find the angular    */
 /* velocity at which the relative position vector is rotating.        */
-void DSM_RelMotionToAngRate(double RelPosN[3], double RelVelN[3], double wn[3])
+vec3 DSM_RelMotionToAngRate(vec3 RelPosN, vec3 RelVelN)
 {
-   double magp, phat[3], Axis[3], Vpar, Vperp[3], magvp;
+   vec3 wn;
+   double magp, Vpar, magvp;
+   vec3 phat, Axis, Vperp;
    long i;
 
-   magp = CopyUnitV(RelPosN, phat);
+   magp = CopyUnitV(RelPosN, &phat);
 
-   VxV(RelPosN, RelVelN, Axis);
-   UNITV(Axis);
+   Axis = VxV(RelPosN, RelVelN);
+   UNITV(&Axis);
 
    Vpar = VoV(RelVelN, phat);
    for (i = 0; i < 3; i++)
-      Vperp[i] = RelVelN[i] - Vpar * phat[i];
+      Vperp.v[i] = RelVelN.v[i] - Vpar * phat.v[i];
    magvp = MAGV(Vperp);
    for (i = 0; i < 3; i++)
-      wn[i] = magvp / magp * Axis[i];
+      wn.v[i] = magvp / magp * Axis.v[i];
+   return wn;
 }
 
 /**********************************************************************/
@@ -73,42 +76,40 @@ struct DSMMeasListType *DSM_GyroProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Ngyro != 0) {
-      double A0xA1[3];
-      double A[3][3], b[3], Ai[3][3];
-      double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-      double Atb[3]    = {0.0, 0.0, 0.0};
-      double AtAi[3][3];
+      vec3 A0xA1, b, Atb = VEC3_ZERO;
+      mat3x3 A, Ai, AtAi;
+      mat3x3 AtA = MAT3X3_ZERO;
       if (AC->Ngyro == 1) {
          G = &AC->Gyro[0];
          for (i = 0; i < 3; i++)
-            AC->wbn[i] = G->Rate * G->Axis[i];
+            AC->wbn.v[i] = G->Rate * G->Axis.v[i];
       }
       else if (AC->Ngyro == 2) {
-         VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis, A0xA1);
+         A0xA1 = VxV(AC->Gyro[0].Axis, AC->Gyro[1].Axis);
          for (i = 0; i < 3; i++) {
-            A[0][i] = AC->Gyro[0].Axis[i];
-            A[1][i] = AC->Gyro[1].Axis[i];
-            A[2][i] = A0xA1[i];
+            A.mat[0][i] = AC->Gyro[0].Axis.v[i];
+            A.mat[1][i] = AC->Gyro[1].Axis.v[i];
+            A.mat[2][i] = A0xA1.v[i];
          }
-         b[0] = AC->Gyro[0].Rate;
-         b[1] = AC->Gyro[1].Rate;
-         b[2] = 0.0;
-         MINV3(A, Ai);
-         MxV(Ai, b, AC->wbn);
+         b.x     = AC->Gyro[0].Rate;
+         b.y     = AC->Gyro[1].Rate;
+         b.z     = 0.0;
+         Ai      = MINV3(A);
+         AC->wbn = MxV(Ai, b);
       }
       else if (AC->Ngyro > 2) {
          /* Normal Equations */
          for (Ig = 0; Ig < AC->Ngyro; Ig++) {
             G = &AC->Gyro[Ig];
             for (i = 0; i < 3; i++) {
-               Atb[i] += G->Rate * G->Axis[i];
+               Atb.v[i] += G->Rate * G->Axis.v[i];
                for (j = 0; j < 3; j++) {
-                  AtA[i][j] += G->Axis[i] * G->Axis[j];
+                  AtA.mat[i][j] += G->Axis.v[i] * G->Axis.v[j];
                }
             }
          }
-         MINV3(AtA, AtAi);
-         MxV(AtAi, Atb, AC->wbn);
+         AtAi    = MINV3(AtA);
+         AC->wbn = MxV(AtAi, Atb);
       }
    }
    return (measList);
@@ -142,42 +143,38 @@ struct DSMMeasListType *DSM_MagnetometerProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Nmag != 0) {
-      double A0xA1[3];
-      double A[3][3], b[3], Ai[3][3];
-      double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-      double Atb[3]    = {0.0, 0.0, 0.0};
-      double AtAi[3][3];
+      vec3 A0xA1, b, Atb;
+      mat3x3 AtA = MAT3X3_ZERO;
+      mat3x3 A, Ai, AtAi;
       if (AC->Nmag == 1) {
          M = &AC->MAG[0];
          for (i = 0; i < 3; i++)
-            AC->bvb[i] = M->Field * M->Axis[i];
+            AC->bvb.v[i] = M->Field * M->Axis.v[i];
       }
       else if (AC->Nmag == 2) {
-         VxV(AC->MAG[0].Axis, AC->MAG[1].Axis, A0xA1);
-         for (i = 0; i < 3; i++) {
-            A[0][i] = AC->MAG[0].Axis[i];
-            A[1][i] = AC->MAG[1].Axis[i];
-            A[2][i] = A0xA1[i];
-         }
-         b[0] = AC->MAG[0].Field;
-         b[1] = AC->MAG[1].Field;
-         b[2] = 0.0;
-         MINV3(A, Ai);
-         MxV(Ai, b, AC->bvb);
+         A0xA1     = VxV(AC->MAG[0].Axis, AC->MAG[1].Axis);
+         A.rows[0] = AC->MAG[0].Axis;
+         A.rows[1] = AC->MAG[1].Axis;
+         A.rows[2] = A0xA1;
+
+         b.x     = AC->MAG[0].Field;
+         b.y     = AC->MAG[1].Field;
+         b.z     = 0.0;
+         Ai      = MINV3(A);
+         AC->bvb = MxV(Ai, b);
       }
       else if (AC->Nmag > 2) {
          /* Normal Equations */
          for (Im = 0; Im < AC->Nmag; Im++) {
             M = &AC->MAG[Im];
-            for (i = 0; i < 3; i++) {
-               Atb[i] += M->Field * M->Axis[i];
-               for (j = 0; j < 3; j++) {
-                  AtA[i][j] += M->Axis[i] * M->Axis[j];
-               }
-            }
+            for (i = 0; i < 3; i++)
+               Atb.v[i] = M->Field * M->Axis.v[i];
+            for (i = 0; i < 3; i++)
+               for (j = 0; j < 3; j++)
+                  AtA.mat[i][j] += M->Axis.v[i] * M->Axis.v[j];
          }
-         MINV3(AtA, AtAi);
-         MxV(AtAi, Atb, AC->bvb);
+         AtAi    = MINV3(AtA);
+         AC->bvb = MxV(AtAi, Atb);
       }
    }
    return (measList);
@@ -210,29 +207,28 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Ncss != 0) {
-      double AtA[3][3] = {{0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}};
-      double Atb[3]    = {0.0, 0.0, 0.0};
-      double AtAi[3][3];
+      mat3x3 AtA = MAT3X3_ZERO;
+      vec3 Atb;
+      mat3x3 AtAi;
       double A[2][3], b[2] = {0.0};
-      long Nvalid          = 0;
-      double InvalidSVB[3] = {1.0, 0.0,
-                              0.0}; /* Safe vector if SunValid == FALSE */
+      long Nvalid = 0;
+      /* Safe vector if SunValid == FALSE */
+      const vec3 InvalidSVB = VEC3_PXAXIS;
       for (Ic = 0; Ic < AC->Ncss; Ic++) {
          Css = &AC->CSS[Ic];
          if (Css->Valid) {
             Nvalid++;
             /* Normal equations, assuming Nvalid will end up > 2 */
-            for (i = 0; i < 3; i++) {
-               Atb[i] += Css->Axis[i] * Css->Illum / Css->Scale;
+            for (i = 0; i < 3; i++)
+               Atb.v[i] = Css->Illum / Css->Scale * Css->Axis.v[i];
+            for (i = 0; i < 3; i++)
+               for (j = 0; j < 3; j++)
+                  AtA.mat[i][j] += Css->Axis.v[i] * Css->Axis.v[j];
 
-               for (j = 0; j < 3; j++) {
-                  AtA[i][j] += Css->Axis[i] * Css->Axis[j];
-               }
-            }
             /* In case Nvalid ends up == 2 */
             for (i = 0; i < 3; i++) {
                A[0][i] = A[1][i];
-               A[1][i] = Css->Axis[i];
+               A[1][i] = Css->Axis.v[i];
             }
             b[0] = b[1];
             b[1] = Css->Illum / Css->Scale;
@@ -240,26 +236,24 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
       }
       if (Nvalid > 2) {
          AC->SunValid = TRUE;
-         MINV3(AtA, AtAi);
-         MxV(AtAi, Atb, AC->svb);
-         UNITV(AC->svb);
+         AtAi         = MINV3(AtA);
+         AC->svb      = MxV(AtAi, Atb);
+         UNITV(&AC->svb);
       }
       else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
-            AC->svb[i] = b[0] * A[0][i] + b[1] * A[1][i];
-         UNITV(AC->svb);
+            AC->svb.v[i] = b[0] * A[0][i] + b[1] * A[1][i];
+         UNITV(&AC->svb);
       }
       else if (Nvalid == 1) {
          AC->SunValid = TRUE;
-         for (i = 0; i < 3; i++)
-            AC->svb[i] = Atb[i];
-         UNITV(AC->svb);
+         AC->svb      = Atb;
+         UNITV(&AC->svb);
       }
       else {
          AC->SunValid = FALSE;
-         for (i = 0; i < 3; i++)
-            AC->svb[i] = InvalidSVB[i];
+         AC->svb      = InvalidSVB;
       }
    }
    return (measList);
@@ -273,7 +267,7 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
    struct DSMNavType *Nav;
    struct DSMMeasType *meas         = NULL;
    struct DSMMeasListType *measList = NULL;
-   long Ifss, i;
+   long Ifss;
 
    Nav = &DSM->DsmNav;
 
@@ -303,30 +297,29 @@ struct DSMMeasListType *DSM_FssProcessing(struct AcType *const AC,
             AC->SunValid = 1;
             switch (FSS->type) {
                case CONVENTIONAL_FSS: {
-                  double tanx     = tan(FSS->SunAng[0]);
-                  double tany     = tan(FSS->SunAng[1]);
-                  double z        = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
-                  FSS->SunVecS[0] = z * tanx;
-                  FSS->SunVecS[1] = z * tany;
-                  FSS->SunVecS[2] = z;
+                  double tanx    = tan(FSS->SunAng[0]);
+                  double tany    = tan(FSS->SunAng[1]);
+                  double z       = 1.0 / sqrt(1.0 + tanx * tanx + tany * tany);
+                  FSS->SunVecS.x = z * tanx;
+                  FSS->SunVecS.y = z * tany;
+                  FSS->SunVecS.x = z;
                } break;
                case GS_FSS: {
-                  double ct       = cos(FSS->SunAng[0]);
-                  double st       = sin(FSS->SunAng[0]);
-                  double cp       = cos(FSS->SunAng[1]);
-                  double sp       = sin(FSS->SunAng[1]);
-                  FSS->SunVecS[0] = ct;
-                  FSS->SunVecS[1] = st * cp;
-                  FSS->SunVecS[2] = st * sp;
+                  double ct      = cos(FSS->SunAng[0]);
+                  double st      = sin(FSS->SunAng[0]);
+                  double cp      = cos(FSS->SunAng[1]);
+                  double sp      = sin(FSS->SunAng[1]);
+                  FSS->SunVecS.x = ct;
+                  FSS->SunVecS.y = st * cp;
+                  FSS->SunVecS.z = st * sp;
                } break;
                default:
                   fprintf(stderr, "Invalid FSS Type. How did it get this far? "
                                   "Exiting...\n");
                   exit(EXIT_FAILURE);
             }
-            MTxV(FSS->CB, FSS->SunVecS, FSS->SunVecB);
-            for (i = 0; i < 3; i++)
-               AC->svb[i] = FSS->SunVecB[i];
+            FSS->SunVecB = MTxV(FSS->CB, FSS->SunVecS);
+            AC->svb      = FSS->SunVecB;
          }
       }
    }
@@ -357,34 +350,33 @@ struct DSMMeasListType *DSM_StarTrackerProcessing(struct AcType *const AC,
             meas             = CreateMeas(Nav, STARTRACK_SENSOR, Ist);
             meas->ccsds_time = Nav->ccsds_time;
             for (i = 0; i < 4; i++)
-               meas->data[i] = ST->qn[i];
+               meas->data[i] = ST->qn.q[i];
             appendMeas(measList, meas);
          }
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Nst != 0) {
       long Nvalid = 0;
-      double qbn[4];
+      quat qbn;
       /* Naive averaging */
-      for (i = 0; i < 4; i++)
-         AC->qbn[i] = 0.0;
+      AC->qbn = QUAT_ZERO;
       for (Ist = 0; Ist < AC->Nst; Ist++) {
          ST = &AC->ST[Ist];
          if (ST->Valid) {
             Nvalid++;
-            QTxQ(ST->qb, ST->qn, qbn);
-            RECTIFYQ(qbn);
+            qbn = QTxQ(ST->qb, ST->qn);
+            qbn = RECTIFYQ(qbn);
             for (i = 0; i < 4; i++)
-               AC->qbn[i] += qbn[i];
+               AC->qbn.q[i] += qbn.q[i];
          }
       }
       if (Nvalid > 0) {
          AC->StValid = TRUE;
-         UNITQ(AC->qbn);
+         AC->qbn     = UNITQ(AC->qbn);
       }
       else {
          AC->StValid = FALSE;
-         AC->qbn[3]  = 1.0;
+         AC->qbn.qs  = 1.0;
       }
    }
    return (measList);
@@ -414,8 +406,8 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
             meas             = CreateMeas(Nav, GPS_SENSOR, Igps);
             meas->ccsds_time = Nav->ccsds_time;
             for (i = 0; i < 3; i++) {
-               meas->data[i]     = G->PosN[i];
-               meas->data[3 + i] = G->VelN[i];
+               meas->data[i]     = G->PosN.v[i];
+               meas->data[3 + i] = G->VelN.v[i];
             }
             appendMeas(measList, meas);
          }
@@ -430,10 +422,8 @@ struct DSMMeasListType *DSM_GpsProcessing(struct AcType *const AC,
       AC->Time = gpsTime2J2000Sec(G->Rollover, G->Week, G->Sec);
 
       /* Position, Velocity */
-      for (i = 0; i < 3; i++) {
-         AC->PosN[i] = AC->GPS[0].PosN[i];
-         AC->VelN[i] = AC->GPS[0].VelN[i];
-      }
+      AC->PosN = AC->GPS[0].PosN;
+      AC->VelN = AC->GPS[0].VelN;
    }
    return (measList);
 }
@@ -503,22 +493,19 @@ void DSM_CommStateProcessing(struct DSMStateType *state,
 {
    commState->Time = state->Time;
    commState->ID   = state->ID;
-   for (int i = 0; i < 3; i++) {
-      commState->VelR[i] = state->VelR[i];
-      commState->PosR[i] = state->PosR[i];
-      commState->VelN[i] = state->VelN[i];
-      commState->PosN[i] = state->PosN[i];
-      commState->wbn[i]  = state->wbn[i];
-      commState->qbn[i]  = state->qbn[i];
-      for (int j = 0; j < 3; j++)
-         commState->CBN[i][j] = state->CBN[i][j];
+   commState->VelR = state->VelR;
+   commState->PosR = state->PosR;
+   commState->VelN = state->VelN;
+   commState->PosN = state->PosN;
+   commState->wbn  = state->wbn;
+   commState->qbn  = state->qbn;
 
-      commState->svn[i] = state->svn[i];
-      commState->svb[i] = state->svb[i];
-      commState->bvn[i] = state->bvn[i];
-      commState->bvb[i] = state->bvb[i];
-   }
-   commState->qbn[3] = state->qbn[3];
+   commState->CBN = state->CBN;
+
+   commState->svn = state->svn;
+   commState->svb = state->svb;
+   commState->bvn = state->bvn;
+   commState->bvb = state->bvb;
 }
 /**********************************************************************/
 /*  End "Comm" Processing Functions                                   */

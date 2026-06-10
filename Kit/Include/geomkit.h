@@ -33,16 +33,16 @@
 struct SilEdgeType {
    long Body;
    long Iv1, Iv2;
-   double PosV1B[3];
-   double PosV2B[3];
-   double PosV1N[3];
-   double PosV2N[3];
+   vec3 PosV1B;
+   vec3 PosV2B;
+   vec3 PosV1N;
+   vec3 PosV2N;
 };
 
 struct SilVtxType {
    long Body;
-   double PosB[3];
-   double PosN[3];
+   vec3 PosB;
+   vec3 PosN;
 };
 
 struct PolyType {
@@ -56,13 +56,13 @@ struct PolyType {
    long *E;
    long Matl;
    double Area;
-   double Norm[3];
-   double Dyad[3][3];       /* For polyhedron gravity */
-   double Uhat[3], Vhat[3]; /* In-plane basis vectors */
-   double Centroid[3];
-   double radius;         /* of bounding sphere centered on Centroid */
-   double UnshadedArea;   /* Variable, accounting for shadowing */
-   double UnshadedCtr[3]; /* Variable, accounting for shadowing */
+   vec3 Norm;
+   mat3x3 Dyad;     /* For polyhedron gravity */
+   vec3 Uhat, Vhat; /* In-plane basis vectors */
+   vec3 Centroid;
+   double radius;       /* of bounding sphere centered on Centroid */
+   double UnshadedArea; /* Variable, accounting for shadowing */
+   vec3 UnshadedCtr;    /* Variable, accounting for shadowing */
 };
 
 struct EdgeType {
@@ -71,21 +71,21 @@ struct EdgeType {
    long Poly1; /* Left */
    long Poly2; /* Right */
    double Length;
-   double Dyad[3][3]; /* For polyhedron gravity */
+   mat3x3 Dyad; /* For polyhedron gravity */
 };
 
 struct BoundingBoxType {
-   double max[3];
-   double min[3];
-   double center[3];
+   vec3 max;
+   vec3 min;
+   vec3 center;
    double radius;
 };
 
 struct OctreeCellType {
    long IsEmpty; /* True if cell and all its children are empty */
-   double center[3];
+   vec3 center;
    double radius;
-   double min[3], max[3];
+   vec3 min, max;
    long Npoly;
    long *Poly; /* Polys completely within cell, but not contained in any of its
                   children */
@@ -124,9 +124,9 @@ struct GeomType {
    long Npoly;
    long Nedge;
    struct BoundingBoxType BBox;
-   double **V;
-   double **Vt;
-   double **Vn;
+   vec3 *V;
+   vec3 *Vt;
+   vec3 *Vn;
    struct PolyType *Poly;
    struct EdgeType *Edge;
    long *Matl;
@@ -174,12 +174,11 @@ struct MatlType *AddMtlLib(const char *PathName, const char *MtlLibName,
 void ScaleSpecDiffFrac(struct MatlType *Matl, long Nmatl);
 void SurfaceForceProps(struct GeomType *G);
 void LoadKDTree(struct GeomType *G);
-long KDProjectRayOntoGeom(double Source[3], double DirVec[3],
-                          struct GeomType *G, long *HitPoly,
-                          double HitPoint[3]);
+long KDProjectRayOntoGeom(vec3 Source, vec3 DirVec, struct GeomType *G,
+                          long *HitPoly, vec3 HitPoint);
 void LoadOctree(struct GeomType *G);
-long OCProjectRayOntoGeom(double Point[3], double DirVec[3], struct GeomType *G,
-                          double ProjPoint[3], long *ClosestPoly);
+long OCProjectRayOntoGeom(vec3 Point, vec3 DirVec, struct GeomType *G,
+                          vec3 *ProjPoint, long *ClosestPoly);
 struct GeomType *LoadWingsObjFile(const char *ModelPath,
                                   const char *ObjFilename,
                                   struct MatlType **MatlPtr, long *Nmatl,
@@ -187,7 +186,7 @@ struct GeomType *LoadWingsObjFile(const char *ModelPath,
                                   long *GeomTag, long EdgesEnabled);
 void WriteGeomToObjFile(struct MatlType *Matl, struct GeomType *Geom,
                         const char *Path, const char *FileName);
-double PolyhedronVolume(struct GeomType *G);
+__attribute__((pure)) double PolyhedronVolume(struct GeomType *G);
 
 /*
 ** #ifdef __cplusplus

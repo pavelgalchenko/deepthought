@@ -300,7 +300,7 @@ long ClampColor4fv(GLfloat *Color)
 /**********************************************************************/
 void FindSunColor(double T, GLfloat LightColor[3], GLfloat DiskColor[3])
 {
-   double rgb[3];
+   vec3 rgb;
    double F1, F2, m;
    /* These wavelengths picked to make Sol (5800K) white */
    double lam1 = 0.552;
@@ -327,28 +327,28 @@ void FindSunColor(double T, GLfloat LightColor[3], GLfloat DiskColor[3])
                    0.955139, 0.962898, 0.969981, 0.973814, 0.980860, 0.985602,
                    0.992215, 0.995340, 0.997967, 0.998953, 0.999713, 0.999905};
 
-   F1     = LinInterp(LT, F, lam1 * T, N);
-   F2     = LinInterp(LT, F, lam2 * T, N);
-   rgb[2] = F1;
-   rgb[1] = F2 - F1;
-   rgb[0] = 1.0 - F2;
+   F1    = LinInterp(LT, F, lam1 * T, N);
+   F2    = LinInterp(LT, F, lam2 * T, N);
+   rgb.z = F1;
+   rgb.y = F2 - F1;
+   rgb.x = 1.0 - F2;
 
    /* Scale max component to 1.0 */
    m = 0.0;
    for (i = 0; i < 3; i++)
-      if (rgb[i] > m)
-         m = rgb[i];
+      if (rgb.v[i] > m)
+         m = rgb.v[i];
    for (i = 0; i < 3; i++)
-      rgb[i] += 1.0 - m;
+      rgb.v[i] += 1.0 - m;
 
    /* Pastelize */
    for (i = 0; i < 3; i++)
-      LightColor[i] = 0.8 + 0.2 * rgb[i];
+      LightColor[i] = 0.8 + 0.2 * rgb.v[i];
    for (i = 0; i < 3; i++)
-      DiskColor[i] = 0.6 + 0.4 * rgb[i];
+      DiskColor[i] = 0.6 + 0.4 * rgb.v[i];
 }
 /**********************************************************************/
-void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], double C[3][3],
+void DrawSkyGrid(GLfloat MajColor[4], GLfloat MinColor[4], mat3x3 C,
                  GLuint MajList, GLuint MinList)
 {
 
@@ -553,29 +553,29 @@ void LoadSkyGrid(double MajGrid, double MinGrid, double SkyDistance,
    glEndList();
 }
 /*********************************************************************/
-void DrawArrowhead(double v[3], double scale)
+void DrawArrowhead(vec3 v, double scale)
 {
-   double X[3], Y[3];
+   vec3 X, Y;
    double c[13] = {1.0,    0.866, 0.5, 0.0, -0.5,  -0.866, -1.0,
                    -0.866, -0.5,  0.0, 0.5, 0.866, 1.0};
    double s[13] = {0.0,  0.5,    0.866, 1.0,    0.866, 0.5, 0.0,
                    -0.5, -0.866, -1.0,  -0.866, -0.5,  0.0};
    long i;
 
-   PerpBasis(v, X, Y);
+   Y = PerpBasis(v, &X);
 
    glBegin(GL_TRIANGLE_FAN);
-   glVertex3d(scale * v[0], scale * v[1], scale * v[2]);
+   glVertex3d(scale * v.x, scale * v.y, scale * v.z);
    for (i = 0; i < 13; i++)
-      glVertex3d(scale * (0.9 * v[0] + 0.025 * (c[i] * X[0] + s[i] * Y[0])),
-                 scale * (0.9 * v[1] + 0.025 * (c[i] * X[1] + s[i] * Y[1])),
-                 scale * (0.9 * v[2] + 0.025 * (c[i] * X[2] + s[i] * Y[2])));
+      glVertex3d(scale * (0.9 * v.x + 0.025 * (c[i] * X.x + s[i] * Y.x)),
+                 scale * (0.9 * v.y + 0.025 * (c[i] * X.y + s[i] * Y.y)),
+                 scale * (0.9 * v.z + 0.025 * (c[i] * X.z + s[i] * Y.z)));
    glEnd();
    glBegin(GL_POLYGON);
    for (i = 12; i >= 0; i--)
-      glVertex3d(scale * (0.9 * v[0] + 0.025 * (c[i] * X[0] + s[i] * Y[0])),
-                 scale * (0.9 * v[1] + 0.025 * (c[i] * X[1] + s[i] * Y[1])),
-                 scale * (0.9 * v[2] + 0.025 * (c[i] * X[2] + s[i] * Y[2])));
+      glVertex3d(scale * (0.9 * v.x + 0.025 * (c[i] * X.x + s[i] * Y.x)),
+                 scale * (0.9 * v.y + 0.025 * (c[i] * X.y + s[i] * Y.y)),
+                 scale * (0.9 * v.z + 0.025 * (c[i] * X.z + s[i] * Y.z)));
    glEnd();
 }
 /*********************************************************************/
@@ -755,7 +755,7 @@ void DrawFarFOV(long Nv, double Width, double Height, long BoreAxis,
    }
 }
 /*********************************************************************/
-void RotateL2R(double C[3][3])
+void RotateL2R(mat3x3 C)
 {
    float M[16] = {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
                   0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0};
@@ -763,12 +763,12 @@ void RotateL2R(double C[3][3])
 
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++)
-         M[4 * i + j] = (float)C[j][i];
+         M[4 * i + j] = (float)C.mat[j][i];
    }
    glMultMatrixf(M);
 }
 /*********************************************************************/
-void RotateR2L(double C[3][3])
+void RotateR2L(mat3x3 C)
 {
    float M[16] = {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
                   0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0};
@@ -776,7 +776,7 @@ void RotateR2L(double C[3][3])
 
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++)
-         M[4 * i + j] = (float)C[i][j];
+         M[4 * i + j] = (float)C.mat[i][j];
    }
    glMultMatrixf(M);
 }
@@ -912,33 +912,31 @@ void Minv4f(float A[16], float Ai[16])
    Ai[15] = b44 / DetA;
 }
 /**********************************************************************/
-void BuildModelMatrix(const double CBN[3][3], const double pbn[3],
-                      float ModelMatrix[16])
+void BuildModelMatrix(const mat3x3 CBN, const vec3 pbn, float ModelMatrix[16])
 {
    long i, j;
 
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         ModelMatrix[4 * i + j] = (float)CBN[i][j];
+         ModelMatrix[4 * i + j] = (float)CBN.mat[i][j];
       }
-      ModelMatrix[12 + i]    = (float)pbn[i];
+      ModelMatrix[12 + i]    = (float)pbn.v[i];
       ModelMatrix[4 * i + 3] = 0.0f;
    }
    ModelMatrix[15] = 1.0f;
 }
 /**********************************************************************/
-void BuildViewMatrix(const double CEN[3][3], const double pen[3],
-                     float ViewMatrix[16])
+void BuildViewMatrix(const mat3x3 CEN, const vec3 pen, float ViewMatrix[16])
 {
-   double pene[3];
+   ;
    long i, j;
 
-   MxV(CEN, pen, pene);
+   vec3 pene = MxV(CEN, pen);
    for (i = 0; i < 3; i++) {
       for (j = 0; j < 3; j++) {
-         ViewMatrix[4 * i + j] = (float)CEN[j][i];
+         ViewMatrix[4 * i + j] = (float)CEN.mat[j][i];
       }
-      ViewMatrix[12 + i]    = (float)(-pene[i]);
+      ViewMatrix[12 + i]    = (float)(-pene.v[i]);
       ViewMatrix[4 * i + 3] = 0.0f;
    }
    ViewMatrix[15] = 1.0f;
@@ -1260,7 +1258,7 @@ void CubeToPpm(GLubyte *Cube, long N, const char *pathname,
    }
 }
 /*********************************************************************/
-void LoadBucky(double BuckyPf[32][3], long BuckyNeighbor[32][6])
+void LoadBucky(vec3 BuckyPf[32], long BuckyNeighbor[32][6])
 {
 
    double IcoPv[12][3] = {{0.0, 0.0, 1.0},
@@ -1303,20 +1301,20 @@ void LoadBucky(double BuckyPf[32][3], long BuckyNeighbor[32][6])
    /* Initialize Buckyball */
    for (i = 0; i < 12; i++) {
       for (j = 0; j < 3; j++)
-         BuckyPf[i][j] = IcoPv[i][j];
+         BuckyPf[i].v[j] = IcoPv[i][j];
    }
    for (i = 12; i < 32; i++) {
       for (j = 0; j < 3; j++) {
-         BuckyPf[i][j] = (BuckyPf[BuckyNeighbor[i][0]][j] +
-                          BuckyPf[BuckyNeighbor[i][1]][j] +
-                          BuckyPf[BuckyNeighbor[i][2]][j]) /
-                         3.0;
+         BuckyPf[i].v[j] = (BuckyPf[BuckyNeighbor[i][0]].v[j] +
+                            BuckyPf[BuckyNeighbor[i][1]].v[j] +
+                            BuckyPf[BuckyNeighbor[i][2]].v[j]) /
+                           3.0;
       }
-      UNITV(BuckyPf[i]);
+      UNITV(&BuckyPf[i]);
    }
 }
 /**********************************************************************/
-void LoadStars(const char *StarFileName, double BuckyPf[32][3],
+void LoadStars(const char *StarFileName, vec3 BuckyPf[32],
                long BuckyNeighbor[32][6], GLuint StarList[32],
                double SkyDistance)
 {
@@ -1328,14 +1326,15 @@ void LoadStars(const char *StarFileName, double BuckyPf[32][3],
    GLfloat Col;
    FILE *StarFile;
    struct StarType {
-      double r[4];
+      vec4 r;
       double m;
       GLfloat Color[4];
-      double v1[4], v2[4], v3[4], v4[4];
+      vec4 v1, v2, v3, v4;
    };
    struct StarType *Star;
-   double qnh[4] = {-0.203123038887, 0.0, 0.0, 0.979153221449};
-   double r[3], uhat[3], vhat[3];
+   const quat qnh = {
+       .x = -0.203123038887, .y = 0.0, .z = 0.0, .s = 0.979153221449};
+   vec3 r, uhat, vhat;
    double QuadSize;
    GLuint StarTexTag;
 
@@ -1371,25 +1370,29 @@ void LoadStars(const char *StarFileName, double BuckyPf[32][3],
    }
 
    for (i = 0; i < Nstar; i++) {
-      fscanf(StarFile, "%lf %lf %lf %lf", &r[0], &r[1], &r[2], &Star[i].m);
+      fscanf(StarFile, "%lf %lf %lf %lf", &r.x, &r.y, &r.z, &Star[i].m);
 
       /* Transform from input frame (probably ECI) to H frame */
-      QTxV(qnh, r, Star[i].r);
+      Star[i].r.qv = QTxV(qnh, r);
 
-      PerpBasis(Star[i].r, uhat, vhat);
+      vhat     = PerpBasis(Star[i].r.qv, &uhat);
       QuadSize = 0.0016 * (10.0 - Star[i].m);
       for (k = 0; k < 3; k++) {
-         Star[i].v1[k] = Star[i].r[k] - QuadSize * uhat[k] - QuadSize * vhat[k];
-         Star[i].v2[k] = Star[i].r[k] - QuadSize * uhat[k] + QuadSize * vhat[k];
-         Star[i].v3[k] = Star[i].r[k] + QuadSize * uhat[k] + QuadSize * vhat[k];
-         Star[i].v4[k] = Star[i].r[k] + QuadSize * uhat[k] - QuadSize * vhat[k];
+         Star[i].v1.q[k] =
+             Star[i].r.q[k] - QuadSize * uhat.v[k] - QuadSize * vhat.v[k];
+         Star[i].v2.q[k] =
+             Star[i].r.q[k] - QuadSize * uhat.v[k] + QuadSize * vhat.v[k];
+         Star[i].v3.q[k] =
+             Star[i].r.q[k] + QuadSize * uhat.v[k] + QuadSize * vhat.v[k];
+         Star[i].v4.q[k] =
+             Star[i].r.q[k] + QuadSize * uhat.v[k] - QuadSize * vhat.v[k];
       }
 
-      Star[i].r[3]  = 1.0 / SkyDistance;
-      Star[i].v1[3] = 1.0 / SkyDistance;
-      Star[i].v2[3] = 1.0 / SkyDistance;
-      Star[i].v3[3] = 1.0 / SkyDistance;
-      Star[i].v4[3] = 1.0 / SkyDistance;
+      Star[i].r.s  = 1.0 / SkyDistance;
+      Star[i].v1.s = 1.0 / SkyDistance;
+      Star[i].v2.s = 1.0 / SkyDistance;
+      Star[i].v3.s = 1.0 / SkyDistance;
+      Star[i].v4.s = 1.0 / SkyDistance;
 
       /*Col = 1.0;*/
       if (Star[i].m <= 0.0)
@@ -1406,10 +1409,10 @@ void LoadStars(const char *StarFileName, double BuckyPf[32][3],
    }
 
    for (i = 0; i < Nstar; i++) {
-      MaxPoR     = VoV(BuckyPf[0], Star[i].r);
+      MaxPoR     = VoV(BuckyPf[0], Star[i].r.qv);
       ClosestVtx = 0;
       for (k = 1; k < 32; k++) {
-         PoR = VoV(BuckyPf[k], Star[i].r);
+         PoR = VoV(BuckyPf[k], Star[i].r.qv);
          if (PoR > MaxPoR) {
             MaxPoR     = PoR;
             ClosestVtx = k;
@@ -1430,13 +1433,13 @@ void LoadStars(const char *StarFileName, double BuckyPf[32][3],
          j = ID[k][i];
          glColor4fv(Star[j].Color);
          glTexCoord2f(0.0, 0.0);
-         glVertex4dv(Star[j].v1);
+         glVertex4dv(Star[j].v1.q);
          glTexCoord2f(1.0, 0.0);
-         glVertex4dv(Star[j].v2);
+         glVertex4dv(Star[j].v2.q);
          glTexCoord2f(1.0, 1.0);
-         glVertex4dv(Star[j].v3);
+         glVertex4dv(Star[j].v3.q);
          glTexCoord2f(0.0, 1.0);
-         glVertex4dv(Star[j].v4);
+         glVertex4dv(Star[j].v4.q);
       }
       glEnd();
       glDisable(GL_TEXTURE_2D);
@@ -1449,8 +1452,7 @@ void LoadStars(const char *StarFileName, double BuckyPf[32][3],
    free(Star);
 }
 /**********************************************************************/
-void DrawStars(double LineOfSight[3], double BuckyPf[32][3],
-               GLuint StarList[32])
+void DrawStars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint StarList[32])
 {
    double PoL;
    long k;
@@ -1473,8 +1475,7 @@ void DrawStars(double LineOfSight[3], double BuckyPf[32][3],
    glDisable(GL_COLOR_MATERIAL);
 }
 /**********************************************************************/
-void Draw1FGL(double LineOfSight[3], double BuckyPf[32][3],
-              GLuint FermiSourceList[32])
+void Draw1FGL(vec3 LineOfSight, vec3 BuckyPf[32], GLuint FermiSourceList[32])
 {
    double PoL;
    long k;
@@ -1493,8 +1494,7 @@ void Draw1FGL(double LineOfSight[3], double BuckyPf[32][3],
    glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
-void DrawEgret(double LineOfSight[3], double BuckyPf[32][3],
-               GLuint EgretSourceList[32])
+void DrawEgret(vec3 LineOfSight, vec3 BuckyPf[32], GLuint EgretSourceList[32])
 {
    double PoL;
    long k;
@@ -1513,8 +1513,7 @@ void DrawEgret(double LineOfSight[3], double BuckyPf[32][3],
    glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
-void DrawPulsars(double LineOfSight[3], double BuckyPf[32][3],
-                 GLuint PulsarList[32])
+void DrawPulsars(vec3 LineOfSight, vec3 BuckyPf[32], GLuint PulsarList[32])
 {
    double PoL;
    long k;
@@ -1533,8 +1532,8 @@ void DrawPulsars(double LineOfSight[3], double BuckyPf[32][3],
    glEnable(GL_LIGHTING);
 }
 /**********************************************************************/
-GLuint LoadMilkyWay(const char *PathName, const char *FileName,
-                    double CGH[3][3], double SkyDistance, double AlphaMask[4])
+GLuint LoadMilkyWay(const char *PathName, const char *FileName, mat3x3 CGH,
+                    double SkyDistance, vec4 AlphaMask)
 {
    long i, j;
    double lat, lng, lat1, lat2, r[3], s, t1, t2;
@@ -1571,14 +1570,15 @@ GLuint LoadMilkyWay(const char *PathName, const char *FileName,
          r[0] = cos(lng) * cos(lat1);
          r[1] = sin(lng) * cos(lat1);
          r[2] = sin(lat1);
-         glColor4d(AlphaMask[j], AlphaMask[j], AlphaMask[j], AlphaMask[j]);
+         glColor4d(AlphaMask.q[j], AlphaMask.q[j], AlphaMask.q[j],
+                   AlphaMask.q[j]);
          glTexCoord2f(-s, t1);
          glVertex3dv(r);
          r[0] = cos(lng) * cos(lat2);
          r[1] = sin(lng) * cos(lat2);
          r[2] = sin(lat2);
-         glColor4d(AlphaMask[j + 1], AlphaMask[j + 1], AlphaMask[j + 1],
-                   AlphaMask[j + 1]);
+         glColor4d(AlphaMask.q[j + 1], AlphaMask.q[j + 1], AlphaMask.q[j + 1],
+                   AlphaMask.q[j + 1]);
          glTexCoord2f(-s, t2);
          glVertex3dv(r);
       }
@@ -1592,7 +1592,7 @@ GLuint LoadMilkyWay(const char *PathName, const char *FileName,
    return (ListTag);
 }
 /**********************************************************************/
-GLuint LoadSkyCube(const char *PathName, const char *FileName, double CGH[3][3],
+GLuint LoadSkyCube(const char *PathName, const char *FileName, mat3x3 CGH,
                    double SkyDistance)
 {
    GLuint TexTag;
@@ -1677,21 +1677,22 @@ GLuint LoadSkyCube(const char *PathName, const char *FileName, double CGH[3][3],
 }
 /**********************************************************************/
 /* Egret Catalog of Gamma-ray Sources                                 */
-void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
+void LoadEgretCatalog(const char *EgretFileName, vec3 BuckyPf[32],
                       long BuckyNeighbor[32][6] __attribute__((unused)),
                       GLuint EgretSourceList[32], double SkyDistance)
 {
 #define Nsource 262
 
    struct GammaSourceType {
-      double r[4];
+      vec4 r;
       char Type;
       char Label[40];
       GLfloat Color[4];
    };
    struct GammaSourceType GammaSource[Nsource];
-   double MaxPoR, PoR, c1, s1, c2, s2, RA, Dec, r[3];
-   double qnh[4] = {-0.203123038887, 0.0, 0.0, 0.979153221449};
+   double MaxPoR, PoR, c1, s1, c2, s2, RA, Dec;
+   vec3 r;
+   const quat qnh = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
    long ClosestVtx;
    long ID[32][Nsource], N[32];
    long i, j, k;
@@ -1706,18 +1707,18 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
       fscanf(SourceFile, "%lf %lf %c %[^\n]\n", &RA, &Dec, &GammaSource[i].Type,
              GammaSource[i].Label);
 
-      c1   = cos(RA * D2R);
-      s1   = sin(RA * D2R);
-      c2   = cos(Dec * D2R);
-      s2   = sin(Dec * D2R);
-      r[0] = c1 * c2;
-      r[1] = s1 * c2;
-      r[2] = s2;
+      c1  = cos(RA * D2R);
+      s1  = sin(RA * D2R);
+      c2  = cos(Dec * D2R);
+      s2  = sin(Dec * D2R);
+      r.x = c1 * c2;
+      r.y = s1 * c2;
+      r.z = s2;
 
       /* Transform from input frame (probably ECI) to H frame */
-      QTxV(qnh, r, GammaSource[i].r);
+      GammaSource[i].r.qv = QTxV(qnh, r);
 
-      GammaSource[i].r[3] = 1.0 / SkyDistance;
+      GammaSource[i].r.qs = 1.0 / SkyDistance;
 
       if (GammaSource[i].Type == 'A') {
          GammaSource[i].Color[0] = 0.0;
@@ -1743,10 +1744,10 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
    fclose(SourceFile);
 
    for (i = 0; i < Nsource; i++) {
-      MaxPoR     = VoV(BuckyPf[0], GammaSource[i].r);
+      MaxPoR     = VoV(BuckyPf[0], GammaSource[i].r.qv);
       ClosestVtx = 0;
       for (k = 1; k < 32; k++) {
-         PoR = VoV(BuckyPf[k], GammaSource[i].r);
+         PoR = VoV(BuckyPf[k], GammaSource[i].r.qv);
          if (PoR > MaxPoR) {
             MaxPoR     = PoR;
             ClosestVtx = k;
@@ -1764,13 +1765,13 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
       for (i = 0; i < N[k]; i++) {
          j = ID[k][i];
          glColor4fv(GammaSource[j].Color);
-         glVertex4dv(GammaSource[j].r);
+         glVertex4dv(GammaSource[j].r.q);
       }
       glEnd();
       for (i = 0; i < N[k]; i++) {
          j = ID[k][i];
          glColor4fv(GammaSource[j].Color);
-         glRasterPos4dv(GammaSource[j].r);
+         glRasterPos4dv(GammaSource[j].r.q);
          glBitmap(0, 0, 0, 0, 8, -5, 0);
          DrawBitmapString(GLUT_BITMAP_8_BY_13, GammaSource[j].Label);
       }
@@ -1782,7 +1783,7 @@ void LoadEgretCatalog(const char *EgretFileName, double BuckyPf[32][3],
 }
 /**********************************************************************/
 /* Fermi Source Catalog 1FGL                                          */
-void Load1FGL(const char *FileName, double BuckyPf[32][3],
+void Load1FGL(const char *FileName, vec3 BuckyPf[32],
               long BuckyNeighbor[32][6] __attribute__((unused)),
               GLuint FermiSourceList[32], double SkyDistance)
 {
@@ -1891,10 +1892,11 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
 
    FILE *infile;
    double RA, Dec;
-   double SourceVec[Nsource][4];
+   vec4 SourceVec[Nsource];
    long Type[Nsource];
    char line[512];
-   double RAhr, RAmin, RAsec, DECdeg, DECmin, DECsec, flux, fluxerr, r[3];
+   double RAhr, RAmin, RAsec, DECdeg, DECmin, DECsec, flux, fluxerr;
+   vec3 r;
    char Class[3];
    double MaxPoR, PoR;
    long ClosestVtx;
@@ -1906,7 +1908,7 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
                           {0.863, 0.078, 0.235, 1.0}}; /* Identified */
    long ColorIdx[16]   = {0, 1, 1, 2, 1, 1, 1, 1, 1, 2, 1, 1, 2, 2, 1, 2};
    float Black[4]      = {0.0, 0.0, 0.0, 1.0};
-   double qnh[4]       = {-0.203123038887, 0.0, 0.0, 0.979153221449};
+   const quat qnh      = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
 
    /*
          unc = No association :  Gray Square
@@ -1974,22 +1976,22 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
             Type[i] = CLASS_MQO;
          else
             printf("1FGL Class unknown: %s\n", Class);
-         r[0] = cos(RA) * cos(Dec);
-         r[1] = sin(RA) * cos(Dec);
-         r[2] = sin(Dec);
+         r.x = cos(RA) * cos(Dec);
+         r.y = sin(RA) * cos(Dec);
+         r.z = sin(Dec);
          /* Transform from input frame (probably ECI) to H frame */
-         QTxV(qnh, r, SourceVec[i]);
-         SourceVec[i][3] = 1.0 / SkyDistance;
+         SourceVec[i].qv = QTxV(qnh, r);
+         SourceVec[i].qs = 1.0 / SkyDistance;
          i++;
       }
    }
    fclose(infile);
 
    for (i = 0; i < Nsource; i++) {
-      MaxPoR     = VoV(BuckyPf[0], SourceVec[i]);
+      MaxPoR     = VoV(BuckyPf[0], SourceVec[i].qv);
       ClosestVtx = 0;
       for (k = 1; k < 32; k++) {
-         PoR = VoV(BuckyPf[k], SourceVec[i]);
+         PoR = VoV(BuckyPf[k], SourceVec[i].qv);
          if (PoR > MaxPoR) {
             MaxPoR     = PoR;
             ClosestVtx = k;
@@ -2009,7 +2011,7 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
          **   glVertex4dv(SourceVec[j]);
          **glEnd();
          */
-         glRasterPos4dv(SourceVec[j]);
+         glRasterPos4dv(SourceVec[j].q);
          glBitmap(0, 0, 0, 0, -8, -8, 0);
          glBitmap(16, 16, 0.0, 0.0, 0.0, 0.0, FglGlyph[Type[j]]);
          /*glBitmap(0,0,0,0,18,-5,0);
@@ -2041,7 +2043,7 @@ void Load1FGL(const char *FileName, double BuckyPf[32][3],
 #undef Nsource
 }
 /**********************************************************************/
-void LoadPulsars(const char *FileName, double BuckyPf[32][3],
+void LoadPulsars(const char *FileName, vec3 BuckyPf[32],
                  long BuckyNeighbor[32][6] __attribute__((unused)),
                  GLuint PulsarList[32], double SkyDistance)
 {
@@ -2055,15 +2057,15 @@ void LoadPulsars(const char *FileName, double BuckyPf[32][3],
 
    FILE *infile;
    double RA, Dec;
-   double SourceVec[Npul][4];
-   double r[3];
+   quat SourceVec[Npul];
+   vec3 r;
    double MaxPoR, PoR;
    long ClosestVtx;
    long N[32], ID[32][Npul];
    long i, j, k;
    GLfloat Color[4] = {0.635, 0.178, 0.635, 0.5};
    float Black[4]   = {0.0, 0.0, 0.0, 1.0};
-   double qnh[4]    = {-0.203123038887, 0.0, 0.0, 0.979153221449};
+   const quat qnh   = {.q = {-0.203123038887, 0.0, 0.0, 0.979153221449}};
    char Identifier[Npul][40];
    double EclLng, EclLat;
    char line[512];
@@ -2077,24 +2079,24 @@ void LoadPulsars(const char *FileName, double BuckyPf[32][3],
       fgets(line, 512, infile);
       if (sscanf(line, "%s %lf %lf %lf %lf", Identifier[i], &RA, &Dec, &EclLng,
                  &EclLat) == 5) {
-         RA   *= D2R;
-         Dec  *= D2R;
-         r[0]  = cos(RA) * cos(Dec);
-         r[1]  = sin(RA) * cos(Dec);
-         r[2]  = sin(Dec);
+         RA  *= D2R;
+         Dec *= D2R;
+         r.x  = cos(RA) * cos(Dec);
+         r.y  = sin(RA) * cos(Dec);
+         r.z  = sin(Dec);
          /* Transform from input frame (probably ECI) to H frame */
-         QTxV(qnh, r, SourceVec[i]);
-         SourceVec[i][3] = 1.0 / SkyDistance;
+         SourceVec[i].qv = QTxV(qnh, r);
+         SourceVec[i].qs = 1.0 / SkyDistance;
          i++;
       }
    }
    fclose(infile);
 
    for (i = 0; i < Npul; i++) {
-      MaxPoR     = VoV(BuckyPf[0], SourceVec[i]);
+      MaxPoR     = VoV(BuckyPf[0], SourceVec[i].qv);
       ClosestVtx = 0;
       for (k = 1; k < 32; k++) {
-         PoR = VoV(BuckyPf[k], SourceVec[i]);
+         PoR = VoV(BuckyPf[k], SourceVec[i].qv);
          if (PoR > MaxPoR) {
             MaxPoR     = PoR;
             ClosestVtx = k;
@@ -2114,7 +2116,7 @@ void LoadPulsars(const char *FileName, double BuckyPf[32][3],
          **   glVertex4dv(SourceVec[j]);
          **glEnd();
          */
-         glRasterPos4dv(SourceVec[j]);
+         glRasterPos4dv(SourceVec[j].q);
          glBitmap(0, 0, 0, 0, -8, -8, 0);
          glBitmap(16, 16, 0.0, 0.0, 0.0, 0.0, PulsarGlyph);
          glBitmap(0, 0, 0, 0, 18, -5, 0);
@@ -2479,13 +2481,13 @@ void DrawBullseye(GLfloat Color[4], double p[4])
    glMaterialfv(GL_FRONT, GL_EMISSION, Black);
 }
 /*********************************************************************/
-void DrawVector(double v[3], const char *Label, const char *Units,
-                GLfloat Color[4], double VisScale, double MagScale,
-                long UnitVec)
+void DrawVector(vec3 v, const char *Label, const char *Units, GLfloat Color[4],
+                double VisScale, double MagScale, long UnitVec)
 {
    GLubyte GlyphHat[4] = {0x82, 0x44, 0x28, 0x10};
    GLubyte GlyphVec[3] = {0xfe, 0x0c, 0x10};
-   double u[3], mag;
+   vec3 u;
+   double mag;
    char s[40];
 
    glDisable(GL_LIGHTING);
@@ -2494,27 +2496,27 @@ void DrawVector(double v[3], const char *Label, const char *Units,
    if (UnitVec) {
       glBegin(GL_LINES);
       glVertex3d(0.0, 0.0, 0.0);
-      glVertex3d(VisScale * v[0], VisScale * v[1], VisScale * v[2]);
+      glVertex3d(VisScale * v.x, VisScale * v.y, VisScale * v.z);
       glEnd();
       DrawArrowhead(v, VisScale);
 
-      glRasterPos3f(VisScale * v[0], VisScale * v[1], VisScale * v[2]);
+      glRasterPos3f(VisScale * v.x, VisScale * v.y, VisScale * v.z);
       glBitmap(0, 0, 0, 0, 4, -5, 0);
       DrawString8x11(Label);
       glBitmap(7, 4, 8.0 * strlen(Label), -11.0, 0.0, 0.0, GlyphHat);
    }
    else {
-      mag = CopyUnitV(v, u);
+      mag = CopyUnitV(v, &u);
       glBegin(GL_LINES);
       glVertex3d(0.0, 0.0, 0.0);
-      glVertex3d(VisScale * u[0], VisScale * u[1], VisScale * u[2]);
+      glVertex3d(VisScale * u.x, VisScale * u.y, VisScale * u.z);
       glEnd();
       DrawArrowhead(u, VisScale);
-      glRasterPos3f(VisScale * u[0], VisScale * u[1], VisScale * u[2]);
+      glRasterPos3f(VisScale * u.x, VisScale * u.y, VisScale * u.z);
       glBitmap(0, 0, 0, 0, 4, -5, 0);
       sprintf(s, "%s (%5.2lf %s)", Label, MagScale * mag, Units);
       DrawString8x11(s);
-      glRasterPos3f(VisScale * u[0], VisScale * u[1], VisScale * u[2]);
+      glRasterPos3f(VisScale * u.x, VisScale * u.y, VisScale * u.z);
       glBitmap(0, 0, 0, 0, 4, -5, 0);
       glBitmap(7, 3, 0, -11.0, 0.0, 0.0, GlyphVec);
    }
@@ -2577,14 +2579,14 @@ void DrawAxisLabels(long Iglyph, GLfloat Color[4], GLfloat Xc, GLfloat Xmax,
    glEnable(GL_LIGHTING);
 }
 /*********************************************************************/
-void DrawBodyLabel(long Ib, GLfloat Color[4], double p[3])
+void DrawBodyLabel(long Ib, GLfloat Color[4], vec3 p)
 {
    GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
    char s[40];
 
    glMaterialfv(GL_FRONT, GL_EMISSION, Color);
 
-   glRasterPos3dv(p);
+   glRasterPos3dv(p.v);
    glBitmap(0, 0, 0, 0, 4, 4, 0);
    sprintf(s, "B[%ld]", Ib);
    DrawString8x11(s);
@@ -2829,37 +2831,38 @@ void DrawRollPitchYaw(long xc, long yc, long PixScale, double AngScale,
 /* Draw a small circle on a Mercator projection in active window.    */
 void DrawSmallCircle(double lngc, double latc, double rad)
 {
-   double axis[3], norm[3], binorm[3], sigma[3], C[3][3], ang, p[3];
-   double x, y, xold, yold;
+   vec3 axis, norm, binorm, sigma, p;
+   mat3x3 C;
+   double x, y, xold, yold, ang;
 
-   axis[0] = cos(lngc) * cos(latc);
-   axis[1] = sin(lngc) * cos(latc);
-   axis[2] = sin(latc);
+   axis.x = cos(lngc) * cos(latc);
+   axis.y = sin(lngc) * cos(latc);
+   axis.z = sin(latc);
 
-   if (axis[2] * axis[2] < 0.5) {
-      norm[0] = 0.0;
-      norm[1] = 0.0;
-      norm[2] = 1.0;
+   if (axis.z * axis.z < 0.5) {
+      norm.x = 0.0;
+      norm.y = 0.0;
+      norm.z = 1.0;
    }
    else {
-      norm[0] = 1.0;
-      norm[1] = 0.0;
-      norm[2] = 0.0;
+      norm.x = 1.0;
+      norm.y = 0.0;
+      norm.z = 0.0;
    }
-   VxV(axis, norm, binorm);
-   UNITV(binorm);
-   SimpRot(binorm, rad, C);
-   MxV(C, axis, sigma);
-   SimpRot(axis, 0.0, C);
-   MxV(C, sigma, p);
-   xold = atan2(p[1], p[0]) * R2D;
-   yold = asin(p[2]) * R2D;
+   binorm = VxV(axis, norm);
+   UNITV(&binorm);
+   C     = SimpRot(binorm, rad);
+   sigma = MxV(C, axis);
+   C     = SimpRot(axis, 0.0);
+   p     = MxV(C, sigma);
+   xold  = atan2(p.y, p.x) * R2D;
+   yold  = asin(p.z) * R2D;
    glBegin(GL_LINES);
    for (ang = 0.0; ang < TWOPI; ang += 0.005 * TWOPI) {
-      SimpRot(axis, ang, C);
-      MxV(C, sigma, p);
-      x = atan2(p[1], p[0]) * R2D;
-      y = asin(p[2]) * R2D;
+      C = SimpRot(axis, ang);
+      p = MxV(C, sigma);
+      x = atan2(p.y, p.x) * R2D;
+      y = asin(p.z) * R2D;
       if (fabs(x - xold) < 180.0) {
          glVertex2f(xold, yold);
          glVertex2f(x, y);
@@ -2884,22 +2887,22 @@ void DrawSmallCircle(double lngc, double latc, double rad)
 /*********************************************************************/
 /* Draws a full grid of any orientation on a Mercator projection.
    CVA is the DCM from the Axis frame to the Viewing frame           */
-void DrawMercatorGrid(double CVA[3][3])
+void DrawMercatorGrid(mat3x3 CVA)
 {
    long min = 30; /* Degrees between each minor gridline */
    long maj = 90; /* Degrees between each major gridline */
 
-   double norm[3];
-   double x[3] = {1, 0, 0};
-   double z[3] = {0, 0, 1};
+   vec3 norm;
+   vec3 x = VEC3_PXAXIS;
+   vec3 z = VEC3_PZAXIS;
 
    long ang; /* Tracked in degrees */
    double lng, lat;
-   double CNA[3][3]; /* DCM from normal vector to axis frame */
-   double CNV[3][3]; /* DCM from normal vector to viewing frame */
+   mat3x3 CNA; /* DCM from normal vector to axis frame */
+   mat3x3 CNV; /* DCM from normal vector to viewing frame */
 
    /* Latitude lines */
-   MxV(CVA, z, norm);
+   norm = MxV(CVA, z);
 
    VecToLngLat(norm, &lng, &lat);
 
@@ -2915,9 +2918,9 @@ void DrawMercatorGrid(double CVA[3][3])
 
    /* Longitude lines */
    for (ang = 0; ang < 179; ang = ang + min) {
-      SimpRot(z, ang * D2R, CNA);
-      MxMT(CNA, CVA, CNV);
-      MTxV(CNV, x, norm);
+      CNA  = SimpRot(z, ang * D2R);
+      CNV  = MxMT(CNA, CVA);
+      norm = MTxV(CNV, x);
 
       VecToLngLat(norm, &lng, &lat);
 
@@ -2926,9 +2929,9 @@ void DrawMercatorGrid(double CVA[3][3])
    }
 
    for (ang = 0; ang < 179; ang = ang + maj) {
-      SimpRot(z, ang * D2R, CNA);
-      MxMT(CNA, CVA, CNV);
-      MTxV(CNV, x, norm);
+      CNA  = SimpRot(z, ang * D2R);
+      CNV  = MxMT(CNA, CVA);
+      norm = MTxV(CNV, x);
 
       VecToLngLat(norm, &lng, &lat);
 
@@ -2943,30 +2946,31 @@ void DrawMercatorGrid(double CVA[3][3])
    be less than 180 degrees)                                         */
 void DrawMercatorLine(double lngA, double latA, double lngB, double latB)
 {
-   double A[3], B[3], norm[3], C[3][3], ang, totalang, p[3];
-   double x, y, xold, yold;
+   vec3 A, B, norm, p;
+   mat3x3 C;
+   double x, y, xold, yold, ang, totalang;
 
-   A[0] = cos(lngA) * cos(latA);
-   A[1] = sin(lngA) * cos(latA);
-   A[2] = sin(latA);
+   A.x = cos(lngA) * cos(latA);
+   A.y = sin(lngA) * cos(latA);
+   A.z = sin(latA);
 
-   B[0] = cos(lngB) * cos(latB);
-   B[1] = sin(lngB) * cos(latB);
-   B[2] = sin(latB);
+   B.x = cos(lngB) * cos(latB);
+   B.y = sin(lngB) * cos(latB);
+   B.z = sin(latB);
 
    totalang = acos(VoV(A, B));
 
-   VxV(A, B, norm);
-   UNITV(norm);
-   SimpRot(A, 0.0, C);
-   MxV(C, A, p);
+   norm = VxV(A, B);
+   UNITV(&norm);
+   C = SimpRot(A, 0.0);
+   p = MxV(C, A);
    VecToLngLat(p, &xold, &yold);
    xold *= R2D;
    yold *= R2D;
    glBegin(GL_LINES);
    for (ang = 0.0; ang < 1.01 * totalang; ang += 0.05 * totalang) {
-      SimpRot(norm, -ang, C);
-      MxV(C, A, p);
+      C = SimpRot(norm, -ang);
+      p = MxV(C, A);
       VecToLngLat(p, &x, &y);
       x *= R2D;
       y *= R2D;
@@ -3000,36 +3004,36 @@ void DrawMercatorLine(double lngA, double latA, double lngB, double latB)
 /* Draws a square FOV on a Mercator projection using DrawMercatorLine.
    Square is centered on x-axis of CCV; FOV half-angles given in radians.
    CVS = DCM from Center of square to Viewing frame                   */
-void DrawMercatorSquare(double CVS[3][3], double FOV[2])
+void DrawMercatorSquare(mat3x3 CVS, double FOV[2])
 {
-   double p[3], q[3];
-   double zaxis[3] = {0, 0, 1};
+   vec3 p, q;
+   vec3 zaxis = VEC3_PZAXIS;
    double lngA, latA, lngB, latB;
-   double xang[4], yang[4];
-   double CPC[3][3]; /* DCM from Center to corner Point */
+   vec4 xang, yang;
+   mat3x3 CPC; /* DCM from Center to corner Point */
    long i, j;
 
-   xang[0] = -FOV[0]; /* x to the left, y up, z out of the sensor in boresight
+   xang.x = -FOV[0]; /* x to the left, y up, z out of the sensor in boresight
                          direction */
-   xang[1] = FOV[0];
-   xang[2] = FOV[0];
-   xang[3] = -FOV[0];
+   xang.y = FOV[0];
+   xang.z = FOV[0];
+   xang.s = -FOV[0];
 
-   yang[0] = -FOV[1];
-   yang[1] = -FOV[1];
-   yang[2] = FOV[1];
-   yang[3] = FOV[1];
+   yang.x = -FOV[1];
+   yang.y = -FOV[1];
+   yang.z = FOV[1];
+   yang.s = FOV[1];
 
    for (i = 0; i < 4; i++) {
-      A2C(21, xang[i], -yang[i], 0.0, CPC);
-      MxV(CPC, zaxis, q); /* Assume sensor axis is z-axis */
-      MxV(CVS, q, p);
+      CPC = A2C(21, xang.q[i], -yang.q[i], 0.0);
+      q   = MxV(CPC, zaxis); /* Assume sensor axis is z-axis */
+      p   = MxV(CVS, q);
       VecToLngLat(p, &lngA, &latA);
 
-      j = (i + 1) % 4;
-      A2C(21, xang[j], -yang[j], 0.0, CPC);
-      MxV(CPC, zaxis, q); /* Assume sensor axis is z-axis */
-      MxV(CVS, q, p);
+      j   = (i + 1) % 4;
+      CPC = A2C(21, xang.q[j], -yang.q[j], 0.0);
+      q   = MxV(CPC, zaxis); /* Assume sensor axis is z-axis */
+      p   = MxV(CVS, q);
       VecToLngLat(p, &lngB, &latB);
 
       DrawMercatorLine(lngA, latA, lngB, latB);
@@ -3059,28 +3063,28 @@ void DrawMercatorVector(double lng, double lat, char *label)
 /**********************************************************************/
 /* Draws all 6 primary axes on a Mercator projection
    CAV is the DCM from the Axis frame to the Viewing frame            */
-void DrawMercatorAxes(double CVA[3][3], char *label)
+void DrawMercatorAxes(mat3x3 CVA, char *label)
 {
 
    double x[6] = {1, -1, 0, 0, 0, 0};
    double y[6] = {0, 0, 1, -1, 0, 0};
    double z[6] = {0, 0, 0, 0, 1, -1};
 
-   double a[3], v[3];
+   vec3 a, v;
    long i;
    double lat, lng;
    char str[20];
 
    for (i = 0; i < 6; i++) {
-      a[0] = x[i];
-      a[1] = y[i];
-      a[2] = z[i];
+      a.x = x[i];
+      a.y = y[i];
+      a.z = z[i];
 
-      MxV(CVA, a, v);
+      v = MxV(CVA, a);
 
       VecToLngLat(v, &lng, &lat);
 
-      if (a[0] + a[1] + a[2] > 0) {
+      if ((a.x + a.y + a.z) > 0) {
          sprintf(str, "+%s%ld", label, (long)i / 2 + 1);
       }
       else {
@@ -3155,89 +3159,94 @@ void HammerProjection(double Lng, double Lat, double *x, double *y)
    *y = SQRTTWO * SinLat / Den;
 }
 /**********************************************************************/
-void VecToCube(long N, double p[3], long *f, long *i, long *j)
+void VecToCube(long N, vec3 p, long *f, long *i, long *j)
 {
    double MaxComponent = 0.0;
    double MidPoint     = 0.5 * (N - 1.0);
    long k;
 
    for (k = 0; k < 3; k++) {
-      if (fabs(p[k]) > MaxComponent) {
-         MaxComponent = fabs(p[k]);
+      if (fabs(p.v[k]) > MaxComponent) {
+         MaxComponent = fabs(p.v[k]);
          *f           = k;
-         if (p[k] < 0.0)
+         if (p.v[k] < 0.0)
             *f += 3;
       }
    }
 
-   if (*f == 0) {
-      *i = (long)(MidPoint * (1.0 - p[1] / p[0]));
-      *j = (long)(MidPoint * (1.0 - p[2] / p[0]));
-   }
-   else if (*f == 1) {
-      *i = (long)(MidPoint * (1.0 + p[2] / p[1]));
-      *j = (long)(MidPoint * (1.0 + p[0] / p[1]));
-   }
-   else if (*f == 2) {
-      *i = (long)(MidPoint * (1.0 - p[0] / p[2]));
-      *j = (long)(MidPoint * (1.0 + p[1] / p[2]));
-   }
-   else if (*f == 3) {
-      *i = (long)(MidPoint * (1.0 + p[1] / p[0]));
-      *j = (long)(MidPoint * (1.0 - p[2] / p[0]));
-   }
-   else if (*f == 4) {
-      *i = (long)(MidPoint * (1.0 + p[2] / p[1]));
-      *j = (long)(MidPoint * (1.0 + p[0] / p[1]));
-   }
-   else {
-      *i = (long)(MidPoint * (1.0 + p[0] / p[2]));
-      *j = (long)(MidPoint * (1.0 + p[1] / p[2]));
+   switch (*f) {
+      case 0: {
+         *i = (long)(MidPoint * (1.0 - p.v[1] / p.v[0]));
+         *j = (long)(MidPoint * (1.0 - p.v[2] / p.v[0]));
+      } break;
+      case 1: {
+         *i = (long)(MidPoint * (1.0 + p.v[2] / p.v[1]));
+         *j = (long)(MidPoint * (1.0 + p.v[0] / p.v[1]));
+      } break;
+      case 2: {
+         *i = (long)(MidPoint * (1.0 - p.v[0] / p.v[2]));
+         *j = (long)(MidPoint * (1.0 + p.v[1] / p.v[2]));
+      } break;
+      case 3: {
+         *i = (long)(MidPoint * (1.0 + p.v[1] / p.v[0]));
+         *j = (long)(MidPoint * (1.0 - p.v[2] / p.v[0]));
+      } break;
+      case 4: {
+         *i = (long)(MidPoint * (1.0 + p.v[2] / p.v[1]));
+         *j = (long)(MidPoint * (1.0 + p.v[0] / p.v[1]));
+      } break;
+      default: {
+         *i = (long)(MidPoint * (1.0 + p.v[0] / p.v[2]));
+         *j = (long)(MidPoint * (1.0 + p.v[1] / p.v[2]));
+      } break;
    }
 }
 /**********************************************************************/
-void CubeToVec(long N, long f, long i, long j, double p[3])
+void CubeToVec(long N, long f, long i, long j, vec3 p)
 {
    double MidPoint = 0.5 * (N - 1.0);
    double HalfN    = 0.5 * N;
 
-   if (f == 0) {
-      /* +X */
-      p[0] = 1.0;
-      p[1] = -(((double)i) - MidPoint) / HalfN;
-      p[2] = -(((double)j) - MidPoint) / HalfN;
+   switch (f) {
+      case 0: {
+         /* +X */
+         p.v[0] = 1.0;
+         p.v[1] = -(((double)i) - MidPoint) / HalfN;
+         p.v[2] = -(((double)j) - MidPoint) / HalfN;
+      } break;
+      case 1: {
+         /* +Y */
+         p.v[1] = 1.0;
+         p.v[2] = (((double)i) - MidPoint) / HalfN;
+         p.v[0] = (((double)j) - MidPoint) / HalfN;
+      } break;
+      case 2: {
+         /* +Z */
+         p.v[2] = 1.0;
+         p.v[1] = -(((double)i) - MidPoint) / HalfN;
+         p.v[0] = (((double)j) - MidPoint) / HalfN;
+      } break;
+      case 3: {
+         /* -X */
+         p.v[0] = -1.0;
+         p.v[1] = -(((double)i) - MidPoint) / HalfN;
+         p.v[2] = (((double)j) - MidPoint) / HalfN;
+      } break;
+      case 4: {
+         /* -Y */
+         p.v[1] = -1.0;
+         p.v[2] = -(((double)i) - MidPoint) / HalfN;
+         p.v[0] = (((double)j) - MidPoint) / HalfN;
+      } break;
+      default: {
+         /* -Z */
+         p.v[2] = -1.0;
+         p.v[1] = -(((double)i) - MidPoint) / HalfN;
+         p.v[0] = -(((double)j) - MidPoint) / HalfN;
+      } break;
    }
-   else if (f == 1) {
-      /* +Y */
-      p[1] = 1.0;
-      p[2] = (((double)i) - MidPoint) / HalfN;
-      p[0] = (((double)j) - MidPoint) / HalfN;
-   }
-   else if (f == 2) {
-      /* +Z */
-      p[2] = 1.0;
-      p[1] = -(((double)i) - MidPoint) / HalfN;
-      p[0] = (((double)j) - MidPoint) / HalfN;
-   }
-   else if (f == 3) {
-      /* -X */
-      p[0] = -1.0;
-      p[1] = -(((double)i) - MidPoint) / HalfN;
-      p[2] = (((double)j) - MidPoint) / HalfN;
-   }
-   else if (f == 4) {
-      /* -Y */
-      p[1] = -1.0;
-      p[2] = -(((double)i) - MidPoint) / HalfN;
-      p[0] = (((double)j) - MidPoint) / HalfN;
-   }
-   else {
-      /* -Z */
-      p[2] = -1.0;
-      p[1] = -(((double)i) - MidPoint) / HalfN;
-      p[0] = -(((double)j) - MidPoint) / HalfN;
-   }
-   UNITV(p);
+
+   UNITV(&p);
 }
 /*********************************************************************/
 double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct)

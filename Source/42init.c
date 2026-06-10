@@ -419,14 +419,14 @@ void EchoDyn(struct SCType *S)
    fprintf(outfile, "Dynamics Check for SC[%ld]\n\n", S->ID);
    fprintf(outfile, "Nb: %2ld   Ng: %2ld\n", S->Nb, S->Ng);
    fprintf(outfile, "Mass:  %lf\n", S->mass);
-   fprintf(outfile, "cm:  %lf %lf %lf\n", S->cm[0], S->cm[1], S->cm[2]);
+   fprintf(outfile, "cm:  %lf %lf %lf\n", S->cm.x, S->cm.y, S->cm.z);
    fprintf(outfile,
            "I  :  %lf  %lf  %lf \n     %lf  %lf  %lf \n      %lf %lf  %lf\n",
-           S->I[0][0], S->I[0][1], S->I[0][2], S->I[1][0], S->I[1][1],
-           S->I[1][2], S->I[2][0], S->I[2][1], S->I[2][2]);
-   fprintf(outfile, "PosR:  %lf %lf %lf\n", S->PosR[0], S->PosR[1], S->PosR[2]);
-   fprintf(outfile, "VelR:  %lf %lf %lf\n\n", S->VelR[0], S->VelR[1],
-           S->VelR[2]);
+           S->I.mat[0][0], S->I.mat[0][1], S->I.mat[0][2], S->I.mat[1][0],
+           S->I.mat[1][1], S->I.mat[1][2], S->I.mat[2][0], S->I.mat[2][1],
+           S->I.mat[2][2]);
+   fprintf(outfile, "PosR:  %lf %lf %lf\n", S->PosR.x, S->PosR.y, S->PosR.z);
+   fprintf(outfile, "VelR:  %lf %lf %lf\n\n", S->VelR.x, S->VelR.y, S->VelR.z);
 
    /* .. Dyn Structure */
    D = &S->Dyn;
@@ -447,20 +447,24 @@ void EchoDyn(struct SCType *S)
       B = &S->B[Ib];
       fprintf(outfile, "Body Structure [%02ld]\n-------------------\n", Ib);
       fprintf(outfile, "Mass:  %lf\n", B->mass);
-      fprintf(outfile, "cm:  %lf %lf %lf\n", B->cm[0], B->cm[1], B->cm[2]);
-      fprintf(outfile, "c:   %lf %lf %lf\n", B->c[0], B->c[1], B->c[2]);
+      fprintf(outfile, "cm:  %lf %lf %lf\n", B->cm.x, B->cm.y, B->cm.z);
+      fprintf(outfile, "c:   %lf %lf %lf\n", B->c.x, B->c.y, B->c.z);
       fprintf(outfile, "I:  %lf %lf %lf\n     %lf %lf %lf\n   %lf %lf %lf\n",
-              B->I[0][0], B->I[0][1], B->I[0][2], B->I[1][0], B->I[1][1],
-              B->I[1][2], B->I[2][0], B->I[2][1], B->I[2][2]);
-      fprintf(outfile, "wn:  %lf %lf %lf\n", B->wn[0], B->wn[1], B->wn[2]);
-      fprintf(outfile, "qn:  %lf %lf %lf %lf\n", B->qn[0], B->qn[1], B->qn[2],
-              B->qn[3]);
-      fprintf(outfile, "vn:  %lf %lf %lf\n", B->vn[0], B->vn[1], B->vn[2]);
-      fprintf(outfile, "pn:  %lf %lf %lf\n\n", B->pn[0], B->pn[1], B->pn[2]);
+              B->I.mat[0][0], B->I.mat[0][1], B->I.mat[0][2], B->I.mat[1][0],
+              B->I.mat[1][1], B->I.mat[1][2], B->I.mat[2][0], B->I.mat[2][1],
+              B->I.mat[2][2]);
+      fprintf(outfile, "wn:  %lf %lf %lf\n", B->wn.x, B->wn.y, B->wn.z);
+      fprintf(outfile, "qn:  %lf %lf %lf %lf\n", B->qn.x, B->qn.y, B->qn.z,
+              B->qn.s);
+      fprintf(outfile, "vn:  %lf %lf %lf\n", B->vn.x, B->vn.y, B->vn.z);
+      fprintf(outfile, "pn:  %lf %lf %lf\n\n", B->pn.x, B->pn.y, B->pn.z);
       fprintf(outfile, "CN:\n");
-      fprintf(outfile, "%lf %lf %lf\n", B->CN[0][0], B->CN[0][1], B->CN[0][2]);
-      fprintf(outfile, "%lf %lf %lf\n", B->CN[1][0], B->CN[1][1], B->CN[1][2]);
-      fprintf(outfile, "%lf %lf %lf\n", B->CN[2][0], B->CN[2][1], B->CN[2][2]);
+      fprintf(outfile, "%lf %lf %lf\n", B->CN.rows[0].x, B->CN.rows[0].y,
+              B->CN.rows[0].z);
+      fprintf(outfile, "%lf %lf %lf\n", B->CN.rows[1].x, B->CN.rows[1].y,
+              B->CN.rows[1].z);
+      fprintf(outfile, "%lf %lf %lf\n", B->CN.rows[2].x, B->CN.rows[2].y,
+              B->CN.rows[2].z);
       fprintf(outfile, "Nf: %ld   f0: %ld\n", B->Nf, B->f0);
       fprintf(outfile, "Mf:\n");
       for (i = 0; i < B->Nf; i++) {
@@ -506,20 +510,20 @@ void EchoDyn(struct SCType *S)
       fprintf(outfile, "Joint Structure [%02ld]\n---------------\n", Ig);
       fprintf(outfile, "Rotu0: %ld   Rotx0: %ld\n", G->Rotu0, G->Rotx0);
       fprintf(outfile, "Trnu0: %ld   Trnx0: %ld\n", G->Trnu0, G->Trnx0);
-      fprintf(outfile, "ang:  %lf %lf %lf\n", G->Ang[0], G->Ang[1], G->Ang[2]);
-      fprintf(outfile, "rate:  %lf %lf %lf\n", G->AngRate[0], G->AngRate[1],
-              G->AngRate[2]);
+      fprintf(outfile, "ang:  %lf %lf %lf\n", G->Ang.x, G->Ang.y, G->Ang.z);
+      fprintf(outfile, "rate:  %lf %lf %lf\n", G->AngRate.x, G->AngRate.y,
+              G->AngRate.z);
       fprintf(outfile, "COI:\n");
-      fprintf(outfile, "%lf %lf %lf\n", G->COI[0][0], G->COI[0][1],
-              G->COI[0][2]);
-      fprintf(outfile, "%lf %lf %lf\n", G->COI[1][0], G->COI[1][1],
-              G->COI[1][2]);
-      fprintf(outfile, "%lf %lf %lf\n", G->COI[2][0], G->COI[2][1],
-              G->COI[2][2]);
-      fprintf(outfile, "SpringCoef: %lf %lf %lf\n", G->RotSpringCoef[0],
-              G->RotSpringCoef[1], G->RotSpringCoef[2]);
-      fprintf(outfile, "DampCoef: %lf %lf %lf\n", G->RotDampCoef[0],
-              G->RotDampCoef[1], G->RotDampCoef[2]);
+      fprintf(outfile, "%lf %lf %lf\n", G->COI.rows[0].x, G->COI.rows[0].y,
+              G->COI.rows[0].z);
+      fprintf(outfile, "%lf %lf %lf\n", G->COI.rows[1].x, G->COI.rows[1].y,
+              G->COI.rows[1].z);
+      fprintf(outfile, "%lf %lf %lf\n", G->COI.rows[2].x, G->COI.rows[2].y,
+              G->COI.rows[2].z);
+      fprintf(outfile, "SpringCoef: %lf %lf %lf\n", G->RotSpringCoef.x,
+              G->RotSpringCoef.y, G->RotSpringCoef.z);
+      fprintf(outfile, "DampCoef: %lf %lf %lf\n", G->RotDampCoef.x,
+              G->RotDampCoef.y, G->RotDampCoef.z);
       Nf = S->B[G->Bin].Nf;
       fprintf(outfile, "PSIi:\n");
       for (i = 0; i < 3; i++) {
@@ -558,9 +562,9 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    FILE *infile;
    char line[80], response1[80], response2[80];
    char Label[25];
-   long i, Nchar;
+   long Nchar;
    long Success = 0;
-   double R[3], V[3];
+   vec3 R, V;
    JDType Epoch_JD;
 
    DateType EpochDate = {0};
@@ -579,8 +583,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
             fscanf(infile, "%s %s %ld-%ld-%ld %ld:%ld:%lf\n", response1,
                    response2, &EpochDate.Year, &EpochDate.Month, &EpochDate.Day,
                    &EpochDate.Hour, &EpochDate.Minute, &sec);
-            fscanf(infile, "%lf %lf %lf\n", &R[0], &R[1], &R[2]);
-            fscanf(infile, "%lf %lf %lf\n", &V[0], &V[1], &V[2]);
+            fscanf(infile, "%lf %lf %lf\n", &R.x, &R.y, &R.z);
+            fscanf(infile, "%lf %lf %lf\n", &V.x, &V.y, &V.z);
          }
       }
    }
@@ -611,14 +615,12 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
                 &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha, &O->rmin,
                 &O->MeanMotion, &O->Period);
          Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
-                Time - O->Epoch, O->PosN, O->VelN, &O->anom);
+                Time - O->Epoch, &O->PosN, &O->VelN, &O->anom);
          // Save original SC Pos/Vel from TRV files
          if (O->Regime == ORB_N_BODY) {
             O->use_N_BODY_Vec = true;
-            for (i = 0; i < 3; i++) {
-               O->N_BODY_PosN[i] = R[i];
-               O->N_BODY_VelN[i] = V[i];
-            }
+            O->N_BODY_PosN    = R;
+            O->N_BODY_VelN    = V;
          }
       }
       else {
@@ -629,13 +631,12 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
          O->mu2   = World[O->Body2].mu;
          O->World = O->Body1;
          O->mu    = O->mu1;
-         for (i = 0; i < 3; i++) {
-            O->PosN[i] = R[i];
-            O->VelN[i] = V[i];
-         }
+         O->PosN  = R;
+         O->VelN  = V;
+
          /* RV2LagModes(O->Epoch,&LagSys[O->Sys],O); */
          R2StableLagMode(O->Epoch, &LagSys[O->Sys], O);
-         LagModes2RV(Time, &LagSys[O->Sys], O, O->PosN, O->VelN);
+         LagModes2RV(Time, &LagSys[O->Sys], O, &O->PosN, &O->VelN);
       }
    }
 
@@ -644,7 +645,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
 /*********************************************************************/
 void InitOrbit(struct OrbitType *O, const JDType jd)
 {
-   long i, j, k;
+   long i, j;
 
    JDType jd_tt_j2000    = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    const double j2000_tt = JDToDynTime(jd_tt_j2000);
@@ -687,15 +688,12 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
             exit(EXIT_FAILURE);
          }
 
-         O->mu = World[O->World].mu;
-         for (j = 0; j < 3; j++) {
-            O->PosN[j] = 0.0;
-            O->VelN[j] = 0.0;
-            for (k = 0; k < 3; k++)
-               O->CLN[j][k] = 0.0;
-            O->CLN[j][j] = 1.0;
-            O->wln[j]    = 0.0;
-         }
+         O->mu   = World[O->World].mu;
+         O->CLN  = MAT3X3_EYE;
+         O->PosN = VEC3_ZERO;
+         O->VelN = VEC3_ZERO;
+         O->wln  = VEC3_ZERO;
+
          O->PolyhedronGravityEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
@@ -716,13 +714,10 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
          struct RegionType *R = &Rgn[Ir];
          O->World             = R->World;
          O->mu                = World[O->World].mu;
-         for (j = 0; j < 3; j++) {
-            O->PosN[j] = R->PosN[j];
-            O->VelN[j] = R->VelN[j];
-            for (k = 0; k < 3; k++)
-               O->CLN[j][k] = R->CN[j][k];
-         }
-         GetWorldWln(jd, &World[O->World], O->wln);
+         O->PosN              = R->PosN;
+         O->VelN              = R->VelN;
+         O->CLN               = R->CN;
+         O->wln               = GetWorldWln(jd, &World[O->World]);
          O->PolyhedronGravityEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/Polyhedron Grav"));
       } break;
@@ -827,17 +822,17 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                   OscEphToMeanEph(O->mu, J2, rad, JD_TT_MJD_0, O);
                }
                Eph2RV(O->mu, O->SLR, O->ecc, O->inc, O->RAAN, O->ArgP,
-                      O->Epoch - O->tp, O->PosN, O->VelN, &O->anom);
+                      O->Epoch - O->tp, &O->PosN, &O->VelN, &O->anom);
 
             } break;
             case INP_POSVEL: {
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Position"), O->PosN);
+                   3, fy_node_by_path_def(node, "/Position"), O->PosN.v);
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Velocity"), O->VelN);
+                   3, fy_node_by_path_def(node, "/Velocity"), O->VelN.v);
                for (j = 0; j < 3; j++) {
-                  O->PosN[j] *= 1.0E3;
-                  O->VelN[j] *= 1.0E3;
+                  O->PosN.v[j] *= 1.0E3;
+                  O->VelN.v[j] *= 1.0E3;
                }
                RV2Eph(O->Epoch, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc,
                       &O->inc, &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR,
@@ -915,9 +910,9 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             "%[\n]",
                             &NodeDate.Year, &NodeDate.Month, &NodeDate.Day,
                             &NodeDate.Hour, &NodeDate.Minute, &sec,
-                            &O->NodePos[i][0], &O->NodePos[i][1],
-                            &O->NodePos[i][2], &O->NodeVel[i][0],
-                            &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
+                            &O->NodePos[i].v[0], &O->NodePos[i].v[1],
+                            &O->NodePos[i].v[2], &O->NodeVel[i].v[0],
+                            &O->NodeVel[i].v[1], &O->NodeVel[i].v[2], &newline);
                         NodeDate.Second = double2rational(sec);
                         JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
                         // TODO: do we transform the timestamps to tt to use
@@ -925,10 +920,9 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                         // O->EphemSystem and store the specified value here?
                         node_jd           = JDChangeSystem(TT_TIME, node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
-                        for (j = 0; j < 3; j++) {
-                           O->NodePos[i][j] *= 1000.0;
-                           O->NodeVel[i][j] *= 1000.0;
-                        }
+                        O->NodePos[i]     = SxV(1000.0, O->NodePos[i]);
+                        O->NodeVel[i]     = SxV(1000.0, O->NodeVel[i]);
+
                         if (j2000_tt < O->NodeDynTime[1]) {
                            fprintf(stderr,
                                    "Oops.  Spline file beginning is in the "
@@ -956,7 +950,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                exit(EXIT_FAILURE);
                break;
          }
-         FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
+         FindCLN(O->PosN, O->VelN, &O->CLN, &O->wln);
 
       } break;
       case ORB_THREE_BODY: {
@@ -1037,39 +1031,39 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                AmpPhase2LagModes(0.0, ampXY1, phiXY1, senseXY1, ampXY2, phiXY2,
                                  senseXY2, ampZ, phiZ, &LagSys[O->Sys], O);
                /* Find r,v from modal description */
-               LagModes2RV(j2000_tt, &LagSys[O->Sys], O, O->PosN, O->VelN);
+               LagModes2RV(j2000_tt, &LagSys[O->Sys], O, &O->PosN, &O->VelN);
 
             } break;
             case INP_XYZ: {
-               double vec3[3] = {0.0};
+               double tmp_vec3[3] = {0.0};
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Position"), vec3);
-               O->x = vec3[0];
-               O->y = vec3[1];
-               O->z = vec3[2];
+                   3, fy_node_by_path_def(node, "/Position"), tmp_vec3);
+               O->x = tmp_vec3[0];
+               O->y = tmp_vec3[1];
+               O->z = tmp_vec3[2];
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Velocity"), vec3);
-               O->xdot = vec3[0];
-               O->ydot = vec3[1];
-               O->zdot = vec3[2];
+                   3, fy_node_by_path_def(node, "/Velocity"), tmp_vec3);
+               O->xdot = tmp_vec3[0];
+               O->ydot = tmp_vec3[1];
+               O->zdot = tmp_vec3[2];
                XYZ2LagModes(0.0, &LagSys[O->Sys], O);
-               LagModes2RV(j2000_tt, &LagSys[O->Sys], O, O->PosN, O->VelN);
+               LagModes2RV(j2000_tt, &LagSys[O->Sys], O, &O->PosN, &O->VelN);
             } break;
             case INP_XYZ_ROT: {
-               double vec3_p[3] = {0.0};
-               double vec3_v[3] = {0.0};
+               vec3 vec3_p;
+               vec3 vec3_v;
 
                struct LagrangeSystemType *LS;
                LS = &LagSys[O->Sys];
 
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Position"), vec3_p);
+                   3, fy_node_by_path_def(node, "/Position"), vec3_p.v);
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Velocity"), vec3_v);
+                   3, fy_node_by_path_def(node, "/Velocity"), vec3_v.v);
 
                StateRnd2StateN(LS, World[LS->Body2].eph.PosN,
                                World[LS->Body2].eph.VelN, vec3_p, vec3_v,
-                               O->PosN, O->VelN);
+                               &O->PosN, &O->VelN);
             } break;
             case INP_FILE: {
                char elementFileName[50] = {0}, elementLabel[50] = {0};
@@ -1117,17 +1111,15 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             "%[\n]",
                             &NodeDate.Year, &NodeDate.Month, &NodeDate.Day,
                             &NodeDate.Hour, &NodeDate.Minute, &sec,
-                            &O->NodePos[i][0], &O->NodePos[i][1],
-                            &O->NodePos[i][2], &O->NodeVel[i][0],
-                            &O->NodeVel[i][1], &O->NodeVel[i][2], &newline);
+                            &O->NodePos[i].v[0], &O->NodePos[i].v[1],
+                            &O->NodePos[i].v[2], &O->NodeVel[i].v[0],
+                            &O->NodeVel[i].v[1], &O->NodeVel[i].v[2], &newline);
                         NodeDate.Second   = double2rational(sec);
                         JDType node_jd    = Date2JD(NodeDate, J2000_EPOCH);
                         node_jd           = JDChangeSystem(TT_TIME, node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
-                        for (j = 0; j < 3; j++) {
-                           O->NodePos[i][j] *= 1000.0;
-                           O->NodeVel[i][j] *= 1000.0;
-                        }
+                        O->NodePos[i]     = SxV(1000, O->NodePos[i]);
+                        O->NodeVel[i]     = SxV(1000, O->NodeVel[i]);
                         if (j2000_tt < O->NodeDynTime[1]) {
                            fprintf(stderr,
                                    "Oops.  Spline file beginning is in the "
@@ -1155,7 +1147,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
          O->World = O->Body1;
          O->mu    = O->mu1;
          O->SMA   = MAGV(O->PosN); /* For sake of EH */
-         FindCLN(O->PosN, O->VelN, O->CLN, O->wln);
+         FindCLN(O->PosN, O->VelN, &O->CLN, &O->wln);
          O->MeanMotion = LagSys[O->Sys].MeanRate;
          O->Period     = TwoPi / O->MeanMotion;
       } break;
@@ -1181,23 +1173,19 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
    double ang[3] = {0.0};
    long seq;
    getYAMLEulerAngles(fy_node_by_path_def(node, "/Euler Angles"), ang, &seq);
-   A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, F->CN);
+   F->CN = A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R);
 
    if (F->FixedInFrame == 'L') {
       /* Adjust CFN */
-      for (j = 0; j < 3; j++) {
-         for (k = 0; k < 3; k++)
-            F->CL[j][k] = F->CN[j][k];
-      }
-      MxM(F->CL, O->CLN, F->CN);
+      F->CL = F->CN;
+
+      F->CN = MxM(F->CL, O->CLN);
    }
-   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Position"), F->PosR);
-   if (FrmExpressedIn == 'L') {
-      double p[3] = {0.0};
-      for (j = 0; j < 3; j++)
-         p[j] = F->PosR[j];
-      MTxV(O->CLN, p, F->PosR);
-   }
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Position"),
+                           F->PosR.v);
+   if (FrmExpressedIn == 'L')
+      F->PosR = MTxV(O->CLN, F->PosR);
+
    fy_document_destroy(fyd);
 }
 /**********************************************************************/
@@ -1349,7 +1337,7 @@ void InitRigidDyn(struct SCType *S)
    for (i = 0; i < 3; i++) {
       D->PAngVel[i][i] = 1.0;
       for (j = 0; j < 3; j++)
-         D->IPAngVel[i][j] = S->B[0].I[i][j];
+         D->IPAngVel[i][j] = S->B[0].I.mat[i][j];
    }
    for (Ib = 0; Ib < S->Nb; Ib++) {
       for (i = 0; i < 3; i++) {
@@ -1627,10 +1615,9 @@ void InitFlexModes(struct SCType *S)
             FN        = &B->Node[In];
             FN->PSI   = CreateMatrix(3, B->Nf);
             FN->THETA = CreateMatrix(3, B->Nf);
-            for (i = 0; i < 3; i++) {
-               FN->Frc[i] = 0.0;
-               FN->Trq[i] = 0.0;
-            }
+            FN->Frc   = VEC3_ZERO;
+            FN->Trq   = VEC3_ZERO;
+
             FN->FlexFrc = (double *)calloc(B->Nf, sizeof(double));
          }
 
@@ -2018,16 +2005,15 @@ void InitNodes(struct BodyType *B)
             exit(EXIT_FAILURE);
          }
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Location"),
-                                 N->NomPosB);
+                                 N->NomPosB.v);
       }
       fy_document_destroy(fyd);
    }
    else {
       /* Default to one node at B.cm */
-      B->NumNodes = 1;
-      B->Node     = (struct NodeType *)calloc(1, sizeof(struct NodeType));
-      for (int i = 0; i < 3; i++)
-         B->Node[0].PosB[i] = B->cm[i];
+      B->NumNodes     = 1;
+      B->Node         = (struct NodeType *)calloc(1, sizeof(struct NodeType));
+      B->Node[0].PosB = B->cm;
       strcpy(B->Node[0].comment, "Mass Center");
    }
 }
@@ -2037,27 +2023,25 @@ void InitPassiveJoint(struct JointType *G,
 {
    FILE *infile;
    char junk[80], newline;
-   long i;
 
-   for (i = 0; i < 3; i++) {
-      G->RotSpringCoef[i] = 0.0;
-      G->RotDampCoef[i]   = 0.0;
-      G->TrnSpringCoef[i] = 0.0;
-      G->TrnDampCoef[i]   = 0.0;
-   }
+   G->RotSpringCoef = VEC3_ZERO;
+   G->RotDampCoef   = VEC3_ZERO;
+   G->TrnSpringCoef = VEC3_ZERO;
+   G->TrnDampCoef   = VEC3_ZERO;
+
    if (strcmp(G->ParmFileName, "NONE")) {
       infile = FileOpen(InOutPath, G->ParmFileName, "r");
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
       fscanf(infile, "%[^\n] %[\n]", junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->RotSpringCoef[0],
-             &G->RotSpringCoef[1], &G->RotSpringCoef[2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->RotDampCoef[0],
-             &G->RotDampCoef[1], &G->RotDampCoef[2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->TrnSpringCoef[0],
-             &G->TrnSpringCoef[1], &G->TrnSpringCoef[2], junk, &newline);
-      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->TrnDampCoef[0],
-             &G->TrnDampCoef[1], &G->TrnDampCoef[2], junk, &newline);
+      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->RotSpringCoef.v[0],
+             &G->RotSpringCoef.v[1], &G->RotSpringCoef.v[2], junk, &newline);
+      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->RotDampCoef.v[0],
+             &G->RotDampCoef.v[1], &G->RotDampCoef.v[2], junk, &newline);
+      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->TrnSpringCoef.v[0],
+             &G->TrnSpringCoef.v[1], &G->TrnSpringCoef.v[2], junk, &newline);
+      fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &G->TrnDampCoef.v[0],
+             &G->TrnDampCoef.v[1], &G->TrnDampCoef.v[2], junk, &newline);
       fclose(infile);
    }
 }
@@ -2068,12 +2052,12 @@ void InitActuatedJoint(struct JointType *G,
    long i;
 
    for (i = 0; i < 3; i++) {
-      G->MaxTrq[i]      = 10.0;
-      G->MaxAngRate[i]  = 1.0 * D2R;
-      G->AngRateGain[i] = G->MaxTrq[i] / G->MaxAngRate[i];
-      G->MaxFrc[i]      = 10.0;
-      G->MaxPosRate[i]  = 0.01;
-      G->PosRateGain[i] = G->MaxFrc[i] / G->MaxPosRate[i];
+      G->MaxTrq.v[i]      = 10.0;
+      G->MaxAngRate.v[i]  = 1.0 * D2R;
+      G->AngRateGain.v[i] = G->MaxTrq.v[i] / G->MaxAngRate.v[i];
+      G->MaxFrc.v[i]      = 10.0;
+      G->MaxPosRate.v[i]  = 0.01;
+      G->PosRateGain.v[i] = G->MaxFrc.v[i] / G->MaxPosRate.v[i];
    }
 }
 /**********************************************************************/
@@ -2102,9 +2086,9 @@ void InitShakers(struct SCType *S)
                 &newline);
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
          Sh->FrcTrq = DecodeString(response);
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &Sh->Axis[0], &Sh->Axis[1],
-                &Sh->Axis[2], junk, &newline);
-         UNITV(Sh->Axis);
+         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &Sh->Axis.v[0],
+                &Sh->Axis.v[1], &Sh->Axis.v[2], junk, &newline);
+         UNITV(&Sh->Axis);
          fscanf(infile, "%ld %[^\n] %[\n]", &Sh->Ntone, junk, &newline);
          if (Sh->Ntone == 0) {
             fscanf(infile, "%[^\n] %[\n]", junk, &newline);
@@ -2233,7 +2217,6 @@ void InitOptics(struct FgsType *F)
    // struct NodeType *N;
    struct OpticsType *O;
    char junk[256], newline, response[120];
-   // double ApPntN[3], FocPntN[3], DetPntN[3], RelPosN[3];
    long Io;
    // long i;
    // long HasFocus;
@@ -2252,9 +2235,9 @@ void InitOptics(struct FgsType *F)
                 junk, &newline);
          fscanf(infile, "%lf %[^\n] %[\n]", &O->ApRad, junk, &newline);
          O->ApRad /= 2.0;
-         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &O->Axis[0], &O->Axis[1],
-                &O->Axis[2], junk, &newline);
-         UNITV(O->Axis);
+         fscanf(infile, "%lf %lf %lf %[^\n] %[\n]", &O->Axis.v[0],
+                &O->Axis.v[1], &O->Axis.v[2], junk, &newline);
+         UNITV(&O->Axis);
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
          O->Type = DecodeString(response);
          fscanf(infile, "%s %[^\n] %[\n]", response, junk, &newline);
@@ -2288,7 +2271,7 @@ void InitOrderNDynamics(struct SCType *S)
 {
    struct BodyType *B;
    struct JointType *G;
-   long Ib, Ig, Id, i, j;
+   long Ib, Ig, Id;
 
    G              = &S->GN;
    G->Init        = 1;
@@ -2298,25 +2281,12 @@ void InitOrderNDynamics(struct SCType *S)
    G->Bo          = &S->B[0];
    G->RotSeq      = 123;
    G->TrnSeq      = 123;
-   for (i = 0; i < 3; i++) {
-      for (j = 0; j < 3; j++) {
-         G->CGiBi[i][j]     = 0.0;
-         G->CBoGo[i][j]     = 0.0;
-         G->Pw[i][j]        = 0.0;
-         G->Pv[i][j]        = 0.0;
-         G->Pwdot[i][j]     = 0.0;
-         G->P[i][j]         = 0.0;
-         G->P[i][3 + j]     = 0.0;
-         G->P[3 + i][j]     = 0.0;
-         G->P[3 + i][3 + i] = 0.0;
-      }
-      G->CGiBi[i][i]     = 1.0;
-      G->CBoGo[i][i]     = 1.0;
-      G->Pw[i][i]        = 1.0;
-      G->Pv[i][i]        = 1.0;
-      G->P[i][i]         = 1.0;
-      G->P[3 + i][3 + i] = 1.0;
-   }
+   G->CGiBi       = MAT3X3_EYE;
+   G->CBoGo       = MAT3X3_EYE;
+   G->Pw          = MAT3X3_EYE;
+   G->Pv          = MAT3X3_EYE;
+   G->Pwdot       = MAT3X3_ZERO;
+
    G->Nu = 6;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -2463,13 +2433,17 @@ void InitSpacecraft(struct SCType *S)
       exit(EXIT_FAILURE);
    }
    long useCM = DecodeString(dummy);
-   double posVec[3], velVec[3];
-   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Pos wrt F"), posVec);
-   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Vel wrt F"), velVec);
+   vec3 posVec, velVec;
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Pos wrt F"),
+                           posVec.v);
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Vel wrt F"),
+                           velVec.v);
 
    node = fy_node_by_path_def(root, "/Attitude");
    char rateFrame, attParm, attFrame;
-   double wbn[3], ang[3], qbn[4], CBN[3][3];
+   vec3 wbn, ang;
+   quat qbn;
+   mat3x3 CBN;
    long seq;
    if (fy_node_scanf(node,
                      "Ang Vel Frame %c "
@@ -2480,59 +2454,42 @@ void InitSpacecraft(struct SCType *S)
               "Could not find spacecraft Attitude information. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Ang Vel"), wbn);
-   for (i = 0; i < 3; i++)
-      wbn[i] *= D2R;
+   assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Ang Vel"), wbn.v);
+   wbn = SxV(D2R, wbn);
    if (attParm == 'Q') {
-      assignYAMLToDoubleArray(4, fy_node_by_path_def(node, "/Quaternion"), qbn);
-      Q2C(qbn, CBN);
+      assignYAMLToDoubleArray(4, fy_node_by_path_def(node, "/Quaternion"),
+                              qbn.q);
+      CBN = Q2C(qbn);
    }
    else {
-      getYAMLEulerAngles(fy_node_by_path_def(node, "/Euler Angles"), ang, &seq);
-      A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, CBN);
-      C2Q(CBN, qbn);
+      getYAMLEulerAngles(fy_node_by_path_def(node, "/Euler Angles"), ang.v,
+                         &seq);
+      CBN = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
+      qbn = C2Q(CBN);
    }
    switch (attFrame) {
       case 'L': {
-         double CBL[3][3];
          /* Adjust CBN */
-         for (j = 0; j < 3; j++) {
-            for (k = 0; k < 3; k++)
-               CBL[j][k] = CBN[j][k];
-         }
-         MxM(CBL, Orb[S->RefOrb].CLN, CBN);
-         C2Q(CBN, qbn);
+         CBN = MxM(CBN, Orb[S->RefOrb].CLN);
+         qbn = C2Q(CBN);
       } break;
       case 'F': {
-         double CBF[3][3];
          /* Adjust CBN */
-         for (j = 0; j < 3; j++) {
-            for (k = 0; k < 3; k++)
-               CBF[j][k] = CBN[j][k];
-         }
-         MxM(CBF, Frm[S->RefOrb].CN, CBN);
-         C2Q(CBN, qbn);
+         CBN = MxM(CBN, Frm[S->RefOrb].CN);
+         qbn = C2Q(CBN);
       } break;
       case 'E': {
          /* Adjust CBN */
-         double CBE[3][3], CEN[3][3];
-         for (j = 0; j < 3; j++) {
-            for (k = 0; k < 3; k++)
-               CBE[j][k] = CBN[j][k];
-         }
-         FindCEN(Orb[S->RefOrb].PosN, CEN);
-         MxM(CBE, CEN, CBN);
-         C2Q(CBN, qbn);
+         CBN = MxM(CBN, FindCEN(Orb[S->RefOrb].PosN));
+         qbn = C2Q(CBN);
       } break;
    }
    if (rateFrame == 'L') {
       /* Add LVLH rate to wn */
-      double wlnb[3];
-      MxV(CBN, Orb[S->RefOrb].wln, wlnb);
-      for (j = 0; j < 3; j++)
-         wbn[j] += wlnb[j];
+      vec3 wlnb = MxV(CBN, Orb[S->RefOrb].wln);
+      wbn       = VpVElem(wbn, wlnb);
    }
-   MxMT(CBN, Frm[S->RefOrb].CN, S->CF);
+   S->CF = MxMT(CBN, Frm[S->RefOrb].CN);
 
    node = fy_node_by_path_def(root, "/Dynamics Flags");
    if (!fy_node_scanf(node, "/Method %49s", dummy)) {
@@ -2603,13 +2560,9 @@ void InitSpacecraft(struct SCType *S)
    }
 
    /* Load B[0] initial attitude */
-   for (j = 0; j < 3; j++) {
-      S->B[0].wn[j] = wbn[j];
-      for (k = 0; k < 3; k++)
-         S->B[0].CN[j][k] = CBN[j][k];
-   }
-   for (j = 0; j < 4; j++)
-      S->B[0].qn[j] = qbn[j];
+   S->B[0].wn = wbn;
+   S->B[0].CN = CBN;
+   S->B[0].qn = qbn;
 
    /* .. Body Ib */
    iterNode = NULL;
@@ -2639,28 +2592,25 @@ void InitSpacecraft(struct SCType *S)
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/MOI"), moi);
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/POI"), poi);
       for (i = 0; i < 3; i++)
-         B->I[i][i] = moi[i];
-      B->I[0][1] = -poi[0];
-      B->I[0][2] = -poi[1];
-      B->I[1][2] = -poi[2];
-      B->I[1][0] = B->I[0][1];
-      B->I[2][0] = B->I[0][2];
-      B->I[2][1] = B->I[1][2];
+         B->I.mat[i][i] = moi[i];
+      B->I.mat[0][1] = -poi[0];
+      B->I.mat[0][2] = -poi[1];
+      B->I.mat[1][2] = -poi[2];
+      B->I.mat[1][0] = B->I.mat[0][1];
+      B->I.mat[2][0] = B->I.mat[0][2];
+      B->I.mat[2][1] = B->I.mat[1][2];
       assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Pos of CM"),
-                              B->cm);
+                              B->cm.v);
       assignYAMLToDoubleArray(
           3, fy_node_by_path_def(seqNode, "/Constant Momentum"),
-          B->EmbeddedMom);
+          B->EmbeddedMom.v);
       assignYAMLToDoubleArray(3,
                               fy_node_by_path_def(seqNode, "/Constant Dipole"),
-                              B->EmbeddedDipole);
+                              B->EmbeddedDipole.v);
       if (S->RefPt == REFPT_JOINT)
-         for (i = 0; i < 3; i++)
-            B->c[i] = B->mass * B->cm[i];
+         B->c = SxV(B->mass, B->cm);
       else
-         for (i = 0; i < 3; i++)
-            B->c[i] = 0.0;
-
+         B->c = VEC3_ZERO;
       InitNodes(B);
    }
 
@@ -2762,54 +2712,50 @@ void InitSpacecraft(struct SCType *S)
 
          /* Load in initial angles and angular rates */
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Init Angles"), G->Ang);
+             3, fy_node_by_path_def(seqNode, "/Init Angles"), G->Ang.v);
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Init Angle Rates"), G->AngRate);
-         for (k = 0; k < 3; k++) {
-            G->Ang[k]     *= D2R;
-            G->AngRate[k] *= D2R;
-         }
+             3, fy_node_by_path_def(seqNode, "/Init Angle Rates"),
+             G->AngRate.v);
+         G->Ang     = SxV(D2R, G->Ang);
+         G->AngRate = SxV(D2R, G->AngRate);
+
          /* Protect against more inputs than RotDOF */
          for (k = G->RotDOF; k < 3; k++) {
-            G->Ang[k]     = 0.0;
-            G->AngRate[k] = 0.0;
+            G->Ang.v[k]     = 0.0;
+            G->AngRate.v[k] = 0.0;
          }
          /* Load in initial displacements and rates */
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Init Displacement"), G->Pos);
+             3, fy_node_by_path_def(seqNode, "/Init Displacement"), G->Pos.v);
          assignYAMLToDoubleArray(
              3, fy_node_by_path_def(seqNode, "/Init Displacement Rates"),
-             G->PosRate);
+             G->PosRate.v);
          /* Protect against more inputs than TrnDOF */
          for (k = G->TrnDOF; k < 3; k++) {
-            G->Pos[k]     = 0.0;
-            G->PosRate[k] = 0.0;
+            G->Pos.v[k]     = 0.0;
+            G->PosRate.v[k] = 0.0;
          }
 
-         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Bi-Gi Angles"), ang,
-                            &seq);
-         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, G->CGiBi);
-         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Bo-Go Angles"), ang,
-                            &seq);
-         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, G->CBoGo);
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Bi-Gi Angles"),
+                            ang.v, &seq);
+         G->CGiBi = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
+         getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Bo-Go Angles"),
+                            ang.v, &seq);
+         G->CBoGo = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
 
-         double pIn[3], pOut[3];
+         vec3 pIn, pOut;
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Pos wrt Inner Body"), pIn);
+             3, fy_node_by_path_def(seqNode, "/Pos wrt Inner Body"), pIn.v);
          assignYAMLToDoubleArray(
-             3, fy_node_by_path_def(seqNode, "/Pos wrt Outer Body"), pOut);
+             3, fy_node_by_path_def(seqNode, "/Pos wrt Outer Body"), pOut.v);
 
          if (S->RefPt == REFPT_JOINT) {
-            for (j = 0; j < 3; j++) {
-               G->RigidRin[j]  = pIn[j];
-               G->RigidRout[j] = pOut[j];
-            }
+            G->RigidRin  = pIn;
+            G->RigidRout = pOut;
          }
          else {
-            for (j = 0; j < 3; j++) {
-               G->RigidRin[j]  = pIn[j] - S->B[G->Bin].cm[j];
-               G->RigidRout[j] = pOut[j] - S->B[G->Bout].cm[j];
-            }
+            G->RigidRin  = VmVElem(pIn, S->B[G->Bin].cm);
+            G->RigidRout = VmVElem(pOut, S->B[G->Bout].cm);
          }
          if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]",
                             G->ParmFileName)) {
@@ -2849,9 +2795,9 @@ void InitSpacecraft(struct SCType *S)
          }
          struct WhlType *W = &S->Whl[Iw];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 W->A);
-         UNITV(W->A);
-         PerpBasis(W->A, W->Uaxis, W->Vaxis);
+                                 W->A.v);
+         UNITV(&W->A);
+         W->Vaxis = PerpBasis(W->A, &W->Uaxis);
          if (fy_node_scanf(seqNode,
                            "/Initial Momentum %lf "
                            "/Max Torque %lf "
@@ -2895,8 +2841,8 @@ void InitSpacecraft(struct SCType *S)
          }
          struct MTBType *MTB = &S->MTB[Im];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 MTB->A);
-         UNITV(MTB->A);
+                                 MTB->A.v);
+         UNITV(&MTB->A);
          if (fy_node_scanf(seqNode,
                            "/Saturation %lf "
                            "/Node %ld",
@@ -2933,8 +2879,8 @@ void InitSpacecraft(struct SCType *S)
          }
          struct ThrType *T = &S->Thr[It];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 T->A);
-         UNITV(T->A);
+                                 T->A.v);
+         UNITV(&T->A);
          if (fy_node_scanf(seqNode,
                            "/Mode %49s "
                            "/Force %lf "
@@ -2976,8 +2922,8 @@ void InitSpacecraft(struct SCType *S)
          }
          struct GyroType *Gyro = &S->Gyro[Ig];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 Gyro->Axis);
-         UNITV(Gyro->Axis);
+                                 Gyro->Axis.v);
+         UNITV(&Gyro->Axis);
          double biasTime;
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
@@ -3050,8 +2996,8 @@ void InitSpacecraft(struct SCType *S)
          }
          struct MagnetometerType *MAG = &S->MAG[Im];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 MAG->Axis);
-         UNITV(MAG->Axis);
+                                 MAG->Axis.v);
+         UNITV(&MAG->Axis);
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
                            "/Saturation %lf "
@@ -3102,8 +3048,8 @@ void InitSpacecraft(struct SCType *S)
          }
          struct CssType *CSS = &S->CSS[Ic];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 CSS->Axis);
-         UNITV(CSS->Axis);
+                                 CSS->Axis.v);
+         UNITV(&CSS->Axis);
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
                            "/Half Cone Angle %lf "
@@ -3159,9 +3105,9 @@ void InitSpacecraft(struct SCType *S)
          struct FssType *FSS = &S->FSS[If];
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
-                            ang, &seq);
-         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FSS->CB);
-         C2Q(FSS->CB, FSS->qb);
+                            ang.v, &seq);
+         FSS->CB = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
+         FSS->qb = C2Q(FSS->CB);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  FSS->FovHalfAng);
          if (fy_node_scanf(seqNode,
@@ -3226,9 +3172,9 @@ void InitSpacecraft(struct SCType *S)
          struct StarTrackerType *ST = &S->ST[Ist];
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
-                            ang, &seq);
-         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, ST->CB);
-         C2Q(ST->CB, ST->qb);
+                            ang.v, &seq);
+         ST->CB = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
+         ST->qb = C2Q(ST->CB);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  ST->FovHalfAng);
 
@@ -3357,8 +3303,8 @@ void InitSpacecraft(struct SCType *S)
          }
          struct AccelType *Accel = &S->Accel[Ia];
          assignYAMLToDoubleArray(3, fy_node_by_path_def(seqNode, "/Axis"),
-                                 Accel->Axis);
-         UNITV(Accel->Axis);
+                                 Accel->Axis.v);
+         UNITV(&Accel->Axis);
          double biasTime;
          if (fy_node_scanf(seqNode,
                            "/Sample Time %lf "
@@ -3460,22 +3406,22 @@ void InitSpacecraft(struct SCType *S)
          FGS->Scl           *= A2R;
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
-                            ang, &seq);
-         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CB);
-         C2Q(FGS->CB, FGS->qb);
+                            ang.v, &seq);
+         FGS->CB = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
+         FGS->qb = C2Q(FGS->CB);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  FGS->FovHalfAng);
          for (i = 0; i < 2; i++)
             FGS->FovHalfAng[i] *= 0.5 * A2R;
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/FOV Frame Angles"),
-                            ang, &seq);
-         A2C(seq, ang[0] * D2R, ang[1] * D2R, ang[2] * D2R, FGS->CR);
-         C2Q(FGS->CR, FGS->qr);
+                            ang.v, &seq);
+         FGS->CR = A2C(seq, ang.v[0] * D2R, ang.v[1] * D2R, ang.v[2] * D2R);
+         FGS->qr = C2Q(FGS->CR);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/Guide Star"),
-                                 ang);
-         FGS->Hr = ang[0] * A2R;
-         FGS->Vr = ang[1] * A2R;
+                                 ang.v);
+         FGS->Hr = ang.v[0] * A2R;
+         FGS->Vr = ang.v[1] * A2R;
          InitOptics(FGS);
          if (strcmp(FGS->PsfFileName, "NONE")) {
             struct PsfType *PSF = &FGS->PSF;
@@ -3490,98 +3436,86 @@ void InitSpacecraft(struct SCType *S)
    /* .. Initialize some Orbit and Formation variables */
    struct OrbitType *O      = &Orb[S->RefOrb];
    struct FormationType *Fr = &Frm[S->RefOrb];
-   double pcmn[3], wxr[3], wxrn[3], psn[3], vsn[3], rh[3], vh[3];
+   vec3 pcmn, wxr, wxrn, psn, vsn, rh, vh;
    if (useCM) {
       if (Fr->FixedInFrame == 'L') {
-         MTxV(Fr->CL, posVec, S->PosEH);
-         MTxV(Fr->CL, velVec, S->VelEH);
+         S->PosEH = MTxV(Fr->CL, posVec);
+         S->VelEH = MTxV(Fr->CL, velVec);
          if (O->Regime == ORB_ZERO) {
-            for (i = 0; i < 3; i++) {
-               S->PosR[i] = S->PosEH[i];
-               S->VelR[i] = S->VelEH[i];
-            }
+            S->PosR = S->PosEH;
+            S->VelR = S->VelEH;
          }
          else if (O->Regime == ORB_FLIGHT) {
-            MTxV(O->CLN, S->PosEH, S->PosR);
-            MTxV(O->CLN, S->VelEH, S->VelR);
+            S->PosR = MTxV(O->CLN, S->PosEH);
+            S->VelR = MTxV(O->CLN, S->VelEH);
          }
          else {
             EHRV2RelRV(O->SMA, O->MeanMotion, O->CLN, S->PosEH, S->VelEH,
-                       S->PosR, S->VelR);
+                       &S->PosR, &S->VelR);
          }
       }
       else {
-         MTxV(Fr->CN, posVec, S->PosR);
-         MTxV(Fr->CN, velVec, S->VelR);
+         S->PosR = MTxV(Fr->CN, posVec);
+         S->VelR = MTxV(Fr->CN, velVec);
          if (O->Regime == ORB_ZERO) {
-            for (i = 0; i < 3; i++) {
-               S->PosEH[i] = S->PosR[i];
-               S->VelEH[i] = S->VelR[i];
-            }
+            S->PosEH = S->PosR;
+            S->VelEH = S->VelR;
          }
          else if (O->Regime == ORB_FLIGHT) {
-            MxV(O->CLN, S->PosR, S->PosEH);
-            MxV(O->CLN, S->VelR, S->VelEH);
+            S->PosEH = MxV(O->CLN, S->PosR);
+            S->VelEH = MxV(O->CLN, S->VelR);
          }
          else {
-            RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR, S->PosEH,
-                       S->VelEH);
+            RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR,
+                       &S->PosEH, &S->VelEH);
          }
       }
 
-      MTxV(S->B[0].CN, S->cm, pcmn);
-      for (j = 0; j < 3; j++) {
-         psn[j] = S->PosR[j] - Fr->PosR[j] - pcmn[j];
-      }
-      MxV(Fr->CN, psn, S->PosF);
-      VxV(S->B[0].wn, S->cm, wxr);
-      MTxV(S->B[0].CN, wxr, wxrn);
-      for (j = 0; j < 3; j++) {
-         vsn[j] = S->VelR[j] - wxrn[j];
-      }
-      MxV(Fr->CN, vsn, S->VelF);
+      pcmn = MTxV(S->B[0].CN, S->cm);
+      for (j = 0; j < 3; j++)
+         psn.v[j] = S->PosR.v[j] - Fr->PosR.v[j] - pcmn.v[j];
+      S->PosF = MxV(Fr->CN, psn);
+      wxr     = VxV(S->B[0].wn, S->cm);
+      wxrn    = MTxV(S->B[0].CN, wxr);
+      vsn     = VmVElem(S->VelR, wxrn);
+      S->VelF = MxV(Fr->CN, vsn);
    }
    else {
-      for (j = 0; j < 3; j++) {
-         S->PosF[j] = posVec[j];
-         S->VelF[j] = velVec[j];
-      }
-      double psl[3], vsl[3], pfl[3], pcml[3], wxrl[3];
-      MTxV(S->B[0].CN, S->cm, pcmn);
-      VxV(S->B[0].wn, S->cm, wxr);
-      MTxV(S->B[0].CN, wxr, wxrn);
+      S->PosF = posVec;
+      S->VelF = velVec;
+
+      vec3 psl, vsl, pfl, pcml, wxrl;
+      pcmn = MTxV(S->B[0].CN, S->cm);
+      wxr  = VxV(S->B[0].wn, S->cm);
+      wxrn = MTxV(S->B[0].CN, wxr);
       if (Fr->FixedInFrame == 'L') {
-         MTxV(Fr->CL, S->PosF, psl);
-         MTxV(Fr->CL, S->VelF, vsl);
-         MxV(O->CLN, Fr->PosR, pfl);
-         MxV(O->CLN, pcmn, pcml);
-         MxV(O->CLN, wxrn, wxrl);
-         for (j = 0; j < 3; j++) {
-            S->PosEH[j] = pcml[j] + psl[j] + pfl[j];
-            S->VelEH[j] = wxrl[j] + vsl[j];
-         }
+         psl  = MTxV(Fr->CL, S->PosF);
+         vsl  = MTxV(Fr->CL, S->VelF);
+         pfl  = MxV(O->CLN, Fr->PosR);
+         pcml = MxV(O->CLN, pcmn);
+         wxrl = MxV(O->CLN, wxrn);
+         for (j = 0; j < 3; j++)
+            S->PosEH.v[j] = pcml.v[j] + psl.v[j] + pfl.v[j];
+         S->VelEH = VpVElem(wxrl, vsl);
          if (O->Regime == ORB_ZERO) {
-            for (i = 0; i < 3; i++) {
-               S->PosR[i] = S->PosEH[i];
-               S->VelR[i] = S->VelEH[i];
-            }
+            S->PosR = S->PosEH;
+            S->VelR = S->VelEH;
          }
          else if (O->Regime == ORB_FLIGHT) {
-            MTxV(O->CLN, S->PosEH, S->PosR);
-            MTxV(O->CLN, S->VelEH, S->VelR);
+            S->PosR = MTxV(O->CLN, S->PosEH);
+            S->VelR = MTxV(O->CLN, S->VelEH);
          }
          else {
             EHRV2RelRV(O->SMA, MAGV(O->wln), O->CLN, S->PosEH, S->VelEH,
-                       S->PosR, S->VelR);
+                       &S->PosR, &S->VelR);
          }
       }
       else {
-         MTxV(Fr->CN, S->PosF, psn);
-         MTxV(Fr->CN, S->VelF, vsn);
-         for (j = 0; j < 3; j++) {
-            S->PosR[j] = pcmn[j] + psn[j] + Fr->PosR[j];
-            S->VelR[j] = wxrn[j] + vsn[j];
-         }
+         psn = MTxV(Fr->CN, S->PosF);
+         vsn = MTxV(Fr->CN, S->VelF);
+         for (j = 0; j < 3; j++)
+            S->PosR.v[j] = pcmn.v[j] + psn.v[j] + Fr->PosR.v[j];
+         S->VelR = VpVElem(wxrn, vsn);
          if (O->Regime == ORB_ZERO) {
             // TODO: ????? should something be here????
          }
@@ -3589,45 +3523,34 @@ void InitSpacecraft(struct SCType *S)
             // TODO: ????? should something be here????
          }
          else {
-            RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR, S->PosEH,
-                       S->VelEH);
+            RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR,
+                       &S->PosEH, &S->VelEH);
          }
       }
    }
    if (O->use_N_BODY_Vec) {
-      for (j = 0; j < 3; j++) {
-         S->PosN[j] = O->N_BODY_PosN[j];
-         S->VelN[j] = O->N_BODY_VelN[j];
-      }
+      S->PosN = O->N_BODY_PosN;
+      S->VelN = O->N_BODY_VelN;
    }
    else {
-      for (j = 0; j < 3; j++) {
-         S->PosN[j] = O->PosN[j] + S->PosR[j];
-         S->VelN[j] = O->VelN[j] + S->VelR[j];
-      }
+      S->PosN = VpVElem(O->PosN, S->PosR);
+      S->VelN = VpVElem(O->VelN, S->VelR);
    }
-   MTxV(World[O->World].CNH, S->PosN, rh);
-   MTxV(World[O->World].CNH, S->VelN, vh);
-   for (j = 0; j < 3; j++) {
-      S->PosH[j] = World[O->World].PosH[j] + rh[j];
-      S->VelH[j] = World[O->World].VelH[j] + vh[j];
-   }
+   rh      = MTxV(World[O->World].CNH, S->PosN);
+   vh      = MTxV(World[O->World].CNH, S->VelN);
+   S->PosH = VpVElem(World[O->World].PosH, rh);
+   S->VelH = VpVElem(World[O->World].VelH, vh);
 
    if (O->Regime == ORB_ZERO) {
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++)
-            S->CLN[i][j] = 0.0;
-         S->CLN[i][i] = 1.0;
-         S->wln[i]    = 0.0;
-      }
+      S->CLN = MAT3X3_EYE;
+      S->wln = VEC3_ZERO;
    }
    else if (O->Regime == ORB_FLIGHT) {
       FindENU(S->PosN, GetWorldW(JD_TDB_MJD, &World[O->World]) / SEC_PER_DAY,
-              S->CLN, S->wln);
+              &S->CLN, &S->wln);
    }
-   else {
-      FindCLN(S->PosN, S->VelN, S->CLN, S->wln);
-   }
+   else
+      FindCLN(S->PosN, S->VelN, &S->CLN, &S->wln);
 
    if (S->DynMethod == DYN_ORDER_N) {
       if (SomeJointsLocked || S->FlexActive || S->ConstraintsRequested) {
@@ -3882,10 +3805,9 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->ang_data[2]          = (AngDataType){0};
    W->ang_data[2].ang_char = 'D';
 
-   for (j = 0; j < 3; j++) {
-      W->DipoleAxis[j]   = DipoleAxis[j];
-      W->DipoleOffset[j] = 0.0;
-   }
+   W->DipoleAxis   = DBL_TO_VEC3(DipoleAxis);
+   W->DipoleOffset = VEC3_ZERO;
+
    W->RingInner = 0.0;
    W->RingOuter = 0.0;
 
@@ -3933,17 +3855,17 @@ void LoadSun(const ephemType ephem, const JDType jd,
       W->Glyph[j] = Glyph[j];
 
    /* State Variables */
-   for (i = 0; i < 3; i++) {
-      W->eph.PosN[i] = 0.0;
-      W->eph.VelN[i] = 0.0;
-   }
-   W->PriMerAng = GetWorldCWN(jd, W->ang_data, W->CWN);
-   C2Q(W->CWN, W->qwn);
+   W->eph.PosN = VEC3_ZERO;
+   W->eph.VelN = VEC3_ZERO;
 
-   GetWorldCNJ(jd, W->ang_data, W->CNJ);
-   C2Q(W->CNJ, W->qnj);
-   QxQ(W->qnj, worlds[EARTH].qnh, W->qnh);
-   Q2C(W->qnh, W->CNH);
+   W->PriMerAng = GetWorldAng(jd, &W->ang_data[0]);
+   W->CWN       = GetWorldCWN(jd, W->ang_data);
+   W->qwn       = C2Q(W->CWN);
+
+   W->CNJ = GetWorldCNJ(jd, W->ang_data);
+   W->qnj = C2Q(W->CNJ);
+   W->qnh = QxQ(W->qnj, worlds[EARTH].qnh);
+   W->CNH = Q2C(W->qnh);
 }
 /*********************************************************************/
 void LoadPlanets(const ephemType ephem, const JDType jd,
@@ -3951,9 +3873,9 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                  struct WorldType *const worlds)
 {
    struct OrbitType *Eph;
-   const double Zaxis[3] = {0.0, 0.0, 1.0};
+   const vec3 Zaxis = VEC3_PZAXIS;
    double GMST;
-   double C_W_TETE[3][3], C_TEME_TETE[3][3], C_TETE_J2000[3][3];
+   mat3x3 C_W_TETE, C_TEME_TETE, C_TETE_J2000;
 
    char PlanetName[N_PLANETS][20]  = {"Mercury", "Venus",   "Earth",
                                       "Mars",    "Jupiter", "Saturn",
@@ -4123,11 +4045,12 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       W->eph.mu         = World[SOL].mu;
       W->eph.SplineFile = NULL;
       W->DipoleMoment   = DipoleMoment[i];
-      for (int j = 0; j < 3; j++) {
-         W->DipoleAxis[j]   = DipoleAxis[i][j];
-         W->DipoleOffset[j] = DipoleOffset[i][j];
-         W->Color[j]        = Color[i][j];
-      }
+
+      W->DipoleAxis   = DBL_TO_VEC3(DipoleAxis[i]);
+      W->DipoleOffset = DBL_TO_VEC3(DipoleOffset[i]);
+      for (int j = 0; j < 3; j++)
+         W->Color[j] = Color[i][j];
+
       W->Color[3] = 1.0;
       for (int j = 0; j < 14; j++)
          W->Glyph[j] = Glyph[i][j];
@@ -4282,24 +4205,25 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                /* .. Earth rotation is a special case */
                GMST         = JD2GMST(jd_tt_j2000);
                W->PriMerAng = TwoPi * GMST;
-               HiFiEarthPrecNute(jd_tt_j2000, C_TEME_TETE, C_TETE_J2000);
-               SimpRot(Zaxis, W->PriMerAng, C_W_TETE);
-               MxM(C_W_TETE, C_TETE_J2000, W->CWN);
+               HiFiEarthPrecNute(jd_tt_j2000, &C_TEME_TETE, &C_TETE_J2000);
+               C_W_TETE = SimpRot(Zaxis, W->PriMerAng);
+               W->CWN   = MxM(C_W_TETE, C_TETE_J2000);
             }
             else {
-               W->PriMerAng = GetWorldCWN(jd_tdb_j2000, W->ang_data, W->CWN);
-               GetWorldCNJ(jd, W->ang_data, W->CNJ);
-               MxM(W->CNJ, worlds[EARTH].CNH, W->CNH);
-               C2Q(W->CNJ, W->qnj);
+               W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
+               W->CWN       = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+               W->CNJ       = GetWorldCNJ(jd, W->ang_data);
+               W->CNH       = MxM(W->CNJ, worlds[EARTH].CNH);
+               W->qnj       = C2Q(W->CNJ);
             }
-            C2Q(W->CWN, W->qwn);
-            C2Q(W->CNH, W->qnh);
+            W->qwn = C2Q(W->CWN);
+            W->qnh = C2Q(W->CNH);
          }
          else {
             SpiceSetOrientation(jd, Iw, W, earth->CNH);
             if (Iw == EARTH) {
-               MxM(CGJ, W->CNH, CGH);
-               C2Q(W->CNH, qjh);
+               CGH = MxM(CGJ, W->CNH);
+               qjh = C2Q(W->CNH);
             }
          }
       }
@@ -4339,8 +4263,8 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       if (W->Exists) {
          Eph->EphemSystem = ephem_sys;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
-                j2000sec_tt - Eph->tp, Eph->PosN, Eph->VelN, &Eph->anom);
-         CopyVG(W->PosH, Eph->PosN, 3);
+                j2000sec_tt - Eph->tp, &Eph->PosN, &Eph->VelN, &Eph->anom);
+         CopyVG(W->PosH.v, Eph->PosN.v, 3);
       }
       else {
          Eph            = FALSE;
@@ -4930,13 +4854,14 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
             if (ephem != EPH_SPICE) {
-               M->PriMerAng = GetWorldCWN(jd_tdb_j2000, M->ang_data, M->CWN);
+               M->PriMerAng = GetWorldAng(jd_tdb_j2000, &M->ang_data[0]);
+               M->CWN       = GetWorldCWN(jd_tdb_j2000, M->ang_data);
                // TODO: double check that CNH tends to reflect the parent body
-               GetWorldCNJ(jd, M->ang_data, M->CNJ);
-               MxM(M->CNJ, worlds[EARTH].CNH, M->CNH);
-               C2Q(M->CNJ, M->qnj);
-               C2Q(M->CWN, M->qwn);
-               C2Q(M->CNH, M->qnh);
+               M->CNJ = GetWorldCNJ(jd, M->ang_data);
+               M->CNH = MxM(M->CNJ, worlds[EARTH].CNH);
+               M->qnj = C2Q(M->CNJ);
+               M->qwn = C2Q(M->CWN);
+               M->qnh = C2Q(M->CNH);
             }
             else
                SpiceSetOrientation(jd, m_id, M, worlds[EARTH].CNH);
@@ -5006,7 +4931,8 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
    struct OrbitType *E;
    char junk[120], newline, response[120];
    long Ib, i;
-   double CNJ[3][3], PoleRA, PoleDec, Epoch;
+   mat3x3 CNJ;
+   double PoleRA, PoleDec, Epoch;
    char GravFileName[32] = {0};
    const char *f_name    = "MinorBodies.txt";
 
@@ -5058,11 +4984,11 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
              &newline);
       W->ang_data[0].ang[1] *= SEC_PER_DAY;
       fscanf(infile, "%lf %lf %[^\n] %[\n]", &PoleRA, &PoleDec, junk, &newline);
-      A2C(312, (PoleRA + 90.0) * D2R, (90.0 - PoleDec) * D2R, 0.0, CNJ);
-      MxM(CNJ, worlds[EARTH].CNH, W->CNH);
-      C2Q(W->CNH, W->qnh);
-      QxQT(W->qnh, worlds[EARTH].qnh, W->qnj);
-      E->Exists      = TRUE;
+      CNJ       = A2C(312, (PoleRA + 90.0) * D2R, (90.0 - PoleDec) * D2R, 0.0);
+      W->CNH    = MxM(CNJ, worlds[EARTH].CNH);
+      W->qnh    = C2Q(W->CNH);
+      W->qnj    = QxQT(W->qnh, worlds[EARTH].qnh);
+      E->Exists = TRUE;
       E->EphemSystem = TT_TIME;
       E->Regime      = ORB_CENTRAL;
       E->World       = SOL;
@@ -5096,7 +5022,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
       W->Nsat           = 0;
       W->RadOfInfluence = 100.0E3; /* Being generous */
       W->DipoleMoment   = 0.0;
-      W->DipoleAxis[2]  = 1.0;
+      W->DipoleAxis.z   = 1.0;
       W->Atmo.Exists    = FALSE;
       W->HasRing        = FALSE;
       for (i = 0; i < 3; i++)
@@ -5105,13 +5031,12 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
 
       const double j2000sec_tt = JDToDynTime(jd);
       Eph2RV(E->mu, E->SLR, E->ecc, E->inc, E->RAAN, E->ArgP,
-             j2000sec_tt - E->tp, E->PosN, E->VelN, &E->anom);
-      for (i = 0; i < 3; i++) {
-         W->PosH[i] = E->PosN[i];
-         W->VelH[i] = E->VelN[i];
-      }
-      GetWorldCWN(JD_TDB_MJD, W->ang_data, W->CWN);
-      C2Q(W->CWN, W->qwn);
+             j2000sec_tt - E->tp, &E->PosN, &E->VelN, &E->anom);
+      W->PosH = E->PosN;
+      W->VelH = E->VelN;
+
+      W->CWN = GetWorldCWN(JD_TDB_MJD, W->ang_data);
+      W->qwn = C2Q(W->CWN);
 
       /* Gravitation Model */
       if (GravPertActive) {
@@ -5184,37 +5109,37 @@ void LoadRegions(void)
       struct WorldType *W = &World[R->World];
 
       assignYAMLToDoubleArray(
-          3, fy_node_by_path_def(seqNode, "/Location/Position"), R->PosW);
+          3, fy_node_by_path_def(seqNode, "/Location/Position"), R->PosW.v);
       if (DecodeString(IsPosW)) {
-         R->Lng      = atan2(R->PosW[1], R->PosW[0]);
+         R->Lng      = atan2(R->PosW.y, R->PosW.x);
          double MagR = MAGV(R->PosW);
-         R->Lat      = asin(R->PosW[2] / MagR);
+         R->Lat      = asin(R->PosW.z / MagR);
          R->Alt      = MagR - W->rad;
-         A2C(312, R->Lng + HalfPi, HalfPi - R->Lat, 0.0, R->CW);
+         R->CW       = A2C(312, R->Lng + HalfPi, HalfPi - R->Lat, 0.0);
          /* for(i=0;i<3;i++) R->CRW[i][i] = 1.0; */
-         MTxV(W->CWN, R->PosW, R->PosN);
-         MxM(R->CW, W->CWN, R->CN);
+         R->PosN = MTxV(W->CWN, R->PosW);
+         R->CN   = MxM(R->CW, W->CWN);
       }
       else {
-         R->Lng      = R->PosW[0] * D2R;
-         R->Lat      = R->PosW[1] * D2R;
-         R->Alt      = R->PosW[2];
+         R->Lng      = R->PosW.x * D2R;
+         R->Lat      = R->PosW.y * D2R;
+         R->Alt      = R->PosW.z;
          double MagR = W->rad + R->Alt;
-         R->PosW[0]  = MagR * cos(R->Lng) * cos(R->Lat);
-         R->PosW[1]  = MagR * sin(R->Lng) * cos(R->Lat);
-         R->PosW[2]  = MagR * sin(R->Lat);
-         A2C(312, R->Lng + HalfPi, HalfPi - R->Lat, 0.0, R->CW);
-         MTxV(W->CWN, R->PosW, R->PosN);
-         MxM(R->CW, W->CWN, R->CN);
+         R->PosW.x   = MagR * cos(R->Lng) * cos(R->Lat);
+         R->PosW.y   = MagR * sin(R->Lng) * cos(R->Lat);
+         R->PosW.z   = MagR * sin(R->Lat);
+         R->CW       = A2C(312, R->Lng + HalfPi, HalfPi - R->Lat, 0.0);
+         R->PosN     = MTxV(W->CWN, R->PosW);
+         R->CN       = MxM(R->CW, W->CWN);
       }
       const double W_w = GetWorldW(JD_TDB_MJD, W);
 
-      R->VelN[0] = -W_w * R->PosN[1];
-      R->VelN[1] = W_w * R->PosN[0];
-      R->VelN[2] = 0.0;
-      R->wn[0]   = 0.0;
-      R->wn[1]   = W_w * cos(R->Lat);
-      R->wn[2]   = W_w * sin(R->Lat);
+      R->VelN.x = -W_w * R->PosN.y;
+      R->VelN.y = W_w * R->PosN.x;
+      R->VelN.z = 0.0;
+      R->wn.x   = 0.0;
+      R->wn.y   = W_w * cos(R->Lat);
+      R->wn.z   = W_w * sin(R->Lat);
       Geom = LoadWingsObjFile(ModelPath, R->GeomFileName, &Matl, &Nmatl, Geom,
                               &Ngeom, &R->GeomTag, TRUE);
 
@@ -5270,10 +5195,9 @@ void InitLagrangePoints(void)
          LS->VU = LS->LU / LS->TU;
 
          FindLagPtParms(LS);
-         for (j = 0; j < 5; j++) {
-            FindLagPtPosVel(DynTime, LS, j, LS->LP[j].PosN, LS->LP[j].VelN,
-                            LS->CLN);
-         }
+         for (j = 0; j < 5; j++)
+            FindLagPtPosVel(DynTime, LS, j, &LS->LP[j].PosN, &LS->LP[j].VelN,
+                            &LS->CLN);
       }
    }
 }
@@ -5308,21 +5232,20 @@ void UpdateLagrangePoints(void)
 }
 /**********************************************************************/
 void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
-                  double trgtPosN[3], double trgtPosH[3], double *trgtPriMerAng,
-                  double trgtCNH[3][3])
+                  vec3 *trgtPosN, vec3 *trgtPosH, double *trgtPriMerAng,
+                  mat3x3 *trgtCNH)
 {
    long i, j, Ic, Iw;
    struct Cheb3DType *Cheb;
    struct OrbitType *Eph;
    struct WorldType *W;
    double u, dudJD, T[20], U[20], P, dPdu;
-   double rh[3], PosJ[3], PosN[3], systemBC[3];
-   double earthPosN[3], lunaPosN[3], otherPosN[3];
-   double earthPosH[3], lunaPosH[3], otherPosH[3];
-   double CNJ[3][3] = {0};
-   long WRLD[2]     = {EARTH, LUNA}, otherJPL;
+   vec3 rh, PosJ, PosN, systemBC;
+   vec3 earthPosN, lunaPosN, otherPosN;
+   vec3 earthPosH, lunaPosH, otherPosH;
+   mat3x3 CNJ, CNH;
+   long WRLD[2] = {EARTH, LUNA}, otherJPL;
    double GMST;
-   double CNH[3][3] = {0};
 
    // TODO: premake some of the other jd types that are needed
    jd = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd);
@@ -5341,9 +5264,9 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
    ChebyPolys(u, Cheb->N, T, U);
    for (i = 0; i < 3; i++) {
       ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-      PosJ[i] = 1000.0 * P;
+      PosJ.v[i] = 1000.0 * P;
    }
-   QTxV(worlds[EARTH].qnh, PosJ, systemBC);
+   systemBC = QTxV(worlds[EARTH].qnh, PosJ);
 
    /* Determine which ephemerides math needed */
    otherJPL = (trgtWORLD != SOL && trgtWORLD != EARTH && trgtWORLD != LUNA &&
@@ -5368,34 +5291,26 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          ChebyPolys(u, Cheb->N, T, U);
          for (i = 0; i < 3; i++) {
             ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-            PosJ[i] = 1000.0 * P;
+            PosJ.v[i] = 1000.0 * P;
          }
-         QTxV(worlds[EARTH].qnh, PosJ, PosN);
-         if (Iw == EARTH) {
-            for (i = 0; i < 3; i++)
-               earthPosN[i] = PosN[i];
-         }
-         else if (Iw == LUNA) {
-            for (i = 0; i < 3; i++)
-               lunaPosN[i] = PosN[i];
-         }
+         PosN = QTxV(worlds[EARTH].qnh, PosJ);
+         if (Iw == EARTH)
+            earthPosN = PosN;
+         else if (Iw == LUNA)
+            lunaPosN = PosN;
       }
       /* Move Earth from barycentric to Sun-centered */
-      for (i = 0; i < 3; i++) {
-         earthPosN[i] -= systemBC[i];
-      }
+      earthPosN = VmVElem(earthPosN, systemBC);
+
       /* Adjust Earth from Earth-Moon barycenter */
       /* (Moon PosVel is geocentric, not from barycenter) */
-      for (i = 0; i < 3; i++) {
-         earthPosN[i] -= lunaPosN[i] / (1.0 + EMRAT);
-         earthPosH[i]  = earthPosN[i];
-      }
-      for (i = 0; i < 3; i++) {
-         rh[i]       = lunaPosN[i];
-         lunaPosH[i] = earthPosH[i] + lunaPosN[i];
-      }
+      for (i = 0; i < 3; i++)
+         earthPosN.v[i] -= lunaPosN.v[i] / (1.0 + EMRAT);
+      earthPosH = earthPosN;
+      rh        = lunaPosN;
+      lunaPosH  = VpVElem(earthPosH, lunaPosN);
       /* Rotate Moon into ECI */
-      QxV(worlds[EARTH].qnh, rh, lunaPosN);
+      lunaPosN = QxV(worlds[EARTH].qnh, rh);
    }
    else if (otherJPL) {
       /* .. Initialize Pos for other planet in JPL ephemerides */
@@ -5412,78 +5327,58 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
       ChebyPolys(u, Cheb->N, T, U);
       for (i = 0; i < 3; i++) {
          ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-         PosJ[i] = 1000.0 * P;
+         PosJ.v[i] = 1000.0 * P;
       }
-      QTxV(worlds[EARTH].qnh, PosJ, PosN);
+      PosN = QTxV(worlds[EARTH].qnh, PosJ);
       /* Move planet from barycentric to Sun-centered */
-      for (i = 0; i < 3; i++) {
-         otherPosN[i]  = PosN[i];
-         otherPosN[i] -= systemBC[i];
-         otherPosH[i]  = otherPosN[i];
-      }
+      otherPosN = PosN;
+      otherPosN = VmVElem(otherPosN, systemBC);
+      otherPosH = otherPosN;
    }
 
    /* Now perform calculation on Target World */
    if (trgtWORLD == SOL) {
-      for (i = 0; i < 3; i++) {
-         trgtPosN[i] = 0.0;
-         trgtPosH[i] = 0.0;
-      }
+      *trgtPosN = VEC3_ZERO;
+      *trgtPosH = VEC3_ZERO;
       /* Calculate PriMerAng for Sun */
       *trgtPriMerAng = GetWorldAng(jd, &worlds[SOL].ang_data[0]);
    }
    else if (trgtWORLD == EARTH) {
-      for (i = 0; i < 3; i++) {
-         trgtPosN[i] = earthPosN[i];
-         trgtPosH[i] = earthPosH[i];
-      }
+      *trgtPosN = earthPosN;
+      *trgtPosH = earthPosH;
+
       /* Calculate PriMerAng for Earth */
       GMST           = JD2GMST(jd);
       *trgtPriMerAng = TwoPi * GMST;
    }
    else if (trgtWORLD == LUNA) {
-      for (i = 0; i < 3; i++) {
-         trgtPosN[i] = lunaPosN[i];
-         trgtPosH[i] = lunaPosH[i];
-      }
+      *trgtPosN = lunaPosN;
+      *trgtPosH = lunaPosH;
       /* Calculate PriMerAng for LUNA */
       // *trgtPriMerAng = LunaPriMerAng(jd);
    }
    else if (otherJPL) {
       /* Move target from barycentric to Sun-centered */
-      for (i = 0; i < 3; i++) {
-         trgtPosN[i] = otherPosN[i];
-         trgtPosH[i] = otherPosH[i];
-      }
+      *trgtPosN = otherPosN;
+      *trgtPosH = otherPosH;
       /* Calculate PriMerAng for Sun */
       *trgtPriMerAng = GetWorldAng(jd, &worlds[trgtWORLD].ang_data[0]);
    }
    else {
       /* Use original position for non JPL epemerides bodies */
-      W = &worlds[trgtWORLD];
-      for (i = 0; i < 3; i++) {
-         trgtPosN[i] = W->eph.PosN[i];
-         trgtPosH[i] = W->PosH[i];
-      }
+      W              = &worlds[trgtWORLD];
+      *trgtPosN      = W->eph.PosN;
+      *trgtPosH      = W->PosH;
       *trgtPriMerAng = W->PriMerAng;
    }
 
    if (trgtWORLD == LUNA) {
-      LunaInertialFrame(jd, CNJ);
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++) {
-            CNH[i][j] = worlds[EARTH].CNH[i][j];
-         }
-      }
-      MxM(CNJ, CNH, trgtCNH);
+      CNJ      = LunaInertialFrame(jd);
+      CNH      = worlds[EARTH].CNH;
+      *trgtCNH = MxM(CNJ, CNH);
    }
-   else {
-      for (i = 0; i < 3; i++) {
-         for (j = 0; j < 3; j++) {
-            trgtCNH[i][j] = worlds[trgtWORLD].CNH[i][j];
-         }
-      }
-   }
+   else
+      *trgtCNH = worlds[trgtWORLD].CNH;
 }
 /**********************************************************************/
 void LoadConstellations(void)
@@ -5503,18 +5398,18 @@ void LoadConstellations(void)
              &C->Nlines);
       C->Class = DecodeString(response);
 
-      C->StarVec = CreateMatrix(C->Nstars, 3);
+      C->StarVec = calloc(C->Nstars, sizeof(vec3));
 
       C->Star1 = (long *)calloc(C->Nlines, sizeof(long));
       C->Star2 = (long *)calloc(C->Nlines, sizeof(long));
 
       for (j = 0; j < C->Nstars; j++) {
          fscanf(infile, "%lf %lf %[^\n] %[\n]", &RA, &Dec, junk, &newline);
-         RA               *= D2R;
-         Dec              *= D2R;
-         C->StarVec[j][0]  = cos(RA) * cos(Dec);
-         C->StarVec[j][1]  = sin(RA) * cos(Dec);
-         C->StarVec[j][2]  = sin(Dec);
+         RA              *= D2R;
+         Dec             *= D2R;
+         C->StarVec[j].x  = cos(RA) * cos(Dec);
+         C->StarVec[j].y  = sin(RA) * cos(Dec);
+         C->StarVec[j].z  = sin(Dec);
       }
 
       for (j = 0; j < C->Nlines; j++) {
@@ -5673,14 +5568,13 @@ void InitSim(int argc, char **argv)
    WorldID Iw;
    long MinorBodiesExist;
    long JunkTag;
-   const double CGJ_tmp[3][3] = {
-       {-0.054873956175539, -0.873437182224835, -0.483835031431981},
-       {0.494110775064704, -0.444828614979805, 0.746981957785302},
-       {-0.867665382947348, -0.198076649977489, 0.455985113757595}};
-   double CJH[3][3];
-
-   for (i = 0; i < 3; i++)
-      CopyVG(CGJ[i], CGJ_tmp[i], 3);
+   const mat3x3 CGJ_tmp = (mat3x3){
+       .rows = {
+           {.v = {-0.054873956175539, -0.873437182224835, -0.483835031431981}},
+           {.v = {0.494110775064704, -0.444828614979805, 0.746981957785302}},
+           {.v = {-0.867665382947348, -0.198076649977489, 0.455985113757595}}}};
+   mat3x3 CJH;
+   CopyVG(CGJ.flat, CGJ_tmp.flat, 9);
 
    Pi          = PI;
    TwoPi       = TWOPI;
@@ -5692,18 +5586,18 @@ void InitSim(int argc, char **argv)
    R2A         = R2D * 3600.0;
 
    // Exact Values from GMAT, gives agreement to 0.5 meters for all bodies
-   World[EARTH].CNH[0][0] = 1.0;
-   World[EARTH].CNH[0][1] = 0.0;
-   World[EARTH].CNH[0][2] = 0.0;
-   World[EARTH].CNH[1][0] = 0.0;
-   World[EARTH].CNH[1][1] = 0.917482062076895741;
-   World[EARTH].CNH[1][2] = -0.397777155914121383;
-   World[EARTH].CNH[2][0] = 0.0;
-   World[EARTH].CNH[2][1] = 0.397777155914121383;
-   World[EARTH].CNH[2][2] = 0.917482062076895741;
+   World[EARTH].CNH.mat[0][0] = 1.0;
+   World[EARTH].CNH.mat[0][1] = 0.0;
+   World[EARTH].CNH.mat[0][2] = 0.0;
+   World[EARTH].CNH.mat[1][0] = 0.0;
+   World[EARTH].CNH.mat[1][1] = 0.917482062076895741;
+   World[EARTH].CNH.mat[1][2] = -0.397777155914121383;
+   World[EARTH].CNH.mat[2][0] = 0.0;
+   World[EARTH].CNH.mat[2][1] = 0.397777155914121383;
+   World[EARTH].CNH.mat[2][2] = 0.917482062076895741;
 
-   C2Q(World[EARTH].CNH, World[EARTH].qnh);
-   C2Q(World[EARTH].CNH, qjh);
+   World[EARTH].qnh = C2Q(World[EARTH].CNH);
+   qjh              = C2Q(World[EARTH].CNH);
 
    // /* Calculate high precise ecliptic value */
    // double ecliptic;
@@ -5712,13 +5606,8 @@ void InitSim(int argc, char **argv)
    // A2C(123, ecliptic * D2R, 0.0, 0.0, World[EARTH].CNH);
    // C2Q(World[EARTH].CNH, World[EARTH].qnh);
    // C2Q(World[EARTH].CNH, qjh);
-   for (i = 0; i < 3; i++) {
-      World[EARTH].qnj[i] = 0.0;
-      for (int j = 0; j < 3; j++)
-         World[EARTH].CNJ[i][j] = 0.0;
-      World[EARTH].CNJ[i][i] = 1.0;
-   }
-   World[EARTH].qnj[3] = 1.0;
+   World[EARTH].qnj = QUAT_EYE;
+   World[EARTH].CNJ = MAT3X3_EYE;
 
    sprintf(InOutPath, "./InOut/");
    sprintf(ModelPath, "./Model/");
@@ -6258,8 +6147,8 @@ void InitSim(int argc, char **argv)
    // overwrite with spice, if we have it and want it
    if (EphemOption == EPH_SPICE) {
       SpiceSetOrientation(JD_TDB_MJD, EARTH, &World[EARTH], World[EARTH].CNH);
-      C2Q(World[EARTH].CNH, World[EARTH].qnh);
-      C2Q(World[EARTH].CNH, qjh);
+      World[EARTH].qnh = C2Q(World[EARTH].CNH);
+      qjh              = C2Q(World[EARTH].CNH);
    }
 
    /* .. Load Sun and Planets */
@@ -6281,21 +6170,21 @@ void InitSim(int argc, char **argv)
    LoadRegions();
 
    /* .. Galactic Frame */
-   Q2C(qjh, CJH);
-   MxM(CGJ, CJH, CGH);
+   CJH = Q2C(qjh);
+   CGH = MxM(CGJ, CJH);
 
    /* .. Ground Station Locations */
    for (i = 0; i < Ngnd; i++) {
       if (GroundStation[i].Exists && !World[GroundStation[i].World].Exists)
          printf("Ground Station[%ld].World doesn't exist.\n", i);
 
-      GroundStation[i].PosW[0] = World[GroundStation[i].World].rad *
-                                 cos(GroundStation[i].lng * D2R) *
-                                 cos(GroundStation[i].lat * D2R);
-      GroundStation[i].PosW[1] = World[GroundStation[i].World].rad *
-                                 sin(GroundStation[i].lng * D2R) *
-                                 cos(GroundStation[i].lat * D2R);
-      GroundStation[i].PosW[2] =
+      GroundStation[i].PosW.x = World[GroundStation[i].World].rad *
+                                cos(GroundStation[i].lng * D2R) *
+                                cos(GroundStation[i].lat * D2R);
+      GroundStation[i].PosW.y = World[GroundStation[i].World].rad *
+                                sin(GroundStation[i].lng * D2R) *
+                                cos(GroundStation[i].lat * D2R);
+      GroundStation[i].PosW.z =
           World[GroundStation[i].World].rad * sin(GroundStation[i].lat * D2R);
    }
 

@@ -20,47 +20,46 @@
 */
 /*********************************************************************/
 /* Ref: Sutherland-Hodgman                                           */
-long ClipEdgeAgainstPlane(double V1[3], double V2[3], double A[3], double B[3],
-                          double C[3], double DirVec[3], double OutVtx[2][3])
+long ClipEdgeAgainstPlane(vec3 V1, vec3 V2, vec3 A, vec3 B, vec3 C, vec3 DirVec,
+                          vec3 OutVtx[2])
 {
-   double Bary1[4], Bary2[4], P1[3], P2[3], c1, c2;
+   double c1, c2;
+   vec3 P1, P2;
+   vec4 Bary1, Bary2;
    long Nout, i;
 
-   ProjectPointOntoTriangle(A, B, C, DirVec, V1, P1, Bary1);
-   ProjectPointOntoTriangle(A, B, C, DirVec, V2, P2, Bary2);
+   ProjectPointOntoTriangle(A, B, C, DirVec, V1, &P1, &Bary1);
+   ProjectPointOntoTriangle(A, B, C, DirVec, V2, &P2, &Bary2);
 
    for (i = 0; i < 4; i++) {
-      if (fabs(Bary1[i]) < 1.0E-6)
-         Bary1[i] = 0.0;
-      if (fabs(Bary2[i]) < 1.0E-6)
-         Bary2[i] = 0.0;
+      if (fabs(Bary1.q[i]) < 1.0E-6)
+         Bary1.q[i] = 0.0;
+      if (fabs(Bary2.q[i]) < 1.0E-6)
+         Bary2.q[i] = 0.0;
    }
 
    /* .. Clip against plane formed by AB edge and DirVec */
-   c1 = Bary1[2];
-   c2 = Bary2[2];
-   if (Bary1[3] > 0.0 && Bary2[3] > 0.0) {
+   c1 = Bary1.z;
+   c2 = Bary2.z;
+   if (Bary1.s > 0.0 && Bary2.s > 0.0) {
       /* Edge is above plane of ABC */
       if (c1 >= 0.0 && c2 >= 0.0) {
          /* Case 1: Both Inside */
-         for (i = 0; i < 3; i++)
-            OutVtx[0][i] = V2[i];
-         Nout = 1;
+         OutVtx[0] = V2;
+         Nout      = 1;
       }
       else if (c1 >= 0.0 && c2 < 0.0) {
          /* Case 2: P1 inside, P2 outside */
          Nout = 1;
-         for (i = 0; i < 3; i++) {
-            OutVtx[0][i] = V1[i] + c1 / (c1 - c2) * (V2[i] - V1[i]);
-         }
+         for (i = 0; i < 3; i++)
+            OutVtx[0].v[i] = V1.v[i] + c1 / (c1 - c2) * (V2.v[i] - V1.v[i]);
       }
       else if (c1 < 0.0 && c2 >= 0.0) {
          /* Case 4: P1 outside, P2 inside */
          Nout = 2;
-         for (i = 0; i < 3; i++) {
-            OutVtx[0][i] = V2[i] + c2 / (c2 - c1) * (V1[i] - V2[i]);
-            OutVtx[1][i] = V2[i];
-         }
+         for (i = 0; i < 3; i++)
+            OutVtx[0].v[i] = V2.v[i] + c2 / (c2 - c1) * (V1.v[i] - V2.v[i]);
+         OutVtx[1] = V2;
       }
       else {
          Nout = 0;
@@ -73,7 +72,7 @@ long ClipEdgeAgainstPlane(double V1[3], double V2[3], double A[3], double B[3],
    return (Nout);
 }
 /*********************************************************************/
-void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
+void FindUnshadedAreas(struct SCType *S, vec3 DirVecN)
 {
    struct SilEdgeType *SilEdge = NULL, SwapEdge, *SE = NULL;
    struct SilVtxType *SilVtx  = NULL;
@@ -83,13 +82,15 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
    struct GeomType *G         = NULL;
    struct EdgeType *E         = NULL;
    struct PolyType *P         = NULL;
-   double DirVecB[3], DoN1, DoN2;
-   double Vtx[3][3], V1[3], V2[3], OutVtx[2][3];
-   double ClipArea, ClipCtr[3], rA[3], ProjPtN[3], Bary[4];
-   double PtA[3], PtB[3], PtC[3], dV1[3], dV2[3], V1xV2[3], dA;
+   double DoN1, DoN2;
+   double ClipArea;
+   double dA;
    long SilNe, SilNv, SilNc = 0, SilNin, Nout;
    long Ib, Ie, Je, Ipoly, i, Ic, Iout, Iv;
-   double pn[3];
+   vec3 pn, ClipCtr, rA, ProjPtN, V1, V2;
+   vec3 PtA, PtB, PtC, dV1, dV2, V1xV2, OutVtx[2], DirVecB;
+   vec4 Bary;
+   vec3 Vtx[3];
    long B1, B2;
 
    ClipVtx = (struct SilVtxType *)calloc(1, sizeof(struct SilVtxType));
@@ -100,9 +101,9 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
    /* Form list of edges */
    SilNe = 0;
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      G = &Geom[B->GeomTag];
-      MxV(B->CN, DirVecN, DirVecB);
+      B       = &S->B[Ib];
+      G       = &Geom[B->GeomTag];
+      DirVecB = MxV(B->CN, DirVecN);
       for (Ie = 0; Ie < G->Nedge; Ie++) {
          E    = &G->Edge[Ie];
          DoN1 = VoV(DirVecB, G->Poly[E->Poly1].Norm);
@@ -119,27 +120,21 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
             SE       = &SilEdge[SilNe];
             SE->Body = Ib;
             if (DoN1 > 0.0) {
-               SE->Iv1 = E->Vtx1;
-               SE->Iv2 = E->Vtx2;
-               for (i = 0; i < 3; i++) {
-                  SE->PosV1B[i] = G->V[E->Vtx1][i];
-                  SE->PosV2B[i] = G->V[E->Vtx2][i];
-               }
+               SE->Iv1    = E->Vtx1;
+               SE->Iv2    = E->Vtx2;
+               SE->PosV1B = G->V[E->Vtx1];
+               SE->PosV2B = G->V[E->Vtx2];
             }
             else {
-               SE->Iv1 = E->Vtx2;
-               SE->Iv2 = E->Vtx1;
-               for (i = 0; i < 3; i++) {
-                  SE->PosV1B[i] = G->V[E->Vtx2][i];
-                  SE->PosV2B[i] = G->V[E->Vtx1][i];
-               }
+               SE->Iv1    = E->Vtx2;
+               SE->Iv2    = E->Vtx1;
+               SE->PosV1B = G->V[E->Vtx2];
+               SE->PosV2B = G->V[E->Vtx1];
             }
-            MTxV(B->CN, SE->PosV1B, SE->PosV1N);
-            MTxV(B->CN, SE->PosV2B, SE->PosV2N);
-            for (i = 0; i < 3; i++) {
-               SE->PosV1N[i] += B->pn[i];
-               SE->PosV2N[i] += B->pn[i];
-            }
+            SE->PosV1N = MTxV(B->CN, SE->PosV1B);
+            SE->PosV2N = MTxV(B->CN, SE->PosV2B);
+            SE->PosV1N = VpVElem(SE->PosV1N, B->pn);
+            SE->PosV2N = VpVElem(SE->PosV2N, B->pn);
             SilNe++;
          }
       }
@@ -159,64 +154,50 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
    SilVtx         = (struct SilVtxType *)calloc(1, sizeof(struct SilVtxType));
    SilNv          = 1;
    SilVtx[0].Body = SilEdge[0].Body;
-   for (i = 0; i < 3; i++) {
-      SilVtx[0].PosB[i] = SilEdge[0].PosV1B[i];
-      SilVtx[0].PosN[i] = SilEdge[0].PosV1N[i];
-   }
+   SilVtx[0].PosB = SilEdge[0].PosV1B;
+   SilVtx[0].PosN = SilEdge[0].PosV1N;
    for (Ie = 0; Ie < SilNe - 1; Ie++) {
       if (SilEdge[Ie + 1].Body == SilEdge[Ie].Body &&
           SilEdge[Ie + 1].Iv1 == SilEdge[Ie].Iv2) {
          SilVtx = (struct SilVtxType *)realloc(
              SilVtx, (SilNv + 1) * sizeof(struct SilVtxType));
          SilVtx[SilNv].Body = SilEdge[Ie].Body;
-         for (i = 0; i < 3; i++) {
-            SilVtx[SilNv].PosB[i] = SilEdge[Ie].PosV2B[i];
-            SilVtx[SilNv].PosN[i] = SilEdge[Ie].PosV2N[i];
-         }
+         SilVtx[SilNv].PosB = SilEdge[Ie].PosV2B;
+         SilVtx[SilNv].PosN = SilEdge[Ie].PosV2N;
          SilNv++;
       }
       else {
          SilVtx = (struct SilVtxType *)realloc(
              SilVtx, (SilNv + 2) * sizeof(struct SilVtxType));
          SilVtx[SilNv].Body = SilEdge[Ie].Body;
-         for (i = 0; i < 3; i++) {
-            SilVtx[SilNv].PosB[i] = SilEdge[Ie].PosV2B[i];
-            SilVtx[SilNv].PosN[i] = SilEdge[Ie].PosV2N[i];
-         }
+         SilVtx[SilNv].PosB = SilEdge[Ie].PosV2B;
+         SilVtx[SilNv].PosN = SilEdge[Ie].PosV2N;
          SilNv++;
          SilVtx[SilNv].Body = SilEdge[Ie + 1].Body;
-         for (i = 0; i < 3; i++) {
-            SilVtx[SilNv].PosB[i] = SilEdge[Ie + 1].PosV1B[i];
-            SilVtx[SilNv].PosN[i] = SilEdge[Ie + 1].PosV1N[i];
-         }
+         SilVtx[SilNv].PosB = SilEdge[Ie + 1].PosV1B;
+         SilVtx[SilNv].PosN = SilEdge[Ie + 1].PosV1N;
          SilNv++;
       }
    }
    SilVtx = (struct SilVtxType *)realloc(SilVtx, (SilNv + 1) *
                                                      sizeof(struct SilVtxType));
    SilVtx[SilNv].Body = SilEdge[SilNe - 1].Body;
-   for (i = 0; i < 3; i++) {
-      SilVtx[SilNv].PosB[i] = SilEdge[SilNe - 1].PosV2B[i];
-      SilVtx[SilNv].PosN[i] = SilEdge[SilNe - 1].PosV2N[i];
-   }
+   SilVtx[SilNv].PosB = SilEdge[SilNe - 1].PosV2B;
+   SilVtx[SilNv].PosN = SilEdge[SilNe - 1].PosV2N;
    SilNv++;
 
    /* .. Find unshaded areas, centroids */
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      G = &Geom[B->GeomTag];
-      MxV(B->CN, DirVecN, DirVecB);
+      B       = &S->B[Ib];
+      G       = &Geom[B->GeomTag];
+      DirVecB = MxV(B->CN, DirVecN);
       for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
          P = &G->Poly[Ipoly];
          if (VoV(P->Norm, DirVecB) > 0.0) {
             /* Transform Poly to N */
-            MTxV(B->CN, G->V[P->V[0]], Vtx[0]);
-            MTxV(B->CN, G->V[P->V[1]], Vtx[1]);
-            MTxV(B->CN, G->V[P->V[2]], Vtx[2]);
             for (i = 0; i < 3; i++) {
-               Vtx[0][i] += B->pn[i];
-               Vtx[1][i] += B->pn[i];
-               Vtx[2][i] += B->pn[i];
+               Vtx[i] = MTxV(B->CN, G->V[P->V[i]]);
+               Vtx[i] = VpVElem(Vtx[i], B->pn);
             }
 
             /* Clip Silhouette against Poly */
@@ -233,11 +214,10 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
                   for (Ie = 0; Ie < SilNin; Ie++) {
                      B1 = InVtx[Ie].Body;
                      B2 = InVtx[(Ie + 1) % SilNin].Body;
-                     if (B1 == B2) { /* Skip edges that jump between bodies */
-                        for (i = 0; i < 3; i++) {
-                           V1[i] = InVtx[Ie].PosN[i];
-                           V2[i] = InVtx[(Ie + 1) % SilNin].PosN[i];
-                        }
+                     if (B1 == B2) {
+                        /* Skip edges that jump between bodies */
+                        V1   = InVtx[Ie].PosN;
+                        V2   = InVtx[(Ie + 1) % SilNin].PosN;
                         Nout = ClipEdgeAgainstPlane(
                             V1, V2, Vtx[Iv], Vtx[(Iv + 1) % 3],
                             Vtx[(Iv + 2) % 3], DirVecN, OutVtx);
@@ -247,12 +227,10 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
                                (SilNc + Nout) * sizeof(struct SilVtxType));
                            for (Iout = 0; Iout < Nout; Iout++) {
                               ClipVtx[SilNc + Iout].Body = B1;
-                              for (i = 0; i < 3; i++) {
-                                 ClipVtx[SilNc + Iout].PosN[i] =
-                                     OutVtx[Iout][i];
-                                 pn[i] = OutVtx[Iout][i] - S->B[B1].pn[i];
-                              }
-                              MxV(S->B[B1].CN, pn, ClipVtx[SilNc + Iout].PosB);
+                              ClipVtx[SilNc + Iout].PosN = OutVtx[Iout];
+                              pn = VmVElem(OutVtx[Iout], S->B[B1].pn);
+
+                              ClipVtx[SilNc + Iout].PosB = MxV(S->B[B1].CN, pn);
                            }
                            SilNc += Nout;
                         }
@@ -269,54 +247,43 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
             }
 
             /* Compute unshaded area, centroid in B */
-            ClipArea   = 0.0;
-            ClipCtr[0] = 0.0;
-            ClipCtr[1] = 0.0;
-            ClipCtr[2] = 0.0;
-            rA[0]      = 0.0;
-            rA[1]      = 0.0;
-            rA[2]      = 0.0;
+            ClipArea = 0.0;
+            ClipCtr  = VEC3_ZERO;
+            rA       = VEC3_ZERO;
             if (SilNc > 2) {
                ProjectPointOntoTriangle(Vtx[0], Vtx[1], Vtx[2], DirVecN,
-                                        ClipVtx[0].PosN, ProjPtN, Bary);
-               for (i = 0; i < 3; i++)
-                  ProjPtN[i] -= B->pn[i];
-               MxV(B->CN, ProjPtN, PtA);
+                                        ClipVtx[0].PosN, &ProjPtN, &Bary);
+               ProjPtN = VmVElem(ProjPtN, B->pn);
+               PtA     = MxV(B->CN, ProjPtN);
                ProjectPointOntoTriangle(Vtx[0], Vtx[1], Vtx[2], DirVecN,
-                                        ClipVtx[1].PosN, ProjPtN, Bary);
-               for (i = 0; i < 3; i++)
-                  ProjPtN[i] -= B->pn[i];
-               MxV(B->CN, ProjPtN, PtB);
+                                        ClipVtx[1].PosN, &ProjPtN, &Bary);
+               ProjPtN = VmVElem(ProjPtN, B->pn);
+               PtB     = MxV(B->CN, ProjPtN);
                for (Ic = 2; Ic < SilNc; Ic++) {
                   ProjectPointOntoTriangle(Vtx[0], Vtx[1], Vtx[2], DirVecN,
-                                           ClipVtx[Ic].PosN, ProjPtN, Bary);
-                  for (i = 0; i < 3; i++)
-                     ProjPtN[i] -= B->pn[i];
-                  MxV(B->CN, ProjPtN, PtC);
-                  for (i = 0; i < 3; i++) {
-                     dV1[i] = PtB[i] - PtA[i];
-                     dV2[i] = PtC[i] - PtA[i];
-                  }
-                  VxV(dV1, dV2, V1xV2);
+                                           ClipVtx[Ic].PosN, &ProjPtN, &Bary);
+                  ProjPtN = VmVElem(ProjPtN, B->pn);
+                  PtC     = MxV(B->CN, ProjPtN);
+                  dV1     = VmVElem(PtB, PtA);
+                  dV2     = VmVElem(PtC, PtA);
+
+                  V1xV2     = VxV(dV1, dV2);
                   dA        = 0.5 * VoV(V1xV2, P->Norm); /* Signed Area */
                   ClipArea += dA;
-                  for (i = 0; i < 3; i++) {
-                     rA[i]  += (PtA[i] + PtB[i] + PtC[i]) / 3.0 * dA;
-                     PtB[i]  = PtC[i];
-                  }
+                  for (i = 0; i < 3; i++)
+                     rA.v[i] += (PtA.v[i] + PtB.v[i] + PtC.v[i]) / 3.0 * dA;
+                  PtB = PtC;
                }
             }
             if (ClipArea > 0.0) {
-               for (i = 0; i < 3; i++)
-                  ClipCtr[i] = rA[i] / ClipArea;
+               ClipCtr = SxV(1.0 / ClipArea, rA);
             }
             if (ClipArea < P->Area) {
                P->UnshadedArea = P->Area - ClipArea;
-               for (i = 0; i < 3; i++) {
-                  P->UnshadedCtr[i] =
-                      (P->Area * P->Centroid[i] - ClipArea * ClipCtr[i]) /
+               for (i = 0; i < 3; i++)
+                  P->UnshadedCtr.v[i] =
+                      (P->Area * P->Centroid.v[i] - ClipArea * ClipCtr.v[i]) /
                       P->UnshadedArea;
-               }
             }
             else {
                P->UnshadedArea = 0.0;
@@ -335,104 +302,93 @@ void FindUnshadedAreas(struct SCType *S, double DirVecN[3])
 void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
                     struct SCType *S)
 {
-   double r, rb[3], Coef, axIoa[3];
-   double rhat[3], c[3], rhatoc;
-   long Ib, i;
+   double r, Coef, rhatoc;
+   long Ib;
    struct BodyType *B;
    struct WorldType *W;
-   double GravGradN[3][3], CGG[3][3], GravGradB[3][3], GGxI[3], GGxpn[3];
-   double FrcN[3], FrcB[3];
-   double Tb[3] = {0}, Tn[3] = {0};
+   mat3x3 GravGradN, CGG, GravGradB;
+   vec3 FrcN, FrcB;
+   vec3 Tb = VEC3_ZERO, Tn;
+   vec3 rhat, c, axIoa, rb, GGxI, GGxpn;
 
-   for (i = 0; i < 3; i++) {
-      S->gravTrqN[i] = 0;
-      S->gravTrqB[i] = 0;
-   }
+   S->gravTrqN = VEC3_ZERO;
+   S->gravTrqB = VEC3_ZERO;
 
    if ((orb->Regime == ORB_ZERO || orb->Regime == ORB_FLIGHT) &&
        orb->PolyhedronGravityEnabled) {
       W = &worlds[orb->World];
       PolyhedronGravGrad(&Geom[W->GeomTag], W->Density, S->PosN, W->CWN,
-                         GravGradN);
+                         &GravGradN);
 
       if (S->Nb == 1) {
          B = &S->B[0];
          /* GG torque */
-         MxM(B->CN, GravGradN, CGG);
-         MxMT(CGG, B->CN, GravGradB);
-         GravGradTimesInertia(GravGradB, B->I, GGxI);
-         for (i = 0; i < 3; i++)
-            B->Trq[i] += GGxI[i];
+         CGG       = MxM(B->CN, GravGradN);
+         GravGradB = MxMT(CGG, B->CN);
+         GGxI      = GravGradTimesInertia(GravGradB, B->I);
+         B->Trq    = VpVElem(B->Trq, GGxI);
       }
       else {
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
             /* GG torque */
-            MxM(B->CN, GravGradN, CGG);
-            MxMT(CGG, B->CN, GravGradB);
-            GravGradTimesInertia(GravGradB, B->I, GGxI);
-            for (i = 0; i < 3; i++)
-               B->Trq[i] += GGxI[i];
+            CGG       = MxM(B->CN, GravGradN);
+            GravGradB = MxMT(CGG, B->CN);
+            GGxI      = GravGradTimesInertia(GravGradB, B->I);
+            B->Trq    = VpVElem(B->Trq, GGxI);
 
             /* GG force */
-            MxV(GravGradN, B->pn, GGxpn);
-            for (i = 0; i < 3; i++)
-               FrcN[i] = B->mass * GGxpn[i];
-            MxV(B->CN, FrcN, FrcB);
-            for (i = 0; i < 3; i++) {
-               B->FrcN[i] += FrcN[i];
-               B->FrcB[i] += FrcB[i];
-            }
+            GGxpn   = MxV(GravGradN, B->pn);
+            FrcN    = SxV(B->mass, GGxpn);
+            FrcB    = MxV(B->CN, FrcN);
+            B->FrcN = VpVElem(B->FrcN, FrcN);
+            B->FrcB = VpVElem(B->FrcB, FrcB);
          }
       }
    }
    else {
-      r    = CopyUnitV(S->PosN, rhat);
+      r    = CopyUnitV(S->PosN, &rhat);
       Coef = orb->mu / (r * r * r);
 
       if (S->Nb == 1) {
          B = &S->B[0];
          /* GG torque */
-         MxV(B->CN, rhat, rb);
-         vxMov(rb, B->I, axIoa);
-         for (i = 0; i < 3; i++)
-            Tb[i] += 3.0 * Coef * axIoa[i];
-         MTxV(B->CN, Tb, Tn);
-         for (i = 0; i < 3; i++) {
-            B->Trq[i]      += 3.0 * Coef * axIoa[i];
-            S->gravTrqN[i] += Tn[i];
-            S->gravTrqB[i] += Tb[i];
-         }
+         rb    = MxV(B->CN, rhat);
+         axIoa = vxMov(rb, B->I);
+         for (int i = 0; i < 3; i++)
+            Tb.v[i] += 3.0 * Coef * axIoa.v[i];
+         Tn = MTxV(B->CN, Tb);
+         for (int i = 0; i < 3; i++)
+            B->Trq.v[i] += 3.0 * Coef * axIoa.v[i];
+         S->gravTrqN = VpVElem(S->gravTrqN, Tn);
+         S->gravTrqB = VpVElem(S->gravTrqB, Tb);
       }
       else {
-         CopyUnitV(S->PosN, rhat);
+         CopyUnitV(S->PosN, &rhat);
          for (Ib = 0; Ib < S->Nb; Ib++) {
             B = &S->B[Ib];
             /* GG torque */
-            MxV(B->CN, rhat, rb);
-            vxMov(rb, B->I, axIoa);
-            for (i = 0; i < 3; i++)
-               B->Trq[i] += 3.0 * Coef * axIoa[i];
+            rb    = MxV(B->CN, rhat);
+            axIoa = vxMov(rb, B->I);
+            for (int i = 0; i < 3; i++)
+               B->Trq.v[i] += 3.0 * Coef * axIoa.v[i];
 
             /* GG force from Hughes, p. 246, eq. (56) */
-            for (i = 0; i < 3; i++)
-               c[i] = B->mass * B->pn[i];
+            c      = SxV(B->mass, B->pn);
             rhatoc = VoV(rhat, c);
-            for (i = 0; i < 3; i++)
-               FrcN[i] = -Coef * (c[i] - 3.0 * rhat[i] * rhatoc);
-            MxV(B->CN, FrcN, FrcB);
-            for (i = 0; i < 3; i++) {
-               B->FrcN[i] += FrcN[i];
-               B->FrcB[i] += FrcB[i];
-            }
+            for (int i = 0; i < 3; i++)
+               FrcN.v[i] = -Coef * (c.v[i] - 3.0 * rhat.v[i] * rhatoc);
+            FrcB    = MxV(B->CN, FrcN);
+            B->FrcN = VpVElem(B->FrcN, FrcN);
+            B->FrcB = VpVElem(B->FrcB, FrcB);
          }
       }
    }
 }
 /**********************************************************************/
-void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
-                        double Frc[3])
+vec3 ThirdBodyGravForce(vec3 p, vec3 s, double mu, double mass)
 {
+   vec3 Frc;
    double magp, mags, p3, s3;
    long j;
 
@@ -441,15 +397,16 @@ void ThirdBodyGravForce(double p[3], double s[3], double mu, double mass,
    p3   = magp * magp * magp;
    s3   = mags * mags * mags;
    for (j = 0; j < 3; j++)
-      Frc[j] = mu * mass * (s[j] / s3 - p[j] / p3);
+      Frc.v[j] = mu * mass * (s.v[j] / s3 - p.v[j] / p3);
+   return Frc;
 }
 /**********************************************************************/
 void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
                    struct SCType *S)
 {
    struct OrbitType *O;
-   double ph[3], p[3], s[3], FrcN[3];
-   long Iw, Im, j;
+   vec3 ph, p, s, FrcN;
+   long Iw, Im;
    long OrbCenter, SecCenter;
 
    O = &orbs[S->RefOrb];
@@ -465,14 +422,11 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-         for (j = 0; j < 3; j++)
-            ph[j] = worlds[Iw].PosH[j] - WCenter->PosH[j];
-         MxV(WCenter->CNH, ph, p);
-         for (j = 0; j < 3; j++)
-            s[j] = p[j] - S->PosN[j];
-         ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcN);
-         for (j = 0; j < 3; j++)
-            S->FrcN[j] += FrcN[j];
+         ph      = VmVElem(worlds[Iw].PosH, WCenter->PosH);
+         p       = MxV(WCenter->CNH, ph);
+         s       = VmVElem(p, S->PosN);
+         FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+         S->FrcN = VpVElem(S->FrcN, FrcN);
       }
    }
    /* Moons of OrbCenter (but not SecCenter) */
@@ -480,59 +434,50 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
       for (Im = 0; Im < WCenter->Nsat; Im++) {
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
-            for (j = 0; j < 3; j++) {
-               p[j] = worlds[Iw].eph.PosN[j];
-               s[j] = p[j] - S->PosN[j];
-            }
-            ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcN);
-            for (j = 0; j < 3; j++)
-               S->FrcN[j] += FrcN[j];
+            p       = worlds[Iw].eph.PosN;
+            s       = VmVElem(p, S->PosN);
+            FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+            S->FrcN = VpVElem(S->FrcN, FrcN);
          }
       }
    }
    /* Moons of SecCenter */
    if (O->Regime == ORB_THREE_BODY) {
       for (Im = 0; Im < worlds[SecCenter].Nsat; Im++) {
-         Iw = worlds[SecCenter].Sat[Im];
-         for (j = 0; j < 3; j++)
-            p[j] = worlds[Iw].eph.PosN[j];
-         MTxV(worlds[SecCenter].CNH, p, ph);
-         MxV(WCenter->CNH, ph, p);
-         for (j = 0; j < 3; j++) {
-            p[j] += worlds[SecCenter].eph.PosN[j];
-            s[j]  = p[j] - S->PosN[j];
-         }
-         ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcN);
-         for (j = 0; j < 3; j++)
-            S->FrcN[j] += FrcN[j];
+         Iw      = worlds[SecCenter].Sat[Im];
+         p       = worlds[Iw].eph.PosN;
+         ph      = MTxV(worlds[SecCenter].CNH, p);
+         p       = MxV(WCenter->CNH, ph);
+         p       = VpVElem(p, worlds[SecCenter].eph.PosN);
+         s       = VmVElem(p, S->PosN);
+         FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+         S->FrcN = VpVElem(S->FrcN, FrcN);
       }
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, WCenter->CWN,
-                          S->mass, S->PosN, FrcN);
-   for (j = 0; j < 3; j++)
-      S->FrcN[j] += FrcN[j];
-
+   FrcN    = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                                    WCenter->CWN, S->mass, S->PosN);
+   S->FrcN = VpVElem(S->FrcN, FrcN);
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
 void GravPertForceRK4(struct WorldType *const worlds,
                       struct OrbitType *const orb, struct SCType *S,
-                      double u[6], double FrcN[3], double RKFdt)
+                      double u[6], vec3 *FrcN, double RKFdt)
 {
-   double ph[3], p[3], s[3], SCPosN[3] = {0}, FrcNtemp[3] = {0};
-   double FrcN_harm[3] = {0}, SCPosN_harm[3] = {0};
-   long Iw, Im, j;
+   vec3 ph, p, s, SCPosN, FrcNtemp;
+   vec3 FrcN_harm, SCPosN_harm;
+   long Iw, Im;
    long OrbCenter, SecCenter;
-   double trgtPosN[3], trgtPosH[3], trgtPriMerAng = 0, trgtCNH[3][3] = {0};
-   double cntrPosN[3], cntrPosH[3], cntrPriMerAng = 0, cntrCNH[3][3] = {0};
+   vec3 trgtPosN, trgtPosH;
+   vec3 cntrPosN, cntrPosH;
+   mat3x3 trgtCNH, cntrCNH;
+   double trgtPriMerAng = 0, cntrPriMerAng = 0;
    long revertCHEB = 0;
 
-   for (j = 0; j < 3; j++) {
-      SCPosN[j]      = u[j];
-      SCPosN_harm[j] = u[j];
-   }
+   SCPosN      = DBL_TO_VEC3(&u[0]);
+   SCPosN_harm = DBL_TO_VEC3(&u[3]);
 
    JDType jd_tdb_mjd = JDAddSeconds(JD_TDB_MJD, RKFdt);
    if (EphemOption != EPH_SPICE) {
@@ -547,32 +492,29 @@ void GravPertForceRK4(struct WorldType *const worlds,
 
    struct WorldType *WCenter = &worlds[OrbCenter];
    if (EphemOption == EPH_SPICE) {
-      Rk4SpiceEphems(jd_tdb_mjd, OrbCenter, worlds, cntrPosN, cntrPosH,
-                     &cntrPriMerAng, cntrCNH);
+      Rk4SpiceEphems(jd_tdb_mjd, OrbCenter, worlds, &cntrPosN, &cntrPosH,
+                     &cntrPriMerAng, &cntrCNH);
    }
    else
-      Rk4JplEphems(jd_tdb_mjd, OrbCenter, worlds, cntrPosN, cntrPosH,
-                   &cntrPriMerAng, cntrCNH);
+      Rk4JplEphems(jd_tdb_mjd, OrbCenter, worlds, &cntrPosN, &cntrPosH,
+                   &cntrPriMerAng, &cntrCNH);
 
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
          if (EphemOption == EPH_SPICE) {
-            Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
-                           &trgtPriMerAng, trgtCNH);
+            Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
+                           &trgtPriMerAng, &trgtCNH);
          }
          else
-            Rk4JplEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
-                         &trgtPriMerAng, trgtCNH);
+            Rk4JplEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
+                         &trgtPriMerAng, &trgtCNH);
 
-         for (j = 0; j < 3; j++)
-            ph[j] = trgtPosH[j] - cntrPosH[j];
-         MxV(cntrCNH, ph, p);
-         for (j = 0; j < 3; j++)
-            s[j] = p[j] - SCPosN[j];
-         ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcNtemp);
-         for (j = 0; j < 3; j++)
-            FrcN[j] += FrcNtemp[j];
+         ph       = VmVElem(trgtPosH, cntrPosH);
+         p        = MxV(cntrCNH, ph);
+         s        = VmVElem(p, SCPosN);
+         FrcNtemp = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+         *FrcN    = VpVElem(*FrcN, FrcNtemp);
       }
    }
 
@@ -582,29 +524,25 @@ void GravPertForceRK4(struct WorldType *const worlds,
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
             if (EphemOption == EPH_SPICE) {
-               Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
-                              &trgtPriMerAng, trgtCNH);
+               Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
+                              &trgtPriMerAng, &trgtCNH);
             }
             else
-               Rk4JplEphems(jd_tdb_mjd, Iw, worlds, trgtPosN, trgtPosH,
-                            &trgtPriMerAng, trgtCNH);
+               Rk4JplEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
+                            &trgtPriMerAng, &trgtCNH);
 
-            for (j = 0; j < 3; j++) {
-               p[j] = trgtPosN[j];
-               s[j] = p[j] - SCPosN[j];
-            }
-            ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass, FrcNtemp);
-            for (j = 0; j < 3; j++)
-               FrcN[j] += FrcNtemp[j];
+            p        = trgtPosN;
+            s        = VmVElem(p, SCPosN);
+            FrcNtemp = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+            *FrcN    = VpVElem(*FrcN, FrcNtemp);
          }
       }
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter, WCenter->CWN,
-                          S->mass, SCPosN_harm, FrcN_harm);
-   for (j = 0; j < 3; j++)
-      FrcN[j] += FrcN_harm[j];
+   FrcN_harm = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                                      WCenter->CWN, S->mass, SCPosN_harm);
+   *FrcN     = VpVElem(*FrcN, FrcN_harm);
 
    if (EphemOption != EPH_SPICE) {
       if (revertCHEB)
@@ -618,31 +556,29 @@ void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
                 struct OrbitType *const orb, struct SCType *S)
 {
 
-   double VrelN[3], WindSpeed, VrelB[3], Area, PolyArea, cp[3];
-   double WoN, Coef, Fb[3] = {0}, Fn[3] = {0}, Trq[3] = {0}, Tn[3] = {0};
-   long Ib, i;
+   vec3 VrelN, VrelB, cp, Fb, Fn, Trq, Tn;
+   double WoN, Coef, Area, PolyArea, WindSpeed;
+   long Ib;
    long Ipoly;
    long OrbCenter;
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
 
-   for (i = 0; i < 3; i++) {
-      S->aeroFrcN[i] = 0;
-      S->aeroFrcB[i] = 0;
-      S->aeroTrqN[i] = 0;
-      S->aeroTrqB[i] = 0;
-   }
+   S->aeroFrcN = VEC3_ZERO;
+   S->aeroFrcB = VEC3_ZERO;
+   S->aeroTrqN = VEC3_ZERO;
+   S->aeroTrqB = VEC3_ZERO;
 
    OrbCenter = orb->World;
 
    /* .. Find Velocity Relative to Atmosphere, expressed in N */
    const double W_w = GetWorldW(jd, &worlds[OrbCenter]);
 
-   VrelN[0]  = S->VelN[0] + W_w * S->PosN[1];
-   VrelN[1]  = S->VelN[1] - W_w * S->PosN[0];
-   VrelN[2]  = S->VelN[2];
-   WindSpeed = UNITV(VrelN);
+   VrelN.v[0] = S->VelN.v[0] + W_w * S->PosN.v[1];
+   VrelN.v[1] = S->VelN.v[1] - W_w * S->PosN.v[0];
+   VrelN.v[2] = S->VelN.v[2];
+   WindSpeed  = UNITV(&VrelN);
 
    if (AeroShadowsActive) {
       FindUnshadedAreas(S, VrelN);
@@ -653,13 +589,12 @@ void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
       B = &S->B[Ib];
 
       /* Transform Rel Wind to B */
-      MxV(B->CN, VrelN, VrelB);
+      VrelB = MxV(B->CN, VrelN);
 
       /* Find total projected area and cp for Body */
       Area = 0.0;
-      for (i = 0; i < 3; i++)
-         cp[i] = 0.0;
-      G = &Geom[B->GeomTag];
+      cp   = VEC3_ZERO;
+      G    = &Geom[B->GeomTag];
       for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
          P = &G->Poly[Ipoly];
          if (strncmp(Matl[P->Matl].Label, "SHADED",
@@ -668,36 +603,30 @@ void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
             if (WoN > 0.0) {
                PolyArea  = WoN * P->UnshadedArea;
                Area     += PolyArea;
-               for (i = 0; i < 3; i++)
-                  cp[i] += PolyArea * (P->UnshadedCtr[i] - B->cm[i]);
+               for (int i = 0; i < 3; i++)
+                  cp.v[i] += PolyArea * (P->UnshadedCtr.v[i] - B->cm.v[i]);
             }
          }
       }
-      if (Area > 0.0) {
-         for (i = 0; i < 3; i++)
-            cp[i] /= Area;
-      }
+      if (Area > 0.0)
+         cp = SxV(1.0 / Area, cp);
 
       S->aeroProjectedArea = Area;
 
       /* Compute force and torque exerted on B */
       Coef = -0.5 * S->AtmoDensity * S->DragCoef * WindSpeed * WindSpeed * Area;
-      for (i = 0; i < 3; i++)
-         Fb[i] = Coef * VrelB[i];
-      MTxV(B->CN, Fb, Fn);
-      for (i = 0; i < 3; i++) {
-         B->FrcN[i]     += Fn[i];
-         B->FrcB[i]     += Fb[i];
-         S->aeroFrcN[i] += Fn[i];
-         S->aeroFrcB[i] += Fb[i];
-      }
-      VxV(cp, Fb, Trq);
-      MTxV(B->CN, Trq, Tn);
-      for (i = 0; i < 3; i++) {
-         B->Trq[i]      += Trq[i];
-         S->aeroTrqN[i] += Tn[i];
-         S->aeroTrqB[i] += Trq[i];
-      }
+      Fb   = SxV(Coef, VrelB);
+      Fn   = MTxV(B->CN, Fb);
+      B->FrcN     = VpVElem(B->FrcN, Fn);
+      B->FrcB     = VpVElem(B->FrcB, Fb);
+      S->aeroFrcN = VpVElem(S->aeroFrcN, Fn);
+      S->aeroFrcB = VpVElem(S->aeroFrcB, Fb);
+
+      Trq         = VxV(cp, Fb);
+      Tn          = MTxV(B->CN, Trq);
+      B->Trq      = VpVElem(B->Trq, Trq);
+      S->aeroTrqN = VpVElem(S->aeroTrqN, Tn);
+      S->aeroTrqB = VpVElem(S->aeroTrqB, Trq);
    }
 }
 /**********************************************************************/
@@ -705,20 +634,18 @@ void SolPressFrcTrq(struct SCType *S)
 {
    long Ib, i;
    long Ipoly;
-   double svb[3], SoN, Coef, r[3], Fb[3] = {0}, Fn[3] = {0}, Tb[3] = {0},
-                                   Tn[3] = {0}, SolarPressure;
+   double SoN, Coef, SolarPressure;
+   vec3 svb, r, Fb, Fn, Tb, Tn;
    struct BodyType *B;
    struct GeomType *G;
    struct PolyType *P;
    struct MatlType *M;
    double srpAreaSum;
 
-   for (i = 0; i < 3; i++) {
-      S->srpFrcN[i] = 0;
-      S->srpFrcB[i] = 0;
-      S->srpTrqN[i] = 0;
-      S->srpTrqB[i] = 0;
-   }
+   S->srpFrcN = VEC3_ZERO;
+   S->srpFrcB = VEC3_ZERO;
+   S->srpTrqN = VEC3_ZERO;
+   S->srpTrqB = VEC3_ZERO;
    srpAreaSum = 0;
 
    if (!S->Eclipse) {
@@ -726,9 +653,8 @@ void SolPressFrcTrq(struct SCType *S)
       /* and falls off as R^2                                  */
       SolarPressure = 4.5E-6 * 2.238E22 / VoV(S->PosH, S->PosH);
 
-      if (SolPressShadowsActive) {
+      if (SolPressShadowsActive)
          FindUnshadedAreas(S, S->svn);
-      }
 
       /* .. Find Force and Torque on each Body */
       for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -740,32 +666,29 @@ void SolPressFrcTrq(struct SCType *S)
             P = &G->Poly[Ipoly];
             if (strncmp(Matl[P->Matl].Label, "SHADED",
                         6)) { /* SRP doesn't see shaded polys */
-               MxV(B->CN, S->svn, svb);
+               svb = MxV(B->CN, S->svn);
                SoN = VoV(svb, P->Norm);
                if (SoN > 0.0) {
                   M           = &Matl[P->Matl];
                   Coef        = -SolarPressure * P->UnshadedArea * SoN;
                   srpAreaSum += P->UnshadedArea * SoN;
                   for (i = 0; i < 3; i++) {
-                     Fb[i] =
-                         Coef * ((1.0 - M->SpecFrac) * svb[i] +
+                     Fb.v[i] =
+                         Coef * ((1.0 - M->SpecFrac) * svb.v[i] +
                                  2.0 * (M->SpecFrac * SoN + M->DiffFrac / 3.0) *
-                                     P->Norm[i]);
+                                     P->Norm.v[i]);
                   }
-                  for (i = 0; i < 3; i++)
-                     r[i] = P->UnshadedCtr[i] - B->cm[i];
-                  VxV(r, Fb, Tb);
-                  MTxV(B->CN, Tb, Tn);
-                  MTxV(B->CN, Fb, Fn);
-                  for (i = 0; i < 3; i++) {
-                     B->FrcN[i]    += Fn[i];
-                     B->FrcB[i]    += Fb[i];
-                     B->Trq[i]     += Tb[i];
-                     S->srpFrcN[i] += Fn[i];
-                     S->srpFrcB[i] += Fb[i];
-                     S->srpTrqN[i] += Tn[i];
-                     S->srpTrqB[i] += Tb[i];
-                  }
+                  r          = VmVElem(P->UnshadedCtr, B->cm);
+                  Tb         = VxV(r, Fb);
+                  Tn         = MTxV(B->CN, Tb);
+                  Fn         = MTxV(B->CN, Fb);
+                  B->FrcN    = VpVElem(B->FrcN, Fn);
+                  B->FrcB    = VpVElem(B->FrcB, Fb);
+                  B->Trq     = VpVElem(B->Trq, Tb);
+                  S->srpFrcN = VpVElem(S->srpFrcN, Fn);
+                  S->srpFrcB = VpVElem(S->srpFrcB, Fb);
+                  S->srpTrqN = VpVElem(S->srpTrqN, Tn);
+                  S->srpTrqB = VpVElem(S->srpTrqB, Tb);
                }
             }
          }
@@ -778,41 +701,38 @@ void SolPressFrcTrq(struct SCType *S)
 void ResidualDipoleTrq(struct SCType *S)
 {
    struct BodyType *B;
-   double bvb[3], Trq[3];
-   long Ib, i;
+   vec3 bvb, Trq;
+   long Ib;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      MxV(B->CN, S->bvn, bvb);
-      VxV(B->EmbeddedDipole, bvb, Trq);
-      for (i = 0; i < 3; i++)
-         B->Trq[i] += Trq[i];
+      B      = &S->B[Ib];
+      bvb    = MxV(B->CN, S->bvn);
+      Trq    = VxV(B->EmbeddedDipole, bvb);
+      B->Trq = VpVElem(B->Trq, Trq);
    }
 }
 /**********************************************************************/
 /* A point is fixed in Body B of Spacecraft S.                        */
 /* Given its components in B, PosB, find its position and velocity    */
 /* wrt R, expressed in N.                                             */
-void FindPosVelR(struct SCType *S, struct BodyType *B, double PosB[3],
-                 double PosR[3], double VelR[3])
+void FindPosVelR(struct SCType *S, struct BodyType *B, vec3 PosB, vec3 *PosR,
+                 vec3 *VelR)
 {
-   double PosCMB[3], PosCMN[3];
-   double VelCMB[3], VelCMN[3];
-   long i;
+   vec3 PosCMB, PosCMN;
+   vec3 VelCMB, VelCMN;
 
    /* From cm of B */
-   for (i = 0; i < 3; i++)
-      PosCMB[i] = PosB[i] - B->cm[i];
-   VxV(B->wn, PosCMB, VelCMB);
+   PosCMB = VmVElem(PosB, B->cm);
+   VelCMB = VxV(B->wn, PosCMB);
 
    /* Transform to N */
-   MTxV(B->CN, PosCMB, PosCMN);
-   MTxV(B->CN, VelCMB, VelCMN);
+   PosCMN = MTxV(B->CN, PosCMB);
+   VelCMN = MTxV(B->CN, VelCMB);
 
    /* From cm of SC, then from origin of R */
-   for (i = 0; i < 3; i++) {
-      PosR[i] = PosCMN[i] + B->pn[i] + S->PosR[i];
-      VelR[i] = VelCMN[i] + B->vn[i] + S->VelR[i];
+   for (int i = 0; i < 3; i++) {
+      PosR->v[i] = PosCMN.v[i] + B->pn.v[i] + S->PosR.v[i];
+      VelR->v[i] = VelCMN.v[i] + B->vn.v[i] + S->VelR.v[i];
    }
 }
 /**********************************************************************/
@@ -824,52 +744,47 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R)
    struct BodyType *B;
    struct PolyType *Pb, *Pr;
    struct EdgeType *E;
-   double FrcN[3], FrcB[3], TrqB[3];
-   double rb[3], wxrb[3];
-   double prn[3], vrn[3], pbrn[3], vbrn[3], CPR[3][3], CPN[3][3];
-   double PosP[3], VelP[3];
-   double FrcP[3];
+   vec3 FrcN, FrcB, TrqB, rb, wxrb;
+   vec3 prn, vrn, pbrn, vbrn;
+   vec3 PosP, VelP, FrcP;
+   mat3x3 CPR, CPN;
    double ContactArea;
    double Dist, MinDist;
-   double PosR[3], VelR[3], RelPosR[3], PosRR[3];
+   vec3 PosR, VelR, RelPosR, PosRR;
    static long HitPoly = 0;
    long OtherPoly;
-   long Ib, Ie, i, Done;
-   double Fn[3], Fb[3], Tb[3];
+   long Ib, Ie, Done;
+   vec3 Fn, Fb, Tb;
 
    B  = &S->B[Ibody];
    Gb = &Geom[B->GeomTag];
    Gr = &Geom[R->GeomTag];
 
-   for (i = 0; i < 3; i++) {
-      FrcN[i] = 0.0;
-      FrcB[i] = 0.0;
-      TrqB[i] = 0.0;
-   }
+   FrcN = VEC3_ZERO;
+   FrcB = VEC3_ZERO;
+   TrqB = VEC3_ZERO;
 
    /* Loop through all Polys (Pb) in Gb */
    for (Ib = 0; Ib < Gb->Npoly; Ib++) {
       Pb = &Gb->Poly[Ib];
       /* Use Centroid for proximity */
       /* Find position and velocity of Centroid wrt origin of R */
-      FindPosVelR(S, B, Pb->Centroid, PosR, VelR);
-      MxV(R->CN, PosR, PosRR);
+      FindPosVelR(S, B, Pb->Centroid, &PosR, &VelR);
+      PosRR = MxV(R->CN, PosR);
 
       /* Find poly (Pr) in Gr closest to Pb */
       Done = 0;
       while (!Done) {
-         Done = 1;
-         for (i = 0; i < 3; i++)
-            RelPosR[i] = PosRR[i] - Gr->Poly[HitPoly].Centroid[i];
+         Done    = 1;
+         RelPosR = VmVElem(PosRR, Gr->Poly[HitPoly].Centroid);
          MinDist = MAGV(RelPosR);
          /* Check neighboring polys */
          for (Ie = 0; Ie < 3; Ie++) {
             E = &Gr->Edge[Gr->Poly[HitPoly].E[Ie]];
             if (E->Poly1 >= 0 && E->Poly2 >= 0) { /* Screen edges of region */
                OtherPoly = (E->Poly1 == HitPoly ? E->Poly2 : E->Poly1);
-               for (i = 0; i < 3; i++)
-                  RelPosR[i] = PosRR[i] - Gr->Poly[OtherPoly].Centroid[i];
-               Dist = MAGV(RelPosR);
+               RelPosR   = VmVElem(PosRR, Gr->Poly[OtherPoly].Centroid);
+               Dist      = MAGV(RelPosR);
                if (Dist < MinDist) {
                   MinDist = Dist;
                   HitPoly = OtherPoly;
@@ -881,60 +796,51 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R)
       }
 
       /* Interact with selected poly */
-      Pr = &Gr->Poly[HitPoly];
-      MTxV(R->CN, Pr->Centroid, prn);
-      VxV(R->wn, Pr->Centroid, wxrb);
-      MTxV(R->CN, wxrb, vrn);
+      Pr   = &Gr->Poly[HitPoly];
+      prn  = MTxV(R->CN, Pr->Centroid);
+      wxrb = VxV(R->wn, Pr->Centroid);
+      vrn  = MTxV(R->CN, wxrb);
 
-      for (i = 0; i < 3; i++) {
-         pbrn[i]   = PosR[i] - prn[i];
-         vbrn[i]   = VelR[i] - vrn[i];
-         CPR[0][i] = Pr->Uhat[i];
-         CPR[1][i] = Pr->Vhat[i];
-         CPR[2][i] = Pr->Norm[i];
-      }
-      MxM(CPR, R->CN, CPN);
-      MxV(CPN, pbrn, PosP);
-      MxV(CPN, vbrn, VelP);
+      pbrn        = VmVElem(PosR, prn);
+      vbrn        = VmVElem(VelR, vrn);
+      CPR.rows[0] = Pr->Uhat;
+      CPR.rows[1] = Pr->Vhat;
+      CPR.rows[2] = Pr->Norm;
+      CPN         = MxM(CPR, R->CN);
+      PosP        = MxV(CPN, pbrn);
+      VelP        = MxV(CPN, vbrn);
 
       /* Find contact force */
-      FrcP[2] = 0.0;
-      FrcP[0] = 0.0;
-      FrcP[1] = 0.0;
-      if (PosP[2] < Pb->radius) {
-         if (PosP[2] > 0.0) {
-            ContactArea = (1.0 - PosP[2] / Pb->radius) * Pb->Area;
-            FrcP[2]     = -R->DampCoef * VelP[2] * ContactArea;
-            FrcP[0]     = 0.0;
-            FrcP[1]     = 0.0;
+      FrcP = VEC3_ZERO;
+      if (PosP.z < Pb->radius) {
+         if (PosP.z > 0.0) {
+            ContactArea = (1.0 - PosP.v[2] / Pb->radius) * Pb->Area;
+            FrcP.v[2]   = -R->DampCoef * VelP.v[2] * ContactArea;
+            FrcP.v[0]   = 0.0;
+            FrcP.v[1]   = 0.0;
          }
          else {
-            ContactArea = (1.0 - PosP[2] / Pb->radius) * Pb->Area;
-            FrcP[2] =
-                -(R->ElastCoef * PosP[2] + R->DampCoef * VelP[2]) * ContactArea;
-            FrcP[0] = -R->FricCoef * FrcP[2] * VelP[0];
-            FrcP[1] = -R->FricCoef * FrcP[2] * VelP[1];
+            ContactArea = (1.0 - PosP.v[2] / Pb->radius) * Pb->Area;
+            FrcP.v[2] = -(R->ElastCoef * PosP.v[2] + R->DampCoef * VelP.v[2]) *
+                        ContactArea;
+            FrcP.v[0] = -R->FricCoef * FrcP.v[2] * VelP.v[0];
+            FrcP.v[1] = -R->FricCoef * FrcP.v[2] * VelP.v[1];
          }
       }
 
       /* Transform into N, B frames */
-      for (i = 0; i < 3; i++)
-         rb[i] = Pb->Centroid[i] - B->cm[i];
-      MTxV(CPN, FrcP, Fn);
-      MxV(B->CN, Fn, Fb);
-      VxV(rb, Fb, Tb);
-      for (i = 0; i < 3; i++) {
-         FrcN[i] += Fn[i];
-         FrcB[i] += Fb[i];
-         TrqB[i] += Tb[i];
-      }
+      rb   = VmVElem(Pb->Centroid, B->cm);
+      Fn   = MTxV(CPN, FrcP);
+      Fb   = MxV(B->CN, Fn);
+      Tb   = VxV(rb, Fb);
+      FrcN = VpVElem(FrcN, Fn);
+      FrcB = VpVElem(FrcB, Fb);
+      TrqB = VpVElem(TrqB, Tb);
    }
 
-   for (i = 0; i < 3; i++) {
-      B->FrcN[i] += FrcN[i];
-      B->FrcB[i] += FrcB[i];
-      B->Trq[i]  += TrqB[i];
-   }
+   B->FrcN = VpVElem(B->FrcN, FrcN);
+   B->FrcB = VpVElem(B->FrcB, FrcB);
+   B->Trq  = VpVElem(B->Trq, TrqB);
 }
 /**********************************************************************/
 /* For each Poly in Body Ba, find force and torque due to contact     */
@@ -947,19 +853,18 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
    struct PolyType *Pa, *Pb;
    struct OctreeType *Oa, *Ob;
    struct OctreeCellType *OCa, *OCb;
-   double PosAN[3], PosBN[3], VelAN[3], VelBN[3];
-   double pan[3], ra[3], van[3];
-   double pbn[3], rb[3], vbn[3];
-   double FrcN[3] = {0.0, 0.0, 0.0};
-   double TrqA[3] = {0.0, 0.0, 0.0};
-   double TrqB[3] = {0.0, 0.0, 0.0};
-   double FrcA[3], FrcB[3];
-   long Ia, Ib, i;
-   double Fn[3], Fa[3], Ta[3], Fb[3], Tb[3];
-   double hbar, r2, v2, dx[3], dv[3], r, v;
-   double ContactArea, NormAxis[3], NormAN[3], NormBN[3];
+   vec3 PosAN = VEC3_ZERO, PosBN = VEC3_ZERO;
+   vec3 VelAN = VEC3_ZERO, VelBN = VEC3_ZERO;
+   vec3 pan, ra, van;
+   vec3 pbn, rb, vbn;
+   vec3 FrcN = VEC3_ZERO, TrqA = VEC3_ZERO, TrqB = VEC3_ZERO;
+   vec3 FrcA, FrcB, NormAxis, NormAN, NormBN;
+   vec3 Fn, Fa, Ta, Fb, Tb, dx, dv;
+   vec3 TanAxis;
+   long Ia, Ib;
+   double hbar, r2, v2, r, v;
+   double ContactArea;
    double NormDist, NormRate, NormFrc;
-   double TanAxis[3];
    long ExhaustedA, ExhaustedB, FoundOneInB;
 
    double PressCoef = 1.0E6; /* Point Solution, ad hoc */
@@ -977,7 +882,7 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
    ExhaustedA = 0;
    OCa        = &Oa->OctCell[0];
    while (!ExhaustedA) {
-      FindPosVelR(Sa, Ba, OCa->center, PosAN, VelAN);
+      FindPosVelR(Sa, Ba, OCa->center, &PosAN, &VelAN);
 
       /* Search Gb's Octree for interactions */
       OCb         = &Ob->OctCell[0];
@@ -985,113 +890,97 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
       FoundOneInB = 0;
 
       while (!ExhaustedB) {
-         FindPosVelR(Sb, Bb, OCb->center, PosBN, VelBN);
-         for (i = 0; i < 3; i++)
-            dx[i] = PosAN[i] - PosBN[i];
+         FindPosVelR(Sb, Bb, OCb->center, &PosBN, &VelBN);
+         dx = VmVElem(PosAN, PosBN);
          if (MAGV(dx) <
              OCa->radius + OCb->radius) { /* OctCells are close enough */
             FoundOneInB = 1;
             for (Ia = 0; Ia < OCa->Npoly; Ia++) {
                Pa = &Ga->Poly[OCa->Poly[Ia]];
-               FindPosVelR(Sa, Ba, Pa->Centroid, pan, van);
-               for (i = 0; i < 3; i++)
-                  ra[i] = Pa->Centroid[i] - Ba->cm[i];
+               FindPosVelR(Sa, Ba, Pa->Centroid, &pan, &van);
+               ra = VmVElem(Pa->Centroid, Ba->cm);
                for (Ib = 0; Ib < OCb->Npoly; Ib++) {
                   Pb = &Gb->Poly[OCb->Poly[Ib]];
-                  FindPosVelR(Sb, Bb, Pb->Centroid, pbn, vbn);
-                  for (i = 0; i < 3; i++)
-                     rb[i] = Pb->Centroid[i] - Bb->cm[i];
+                  FindPosVelR(Sb, Bb, Pb->Centroid, &pbn, &vbn);
+                  rb = VmVElem(Pb->Centroid, Bb->cm);
 
                   /* Use SPH concepts */
                   hbar        = 0.5 * (Pa->radius + Pb->radius);
                   ContactArea = 0.5 * (Pa->Area + Pb->Area);
-                  r2          = 0.0;
-                  v2          = 0.0;
-                  for (i = 0; i < 3; i++) {
-                     dx[i]  = pan[i] - pbn[i];
-                     dv[i]  = van[i] - vbn[i];
-                     r2    += dx[i] * dx[i];
-                     v2    += dv[i] * dv[i];
-                  }
-                  r = sqrt(r2);
-                  v = sqrt(v2);
+                  dx          = VmVElem(pan, pbn);
+                  dv          = VmVElem(van, vbn);
+                  r2          = VoV(dx, dx);
+                  v2          = VoV(dv, dv);
+                  r           = sqrt(r2);
+                  v           = sqrt(v2);
 
                   if (r < 2.0 * hbar) {
                      if (v * DTSIM > 0.1 * hbar) {
-                        printf(
-                            "Warning: CFL Violation in BodyBodyContactFrcTrq.  "
-                            "Suggest DTSIM < %lf sec.\n",
-                            0.1 * hbar / v);
+                        printf("Warning: CFL Violation in "
+                               "BodyBodyContactFrcTrq.  "
+                               "Suggest DTSIM < %lf sec.\n",
+                               0.1 * hbar / v);
                      }
 
                      /* Find contact force exerted by Pb on Pa */
-                     MTxV(Ba->CN, Pa->Norm, NormAN);
-                     MTxV(Bb->CN, Pb->Norm, NormBN);
-                     for (i = 0; i < 3; i++)
-                        NormAxis[i] = NormBN[i] - NormAN[i];
-                     UNITV(NormAxis);
+                     NormAN   = MTxV(Ba->CN, Pa->Norm);
+                     NormBN   = MTxV(Bb->CN, Pb->Norm);
+                     NormAxis = VmVElem(NormBN, NormAN);
+                     UNITV(&NormAxis);
                      NormDist = VoV(dx, NormAxis);
                      NormRate = VoV(dv, NormAxis);
-                     for (i = 0; i < 3; i++)
-                        TanAxis[i] = dv[i] - NormRate * NormAxis[i];
-                     UNITV(TanAxis);
+                     for (int i = 0; i < 3; i++)
+                        TanAxis.v[i] = dv.v[i] - NormRate * NormAxis.v[i];
+                     UNITV(&TanAxis);
                      if (NormDist < 0.0) {
                         NormFrc = ContactArea *
                                   (-PressCoef * NormDist - ViscCoef * NormRate);
-                        for (i = 0; i < 3; i++)
-                           Fn[i] = NormFrc * NormAxis[i] -
-                                   FricCoef * NormFrc * TanAxis[i];
+                        for (int i = 0; i < 3; i++)
+                           Fn.v[i] = NormFrc * NormAxis.v[i] -
+                                     FricCoef * NormFrc * TanAxis.v[i];
 
                         /* Transform into N, A, B frames */
-                        MxV(Ba->CN, Fn, Fa);
-                        VxV(ra, Fa, Ta);
-                        MxV(Bb->CN, Fn, Fb);
-                        VxV(rb, Fb, Tb);
-                        for (i = 0; i < 3; i++) {
-                           FrcN[i] += Fn[i];
-                           TrqA[i] += Ta[i];
-                           TrqB[i] += Tb[i];
-                        }
+                        Fa   = MxV(Ba->CN, Fn);
+                        Ta   = VxV(ra, Fa);
+                        Fb   = MxV(Bb->CN, Fn);
+                        Tb   = VxV(rb, Fb);
+                        FrcN = VpVElem(FrcN, Fn);
+                        TrqA = VpVElem(TrqA, Ta);
+                        TrqB = VpVElem(TrqB, Tb);
                      }
                   }
                }
             }
             if (OCb->NextOnHit == 0)
                ExhaustedB = 1;
-            else {
+            else
                OCb = &Ob->OctCell[OCb->NextOnHit];
-            }
          }
          else if (OCb->NextOnMiss == 0)
             ExhaustedB = 1;
-         else {
+         else
             OCb = &Ob->OctCell[OCb->NextOnMiss];
-         }
       }
       if (FoundOneInB) {
          if (OCa->NextOnHit == 0)
             ExhaustedA = 1;
-         else {
+         else
             OCa = &Oa->OctCell[OCa->NextOnHit];
-         }
       }
       else if (OCa->NextOnMiss == 0)
          ExhaustedA = 1;
-      else {
+      else
          OCa = &Oa->OctCell[OCa->NextOnMiss];
-      }
    }
 
-   MxV(Ba->CN, FrcN, FrcA);
-   MxV(Bb->CN, FrcN, FrcB);
-   for (i = 0; i < 3; i++) {
-      Ba->SCContactFrcN[i] += FrcN[i];
-      Ba->SCContactFrcB[i] += FrcA[i];
-      Ba->SCContactTrq[i]  += TrqA[i];
-      Bb->SCContactFrcN[i] -= FrcN[i];
-      Bb->SCContactFrcB[i] += FrcB[i];
-      Bb->SCContactTrq[i]  -= TrqB[i];
-   }
+   FrcA              = MxV(Ba->CN, FrcN);
+   FrcB              = MxV(Bb->CN, FrcN);
+   Ba->SCContactFrcN = VpVElem(Ba->SCContactFrcN, FrcN);
+   Ba->SCContactFrcB = VpVElem(Ba->SCContactFrcB, FrcA);
+   Ba->SCContactTrq  = VpVElem(Ba->SCContactTrq, TrqA);
+   Bb->SCContactFrcN = VmVElem(Bb->SCContactFrcN, FrcN);
+   Bb->SCContactFrcB = VpVElem(Bb->SCContactFrcB, FrcB);
+   Bb->SCContactTrq  = VmVElem(Bb->SCContactTrq, TrqB);
 }
 /**********************************************************************/
 void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
@@ -1102,8 +991,8 @@ void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
    struct SCType *Sc;
    struct BodyType *Bi, *Bj;
    struct GeomType *Gi, *Gj;
-   double dx[3], cmb[3], cmni[3], cmnj[3];
-   long i, Isc, Ib, Jb;
+   vec3 dx, cmb, cmni, cmnj;
+   long Isc, Ib, Jb;
 
    struct SCType *S    = &scs[sc_id];
    struct OrbitType *O = &orbs[S->RefOrb];
@@ -1119,28 +1008,26 @@ void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
          continue;
       if (orbs[Sc->RefOrb].World != O->World)
          continue;
-      for (i = 0; i < 3; i++)
-         dx[i] = S->PosN[i] - Sc->PosN[i];
+      dx = VmVElem(S->PosN, Sc->PosN);
       if (MAGV(dx) > 1.2 * (S->BBox.radius + Sc->BBox.radius))
          continue;
 
       /* Check each body of S vs each body of Sc */
       for (Ib = 0; Ib < S->Nb; Ib++) {
-         Bi = &S->B[Ib];
-         Gi = &Geom[Bi->GeomTag];
-         for (i = 0; i < 3; i++)
-            cmb[i] = Bi->cm[i] - Gi->BBox.center[i];
-         MTxV(Bi->CN, cmb, cmni);
+         Bi   = &S->B[Ib];
+         Gi   = &Geom[Bi->GeomTag];
+         cmb  = VmVElem(Bi->cm, Gi->BBox.center);
+         cmni = MTxV(Bi->CN, cmb);
          for (Jb = 0; Jb < Sc->Nb; Jb++) {
             /* Cheap Bi/Bj proximity checks */
-            Bj = &Sc->B[Jb];
-            Gj = &Geom[Bj->GeomTag];
-            for (i = 0; i < 3; i++)
-               cmb[i] = Bj->cm[i] - Gj->BBox.center[i];
-            MTxV(Bj->CN, cmb, cmnj);
-            for (i = 0; i < 3; i++)
-               dx[i] = (S->PosN[i] + Bi->pn[i] - cmni[i]) -
-                       (Sc->PosN[i] + Bj->pn[i] - cmnj[i]);
+            Bj   = &Sc->B[Jb];
+            Gj   = &Geom[Bj->GeomTag];
+            cmb  = VmVElem(Bj->cm, Gj->BBox.center);
+            cmnj = MTxV(Bj->CN, cmb);
+
+            for (int i = 0; i < 3; i++)
+               dx.v[i] = (S->PosN.v[i] + Bi->pn.v[i] - cmni.v[i]) -
+                         (Sc->PosN.v[i] + Bj->pn.v[i] - cmnj.v[i]);
             if (MAGV(dx) > (Gi->BBox.radius + Gj->BBox.radius))
                continue;
             BodyBodyContactFrcTrq(S, Ib, Sc, Jb);
@@ -1154,8 +1041,8 @@ void NonSCContactFrcTrq(struct OrbitType *const O, struct SCType *S)
    // TODO: split this between sc and not sc contacts. sc contact forces will
    // need to be outside the integrator.
    struct RegionType *R;
-   double dx[3];
-   long Ir, i, Ib;
+   vec3 dx;
+   long Ir, Ib;
 
    /* .. Contact with Regions */
    for (Ir = 0; Ir < Nrgn; Ir++) {
@@ -1165,8 +1052,7 @@ void NonSCContactFrcTrq(struct OrbitType *const O, struct SCType *S)
          continue;
       if (R->World != O->World)
          continue;
-      for (i = 0; i < 3; i++)
-         dx[i] = S->PosN[i] - R->PosN[i];
+      dx = VmVElem(S->PosN, R->PosN);
       if (MAGV(dx) > S->BBox.radius + Geom[R->GeomTag].BBox.radius)
          continue;
 
@@ -1182,10 +1068,10 @@ void NonSCContactFrcTrq(struct OrbitType *const O, struct SCType *S)
 /* .. determine actuator capacity requirements.                       */
 void EnvTrq(struct SCType *S)
 {
-   long Ib, i;
-   double S1[3], S2[3], S3[3], CSN[3][3];
-   double rxF[3], TrqN[3], SumTrqN[3], TrqS[3];
-   double TrqB[3], Hn[3], Hb[3];
+   long Ib;
+   mat3x3 CSN;
+   vec3 S1, S2, S3, rxF, TrqN, SumTrqN, TrqS;
+   vec3 TrqB, Hn, Hb;
    struct EnvTrqType *E;
    char envfilename[40];
 
@@ -1198,39 +1084,38 @@ void EnvTrq(struct SCType *S)
    }
 
    /* Define S frame: s3 is orbit normal, s1 is orbit noon */
-   VxV(S->PosN, S->VelN, S3);
-   UNITV(S3);
-   VxV(S3, S->svn, S2);
-   UNITV(S2);
-   VxV(S2, S3, S1);
-   for (i = 0; i < 3; i++) {
-      CSN[0][i]  = S1[i];
-      CSN[1][i]  = S2[i];
-      CSN[2][i]  = S3[i];
-      SumTrqN[i] = 0.0;
-   }
+   S3 = VxV(S->PosN, S->VelN);
+   UNITV(&S3);
+   S2 = VxV(S3, S->svn);
+   UNITV(&S2);
+   S1          = VxV(S2, S3);
+   CSN.rows[0] = S1;
+   CSN.rows[1] = S2;
+   CSN.rows[2] = S3;
+   SumTrqN     = VEC3_ZERO;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      MTxV(S->B[Ib].CN, S->B[Ib].Trq, TrqN);
-      VxV(S->B[Ib].pn, S->B[Ib].FrcN, rxF);
-      for (i = 0; i < 3; i++)
-         SumTrqN[i] += TrqN[i] + rxF[i];
+      TrqN = MTxV(S->B[Ib].CN, S->B[Ib].Trq);
+      rxF  = VxV(S->B[Ib].pn, S->B[Ib].FrcN);
+      for (int i = 0; i < 3; i++)
+         SumTrqN.v[i] += TrqN.v[i] + rxF.v[i];
    }
-   MxV(CSN, SumTrqN, TrqS);
+   TrqS = MxV(CSN, SumTrqN);
 
-   for (i = 0; i < 3; i++)
-      E->Hs[i] += TrqS[i] * DTSIM;
+   for (int i = 0; i < 3; i++)
+      E->Hs.v[i] += TrqS.v[i] * DTSIM;
 
    if (OutFlag) {
       /* Express Trq, H in B0 frame */
-      MxV(S->B[0].CN, SumTrqN, TrqB);
-      MTxV(CSN, E->Hs, Hn);
-      MxV(S->B[0].CN, Hn, Hb);
+      TrqB = MxV(S->B[0].CN, SumTrqN);
+      Hn   = MTxV(CSN, E->Hs);
+      Hb   = MxV(S->B[0].CN, Hn);
       fprintf(E->envfile,
               "%18.12le %18.12le %18.12le %18.12le %18.12le %18.12le %18.12le "
               "%18.12le %18.12le %18.12le %18.12le %18.12le\n",
-              TrqS[0], TrqS[1], TrqS[2], E->Hs[0], E->Hs[1], E->Hs[2], TrqB[0],
-              TrqB[1], TrqB[2], Hb[0], Hb[1], Hb[2]);
+              TrqS.v[0], TrqS.v[1], TrqS.v[2], E->Hs.v[0], E->Hs.v[1],
+              E->Hs.v[2], TrqB.v[0], TrqB.v[1], TrqB.v[2], Hb.v[0], Hb.v[1],
+              Hb.v[2]);
    }
 }
 /**********************************************************************/
@@ -1241,8 +1126,8 @@ void EnvTrq(struct SCType *S)
 void Perturbations(JDType jd, struct WorldType *const worlds,
                    struct OrbitType *const O, struct SCType *S)
 {
-   // Only need up to 2 of the worlds, and that is only in the case of a 3 body
-   // orbit
+   // Only need up to 2 of the worlds, and that is only in the case of a 3
+   // body orbit
    /* .. Gravity-Gradient Torques */
    if (GGActive)
       GravGradFrcTrq(worlds, O, S);
@@ -1266,9 +1151,9 @@ void Perturbations(JDType jd, struct WorldType *const worlds,
    /* .. Contact Forces and Torques */
    if (ContactActive) {
       NonSCContactFrcTrq(O, S);
-      // Since Perturbations() is called inside the integrator, we don't want to
-      // actually calculate the spacecraft/spacecraft contact forces inside the
-      // integrator
+      // Since Perturbations() is called inside the integrator, we don't want
+      // to actually calculate the spacecraft/spacecraft contact forces
+      // inside the integrator
       AddSCContactFrcTrq(S);
    }
 

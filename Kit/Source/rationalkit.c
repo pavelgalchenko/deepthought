@@ -312,14 +312,14 @@ static Rat_Long _gcdl(Rat_Long a, Rat_Long b)
       RAT_REDUCE_BY_GCD(rat.num, rat.den);                                     \
    return rat;
 /**********************************************************************/
-static Rational _cleanupl(Rational rat) __attribute__((const));
-static Rational _cleanupl(Rational rat)
+static inline Rational _cleanupl(Rational rat) __attribute__((const));
+static inline Rational _cleanupl(Rational rat)
 {
    _cleanup_body(rat)
 }
 /**********************************************************************/
-static RationalLL _cleanupll(RationalLL rat) __attribute__((const));
-static RationalLL _cleanupll(RationalLL rat){_cleanup_body(rat)}
+static inline RationalLL _cleanupll(RationalLL rat) __attribute__((const));
+static inline RationalLL _cleanupll(RationalLL rat){_cleanup_body(rat)}
 /**********************************************************************/
 #define _cleanup(rat)                                                          \
    _Generic((rat), Rational: _cleanupl, RationalLL: _cleanupll)(rat)
@@ -438,7 +438,8 @@ Rat_LongLong _rat_int_mod_ratll(RationalLL *const rat, const Rat_LongLong mod)
 Rational ReduceRational(Rational rat)
 {
    _reduce(rat);
-   RAT_REDUCE_BY_GCD(rat.num, rat.den);
+   if (rat.den > RAT_MAX_DEN)
+      RAT_REDUCE_BY_GCD(rat.num, rat.den);
    return rat;
 }
 /**********************************************************************/
