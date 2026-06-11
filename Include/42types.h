@@ -14,6 +14,7 @@
 #include "AcTypes.h"
 #include "DSMTypes.h"
 #include "geomkit.h"
+#include "iokit.h"
 #include "mathkit.h"
 #include "orbkit.h"
 #include "rkkit.h"

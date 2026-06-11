@@ -12,6 +12,7 @@
             "Demo",
             "DSM_DEMO",
             "DSM_NAV_DEMO",
+            "PLANETS_TEST",
          ],
          "default": "DSM_DEMO"
       },
@@ -21,7 +22,6 @@
          "type": "pickString",
          "options": [
             "Kit/tests/jdkit_tests",
-            "Kit/tests/jdkit_dbl_tests",
             "Kit/tests/rationalkit_tests",
          ],
          "default": "Kit/tests/jdkit_tests"

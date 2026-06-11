@@ -60,7 +60,7 @@ void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
             rhatn  = UNITV(S->PosN).v;
             rhat   = MxV(B->CN, rhatn);
             p      = MxV(B->CN, B->pn);
-            p      = VpVElem(p, N->PosB);
+            p      = VAddV_Elem(p, N->PosB);
             rhatop = VoV(rhat, p);
             for (int i = 0; i < 3; i++)
                AccGGB.v[i] = Coef * (p.v[i] - 3.0 * rhat.v[i] * rhatop);
@@ -360,7 +360,7 @@ void StarTrackerModel(struct WorldType *const worlds,
          /* Moon Occultation? (Only worked out if orbiting Earth.  Customize
           * as needed)*/
          if ((ST->Valid == TRUE) && (orb->World == EARTH)) {
-            mvn          = VmVElem(worlds[LUNA].eph.PosN, S->PosN);
+            mvn          = VSubV_Elem(worlds[LUNA].eph.PosN, S->PosN);
             magvec3_t uv = UNITV(mvn);
             MoonDist     = uv.m;
             mvn          = uv.v;
@@ -527,7 +527,7 @@ void FullFgsModel(struct FgsType *F, struct SCType *S)
    CFB      = Q2C(qfb);
    x        = 0.0;
    y        = 0.0;
-   StarPosB = VmVElem(OutPntB, N->PosB);
+   StarPosB = VSubV_Elem(OutPntB, N->PosB);
    for (i = 0; i < 3; i++) {
       x += CFB.mat[F->H_Axis][i] * StarPosB.v[i];
       y += CFB.mat[F->V_Axis][i] * StarPosB.v[i];
@@ -688,7 +688,7 @@ void Sensors(struct WorldType *const worlds, struct OrbitType *const orb,
       GpsModel(worlds, orb, S);
 
    /* Earth Sensor */
-   evn = VNegElem(S->PosN);
+   evn = NegV_Elem(S->PosN);
    evn = UNITV(evn).v;
    evb = MxV(S->B[0].CN, evn);
    if (evb.z > 0.866) {

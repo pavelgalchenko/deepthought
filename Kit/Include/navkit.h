@@ -14,12 +14,10 @@
 #ifndef __NAVKIT_H__
 #define __NAVKIT_H__
 
-#include "42.h"
 #include "42types.h"
 #include "AcTypes.h"
 #include "DSMTypes.h"
 #include "defineskit.h"
-#include "spicekit.h"
 
 enum matType {
    Q_DAT,

@@ -12,7 +12,10 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "dsmkit.h"
-#include "DSMTypes.h"
+#include "42constants.h"
+#include "dcmkit.h"
+#include "defineskit.h"
+#include "fswkit.h"
 #include "navkit.h"
 
 /* #ifdef __cplusplus

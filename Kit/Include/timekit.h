@@ -14,10 +14,7 @@
 #ifndef __TIMEKIT_H__
 #define __TIMEKIT_H__
 
-#include "42constants.h"
-#include "defineskit.h"
 #include "jdkit.h"
-#include <math.h>
 #include <stdint.h>
 #if defined(_WIN32)
 #include <Windows.h>

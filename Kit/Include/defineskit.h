@@ -75,4 +75,11 @@
 #define TWO_ARG_TYPES(a, b) (void (*)(typeof(a), typeof(b)))0
 #endif
 
+#ifndef TRUE
+#define TRUE (1)
+#endif
+#ifndef FALSE
+#define FALSE (0)
+#endif
+
 #endif /* __DEFINESKIT_H__ */

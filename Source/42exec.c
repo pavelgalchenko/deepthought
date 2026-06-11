@@ -173,7 +173,7 @@ void UpdateScBoundingBox(struct SCType *S)
       G    = &Geom[B->GeomTag];
       ctrB = G->BBox.center;
       if (S->RefPt == REFPT_CM)
-         ctrB = VmVElem(ctrB, B->cm);
+         ctrB = VSubV_Elem(ctrB, B->cm);
 
       ctrN = MTxV(B->CN, ctrB);
       for (i = 0; i < 3; i++)
@@ -181,7 +181,7 @@ void UpdateScBoundingBox(struct SCType *S)
 
       ctrB0 = MxV(B0->CN, ctrN);
       if (S->RefPt == REFPT_CM)
-         ctrB0 = VpVElem(ctrB0, B0->cm);
+         ctrB0 = VAddV_Elem(ctrB0, B0->cm);
 
       for (i = 0; i < 3; i++) {
          maxB0 = ctrB0.v[i] + G->BBox.radius;
@@ -459,13 +459,15 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
                break;
-            case ORBDOF_EULER_HILL:
+            case ORBDOF_EULER_HILL: {
                x_trn = &x_rk[dim - 6];
                CopyVG(S->PosEH.v, x_trn, 3);
                CopyVG(S->VelEH.v, &x_trn[3], 3);
-               EHRV2RelRV(orb->SMA, orb->MeanMotion, orb->CLN, S->PosEH,
-                          S->VelEH, &S->PosR, &S->VelR);
-               break;
+               pair_vec3_t pair = EHRV2RelRV(orb->SMA, orb->MeanMotion,
+                                             orb->CLN, S->PosEH, S->VelEH);
+               S->PosR          = pair.first;
+               S->VelR          = pair.second;
+            } break;
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
                CopyVG(S->PosN.v, x_trn, 3);
@@ -494,13 +496,15 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S)
          switch (S->OrbDOF) {
             case ORBDOF_FIXED:
                break;
-            case ORBDOF_EULER_HILL:
+            case ORBDOF_EULER_HILL: {
                x_trn = &x_rk[dim - 6];
                CopyVG(S->PosEH.v, x_trn, 3);
                CopyVG(S->VelEH.v, &x_trn[3], 3);
-               EHRV2RelRV(orb->SMA, orb->MeanMotion, orb->CLN, S->PosEH,
-                          S->VelEH, &S->PosR, &S->VelR);
-               break;
+               pair_vec3_t pair = EHRV2RelRV(orb->SMA, orb->MeanMotion,
+                                             orb->CLN, S->PosEH, S->VelEH);
+               S->PosR          = pair.first;
+               S->VelR          = pair.second;
+            } break;
             case ORBDOF_COWELL:
                x_trn = &x_rk[dim - 6];
                CopyVG(S->PosN.v, x_trn, 3);

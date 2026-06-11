@@ -34,7 +34,6 @@
             "type": "pickString",
             "options": [
                 "Kit/tests/jdkit_tests",
-                "Kit/tests/jdkit_dbl_tests",
                 "Kit/tests/rationalkit_tests",
             ],
             "default": "Kit/tests/jdkit_tests"

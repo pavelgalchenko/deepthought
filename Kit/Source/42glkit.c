@@ -15,6 +15,10 @@
 #define EXTERN
 #include "42glkit.h"
 #undef EXTERN
+#include "defineskit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 void UnscentedStateTForm(struct DSMNavType *const Nav, double *mean,
                          double **P);

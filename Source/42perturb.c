@@ -133,8 +133,8 @@ void FindUnshadedAreas(struct SCType *S, vec3_t DirVecN)
             }
             SE->PosV1N = MTxV(B->CN, SE->PosV1B);
             SE->PosV2N = MTxV(B->CN, SE->PosV2B);
-            SE->PosV1N = VpVElem(SE->PosV1N, B->pn);
-            SE->PosV2N = VpVElem(SE->PosV2N, B->pn);
+            SE->PosV1N = VAddV_Elem(SE->PosV1N, B->pn);
+            SE->PosV2N = VAddV_Elem(SE->PosV2N, B->pn);
             SilNe++;
          }
       }
@@ -197,7 +197,7 @@ void FindUnshadedAreas(struct SCType *S, vec3_t DirVecN)
             /* Transform Poly to N */
             for (i = 0; i < 3; i++) {
                Vtx[i] = MTxV(B->CN, G->V[P->V[i]]);
-               Vtx[i] = VpVElem(Vtx[i], B->pn);
+               Vtx[i] = VAddV_Elem(Vtx[i], B->pn);
             }
 
             /* Clip Silhouette against Poly */
@@ -228,7 +228,7 @@ void FindUnshadedAreas(struct SCType *S, vec3_t DirVecN)
                            for (Iout = 0; Iout < Nout; Iout++) {
                               ClipVtx[SilNc + Iout].Body = B1;
                               ClipVtx[SilNc + Iout].PosN = OutVtx[Iout];
-                              pn = VmVElem(OutVtx[Iout], S->B[B1].pn);
+                              pn = VSubV_Elem(OutVtx[Iout], S->B[B1].pn);
 
                               ClipVtx[SilNc + Iout].PosB = MxV(S->B[B1].CN, pn);
                            }
@@ -253,19 +253,19 @@ void FindUnshadedAreas(struct SCType *S, vec3_t DirVecN)
             if (SilNc > 2) {
                ProjectPointOntoTriangle(Vtx[0], Vtx[1], Vtx[2], DirVecN,
                                         ClipVtx[0].PosN, &ProjPtN, &Bary);
-               ProjPtN = VmVElem(ProjPtN, B->pn);
+               ProjPtN = VSubV_Elem(ProjPtN, B->pn);
                PtA     = MxV(B->CN, ProjPtN);
                ProjectPointOntoTriangle(Vtx[0], Vtx[1], Vtx[2], DirVecN,
                                         ClipVtx[1].PosN, &ProjPtN, &Bary);
-               ProjPtN = VmVElem(ProjPtN, B->pn);
+               ProjPtN = VSubV_Elem(ProjPtN, B->pn);
                PtB     = MxV(B->CN, ProjPtN);
                for (Ic = 2; Ic < SilNc; Ic++) {
                   ProjectPointOntoTriangle(Vtx[0], Vtx[1], Vtx[2], DirVecN,
                                            ClipVtx[Ic].PosN, &ProjPtN, &Bary);
-                  ProjPtN = VmVElem(ProjPtN, B->pn);
+                  ProjPtN = VSubV_Elem(ProjPtN, B->pn);
                   PtC     = MxV(B->CN, ProjPtN);
-                  dV1     = VmVElem(PtB, PtA);
-                  dV2     = VmVElem(PtC, PtA);
+                  dV1     = VSubV_Elem(PtB, PtA);
+                  dV2     = VSubV_Elem(PtC, PtA);
 
                   V1xV2     = VxV(dV1, dV2);
                   dA        = 0.5 * VoV(V1xV2, P->Norm); /* Signed Area */
@@ -326,7 +326,7 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
          CGG       = MxM(B->CN, GravGradN);
          GravGradB = MxMT(CGG, B->CN);
          GGxI      = GravGradTimesInertia(GravGradB, B->I);
-         B->Trq    = VpVElem(B->Trq, GGxI);
+         B->Trq    = VAddV_Elem(B->Trq, GGxI);
       }
       else {
          for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -335,14 +335,14 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
             CGG       = MxM(B->CN, GravGradN);
             GravGradB = MxMT(CGG, B->CN);
             GGxI      = GravGradTimesInertia(GravGradB, B->I);
-            B->Trq    = VpVElem(B->Trq, GGxI);
+            B->Trq    = VAddV_Elem(B->Trq, GGxI);
 
             /* GG force */
             GGxpn   = MxV(GravGradN, B->pn);
             FrcN    = SxV(B->mass, GGxpn);
             FrcB    = MxV(B->CN, FrcN);
-            B->FrcN = VpVElem(B->FrcN, FrcN);
-            B->FrcB = VpVElem(B->FrcB, FrcB);
+            B->FrcN = VAddV_Elem(B->FrcN, FrcN);
+            B->FrcB = VAddV_Elem(B->FrcB, FrcB);
          }
       }
    }
@@ -362,8 +362,8 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
          Tn = MTxV(B->CN, Tb);
          for (int i = 0; i < 3; i++)
             B->Trq.v[i] += 3.0 * Coef * axIoa.v[i];
-         S->gravTrqN = VpVElem(S->gravTrqN, Tn);
-         S->gravTrqB = VpVElem(S->gravTrqB, Tb);
+         S->gravTrqN = VAddV_Elem(S->gravTrqN, Tn);
+         S->gravTrqB = VAddV_Elem(S->gravTrqB, Tb);
       }
       else {
          rhat = UNITV(S->PosN).v;
@@ -381,8 +381,8 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
             for (int i = 0; i < 3; i++)
                FrcN.v[i] = -Coef * (c.v[i] - 3.0 * rhat.v[i] * rhatoc);
             FrcB    = MxV(B->CN, FrcN);
-            B->FrcN = VpVElem(B->FrcN, FrcN);
-            B->FrcB = VpVElem(B->FrcB, FrcB);
+            B->FrcN = VAddV_Elem(B->FrcN, FrcN);
+            B->FrcB = VAddV_Elem(B->FrcB, FrcB);
          }
       }
    }
@@ -424,11 +424,11 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
    /* Sun and all existing planets */
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
       if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-         ph      = VmVElem(worlds[Iw].PosH, WCenter->PosH);
+         ph      = VSubV_Elem(worlds[Iw].PosH, WCenter->PosH);
          p       = MxV(WCenter->CNH, ph);
-         s       = VmVElem(p, S->PosN);
+         s       = VSubV_Elem(p, S->PosN);
          FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-         S->FrcN = VpVElem(S->FrcN, FrcN);
+         S->FrcN = VAddV_Elem(S->FrcN, FrcN);
       }
    }
    /* Moons of OrbCenter (but not SecCenter) */
@@ -437,9 +437,9 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
             p       = worlds[Iw].eph.PosN;
-            s       = VmVElem(p, S->PosN);
+            s       = VSubV_Elem(p, S->PosN);
             FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-            S->FrcN = VpVElem(S->FrcN, FrcN);
+            S->FrcN = VAddV_Elem(S->FrcN, FrcN);
          }
       }
    }
@@ -450,17 +450,17 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
          p       = worlds[Iw].eph.PosN;
          ph      = MTxV(worlds[SecCenter].CNH, p);
          p       = MxV(WCenter->CNH, ph);
-         p       = VpVElem(p, worlds[SecCenter].eph.PosN);
-         s       = VmVElem(p, S->PosN);
+         p       = VAddV_Elem(p, worlds[SecCenter].eph.PosN);
+         s       = VSubV_Elem(p, S->PosN);
          FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-         S->FrcN = VpVElem(S->FrcN, FrcN);
+         S->FrcN = VAddV_Elem(S->FrcN, FrcN);
       }
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
    FrcN    = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
                                     WCenter->CWN, S->mass, S->PosN);
-   S->FrcN = VpVElem(S->FrcN, FrcN);
+   S->FrcN = VAddV_Elem(S->FrcN, FrcN);
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
@@ -512,11 +512,11 @@ void GravPertForceRK4(struct WorldType *const worlds,
             Rk4JplEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
                          &trgtPriMerAng, &trgtCNH);
 
-         ph       = VmVElem(trgtPosH, cntrPosH);
+         ph       = VSubV_Elem(trgtPosH, cntrPosH);
          p        = MxV(cntrCNH, ph);
-         s        = VmVElem(p, SCPosN);
+         s        = VSubV_Elem(p, SCPosN);
          FrcNtemp = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-         *FrcN    = VpVElem(*FrcN, FrcNtemp);
+         *FrcN    = VAddV_Elem(*FrcN, FrcNtemp);
       }
    }
 
@@ -534,9 +534,9 @@ void GravPertForceRK4(struct WorldType *const worlds,
                             &trgtPriMerAng, &trgtCNH);
 
             p        = trgtPosN;
-            s        = VmVElem(p, SCPosN);
+            s        = VSubV_Elem(p, SCPosN);
             FrcNtemp = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-            *FrcN    = VpVElem(*FrcN, FrcNtemp);
+            *FrcN    = VAddV_Elem(*FrcN, FrcNtemp);
          }
       }
    }
@@ -544,7 +544,7 @@ void GravPertForceRK4(struct WorldType *const worlds,
    struct SphereHarmType *gravModel = &WCenter->GravModel;
    FrcN_harm = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
                                       WCenter->CWN, S->mass, SCPosN_harm);
-   *FrcN     = VpVElem(*FrcN, FrcN_harm);
+   *FrcN     = VAddV_Elem(*FrcN, FrcN_harm);
 
    if (EphemOption != EPH_SPICE) {
       if (revertCHEB)
@@ -621,16 +621,16 @@ void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
       Coef = -0.5 * S->AtmoDensity * S->DragCoef * WindSpeed * WindSpeed * Area;
       Fb   = SxV(Coef, VrelB);
       Fn   = MTxV(B->CN, Fb);
-      B->FrcN     = VpVElem(B->FrcN, Fn);
-      B->FrcB     = VpVElem(B->FrcB, Fb);
-      S->aeroFrcN = VpVElem(S->aeroFrcN, Fn);
-      S->aeroFrcB = VpVElem(S->aeroFrcB, Fb);
+      B->FrcN     = VAddV_Elem(B->FrcN, Fn);
+      B->FrcB     = VAddV_Elem(B->FrcB, Fb);
+      S->aeroFrcN = VAddV_Elem(S->aeroFrcN, Fn);
+      S->aeroFrcB = VAddV_Elem(S->aeroFrcB, Fb);
 
       Trq         = VxV(cp, Fb);
       Tn          = MTxV(B->CN, Trq);
-      B->Trq      = VpVElem(B->Trq, Trq);
-      S->aeroTrqN = VpVElem(S->aeroTrqN, Tn);
-      S->aeroTrqB = VpVElem(S->aeroTrqB, Trq);
+      B->Trq      = VAddV_Elem(B->Trq, Trq);
+      S->aeroTrqN = VAddV_Elem(S->aeroTrqN, Tn);
+      S->aeroTrqB = VAddV_Elem(S->aeroTrqB, Trq);
    }
 }
 /**********************************************************************/
@@ -682,17 +682,17 @@ void SolPressFrcTrq(struct SCType *S)
                                  2.0 * (M->SpecFrac * SoN + M->DiffFrac / 3.0) *
                                      P->Norm.v[i]);
                   }
-                  r          = VmVElem(P->UnshadedCtr, B->cm);
+                  r          = VSubV_Elem(P->UnshadedCtr, B->cm);
                   Tb         = VxV(r, Fb);
                   Tn         = MTxV(B->CN, Tb);
                   Fn         = MTxV(B->CN, Fb);
-                  B->FrcN    = VpVElem(B->FrcN, Fn);
-                  B->FrcB    = VpVElem(B->FrcB, Fb);
-                  B->Trq     = VpVElem(B->Trq, Tb);
-                  S->srpFrcN = VpVElem(S->srpFrcN, Fn);
-                  S->srpFrcB = VpVElem(S->srpFrcB, Fb);
-                  S->srpTrqN = VpVElem(S->srpTrqN, Tn);
-                  S->srpTrqB = VpVElem(S->srpTrqB, Tb);
+                  B->FrcN    = VAddV_Elem(B->FrcN, Fn);
+                  B->FrcB    = VAddV_Elem(B->FrcB, Fb);
+                  B->Trq     = VAddV_Elem(B->Trq, Tb);
+                  S->srpFrcN = VAddV_Elem(S->srpFrcN, Fn);
+                  S->srpFrcB = VAddV_Elem(S->srpFrcB, Fb);
+                  S->srpTrqN = VAddV_Elem(S->srpTrqN, Tn);
+                  S->srpTrqB = VAddV_Elem(S->srpTrqB, Tb);
                }
             }
          }
@@ -712,7 +712,7 @@ void ResidualDipoleTrq(struct SCType *S)
       B      = &S->B[Ib];
       bvb    = MxV(B->CN, S->bvn);
       Trq    = VxV(B->EmbeddedDipole, bvb);
-      B->Trq = VpVElem(B->Trq, Trq);
+      B->Trq = VAddV_Elem(B->Trq, Trq);
    }
 }
 /**********************************************************************/
@@ -726,7 +726,7 @@ void FindPosVelR(struct SCType *S, struct BodyType *B, vec3_t PosB,
    vec3_t VelCMB, VelCMN;
 
    /* From cm of B */
-   PosCMB = VmVElem(PosB, B->cm);
+   PosCMB = VSubV_Elem(PosB, B->cm);
    VelCMB = VxV(B->wn, PosCMB);
 
    /* Transform to N */
@@ -780,14 +780,14 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R)
       Done = 0;
       while (!Done) {
          Done    = 1;
-         RelPosR = VmVElem(PosRR, Gr->Poly[HitPoly].Centroid);
+         RelPosR = VSubV_Elem(PosRR, Gr->Poly[HitPoly].Centroid);
          MinDist = MAGV(RelPosR);
          /* Check neighboring polys */
          for (Ie = 0; Ie < 3; Ie++) {
             E = &Gr->Edge[Gr->Poly[HitPoly].E[Ie]];
             if (E->Poly1 >= 0 && E->Poly2 >= 0) { /* Screen edges of region */
                OtherPoly = (E->Poly1 == HitPoly ? E->Poly2 : E->Poly1);
-               RelPosR   = VmVElem(PosRR, Gr->Poly[OtherPoly].Centroid);
+               RelPosR   = VSubV_Elem(PosRR, Gr->Poly[OtherPoly].Centroid);
                Dist      = MAGV(RelPosR);
                if (Dist < MinDist) {
                   MinDist = Dist;
@@ -805,8 +805,8 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R)
       wxrb = VxV(R->wn, Pr->Centroid);
       vrn  = MTxV(R->CN, wxrb);
 
-      pbrn        = VmVElem(PosR, prn);
-      vbrn        = VmVElem(VelR, vrn);
+      pbrn        = VSubV_Elem(PosR, prn);
+      vbrn        = VSubV_Elem(VelR, vrn);
       CPR.rows[0] = Pr->Uhat;
       CPR.rows[1] = Pr->Vhat;
       CPR.rows[2] = Pr->Norm;
@@ -833,18 +833,18 @@ void BodyRgnContactFrcTrq(struct SCType *S, long Ibody, struct RegionType *R)
       }
 
       /* Transform into N, B frames */
-      rb   = VmVElem(Pb->Centroid, B->cm);
+      rb   = VSubV_Elem(Pb->Centroid, B->cm);
       Fn   = MTxV(CPN, FrcP);
       Fb   = MxV(B->CN, Fn);
       Tb   = VxV(rb, Fb);
-      FrcN = VpVElem(FrcN, Fn);
-      FrcB = VpVElem(FrcB, Fb);
-      TrqB = VpVElem(TrqB, Tb);
+      FrcN = VAddV_Elem(FrcN, Fn);
+      FrcB = VAddV_Elem(FrcB, Fb);
+      TrqB = VAddV_Elem(TrqB, Tb);
    }
 
-   B->FrcN = VpVElem(B->FrcN, FrcN);
-   B->FrcB = VpVElem(B->FrcB, FrcB);
-   B->Trq  = VpVElem(B->Trq, TrqB);
+   B->FrcN = VAddV_Elem(B->FrcN, FrcN);
+   B->FrcB = VAddV_Elem(B->FrcB, FrcB);
+   B->Trq  = VAddV_Elem(B->Trq, TrqB);
 }
 /**********************************************************************/
 /* For each Poly in Body Ba, find force and torque due to contact     */
@@ -895,24 +895,24 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
 
       while (!ExhaustedB) {
          FindPosVelR(Sb, Bb, OCb->center, &PosBN, &VelBN);
-         dx = VmVElem(PosAN, PosBN);
+         dx = VSubV_Elem(PosAN, PosBN);
          if (MAGV(dx) <
              OCa->radius + OCb->radius) { /* OctCells are close enough */
             FoundOneInB = 1;
             for (Ia = 0; Ia < OCa->Npoly; Ia++) {
                Pa = &Ga->Poly[OCa->Poly[Ia]];
                FindPosVelR(Sa, Ba, Pa->Centroid, &pan, &van);
-               ra = VmVElem(Pa->Centroid, Ba->cm);
+               ra = VSubV_Elem(Pa->Centroid, Ba->cm);
                for (Ib = 0; Ib < OCb->Npoly; Ib++) {
                   Pb = &Gb->Poly[OCb->Poly[Ib]];
                   FindPosVelR(Sb, Bb, Pb->Centroid, &pbn, &vbn);
-                  rb = VmVElem(Pb->Centroid, Bb->cm);
+                  rb = VSubV_Elem(Pb->Centroid, Bb->cm);
 
                   /* Use SPH concepts */
                   hbar        = 0.5 * (Pa->radius + Pb->radius);
                   ContactArea = 0.5 * (Pa->Area + Pb->Area);
-                  dx          = VmVElem(pan, pbn);
-                  dv          = VmVElem(van, vbn);
+                  dx          = VSubV_Elem(pan, pbn);
+                  dv          = VSubV_Elem(van, vbn);
                   r2          = VoV(dx, dx);
                   v2          = VoV(dv, dv);
                   r           = sqrt(r2);
@@ -929,7 +929,7 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
                      /* Find contact force exerted by Pb on Pa */
                      NormAN   = MTxV(Ba->CN, Pa->Norm);
                      NormBN   = MTxV(Bb->CN, Pb->Norm);
-                     NormAxis = VmVElem(NormBN, NormAN);
+                     NormAxis = VSubV_Elem(NormBN, NormAN);
                      NormAxis = UNITV(NormAxis).v;
                      NormDist = VoV(dx, NormAxis);
                      NormRate = VoV(dv, NormAxis);
@@ -948,9 +948,9 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
                         Ta   = VxV(ra, Fa);
                         Fb   = MxV(Bb->CN, Fn);
                         Tb   = VxV(rb, Fb);
-                        FrcN = VpVElem(FrcN, Fn);
-                        TrqA = VpVElem(TrqA, Ta);
-                        TrqB = VpVElem(TrqB, Tb);
+                        FrcN = VAddV_Elem(FrcN, Fn);
+                        TrqA = VAddV_Elem(TrqA, Ta);
+                        TrqB = VAddV_Elem(TrqB, Tb);
                      }
                   }
                }
@@ -979,12 +979,12 @@ void BodyBodyContactFrcTrq(struct SCType *Sa, long Ibody, struct SCType *Sb,
 
    FrcA              = MxV(Ba->CN, FrcN);
    FrcB              = MxV(Bb->CN, FrcN);
-   Ba->SCContactFrcN = VpVElem(Ba->SCContactFrcN, FrcN);
-   Ba->SCContactFrcB = VpVElem(Ba->SCContactFrcB, FrcA);
-   Ba->SCContactTrq  = VpVElem(Ba->SCContactTrq, TrqA);
-   Bb->SCContactFrcN = VmVElem(Bb->SCContactFrcN, FrcN);
-   Bb->SCContactFrcB = VpVElem(Bb->SCContactFrcB, FrcB);
-   Bb->SCContactTrq  = VmVElem(Bb->SCContactTrq, TrqB);
+   Ba->SCContactFrcN = VAddV_Elem(Ba->SCContactFrcN, FrcN);
+   Ba->SCContactFrcB = VAddV_Elem(Ba->SCContactFrcB, FrcA);
+   Ba->SCContactTrq  = VAddV_Elem(Ba->SCContactTrq, TrqA);
+   Bb->SCContactFrcN = VSubV_Elem(Bb->SCContactFrcN, FrcN);
+   Bb->SCContactFrcB = VAddV_Elem(Bb->SCContactFrcB, FrcB);
+   Bb->SCContactTrq  = VSubV_Elem(Bb->SCContactTrq, TrqB);
 }
 /**********************************************************************/
 void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
@@ -1012,7 +1012,7 @@ void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
          continue;
       if (orbs[Sc->RefOrb].World != O->World)
          continue;
-      dx = VmVElem(S->PosN, Sc->PosN);
+      dx = VSubV_Elem(S->PosN, Sc->PosN);
       if (MAGV(dx) > 1.2 * (S->BBox.radius + Sc->BBox.radius))
          continue;
 
@@ -1020,13 +1020,13 @@ void SCContactFrcTrq(struct OrbitType *const orbs, struct SCType *scs,
       for (Ib = 0; Ib < S->Nb; Ib++) {
          Bi   = &S->B[Ib];
          Gi   = &Geom[Bi->GeomTag];
-         cmb  = VmVElem(Bi->cm, Gi->BBox.center);
+         cmb  = VSubV_Elem(Bi->cm, Gi->BBox.center);
          cmni = MTxV(Bi->CN, cmb);
          for (Jb = 0; Jb < Sc->Nb; Jb++) {
             /* Cheap Bi/Bj proximity checks */
             Bj   = &Sc->B[Jb];
             Gj   = &Geom[Bj->GeomTag];
-            cmb  = VmVElem(Bj->cm, Gj->BBox.center);
+            cmb  = VSubV_Elem(Bj->cm, Gj->BBox.center);
             cmnj = MTxV(Bj->CN, cmb);
 
             for (int i = 0; i < 3; i++)
@@ -1056,7 +1056,7 @@ void NonSCContactFrcTrq(struct OrbitType *const O, struct SCType *S)
          continue;
       if (R->World != O->World)
          continue;
-      dx = VmVElem(S->PosN, R->PosN);
+      dx = VSubV_Elem(S->PosN, R->PosN);
       if (MAGV(dx) > S->BBox.radius + Geom[R->GeomTag].BBox.radius)
          continue;
 

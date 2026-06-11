@@ -14,13 +14,17 @@
 #ifndef __42DEFINES_H__
 #define __42DEFINES_H__
 
-#define TRUE  1
-#define FALSE 0
+#ifndef TRUE
+#define TRUE (1)
+#endif
+#ifndef FALSE
+#define FALSE (0)
+#endif
 
-#define ON  1
-#define OFF 0
+#define ON  (1)
+#define OFF (0)
 
-#define AU2m 149597870000.0
+#define AU2m (149597870000.0)
 
 #ifndef ABS
 #define ABS(X) ((X) > 0 ? (X) : (-X))

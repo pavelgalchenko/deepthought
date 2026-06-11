@@ -14,17 +14,7 @@
 #ifndef __JDKIT_H__
 #define __JDKIT_H__
 
-#include "42constants.h"
-#include "defineskit.h"
-#include "mathkit.h"
 #include "rationalkit.h"
-#include <ctype.h>
-#include <math.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -89,10 +79,16 @@ typedef struct JDType {
    JD_RAW((sys), (epc), (day),                                                 \
           RATIONAL_NGCD(((day) - ((long)(day))) * 86400.0, 0, 1))
 
+#define JDaxpy(a, x, y)                                                        \
+   _Generic((a),                                                               \
+       double: _jdaxpy_dbl,                                                    \
+       Rational: _jdaxpy_rat,                                                  \
+       RationalLL: _jdaxpy_ratll)(a, x, y)
+
 __attribute__((const)) JDType InitJD(const TimeSystem system,
                                      const EpochTT epoch, const long days,
                                      const Rational seconds);
-__attribute__((const)) double GetLeapSec(const JDType jd);
+__attribute__((pure)) double GetLeapSec(const JDType jd);
 __attribute__((const)) double EpochValueTT(EpochTT epoch);
 __attribute__((const)) JDType JDChangeEpoch(const EpochTT new_epoch, JDType jd);
 __attribute__((const)) JDType JDChangeSystem(const TimeSystem new_system,
@@ -132,7 +128,12 @@ __attribute__((const)) JDType JDSubRationalSeconds(const JDType a,
                                                    const Rational b);
 __attribute__((const)) JDType JDSubRationalMult(const JDType a, Rational mul,
                                                 const JDType b);
-__attribute__((const)) JDType JDaxpy(const double a, const JDType x, JDType y);
+__attribute__((const)) JDType _jdaxpy_dbl(const double a, const JDType x,
+                                          JDType y);
+__attribute__((const)) JDType _jdaxpy_rat(const Rational a, const JDType x,
+                                          JDType y);
+__attribute__((const)) JDType _jdaxpy_ratll(const RationalLL a, const JDType x,
+                                            JDType y);
 __attribute__((const)) double JDAddToDays(const JDType a, const JDType b);
 __attribute__((const)) double JDAddToSeconds(const JDType a, const JDType b);
 __attribute__((const)) double JDSubToDays(const JDType a, const JDType b);

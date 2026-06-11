@@ -12,6 +12,11 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "timekit.h"
+#include "42constants.h"
+#include "defineskit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {

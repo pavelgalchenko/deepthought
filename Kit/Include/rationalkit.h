@@ -15,9 +15,6 @@
 #define __RATIONALKIT_H__
 
 #include "defineskit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 typedef signed long int Rat_Long;
 #define _SIZEOF_RATLONG_ (__SIZEOF_LONG__)
@@ -64,6 +61,11 @@ typedef struct RationalLL {
    RATIONAL_RAW((whl) + ((SIGN(d) * (n)) / MAX_ABS_ONE(d)),                    \
                 ((SIGN(d) * (n)) % MAX_ABS_ONE(d)), MAX_ABS_ONE(d))
 #define RATIONAL_ZERO RATIONAL_RAW(0, 0, 1)
+#define RATIONALLL_RAW(whl, n, d)                                              \
+   ((RationalLL){.whole = (whl), .num = (n), .den = (d)})
+#define RATIONALLL_NGCD(whl, n, d)                                             \
+   RATIONALLL_RAW((whl) + ((SIGN(d) * (n)) / MAX_ABS_ONE(d)),                  \
+                  ((SIGN(d) * (n)) % MAX_ABS_ONE(d)), MAX_ABS_ONE(d))
 
 static inline Rational _iden_rational(Rational x)
 {
@@ -74,9 +76,15 @@ static inline RationalLL _iden_rationalll(RationalLL x)
    return x;
 }
 #define ToRational(a)                                                          \
-   _Generic((a), Rational: _iden_rational, RationalLL: _rat_to_rational)(a)
+   _Generic((a),                                                               \
+       Rational: _iden_rational,                                               \
+       RationalLL: _rat_to_rational,                                           \
+       double: double2rational)(a)
 #define ToRationalLL(a)                                                        \
-   _Generic((a), Rational: _rat_to_rationalll, RationalLL: _iden_rationalll)(a)
+   _Generic((a),                                                               \
+       Rational: _rat_to_rationalll,                                           \
+       RationalLL: _iden_rationalll,                                           \
+       double: double2rationalll)(a)
 #define IntegerRationalMult(mul, rat)                                          \
    _int_rat_mult((Rat_LongLong)(mul), ToRationalLL(rat))
 #define IntegerRationalMultMod(mul, rat, mod, carry)                           \
@@ -91,6 +99,11 @@ static inline RationalLL _iden_rationalll(RationalLL x)
    _Generic((rat),                                                             \
        Rational *: _rat_int_mod_rat,                                           \
        RationalLL *: _rat_int_mod_ratll)((rat), (mod))
+#define rational2double(x) _rational2double(ToRational(x))
+#define RationalAbs(x)                                                         \
+   _Generic((x), Rational: _rat_abs, RationalLL: _ratll_abs)(x)
+#define ispos_rational(x)                                                      \
+   _Generic((x), Rational: _ispos_rat, RationalLL: _ispos_ratll)(x)
 
 __attribute__((const)) Rational _rat_to_rational(const RationalLL rat_ll);
 __attribute__((const)) RationalLL _rat_to_rationalll(const Rational rat);
@@ -119,10 +132,13 @@ __attribute__((const)) Rational InitRational(const Rat_Long whole,
 __attribute__((const)) Rational ReduceRational(Rational rat);
 
 __attribute__((const)) Rational double2rational(const double val);
-__attribute__((const)) double rational2double(const Rational rat);
-__attribute__((const)) Rational RationalAbs(Rational rat);
+__attribute__((const)) RationalLL double2rationalll(const double val);
+__attribute__((const)) double _rational2double(const Rational rat);
+__attribute__((const)) Rational _rat_abs(Rational rat);
+__attribute__((const)) RationalLL _ratll_abs(RationalLL rat);
 __attribute__((const)) Rational RationalNegate(Rational rat);
-__attribute__((const)) int ispos_rational(Rational a);
+__attribute__((const)) int _ispos_rat(Rational a);
+__attribute__((const)) int _ispos_ratll(RationalLL a);
 __attribute__((const)) int isequal_rational(const Rational a, const Rational b);
 __attribute__((const)) int isless_rational(const Rational a, const Rational b);
 __attribute__((const)) int isgreater_rational(const Rational a,

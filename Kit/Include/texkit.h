@@ -15,7 +15,7 @@
 /*  Ebert, Musgrave, Peachey, Perlin, Worley.                         */
 /*  "Texturing & Modeling: A Procedural Approach", 3rd edition        */
 
-void Worley(douvec3ble at[3], long max_order, double *F, double (*delta)[3],
+void Worley(double at[3], long max_order, double *F, double (*delta)[3],
             unsigned long *ID, long DistanceType);
 
 void MixColor(float C1[3], float C2[3], double f, float C[3]);
@@ -29,9 +29,9 @@ void InitGradRandomTable(int seed);
 double glattice(long ix, long iy, long iz, double fx, double fy, double fz);
 double gnoise(double x, double y, double z);
 double turbulence(double x, double y, double z, double MinFreq, double MaxFreq);
-double FractalWorley(vec3_t p[3], long octaves, double lacunarity,
+double FractalWorley(double p[3], long octaves, double lacunarity,
                      long DistanceType);
-double FractalWorley2(vec3_t p[3], long octaves, double lacunarity,
+double FractalWorley2(double p[3], long octaves, double lacunarity,
                       long DistanceType);
 double ProcTex2D(double x, double y, double Xunit, double Yunit, long Noct);
 double ProcTex3D(double x, double y, double z, double Xunit, double Yunit,

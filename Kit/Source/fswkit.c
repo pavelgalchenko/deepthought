@@ -12,6 +12,12 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "fswkit.h"
+#include "42constants.h"
+#include "dcmkit.h"
+#include "defineskit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {

@@ -12,6 +12,12 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "mathkit.h"
+#include "42constants.h"
+#include "defineskit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -37,11 +43,9 @@ int all_int(const long n, const int *const vec)
 /**********************************************************************/
 int any_isnan(const long n, const double *const v)
 {
-   for (long i = 0; i < n; i++) {
+   for (long i = 0; i < n; i++)
       if (isnan(v[i]))
          return 1;
-   }
-
    return 0;
 }
 /**********************************************************************/
@@ -206,103 +210,107 @@ mat3x3_t MTxMT(const mat3x3_t A, const mat3x3_t B)
 vec3_t VxM(const vec3_t V, const mat3x3_t M)
 {
    vec3_t W;
-   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[1][0] + V.v[2] * M.mat[2][0];
-   W.v[1] = V.v[0] * M.mat[0][1] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[2][1];
-   W.v[2] = V.v[0] * M.mat[0][2] + V.v[1] * M.mat[1][2] + V.v[2] * M.mat[2][2];
+   W.x = V.x * M.mat[0][0] + V.y * M.mat[1][0] + V.z * M.mat[2][0];
+   W.y = V.x * M.mat[0][1] + V.y * M.mat[1][1] + V.z * M.mat[2][1];
+   W.z = V.x * M.mat[0][2] + V.y * M.mat[1][2] + V.z * M.mat[2][2];
    return W;
+}
+/**********************************************************************/
+/*  Transpose of 3x3 Matrix times 3x1 Vector                          */
+/*  Equivalent to the transpose problem, VxM                          */
+vec3_t MTxV(const mat3x3_t M, const vec3_t V)
+{
+   // vec3_t W;
+   // W.x = V.x * M.mat[0][0] + V.y * M.mat[1][0] + V.z * M.mat[2][0];
+   // W.y = V.x * M.mat[0][1] + V.y * M.mat[1][1] + V.z * M.mat[2][1];
+   // W.z = V.x * M.mat[0][2] + V.y * M.mat[1][2] + V.z * M.mat[2][2];
+   return VxM(V, M);
 }
 /**********************************************************************/
 /*  3x3 Matrix times 3x1 Vector                                       */
 vec3_t MxV(const mat3x3_t M, const vec3_t V)
 {
    vec3_t W;
-   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[0][1] + V.v[2] * M.mat[0][2];
-   W.v[1] = V.v[0] * M.mat[1][0] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[1][2];
-   W.v[2] = V.v[0] * M.mat[2][0] + V.v[1] * M.mat[2][1] + V.v[2] * M.mat[2][2];
+   W.x = V.x * M.mat[0][0] + V.y * M.mat[0][1] + V.z * M.mat[0][2];
+   W.y = V.x * M.mat[1][0] + V.y * M.mat[1][1] + V.z * M.mat[1][2];
+   W.z = V.x * M.mat[2][0] + V.y * M.mat[2][1] + V.z * M.mat[2][2];
    return W;
 }
 /**********************************************************************/
 /*  1x3 Vector times transpose of 3x3 Matrix                          */
+/*  Equivalent to the transpose problem, MxV                          */
 vec3_t VxMT(const vec3_t V, const mat3x3_t M)
 {
-   vec3_t W;
-   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[0][1] + V.v[2] * M.mat[0][2];
-   W.v[1] = V.v[0] * M.mat[1][0] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[1][2];
-   W.v[2] = V.v[0] * M.mat[2][0] + V.v[1] * M.mat[2][1] + V.v[2] * M.mat[2][2];
-   return W;
-}
-/**********************************************************************/
-/*  Transpose of 3x3 Matrix times 3x1 Vector                          */
-vec3_t MTxV(const mat3x3_t M, const vec3_t V)
-{
-   vec3_t W;
-   W.v[0] = V.v[0] * M.mat[0][0] + V.v[1] * M.mat[1][0] + V.v[2] * M.mat[2][0];
-   W.v[1] = V.v[0] * M.mat[0][1] + V.v[1] * M.mat[1][1] + V.v[2] * M.mat[2][1];
-   W.v[2] = V.v[0] * M.mat[0][2] + V.v[1] * M.mat[1][2] + V.v[2] * M.mat[2][2];
-   return W;
+   // vec3_t W;
+   // W.x = V.x * M.mat[0][0] + V.y * M.mat[0][1] + V.z * M.mat[0][2];
+   // W.y = V.x * M.mat[1][0] + V.y * M.mat[1][1] + V.z * M.mat[1][2];
+   // W.z = V.x * M.mat[2][0] + V.y * M.mat[2][1] + V.z * M.mat[2][2];
+   return MxV(M, V);
 }
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
 vec3_t SxV(const double S, const vec3_t V)
 {
    vec3_t W;
-   W.v[0] = S * V.v[0];
-   W.v[1] = S * V.v[1];
-   W.v[2] = S * V.v[2];
+   W.x = S * V.x;
+   W.y = S * V.y;
+   W.z = S * V.z;
    return W;
 }
 /**********************************************************************/
-vec3_t VNegElem(const vec3_t A)
+vec3_t NegV_Elem(const vec3_t A)
 {
    vec3_t out;
-   out.v[0] = -A.v[0];
-   out.v[1] = -A.v[1];
-   out.v[2] = -A.v[2];
+   out.x = -A.x;
+   out.y = -A.y;
+   out.z = -A.z;
    return out;
 }
 /**********************************************************************/
-vec3_t VpVElem(const vec3_t A, const vec3_t B)
+vec3_t VAddV_Elem(const vec3_t A, const vec3_t B)
 {
    vec3_t out  = A;
-   out.v[0]   += B.v[0];
-   out.v[1]   += B.v[1];
-   out.v[2]   += B.v[2];
+   out.x      += B.x;
+   out.y      += B.y;
+   out.z      += B.z;
    return out;
 }
 /**********************************************************************/
-vec3_t VmVElem(const vec3_t A, const vec3_t B)
+vec3_t VSubV_Elem(const vec3_t A, const vec3_t B)
 {
    vec3_t out  = A;
-   out.v[0]   -= B.v[0];
-   out.v[1]   -= B.v[1];
-   out.v[2]   -= B.v[2];
+   out.x      -= B.x;
+   out.y      -= B.y;
+   out.z      -= B.z;
    return out;
 }
 /**********************************************************************/
-vec3_t VxVElem(const vec3_t A, const vec3_t B)
+vec3_t VMulV_Elem(const vec3_t A, const vec3_t B)
 {
    vec3_t out  = A;
-   out.v[0]   *= B.v[0];
-   out.v[1]   *= B.v[1];
-   out.v[2]   *= B.v[2];
+   out.x      *= B.x;
+   out.y      *= B.y;
+   out.z      *= B.z;
    return out;
 }
 /**********************************************************************/
-vec3_t VdVElem(const vec3_t A, const vec3_t B)
+vec3_t VDivV_Elem(const vec3_t A, const vec3_t B)
 {
    vec3_t out  = A;
-   out.v[0]   /= (fabs(B.v[0]) > __DBL_EPSILON__) ? B.v[0] : 0.0;
-   out.v[1]   /= (fabs(B.v[1]) > __DBL_EPSILON__) ? B.v[1] : 0.0;
-   out.v[2]   /= (fabs(B.v[2]) > __DBL_EPSILON__) ? B.v[2] : 0.0;
+   out.x      /= (fabs(B.x) > __DBL_EPSILON__) ? B.x : 0.0;
+   out.y      /= (fabs(B.y) > __DBL_EPSILON__) ? B.y : 0.0;
+   out.z      /= (fabs(B.z) > __DBL_EPSILON__) ? B.z : 0.0;
    return out;
 }
 /**********************************************************************/
 vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim)
 {
-   for (int i = 0; i < 3; i++)
-      if (lim.v[i] > 0)
-         x.v[i] = Limit(x.v[i], -lim.v[i], lim.v[i]);
-
+   if (lim.x > 0)
+      x.x = Limit(x.x, -lim.x, lim.x);
+   if (lim.y > 0)
+      x.y = Limit(x.y, -lim.y, lim.y);
+   if (lim.z > 0)
+      x.z = Limit(x.z, -lim.z, lim.z);
    return x;
 }
 /**********************************************************************/
@@ -533,7 +541,7 @@ vec3_t vxMov(const vec3_t w, const mat3x3_t M)
 /*  Magnitude of a 3-vector                                           */
 double MAGV(const vec3_t V)
 {
-   return (sqrt(VoV(V, V)));
+   return sqrt(VoV(V, V));
 }
 /**********************************************************************/
 /*  Normalize a 3-vector.  Return its (pre-normalization) magnitude   */

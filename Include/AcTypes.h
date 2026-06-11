@@ -15,6 +15,7 @@
 #define __ACTYPES_H__
 
 #include "jdkit.h"
+#include "mathkit.h"
 
 /*
 ** #ifdef __cplusplus

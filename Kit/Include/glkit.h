@@ -14,12 +14,7 @@
 #ifndef __GLKIT_H__
 #define __GLKIT_H__
 
-#include "42constants.h"
-#include "defineskit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "mathkit.h"
 
 #ifdef __linux__
 #define GL_GLEXT_PROTOTYPES
@@ -57,11 +52,6 @@
 #else
 #error "Yo!  I don't know where to look for glut.h!"
 #endif
-
-#include "dcmkit.h"
-#include "iokit.h"
-#include "mathkit.h"
-#include "sigkit.h"
 
 /*
 ** #ifdef __cplusplus

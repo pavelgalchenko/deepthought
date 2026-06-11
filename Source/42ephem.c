@@ -41,11 +41,13 @@ void AssignScToOrbit(struct SCType *S, long Iorb)
    }
 
    /* .. Update PosR, VelR, PosEH, VelEH */
-   S->PosR = VmVElem(S->PosN, NewOrb->PosN);
-   S->VelR = VmVElem(S->PosN, NewOrb->PosN);
+   S->PosR = VSubV_Elem(S->PosN, NewOrb->PosN);
+   S->VelR = VSubV_Elem(S->PosN, NewOrb->PosN);
 
-   RelRV2EHRV(MAGV(NewOrb->PosN), MAGV(NewOrb->wln), NewOrb->CLN, S->PosR,
-              S->VelR, &S->PosEH, &S->VelEH);
+   pair_vec3_t pair = RelRV2EHRV(MAGV(NewOrb->PosN), MAGV(NewOrb->wln),
+                                 NewOrb->CLN, S->PosR, S->VelR);
+   S->PosEH         = pair.first;
+   S->VelEH         = pair.second;
 
    /* .. Update RefOrb tag */
    S->RefOrb = Iorb;
@@ -73,7 +75,7 @@ void FindSCinFormation(struct SCType *S)
       /* Find VelF */
       wxr     = VxV(S->B[0].wn, S->cm);
       wxrn    = MTxV(S->B[0].CN, wxr);
-      vsn     = VmVElem(S->VelR, wxrn);
+      vsn     = VSubV_Elem(S->VelR, wxrn);
       S->VelF = MxV(F->CN, vsn);
    }
 #if 0
@@ -118,8 +120,8 @@ void CheckOrbitRectification(struct SCType *scs, struct OrbitType *O)
    /* Visualization gets jittery at about 50 km due to SC.PosR-POV.rr being */
    /* difference of large quantities */
    if (MAGV(PosR) > 50.0E3) {
-      O->PosN = VpVElem(O->PosN, PosR);
-      O->VelN = VpVElem(O->VelN, VelR);
+      O->PosN = VAddV_Elem(O->PosN, PosR);
+      O->VelN = VAddV_Elem(O->VelN, VelR);
       if (O->Regime == ORB_CENTRAL)
          RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
                 &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha,
@@ -129,10 +131,12 @@ void CheckOrbitRectification(struct SCType *scs, struct OrbitType *O)
       n = sqrt(O->mu / (a * a * a));
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (scs[Isc].Exists && scs[Isc].RefOrb == O->Tag) {
-            S       = &scs[Isc];
-            S->PosR = VmVElem(S->PosR, PosR);
-            S->VelR = VmVElem(S->VelR, VelR);
-            RelRV2EHRV(a, n, O->CLN, S->PosR, S->VelR, &S->PosEH, &S->VelEH);
+            S                = &scs[Isc];
+            S->PosR          = VSubV_Elem(S->PosR, PosR);
+            S->VelR          = VSubV_Elem(S->VelR, VelR);
+            pair_vec3_t pair = RelRV2EHRV(a, n, O->CLN, S->PosR, S->VelR);
+            S->PosEH         = pair.first;
+            S->VelEH         = pair.second;
          }
       }
       printf("Orb[%ld] rectified at Time = %12.3f\n", O->Tag, SimTime);
@@ -184,8 +188,8 @@ void ChangeNFrame(struct SCType *const scs, struct WorldType *const worlds,
          S->PosR = MxV(CN2H, VH);
          VH      = MTxV(CN1H, S->VelR);
          S->VelR = MxV(CN2H, VH);
-         S->PosN = VpVElem(O->PosN, S->PosR);
-         S->VelN = VpVElem(O->VelN, S->VelR);
+         S->PosN = VAddV_Elem(O->PosN, S->PosR);
+         S->VelN = VAddV_Elem(O->VelN, S->VelR);
 
          FindCLN(S->PosN, S->VelN, &S->CLN, &S->wln);
          CL2H     = MxM(S->CLN, CN2H);
@@ -227,15 +231,22 @@ void ChangeNFrame(struct SCType *const scs, struct WorldType *const worlds,
       POV.CN         = MxMT(CH, CN2H);
       POV.CL         = MxMT(POV.CN, scs[POV.Host.SC].CLN);
 
-      if (POV.Frame == FRAME_N)
-         POV.C = POV.CN;
-      else if (POV.Frame == FRAME_L)
-         POV.C = POV.CL;
-      else if (POV.Frame == FRAME_F)
-         /* Still needs work */
-         POV.C = POV.CF;
-      else if (POV.Frame == FRAME_S)
-         POV.C = POV.CB;
+      switch (POV.Frame) {
+         case FRAME_N:
+            POV.C = POV.CN;
+            break;
+         case FRAME_L:
+            POV.C = POV.CL;
+            break;
+         case FRAME_F:
+            /* Still needs work */
+            POV.C = POV.CF;
+            break;
+         case FRAME_S:
+         case FRAME_B:
+            POV.C = POV.CB;
+            break;
+      }
       POV.q = C2Q(POV.C);
    }
 }
@@ -250,7 +261,7 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
 #define THREEBODY_TO_CENTRAL1 3
 #define THREEBODY_TO_CENTRAL2 4
 
-   long i, Im, Iw;
+   long Im, Iw;
    vec3_t dr, rh, vh;
    struct WorldType *P;
    long Transition = NO_TRANSITION;
@@ -261,7 +272,7 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
       P = &worlds[O->World];
       for (Im = 0; Im < P->Nsat; Im++) {
          Iw = P->Sat[Im];
-         dr = VmVElem(O->PosN, worlds[Iw].eph.PosN);
+         dr = VSubV_Elem(O->PosN, worlds[Iw].eph.PosN);
          if (MAGV(dr) < 1.99 * worlds[Iw].RadOfInfluence) {
             Transition = CENTRAL1_TO_THREEBODY;
             Body1      = O->World;
@@ -278,7 +289,7 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
    else { /* ORB_THREE_BODY */
       /* Falling "in" from 3-body to Body 2-centered */
       Iw = O->Body2;
-      dr = VmVElem(O->PosN, worlds[Iw].eph.PosN);
+      dr = VSubV_Elem(O->PosN, worlds[Iw].eph.PosN);
       if (MAGV(dr) < 0.49 * worlds[Iw].RadOfInfluence) {
          Transition = THREEBODY_TO_CENTRAL2;
          Body1      = O->Body1;
@@ -286,7 +297,7 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
       }
       else {
          /* Falling "out" from 3-body to Body 1-centered */
-         dr = VmVElem(O->PosN, worlds[Iw].eph.PosN);
+         dr = VSubV_Elem(O->PosN, worlds[Iw].eph.PosN);
          if (MAGV(dr) > 2.01 * worlds[Iw].RadOfInfluence) {
             Transition = THREEBODY_TO_CENTRAL1;
             Body1      = O->Body1;
@@ -320,8 +331,8 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
          vh        = MTxV(worlds[Body2].CNH, O->VelN);
          O->PosN   = MxV(worlds[Body1].CNH, rh);
          O->VelN   = MxV(worlds[Body1].CNH, vh);
-         O->PosN   = VpVElem(O->PosN, worlds[Body2].eph.PosN);
-         O->VelN   = VpVElem(O->VelN, worlds[Body2].eph.VelN);
+         O->PosN   = VAddV_Elem(O->PosN, worlds[Body2].eph.PosN);
+         O->VelN   = VAddV_Elem(O->VelN, worlds[Body2].eph.VelN);
 
          RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
                 &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha,
@@ -342,14 +353,12 @@ void CheckChangeOfOrbitWorld(struct SCType *const scs,
          O->Regime = ORB_CENTRAL;
          O->World  = Body2;
          O->mu     = worlds[O->World].mu;
-         for (i = 0; i < 3; i++) {
-            O->PosN = VmVElem(O->PosN, worlds[Body2].eph.PosN);
-            O->VelN = VmVElem(O->VelN, worlds[Body2].eph.VelN);
-         }
-         rh      = MTxV(worlds[Body1].CNH, O->PosN);
-         vh      = MTxV(worlds[Body1].CNH, O->VelN);
-         O->PosN = MxV(worlds[Body2].CNH, rh);
-         O->VelN = MxV(worlds[Body2].CNH, vh);
+         O->PosN   = VSubV_Elem(O->PosN, worlds[Body2].eph.PosN);
+         O->VelN   = VSubV_Elem(O->VelN, worlds[Body2].eph.VelN);
+         rh        = MTxV(worlds[Body1].CNH, O->PosN);
+         vh        = MTxV(worlds[Body1].CNH, O->VelN);
+         O->PosN   = MxV(worlds[Body2].CNH, rh);
+         O->VelN   = MxV(worlds[Body2].CNH, vh);
          RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
                 &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha,
                 &O->rmin, &O->MeanMotion, &O->Period);
@@ -418,7 +427,6 @@ void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
    if (O->Regime == ORB_CENTRAL) {
       O->PosN = x;
       O->VelN = v;
-
       RV2Eph(O->Epoch, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
              &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha, &O->rmin,
              &O->MeanMotion, &O->Period);
@@ -428,8 +436,8 @@ void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
       xn = MTxV(lagsys[O->Sys].CLN, x);
       vn = MTxV(lagsys[O->Sys].CLN, v);
       for (j = 0; j < 3; j++) {
-         O->PosN = VpVElem(xn, lagsys[O->Sys].LP[O->LP].PosN);
-         O->VelN = VpVElem(vn, lagsys[O->Sys].LP[O->LP].VelN);
+         O->PosN = VAddV_Elem(xn, lagsys[O->Sys].LP[O->LP].PosN);
+         O->VelN = VAddV_Elem(vn, lagsys[O->Sys].LP[O->LP].VelN);
       }
    }
    else {
@@ -973,14 +981,15 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
       W = &worlds[Iw];
       if (!W->Exists)
          continue;
-      W->eph.PosN = VmVElem(W->eph.PosN, sol->eph.PosN);
-      W->eph.VelN = VmVElem(W->eph.VelN, sol->eph.VelN);
+      W->eph.PosN = VSubV_Elem(W->eph.PosN, sol->eph.PosN);
+      W->eph.VelN = VSubV_Elem(W->eph.VelN, sol->eph.VelN);
       W->PosH     = W->eph.PosN;
       W->VelH     = W->eph.VelN;
       /* Calculate PriMerAng for Planets */
-      W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
-      W->CWN       = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-      W->qwn       = C2Q(W->CWN);
+      dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+      W->PriMerAng         = dbl_mat.dbl;
+      W->CWN               = dbl_mat.mat;
+      W->qwn               = C2Q(W->CWN);
    }
 
    /* Adjust Earth from Earth-Moon barycenter */
@@ -996,8 +1005,8 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
 
    rh                = worlds[LUNA].eph.PosN;
    vh                = worlds[LUNA].eph.VelN;
-   worlds[LUNA].PosH = VpVElem(worlds[EARTH].PosH, worlds[LUNA].eph.PosN);
-   worlds[LUNA].VelH = VpVElem(worlds[EARTH].VelH, worlds[LUNA].eph.VelN);
+   worlds[LUNA].PosH = VAddV_Elem(worlds[EARTH].PosH, worlds[LUNA].eph.PosN);
+   worlds[LUNA].VelH = VAddV_Elem(worlds[EARTH].VelH, worlds[LUNA].eph.VelN);
 
    /* Rotate Moon into ECI */
    worlds[LUNA].eph.PosN = QxV(worlds[EARTH].qnh, rh);
@@ -1016,11 +1025,12 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
          W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
       }
       else {
-         W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
-         W->CWN       = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-         W->CNJ       = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
-         W->CNH       = MxM(W->CNJ, worlds[EARTH].CNH);
-         W->qnj       = C2Q(W->CNJ);
+         dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+         W->PriMerAng         = dbl_mat.dbl;
+         W->CWN               = dbl_mat.mat;
+         W->CNJ               = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
+         W->CNH               = MxM(W->CNJ, worlds[EARTH].CNH);
+         W->qnj               = C2Q(W->CNJ);
       }
       W->qwn = C2Q(W->CWN);
       W->qnh = C2Q(W->CNH);
@@ -1080,8 +1090,8 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
              &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
              &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
 
-      worlds[LUNA].PosH = VpVElem(rh, worlds[EARTH].PosH);
-      worlds[LUNA].VelH = VpVElem(vh, worlds[EARTH].VelH);
+      worlds[LUNA].PosH = VAddV_Elem(rh, worlds[EARTH].PosH);
+      worlds[LUNA].VelH = VAddV_Elem(vh, worlds[EARTH].VelH);
    }
 
    for (Ip = SOL; Ip <= PLUTO; Ip++) {
@@ -1096,8 +1106,9 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
             W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
          }
          else {
-            W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
-            W->CWN       = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+            dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+            W->PriMerAng         = dbl_mat.dbl;
+            W->CWN               = dbl_mat.mat;
          }
          W->qwn = C2Q(W->CWN);
       }
@@ -1128,13 +1139,14 @@ long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
          W->PosH = Eph->PosN;
          W->VelH = Eph->VelN;
 
-         W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
-         W->CWN       = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-         W->CNJ       = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
-         W->CNH       = MxM(W->CNJ, earth_CNH);
-         W->qnj       = C2Q(W->CNJ);
-         W->qwn       = C2Q(W->CWN);
-         W->qnh       = C2Q(W->CNH);
+         dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+         W->PriMerAng         = dbl_mat.dbl;
+         W->CWN               = dbl_mat.mat;
+         W->CNJ               = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
+         W->CNH               = MxM(W->CNJ, earth_CNH);
+         W->qnj               = C2Q(W->CNJ);
+         W->qwn               = C2Q(W->CWN);
+         W->qnh               = C2Q(W->CNH);
       }
    }
    return (0);
@@ -1170,14 +1182,15 @@ long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
             M->CNH  = MxM(M->CNJ, earth_CNH);
             rh      = MTxV(W->CNH, Eph->PosN);
             vh      = MTxV(W->CNH, Eph->VelN);
-            M->PosH = VpVElem(rh, W->PosH);
-            M->VelH = VpVElem(vh, W->VelH);
+            M->PosH = VAddV_Elem(rh, W->PosH);
+            M->VelH = VAddV_Elem(vh, W->VelH);
 
-            W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
-            M->CWN       = GetWorldCWN(jd_tdb_mjd, M->ang_data);
-            M->qnj       = C2Q(M->CNJ);
-            M->qwn       = C2Q(M->CWN);
-            M->qnh       = C2Q(M->CNH);
+            dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, M->ang_data);
+            M->PriMerAng         = dbl_mat.dbl;
+            M->CWN               = dbl_mat.mat;
+            M->qnj               = C2Q(M->CNJ);
+            M->qwn               = C2Q(M->CWN);
+            M->qnh               = C2Q(M->CNH);
          }
       }
    }
@@ -1304,35 +1317,39 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
       if (orb->Regime == ORB_ZERO) {
          sc->CLN  = MAT3X3_EYE;
          sc->wln  = VEC3_ZERO;
-         sc->PosR = VmVElem(sc->PosN, orb->PosN);
-         sc->VelR = VmVElem(sc->VelN, orb->VelN);
+         sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
+         sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
       }
       else if (orb->Regime == ORB_FLIGHT) {
-         sc->PosR = VmVElem(sc->PosN, orb->PosN);
-         sc->VelR = VmVElem(sc->VelN, orb->VelN);
+         sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
+         sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
          FindENU(sc->PosN, GetWorldW(jd, world), &sc->CLN, &sc->wln);
       }
       else if (orb->Regime == ORB_CENTRAL || orb->Regime == ORB_N_BODY) {
          if (sc->OrbDOF == ORBDOF_COWELL) {
-            sc->PosR = VmVElem(sc->PosN, orb->PosN);
-            sc->VelR = VmVElem(sc->VelN, orb->VelN);
+            sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
+            sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
          }
          else {
-            sc->PosN = VpVElem(orb->PosN, sc->PosR);
-            sc->VelN = VpVElem(orb->VelN, sc->VelR);
+            sc->PosN = VAddV_Elem(orb->PosN, sc->PosR);
+            sc->VelN = VAddV_Elem(orb->VelN, sc->VelR);
          }
          FindCLN(sc->PosN, sc->VelN, &sc->CLN, &sc->wln);
-         RelRV2EHRV(orb->SMA, orb->MeanMotion, orb->CLN, sc->PosR, sc->VelR,
-                    &sc->PosEH, &sc->VelEH);
+         pair_vec3_t pair = RelRV2EHRV(orb->SMA, orb->MeanMotion, orb->CLN,
+                                       sc->PosR, sc->VelR);
+         sc->PosEH        = pair.first;
+         sc->VelEH        = pair.second;
       }
       else { /* ORB_THREE_BODY */
-         sc->PosN = VpVElem(orb->PosN, sc->PosR);
-         sc->VelN = VpVElem(orb->VelN, sc->VelR);
+         sc->PosN = VAddV_Elem(orb->PosN, sc->PosR);
+         sc->VelN = VAddV_Elem(orb->VelN, sc->VelR);
 
          MagR1      = MAGV(orb->PosN);
          MeanMotion = sqrt(orb->mu1 / (MagR1 * MagR1 * MagR1));
-         RelRV2EHRV(MagR1, MeanMotion, orb->CLN, sc->PosR, sc->VelR, &sc->PosEH,
-                    &sc->VelEH);
+         pair_vec3_t pair =
+             RelRV2EHRV(MagR1, MeanMotion, orb->CLN, sc->PosR, sc->VelR);
+         sc->PosEH = pair.first;
+         sc->VelEH = pair.second;
          FindCLN(sc->PosN, sc->VelN, &sc->CLN, &sc->wln);
       }
       /* Equatorial Frame: e1 = n3, e2 = East, e3 points to World axis */
@@ -1341,13 +1358,13 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
       /* Locate Spacecraft in H frame */
       sc->PosH = MTxV(world->CNH, sc->PosN);
       sc->VelH = MTxV(world->CNH, sc->VelN);
-      sc->PosH = VpVElem(sc->PosH, world->PosH);
-      sc->VelH = VpVElem(sc->VelH, world->VelH);
+      sc->PosH = VAddV_Elem(sc->PosH, world->PosH);
+      sc->VelH = VAddV_Elem(sc->VelH, world->VelH);
 
       /* Sun unit vector */
-      svh     = VNegElem(world->PosH);
+      svh     = NegV_Elem(world->PosH);
       sc->svn = MxV(world->CNH, svh);
-      sc->svn = VmVElem(sc->svn, sc->PosN);
+      sc->svn = VSubV_Elem(sc->svn, sc->PosN);
       sc->svn = UNITV(sc->svn).v;
       sc->svb = MxV(sc->B[0].CN, sc->svn);
 
@@ -1356,7 +1373,7 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
          sc->Eclipse = FALSE;
       else {
          p           = MAGV(sc->PosN);
-         pvn         = VNegElem(sc->PosN);
+         pvn         = NegV_Elem(sc->PosN);
          pvn         = UNITV(pvn).v;
          SoP         = VoV(sc->svn, pvn);
          sc->Eclipse = FALSE;

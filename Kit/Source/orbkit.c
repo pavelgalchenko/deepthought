@@ -10,7 +10,17 @@
 /*    under Title 17, U.S. Code.                                      */
 
 /*    All Other Rights Reserved.                                      */
+
 #include "orbkit.h"
+#include "42constants.h"
+#include "dcmkit.h"
+#include "defineskit.h"
+#include "timekit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -113,8 +123,9 @@ double GetWorldAng(JDType jd, const AngDataType *const ang_data)
    return angle * D2R;
 }
 /**********************************************************************/
-mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
+dbl_mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
 {
+   dbl_mat3x3_t pri_cwn;
    const vec3_t z_axis = VEC3_PZAXIS;
 
    const AngDataType *pm_data = NULL;
@@ -133,8 +144,9 @@ mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
    }
    jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
-   const double pri_mer_ang = GetWorldAng(jd, pm_data);
-   return SimpRot(z_axis, pri_mer_ang);
+   pri_cwn.dbl = GetWorldAng(jd, pm_data);
+   pri_cwn.mat = SimpRot(z_axis, pri_cwn.dbl);
+   return pri_cwn;
 }
 /**********************************************************************/
 mat3x3_t GetWorldCNJ(JDType jd, const AngDataType *const ang_data)
@@ -197,301 +209,49 @@ void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
 WorldID GetWorldID(const char *s)
 {
    unsigned long i;
-   if (!strcmp(s, "SOL") || !strcmp(s, "SUN"))
+   if (!strcmp(s, "SUN"))
       return SOL;
-   else if (!strcmp(s, "MERCURY"))
-      return MERCURY;
-   else if (!strcmp(s, "VENUS"))
-      return VENUS;
-   else if (!strcmp(s, "EARTH"))
-      return EARTH;
-   else if (!strcmp(s, "MARS"))
-      return MARS;
-   else if (!strcmp(s, "JUPITER"))
-      return JUPITER;
-   else if (!strcmp(s, "SATURN"))
-      return SATURN;
-   else if (!strcmp(s, "URANUS"))
-      return URANUS;
-   else if (!strcmp(s, "NEPTUNE"))
-      return NEPTUNE;
-   else if (!strcmp(s, "PLUTO"))
-      return PLUTO;
-   else if (!strcmp(s, "LUNA"))
-      return LUNA;
-   else if (!strcmp(s, "PHOBOS"))
-      return PHOBOS;
-   else if (!strcmp(s, "DEIMOS"))
-      return DEIMOS;
-   else if (!strcmp(s, "IO"))
-      return IO;
-   else if (!strcmp(s, "EUROPA"))
-      return EUROPA;
-   else if (!strcmp(s, "GANYMEDE"))
-      return GANYMEDE;
-   else if (!strcmp(s, "CALLISTO"))
-      return CALLISTO;
-   else if (!strcmp(s, "AMALTHEA"))
-      return AMALTHEA;
-   else if (!strcmp(s, "HIMALIA"))
-      return HIMALIA;
-   else if (!strcmp(s, "ELARA"))
-      return ELARA;
-   else if (!strcmp(s, "PASIPHAE"))
-      return PASIPHAE;
-   else if (!strcmp(s, "SINOPE"))
-      return SINOPE;
-   else if (!strcmp(s, "LYSITHEA"))
-      return LYSITHEA;
-   else if (!strcmp(s, "CARME"))
-      return CARME;
-   else if (!strcmp(s, "ANANKE"))
-      return ANANKE;
-   else if (!strcmp(s, "LEDA"))
-      return LEDA;
-   else if (!strcmp(s, "THEBE"))
-      return THEBE;
-   else if (!strcmp(s, "ADRASTEA"))
-      return ADRASTEA;
-   else if (!strcmp(s, "METIS"))
-      return METIS;
-   else if (!strcmp(s, "MIMAS"))
-      return MIMAS;
-   else if (!strcmp(s, "ENCELADUS"))
-      return ENCELADUS;
-   else if (!strcmp(s, "TETHYS"))
-      return TETHYS;
-   else if (!strcmp(s, "DIONE"))
-      return DIONE;
-   else if (!strcmp(s, "RHEA"))
-      return RHEA;
-   else if (!strcmp(s, "TITAN"))
-      return TITAN;
-   else if (!strcmp(s, "HYPERION"))
-      return HYPERION;
-   else if (!strcmp(s, "IAPETUS"))
-      return IAPETUS;
-   else if (!strcmp(s, "PHOEBE"))
-      return PHOEBE;
-   else if (!strcmp(s, "JANUS"))
-      return JANUS;
-   else if (!strcmp(s, "EPIMETHEUS"))
-      return EPIMETHEUS;
-   else if (!strcmp(s, "HELENE"))
-      return HELENE;
-   else if (!strcmp(s, "TELESTO"))
-      return TELESTO;
-   else if (!strcmp(s, "CALYPSO"))
-      return CALYPSO;
-   else if (!strcmp(s, "ATLAS"))
-      return ATLAS;
-   else if (!strcmp(s, "PROMETHEUS"))
-      return PROMETHEUS;
-   else if (!strcmp(s, "PANDORA"))
-      return PANDORA;
-   else if (!strcmp(s, "PAN"))
-      return PAN;
-   else if (!strcmp(s, "ARIEL"))
-      return ARIEL;
-   else if (!strcmp(s, "UMBRIEL"))
-      return UMBRIEL;
-   else if (!strcmp(s, "TITANIA"))
-      return TITANIA;
-   else if (!strcmp(s, "OBERON"))
-      return OBERON;
-   else if (!strcmp(s, "MIRANDA"))
-      return MIRANDA;
-   else if (!strcmp(s, "TRITON"))
-      return TRITON;
-   else if (!strcmp(s, "NEREID"))
-      return NEREID;
-   else if (!strcmp(s, "CHARON"))
-      return CHARON;
-   else if (sscanf(s, "MINORBODY_%lu", &i) == 1)
+#define X(world, str_val, naif_str, parent)                                    \
+   if (strcmp(s, str_val) == 0)                                                \
+      return world;
+   X_WORLD_LIST
+#undef X
+   if (sscanf(s, "MINORBODY_%lu", &i) == 1)
       return (NMAJORWORLD + i);
    fprintf(stderr, "Bogus input %s in GetWorldID (42init.c:%d)\n", s, __LINE__);
    exit(EXIT_FAILURE);
 }
 /**********************************************************************/
-void WorldID2String(WorldID w_id, char w_str[32])
+const char *WorldID2String(WorldID w_id)
 {
    // Returns the NAIF names of the celestial bodies
    switch (w_id) {
-      case SOL:
-         strcpy(w_str, "SUN");
-         break;
-      case MERCURY:
-         strcpy(w_str, "MERCURY");
-         break;
-      case VENUS:
-         strcpy(w_str, "VENUS");
-         break;
-      case EARTH:
-         strcpy(w_str, "EARTH");
-         break;
-      case MARS:
-         strcpy(w_str, "MARS");
-         break;
-      case JUPITER:
-         strcpy(w_str, "JUPITER");
-         break;
-      case SATURN:
-         strcpy(w_str, "SATURN");
-         break;
-      case URANUS:
-         strcpy(w_str, "URANUS");
-         break;
-      case NEPTUNE:
-         strcpy(w_str, "NEPTUNE");
-         break;
-      case PLUTO:
-         strcpy(w_str, "PLUTO");
-         break;
-      case LUNA:
-         strcpy(w_str, "MOON");
-         break;
-      case PHOBOS:
-         strcpy(w_str, "PHOBOS");
-         break;
-      case DEIMOS:
-         strcpy(w_str, "DEIMOS");
-         break;
-      case IO:
-         strcpy(w_str, "IO");
-         break;
-      case EUROPA:
-         strcpy(w_str, "EUROPA");
-         break;
-      case GANYMEDE:
-         strcpy(w_str, "GANYMEDE");
-         break;
-      case CALLISTO:
-         strcpy(w_str, "CALLISTO");
-         break;
-      case AMALTHEA:
-         strcpy(w_str, "AMALTHEA");
-         break;
-      case HIMALIA:
-         strcpy(w_str, "HIMALIA");
-         break;
-      case ELARA:
-         strcpy(w_str, "ELARA");
-         break;
-      case PASIPHAE:
-         strcpy(w_str, "PASIPHAE");
-         break;
-      case SINOPE:
-         strcpy(w_str, "SINOPE");
-         break;
-      case LYSITHEA:
-         strcpy(w_str, "LYSITHEA");
-         break;
-      case CARME:
-         strcpy(w_str, "CARME");
-         break;
-      case ANANKE:
-         strcpy(w_str, "ANANKE");
-         break;
-      case LEDA:
-         strcpy(w_str, "LEDA");
-         break;
-      case THEBE:
-         strcpy(w_str, "THEBE");
-         break;
-      case ADRASTEA:
-         strcpy(w_str, "ADRASTEA");
-         break;
-      case METIS:
-         strcpy(w_str, "METIS");
-         break;
-      case MIMAS:
-         strcpy(w_str, "MIMAS");
-         break;
-      case ENCELADUS:
-         strcpy(w_str, "ENCELADUS");
-         break;
-      case TETHYS:
-         strcpy(w_str, "TETHYS");
-         break;
-      case DIONE:
-         strcpy(w_str, "DIONE");
-         break;
-      case RHEA:
-         strcpy(w_str, "RHEA");
-         break;
-      case TITAN:
-         strcpy(w_str, "TITAN");
-         break;
-      case HYPERION:
-         strcpy(w_str, "HYPERION");
-         break;
-      case IAPETUS:
-         strcpy(w_str, "IAPETUS");
-         break;
-      case PHOEBE:
-         strcpy(w_str, "PHOEBE");
-         break;
-      case JANUS:
-         strcpy(w_str, "JANUS");
-         break;
-      case EPIMETHEUS:
-         strcpy(w_str, "EPIMETHEUS");
-         break;
-      case HELENE:
-         strcpy(w_str, "HELENE");
-         break;
-      case TELESTO:
-         strcpy(w_str, "TELESTO");
-         break;
-      case CALYPSO:
-         strcpy(w_str, "CALYPSO");
-         break;
-      case ATLAS:
-         strcpy(w_str, "ATLAS");
-         break;
-      case PROMETHEUS:
-         strcpy(w_str, "PROMETHEUS");
-         break;
-      case PANDORA:
-         strcpy(w_str, "PANDORA");
-         break;
-      case PAN:
-         strcpy(w_str, "PAN");
-         break;
-      case ARIEL:
-         strcpy(w_str, "ARIEL");
-         break;
-      case UMBRIEL:
-         strcpy(w_str, "UMBRIEL");
-         break;
-      case TITANIA:
-         strcpy(w_str, "TITANIA");
-         break;
-      case OBERON:
-         strcpy(w_str, "OBERON");
-         break;
-      case MIRANDA:
-         strcpy(w_str, "MIRANDA");
-         break;
-      case TRITON:
-         strcpy(w_str, "TRITON");
-         break;
-      case NEREID:
-         strcpy(w_str, "NEREID");
-         break;
-      case CHARON:
-         strcpy(w_str, "CHARON");
-         break;
-      default:
-         if (w_id >= NMAJORWORLD) {
-            sprintf(w_str, "MINORBODY_%u", w_id - NMAJORWORLD);
-            break;
-         }
-         else {
-            fprintf(stderr,
-                    "Unknown WorldID %u in WorldID2String. Exiting...\n", w_id);
-            exit(EXIT_FAILURE);
-         }
+#define X(world, str_val, naif_str, parent)                                    \
+   case world:                                                                 \
+      return naif_str;
+      X_WORLD_LIST
+#undef X
+      default: {
+         fprintf(stderr, "Unknown WorldID %u in WorldID2String. Exiting...\n",
+                 w_id);
+         exit(EXIT_FAILURE);
+      }
+   }
+}
+/**********************************************************************/
+WorldID GetWorldParent(const WorldID w_id)
+{
+   switch (w_id) {
+#define X(world, str_val, naif_str, parent)                                    \
+   case world:                                                                 \
+      return parent;
+      X_WORLD_LIST
+#undef X
+      default: {
+         fprintf(stderr, "WorldID %u has unspecified parent. Exiting...\n",
+                 w_id);
+         exit(EXIT_FAILURE);
+      }
    }
 }
 /**********************************************************************/
@@ -3031,13 +2791,16 @@ double RadiusOfInfluence(double mu1, double mu2, double r)
 /*  Given Rrel and Vrel, find the Euler-Hill state vector [re, ve]    */
 /*  E-H usually assumes small departures from LVLH.  I'm using        */
 /*  spherical coordinates here to ensure valid solution anywhere.     */
-void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t Rrel,
-                vec3_t Vrel, vec3_t *re, vec3_t *ve)
+pair_vec3_t RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN,
+                       vec3_t Rrel, vec3_t Vrel)
 {
    double magp, alpha, beta;
    vec3_t p, b3, vn, vb;
    mat3x3_t CBL, CBN;
    double C1, S1, C2, S2;
+   pair_vec3_t pair;
+   vec3_t *const re = &pair.first;
+   vec3_t *const ve = &pair.second;
    long i;
 
    for (i = 0; i < 3; i++)
@@ -3074,19 +2837,23 @@ void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t Rrel,
 
    *ve    = vb;
    ve->x -= OrbRate * magp;
+   return pair;
 }
 /**********************************************************************/
 /*  Given a circular reference, and the Euler-Hill state vector       */
 /*  find the relative position and velocity (expressed in N)          */
 /*  E-H usually assumes small departures from LVLH.  I'm using        */
 /*  spherical coordinates here to ensure valid solution anywhere.     */
-void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t re,
-                vec3_t ve, vec3_t *Rrel, vec3_t *Vrel)
+pair_vec3_t EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN,
+                       vec3_t re, vec3_t ve)
 {
    double alpha, beta, magp;
    mat3x3_t CBL, CBN;
    vec3_t vb, vn;
    double C1, S1, C2, S2;
+   pair_vec3_t pair;
+   vec3_t *const Rrel = &pair.first;
+   vec3_t *const Vrel = &pair.second;
    long i;
 
    alpha = re.x / OrbRadius;
@@ -3116,6 +2883,7 @@ void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t re,
 
    for (i = 0; i < 3; i++)
       Vrel->v[i] = vn.v[i] - OrbRadius * OrbRate * OrbCLN.rows[0].v[i];
+   return pair;
 }
 /**********************************************************************/
 /*  Given Euler-Hill position and velocity, find parameters of        */

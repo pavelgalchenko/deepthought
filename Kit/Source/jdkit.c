@@ -12,6 +12,17 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "jdkit.h"
+#include "42constants.h"
+#include "defineskit.h"
+#include "mathkit.h"
+#include <ctype.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -48,12 +59,12 @@ TimeSystem GetTimeSystem(const char *s)
       return TDB_TIME;
    else if (!strncmp(s, "TT", 2))
       return TT_TIME;
-   fprintf(stderr, "Bogus input %s in GetTimeSystem (42init.c:%d)\n", s,
+   fprintf(stderr, "Bogus input %s in GetTimeSystem (jdkit.c:%d)\n", s,
            __LINE__);
    exit(EXIT_FAILURE);
 }
 /**********************************************************************/
-static Rational _epoch_pod_seconds(const EpochTT epoch) __attribute__((const));
+__attribute__((const)) static Rational _epoch_pod_seconds(const EpochTT epoch);
 static Rational _epoch_pod_seconds(const EpochTT epoch)
 {
    // either zero or 43200 seconds
@@ -73,8 +84,8 @@ static Rational _epoch_pod_seconds(const EpochTT epoch)
    return RATIONAL_ZERO;
 }
 /**********************************************************************/
-static JDType _epoch_diff_tt(const EpochTT a, const EpochTT b)
-    __attribute__((const));
+__attribute__((const)) static JDType _epoch_diff_tt(const EpochTT a,
+                                                    const EpochTT b);
 static JDType _epoch_diff_tt(const EpochTT a, const EpochTT b)
 {
    JDType jd_diff = JD_ZERO;
@@ -355,8 +366,8 @@ static JDType _jd_tcb2tdb(const JDType tcb_jd __attribute__((unused)))
                    "Exiting...\n");
    exit(EXIT_FAILURE);
 }
-static JDType _jdtt(JDType) __attribute__((const));
-static JDType _jd_tdb2tcb(JDType tdb_jd) __attribute__((const));
+__attribute__((const)) static JDType _jdtt(JDType);
+__attribute__((const)) static JDType _jd_tdb2tcb(JDType tdb_jd);
 static JDType _jd_tdb2tcb(JDType tdb_jd)
 {
    const JDType jd_tt_conv =
@@ -373,8 +384,9 @@ static JDType _jd_tdb2tcb(JDType tdb_jd)
 #define M_E_OFFSET             (357.5277233)
 #define M_E_COEFF1             (35999.05034)
 #define DAY_PER_JULIAN_CENTURY (36525.0)
-static double _sec_dbl_d_tt_tdb(double secs_tt_j2000) __attribute__((const));
-static double _sec_dbl_d_tt_tdb(double secs_tt_j2000)
+__attribute__((const)) static inline double
+_sec_dbl_d_tt_tdb(double secs_tt_j2000);
+static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000)
 {
    const double T_TT = secs_tt_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
    const double m_E  = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0);
@@ -384,7 +396,8 @@ static double _sec_dbl_d_tt_tdb(double secs_tt_j2000)
 #undef M_E_COEFF1
 #undef DAY_PER_JULIAN_CENTURY
 /**********************************************************************/
-static double _d_tt_tdb(JDType jd)
+__attribute__((const)) static inline double _d_tt_tdb(JDType jd);
+static inline double _d_tt_tdb(JDType jd)
 {
    // TODO: use spice instead if available?
    // Approximation from GMAT 2026 Mathematical Specification, p10
@@ -393,19 +406,20 @@ static double _d_tt_tdb(JDType jd)
    return _sec_dbl_d_tt_tdb(JDToSeconds(jd));
 }
 /**********************************************************************/
-static double _tdb2ttF(const double x, double params[1]) __attribute__((pure));
+__attribute__((pure)) static double _tdb2ttF(const double x, double params[1]);
 static double _tdb2ttF(const double x, double params[1])
 {
    return x + _sec_dbl_d_tt_tdb(x) - params[0];
 }
 /**********************************************************************/
-static JDType _jd_tt2tdb(JDType tt_jd) __attribute__((const));
+__attribute__((const)) static JDType _jd_tt2tdb(JDType tt_jd);
 static JDType _jd_tt2tdb(JDType tt_jd)
 {
    tt_jd.system = TDB_TIME;
    return JDAddSeconds(tt_jd, _d_tt_tdb(tt_jd));
 }
 /**********************************************************************/
+__attribute__((pure)) static JDType _jd_tdb2tt(JDType tdb_jd);
 static JDType _jd_tdb2tt(JDType tdb_jd)
 {
    // Use Newton Method to approximate inverse of _jd_tt2tdb;
@@ -427,7 +441,7 @@ static JDType _jd_tdb2tt(JDType tdb_jd)
 #undef TDB_COEFF1
 #undef TDB_COEFF2
 // UTC headaches
-static JDType _jd_utc2tai(JDType utc_jd) __attribute__((const));
+__attribute__((const)) static JDType _jd_utc2tai(JDType utc_jd);
 static JDType _jd_utc2tai(JDType utc_jd)
 {
    const double leap_sec = GetLeapSec(utc_jd);
@@ -435,7 +449,7 @@ static JDType _jd_utc2tai(JDType utc_jd)
    utc_jd.system = TAI_TIME;
    return JDAddSeconds(utc_jd, leap_sec);
 }
-static JDType _jd_tai2utc(JDType tai_jd) __attribute__((const));
+__attribute__((const)) static JDType _jd_tai2utc(JDType tai_jd);
 static JDType _jd_tai2utc(JDType tai_jd)
 {
    // IF 'GetLeapSec()' GETS BACK HERE, WE'LL HAVE INFINITE RECURSION. AVOID!!
@@ -616,81 +630,86 @@ static int isLineBlank(char *const line)
    return is_blank;
 }
 
+struct LeapSecFileEntry {
+   JDType jd_mjd_utc; // JD in UTC with MJD epoch
+
+   // TAI-UTC = offset_1 + (MJD - offset_2) x offset_3
+   double offset_1;
+   double offset_2;
+   double offset_3;
+};
+static struct LeapSecFileTbl {
+   long n_entries;
+   struct LeapSecFileEntry *entries;
+} leapSecTbl = {.n_entries = 0, .entries = NULL};
+
+static __once_flag leapsec_flag = __ONCE_FLAG_INIT;
+void load_leapsec_file()
+{
+   extern char ModelPath[1000];
+   char f_path[1064] = {'\0'};
+   strcpy(f_path, ModelPath);
+   strcat(f_path, "/tai-utc.dat");
+   FILE *file = fopen(f_path, "rt");
+   if (file == NULL) {
+      fprintf(stderr, "Error opening tai-utc file '%s'. Exiting...\n", f_path);
+      exit(EXIT_FAILURE);
+   }
+
+   leapSecTbl = (struct LeapSecFileTbl){.n_entries = 0, .entries = NULL};
+
+   // loop over file to find the number of nonempty lines
+   char line[512] = {'\0'};
+   while (fgets(line, 512, file))
+      if (!isLineBlank(line))
+         leapSecTbl.n_entries++;
+
+   // use number of nonempty lines to allocate the data locations
+   leapSecTbl.entries =
+       calloc(leapSecTbl.n_entries, sizeof(struct LeapSecFileEntry));
+
+   // rewind file and start parsing for the actual data
+   rewind(file);
+   int i = 0;
+   while (fgets(line, 512, file)) {
+      struct LeapSecFileEntry *const entry = &leapSecTbl.entries[i];
+      int y, d;
+      char mon[16]           = {'\0'};
+      double jd_mjd_utc_days = 0;
+      int sscanf_check =
+          sscanf(line, "%i %s %i =JD %lf TAI-UTC= %lf S + (MJD - %lf) X %lf S",
+                 &y, mon, &d, &jd_mjd_utc_days, &entry->offset_1,
+                 &entry->offset_2, &entry->offset_3);
+
+      if (sscanf_check) {
+         entry->jd_mjd_utc = JDFromDays(jd_mjd_utc_days, UTC_TIME, ZERO_EPOCH);
+         entry->jd_mjd_utc = JDChangeEpoch(MJD_EPOCH, entry->jd_mjd_utc);
+         i++;
+      }
+   }
+   fclose(file);
+}
+
 // returns the number of leap seconds for specified JD
 double GetLeapSec(const JDType jd)
 {
-   struct LeapSecFileEntry {
-      JDType jd_mjd_utc; // JD in UTC with MJD epoch
-
-      // TAI-UTC = offset_1 + (MJD - offset_2) x offset_3
-      double offset_1;
-      double offset_2;
-      double offset_3;
-   };
-   static struct LeapSecFileTbl {
-      long n_entries;
-      struct LeapSecFileEntry *entries;
-   } leapSecTbl = {.n_entries = 0, .entries = NULL};
 
    // TODO: this and other functions do not handle the time being *during* a
    // leap second
 
    // TODO: use spice instead if available?
 
+   call_once(&leapsec_flag, load_leapsec_file);
+
    // ensure jd is UTC with MJD epoch
    // dug through GMAT source code, JD in 'tai-utc.dat' is UTC
    // TODO: this causes infinite recursion due to the conversion to TT_TIME
    // embeded within
    const JDType jd_mjd_utc = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
+   double jd_mjd_utc_days  = JDToDays(jd_mjd_utc);
 
-   if (leapSecTbl.n_entries == 0) {
-      // initalize data
-      extern char ModelPath[1000];
-      char f_path[1064] = {'\0'};
-      strcpy(f_path, ModelPath);
-      strcat(f_path, "/tai-utc.dat");
-      FILE *file = fopen(f_path, "rt");
-      if (file == NULL) {
-         fprintf(stderr, "Error opening tai-utc file '%s'. Exiting...\n",
-                 f_path);
-         exit(EXIT_FAILURE);
-      }
-
-      // loop over file to find the number of nonempty lines
-      char line[512] = {'\0'};
-      while (fgets(line, 512, file))
-         if (!isLineBlank(line))
-            leapSecTbl.n_entries++;
-
-      // use number of nonempty lines to allocate the data locations
-      leapSecTbl.entries =
-          calloc(leapSecTbl.n_entries, sizeof(struct LeapSecFileEntry));
-
-      // rewind file and start parsing for the actual data
-      rewind(file);
-      int i = 0;
-      while (fgets(line, 512, file)) {
-         struct LeapSecFileEntry *const entry = &leapSecTbl.entries[i];
-         int y, d;
-         char mon[16]           = {'\0'};
-         double jd_mjd_utc_days = 0;
-         int sscanf_check       = sscanf(
-             line, "%i %s %i =JD %lf TAI-UTC= %lf S + (MJD - %lf) X %lf S", &y,
-             mon, &d, &jd_mjd_utc_days, &entry->offset_1, &entry->offset_2,
-             &entry->offset_3);
-
-         if (sscanf_check) {
-            entry->jd_mjd_utc =
-                JDFromDays(jd_mjd_utc_days, UTC_TIME, ZERO_EPOCH);
-            entry->jd_mjd_utc = JDChangeEpoch(MJD_EPOCH, entry->jd_mjd_utc);
-
-            i++;
-         }
-      }
-      fclose(file);
-   }
-
-   double jd_mjd_utc_days = JDToDays(jd_mjd_utc);
+   // read through the table backwards (we're probably doing a sim closer to the
+   // end of the table)
    struct LeapSecFileEntry *const start_entry =
        &leapSecTbl.entries[leapSecTbl.n_entries - 1];
    for (struct LeapSecFileEntry *entry = start_entry;
@@ -704,7 +723,7 @@ double GetLeapSec(const JDType jd)
 
 // ensure everything in JDType is reduced, and that if whole_days < 0, then so
 // are seconds.whole and seconds.num, and vice-versa
-static JDType _reduce_jd_no_rational(JDType jd) __attribute__((const));
+__attribute__((const)) static JDType _reduce_jd_no_rational(JDType jd);
 static JDType _reduce_jd_no_rational(JDType jd)
 {
    const RationalLL rat_day =
@@ -724,7 +743,7 @@ static JDType _reduce_jd_no_rational(JDType jd)
    }
    return jd;
 }
-static JDType _reduce_jd(JDType jd) __attribute__((const));
+__attribute__((const)) static JDType _reduce_jd(JDType jd);
 static JDType _reduce_jd(JDType jd)
 {
    jd         = _reduce_jd_no_rational(jd);
@@ -920,6 +939,10 @@ static JDType _jd_rational_mult_helper(Rational mul, const JDType jd)
 
 JDType JDAdd(JDType a, JDType b)
 {
+   if (isequal_jd(a, JD_ZERO))
+      return b;
+   else if (isequal_jd(b, JD_ZERO))
+      return a;
    EpochTT out_epoch = a.epoch;
    if (a.epoch == ZERO_EPOCH && b.epoch != ZERO_EPOCH)
       out_epoch = b.epoch;
@@ -980,6 +1003,10 @@ JDType JDAddRationalMult(const JDType a, Rational mul, JDType b)
 
 JDType JDSub(JDType a, JDType b)
 {
+   if (isequal_jd(a, JD_ZERO))
+      return JDNegate(b);
+   else if (isequal_jd(b, JD_ZERO))
+      return a;
    EpochTT out_epoch = a.epoch;
    if (a.epoch == ZERO_EPOCH && b.epoch != ZERO_EPOCH)
       out_epoch = b.epoch;
@@ -1027,33 +1054,54 @@ JDType JDSubRationalMult(const JDType a, Rational mul, JDType b)
    return JDSub(a, b);
 }
 
-JDType JDaxpy(const double a, JDType x, JDType y)
+/**********************************************************************/
+// The operation 'z = a * x + y' for 'x' and 'y' being JDType and 'a' being
+// a scalar Rational, RationalLL, or double
+// TODO: this is quite hacky to "just work" for its usage in rkkit
+static inline int _ispos_dbl(const double x)
 {
-   // The operation 'z = a * x + y' for 'x' and 'y' being JDType and 'a' being
-   // a scalar double
-   // TODO: this is quite hacky to "just work" for its usage in rkkit
-   const int sign       = (a >= 0) ? 1 : -1;
-   const double mult    = fabs(a);
-   RationalLL mult_rat  = _rat_to_rationalll(double2rational(mult));
-   Rational day_mult    = IntegerRationalMult(x.whole_days, mult_rat);
-   x.whole_days         = day_mult.whole;
-   day_mult.whole       = 0;
-   day_mult.num        *= SEC_PER_DAY;
+   return SIGN(x);
+}
+#define _gen_ispos(x)                                                          \
+   _Generic((x),                                                               \
+       double: _ispos_dbl,                                                     \
+       Rational: _ispos_rat,                                                   \
+       RationalLL: _ispos_ratll)(x)
+#define _gen_abs(x)                                                            \
+   _Generic((x), double: fabs, Rational: _rat_abs, RationalLL: _ratll_abs)(x)
+#define _jdaxpy_body(a, x, y)                                                  \
+   const int sign             = SIGN(_gen_ispos((a)));                         \
+   const RationalLL mult_rat  = ToRationalLL(_gen_abs((a)));                   \
+   Rational day_mult          = IntegerRationalMult(x.whole_days, mult_rat);   \
+   (x).whole_days             = day_mult.whole;                                \
+   day_mult.whole             = 0;                                             \
+   day_mult.num              *= SEC_PER_DAY;                                   \
+                                                                               \
+   RationalLL secs    = RationalMult((mult_rat), (x).seconds);                 \
+   (x).seconds        = ToRational(RationalAdd(secs, day_mult));               \
+   (x).epoch          = (y).epoch;                                             \
+   (x).system         = (y).system;                                            \
+   (x)                = _reduce_jd((x));                                       \
+   (x).whole_days    *= sign;                                                  \
+   (x).seconds.whole *= sign;                                                  \
+   (x).seconds.num   *= sign;                                                  \
+   return JDAdd((x), (y))
 
-   RationalLL secs = RationalMult(mult_rat, x.seconds);
-   x.seconds       = ToRational(RationalAdd(secs, day_mult));
-
-   x.epoch  = y.epoch;
-   x.system = y.system;
-
-   x                = _reduce_jd(x);
-   x.whole_days    *= sign;
-   x.seconds.whole *= sign;
-   x.seconds.num   *= sign;
-
-   return JDAdd(x, y);
+JDType _jdaxpy_ratll(const RationalLL a, JDType x, JDType y)
+{
+   _jdaxpy_body(a, x, y);
 }
 
+JDType _jdaxpy_rat(const Rational a, JDType x, JDType y)
+{
+   _jdaxpy_body(a, x, y);
+}
+
+JDType _jdaxpy_dbl(const double a, JDType x, JDType y)
+{
+   _jdaxpy_body(a, x, y);
+}
+/**********************************************************************/
 double JDAddToDays(const JDType a, const JDType b)
 {
    return JDToDays(JDAdd(a, b));

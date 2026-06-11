@@ -14,15 +14,7 @@
 #ifndef __GEOMKIT_H__
 #define __GEOMKIT_H__
 
-#include "42constants.h"
-#include "dcmkit.h"
-#include "defineskit.h"
-#include "iokit.h"
 #include "mathkit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /*
 ** #ifdef __cplusplus
@@ -57,7 +49,7 @@ struct PolyType {
    long Matl;
    double Area;
    vec3_t Norm;
-   mat3x3_t Dyad;       /* For polyhedron gravity */
+   mat3x3_t Dyad;     /* For polyhedron gravity */
    vec3_t Uhat, Vhat; /* In-plane basis vectors */
    vec3_t Centroid;
    double radius;       /* of bounding sphere centered on Centroid */

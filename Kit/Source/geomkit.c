@@ -12,6 +12,14 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "geomkit.h"
+#include "42constants.h"
+#include "dcmkit.h"
+#include "defineskit.h"
+#include "iokit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {

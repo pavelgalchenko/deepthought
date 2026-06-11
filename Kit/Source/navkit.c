@@ -12,6 +12,8 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "navkit.h"
+#include "42.h"
+#include "spicekit.h"
 
 /* REQUIRED GLOBALS                                                   */
 /*    WorldType World                                                 */
@@ -263,9 +265,10 @@ mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
             CWN                      = MxM(C_W_TETE, C_TETE_J2000);
          }
       } break;
-      default:
-         CWN = GetWorldCWN(jd, W->ang_data);
-         break;
+      default: {
+         dbl_mat3x3_t dbl_mat = GetWorldCWN(jd, W->ang_data);
+         CWN                  = dbl_mat.mat;
+      } break;
    }
    return CWN;
 }
@@ -1712,9 +1715,9 @@ void RIEKFUpdateLaw(struct DSMNavType *const Nav)
    }
 
    tmpV      = MxV(dR, Nav->PosR);
-   Nav->PosR = VpVElem(dr, tmpV);
+   Nav->PosR = VAddV_Elem(dr, tmpV);
    tmpV      = MxV(dR, Nav->VelR);
-   Nav->VelR = VpVElem(dv, tmpV);
+   Nav->VelR = VAddV_Elem(dv, tmpV);
 
    tmpV = MTxV(Nav->CRB, dw);
    for (i = 0; i < 3; i++)
@@ -1762,7 +1765,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
       getAeroForceAndTorque(DSM, CRB, PosR, VelR,
                             GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]),
                             AtmoDensity, &aeroFrc, &aeroTrq);
-      tmpV2 = VpVElem(tmpV2, aeroTrq);
+      tmpV2 = VAddV_Elem(tmpV2, aeroTrq);
    }
 
    if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[POS_STATE] &&
@@ -1800,7 +1803,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   subMatAdd(jacobian, tmpAssign, rowInd, rowInd, 3, 3);
 
                   tmpV3 = MTxV(CRB, Nav->refOmega);
-                  tmpV3 = VpVElem(tmpV3, wbr);
+                  tmpV3 = VAddV_Elem(tmpV3, wbr);
                   tmpV  = MxV(DSM->MOI, tmpV3);
                   for (long Iw = 0; Iw < AC->Nwhl; Iw++)
                      for (i = 0; i < 3; i++)
@@ -1828,7 +1831,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
 
                   // calculate dwbn_dot/dwbn
                   tmpV3 = MTxV(CRB, Nav->refOmega);
-                  tmpV3 = VpVElem(tmpV3, wbr);
+                  tmpV3 = VAddV_Elem(tmpV3, wbr);
                   tmpM2 = V2CrossM(tmpV3);
                   tmpM3 = MxM(tmpM2, DSM->MOI);
                   tmpV2 = MxV(DSM->MOI, tmpV3);
@@ -1933,7 +1936,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                rowInd = Nav->navInd[state];
                switch (state) {
                   case VEL_STATE: {
-                     tmpV2 = VpVElem(PosR, Nav->refPos);
+                     tmpV2 = VAddV_Elem(PosR, Nav->refPos);
                      tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
                      if (GravPertActive) {
                         tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
@@ -2124,7 +2127,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                case OMEGA_STATE:
                   // calculate dwbn_dot/dwbn
                   tmpV3 = QxV(qbr, Nav->refOmega);
-                  tmpV3 = VpVElem(tmpV3, wbr);
+                  tmpV3 = VAddV_Elem(tmpV3, wbr);
                   tmpM2 = V2CrossM(tmpV3);
                   tmpM3 = MxM(tmpM2, DSM->MOI);
                   tmpV2 = MxV(DSM->MOI, tmpV3);
@@ -2202,7 +2205,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                rowInd = Nav->navInd[state];
                switch (state) {
                   case VEL_STATE: {
-                     tmpV2 = VpVElem(PosR, Nav->refPos);
+                     tmpV2 = VAddV_Elem(PosR, Nav->refPos);
                      tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
                      if (GravPertActive) {
                         tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
@@ -2423,8 +2426,8 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
          const struct DSMStateType *TrgState = Nav->refOriPtr;
          const struct BodyType *TrgSB        = Nav->refBodyPtr;
          // pn is position of body origin relative to sc origin
-         targetPosN = VpVElem(TrgState->PosN, TrgSB->pn);
-         targetVelN = VpVElem(TrgState->VelN, TrgSB->vn);
+         targetPosN = VAddV_Elem(TrgState->PosN, TrgSB->pn);
+         targetVelN = VAddV_Elem(TrgState->VelN, TrgSB->vn);
       } break;
    }
 
@@ -2462,7 +2465,7 @@ void configureRefFrame(struct DSMNavType *const Nav, double *const lerp_alpha,
       Nav->refPos = refPos;
       refVel      = MxV(Nav->refCRN, Nav->refVel);
       wxr         = VxV(Nav->refOmega, Nav->refPos);
-      Nav->refVel = VmVElem(refVel, wxr);
+      Nav->refVel = VSubV_Elem(refVel, wxr);
    }
 
    if (Nav->Init == TRUE && fabs(one_m_alpha) > __DBL_EPSILON__) {
@@ -2686,7 +2689,7 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                wbn = wbr;
                if (Nav->refFrame != FRAME_N) {
                   tmpV = MTxV(CRB, Nav->refOmega);
-                  wbn  = VpVElem(wbn, tmpV);
+                  wbn  = VAddV_Elem(wbn, tmpV);
                }
                vec3_t Hb = MxV(DSM->MOI, wbn);
 
@@ -2726,18 +2729,18 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
 
                if (GravPertActive) {
                   vec3_t accelR;
-                  tmpV   = VpVElem(PosR, Nav->refPos);
+                  tmpV   = VAddV_Elem(PosR, Nav->refPos);
                   accelR = NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb);
-                  *VelRdot = VpVElem(*VelRdot, accelR);
+                  *VelRdot = VAddV_Elem(*VelRdot, accelR);
                }
 
                switch (regime) {
                   case ORB_CENTRAL: {
-                     tmpV     = VpVElem(PosR, Nav->refPos);
+                     tmpV     = VAddV_Elem(PosR, Nav->refPos);
                      tmpV2    = getGravAccel(DSM->refOrb->mu, tmpV);
-                     *VelRdot = VpVElem(*VelRdot, tmpV2);
+                     *VelRdot = VAddV_Elem(*VelRdot, tmpV2);
                      if (Nav->refOriType != ORI_WORLD)
-                        *VelRdot = VpVElem(*VelRdot, Nav->refAccel);
+                        *VelRdot = VAddV_Elem(*VelRdot, Nav->refAccel);
 
                      if (AeroActive)
                         for (i = 0; i < 3; i++)
@@ -2786,7 +2789,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
       if (AeroActive) {
          const long orbCenter = DSM->refOrb->World;
          vec3_t worldWR, VrelR, PosN, PosRWorld;
-         PosRWorld           = VpVElem(Nav->PosR, Nav->refPos);
+         PosRWorld           = VAddV_Elem(Nav->PosR, Nav->refPos);
          const double worldw = GetWorldW(Nav->jd_tt_mjd, &World[orbCenter]);
          for (i = 0; i < 3; i++)
             worldWR.v[i] = -Nav->refCRN.mat[i][2] * worldw;

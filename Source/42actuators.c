@@ -143,8 +143,8 @@ void ThrModel(const int smoothing, struct ThrType *Thr, struct SCType *S,
    Thr->Trq = VxV(N->PosCm, Thr->Frc);
 
    if (S->FlexActive) {
-      N->Trq = VpVElem(N->Trq, Thr->Trq);
-      N->Frc = VpVElem(N->Frc, Thr->Frc);
+      N->Trq = VAddV_Elem(N->Trq, Thr->Trq);
+      N->Frc = VAddV_Elem(N->Frc, Thr->Frc);
    }
 }
 #undef SMOOTH_INTERVAL
@@ -206,7 +206,7 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
                   AoN = VoV(CPB.rows[0], P->Norm);
                   if (AoN < 0.0) { /* Plume doesn't see polys facing away */
                      /* Find plume pressure (momentum flux) at poly centroid */
-                     PosB = VmVElem(P->Centroid, PosThrB);
+                     PosB = VSubV_Elem(P->Centroid, PosThrB);
                      PosP = MxV(CPB, PosB);
                      if (PosP.x > 0.0) { /* Ignore backflow */
                         magvec3_t uv  = UNITV(PosP);
@@ -226,12 +226,12 @@ void ThrusterPlumeFrcTrq(struct SCType *S)
                         FrcB = MTxV(CPB, FrcP);
 
                         /* Find plume force in B frame */
-                        r       = VmVElem(P->Centroid, B->cm);
+                        r       = VSubV_Elem(P->Centroid, B->cm);
                         TrqB    = VxV(r, FrcB);
                         FrcN    = MTxV(B->CN, FrcB);
-                        B->FrcN = VpVElem(B->FrcN, FrcN);
-                        B->FrcB = VpVElem(B->FrcB, FrcB);
-                        B->Trq  = VpVElem(B->Trq, TrqB);
+                        B->FrcN = VAddV_Elem(B->FrcN, FrcN);
+                        B->FrcB = VAddV_Elem(B->FrcB, FrcB);
+                        B->Trq  = VAddV_Elem(B->Trq, TrqB);
                      }
                   }
                }
@@ -263,8 +263,8 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
    for (i = 0; i < 3; i++)
       FrcB.v[i] = S->IdealAct[i].Fcmd;
    FrcN         = MTxV(S->B[0].CN, FrcB);
-   S->B[0].FrcB = VpVElem(S->B[0].FrcB, FrcB);
-   S->B[0].FrcN = VpVElem(S->B[0].FrcN, FrcN);
+   S->B[0].FrcB = VAddV_Elem(S->B[0].FrcB, FrcB);
+   S->B[0].FrcN = VAddV_Elem(S->B[0].FrcN, FrcN);
    for (i = 0; i < 3; i++)
       S->B[0].Trq.v[i] += S->IdealAct[i].Tcmd;
 
@@ -283,7 +283,7 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
    /* MTBs */
    for (i = 0; i < S->Nmtb; i++) {
       MTBModel(&S->MTB[i], S->bvb);
-      S->B[0].Trq = VpVElem(S->B[0].Trq, S->MTB[i].Trq);
+      S->B[0].Trq = VAddV_Elem(S->B[0].Trq, S->MTB[i].Trq);
    }
 
    /* Gimbal Drives */
@@ -305,9 +305,9 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
       Thr = &S->Thr[i];
       ThrModel(smoothing, Thr, S, jd);
       FrcN                 = MTxV(S->B[Thr->Body].CN, Thr->Frc);
-      S->B[Thr->Body].Trq  = VpVElem(S->B[Thr->Body].Trq, Thr->Trq);
-      S->B[Thr->Body].FrcN = VpVElem(S->B[Thr->Body].FrcN, FrcN);
-      S->B[Thr->Body].FrcB = VpVElem(S->B[Thr->Body].FrcB, Thr->Frc);
+      S->B[Thr->Body].Trq  = VAddV_Elem(S->B[Thr->Body].Trq, Thr->Trq);
+      S->B[Thr->Body].FrcN = VAddV_Elem(S->B[Thr->Body].FrcN, FrcN);
+      S->B[Thr->Body].FrcB = VAddV_Elem(S->B[Thr->Body].FrcB, Thr->Frc);
    }
    if (ThrusterPlumesActive) {
       ThrusterPlumeFrcTrq(S);
@@ -332,8 +332,8 @@ void Actuators(const int smoothing, struct SCType *S, JDType jd)
             W = &S->Whl[i];
             N = &S->B[W->Body].Node[W->Node];
             WheelJitter(W, S);
-            N->Frc = VpVElem(N->Frc, W->JitFrc);
-            N->Trq = VpVElem(N->Trq, W->JitTrq);
+            N->Frc = VAddV_Elem(N->Frc, W->JitFrc);
+            N->Trq = VAddV_Elem(N->Trq, W->JitTrq);
          }
       }
    }

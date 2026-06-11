@@ -14,16 +14,9 @@
 #ifndef __ORBKIT_H__
 #define __ORBKIT_H__
 
-#include "42constants.h"
-#include "dcmkit.h"
-#include "defineskit.h"
 #include "iokit.h"
+#include "jdkit.h"
 #include "mathkit.h"
-#include "timekit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /*
 ** #ifdef __cplusplus
@@ -31,76 +24,121 @@
 ** #endif
 */
 
+/* Use X-Macros to define the World List, and some other associated   */
+/*    Parameters.                                                     */
+/*    Format:                                                         */
+/*    X(                                                              */
+/*       world, ---- Identifier for the enum                          */
+/*       naif_str, - NAIF string representation                       */
+/*       parent, --- Parent of the world                              */
+/*    )                                                               */
+#define X_WORLD_LIST                                                           \
+   X(SOL, "SOL", "SUN", (-1))                                                  \
+   X(MERCURY, "MERCURY", "MERCURY", SOL)                                       \
+   X(VENUS, "VENUS", "VENUS", SOL)                                             \
+   X(EARTH, "EARTH", "EARTH", SOL)                                             \
+   X(MARS, "MARS", "MARS", SOL)                                                \
+   X(JUPITER, "JUPITER", "JUPITER", SOL)                                       \
+   X(SATURN, "SATURN", "SATURN", SOL)                                          \
+   X(URANUS, "URANUS", "URANUS", SOL)                                          \
+   X(NEPTUNE, "NEPTUNE", "NEPTUNE", SOL)                                       \
+   X(PLUTO, "PLUTO", "PLUTO", SOL)                                             \
+   /* Moon of Earth */                                                         \
+   X(LUNA, "LUNA", "MOON", EARTH)                                              \
+   /* Moons of Mars */                                                         \
+   X(PHOBOS, "PHOBOS", "PHOBOS", MARS)                                         \
+   X(DEIMOS, "DEIMOS", "DEIMOS", MARS)                                         \
+   /* Major Moons of Jupiter */                                                \
+   X(IO, "IO", "IO", JUPITER)                                                  \
+   X(EUROPA, "EUROPA", "EUROPA", JUPITER)                                      \
+   X(GANYMEDE, "GANYMEDE", "GANYMEDE", JUPITER)                                \
+   X(CALLISTO, "CALLISTO", "CALLISTO", JUPITER)                                \
+   X(AMALTHEA, "AMALTHEA", "AMALTHEA", JUPITER)                                \
+   X(HIMALIA, "HIMALIA", "HIMALIA", JUPITER)                                   \
+   X(ELARA, "ELARA", "ELARA", JUPITER)                                         \
+   X(PASIPHAE, "PASIPHAE", "PASIPHAE", JUPITER)                                \
+   X(SINOPE, "SINOPE", "SINOPE", JUPITER)                                      \
+   X(LYSITHEA, "LYSITHEA", "LYSITHEA", JUPITER)                                \
+   X(CARME, "CARME", "CARME", JUPITER)                                         \
+   X(ANANKE, "ANANKE", "ANANKE", JUPITER)                                      \
+   X(LEDA, "LEDA", "LEDA", JUPITER)                                            \
+   X(THEBE, "THEBE", "THEBE", JUPITER)                                         \
+   X(ADRASTEA, "ADRASTEA", "ADRASTEA", JUPITER)                                \
+   X(METIS, "METIS", "METIS", JUPITER)                                         \
+   /* Major Moons of Saturn */                                                 \
+   X(MIMAS, "MIMAS", "MIMAS", SATURN)                                          \
+   X(ENCELADUS, "ENCELADUS", "ENCELADUS", SATURN)                              \
+   X(TETHYS, "TETHYS", "TETHYS", SATURN)                                       \
+   X(DIONE, "DIONE", "DIONE", SATURN)                                          \
+   X(RHEA, "RHEA", "RHEA", SATURN)                                             \
+   X(TITAN, "TITAN", "TITAN", SATURN)                                          \
+   X(HYPERION, "HYPERION", "HYPERION", SATURN)                                 \
+   X(IAPETUS, "IAPETUS", "IAPETUS", SATURN)                                    \
+   X(PHOEBE, "PHOEBE", "PHOEBE", SATURN)                                       \
+   X(JANUS, "JANUS", "JANUS", SATURN)                                          \
+   X(EPIMETHEUS, "EPIMETHEUS", "EPIMETHEUS", SATURN)                           \
+   X(HELENE, "HELENE", "HELENE", SATURN)                                       \
+   X(TELESTO, "TELESTO", "TELESTO", SATURN)                                    \
+   X(CALYPSO, "CALYPSO", "CALYPSO", SATURN)                                    \
+   X(ATLAS, "ATLAS", "ATLAS", SATURN)                                          \
+   X(PROMETHEUS, "PROMETHEUS", "PROMETHEUS", SATURN)                           \
+   X(PANDORA, "PANDORA", "PANDORA", SATURN)                                    \
+   X(PAN, "PAN", "PAN", SATURN)                                                \
+   /* Major Moons of Uranus */                                                 \
+   X(ARIEL, "ARIEL", "ARIEL", URANUS)                                          \
+   X(UMBRIEL, "UMBRIEL", "UMBRIEL", URANUS)                                    \
+   X(TITANIA, "TITANIA", "TITANIA", URANUS)                                    \
+   X(OBERON, "OBERON", "OBERON", URANUS)                                       \
+   X(MIRANDA, "MIRANDA", "MIRANDA", URANUS)                                    \
+   /* Major Moons of Neptune */                                                \
+   X(TRITON, "TRITON", "TRITON", NEPTUNE)                                      \
+   X(NEREID, "NEREID", "NEREID", NEPTUNE)                                      \
+   /* Pluto's moon */                                                          \
+   X(CHARON, "CHARON", "CHARON", PLUTO)
+
+#define WORLD_CONFIGURE_SATELLITES(worlds, w_id, n_sat, sat_list)              \
+   do {                                                                        \
+      (n_sat)    = 0;                                                          \
+      (sat_list) = NULL;                                                       \
+      for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++)                           \
+         if (GetWorldParent(Iw) == w_id &&                                     \
+             (w_id == SOL || (worlds)[Iw].Exists))                             \
+            (n_sat)++;                                                         \
+                                                                               \
+      if ((n_sat) > 0) {                                                       \
+         (sat_list) = calloc((n_sat), sizeof(long));                           \
+         if ((sat_list) == NULL) {                                             \
+            fprintf(                                                           \
+                stderr,                                                        \
+                "World[%i].Sat calloc returned null pointer . Exiting...\n",   \
+                (w_id));                                                       \
+            exit(EXIT_FAILURE);                                                \
+         }                                                                     \
+                                                                               \
+         long i_sat = 0;                                                       \
+         for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {                      \
+            if (GetWorldParent(Iw) == w_id &&                                  \
+                (w_id == SOL || (worlds)[Iw].Exists)) {                        \
+               sat_list[i_sat] = Iw;                                           \
+               i_sat++;                                                        \
+            }                                                                  \
+         }                                                                     \
+      }                                                                        \
+   } while (0)
+
 /* World Tags */
 typedef enum WorldID {
    // TODO: maybe organize the moons to immediately follow the parent planet?
    // for example, the moons of Jupiter would be from
    // World[JUPITER+1] to World[SATURN-1]
    // this would make iterating over just the planets more difficult...
-   SOL = 0,
-   MERCURY,
-   VENUS,
-   EARTH,
-   MARS,
-   JUPITER,
-   SATURN,
-   URANUS,
-   NEPTUNE,
-   PLUTO,
-   /* Moon of Earth */
-   LUNA,
-   /* Moons of Mars */
-   PHOBOS,
-   DEIMOS,
-   /* Major Moons of Jupiter */
-   IO,
-   EUROPA,
-   GANYMEDE,
-   CALLISTO,
-   AMALTHEA,
-   HIMALIA,
-   ELARA,
-   PASIPHAE,
-   SINOPE,
-   LYSITHEA,
-   CARME,
-   ANANKE,
-   LEDA,
-   THEBE,
-   ADRASTEA,
-   METIS,
-   /* Major Moons of Saturn */
-   MIMAS,
-   ENCELADUS,
-   TETHYS,
-   DIONE,
-   RHEA,
-   TITAN,
-   HYPERION,
-   IAPETUS,
-   PHOEBE,
-   JANUS,
-   EPIMETHEUS,
-   HELENE,
-   TELESTO,
-   CALYPSO,
-   ATLAS,
-   PROMETHEUS,
-   PANDORA,
-   PAN,
-   /* Major Moons of Uranus */
-   ARIEL,
-   UMBRIEL,
-   TITANIA,
-   OBERON,
-   MIRANDA,
-   /* Major Moons of Neptune */
-   TRITON,
-   NEREID,
-   /* Pluto's moon */
-   CHARON,
-   // set the number of non Minor Bodies
-   NMAJORWORLD,
+
+   NULL_WORLD = -1,
+#define X(world, str_val, naif, parent) world,
+   X_WORLD_LIST
+#undef X
+       // set the number of non Minor Bodies
+       NMAJORWORLD,
    /* Minor Bodies */
    MINORBODY_0 = NMAJORWORLD,
    MINORBODY_1,
@@ -445,7 +483,9 @@ struct WorldType {
 };
 
 /*~ Prototypes ~*/
-WorldID GetWorldID(const char *s);
+__attribute__((pure)) WorldID GetWorldID(const char *s);
+__attribute__((pure)) const char *WorldID2String(WorldID w_id);
+__attribute__((const)) WorldID GetWorldParent(const WorldID w_id);
 
 void CloneWorld(struct WorldType *const destWorld,
                 const struct WorldType srcWorld);
@@ -458,14 +498,13 @@ __attribute__((pure)) vec3_t GetWorldWln(JDType jd,
 __attribute__((const)) AngDataType CopyAngData(const AngDataType src);
 __attribute__((pure)) double GetWorldAng(JDType jd,
                                          const AngDataType *const ang_data);
-__attribute__((pure)) mat3x3_t GetWorldCWN(JDType jd,
-                                           const AngDataType *const ang_data);
+__attribute__((pure)) dbl_mat3x3_t
+GetWorldCWN(JDType jd, const AngDataType *const ang_data);
 __attribute__((pure)) mat3x3_t GetWorldCNJ(JDType jd,
                                            const AngDataType *const ang_data);
 
 void CloneOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
 void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb);
-void WorldID2String(WorldID w_id, char w_str[32]);
 __attribute__((const)) double MeanAnomToTrueAnom(double MeanAnom, double ecc);
 __attribute__((const)) double TrueAnomaly(double mu, double p, double e,
                                           double t);
@@ -486,8 +525,7 @@ void MeanEph2RV(struct OrbitType *O, double DynTime);
 long LoadTleFromFile(const char *Path, const char *TleFileName,
                      const char *TleLabel, double DynTime, JDType jd,
                      struct OrbitType *O);
-__attribute__((pure)) double RV2RVp(double mu, vec3_t r, vec3_t v, vec3_t *rp,
-                                    vec3_t *vp);
+double RV2RVp(double mu, vec3_t r, vec3_t v, vec3_t *rp, vec3_t *vp);
 void PlanetEphemerides(long i, JDType jd, double mu, double *SMA, double *ecc,
                        double *inc, double *RAAN, double *omg, double *tp,
                        double *anom, double *p, double *alpha, double *rmin,
@@ -519,10 +557,12 @@ void TDRSPosVel(double PriMerAng, double TIME, vec3_t ptn[10], vec3_t vtn[10]);
 __attribute__((const)) mat3x3_t TETE2J2000(double JD);
 __attribute__((const)) double RadiusOfInfluence(double mu1, double mu2,
                                                 double r);
-void RelRV2EHRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t Rrel,
-                vec3_t Vrel, vec3_t *re, vec3_t *ve);
-void EHRV2RelRV(double OrbRadius, double OrbRate, mat3x3_t OrbCLN, vec3_t re,
-                vec3_t ve, vec3_t *Rrel, vec3_t *Vrel);
+__attribute__((const)) pair_vec3_t RelRV2EHRV(double OrbRadius, double OrbRate,
+                                              mat3x3_t OrbCLN, vec3_t Rrel,
+                                              vec3_t Vrel);
+__attribute__((const)) pair_vec3_t EHRV2RelRV(double OrbRadius, double OrbRate,
+                                              mat3x3_t OrbCLN, vec3_t re,
+                                              vec3_t ve);
 void EHRV2EHModes(vec3_t r, vec3_t v, double n, double nt, double *A,
                   double *Bc, double *Bs, double *C, double *Dc, double *Ds);
 void EHModes2EHRV(double A, double Bc, double Bs, double C, double Dc,

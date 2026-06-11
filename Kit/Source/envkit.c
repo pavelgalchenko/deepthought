@@ -13,6 +13,17 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "envkit.h"
+#include "42constants.h"
+#include "42types.h"
+#include "dcmkit.h"
+#include "defineskit.h"
+#include "geomkit.h"
+#include "iokit.h"
+#include "timekit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <threads.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
@@ -96,92 +107,100 @@ vec3_t SphericalHarmGravForce(const long N, const long M,
 }
 /**********************************************************************/
 /*  IGRF Magnetic field model                                      *  */
+#define nYears 26
+static double **IGRF_C = NULL, **IGRF_S = NULL, **IGRF_Norm = NULL;
+static double **IGRF_Cdat[nYears + 1] = {NULL};
+static double **IGRF_Sdat[nYears + 1] = {NULL};
+
+static char IGRF_ModelPath[1000] = {'\0'};
+static long IGRF_warned          = 0;
+static __once_flag igrf_flag     = __ONCE_FLAG_INIT;
+void load_igrf_file()
+{
+   double dum[nYears + 1];
+   long k;
+   long n, m;
+   char gh;
+
+   IGRF_C    = CreateMatrix(14, 14);
+   IGRF_S    = CreateMatrix(14, 14);
+   IGRF_Norm = CreateMatrix(14, 14);
+
+   for (k = 0; k < nYears + 1; k++) {
+      IGRF_Cdat[k] = CreateMatrix(14, 14);
+      IGRF_Sdat[k] = CreateMatrix(14, 14);
+   }
+
+   /* Get data from IGRF20.txt */
+   const char *file_name = "igrf14coeffs.txt";
+   FILE *IGRFfile        = FileOpen(IGRF_ModelPath, file_name, "r");
+   // skip first 4 lines
+
+   char buffer[BUFSIZ] = {0};
+   for (int i = 0; i < 4; i++)
+      fgets(buffer, sizeof(buffer), IGRFfile);
+   while (fgets(buffer, sizeof(buffer), IGRFfile) != NULL) {
+      sscanf(buffer,
+             "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
+             "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+             &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4], &dum[5],
+             &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11], &dum[12],
+             &dum[13], &dum[14], &dum[15], &dum[16], &dum[17], &dum[18],
+             &dum[19], &dum[20], &dum[21], &dum[22], &dum[23], &dum[24],
+             &dum[25], &dum[26]);
+      switch (gh) {
+         case 'g':
+            for (k = 0; k < nYears + 1; k++)
+               IGRF_Cdat[k][n][m] = dum[k];
+            break;
+         case 'h':
+            for (k = 0; k < nYears + 1; k++)
+               IGRF_Sdat[k][n][m] = dum[k];
+            break;
+         default:
+            fprintf(stderr,
+                    "Invalid leading character in IGRF file %s. Exiting...\n",
+                    file_name);
+            exit(EXIT_FAILURE);
+            break;
+      }
+   }
+   fclose(IGRFfile);
+   /* Transform from Schmidt normalization to Neumann normalization */
+   for (n = 1; n <= 13; n++) {
+      for (m = 0; m <= n; m++) {
+         IGRF_Norm[n][m] = 1.0;
+         if (m != 0)
+            IGRF_Norm[n][m] = sqrt(2.0 / factDfact(n + m, n - m));
+      }
+   }
+}
+
 vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
                     const long M, const vec3_t pbn, const double PriMerAng)
 {
-   static double **C = NULL, **S = NULL, **Norm = NULL;
-#define nYears 26
+   if (IGRF_ModelPath[0] == '\0')
+      strncpy(IGRF_ModelPath, ModelPath, 999);
+   call_once(&igrf_flag, load_igrf_file);
 
-   static double **Cdat[nYears + 1] = {NULL}, **Sdat[nYears + 1] = {NULL};
-   double t[nYears] = {1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0,
-                       1935.0, 1940.0, 1945.0, 1950.0, 1955.0, 1960.0, 1965.0,
-                       1970.0, 1975.0, 1980.0, 1985.0, 1990.0, 1995.0, 2000.0,
-                       2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
+   static const double t[nYears] = {
+       1900.0, 1905.0, 1910.0, 1915.0, 1920.0, 1925.0, 1930.0, 1935.0, 1940.0,
+       1945.0, 1950.0, 1955.0, 1960.0, 1965.0, 1970.0, 1975.0, 1980.0, 1985.0,
+       1990.0, 1995.0, 2000.0, 2005.0, 2010.0, 2015.0, 2020.0, 2025.0};
 
    double Br, Bth, Bph;
    vec3_t pbe, gradV, BVE;
    const vec3_t AXIS = VEC3_PZAXIS;
    mat3x3_t CEN;
-   const double Re    = 6371200.0;
-   static long First  = 1;
-   static long warned = 0;
+   const double Re = 6371200.0;
 
 #ifdef _DEBUG_MAG_
+   static long First    = 1;
    static FILE *magFile = NULL;
    static int reporting = 0;
    static double theta, phi;
-#endif
    if (First) {
       First = 0;
-      double dum[nYears + 1];
-      long k;
-      long n, m;
-      char gh;
-
-      C    = CreateMatrix(14, 14);
-      S    = CreateMatrix(14, 14);
-      Norm = CreateMatrix(14, 14);
-
-      for (k = 0; k < nYears + 1; k++) {
-         Cdat[k] = CreateMatrix(14, 14);
-         Sdat[k] = CreateMatrix(14, 14);
-      }
-
-      /* Get data from IGRF20.txt */
-      const char *file_name = "igrf14coeffs.txt";
-      FILE *IGRFfile        = FileOpen(ModelPath, file_name, "r");
-      // skip first 4 lines
-
-      char buffer[BUFSIZ] = {0};
-      for (int i = 0; i < 4; i++)
-         fgets(buffer, sizeof(buffer), IGRFfile);
-      while (fgets(buffer, sizeof(buffer), IGRFfile) != NULL) {
-         sscanf(buffer,
-                "%c %ld %ld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf "
-                "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-                &gh, &n, &m, &dum[0], &dum[1], &dum[2], &dum[3], &dum[4],
-                &dum[5], &dum[6], &dum[7], &dum[8], &dum[9], &dum[10], &dum[11],
-                &dum[12], &dum[13], &dum[14], &dum[15], &dum[16], &dum[17],
-                &dum[18], &dum[19], &dum[20], &dum[21], &dum[22], &dum[23],
-                &dum[24], &dum[25], &dum[26]);
-         switch (gh) {
-            case 'g':
-               for (k = 0; k < nYears + 1; k++)
-                  Cdat[k][n][m] = dum[k];
-               break;
-            case 'h':
-               for (k = 0; k < nYears + 1; k++)
-                  Sdat[k][n][m] = dum[k];
-               break;
-            default:
-               fprintf(
-                   stderr,
-                   "Invalid leading character in IGRF file %s. Exiting...\n",
-                   file_name);
-               exit(EXIT_FAILURE);
-               break;
-         }
-      }
-      fclose(IGRFfile);
-      /* Transform from Schmidt normalization to Neumann normalization */
-      for (n = 1; n <= 13; n++) {
-         for (m = 0; m <= n; m++) {
-            Norm[n][m] = 1.0;
-            if (m != 0)
-               Norm[n][m] = sqrt(2.0 / factDfact(n + m, n - m));
-         }
-      }
-#ifdef _DEBUG_MAG_
       extern char OutPath[1000];
       magFile   = FileOpen(OutPath, "/IGRFModelTest.42", "wt");
       r         = MAGV(pbn);
@@ -204,17 +223,16 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
       }
       reporting = 0;
       fclose(magFile);
-
-#endif
    }
+#endif
 
    const double doy  = (UTC.doy - 1) + (UTC.Hour - 1) / 24.0 +
                        UTC.Minute / 1440.0 +
                        (rational2double(UTC.Second)) / 86400.0;
    const double year = UTC.Year + doy / (UTC.Year % 4 ? 365.0 : 366.0);
    if (year > 2020) {
-      if (!warned && year > t[nYears - 1] + 5) {
-         warned = 1;
+      if (!IGRF_warned && year > t[nYears - 1] + 5) {
+         IGRF_warned = 1;
          printf("***** WARNING: IGRF model only well defined up to %ld; "
                 "IGRF values at %lf may be of reduced accuracy. *****\n",
                 (long)t[nYears - 1] + 5, year);
@@ -224,8 +242,10 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
           (year > t[nYears - 1] + 5.0 ? 5.0 : year - t[nYears - 1]);
       for (int n = 0; n <= 13; n++) {
          for (int m = 0; m <= n; m++) {
-            C[n][m] = Cdat[nYears - 1][n][m] + Cdat[nYears][n][m] * dt;
-            S[n][m] = Sdat[nYears - 1][n][m] + Sdat[nYears][n][m] * dt;
+            IGRF_C[n][m] =
+                IGRF_Cdat[nYears - 1][n][m] + IGRF_Cdat[nYears][n][m] * dt;
+            IGRF_S[n][m] =
+                IGRF_Sdat[nYears - 1][n][m] + IGRF_Sdat[nYears][n][m] * dt;
          }
       }
    }
@@ -234,11 +254,11 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
          for (int m = 0; m <= n; m++) {
             double Y[nYears] = {0.0};
             for (int k = 0; k < nYears; k++)
-               Y[k] = Cdat[k][n][m];
-            C[n][m] = LinInterp(t, Y, year, nYears);
+               Y[k] = IGRF_Cdat[k][n][m];
+            IGRF_C[n][m] = LinInterp(t, Y, year, nYears);
             for (int k = 0; k < nYears; k++)
-               Y[k] = Sdat[k][n][m];
-            S[n][m] = LinInterp(t, Y, year, nYears);
+               Y[k] = IGRF_Sdat[k][n][m];
+            IGRF_S[n][m] = LinInterp(t, Y, year, nYears);
          }
       }
    }
@@ -254,7 +274,7 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
    const double sph     = coord.sph;
 
    /*    Find Br, Bth, Bph */
-   gradV = SphericalHarmonics(N, M, coord, Re, Re, C, S, Norm);
+   gradV = SphericalHarmonics(N, M, coord, Re, Re, IGRF_C, IGRF_S, IGRF_Norm);
    Br    = -gradV.v[0];
    Bth   = -gradV.v[1];
    Bph   = -gradV.v[2];

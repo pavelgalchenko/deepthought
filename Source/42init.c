@@ -2487,7 +2487,7 @@ void InitSpacecraft(struct SCType *S)
    if (rateFrame == 'L') {
       /* Add LVLH rate to wn */
       vec3_t wlnb = MxV(CBN, Orb[S->RefOrb].wln);
-      wbn         = VpVElem(wbn, wlnb);
+      wbn         = VAddV_Elem(wbn, wlnb);
    }
    S->CF = MxMT(CBN, Frm[S->RefOrb].CN);
 
@@ -2754,8 +2754,8 @@ void InitSpacecraft(struct SCType *S)
             G->RigidRout = pOut;
          }
          else {
-            G->RigidRin  = VmVElem(pIn, S->B[G->Bin].cm);
-            G->RigidRout = VmVElem(pOut, S->B[G->Bout].cm);
+            G->RigidRin  = VSubV_Elem(pIn, S->B[G->Bin].cm);
+            G->RigidRout = VSubV_Elem(pOut, S->B[G->Bout].cm);
          }
          if (!fy_node_scanf(seqNode, "/Parm File Name %39[^\n]",
                             G->ParmFileName)) {
@@ -3452,8 +3452,10 @@ void InitSpacecraft(struct SCType *S)
             S->VelR = MTxV(O->CLN, S->VelEH);
          }
          else {
-            EHRV2RelRV(O->SMA, O->MeanMotion, O->CLN, S->PosEH, S->VelEH,
-                       &S->PosR, &S->VelR);
+            pair_vec3_t pair =
+                EHRV2RelRV(O->SMA, O->MeanMotion, O->CLN, S->PosEH, S->VelEH);
+            S->PosR = pair.first;
+            S->VelR = pair.second;
          }
       }
       else {
@@ -3468,8 +3470,10 @@ void InitSpacecraft(struct SCType *S)
             S->VelEH = MxV(O->CLN, S->VelR);
          }
          else {
-            RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR,
-                       &S->PosEH, &S->VelEH);
+            pair_vec3_t pair =
+                RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR);
+            S->PosEH = pair.first;
+            S->VelEH = pair.second;
          }
       }
 
@@ -3479,7 +3483,7 @@ void InitSpacecraft(struct SCType *S)
       S->PosF = MxV(Fr->CN, psn);
       wxr     = VxV(S->B[0].wn, S->cm);
       wxrn    = MTxV(S->B[0].CN, wxr);
-      vsn     = VmVElem(S->VelR, wxrn);
+      vsn     = VSubV_Elem(S->VelR, wxrn);
       S->VelF = MxV(Fr->CN, vsn);
    }
    else {
@@ -3498,7 +3502,7 @@ void InitSpacecraft(struct SCType *S)
          wxrl = MxV(O->CLN, wxrn);
          for (j = 0; j < 3; j++)
             S->PosEH.v[j] = pcml.v[j] + psl.v[j] + pfl.v[j];
-         S->VelEH = VpVElem(wxrl, vsl);
+         S->VelEH = VAddV_Elem(wxrl, vsl);
          if (O->Regime == ORB_ZERO) {
             S->PosR = S->PosEH;
             S->VelR = S->VelEH;
@@ -3508,8 +3512,10 @@ void InitSpacecraft(struct SCType *S)
             S->VelR = MTxV(O->CLN, S->VelEH);
          }
          else {
-            EHRV2RelRV(O->SMA, MAGV(O->wln), O->CLN, S->PosEH, S->VelEH,
-                       &S->PosR, &S->VelR);
+            pair_vec3_t pair =
+                EHRV2RelRV(O->SMA, MAGV(O->wln), O->CLN, S->PosEH, S->VelEH);
+            S->PosR = pair.first;
+            S->VelR = pair.second;
          }
       }
       else {
@@ -3517,7 +3523,7 @@ void InitSpacecraft(struct SCType *S)
          vsn = MTxV(Fr->CN, S->VelF);
          for (j = 0; j < 3; j++)
             S->PosR.v[j] = pcmn.v[j] + psn.v[j] + Fr->PosR.v[j];
-         S->VelR = VpVElem(wxrn, vsn);
+         S->VelR = VAddV_Elem(wxrn, vsn);
          if (O->Regime == ORB_ZERO) {
             // TODO: ????? should something be here????
          }
@@ -3525,8 +3531,10 @@ void InitSpacecraft(struct SCType *S)
             // TODO: ????? should something be here????
          }
          else {
-            RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR,
-                       &S->PosEH, &S->VelEH);
+            pair_vec3_t pair =
+                RelRV2EHRV(O->SMA, MAGV(O->wln), O->CLN, S->PosR, S->VelR);
+            S->PosEH = pair.first;
+            S->VelEH = pair.second;
          }
       }
    }
@@ -3535,13 +3543,13 @@ void InitSpacecraft(struct SCType *S)
       S->VelN = O->N_BODY_VelN;
    }
    else {
-      S->PosN = VpVElem(O->PosN, S->PosR);
-      S->VelN = VpVElem(O->VelN, S->VelR);
+      S->PosN = VAddV_Elem(O->PosN, S->PosR);
+      S->VelN = VAddV_Elem(O->VelN, S->VelR);
    }
    rh      = MTxV(World[O->World].CNH, S->PosN);
    vh      = MTxV(World[O->World].CNH, S->VelN);
-   S->PosH = VpVElem(World[O->World].PosH, rh);
-   S->VelH = VpVElem(World[O->World].VelH, vh);
+   S->PosH = VAddV_Elem(World[O->World].PosH, rh);
+   S->VelH = VAddV_Elem(World[O->World].VelH, vh);
 
    if (O->Regime == ORB_ZERO) {
       S->CLN = MAT3X3_EYE;
@@ -3745,7 +3753,7 @@ void LoadSun(const ephemType ephem, const JDType jd,
    const float SunColor[3]       = {1.0, 1.0, 0.9};
    const unsigned char Glyph[14] = {0xc0, 0xc0, 0x00, 0x00, 0x18, 0x66, 0x42,
                                     0x99, 0x99, 0x42, 0x66, 0x18, 0x00, 0x00};
-   long i, j;
+   long j;
    struct WorldType *W;
 
    W = &worlds[SOL];
@@ -3753,16 +3761,11 @@ void LoadSun(const ephemType ephem, const JDType jd,
    /* Relationships */
    W->Exists = TRUE;
    W->Type   = SUN;
-   W->Parent = -1; // if was zero, would just be self-referential
+   W->Parent = GetWorldParent(SOL);
 
-   W->Nsat = 9;
-   W->Sat  = (WorldID *)calloc(W->Nsat, sizeof(long));
-   if (W->Sat == NULL) {
-      fprintf(stderr, "W->Sat calloc returned null pointer.  Bailing out!\n");
-      exit(EXIT_FAILURE);
-   }
-   for (i = 0; i < W->Nsat; i++)
-      W->Sat[i] = MERCURY + i;
+   W->Nsat = 0;
+   W->Sat  = NULL;
+   WORLD_CONFIGURE_SATELLITES(worlds, SOL, W->Nsat, W->Sat);
 
    /* Physical Properties */
    double GM;
@@ -3860,9 +3863,10 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->eph.PosN = VEC3_ZERO;
    W->eph.VelN = VEC3_ZERO;
 
-   W->PriMerAng = GetWorldAng(jd, &W->ang_data[0]);
-   W->CWN       = GetWorldCWN(jd, W->ang_data);
-   W->qwn       = C2Q(W->CWN);
+   dbl_mat3x3_t dbl_mat = GetWorldCWN(jd, W->ang_data);
+   W->PriMerAng         = dbl_mat.dbl;
+   W->CWN               = dbl_mat.mat;
+   W->qwn               = C2Q(W->CWN);
 
    W->CNJ = GetWorldCNJ(jd, W->ang_data);
    W->qnj = C2Q(W->CNJ);
@@ -4042,7 +4046,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       strcpy(W->BumpTexFileName, "NONE");
       W->J2             = J2[i];
       W->rad            = Rad[i];
-      W->Parent         = SOL;
+      W->Parent         = GetWorldParent(Iw);
       W->eph.World      = SOL;
       W->eph.mu         = World[SOL].mu;
       W->eph.SplineFile = NULL;
@@ -4213,11 +4217,12 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
             }
             else {
-               W->PriMerAng = GetWorldAng(jd_tdb_j2000, &W->ang_data[0]);
-               W->CWN       = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-               W->CNJ       = GetWorldCNJ(jd, W->ang_data);
-               W->CNH       = MxM(W->CNJ, worlds[EARTH].CNH);
-               W->qnj       = C2Q(W->CNJ);
+               dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+               W->PriMerAng         = dbl_mat.dbl;
+               W->CWN               = dbl_mat.mat;
+               W->CNJ               = GetWorldCNJ(jd, W->ang_data);
+               W->CNH               = MxM(W->CNJ, worlds[EARTH].CNH);
+               W->qnj               = C2Q(W->CNJ);
             }
             W->qwn = C2Q(W->CWN);
             W->qnh = C2Q(W->CNH);
@@ -4351,8 +4356,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
                      double *const raan, double *const omg,
                      double *const mean_anom, DateType *const epoch_date)
 {
-   char p_name[32] = {'\0'};
-   WorldID2String(planet, p_name);
+   const char *p_name = WorldID2String(planet);
    long n_moon;
    WorldID first_moon;
    NMoon(planet, &n_moon, &first_moon);
@@ -4640,8 +4644,6 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 
    JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    for (WorldID p_id = MERCURY; p_id <= PLUTO; p_id++) {
-      char p_name[32] = {'\0'};
-      WorldID2String(p_id, p_name);
 
       struct WorldType *P = &worlds[p_id];
 
@@ -4650,25 +4652,9 @@ void LoadMoons(const ephemType ephem, const JDType jd,
       NMoon(p_id, &n_moon, &first_moon);
       P->Nsat = 0;
       P->Sat  = NULL;
-      for (WorldID Im = first_moon; Im < (n_moon + first_moon); Im++) {
-         if (worlds[Im].Exists) {
-            P->Nsat++;
-            if (P->Sat == NULL)
-               P->Sat = calloc(P->Nsat, sizeof(long));
-            else
-               P->Sat = realloc(P->Sat, P->Nsat * sizeof(long));
-            P->Sat[P->Nsat - 1] = Im;
-         }
-      }
+      WORLD_CONFIGURE_SATELLITES(worlds, p_id, P->Nsat, P->Sat);
 
       if (P->Exists && P->Nsat > 0) {
-         if (P->Sat == NULL) {
-            fprintf(stderr,
-                    "%s P->Sat allocation returned null pointer. Exiting...\n",
-                    p_name);
-            exit(EXIT_FAILURE);
-         }
-
          for (long im = 0; im < P->Nsat; im++) {
             const WorldID m_id  = P->Sat[im];
             struct WorldType *M = &worlds[m_id];
@@ -4857,8 +4843,9 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
             if (ephem != EPH_SPICE) {
-               M->PriMerAng = GetWorldAng(jd_tdb_j2000, &M->ang_data[0]);
-               M->CWN       = GetWorldCWN(jd_tdb_j2000, M->ang_data);
+               dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, M->ang_data);
+               M->PriMerAng         = dbl_mat.dbl;
+               M->CWN               = dbl_mat.mat;
                // TODO: double check that CNH tends to reflect the parent body
                M->CNJ = GetWorldCNJ(jd, M->ang_data);
                M->CNH = MxM(M->CNJ, worlds[EARTH].CNH);
@@ -5038,8 +5025,10 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
       W->PosH = E->PosN;
       W->VelH = E->VelN;
 
-      W->CWN = GetWorldCWN(JD_TDB_MJD, W->ang_data);
-      W->qwn = C2Q(W->CWN);
+      dbl_mat3x3_t dbl_mat = GetWorldCWN(JD_TDB_MJD, W->ang_data);
+      W->PriMerAng         = dbl_mat.dbl;
+      W->CWN               = dbl_mat.mat;
+      W->qwn               = C2Q(W->CWN);
 
       /* Gravitation Model */
       if (GravPertActive) {
@@ -5303,7 +5292,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
             lunaPosN = PosN;
       }
       /* Move Earth from barycentric to Sun-centered */
-      earthPosN = VmVElem(earthPosN, systemBC);
+      earthPosN = VSubV_Elem(earthPosN, systemBC);
 
       /* Adjust Earth from Earth-Moon barycenter */
       /* (Moon PosVel is geocentric, not from barycenter) */
@@ -5311,7 +5300,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
          earthPosN.v[i] -= lunaPosN.v[i] / (1.0 + EMRAT);
       earthPosH = earthPosN;
       rh        = lunaPosN;
-      lunaPosH  = VpVElem(earthPosH, lunaPosN);
+      lunaPosH  = VAddV_Elem(earthPosH, lunaPosN);
       /* Rotate Moon into ECI */
       lunaPosN = QxV(worlds[EARTH].qnh, rh);
    }
@@ -5335,7 +5324,7 @@ void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
       PosN = QTxV(worlds[EARTH].qnh, PosJ);
       /* Move planet from barycentric to Sun-centered */
       otherPosN = PosN;
-      otherPosN = VmVElem(otherPosN, systemBC);
+      otherPosN = VSubV_Elem(otherPosN, systemBC);
       otherPosH = otherPosN;
    }
 
@@ -5472,8 +5461,9 @@ void ReadWorldExists(struct WorldType *const worlds,
 
       int found = FALSE;
       for (WorldID Iw = MERCURY; Iw <= PLUTO; Iw++) {
-         char world_name[32] = {'\0'};
-         WorldID2String(Iw, world_name);
+         char world_name[32]   = {'\0'};
+         const char *cnst_name = WorldID2String(Iw);
+         strncpy(world_name, cnst_name, 31);
          CapitalizeFirst(31, world_name);
 
          long n_moon        = 0;

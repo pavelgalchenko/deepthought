@@ -1954,8 +1954,8 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
 
       if (Nav->refOriType == ORI_WORLD && Nav->refFrame == FRAME_N) {
-         Nav->PosR = VpVElem(Nav->PosR, DSM->refOrb->PosN);
-         Nav->VelR = VpVElem(Nav->VelR, DSM->refOrb->VelN);
+         Nav->PosR = VAddV_Elem(Nav->PosR, DSM->refOrb->PosN);
+         Nav->VelR = VAddV_Elem(Nav->VelR, DSM->refOrb->VelN);
       }
 
       if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
@@ -2381,8 +2381,8 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          vn.y = CV->W.x * CosPriMerAng - CV->W.y * SinPriMerAng;
          vn.z = 0.0;
          if (CV->TrgWorld == RefOrb->World) {
-            RelPosN = VmVElem(pn, state->PosN);
-            RelVelN = VmVElem(vn, state->VelN);
+            RelPosN = VSubV_Elem(pn, state->PosN);
+            RelVelN = VSubV_Elem(vn, state->VelN);
          }
          else {
             struct WorldType *W = &World[RefOrb->World];
@@ -2416,12 +2416,12 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
             TrgState               = &TrgDSM->commState;
          }
          if (TrgOrb == RefOrb) {
-            RelPosN = VmVElem(TrgState->PosR, state->PosR);
-            RelVelN = VmVElem(TrgState->VelR, state->VelR);
+            RelPosN = VSubV_Elem(TrgState->PosR, state->PosR);
+            RelVelN = VSubV_Elem(TrgState->VelR, state->VelR);
          }
          else if (TrgOrb->World == RefOrb->World) {
-            RelPosN = VmVElem(TrgState->PosN, state->PosN);
-            RelVelN = VmVElem(TrgState->VelN, state->VelN);
+            RelPosN = VSubV_Elem(TrgState->PosN, state->PosN);
+            RelVelN = VSubV_Elem(TrgState->VelN, state->VelN);
          }
          else {
             struct WorldType *TrgW = &World[TrgOrb->World];
@@ -2465,11 +2465,12 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          qBb = QxQT(TrgSB[0].qn, TrgSB[CV->TrgBody].qn);
          qbN = QTxQ(qBb, TrgState->qbn);
 
-         pn = VmVElem(VpVElem(QTxV(qbN, CV->T), TrgSB[CV->TrgBody].pn), pcmn);
+         pn = VSubV_Elem(VAddV_Elem(QTxV(qbN, CV->T), TrgSB[CV->TrgBody].pn),
+                         pcmn);
 
-         RelPosB = VmVElem(CV->T, TrgSB[CV->TrgBody].cm);
+         RelPosB = VSubV_Elem(CV->T, TrgSB[CV->TrgBody].cm);
          vb      = VxV(TrgSB[CV->TrgBody].wn, RelPosB);
-         vn      = VpVElem(QTxV(qbN, vb), TrgSB[CV->TrgBody].vn);
+         vn      = VAddV_Elem(QTxV(qbN, vb), TrgSB[CV->TrgBody].vn);
 
          if (TrgOrb == RefOrb) {
             for (int i = 0; i < 3; i++) {
@@ -2485,8 +2486,8 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          }
          else {
             struct WorldType *TrgW = &World[TrgOrb->World];
-            pn                     = VpVElem(pn, TrgState->PosN);
-            vn                     = VpVElem(vn, TrgState->VelN);
+            pn                     = VAddV_Elem(pn, TrgState->PosN);
+            vn                     = VAddV_Elem(vn, TrgState->VelN);
             RelPosH                = MTxV(TrgW->CNH, pn);
             RelVelH                = MTxV(TrgW->CNH, vn);
             struct WorldType *W    = &World[RefOrb->World];
@@ -2523,7 +2524,7 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
          /* Aim at TDRS closest to Zenith */
          for (It = 0; It < 10; It++) {
             if (Tdrs[It].Exists) {
-               RelPosN = VmVElem(Tdrs[It].PosN, state->PosN);
+               RelPosN = VSubV_Elem(Tdrs[It].PosN, state->PosN);
                uv      = UNITV(RelPosN);
                RelPosN = uv.v;
                ToS     = VoV(RelPosN, Rhat);
@@ -2724,7 +2725,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
          CTRL->CmdPosR     = MTxV(DSM->refOrb->CLN, cmd_pos_EH);
          CTRL->CmdVelR     = VxV(wln, CTRL->CmdPosR);
          const vec3_t temp = MTxV(DSM->refOrb->CLN, cmd_vel_EH);
-         CTRL->CmdVelR     = VpVElem(CTRL->CmdVelR, temp);
+         CTRL->CmdVelR     = VAddV_Elem(CTRL->CmdVelR, temp);
       } break;
       default: {
          // Decode ref SC ID Number
@@ -2805,7 +2806,7 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
    if (!strcmp(Cmd->RefOrigin, "OP")) {
       // Specify disp from OP, in X frame directions, control to OP
       // Add pos of F frame origin in R frame
-      CTRL->CmdPosR   = VpVElem(CTRL->CmdPosR, F->PosR);
+      CTRL->CmdPosR   = VAddV_Elem(CTRL->CmdPosR, F->PosR);
       goodOriginFrame = TRUE;
    }
    else if (!strncmp(Cmd->RefOrigin, "SC", 2)) {
@@ -2853,8 +2854,8 @@ void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
               Cmd->RefOrigin, Cmd->RefFrame, SimTime);
       exit(EXIT_FAILURE);
    }
-   CTRL->CmdPosN = VpVElem(CTRL->CmdPosR, state->PosN);
-   CTRL->CmdVelN = VpVElem(CTRL->CmdVelR, state->VelN);
+   CTRL->CmdPosN = VAddV_Elem(CTRL->CmdPosR, state->PosN);
+   CTRL->CmdVelN = VAddV_Elem(CTRL->CmdVelR, state->VelN);
 
    CTRL->trn_kp   = Cmd->trn_kp;
    CTRL->trn_kr   = Cmd->trn_kr;
@@ -3093,9 +3094,9 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
             exit(EXIT_FAILURE);
          }
 
-         vec3_t therr              = VmVElem(cmdVecB, Cmd->PriVec.cmd_axis);
+         vec3_t therr              = VSubV_Elem(cmdVecB, Cmd->PriVec.cmd_axis);
          const double therr_o_axis = VoV(Cmd->PriVec.cmd_axis, therr);
-         therr = VpVElem(therr, SxV(-therr_o_axis, Cmd->PriVec.cmd_axis));
+         therr = VAddV_Elem(therr, SxV(-therr_o_axis, Cmd->PriVec.cmd_axis));
          magvec3_t utherr       = UNITV(therr);
          therr                  = utherr.v;
          const double therr_mag = utherr.m;
@@ -3298,8 +3299,8 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
       DSMState->Time = AC->Time;
       DSMState->PosN = AC->PosN;
       DSMState->VelN = AC->VelN;
-      DSMState->PosR = VmVElem(DSMState->PosN, DSM->refOrb->PosN);
-      DSMState->VelR = VmVElem(DSMState->VelN, DSM->refOrb->VelN);
+      DSMState->PosR = VSubV_Elem(DSMState->PosN, DSM->refOrb->PosN);
+      DSMState->VelR = VSubV_Elem(DSMState->VelN, DSM->refOrb->VelN);
 
       DSMState->CBN = AC->CBN;
       DSMState->qbn = AC->qbn;
@@ -3336,20 +3337,20 @@ void NavigationModule(struct AcType *const AC, struct DSMType *const DSM)
                DSMState->CBN = Q2C(DSMState->qbn);
                break;
             case POS_STATE:
-               tmp3Vec        = VpVElem(Nav->PosR, Nav->refPos);
+               tmp3Vec        = VAddV_Elem(Nav->PosR, Nav->refPos);
                DSMState->PosN = MTxV(Nav->refCRN, tmp3Vec);
-               DSMState->PosR = VmVElem(DSMState->PosN, DSM->refOrb->PosN);
+               DSMState->PosR = VSubV_Elem(DSMState->PosN, DSM->refOrb->PosN);
                break;
             case VEL_STATE:
                // will need more (BKE) for non-inertial frame
-               tmp3Vec        = VpVElem(Nav->VelR, Nav->refVel);
+               tmp3Vec        = VAddV_Elem(Nav->VelR, Nav->refVel);
                DSMState->VelN = MTxV(Nav->refCRN, tmp3Vec);
 
-               DSMState->VelR = VmVElem(DSMState->VelN, DSM->refOrb->VelN);
+               DSMState->VelR = VSubV_Elem(DSMState->VelN, DSM->refOrb->VelN);
                break;
             case OMEGA_STATE:
                tmp3Vec       = MTxV(Nav->CRB, Nav->refOmega);
-               DSMState->wbn = VpVElem(Nav->wbr, tmp3Vec);
+               DSMState->wbn = VAddV_Elem(Nav->wbr, tmp3Vec);
                break;
             default:
                break;
@@ -3431,10 +3432,10 @@ void TranslationCtrl(struct DSMType *DSM)
             }
 
             // Position Error
-            DSM->perr = VmVElem(state->PosR, CTRL->CmdPosR);
+            DSM->perr = VSubV_Elem(state->PosR, CTRL->CmdPosR);
 
             // Velocity Error
-            DSM->verr = VmVElem(state->VelR, CTRL->CmdVelR);
+            DSM->verr = VSubV_Elem(state->VelR, CTRL->CmdVelR);
 
             // Integrated Error
             for (int i = 0; i < 3; i++)
@@ -3442,7 +3443,7 @@ void TranslationCtrl(struct DSMType *DSM)
                    (DSM->perr.v[i] + DSM->Oldperr.v[i]) * DSM->DT / 2.0;
 
             DSM->trn_ei = LimitElem_bidir(
-                DSM->trn_ei, VdVElem(Cmd->trn_kilimit, CTRL->trn_ki));
+                DSM->trn_ei, VDivV_Elem(Cmd->trn_kilimit, CTRL->trn_ki));
 
             for (int i = 0; i < 3; i++)
                CTRL->u1.v[i] =
@@ -3465,10 +3466,10 @@ void TranslationCtrl(struct DSMType *DSM)
          case LYA_2BODY_CNTRL: {
             // Calculate relative radius, velocity
             // Position Error, Relative
-            DSM->perr = VmVElem(state->PosR, CTRL->CmdPosR);
+            DSM->perr = VSubV_Elem(state->PosR, CTRL->CmdPosR);
 
             // Velocity Error
-            DSM->verr = VmVElem(state->VelR, CTRL->CmdVelR);
+            DSM->verr = VSubV_Elem(state->VelR, CTRL->CmdVelR);
 
             const double r_norm  = MAGV(state->PosN);
             const double r_cntrl = MAGV(CTRL->CmdPosN);
@@ -3586,7 +3587,7 @@ void AttitudeCtrl(struct DSMType *DSM)
             wrb = QxV(state->qbn, Cmd->wrn);
 
             // Angular Velocity Error (in body frame)
-            DSM->werr = VmVElem(state->wbn, wrb);
+            DSM->werr = VSubV_Elem(state->wbn, wrb);
 
             // Integrated angle error
             for (int i = 0; i < 3; i++)
@@ -3594,7 +3595,7 @@ void AttitudeCtrl(struct DSMType *DSM)
                    (DSM->Oldtherr.v[i] + DSM->therr.v[i]) / 2.0 * DSM->DT;
 
             DSM->att_ei = LimitElem_bidir(
-                DSM->att_ei, VdVElem(Cmd->att_kilimit, CTRL->att_ki));
+                DSM->att_ei, VDivV_Elem(Cmd->att_kilimit, CTRL->att_ki));
 
             for (int i = 0; i < 3; i++)
                CTRL->u2.v[i] =
@@ -3616,7 +3617,7 @@ void AttitudeCtrl(struct DSMType *DSM)
             wrb = QxV(state->qbn, Cmd->wrn);
 
             // Angular Velocity Error (in body frame)
-            DSM->werr = VmVElem(state->wbn, wrb);
+            DSM->werr = VSubV_Elem(state->wbn, wrb);
 
             // calculate nonlinear term in Quaternion Lyapunov stability
             vec3_t om_x_I_om = vxMov(DSM->werr, DSM->MOI);
@@ -3663,7 +3664,7 @@ void MomentumDumpCtrl(struct DSMType *DSM, vec3_t TotalWhlH)
    if (CTRL->H_DumpActive == TRUE) {
       switch (Cmd->dmp_controller) {
          case H_DUMP_CNTRL:
-            CTRL->dTcmd = VNegElem(VxVElem(CTRL->dmp_kp, TotalWhlH));
+            CTRL->dTcmd = NegV_Elem(VMulV_Elem(CTRL->dmp_kp, TotalWhlH));
             break;
          default:
             fprintf(

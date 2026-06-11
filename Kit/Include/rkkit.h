@@ -14,10 +14,7 @@
 #ifndef __RKKIT_H__
 #define __RKKIT_H__
 
-#include "defineskit.h"
 #include "jdkit.h"
-#include "mathkit.h"
-#include <string.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {

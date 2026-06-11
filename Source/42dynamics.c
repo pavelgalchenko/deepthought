@@ -44,8 +44,8 @@ void MotionConstraints(struct SCType *S)
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B     = &S->B[Ib];
-      B->pn = VmVElem(B->pn, pcm);
-      B->vn = VmVElem(B->pn, vcm);
+      B->pn = VSubV_Elem(B->pn, pcm);
+      B->vn = VSubV_Elem(B->pn, vcm);
    }
    /* Adjust Dyn States corresponding to B[0].vn, B[0].pn */
    for (i = 0; i < 3; i++) {
@@ -68,7 +68,7 @@ void SCMassProps(struct SCType *S)
 
    /* Locate SC.cm wrt B0 origin */
    pnb   = MxV(B0->CN, B0->pn);
-   S->cm = VmVElem(B0->cm, pnb);
+   S->cm = VSubV_Elem(B0->cm, pnb);
 
    /* Compute composite inertia matrix, SC.I */
    S->I = B0->I;
@@ -90,7 +90,7 @@ void SCMassProps(struct SCType *S)
       p   = MxV(B0->CN, B->pn);
       MOI = PARAXIS(B->I, CI0, B->mass, p);
       for (i = 0; i < 3; i++)
-         S->I.rows[i] = VpVElem(S->I.rows[i], MOI.rows[i]);
+         S->I.rows[i] = VAddV_Elem(S->I.rows[i], MOI.rows[i]);
    }
 }
 /**********************************************************************/
@@ -269,14 +269,14 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
       wgon   = ADOT2W(G->IsSpherical, G->RotSeq, G->Ang, G->AngRate);
       Bo->wn = MxV(G->CBoGo, wgon);
       if (S->FlexActive) {
-         Bo->wn = VmVElem(Bo->wn, G->FlexAngVelo);
-         wi     = VpVElem(Bi->wn, G->FlexAngVeli);
+         Bo->wn = VSubV_Elem(Bo->wn, G->FlexAngVelo);
+         wi     = VAddV_Elem(Bi->wn, G->FlexAngVeli);
          wo     = MxV(G->COI, wi);
       }
       else
          wo = MxV(G->COI, Bi->wn);
 
-      Bo->wn = VpVElem(Bo->wn, wo);
+      Bo->wn = VAddV_Elem(Bo->wn, wo);
 
       /* pn, vn */
       xg = VEC3_ZERO;
@@ -289,7 +289,7 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
       }
       G->xb = MTxV(G->CGiBi, xg);
       G->ro = G->RigidRout;
-      G->ri = VpVElem(G->RigidRin, G->xb);
+      G->ri = VAddV_Elem(G->RigidRin, G->xb);
 
       G->xn = MTxV(Bi->CN, G->xb);
       ri    = MTxV(Bi->CN, G->ri);
@@ -306,8 +306,8 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
       for (i = 0; i < 3; i++)
          Bo->vn.v[i] = Bi->vn.v[i] + wxri.v[i] + vgn.v[i] - wxro.v[i];
       if (S->FlexActive) {
-         G->ri = VpVElem(G->ri, G->FlexPosi);
-         G->ro = VpVElem(G->ro, G->FlexPoso);
+         G->ri = VAddV_Elem(G->ri, G->FlexPosi);
+         G->ro = VAddV_Elem(G->ro, G->FlexPoso);
          fvi   = MTxV(Bi->CN, G->FlexVeli);
          fvo   = MTxV(Bo->CN, G->FlexVelo);
          for (i = 0; i < 3; i++)
@@ -353,14 +353,14 @@ void BodyStatesToNodeStates(struct SCType *S)
                   N->FlexAngRate.v[i] += N->THETA[i][If] * B->xi[If];
                }
             }
-            N->PosB    = VpVElem(N->PosB, N->FlexPos);
-            N->VelB    = VpVElem(N->VelB, N->FlexVel);
-            N->AngVelB = VpVElem(N->AngVelB, N->FlexAngRate);
+            N->PosB    = VAddV_Elem(N->PosB, N->FlexPos);
+            N->VelB    = VAddV_Elem(N->VelB, N->FlexVel);
+            N->AngVelB = VAddV_Elem(N->AngVelB, N->FlexAngRate);
             N->qb.qv   = SxV(0.5, N->FlexAng);
             N->qb.qs   = sqrt(1.0 - VoV(N->qb.qv, N->qb.qv));
          }
          vb       = MxV(B->CN, B->vn);
-         N->PosCm = VpVElem(N->PosB, B->cm);
+         N->PosCm = VAddV_Elem(N->PosB, B->cm);
          wxr      = VxV(N->AngVelB, N->PosCm);
          for (i = 0; i < 3; i++)
             N->VelB.v[i] += vb.v[i] + wxr.v[i];
@@ -386,7 +386,7 @@ void FindTotalAngMom(struct SCType *S)
    for (Ib = 0; Ib < S->Nb; Ib++) {
       B    = &S->B[Ib];
       Hb   = MxV(B->I, B->wn);
-      Hb   = VpVElem(Hb, B->EmbeddedMom);
+      Hb   = VAddV_Elem(Hb, B->EmbeddedMom);
       Hn   = MTxV(B->CN, Hb);
       mv   = SxV(B->mass, B->vn);
       rxmv = VxV(B->pn, mv);
@@ -399,7 +399,7 @@ void FindTotalAngMom(struct SCType *S)
       W      = &S->Whl[Iwhl];
       Hwb    = SxV(W->H, W->A);
       Hwn    = MTxV(S->B[W->Body].CN, Hwb);
-      S->Hvn = VpVElem(S->Hvn, Hwn);
+      S->Hvn = VAddV_Elem(S->Hvn, Hwn);
    }
 
    /* Express in B[0] frame */
@@ -1339,7 +1339,7 @@ void FindInertiaTrq(struct SCType *S)
       H = SxV(W->H, W->A);
 
       wxH           = VxV(B->wn, H);
-      B->InertiaTrq = VmVElem(B->InertiaTrq, wxH);
+      B->InertiaTrq = VSubV_Elem(B->InertiaTrq, wxH);
    }
 
    if (S->FlexActive && S->RefPt == REFPT_JOINT) {
@@ -1348,7 +1348,7 @@ void FindInertiaTrq(struct SCType *S)
          B             = &S->B[Ib];
          CAccR         = MxV(B->CN, B->AccR);
          cPexa         = MxV(B->cplusPeta, CAccR);
-         B->InertiaTrq = VmVElem(B->InertiaTrq, cPexa);
+         B->InertiaTrq = VSubV_Elem(B->InertiaTrq, cPexa);
       }
    }
 }
@@ -1382,7 +1382,7 @@ void FindInertiaFrc(struct SCType *S)
          for (i = 0; i < 3; i++)
             FlexInertiaFrc.v[i] = cPexa.v[i] - cPexwxw.v[i] - 2.0 * wxPxi.v[i];
          FlexInertiaFrcN = MTxV(B->CN, FlexInertiaFrc);
-         B->InertiaFrc   = VpVElem(B->InertiaFrc, FlexInertiaFrcN);
+         B->InertiaFrc   = VAddV_Elem(B->InertiaFrc, FlexInertiaFrcN);
       }
    }
 }
@@ -3125,20 +3125,20 @@ void ScatterStates(struct JointType *G)
 
    Bo->CN = MxM(G->COI, Bi->CN);
 
-   pni    = VpVElem(Bi->pn, G->riplusPx);
+   pni    = VAddV_Elem(Bi->pn, G->riplusPx);
    Bo->pn = MxV(G->COI, pni);
-   Bo->pn = VmVElem(Bo->pn, G->RigidRout);
+   Bo->pn = VSubV_Elem(Bo->pn, G->RigidRout);
 
    /* Velocities */
    Cwi    = MxV(G->COI, Bi->wn);
-   Bo->wn = VpVElem(Cwi, Pwu);
+   Bo->wn = VAddV_Elem(Cwi, Pwu);
 
    wxri = VxV(Bi->wn, G->riplusPx);
    wxro = VxV(Bo->wn, G->RigidRout);
    for (i = 0; i < 3; i++)
       vi.v[i] = Bi->vn.v[i] + Pvu.v[i] + wxri.v[i];
    Cvi    = MxV(G->COI, vi);
-   Bo->vn = VmVElem(Cvi, wxro);
+   Bo->vn = VSubV_Elem(Cvi, wxro);
 
    /* Remainder Accelerations */
    Calfri = MxV(G->COI, Bi->RemAlf);
@@ -3195,7 +3195,7 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
       }
       Coc = MT(Gd->COI);
       RotateSpatVec(Coc, TF, CTF);
-      rdk = VmVElem(G->RigidRout, Gd->riplusPx);
+      rdk = VSubV_Elem(G->RigidRout, Gd->riplusPx);
       ShiftArtFrc(CTF, rdk, SCTF);
       for (i = 0; i < 6; i++)
          G->ArtFrc[i] += SCTF[i];
@@ -3224,7 +3224,7 @@ void GatherMassAndForce(struct JointType *G, struct SCType *S)
       }
       Coc = MT(Gd->COI);
       RotateSpatMat(Coc, TM, CTMC);
-      rdk = VmVElem(G->ro, Gd->riplusPx);
+      rdk = VSubV_Elem(G->ro, Gd->riplusPx);
       ShiftArtMass(CTMC, rdk, SCTMCS);
       for (i = 0; i < 6; i++) {
          for (j = 0; j < 6; j++)
@@ -3309,7 +3309,7 @@ void ScatterStateDerivatives(struct JointType *G)
       for (j = 0; j < G->Nu; j++)
          CSauiPudot[i] += G->P[i][j] * G->udot[j];
    }
-   rko = VNegElem(G->RigidRout);
+   rko = NegV_Elem(G->RigidRout);
    ShiftSpatAcc(CSauiPudot, rko, Bo->AccU);
 }
 /******************************************************************************/
@@ -4242,19 +4242,19 @@ void PolyhedronCowellRK4(struct WorldType *const world,
    PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(u, m1, S->mass, GravAccN, S->FrcN);
    mv[0] = DBL_TO_VEC3(m1);
-   uv    = VpVElem(S->PosN, SxV(0.5 * DTSIM, mv[0]));
+   uv    = VAddV_Elem(S->PosN, SxV(0.5 * DTSIM, mv[0]));
    VEC3_TO_DBL(uu, uv);
 
    PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(uu, m2, S->mass, GravAccN, S->FrcN);
    mv[1] = DBL_TO_VEC3(m2);
-   uv    = VpVElem(S->PosN, SxV(0.5 * DTSIM, mv[1]));
+   uv    = VAddV_Elem(S->PosN, SxV(0.5 * DTSIM, mv[1]));
    VEC3_TO_DBL(uu, uv);
 
    PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
    PolyhedronCowellEOM(uu, m3, S->mass, GravAccN, S->FrcN);
    mv[2] = DBL_TO_VEC3(m3);
-   uv    = VpVElem(S->PosN, SxV(DTSIM, mv[0]));
+   uv    = VAddV_Elem(S->PosN, SxV(DTSIM, mv[0]));
    VEC3_TO_DBL(uu, uv);
 
    PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
@@ -4288,8 +4288,8 @@ void ThreeBodyEnckeEOM(double u[6], double udot[6], vec3_t R1, double muR13,
    udot[2] = u[5];
 
    vec3_t uv = DBL_TO_VEC3(u);
-   r1        = VpVElem(R1, uv);
-   r2        = VpVElem(R2, uv);
+   r1        = VAddV_Elem(R1, uv);
+   r2        = VAddV_Elem(R2, uv);
 
    fq1 = EnckeFQ(r1, uv);
    fq2 = EnckeFQ(r2, uv);
@@ -4314,7 +4314,7 @@ void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
 
    accel = SxV(1.0 / S->mass, S->FrcN);
    R1    = orb->PosN;
-   R2    = VmVElem(R1, E->PosN);
+   R2    = VSubV_Elem(R1, E->PosN);
 
    MagR1 = MAGV(R1);
    muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
@@ -4340,7 +4340,7 @@ void ThreeBodyEnckeRK4(struct WorldType *const worlds,
 
    accel = SxV(1.0 / S->mass, S->FrcN);
    R1    = orb->PosN;
-   R2    = VmVElem(R1, E->PosN);
+   R2    = VSubV_Elem(R1, E->PosN);
 
    MagR1 = MAGV(R1);
    muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
@@ -4442,8 +4442,10 @@ void EulHillRK4(struct OrbitType *orb, struct SCType *S)
       S->VelEH.v[j] = u[3 + j];
    }
 
-   EHRV2RelRV(orb->SMA, orb->MeanMotion, CLN, S->PosEH, S->VelEH, &S->PosR,
-              &S->VelR);
+   pair_vec3_t pair =
+       EHRV2RelRV(orb->SMA, orb->MeanMotion, CLN, S->PosEH, S->VelEH);
+   S->PosR = pair.first;
+   S->VelR = pair.second;
 }
 /**********************************************************************/
 void ThreeBodyOrbitEOM(double mu1, double mu2, vec3_t p, double u[6],
@@ -4549,7 +4551,7 @@ void PartitionForces(struct SCType *S)
 
    Nb = S->Nb;
    for (Ib = 0; Ib < Nb; Ib++)
-      FextN = VpVElem(FextN, S->B[Ib].FrcN);
+      FextN = VAddV_Elem(FextN, S->B[Ib].FrcN);
 
    for (int i = 0; i < 3; i++) {
       S->FrcN.v[i] += FextN.v[i];
@@ -4610,8 +4612,10 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
       vec3_t pv = DBL_TO_VEC3(x_trn);
       vec3_t vv = DBL_TO_VEC3(&x_trn[3]);
-      EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, pv, vv, &S->PosR,
-                 &S->VelR);
+      pair_vec3_t pair =
+          EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, pv, vv);
+      S->PosR = pair.first;
+      S->VelR = pair.second;
    }
    else if (S->OrbDOF == ORBDOF_FIXED)
       FixedOrbitPosition(orb, frm, S);

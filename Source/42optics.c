@@ -33,12 +33,12 @@ long Aperture(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
 
    long InAperture = TRUE;
 
-   cq = VmVElem(FldPnt, ctr);
+   cq = VSubV_Elem(FldPnt, ctr);
    l  = VoV(cq, axis);
    while (fabs(dl) > eps && k < 10) {
       for (int i = 0; i < 3; i++)
          IntPnt->v[i] = FldPnt.v[i] + l * FldDir.v[i];
-      cp  = VpVElem(*IntPnt, ctr);
+      cp  = VAddV_Elem(*IntPnt, ctr);
       PoA = VoV(cp, axis);
       for (int i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
@@ -75,12 +75,12 @@ long PlanarMirror(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
 
    long InAperture = TRUE;
 
-   cq = VmVElem(FldPnt, ctr);
+   cq = VSubV_Elem(FldPnt, ctr);
    l  = VoV(cq, axis);
    while (fabs(dl) > eps && k < 10) {
       for (int i = 0; i < 3; i++)
          IntPnt->v[i] = FldPnt.v[i] + l * FldDir.v[i];
-      cp  = VmVElem(*IntPnt, ctr);
+      cp  = VSubV_Elem(*IntPnt, ctr);
       PoA = VoV(cp, axis);
       for (int i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
@@ -127,12 +127,12 @@ long ConicMirror(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
 
    R = 2.0 * foclen;
 
-   cq = VmVElem(FldPnt, ctr);
+   cq = VSubV_Elem(FldPnt, ctr);
    l  = VoV(cq, axis);
    for (i = 0; i < 3; i++)
       IntPnt->v[i] = FldPnt.v[i] + l * FldDir.v[i];
    while (fabs(dl) > eps && k < 10) {
-      cp  = VpVElem(*IntPnt, ctr);
+      cp  = VAddV_Elem(*IntPnt, ctr);
       PoA = VoV(cp, axis);
       for (i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
@@ -173,7 +173,7 @@ long ThinLens(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
    double theta1, CosTheta1, SinTheta1;
    double eps = 1.0E-6;
 
-   dp     = VmVElem(FldPnt, ctr);
+   dp     = VSubV_Elem(FldPnt, ctr);
    binorm = VxV(dp, axis);
    if (MAGV(binorm) < eps) {
       binorm = VxV(FldDir, axis);
@@ -183,7 +183,7 @@ long ThinLens(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
 
    if (RayOnAxis) {
       *IntPnt  = ctr;
-      *RefrDir = VNegElem(axis);
+      *RefrDir = NegV_Elem(axis);
    }
    else {
       binorm = UNITV(binorm).v;
@@ -224,12 +224,12 @@ long Detector(vec3_t FldPnt, vec3_t FldDir, vec3_t ctr, vec3_t axis,
 
    long InAperture = TRUE;
 
-   cq = VmVElem(FldPnt, ctr);
+   cq = VSubV_Elem(FldPnt, ctr);
    l  = VoV(cq, axis);
    while (fabs(dl) > eps && k < 10) {
       for (int i = 0; i < 3; i++)
          IntPnt->v[i] = FldPnt.v[i] + l * FldDir.v[i];
-      cp  = VmVElem(*IntPnt, ctr);
+      cp  = VSubV_Elem(*IntPnt, ctr);
       PoA = VoV(cp, axis);
       for (int i = 0; i < 3; i++)
          rvec.v[i] = cp.v[i] - PoA * axis.v[i];
@@ -266,7 +266,7 @@ long OpticalFieldPoint(vec3_t StarVecB, struct OpticsType *O, vec3_t *FldPntB,
    InAp     = Aperture(InPntB, InDirB, N->NomPosB, O->Axis, O->ApRad, &OutPntB,
                        &OutDirB);
    *FldPntB = OutPntB;
-   *FldDirB = VNegElem(O->Axis);
+   *FldDirB = NegV_Elem(O->Axis);
 
    return (InAp);
 }

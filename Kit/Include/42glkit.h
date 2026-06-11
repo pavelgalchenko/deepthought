@@ -14,11 +14,7 @@
 #ifndef __42GLKIT_H__
 #define __42GLKIT_H__
 
-#include "defineskit.h"
 #include "glkit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 /*
 ** #ifdef __cplusplus

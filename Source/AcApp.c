@@ -417,8 +417,8 @@ void AcFsw(struct AcType *AC)
       L2 = VxV(AC->PosN, AC->VelN);
       L2 = UNITV(L2).v;
       L3 = UNITV(L3).v;
-      L2 = VNegElem(L2);
-      L3 = VNegElem(L3);
+      L2 = NegV_Elem(L2);
+      L3 = NegV_Elem(L3);
 
       L1              = VxV(L2, L3);
       L1              = UNITV(L1).v;
@@ -444,7 +444,7 @@ void AcFsw(struct AcType *AC)
    else
       AC->qbr = QUAT_EYE;
 
-   C->werr = VmVElem(AC->wbn, AC->wln);
+   C->werr = VSubV_Elem(AC->wbn, AC->wln);
    for (i = 0; i < 3; i++) {
       C->therr.v[i] = Limit(2.0 * AC->qbr.qv.v[i], -0.1, 0.1);
       AC->Tcmd.v[i] = Limit(

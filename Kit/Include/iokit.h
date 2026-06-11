@@ -25,18 +25,7 @@
 #else
 #include "libfyaml.h"
 #endif
-#include <ctype.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#ifndef __unix__
-#include <unistd.h>
-#endif
-
+/* #include <sys/un.h> */
 #ifdef _WIN32
 #include <winsock2.h>
 #else
@@ -48,7 +37,6 @@
 /* Finesse winsock SOCKET datatype */
 #define SOCKET int
 #endif
-/* #include <sys/un.h> */
 
 #define WHILE_FY_ITER(node, iterNode)                                          \
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)

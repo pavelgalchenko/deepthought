@@ -16,6 +16,7 @@
 #include <criterion/new/assert.h>
 #include <criterion/parameterized.h>
 #include <criterion/theories.h>
+#include <stdio.h>
 
 #define SUITE_NAME rationalkit
 
@@ -407,7 +408,7 @@ ParameterizedTest(struct ratdbl_tuple *val, SUITE_NAME, dbl)
 
    // not all tested numbers are exact for doubles in the first place
    double thresh    = ULP_THRESH * (nextafter(val->dbl, INFINITY) - val->dbl);
-   Rational dbl_rat = double2rational(val->dbl);
+   Rational dbl_rat = ToRational(val->dbl);
    double dbl_conv  = rational2double(dbl_rat);
    Rational ratchk  = ToRational(RationalSub(dbl_rat, val->rat));
    char ratchk_str[RATIONAL_STR_LEN];

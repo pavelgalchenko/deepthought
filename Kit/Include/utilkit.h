@@ -20,8 +20,6 @@
 #ifndef __UTILKIT_H__
 #define __UTILKIT_H__
 
-#include <ctype.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* #ifdef __cplusplus

@@ -14,17 +14,11 @@
 #ifndef __ENVKIT_H__
 #define __ENVKIT_H__
 
-#include "42constants.h"
-#include "42types.h"
-#include "dcmkit.h"
-#include "defineskit.h"
 #include "geomkit.h"
-#include "iokit.h"
+#include "jdkit.h"
 #include "mathkit.h"
+#include "orbkit.h"
 #include "timekit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 /*
 ** #ifdef __cplusplus

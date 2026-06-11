@@ -19,6 +19,11 @@
 #include "42glutkit.h"
 #undef EXTERN
 
+#include "defineskit.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 /* #ifdef __cplusplus
 ** namespace _42 {
 ** using namespace Kit;

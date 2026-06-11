@@ -14,13 +14,6 @@
 #ifndef __MATHKIT_H__
 #define __MATHKIT_H__
 
-#include "42constants.h"
-#include "defineskit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 /*
 ** #ifdef __cplusplus
 ** namespace Kit {
@@ -80,6 +73,11 @@ typedef struct pair_mat3x3 {
    mat3x3_t second;
 } pair_mat3x3_t;
 
+typedef struct dbl_mat3x3 {
+   double dbl;
+   mat3x3_t mat;
+} dbl_mat3x3_t;
+
 // Vector first Quaternion
 typedef union quat {
    struct {
@@ -130,16 +128,16 @@ __attribute__((const)) mat3x3_t MxMT(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MTxM(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MTxMT(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) vec3_t VxM(const vec3_t V, const mat3x3_t M);
+__attribute__((const)) vec3_t MTxV(const mat3x3_t M, const vec3_t V);
 __attribute__((const)) vec3_t MxV(const mat3x3_t M, const vec3_t V);
 __attribute__((const)) vec3_t VxMT(const vec3_t V, const mat3x3_t M);
-__attribute__((const)) vec3_t MTxV(const mat3x3_t M, const vec3_t V);
 __attribute__((const)) vec3_t SxV(const double S, const vec3_t V);
 
-__attribute__((const)) vec3_t VNegElem(const vec3_t A);
-__attribute__((const)) vec3_t VpVElem(const vec3_t A, const vec3_t B);
-__attribute__((const)) vec3_t VmVElem(const vec3_t A, const vec3_t B);
-__attribute__((const)) vec3_t VxVElem(const vec3_t A, const vec3_t B);
-__attribute__((const)) vec3_t VdVElem(const vec3_t A, const vec3_t B);
+__attribute__((const)) vec3_t NegV_Elem(const vec3_t A);
+__attribute__((const)) vec3_t VAddV_Elem(const vec3_t A, const vec3_t B);
+__attribute__((const)) vec3_t VSubV_Elem(const vec3_t A, const vec3_t B);
+__attribute__((const)) vec3_t VMulV_Elem(const vec3_t A, const vec3_t B);
+__attribute__((const)) vec3_t VDivV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim);
 
 __attribute__((const)) mat3x3_t SxM(const double S, const mat3x3_t A);

@@ -12,6 +12,10 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "spicekit.h"
+#include "dcmkit.h"
+#include "defineskit.h"
+#include "iokit.h"
+#include <threads.h>
 
 #ifndef _ENABLE_SPICE_
 // will be quite a few unused variables due to the define replacements
@@ -21,96 +25,65 @@
 
 /**********************************************************************/
 // Do some preconfiguration to interact with spice easier
+static once_flag naif_id_init_flag        = ONCE_FLAG_INIT;
+static SpiceInt naif_id_list[NMAJORWORLD] = {0};
+void init_naif_id()
+{
+   for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
+      const char *world_name = WorldID2String(Iw);
+      SpiceBoolean found     = SPICEFALSE;
+      bodn2c_c(world_name, &naif_id_list[Iw], &found);
+      if (found == SPICEFALSE) {
+         fprintf(stderr, "Could not find NAIF ID for body %s. Exiting...\n",
+                 world_name);
+         exit(EXIT_FAILURE);
+      }
+   }
+}
 SpiceInt WorldID2NAIFID(WorldID w_id)
 {
-   static int first                          = 0;
-   static SpiceInt naif_id_list[NMAJORWORLD] = {0};
    if (w_id >= NMAJORWORLD) {
       fprintf(stderr, "WorldID2NAIFID() is not configured to handle the "
                       "user configured minor bodies. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   if (!first) {
-      first = 1;
-      for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
-         char world_name[32];
-         WorldID2String(Iw, world_name);
-         SpiceBoolean found = SPICEFALSE;
-         bodn2c_c(world_name, &naif_id_list[Iw], &found);
-         if (found == SPICEFALSE) {
-            fprintf(stderr, "Could not find NAIF ID for body %s. Exiting...\n",
-                    world_name);
-            exit(EXIT_FAILURE);
-         }
-      }
-   }
+   call_once(&naif_id_init_flag, init_naif_id);
    return naif_id_list[w_id];
 }
 /**********************************************************************/
-void WorldID2IAUFrameWorld(WorldID w_id,
-                           char iau_frame[SPICE_FRM_STR_BUFF_SIZE])
+static once_flag iau_frame_init = ONCE_FLAG_INIT;
+static char iau_frame_list[NMAJORWORLD][SPICE_FRM_STR_BUFF_SIZE] = {{'\0'}};
+void init_iau_frame()
 {
-   static int first = 0;
-
-   static char iau_frame_list[NMAJORWORLD][SPICE_FRM_STR_BUFF_SIZE] = {{'\0'}};
-   if (w_id >= NMAJORWORLD) {
-      fprintf(stderr, "WorldID2OrientationNAIFID() is not configured to handle "
-                      "the user configured minor bodies. Exiting...\n");
-      exit(EXIT_FAILURE);
-   }
-   if (!first) {
-      // Some smaller moons do not have valid orientation data.
-      // We replace these with the orientation of their planet
-      // Substitutions:
-      // HIMALIA, ELARA, PASIPHAE, SINOPE, LYSITHEA, CARME, ANANKE, LEDA ->
-      // JUPITER HYPERION -> SATURN NEREID -> NEPTUNE
-      first = 1;
-      for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
-         char world_name[32];
-         WorldID id = Iw;
-         switch (Iw) {
-            case HIMALIA:
-            case ELARA:
-            case PASIPHAE:
-            case SINOPE:
-            case LYSITHEA:
-            case CARME:
-            case ANANKE:
-            case LEDA:
-               id = JUPITER;
-               break;
-            case HYPERION:
-               id = SATURN;
-               break;
-            case NEREID:
-               id = NEPTUNE;
-               break;
-            default:
-               break;
+   for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
+      char frame_name[32] = {'\0'};
+      WorldID id          = Iw;
+      SpiceBoolean found  = FALSE;
+      while (!found) {
+         if (id == -1) {
+            fprintf(stderr,
+                    "Unable to find IAU_frame for WorldID %i or any of its "
+                    "parents. Exiting...\n",
+                    Iw);
+            exit(EXIT_FAILURE);
          }
-         WorldID2String(id, world_name);
-         strcat(iau_frame_list[Iw], world_name);
+         strcpy(frame_name, "IAU_");
+         const char *world_name = WorldID2String(id);
+         strcpy(&frame_name[4], world_name);
+         namfrm_c(frame_name, &found);
+         id = GetWorldParent(id);
       }
+      strcpy(iau_frame_list[Iw], frame_name);
    }
-   strcpy(iau_frame, iau_frame_list[w_id]);
 }
-/**********************************************************************/
 void WorldID2IAUFrame(WorldID w_id, char iau_frame[SPICE_FRM_STR_BUFF_SIZE])
 {
-   static int first                                                 = 0;
-   static char iau_frame_list[NMAJORWORLD][SPICE_FRM_STR_BUFF_SIZE] = {{'\0'}};
    if (w_id >= NMAJORWORLD) {
       fprintf(stderr, "WorldID2IAUFrame() is not configured to handle the user "
                       "configured minor bodies. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   if (!first) {
-      first = 1;
-      for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
-         strcpy(iau_frame_list[Iw], "IAU_");
-         WorldID2IAUFrameWorld(Iw, &iau_frame_list[Iw][4]);
-      }
-   }
+   call_once(&iau_frame_init, init_iau_frame);
    strcpy(iau_frame, iau_frame_list[w_id]);
 }
 /**********************************************************************/
@@ -389,8 +362,8 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
    for (Iw = PLUTO; Iw >= SOL && Iw <= PLUTO; Iw--) {
       // WorldID is typically unsigned, so (((0)--) >= SOL) can be true
       W           = &worlds[Iw];
-      W->eph.PosN = VmVElem(W->eph.PosN, sol->eph.PosN);
-      W->eph.VelN = VmVElem(W->eph.VelN, sol->eph.VelN);
+      W->eph.PosN = VSubV_Elem(W->eph.PosN, sol->eph.PosN);
+      W->eph.VelN = VSubV_Elem(W->eph.VelN, sol->eph.VelN);
       W->PosH     = W->eph.PosN;
       W->VelH     = W->eph.VelN;
    }
@@ -414,25 +387,20 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
                spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
                        WorldID2NAIFID(Ip), Nstate, &light_time);
             }
-
-            // Inertial pos & vel (m & m/s)
-            for (int i = 0; i < 3; i++) {
-               Eph->PosN.v[i] = 1.0e3 * Nstate[i];
-               Eph->VelN.v[i] = 1.0e3 * Nstate[i + 3];
-            }
+            Eph->PosN = SxV(1.0e3, DBL_TO_VEC3(Nstate));
+            Eph->VelN = SxV(1.0e3, DBL_TO_VEC3(&Nstate[3]));
 
             // Heliocentric pos & vel = inertial pos & vel (m & m/s)
-            W->PosH = VpVElem(Eph->PosN, P->PosH);
-            W->VelH = VpVElem(Eph->VelN, P->VelH);
+            W->PosH = VAddV_Elem(Eph->PosN, P->PosH);
+            W->VelH = VAddV_Elem(Eph->VelN, P->VelH);
          }
       }
    }
 
    for (Iw = SOL; Iw < NMAJORWORLD; Iw++) {
-      if (worlds[Iw].Exists) {
-         if (Iw != EARTH || Iw != SOL)
-            SpiceSetOrientation(jd_tdb_j2000, Iw, W, earth->CNH);
-      }
+      W = &worlds[Iw];
+      if (W->Exists && (Iw != EARTH || Iw != SOL))
+         SpiceSetOrientation(jd_tdb_j2000, Iw, W, earth->CNH);
    }
 
    for (Iw = MERCURY; Iw <= LUNA; Iw++) {

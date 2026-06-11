@@ -14,7 +14,6 @@
 #ifndef __SPICEKIT_H__
 #define __SPICEKIT_H__
 
-#include "defineskit.h"
 #include "jdkit.h"
 #include "orbkit.h"
 
@@ -60,8 +59,6 @@ typedef const char ConstSpiceChar;
 */
 
 __attribute__((const)) SpiceInt WorldID2NAIFID(WorldID w_id);
-void WorldID2IAUFrameWorld(WorldID w_id,
-                           SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 void WorldID2IAUFrame(WorldID w_id,
                       SpiceChar iau_frame[SPICE_FRM_STR_BUFF_SIZE]);
 int SpiceCheckAndGetDbl(WorldID Iw, ConstSpiceChar *item, SpiceInt start,

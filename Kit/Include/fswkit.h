@@ -11,13 +11,7 @@
 
 /*    All Other Rights Reserved.                                      */
 
-#include "42constants.h"
-#include "dcmkit.h"
-#include "defineskit.h"
 #include "mathkit.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifndef __FSWKIT_H__
 #define __FSWKIT_H__

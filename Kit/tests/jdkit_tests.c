@@ -17,6 +17,7 @@
 #include <criterion/new/assert.h>
 #include <criterion/parameterized.h>
 #include <criterion/theories.h>
+#include <stdio.h>
 
 #define SUITE_NAME jdkit
 

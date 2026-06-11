@@ -12,6 +12,8 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "utilkit.h"
+#include <ctype.h>
+#include <stdlib.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
