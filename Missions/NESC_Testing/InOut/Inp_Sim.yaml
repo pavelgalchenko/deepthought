@@ -1,0 +1,84 @@
+%YAML 1.2
+---
+# <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
+Simulation Control:
+  Mode: FAST
+  Duration: 28800.0
+  Step Size: 60.0
+  File Interval: 60.0
+  RNG Seed: 0
+  Enable Graphics: true
+  Command File: Inp_Cmd.txt
+Time: # 2007/324:00:00:00 = 2007:11:20:00:00:00.000
+  Date:
+    Month: 11
+    Day: 20
+    Year: 2007
+  Time:
+    Hour: 0
+    Minute: 0
+    Second: 0
+    Millisecond: 0
+Orbits:
+  - Name: Orb_Highly_Elliptical
+    Enabled: true
+  # - Name: Orb_Nearly_Circular
+  #   Enabled: true
+SCs:
+  - Name: SC_Sphere
+    Orbit: Orb_Highly_Elliptical
+    Enabled: true
+  # - Name: SC_Cylinder
+  #   Orbit: Orb_Highly_Elliptical
+  #   Enabled: true
+  # - Name: SC_ISS
+  #   Orbit: Orb_Highly_Elliptical
+  #   Enabled: true
+  # - Name: SC_Sphere
+  #   Orbit: Orb_Nearly_Circular
+  #   Enabled: true
+  # - Name: SC_Cylinder
+  #   Orbit: Orb_Nearly_Circular
+  #   Enabled: true
+  # - Name: SC_ISS
+  #   Orbit: Orb_Nearly_Circular
+  #   Enabled: true
+Perturbation Models:
+  Atmosphere:
+    Enabled: false
+    Shadows: false
+    Models:
+      - World: EARTH
+        Method: USER
+        F10.7: 128.8
+        Ap: 15.7
+  Magnetic:
+    Residual Mag Moment: false
+    Models:
+      - World: EARTH
+        Method: Dipole
+  Gravitation:
+    Enabled: true
+    Gravity Gradient: false
+    Models:
+      - World: EARTH
+        Degree: 8
+        Order: 8
+  SRP:
+    Enabled: false
+    Shadows: false
+  Thruster Plume: false
+  Contact: false
+  CFD Slosh: false
+  Albedo on CSS: false
+  Output Env Torques to File: false
+Ephem Type: SPICE
+Celestial Bodies:
+  Earth:
+    Exists: true
+    # Moons: "All"
+Lagrange Systems:
+  Earth-Moon: false
+  Sun-Earth: false
+  Sun-Jupiter: false
+Ground Stations: []

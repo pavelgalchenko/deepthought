@@ -107,6 +107,20 @@ typedef quat_t vec4_t;
       (dbl)[3] = qua.s;                                                        \
    } while (0)
 
+#define DEAL_VEC3(vec3, a, b, c)                                               \
+   do {                                                                        \
+      (a) = (vec3).x;                                                          \
+      (b) = (vec3).y;                                                          \
+      (c) = (vec3).z;                                                          \
+   } while (0)
+#define DEAL_VEC4(vec4, a, b, c, d)                                            \
+   do {                                                                        \
+      (a) = (vec4).x;                                                          \
+      (b) = (vec4).y;                                                          \
+      (c) = (vec4).z;                                                          \
+      (d) = (vec4).s;                                                          \
+   } while (0)
+
 // Spherical representation of vec3_t
 // instead of having 'theta' and 'phi' angles, instead has the cos and sin
 // values for these angles
@@ -140,6 +154,12 @@ __attribute__((const)) vec3_t VMulV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t VDivV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim);
 
+__attribute__((const)) mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B);
+__attribute__((const)) mat3x3_t MSubM_Elem(const mat3x3_t A, const mat3x3_t B);
+__attribute__((const)) mat3x3_t MMulM_Elem(const mat3x3_t A, const mat3x3_t B);
+__attribute__((const)) mat3x3_t MDivM_Elem(const mat3x3_t A, const mat3x3_t B);
+__attribute__((const)) double MTrace(const mat3x3_t A);
+
 __attribute__((const)) mat3x3_t SxM(const double S, const mat3x3_t A);
 __attribute__((const)) double det3x3(const mat3x3_t M);
 void MINV4(const double A[4][4], double B[4][4]);
@@ -148,6 +168,7 @@ void MINV2(const double A[2][2], double B[2][2]);
 void PINV4x3(const double A[4][3], double Aplus[3][4]);
 __attribute__((const)) mat3x3_t MT(const mat3x3_t A);
 __attribute__((const)) double VoV(const vec3_t A, const vec3_t B);
+__attribute__((const)) mat3x3_t VOuterV(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t VxV(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t vxMov(const vec3_t w, const mat3x3_t M);
 __attribute__((const)) double MAGV(const vec3_t V);
@@ -238,7 +259,7 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
 __attribute__((const)) sphere_coord_t getTrigSphericalCoords(const vec3_t pbe);
 __attribute__((const)) mat3x3_t Adjoint(const mat3x3_t C, const mat3x3_t A);
 __attribute__((const)) mat3x3_t AdjointT(const mat3x3_t C, const mat3x3_t A);
-void MINVxM3(mat3x3_t A, long m, double B[3][m], double C[3][m]);
+void MINVxM3(mat3x3_t A, long m, vec3_t BT[m], vec3_t CT[m]);
 void MINVxMG(double **A, double **B, double **C, long N, long m);
 void MxMINVG(double **A, double **B, double **C, long N, long m);
 __attribute__((const)) mat3x3_t expmso3(vec3_t const theta);

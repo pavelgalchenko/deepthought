@@ -225,13 +225,17 @@ void ZeroNonSCContactFrcTrq(struct SCType *S)
    struct NodeType *FN;
    long Ib, Ig, In;
 
-   S->FrcN = VEC3_ZERO;
+   S->FrcN         = VEC3_ZERO;
+   S->gravPertAccN = VEC3_ZERO;
+   S->gravPriAccN  = VEC3_ZERO;
 
    for (Ib = 0; Ib < S->Nb; Ib++) {
-      B       = &S->B[Ib];
-      B->FrcN = VEC3_ZERO;
-      B->FrcB = VEC3_ZERO;
-      B->Trq  = VEC3_ZERO;
+      B               = &S->B[Ib];
+      B->gravPriAccN  = VEC3_ZERO;
+      B->gravPertAccN = VEC3_ZERO;
+      B->FrcN         = VEC3_ZERO;
+      B->FrcB         = VEC3_ZERO;
+      B->Trq          = VEC3_ZERO;
    }
    for (Ig = 0; Ig < S->Ng; Ig++) {
       G      = &S->G[Ig];
@@ -622,7 +626,7 @@ void CheckDoWorldOrientation(
    }
 }
 /**********************************************************************/
-long SimStep_New(void)
+long SimStep(void)
 {
    long Isc;
    static long First = 1;
@@ -657,6 +661,7 @@ long SimStep_New(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          S = &SC[Isc];
          if (S->Exists) {
+
             struct OrbitType *O = &Orb[S->RefOrb];
             /* Magnetic Field, Atmospheric Density */
             Environment(JD_TDB_MJD, World, O, S);
@@ -669,6 +674,15 @@ long SimStep_New(void)
             /* Orbit-affecting and "internal" */
             Actuators(FALSE, S, JD_TT_MJD);
             PartitionForces(S);
+
+            SToRKState(S->rkparams.orb, S, S->rk_state);
+            if (S->OrbDOF != ORBDOF_FIXED) {
+               const long dim    = S->rkparams.base.dim;
+               const vec3_t rvec = DBL_TO_VEC3(&S->rk_state[dim - 6]);
+               const vec3_t vvec = DBL_TO_VEC3(&S->rk_state[dim - 3]);
+               S->gravPriAccN    = GetPrimaryGravAccel(S->OrbDOF, rvec, vvec,
+                                                       World, &Orb[S->RefOrb]);
+            }
 
             Sensors(World, O, S);
             FlightSoftWare(S);
@@ -710,9 +724,18 @@ long SimStep_New(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       S = &SC[Isc];
       if (S->Exists) {
+         // TODO: do I need to do this??
          SToRKState(S->rkparams.orb, S, S->rk_state);
          RungeKuttaStep(&S->RKIntegrator, TRUE, JD_TT_MJD, DTSIM, S->rk_state);
          RKStateToS(S->rkparams.orb, S->rk_state, S);
+
+         if (S->OrbDOF != ORBDOF_FIXED) {
+            const long dim    = S->rkparams.base.dim;
+            const vec3_t rvec = DBL_TO_VEC3(&S->rk_state[dim - 6]);
+            const vec3_t vvec = DBL_TO_VEC3(&S->rk_state[dim - 3]);
+            S->gravPriAccN = GetPrimaryGravAccel(S->OrbDOF, rvec, vvec, World,
+                                                 &Orb[S->RefOrb]);
+         }
       }
    }
    SimComplete = AdvanceTime(DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB,
@@ -757,122 +780,6 @@ long SimStep_New(void)
    return (SimComplete);
 }
 /**********************************************************************/
-long SimStep_Old(void)
-{
-   long Isc;
-   static long First = 1;
-   struct SCType *S;
-   long SimComplete;
-   double TotalRunTime;
-   static long nout = 0, GLnout = 0;
-   static int set_nout = FALSE;
-
-   if (First) {
-      First   = 0;
-      SimTime = 0.0;
-      /* First call just initializes timer */
-      RealRunTime(&TotalRunTime);
-      ManageFlags(&nout, &GLnout, &set_nout);
-
-      /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-      Ephemerides(JD_TDB_MJD, EphemOption, SC, World, Rgn, LagSys, Orb);
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         S = &SC[Isc];
-         if (S->Exists) {
-            ZeroFrcTrq(S);
-         }
-      }
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         S = &SC[Isc];
-         if (S->Exists) {
-            struct OrbitType *O = &Orb[S->RefOrb];
-            /* Magnetic Field, Atmospheric Density */
-            Environment(JD_TDB_MJD, World, O, S);
-            if (ContactActive)
-               SCContactFrcTrq(Orb, SC, Isc);
-            Perturbations(JD_TDB_MJD, World, O,
-                          S); /* Environmental Forces and Torques */
-            Sensors(World, O, S);
-            FlightSoftWare(S);
-            Actuators(FALSE, S, JD_TT_MJD);
-            PartitionForces(S); /* Orbit-affecting and "internal" */
-         }
-      }
-      for (Isc = 0; Isc < Nsc; Isc++) {
-         S = &SC[Isc];
-         if (S->Exists && S->FswTag == DSM_FSW) {
-            struct DSMType *DSM = &S->DSM;
-            DSM->commState      = DSM->CommStateProcessing(DSM->state);
-         }
-      }
-      Report(); /* File Output */
-   }
-
-   ReportProgress();
-   ManageFlags(&nout, &GLnout, &set_nout);
-
-   /* Read and Interpret Command Script File */
-   CmdInterpreter();
-
-   /* Update Dynamics to next Timestep */
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      if (SC[Isc].Exists)
-         Dynamics(World, &Orb[SC[Isc].RefOrb], &Frm[SC[Isc].RefOrb], &SC[Isc]);
-   }
-   SimComplete = AdvanceTime(DTSIM_RAT, &JD_TT_MJD, &JD_TDB_MJD, &TT, &TDB,
-                             &UTC, &SimTime, &DynTime, &AtomicTime, &GpsTime,
-                             &CivilTime, &GpsRollover, &GpsWeek, &GpsSecond);
-   for (long Iorb = 0; Iorb < Norb; Iorb++)
-      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
-
-   /* Update SC Bounding Boxes occasionally */
-   ManageBoundingBoxes();
-
-   InterProcessComm(); /* Send and receive from external processes */
-   /* Sun, Moon, Planets, Spacecraft, Useful Auxiliary Frames */
-   Ephemerides(JD_TDB_MJD, EphemOption, SC, World, Rgn, LagSys, Orb);
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (S->Exists) {
-         ZeroFrcTrq(S);
-      }
-   }
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (S->Exists) {
-         struct OrbitType *O = &Orb[S->RefOrb];
-         /* Magnetic Field, Atmospheric Density */
-         Environment(JD_TDB_MJD, World, O, S);
-         if (ContactActive)
-            SCContactFrcTrq(Orb, SC, Isc);
-         Perturbations(JD_TDB_MJD, World, O,
-                       S); /* Environmental Forces and Torques */
-         Sensors(World, O, S);
-         FlightSoftWare(S);
-         Actuators(FALSE, S, JD_TT_MJD);
-         PartitionForces(S); /* Orbit-affecting and "internal" */
-      }
-   }
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      S = &SC[Isc];
-      if (S->Exists && S->FswTag == DSM_FSW) {
-         struct DSMType *DSM = &S->DSM;
-         DSM->commState      = DSM->CommStateProcessing(DSM->state);
-      }
-   }
-   Report(); /* File Output */
-
-   /* Exit when Stoptime is reached */
-   if (SimComplete) {
-      if (TimeMode == FAST_TIME) {
-         RealRunTime(&TotalRunTime);
-         printf("     Total Run Time = %9.2lf sec\n", TotalRunTime);
-         printf("     Sim Speed = %8.2lf x Real\n", STOPTIME / TotalRunTime);
-      }
-   }
-   return (SimComplete);
-}
-/**********************************************************************/
 int exec(int argc, char **argv)
 {
    long Done = 0;
@@ -897,21 +804,13 @@ int exec(int argc, char **argv)
    }
    else {
       while (!Done) {
-#ifdef OLD_INTEGRATOR
-         Done = SimStep_Old();
-#else
-         Done = SimStep_New();
-#endif
+         Done = SimStep();
       }
    }
 #else
    /* Crunch numbers till done */
    while (!Done) {
-#ifdef OLD_INTEGRATOR
-      Done = SimStep_Old();
-#else
-      Done = SimStep_New();
-#endif
+      Done = SimStep();
    }
 #endif
 

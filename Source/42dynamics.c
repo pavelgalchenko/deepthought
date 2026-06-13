@@ -2316,490 +2316,6 @@ void KaneNBodyEOM_RK(struct SCType *S, double *const xdot_out)
    offset += Nf;
    CopyVG(&xdot_out[offset], dxf, Nf);
 }
-/**********************************************************************/
-void KaneNBodyRK4(struct SCType *S)
-{
-   struct DynType *D;
-   struct JointType *G;
-   double *u, *uu, *du, *udot;
-   double *x, *xx, *dx, *xdot;
-   double *h, *hh, *dh, *hdot;
-   double *a, *aa, *da, *adot;
-   double *uf, *uuf, *duf, *ufdot;
-   double *xf, *xxf, *dxf, *xfdot;
-   long i, iu, Ig;
-   long Nu, Nx, Nw, Nf;
-
-   /* Save some typing (and dereferencing) */
-   D  = &S->Dyn;
-   Nu = D->Nu;
-   Nx = D->Nx;
-   Nw = S->Nw;
-   Nf = D->Nf;
-
-   u  = D->u;
-   x  = D->x;
-   h  = D->h;
-   a  = D->a;
-   uf = D->uf;
-   xf = D->xf;
-
-   uu  = D->uu;
-   xx  = D->xx;
-   hh  = D->hh;
-   aa  = D->aa;
-   uuf = D->uuf;
-   xxf = D->xxf;
-
-   du  = D->du;
-   dx  = D->dx;
-   dh  = D->dh;
-   da  = D->da;
-   duf = D->duf;
-   dxf = D->dxf;
-
-   udot  = D->udot;
-   xdot  = D->xdot;
-   hdot  = D->hdot;
-   adot  = D->adot;
-   ufdot = D->ufdot;
-   xfdot = D->xfdot;
-
-   /* State vector initialized in InitKaneNBody() */
-
-   /* .. Check for Locked Joint DOFs */
-   for (i = 0; i < 3; i++)
-      D->ActiveStateIdx[i] = i; /* Body 0 angular DOF never locked */
-   D->Ns = 3;
-   iu    = 3;
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G               = &S->G[Ig];
-      G->ActiveRotu0  = D->Ns;
-      G->ActiveRotDOF = 0;
-      for (i = 0; i < G->RotDOF; i++) {
-         if (!G->RotLocked[i]) {
-            G->ActiveRotDOF++;
-            D->ActiveStateIdx[D->Ns] = iu;
-            D->Ns++;
-         }
-         else {
-            u[iu] = 0.0;
-         }
-         iu++;
-      }
-      G->ActiveTrnu0  = D->Ns;
-      G->ActiveTrnDOF = 0;
-      for (i = 0; i < G->TrnDOF; i++) {
-         if (!G->TrnLocked[i]) {
-            G->ActiveTrnDOF++;
-            D->ActiveStateIdx[D->Ns] = iu;
-            D->Ns++;
-         }
-         else {
-            u[iu] = 0.0;
-         }
-         iu++;
-      }
-   }
-   for (i = 0; i < 3; i++) { /* Body 0 translational DOF never locked */
-      D->ActiveStateIdx[D->Ns] = iu;
-      D->Ns++;
-      iu++;
-   }
-   D->SomeJointsLocked  = ((D->Ns == D->Nu) ? 0 : 1);
-   D->Ns               += D->Nf;
-
-   /* .. 4th order Runge Kutta */
-
-   /* First Call */
-   KaneNBodyEOM(u, x, h, a, uf, xf, du, dx, dh, da, duf, dxf, S);
-   for (i = 0; i < Nu; i++) {
-      uu[i]   = u[i] + 0.5 * DTSIM * du[i];
-      udot[i] = du[i] / 6.0;
-   }
-   for (i = 0; i < Nx; i++) {
-      xx[i]   = x[i] + 0.5 * DTSIM * dx[i];
-      xdot[i] = dx[i] / 6.0;
-   }
-   for (i = 0; i < Nw; i++) {
-      hh[i]   = h[i] + 0.5 * DTSIM * dh[i];
-      hdot[i] = dh[i] / 6.0;
-      aa[i]   = a[i] + 0.5 * DTSIM * da[i];
-      adot[i] = da[i] / 6.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      uuf[i]   = uf[i] + 0.5 * DTSIM * duf[i];
-      ufdot[i] = duf[i] / 6.0;
-      xxf[i]   = xf[i] + 0.5 * DTSIM * dxf[i];
-      xfdot[i] = dxf[i] / 6.0;
-   }
-
-   /* This call must be made here, so that du is taken at the */
-   /* same instant as all the other configuration variables */
-   if (S->ConstraintsRequested) {
-      KaneNBodyConstraints(S, D->u, D->x, D->h, D->a, D->uf, D->xf);
-   }
-   FindBodyAccelerations(S, D->du);
-
-   /* Second Call */
-   KaneNBodyEOM(uu, xx, hh, aa, uuf, xxf, du, dx, dh, da, duf, dxf, S);
-
-   for (i = 0; i < Nu; i++) {
-      uu[i]    = u[i] + 0.5 * DTSIM * du[i];
-      udot[i] += du[i] / 3.0;
-   }
-   for (i = 0; i < Nx; i++) {
-      xx[i]    = x[i] + 0.5 * DTSIM * dx[i];
-      xdot[i] += dx[i] / 3.0;
-   }
-   for (i = 0; i < Nw; i++) {
-      hh[i]    = h[i] + 0.5 * DTSIM * dh[i];
-      hdot[i] += dh[i] / 3.0;
-      aa[i]    = a[i] + 0.5 * DTSIM * da[i];
-      adot[i] += da[i] / 3.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      uuf[i]    = uf[i] + 0.5 * DTSIM * duf[i];
-      ufdot[i] += duf[i] / 3.0;
-      xxf[i]    = xf[i] + 0.5 * DTSIM * dxf[i];
-      xfdot[i] += dxf[i] / 3.0;
-   }
-
-   /* Third Call */
-   KaneNBodyEOM(uu, xx, hh, aa, uuf, xxf, du, dx, dh, da, duf, dxf, S);
-
-   for (i = 0; i < Nu; i++) {
-      uu[i]    = u[i] + DTSIM * du[i];
-      udot[i] += du[i] / 3.0;
-   }
-   for (i = 0; i < Nx; i++) {
-      xx[i]    = x[i] + DTSIM * dx[i];
-      xdot[i] += dx[i] / 3.0;
-   }
-   for (i = 0; i < Nw; i++) {
-      hh[i]    = h[i] + DTSIM * dh[i];
-      hdot[i] += dh[i] / 3.0;
-      aa[i]    = a[i] + DTSIM * da[i];
-      adot[i] += da[i] / 3.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      uuf[i]    = uf[i] + DTSIM * duf[i];
-      ufdot[i] += duf[i] / 3.0;
-      xxf[i]    = xf[i] + DTSIM * dxf[i];
-      xfdot[i] += dxf[i] / 3.0;
-   }
-
-   /* Fourth Call */
-   KaneNBodyEOM(uu, xx, hh, aa, uuf, xxf, du, dx, dh, da, duf, dxf, S);
-
-   for (i = 0; i < Nu; i++)
-      udot[i] += du[i] / 6.0;
-   for (i = 0; i < Nx; i++)
-      xdot[i] += dx[i] / 6.0;
-   for (i = 0; i < Nw; i++) {
-      hdot[i] += dh[i] / 6.0;
-      adot[i] += da[i] / 6.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      ufdot[i] += duf[i] / 6.0;
-      xfdot[i] += dxf[i] / 6.0;
-   }
-
-   for (i = 0; i < Nu; i++)
-      u[i] += udot[i] * DTSIM;
-   for (i = 0; i < Nx; i++)
-      x[i] += xdot[i] * DTSIM;
-   for (i = 0; i < Nw; i++) {
-      h[i] += hdot[i] * DTSIM;
-      a[i] += adot[i] * DTSIM;
-      while (a[i] < -Pi)
-         a[i] += TwoPi;
-      while (a[i] > Pi)
-         a[i] -= TwoPi;
-   }
-   for (i = 0; i < Nf; i++) {
-      uf[i] += ufdot[i] * DTSIM;
-      xf[i] += xfdot[i] * DTSIM;
-   }
-
-   /* .. NaN Check */
-   for (i = 0; i < Nu; i++) {
-      if (isnan(u[i])) {
-         fprintf(stderr,
-                 "Oops!  u[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                 "Better fix that.\n",
-                 i, SimTime);
-         exit(EXIT_FAILURE);
-      }
-   }
-   for (i = 0; i < Nx; i++) {
-      if (isnan(x[i])) {
-         fprintf(stderr,
-                 "Oops!  x[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                 "Better fix that.\n",
-                 i, SimTime);
-         exit(EXIT_FAILURE);
-      }
-   }
-   for (i = 0; i < Nf; i++) {
-      if (isnan(uf[i])) {
-         fprintf(stderr,
-                 "Oops!  uf[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                 "Better fix that.\n",
-                 i, SimTime);
-         exit(EXIT_FAILURE);
-      }
-      if (isnan(xf[i])) {
-         fprintf(stderr,
-                 "Oops!  xf[%ld] is NaN in KaneNBodyRK4 at SimTime = %lf.  "
-                 "Better fix that.\n",
-                 i, SimTime);
-         exit(EXIT_FAILURE);
-      }
-   }
-
-   /* .. Map out state variables */
-   MapStateVectorToBodyStates(u, x, h, a, uf, xf, S);
-   MotionConstraints(S);
-   BodyStatesToNodeStates(S);
-   SCMassProps(S);
-   FindTotalAngMom(S);
-}
-/**********************************************************************/
-/* For spacecraft composed of a single body, with the reference point */
-/* placed at the CM, the EOM are vastly simplified.  KaneNBodyEOM     */
-/* will work, but this should be faster.                              */
-void OneBodyEOM(double *u, double *x, double *h, double *uf, double *xf,
-                double *udot, double *xdot, double *hdot, double *ufdot,
-                double *xfdot, struct SCType *S)
-{
-   struct BodyType *B;
-   struct DynType *D;
-   struct NodeType *FN;
-   vec3_t Hb, WhlTorq, wxH, Trq;
-   mat3x3_t Iinv;
-   long i, j, k;
-   long If, Nf, In;
-
-   D  = &S->Dyn;
-   B  = &S->B[0];
-   Nf = B->Nf;
-
-   /* .. Build H's */
-   vec3_t uvec = DBL_TO_VEC3(&u[0]);
-   Hb          = MxV(B->I, uvec);
-   for (i = 0; i < 3; i++)
-      Hb.v[i] += B->EmbeddedMom.v[i];
-   for (j = 0; j < S->Nw; j++)
-      Hb.v[i] += h[j] * S->Whl[j].A.v[i];
-
-   /* .. Build wheel torque in B0 frame */
-   WhlTorq = VEC3_ZERO;
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < S->Nw; j++)
-         WhlTorq.v[i] -= S->Whl[j].Trq * S->Whl[j].A.v[i];
-
-   /* .. Angular Rates */
-   wxH = VxV(uvec, Hb);
-   for (i = 0; i < 3; i++)
-      Trq.v[0] = B->Trq.v[0] - wxH.v[0] + WhlTorq.v[0];
-
-   /* .. Rigid Body EOM */
-   Iinv           = MINV3(B->I);
-   vec3_t uvecdot = MxV(Iinv, Trq);
-   VEC3_TO_DBL(udot, uvecdot);
-
-   /* .. Wheel-body interaction  */
-   for (i = 0; i < S->Nw; i++)
-      hdot[i] = S->Whl[i].Trq;
-
-   /* .. Quaternion kinematics */
-   quat_t q = DBL_TO_QUAT(&x[0]);
-   quat_t qdot;
-   qdot = QW2QDOT(q, uvec);
-
-   QUAT_TO_DBL(&xdot[0], qdot);
-
-   /* .. Flex EOM */
-   if (S->FlexActive) {
-      for (If = 0; If < Nf; If++) {
-         D->FlexFrc[If] = 0.0;
-         for (k = 0; k < Nf; k++)
-            D->FlexFrc[If] -= B->Cf[If][k] * uf[k] + B->Kf[If][k] * xf[k];
-         for (In = 0; In < B->NumNodes; In++) {
-            FN = &B->Node[In];
-            D->FlexFrc[If] +=
-                FN->PSI[0][If] * FN->Frc.x + FN->PSI[1][If] * FN->Frc.x +
-                FN->PSI[2][If] * FN->Frc.z + FN->THETA[0][If] * FN->Trq.x +
-                FN->THETA[1][If] * FN->Trq.x + FN->THETA[2][If] * FN->Trq.z;
-         }
-      }
-      if (B->MfIsDiagonal)
-         for (If = 0; If < Nf; If++)
-            ufdot[If] = D->FlexFrc[If] / B->Mf[If][If];
-      else
-         LINSOLVE(B->Mf, ufdot, D->FlexFrc, Nf);
-
-      /* Flex Kinematics */
-      for (If = 0; If < Nf; If++)
-         xfdot[If] = uf[If];
-   }
-}
-/**********************************************************************/
-void OneBodyRK4(struct SCType *S)
-{
-   struct DynType *D;
-   struct WhlType *W;
-   double *u, *uu, *du, *udot;
-   double *x, *xx, *dx, *xdot;
-   double *h, *hh, *dh, *hdot;
-   double *uf, *uuf, *duf, *ufdot;
-   double *xf, *xxf, *dxf, *xfdot;
-   long i;
-   long Nf, Nw;
-
-   /* Save some typing (and dereferencing) */
-   D  = &S->Dyn;
-   Nw = S->Nw;
-   Nf = D->Nf;
-
-   u  = D->u;
-   x  = D->x;
-   h  = D->h;
-   uf = D->uf;
-   xf = D->xf;
-
-   uu  = D->uu;
-   xx  = D->xx;
-   hh  = D->hh;
-   uuf = D->uuf;
-   xxf = D->xxf;
-
-   du  = D->du;
-   dx  = D->dx;
-   dh  = D->dh;
-   duf = D->duf;
-   dxf = D->dxf;
-
-   udot  = D->udot;
-   xdot  = D->xdot;
-   hdot  = D->hdot;
-   ufdot = D->ufdot;
-   xfdot = D->xfdot;
-
-   /* State vector initialized in InitRigidDyn() */
-
-   /* .. 4th order Runge Kutta */
-   /* First Call */
-   OneBodyEOM(u, x, h, uf, xf, du, dx, dh, duf, dxf, S);
-
-   for (i = 0; i < 3; i++) {
-      uu[i]   = u[i] + 0.5 * DTSIM * du[i];
-      udot[i] = du[i] / 6.0;
-   }
-   for (i = 0; i < 4; i++) {
-      xx[i]   = x[i] + 0.5 * DTSIM * dx[i];
-      xdot[i] = dx[i] / 6.0;
-   }
-   for (i = 0; i < Nw; i++) {
-      hh[i]   = h[i] + 0.5 * DTSIM * dh[i];
-      hdot[i] = dh[i] / 6.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      uuf[i]   = uf[i] + 0.5 * DTSIM * duf[i];
-      ufdot[i] = duf[i] / 6.0;
-      xxf[i]   = xf[i] + 0.5 * DTSIM * dxf[i];
-      xfdot[i] = dxf[i] / 6.0;
-   }
-
-   /* Second Call */
-   OneBodyEOM(uu, xx, hh, uuf, xxf, du, dx, dh, duf, dxf, S);
-
-   for (i = 0; i < 3; i++) {
-      uu[i]    = u[i] + 0.5 * DTSIM * du[i];
-      udot[i] += du[i] / 3.0;
-   }
-   for (i = 0; i < 4; i++) {
-      xx[i]    = x[i] + 0.5 * DTSIM * dx[i];
-      xdot[i] += dx[i] / 3.0;
-   }
-   for (i = 0; i < Nw; i++) {
-      hh[i]    = h[i] + 0.5 * DTSIM * dh[i];
-      hdot[i] += dh[i] / 3.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      uuf[i]    = uf[i] + 0.5 * DTSIM * duf[i];
-      ufdot[i] += duf[i] / 3.0;
-      xxf[i]    = xf[i] + 0.5 * DTSIM * dxf[i];
-      xfdot[i] += dxf[i] / 3.0;
-   }
-
-   /* Third Call */
-   OneBodyEOM(uu, xx, hh, uuf, xxf, du, dx, dh, duf, dxf, S);
-
-   for (i = 0; i < 3; i++) {
-      uu[i]    = u[i] + DTSIM * du[i];
-      udot[i] += du[i] / 3.0;
-   }
-   for (i = 0; i < 4; i++) {
-      xx[i]    = x[i] + DTSIM * dx[i];
-      xdot[i] += dx[i] / 3.0;
-   }
-   for (i = 0; i < Nw; i++) {
-      hh[i]    = h[i] + DTSIM * dh[i];
-      hdot[i] += dh[i] / 3.0;
-   }
-   for (i = 0; i < Nf; i++) {
-      uuf[i]    = uf[i] + DTSIM * duf[i];
-      ufdot[i] += duf[i] / 3.0;
-      xxf[i]    = xf[i] + DTSIM * dxf[i];
-      xfdot[i] += dxf[i] / 3.0;
-   }
-
-   /* Fourth Call */
-   OneBodyEOM(uu, xx, hh, uuf, xxf, du, dx, dh, duf, dxf, S);
-
-   for (i = 0; i < 3; i++) {
-      udot[i] += du[i] / 6.0;
-      u[i]    += udot[i] * DTSIM;
-   }
-   for (i = 0; i < 4; i++) {
-      xdot[i] += dx[i] / 6.0;
-      x[i]    += xdot[i] * DTSIM;
-   }
-   for (i = 0; i < Nw; i++) {
-      hdot[i] += dh[i] / 6.0;
-      h[i]    += hdot[i] * DTSIM;
-   }
-   for (i = 0; i < Nf; i++) {
-      ufdot[i] += duf[i] / 6.0;
-      uf[i]    += ufdot[i] * DTSIM;
-      xfdot[i] += dxf[i] / 6.0;
-      xf[i]    += xfdot[i] * DTSIM;
-   }
-
-   /* .. Map out state variables */
-   for (i = 0; i < 3; i++) {
-      S->B[0].wn.v[i] = u[i];
-      S->B[0].qn.q[i] = x[i];
-   }
-   S->B[0].qn.qs = x[3];
-
-   S->B[0].qn = UNITQ(S->B[0].qn);
-   S->B[0].CN = Q2C(S->B[0].qn);
-
-   /* .. Wheels */
-   for (i = 0; i < Nw; i++) {
-      W    = &S->Whl[i];
-      W->H = h[i];
-      W->w = h[i] / W->J;
-   }
-
-   BodyStatesToNodeStates(S);
-
-   /* .. Find Total Angular Momentum */
-   FindTotalAngMom(S);
-}
 /******************************************************************************/
 /*  Finds rotational and translational joint partials                         */
 /*  On Init, populate all matrix elements.  Else, only populate               */
@@ -3536,423 +3052,6 @@ void OrderNMultiBodyEOM_RK(struct SCType *S, double *const xdot_out)
       xdot_out[D->Nu + D->Nx + Iw] = W->Hdot;
    }
 }
-/******************************************************************************/
-void OrderNMultiBodyRK4(struct SCType *S)
-{
-   struct DynType *D; /* Copy to/from D->u, D->x */
-   struct BodyType *B;
-   struct JointType *G;
-   struct WhlType *W;
-   double f, dt;
-   long i, Ig, Iw, Ib;
-
-   /* Copy states from Dyn */
-   D = &S->Dyn;
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->RKum[i]     = D->u[i];
-      G->RKum[3 + i] = D->u[D->Nu - 3 + i];
-      G->RKxm.v[i]   = D->x[D->Nx - 3 + i];
-   }
-   CopyVG(D->x, G->RKqm.q, 4);
-   G->RKqm = UNITQ(G->RKqm);
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++)
-         G->RKum[i] = D->u[G->Rotu0 + i];
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->RKum[G->RotDOF + i] = D->u[G->Trnu0 + i];
-         G->RKxm.v[i]           = D->x[G->Trnx0 + i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->RKqm.q[i] = D->x[G->Rotx0 + i];
-         G->RKqm = UNITQ(G->RKqm);
-      }
-      else
-         for (i = 0; i < G->RotDOF; i++)
-            G->RKqm.q[i] = D->x[G->Rotx0 + i];
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W       = &S->Whl[Iw];
-      W->RKHm = D->h[Iw];
-   }
-
-   /* Set up for First Call */
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      CopyVG(&B->SpatFrc[0], B->Trq.v, 3);
-      CopyVG(&B->SpatFrc[3], B->FrcB.v, 3);
-   }
-   G = &S->GN;
-   CopyVG(G->AngRate.v, &G->RKum[0], 3);
-   CopyVG(G->PosRate.v, &G->RKum[3], 3);
-   CopyVG(G->Pos.v, G->RKxm.v, 3);
-   CopyVG(G->q.q, G->RKqm.q, 4);
-   G->q = UNITQ(G->q);
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      CopyVG(G->AngRate.v, G->RKum, G->RotDOF);
-
-      CopyVG(G->PosRate.v, &G->RKum[G->RotDOF], G->TrnDOF);
-      CopyVG(G->Pos.v, G->RKxm.v, G->TrnDOF);
-
-      if (G->IsSpherical) {
-         CopyVG(G->q.q, G->RKqm.q, 4);
-         G->q = UNITQ(G->q);
-      }
-      else
-         CopyVG(G->q.q, G->RKqm.q, G->RotDOF);
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W    = &S->Whl[Iw];
-      W->H = W->RKHm;
-      W->w = W->H / W->J;
-   }
-
-   /* First Call */
-   OrderNMultiBodyEOM(S);
-
-   /* Digest First Call */
-   f       = 1.0 / 6.0;
-   G       = &S->GN;
-   G->RKdx = SxV(f, G->xdot);
-   for (i = 0; i < 3; i++) {
-      G->RKdu[i]     = f * G->udot[i];
-      G->RKdu[3 + i] = f * G->udot[3 + i];
-   }
-   for (i = 0; i < 4; i++)
-      G->RKdq.q[i] = f * G->qdot.q[i];
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->RKdu[i] = f * G->udot[i];
-      }
-      G->RKdx = SxV(f, G->xdot);
-      for (i = 0; i < G->TrnDOF; i++)
-         G->RKdu[G->RotDOF + i] = f * G->udot[G->RotDOF + i];
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++) {
-            G->RKdq.q[i] = f * G->qdot.q[i];
-         }
-      }
-      else {
-         for (i = 0; i < G->RotDOF; i++) {
-            G->RKdq.q[i] = f * G->qdot.q[i];
-         }
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W       = &S->Whl[Iw];
-      W->RKdH = f * W->Hdot;
-   }
-
-   /* Set up for Second Call */
-   dt = 0.5 * DTSIM;
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq.v[i];
-         B->SpatFrc[3 + i] = B->FrcB.v[i];
-      }
-   }
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
-      G->PosRate.v[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
-      G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
-   }
-   for (i = 0; i < 4; i++)
-      G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
-   G->q = UNITQ(G->q);
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++)
-         G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate.v[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
-         G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
-         G->q = UNITQ(G->q);
-      }
-      else {
-         /* "q" here used for angle states */
-         for (i = 0; i < G->RotDOF; i++)
-            G->Ang.v[i] = G->RKqm.qv.v[i] + dt * G->qdot.qv.v[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W    = &S->Whl[Iw];
-      W->H = W->RKHm + dt * W->Hdot;
-      W->w = W->H / W->J;
-   }
-
-   /* Second Call */
-   OrderNMultiBodyEOM(S);
-
-   /* Digest Second Call */
-   f = 1.0 / 3.0;
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->RKdu[i]     += f * G->udot[i];
-      G->RKdu[3 + i] += f * G->udot[3 + i];
-      G->RKdx.v[i]   += f * G->xdot.v[i];
-   }
-   for (i = 0; i < 4; i++)
-      G->RKdq.q[i] += f * G->qdot.q[i];
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->RKdu[i] += f * G->udot[i];
-      }
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->RKdu[G->RotDOF + i] += f * G->udot[G->RotDOF + i];
-         G->RKdx.v[i]           += f * G->xdot.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->RKdq.q[i] += f * G->qdot.q[i];
-      }
-      else {
-         for (i = 0; i < G->RotDOF; i++)
-            G->RKdq.q[i] += f * G->qdot.q[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W        = &S->Whl[Iw];
-      W->RKdH += f * W->Hdot;
-   }
-
-   /* Set up for Third Call */
-   dt = 0.5 * DTSIM;
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq.v[i];
-         B->SpatFrc[3 + i] = B->FrcB.v[i];
-      }
-   }
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
-      G->PosRate.v[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
-      G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
-   }
-   for (i = 0; i < 4; i++)
-      G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
-   G->q = UNITQ(G->q);
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
-      }
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate.v[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
-         G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
-         G->q = UNITQ(G->q);
-      }
-      else {
-         /* "q" here used for angle states */
-         for (i = 0; i < G->RotDOF; i++)
-            G->Ang.v[i] = G->RKqm.qv.v[i] + dt * G->qdot.qv.v[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W    = &S->Whl[Iw];
-      W->H = W->RKHm + dt * W->Hdot;
-      W->w = W->H / W->J;
-   }
-
-   /* Third Call */
-   OrderNMultiBodyEOM(S);
-
-   /* Digest Third Call */
-   f = 1.0 / 3.0;
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->RKdu[i]     += f * G->udot[i];
-      G->RKdu[3 + i] += f * G->udot[3 + i];
-      G->RKdx.v[i]   += f * G->xdot.v[i];
-   }
-   for (i = 0; i < 4; i++) {
-      G->RKdq.q[i] += f * G->qdot.q[i];
-   }
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++)
-         G->RKdu[i] += f * G->udot[i];
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->RKdu[G->RotDOF + i] += f * G->udot[G->RotDOF + i];
-         G->RKdx.v[i]           += f * G->xdot.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->RKdq.q[i] += f * G->qdot.q[i];
-      }
-      else {
-         for (i = 0; i < G->RotDOF; i++)
-            G->RKdq.q[i] += f * G->qdot.q[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W        = &S->Whl[Iw];
-      W->RKdH += f * W->Hdot;
-   }
-
-   /* Set up for Fourth Call */
-   dt = DTSIM;
-   for (Ib = 0; Ib < S->Nb; Ib++) {
-      B = &S->B[Ib];
-      for (i = 0; i < 3; i++) {
-         B->SpatFrc[i]     = B->Trq.v[i];
-         B->SpatFrc[3 + i] = B->FrcB.v[i];
-      }
-   }
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
-      G->PosRate.v[i] = G->RKum[3 + i] + dt * G->udot[3 + i];
-      G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
-   }
-   for (i = 0; i < 4; i++) {
-      G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
-   }
-   G->RKqm = UNITQ(G->RKqm);
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++)
-         G->AngRate.v[i] = G->RKum[i] + dt * G->udot[i];
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->PosRate.v[i] = G->RKum[G->RotDOF + i] + dt * G->udot[G->RotDOF + i];
-         G->Pos.v[i]     = G->RKxm.v[i] + dt * G->xdot.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->q.q[i] = G->RKqm.q[i] + dt * G->qdot.q[i];
-         G->q = UNITQ(G->RKqm);
-      }
-      else {
-         /* "q" here used for angle states */
-         for (i = 0; i < G->RotDOF; i++)
-            G->Ang.v[i] = G->RKqm.qv.v[i] + dt * G->qdot.qv.v[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W    = &S->Whl[Iw];
-      W->H = W->RKHm + dt * W->Hdot;
-      W->w = W->H / W->J;
-   }
-
-   /* Fourth Call */
-   OrderNMultiBodyEOM(S);
-
-   /* Digest Fourth Call */
-   f = 1.0 / 6.0;
-   G = &S->GN;
-   for (i = 0; i < 3; i++) {
-      G->RKdu[i]     += f * G->udot[i];
-      G->RKdu[3 + i] += f * G->udot[3 + i];
-      G->RKdx.v[i]   += f * G->xdot.v[i];
-   }
-   for (i = 0; i < 4; i++)
-      G->RKdq.q[i] += f * G->qdot.q[i];
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         G->RKdu[i] += f * G->udot[i];
-      }
-      for (i = 0; i < G->TrnDOF; i++) {
-         G->RKdu[G->RotDOF + i] += f * G->udot[G->RotDOF + i];
-         G->RKdx.v[i]           += f * G->xdot.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            G->RKdq.q[i] += f * G->qdot.q[i];
-      }
-      else {
-         for (i = 0; i < G->RotDOF; i++)
-            G->RKdq.q[i] += f * G->qdot.q[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W        = &S->Whl[Iw];
-      W->RKdH += f * W->Hdot;
-   }
-
-   /* Update States */
-   dt = DTSIM;
-   G  = &S->GN;
-   for (i = 0; i < 3; i++) {
-      D->u[i]             = G->RKum[i] + dt * G->RKdu[i];
-      D->u[D->Nu - 3 + i] = G->RKum[3 + i] + dt * G->RKdu[3 + i];
-      D->x[D->Nx - 3 + i] = G->RKxm.v[i] + dt * G->RKdx.v[i];
-   }
-   quat_t q;
-   for (i = 0; i < 4; i++)
-      q.q[i] = G->RKqm.q[i] + dt * G->RKdq.q[i];
-
-   q = UNITQ(q);
-   QUAT_TO_DBL(D->x, q);
-
-   for (Ig = 0; Ig < S->Ng; Ig++) {
-      G = &S->G[Ig];
-      for (i = 0; i < G->RotDOF; i++) {
-         D->u[G->Rotu0 + i] = G->RKum[i] + dt * G->RKdu[i];
-      }
-      for (i = 0; i < G->TrnDOF; i++) {
-         D->u[G->Trnu0 + i] =
-             G->RKum[G->RotDOF + i] + dt * G->RKdu[G->RotDOF + i];
-         D->x[G->Trnx0 + i] = G->RKxm.v[i] + dt * G->RKdx.v[i];
-      }
-      if (G->IsSpherical) {
-         for (i = 0; i < 4; i++)
-            q.q[i] = G->RKqm.q[i] + dt * G->RKdq.q[i];
-         q = UNITQ(q);
-         QUAT_TO_DBL(&D->x[G->Rotx0], q);
-      }
-      else {
-         /* "q" here used for angle states */
-         for (i = 0; i < G->RotDOF; i++)
-            D->x[G->Rotx0 + i] = G->RKqm.qv.v[i] + dt * G->RKdq.qv.v[i];
-      }
-   }
-
-   for (Iw = 0; Iw < S->Nw; Iw++) {
-      W        = &S->Whl[Iw];
-      D->h[Iw] = W->RKHm + dt * W->RKdH;
-   }
-
-   MapStateVectorToBodyStates(D->u, D->x, D->h, D->a, D->uf, D->xf, S);
-   MotionConstraints(S);
-   BodyStatesToNodeStates(S);
-   SCMassProps(S);
-   FindTotalAngMom(S);
-}
 /**********************************************************************/
 /* Utility function for Encke's method.  Computes f(q).               */
 /* See Battin, p. 449                                                 */
@@ -3975,300 +3074,67 @@ double EnckeFQ(vec3_t r, vec3_t delta)
 /*  See Battin, p. 449                                                */
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
-void EnckeEOM(double u[6], double udot[6], vec3_t R, double muR3, vec3_t a)
+vec3_t EnckeEOM(vec3_t xr, vec3_t orb_R, double muR3)
 {
    double fq;
    vec3_t r;
 
-   udot[0] = u[3];
-   udot[1] = u[4];
-   udot[2] = u[5];
+   r.x = orb_R.x + xr.x;
+   r.y = orb_R.y + xr.y;
+   r.z = orb_R.z + xr.z;
+   fq  = EnckeFQ(r, xr);
 
-   r.v[0] = R.v[0] + u[0];
-   r.v[1] = R.v[1] + u[1];
-   r.v[2] = R.v[2] + u[2];
-
-   vec3_t uv = DBL_TO_VEC3(u);
-   fq        = EnckeFQ(r, uv);
-
-   udot[3] = a.v[0] - muR3 * (u[0] + fq * r.v[0]);
-   udot[4] = a.v[1] - muR3 * (u[1] + fq * r.v[1]);
-   udot[5] = a.v[2] - muR3 * (u[2] + fq * r.v[2]);
+   vec3_t gravAccel;
+   gravAccel.x = -muR3 * (xr.x + fq * r.x);
+   gravAccel.y = -muR3 * (xr.y + fq * r.y);
+   gravAccel.z = -muR3 * (xr.z + fq * r.z);
+   return gravAccel;
 }
 /**********************************************************************/
-void EnckeEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
-                 double *xdot)
+__attribute__((const)) static vec3_t EnckeEOM_RK(const vec3_t rvec,
+                                                 const vec3_t orb_R, double mu);
+static vec3_t EnckeEOM_RK(vec3_t rvec, vec3_t orb_R, double mu)
 {
-   vec3_t accel, R;
+   vec3_t gravAccel;
    double magr, muR3;
 
-   accel = SxV(1.0 / S->mass, S->FrcN);
-   R     = orb->PosN;
+   magr = MAGV(orb_R);
+   muR3 = mu / (magr * magr * magr);
 
-   magr = MAGV(R);
-   muR3 = orb->mu / (magr * magr * magr);
-
-   /* .. EOM Call */
-   EnckeEOM(x, xdot, R, muR3, accel);
+   /* .. EOM  */
+   gravAccel = EnckeEOM(rvec, orb_R, muR3);
+   return gravAccel;
 }
 /**********************************************************************/
-/* Integration of orbital equations of motion                         */
-/* by 4th order Runge-Kutta                                           */
-void EnckeRK4(struct OrbitType *orb, struct SCType *S)
-{
-   vec3_t accel, R;
-   double magr, muR3;
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   long j;
-
-   accel = SxV(1.0 / S->mass, S->FrcN);
-   R     = orb->PosN;
-
-   magr = MAGV(R);
-   muR3 = orb->mu / (magr * magr * magr);
-
-   u[0] = S->PosR.v[0];
-   u[1] = S->PosR.v[1];
-   u[2] = S->PosR.v[2];
-   u[3] = S->VelR.v[0];
-   u[4] = S->VelR.v[1];
-   u[5] = S->VelR.v[2];
-
-   /* .. 4th Order Runga-Kutta Integration */
-   EnckeEOM(u, m1, R, muR3, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   EnckeEOM(uu, m2, R, muR3, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   EnckeEOM(uu, m3, R, muR3, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + DTSIM * m3[j];
-   EnckeEOM(uu, m4, R, muR3, accel);
-   for (j = 0; j < 6; j++)
-      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
-
-   S->PosR.v[0] = u[0];
-   S->PosR.v[1] = u[1];
-   S->PosR.v[2] = u[2];
-   S->VelR.v[0] = u[3];
-   S->VelR.v[1] = u[4];
-   S->VelR.v[2] = u[5];
-}
-/**********************************************************************/
-void CowellEOM(double u[6], double udot[6], double mu, double mass, vec3_t Frc)
+__attribute__((const)) static vec3_t CowellEOM_RK(const vec3_t rvec,
+                                                  const double mu);
+static vec3_t CowellEOM_RK(const vec3_t rvec, const double mu)
 {
    double r, muR3;
 
-   vec3_t uv = DBL_TO_VEC3(u);
-   r         = MAGV(uv);
-   muR3      = mu / (r * r * r);
+   r    = MAGV(rvec);
+   muR3 = mu / (r * r * r);
 
-   udot[0] = u[3];
-   udot[1] = u[4];
-   udot[2] = u[5];
-   udot[3] = Frc.v[0] / mass - muR3 * u[0];
-   udot[4] = Frc.v[1] / mass - muR3 * u[1];
-   udot[5] = Frc.v[2] / mass - muR3 * u[2];
+   vec3_t gravAccel;
+   gravAccel.x = -muR3 * rvec.x;
+   gravAccel.y = -muR3 * rvec.y;
+   gravAccel.z = -muR3 * rvec.z;
+   return gravAccel;
 }
 /**********************************************************************/
-void CowellEOMMrk2(double u[6], double udot[6], double mu, double mass,
-                   vec3_t Frc, struct WorldType *const worlds,
-                   struct OrbitType *const orb, struct SCType *S, double RKFdt)
+__attribute__((pure)) static vec3_t
+PolyhedronCowellEOM_RK(const vec3_t rvec, struct WorldType *const world);
+static vec3_t PolyhedronCowellEOM_RK(const vec3_t rvec,
+                                     struct WorldType *const world)
 {
-   vec3_t r_vec, gravpertFrc;
-   double rmag, muR3;
-
-   r_vec = DBL_TO_VEC3(u);
-   rmag  = MAGV(r_vec);
-   muR3  = mu / (rmag * rmag * rmag);
-
-   /* .. Gravity Perturbation Forces */
-   if (GravPertActive)
-      GravPertForceRK4(worlds, orb, S, u, &gravpertFrc, RKFdt);
-
-   udot[0] = u[3];
-   udot[1] = u[4];
-   udot[2] = u[5];
-   udot[3] = (Frc.v[0] + gravpertFrc.v[0]) / mass - muR3 * u[0];
-   udot[4] = (Frc.v[1] + gravpertFrc.v[1]) / mass - muR3 * u[1];
-   udot[5] = (Frc.v[2] + gravpertFrc.v[2]) / mass - muR3 * u[2];
-}
-/**********************************************************************/
-/* Integration of orbital equations of motion using Cowell's method   */
-/* by 4th order Runge-Kutta                                           */
-void CowellRK4Mrk2(struct WorldType *const worlds, struct OrbitType *const orb,
-                   struct SCType *S)
-{
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   double dt0, dt1, dt2, dt3;
-   long j;
-
-   u[0] = S->PosN.v[0];
-   u[1] = S->PosN.v[1];
-   u[2] = S->PosN.v[2];
-   u[3] = S->VelN.v[0];
-   u[4] = S->VelN.v[1];
-   u[5] = S->VelN.v[2];
-
-   dt0 = 0.0;
-   dt1 = 0.5 * DTSIM;
-   dt2 = 0.5 * DTSIM;
-   dt3 = DTSIM;
-
-   /* .. 4th Order Runga-Kutta Integration */
-   CowellEOMMrk2(u, m1, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt0);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + dt1 * m1[j];
-   CowellEOMMrk2(uu, m2, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt1);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + dt2 * m2[j];
-   CowellEOMMrk2(uu, m3, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt2);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + dt3 * m3[j];
-   CowellEOMMrk2(uu, m4, orb->mu, S->mass, S->FrcN, worlds, orb, S, dt3);
-   for (j = 0; j < 6; j++)
-      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
-
-   S->PosN.v[0] = u[0];
-   S->PosN.v[1] = u[1];
-   S->PosN.v[2] = u[2];
-   S->VelN.v[0] = u[3];
-   S->VelN.v[1] = u[4];
-   S->VelN.v[2] = u[5];
-}
-/**********************************************************************/
-void CowellEOM_RK(struct OrbitType *const orb, struct SCType *S, double *x,
-                  double *xdot)
-{
-   /* .. EOM Call */
-   CowellEOM(x, xdot, orb->mu, S->mass, S->FrcN);
-}
-/**********************************************************************/
-/* Integration of orbital equations of motion using Cowell's method   */
-/* by 4th order Runge-Kutta                                           */
-void CowellRK4(struct OrbitType *const orb, struct SCType *S)
-{
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   long j;
-
-   u[0] = S->PosN.v[0];
-   u[1] = S->PosN.v[1];
-   u[2] = S->PosN.v[2];
-   u[3] = S->VelN.v[0];
-   u[4] = S->VelN.v[1];
-   u[5] = S->VelN.v[2];
-
-   /* .. 4th Order Runga-Kutta Integration */
-   CowellEOM(u, m1, orb->mu, S->mass, S->FrcN);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   CowellEOM(uu, m2, orb->mu, S->mass, S->FrcN);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   CowellEOM(uu, m3, orb->mu, S->mass, S->FrcN);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + DTSIM * m3[j];
-   CowellEOM(uu, m4, orb->mu, S->mass, S->FrcN);
-   for (j = 0; j < 6; j++)
-      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
-
-   S->PosN.v[0] = u[0];
-   S->PosN.v[1] = u[1];
-   S->PosN.v[2] = u[2];
-   S->VelN.v[0] = u[3];
-   S->VelN.v[1] = u[4];
-   S->VelN.v[2] = u[5];
-}
-/**********************************************************************/
-void PolyhedronCowellEOM(double u[6], double udot[6], double mass,
-                         vec3_t GravAcc, vec3_t Frc)
-{
-   udot[0] = u[3];
-   udot[1] = u[4];
-   udot[2] = u[5];
-   udot[3] = GravAcc.v[0] + Frc.v[0] / mass;
-   udot[4] = GravAcc.v[1] + Frc.v[1] / mass;
-   udot[5] = GravAcc.v[2] + Frc.v[2] / mass;
-}
-/**********************************************************************/
-void PolyhedronCowellEOM_RK(struct WorldType *const world,
-                            struct OrbitType *const orb __attribute__((unused)),
-                            struct SCType *S, double *x, double *xdot)
-{
-   double u[6];
    struct GeomType *G;
-   vec3_t GravAccN;
+   vec3_t gravAccel;
 
    G = &Geom[world->GeomTag];
 
-   u[0] = x[0];
-   u[1] = x[1];
-   u[2] = x[2];
-   u[3] = x[3];
-   u[4] = x[4];
-   u[5] = x[5];
-
-   vec3_t uv = DBL_TO_VEC3(u);
    /* .. EOM Call */
-   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
-   PolyhedronCowellEOM(u, xdot, S->mass, GravAccN, S->FrcN);
-}
-/**********************************************************************/
-/* Integration of orbital equations of motion using Cowell's method   */
-/* by 4th order Runge-Kutta                                           */
-void PolyhedronCowellRK4(struct WorldType *const world,
-                         struct OrbitType *const orb __attribute__((unused)),
-                         struct SCType *S)
-{
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   long j;
-   struct GeomType *G;
-   vec3_t GravAccN;
-
-   G = &Geom[world->GeomTag];
-
-   u[0] = S->PosN.v[0];
-   u[1] = S->PosN.v[1];
-   u[2] = S->PosN.v[2];
-   u[3] = S->VelN.v[0];
-   u[4] = S->VelN.v[1];
-   u[5] = S->VelN.v[2];
-
-   vec3_t uv = S->PosN;
-   vec3_t mv[4];
-
-   /* .. 4th Order Runga-Kutta Integration */
-   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
-   PolyhedronCowellEOM(u, m1, S->mass, GravAccN, S->FrcN);
-   mv[0] = DBL_TO_VEC3(m1);
-   uv    = VAddV_Elem(S->PosN, SxV(0.5 * DTSIM, mv[0]));
-   VEC3_TO_DBL(uu, uv);
-
-   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
-   PolyhedronCowellEOM(uu, m2, S->mass, GravAccN, S->FrcN);
-   mv[1] = DBL_TO_VEC3(m2);
-   uv    = VAddV_Elem(S->PosN, SxV(0.5 * DTSIM, mv[1]));
-   VEC3_TO_DBL(uu, uv);
-
-   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
-   PolyhedronCowellEOM(uu, m3, S->mass, GravAccN, S->FrcN);
-   mv[2] = DBL_TO_VEC3(m3);
-   uv    = VAddV_Elem(S->PosN, SxV(DTSIM, mv[0]));
-   VEC3_TO_DBL(uu, uv);
-
-   PolyhedronGravAcc(G, world->Density, uv, world->CWN, &GravAccN);
-   PolyhedronCowellEOM(uu, m4, S->mass, GravAccN, S->FrcN);
-   mv[3] = DBL_TO_VEC3(m4);
-   for (j = 3; j < 6; j++)
-      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
-
-   S->PosN.v[0] = u[0];
-   S->PosN.v[1] = u[1];
-   S->PosN.v[2] = u[2];
-   S->VelN.v[0] = u[3];
-   S->VelN.v[1] = u[4];
-   S->VelN.v[2] = u[5];
+   PolyhedronGravAcc(G, world->Density, rvec, world->CWN, &gravAccel);
+   return gravAccel;
 }
 /**********************************************************************/
 /*  Orbit dynamics using Encke's method                               */
@@ -4277,44 +3143,37 @@ void PolyhedronCowellRK4(struct WorldType *const world,
 /*   u[0-2] is Rrel(1-3)                                              */
 /*   u[3-5] is Vrel(1-3)                                              */
 
-void ThreeBodyEnckeEOM(double u[6], double udot[6], vec3_t R1, double muR13,
-                       vec3_t R2, double muR23, vec3_t a)
+vec3_t ThreeBodyEnckeEOM(vec3_t r, vec3_t R1, double muR13, vec3_t R2,
+                         double muR23)
 {
    vec3_t r1, r2;
    double fq1, fq2;
 
-   udot[0] = u[3];
-   udot[1] = u[4];
-   udot[2] = u[5];
+   r1 = VAddV_Elem(R1, r);
+   r2 = VAddV_Elem(R2, r);
 
-   vec3_t uv = DBL_TO_VEC3(u);
-   r1        = VAddV_Elem(R1, uv);
-   r2        = VAddV_Elem(R2, uv);
+   fq1 = EnckeFQ(r1, r);
+   fq2 = EnckeFQ(r2, r);
 
-   fq1 = EnckeFQ(r1, uv);
-   fq2 = EnckeFQ(r2, uv);
-
-   udot[3] =
-       a.v[0] - muR13 * (u[0] + fq1 * r1.v[0]) - muR23 * (u[0] + fq2 * r2.v[0]);
-   udot[4] =
-       a.v[1] - muR13 * (u[1] + fq1 * r1.v[1]) - muR23 * (u[1] + fq2 * r2.v[1]);
-   udot[5] =
-       a.v[2] - muR13 * (u[2] + fq1 * r1.v[2]) - muR23 * (u[2] + fq2 * r2.v[2]);
+   vec3_t gravAccel;
+   gravAccel.x = -muR13 * (r.x + fq1 * r1.x) - muR23 * (r.x + fq2 * r2.x);
+   gravAccel.y = -muR13 * (r.y + fq1 * r1.y) - muR23 * (r.y + fq2 * r2.y);
+   gravAccel.z = -muR13 * (r.z + fq1 * r1.z) - muR23 * (r.z + fq2 * r2.z);
+   return gravAccel;
 }
 /**********************************************************************/
-void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
-                          struct OrbitType *const orb, struct SCType *S,
-                          double *x, double *xdot)
+__attribute__((pure)) static vec3_t
+ThreeBodyEnckeEOM_RK(const vec3_t rvec, struct OrbitType *const orb,
+                     const vec3_t PosN2);
+static vec3_t ThreeBodyEnckeEOM_RK(const vec3_t rvec,
+                                   struct OrbitType *const orb,
+                                   const vec3_t PosN2)
 {
-   vec3_t accel, R1, R2;
+   vec3_t R1, R2, gravAccel;
    double MagR1, muR13, MagR2, muR23;
-   struct OrbitType *E;
 
-   E = &worlds[orb->Body2].eph;
-
-   accel = SxV(1.0 / S->mass, S->FrcN);
-   R1    = orb->PosN;
-   R2    = VSubV_Elem(R1, E->PosN);
+   R1 = orb->PosN;
+   R2 = VSubV_Elem(R1, PosN2);
 
    MagR1 = MAGV(R1);
    muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
@@ -4322,130 +3181,22 @@ void ThreeBodyEnckeEOM_RK(struct WorldType *const worlds,
    muR23 = orb->mu2 / (MagR2 * MagR2 * MagR2);
 
    /* .. EOM Call */
-   ThreeBodyEnckeEOM(x, xdot, R1, muR13, R2, muR23, accel);
+   gravAccel = ThreeBodyEnckeEOM(rvec, R1, muR13, R2, muR23);
+   return gravAccel;
 }
 /**********************************************************************/
-/* Integration of equations of perturbed motion from three-body orbit */
-/* by 4th order Runge-Kutta                                           */
-void ThreeBodyEnckeRK4(struct WorldType *const worlds,
-                       struct OrbitType *const orb, struct SCType *S)
+__attribute__((const)) static vec3_t
+EulHillEOM_RK(const vec3_t rvec, const vec3_t vvec, double orb_n);
+static vec3_t EulHillEOM_RK(const vec3_t rvec, const vec3_t vvec, double orb_n)
 {
-   vec3_t accel, R1, R2;
-   double MagR1, muR13, MagR2, muR23;
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   long j;
-   struct OrbitType *E;
-
-   E = &worlds[orb->Body2].eph;
-
-   accel = SxV(1.0 / S->mass, S->FrcN);
-   R1    = orb->PosN;
-   R2    = VSubV_Elem(R1, E->PosN);
-
-   MagR1 = MAGV(R1);
-   muR13 = orb->mu1 / (MagR1 * MagR1 * MagR1);
-   MagR2 = MAGV(R2);
-   muR23 = orb->mu2 / (MagR2 * MagR2 * MagR2);
-
-   u[0] = S->PosR.v[0];
-   u[1] = S->PosR.v[1];
-   u[2] = S->PosR.v[2];
-   u[3] = S->VelR.v[0];
-   u[4] = S->VelR.v[1];
-   u[5] = S->VelR.v[2];
-
-   /* .. 4th Order Runga-Kutta Integration */
-   ThreeBodyEnckeEOM(u, m1, R1, muR13, R2, muR23, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   ThreeBodyEnckeEOM(uu, m2, R1, muR13, R2, muR23, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   ThreeBodyEnckeEOM(uu, m3, R1, muR13, R2, muR23, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + DTSIM * m3[j];
-   ThreeBodyEnckeEOM(uu, m4, R1, muR13, R2, muR23, accel);
-   for (j = 0; j < 6; j++)
-      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
-
-   S->PosR.v[0] = u[0];
-   S->PosR.v[1] = u[1];
-   S->PosR.v[2] = u[2];
-   S->VelR.v[0] = u[3];
-   S->VelR.v[1] = u[4];
-   S->VelR.v[2] = u[5];
-}
-/************************************************************/
-/*  Euler-Hill linearized EOM for near-circular orbits.     */
-
-void EulHillEOM(double u[6], double udot[6], double n, vec3_t a)
-{
-   udot[0] = u[3];
-   udot[1] = u[4];
-   udot[2] = u[5];
-   udot[3] = a.v[0] + 2.0 * n * u[5];
-   udot[4] = a.v[1] - n * n * u[1];
-   udot[5] = a.v[2] - 2.0 * n * u[3] + 3.0 * n * n * u[2];
-}
-/**********************************************************************/
-void EulHillEOM_RK(struct OrbitType *orb, struct SCType *S, double *x,
-                   double *xdot)
-{
-   vec3_t accelN, accel;
-
-   accelN = SxV(1.0 / S->mass, S->FrcN);
-   accel  = MxV(orb->CLN, accelN);
+   vec3_t gravAccel;
+   const double n2 = orb_n * orb_n;
 
    // assuming x is already in euler hill frame
-   EulHillEOM(x, xdot, orb->MeanMotion, accel);
-}
-/**********************************************************************/
-/* Integration of orbital equations of motion                         */
-/* by 4th order Runge-Kutta                                           */
-/* State u[0:2] = r, u[3:5] = v                                       */
-void EulHillRK4(struct OrbitType *orb, struct SCType *S)
-{
-   vec3_t accelN, accel;
-   mat3x3_t CLprop, CLN;
-   double u[6], uu[6], m1[6], m2[6], m3[6], m4[6];
-   long j;
-
-   accelN = SxV(1.0 / S->mass, S->FrcN);
-   for (j = 0; j < 3; j++) {
-      u[j]     = S->PosEH.v[j];
-      u[3 + j] = S->VelEH.v[j];
-   }
-   accel = MxV(orb->CLN, accelN);
-
-   /* .. 4th Order Runga-Kutta Integration */
-   EulHillEOM(u, m1, orb->MeanMotion, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m1[j];
-   CLprop = SimpRot(orb->CLN.rows[1], -orb->MeanMotion * 0.5 * DTSIM);
-   CLN    = MxM(orb->CLN, CLprop);
-   accel  = MxV(CLN, accelN);
-   EulHillEOM(uu, m2, orb->MeanMotion, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + 0.5 * DTSIM * m2[j];
-   EulHillEOM(uu, m3, orb->MeanMotion, accel);
-   for (j = 0; j < 6; j++)
-      uu[j] = u[j] + DTSIM * m3[j];
-   CLprop = SimpRot(orb->CLN.rows[1], -orb->MeanMotion * DTSIM);
-   CLN    = MxM(orb->CLN, CLprop);
-   accel  = MxV(CLN, accelN);
-   EulHillEOM(uu, m4, orb->MeanMotion, accel);
-   for (j = 0; j < 6; j++)
-      u[j] += DTSIM / 6.0 * (m1[j] + 2.0 * (m2[j] + m3[j]) + m4[j]);
-
-   for (j = 0; j < 3; j++) {
-      S->PosEH.v[j] = u[j];
-      S->VelEH.v[j] = u[3 + j];
-   }
-
-   pair_vec3_t pair =
-       EHRV2RelRV(orb->SMA, orb->MeanMotion, CLN, S->PosEH, S->VelEH);
-   S->PosR = pair.first;
-   S->VelR = pair.second;
+   gravAccel.x = +2.0 * orb_n * vvec.z;
+   gravAccel.y = -n2 * rvec.y;
+   gravAccel.z = -2.0 * orb_n * vvec.x + 3.0 * n2 * rvec.z;
+   return gravAccel;
 }
 /**********************************************************************/
 void ThreeBodyOrbitEOM(double mu1, double mu2, vec3_t p, double u[6],
@@ -4545,17 +3296,21 @@ void AddSCContactFrcTrq(struct SCType *S)
 void PartitionForces(struct SCType *S)
 {
    long Ib;
-   vec3_t FextN = VEC3_ZERO;
+   vec3_t gravPertAccN = VEC3_ZERO;
+   vec3_t FextN        = VEC3_ZERO;
    vec3_t FextB;
    long Nb;
 
    Nb = S->Nb;
-   for (Ib = 0; Ib < Nb; Ib++)
-      FextN = VAddV_Elem(FextN, S->B[Ib].FrcN);
+   for (Ib = 0; Ib < Nb; Ib++) {
+      FextN        = VAddV_Elem(FextN, S->B[Ib].FrcN);
+      gravPertAccN = VAddV_Elem(gravPertAccN, S->B[Ib].gravPertAccN);
+   }
 
    for (int i = 0; i < 3; i++) {
-      S->FrcN.v[i] += FextN.v[i];
-      S->AccN.v[i]  = FextN.v[i] / S->mass; /* For accelerometer model */
+      S->FrcN.v[i]         += FextN.v[i];
+      S->gravPertAccN.v[i] += gravPertAccN.v[i];
+      S->AccN.v[i] = FextN.v[i] / S->mass; /* For accelerometer model */
    }
 
    for (Ib = 0; Ib < Nb; Ib++) {
@@ -4565,6 +3320,69 @@ void PartitionForces(struct SCType *S)
          S->B[Ib].FrcB.v[i] -= FextB.v[i] * S->B[Ib].mass / S->mass;
       }
    }
+}
+/**********************************************************************/
+vec3_t GetPrimaryGravAccel(const long OrbDOF, const vec3_t rvec,
+                           const vec3_t vvec, struct WorldType *world,
+                           struct OrbitType *orb)
+{
+   vec3_t gravAccN     = VEC3_ZERO;
+   struct WorldType *W = &world[orb->World];
+   switch (orb->Regime) {
+      case ORB_ZERO:
+      case ORB_FLIGHT:
+         if (orb->PolyhedronGravityEnabled)
+            gravAccN = PolyhedronCowellEOM_RK(rvec, W);
+         else
+            gravAccN = CowellEOM_RK(rvec, orb->mu);
+         break;
+      case ORB_CENTRAL:
+         switch (OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               // assumes incoming rvec and vvec are already in Euler-Hill frame
+               gravAccN = EulHillEOM_RK(rvec, vvec, orb->MeanMotion);
+               break;
+            case ORBDOF_COWELL:
+               gravAccN = CowellEOM_RK(rvec, orb->mu);
+               break;
+            default:
+               gravAccN = EnckeEOM_RK(rvec, orb->PosN, orb->mu);
+               break;
+         }
+         break;
+      case ORB_N_BODY:
+         switch (OrbDOF) {
+            case ORBDOF_COWELL:
+               gravAccN = CowellEOM_RK(rvec, orb->mu);
+               break;
+            default:
+               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
+               exit(EXIT_FAILURE);
+         }
+         break;
+      case ORB_THREE_BODY:
+         switch (OrbDOF) {
+            case ORBDOF_FIXED:
+               break;
+            case ORBDOF_EULER_HILL:
+               gravAccN = EulHillEOM_RK(rvec, vvec, orb->MeanMotion);
+               break;
+            case ORBDOF_COWELL:
+               gravAccN = CowellEOM_RK(rvec, orb->mu);
+               break;
+            default:
+               gravAccN =
+                   ThreeBodyEnckeEOM_RK(rvec, orb, world[orb->Body2].eph.PosN);
+               break;
+         }
+         break;
+      default:
+         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+   return gravAccN;
 }
 /**********************************************************************/
 void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
@@ -4641,75 +3459,22 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
          exit(EXIT_FAILURE);
    }
 
-   struct WorldType *W = &world[orb->World];
-   switch (orb->Regime) {
-      case ORB_ZERO:
-      case ORB_FLIGHT:
-         x_trn    = &x[dim - 6];
-         xdot_trn = &xdot[dim - 6];
-         if (orb->PolyhedronGravityEnabled)
-            PolyhedronCowellEOM_RK(W, orb, S, x_trn, xdot_trn);
-         else
-            CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
-         break;
-      case ORB_CENTRAL:
-         switch (S->OrbDOF) {
-            case ORBDOF_FIXED:
-               break;
-            case ORBDOF_EULER_HILL:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               // assumes incoming x_trn is already in Euler-Hill frame
-               EulHillEOM_RK(orb, S, x_trn, xdot_trn);
-               break;
-            case ORBDOF_COWELL:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
-               break;
-            default:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               EnckeEOM_RK(orb, S, x_trn, xdot_trn);
-               break;
-         }
-         break;
-      case ORB_N_BODY:
-         switch (S->OrbDOF) {
-            case ORBDOF_COWELL:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
-               break;
-            default:
-               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
-               exit(EXIT_FAILURE);
-         }
-         break;
-      case ORB_THREE_BODY:
-         switch (S->OrbDOF) {
-            case ORBDOF_FIXED:
-               break;
-            case ORBDOF_EULER_HILL:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               EulHillEOM_RK(orb, S, x_trn, xdot_trn);
-               break;
-            case ORBDOF_COWELL:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               CowellEOM(x_trn, xdot_trn, orb->mu, S->mass, S->FrcN);
-               break;
-            default:
-               x_trn    = &x[dim - 6];
-               xdot_trn = &xdot[dim - 6];
-               ThreeBodyEnckeEOM_RK(world, orb, S, x_trn, xdot_trn);
-               break;
-         }
-         break;
-      default:
-         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
-         exit(EXIT_FAILURE);
+   if (S->OrbDOF != ORBDOF_FIXED) {
+      vec3_t rvec, vvec, accel = VEC3_ZERO;
+      x_trn    = &x[dim - 6];
+      xdot_trn = &xdot[dim - 6];
+      rvec     = DBL_TO_VEC3(x_trn);
+      vvec     = DBL_TO_VEC3(&x_trn[3]);
+
+      xdot_trn[0] = x_trn[3];
+      xdot_trn[1] = x_trn[4];
+      xdot_trn[2] = x_trn[5];
+      accel       = SxV(1.0 / S->mass, S->FrcN);
+      if (S->OrbDOF == ORBDOF_EULER_HILL)
+         accel = MxV(orb->CLN, accel);
+
+      S->gravPriAccN = GetPrimaryGravAccel(S->OrbDOF, rvec, vvec, world, orb);
+      VEC3_TO_DBL(&xdot_trn[3], VAddV_Elem(S->gravPriAccN, accel));
    }
 
 #ifdef DEBUG_MODE
@@ -4718,80 +3483,6 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
       exit(EXIT_FAILURE);
    }
 #endif
-}
-/**********************************************************************/
-void Dynamics(struct WorldType *const worlds, struct OrbitType *const orb,
-              struct FormationType *const frm, struct SCType *S)
-{
-   // if (S->Nb > 1) {
-   switch (S->DynMethod) {
-      case DYN_GAUSS_ELIM:
-         KaneNBodyRK4(S);
-         break;
-      case DYN_ORDER_N:
-         OrderNMultiBodyRK4(S);
-         break;
-      default:
-         fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
-         exit(EXIT_FAILURE);
-   }
-   //}
-   // else OneBodyRK4(S);
-
-   struct WorldType *W = &worlds[orb->World];
-   switch (orb->Regime) {
-      case ORB_ZERO:
-      case ORB_FLIGHT:
-         if (orb->PolyhedronGravityEnabled) {
-            PolyhedronCowellRK4(W, orb, S);
-         }
-         else
-            CowellRK4(orb, S);
-         break;
-      case ORB_CENTRAL:
-         switch (S->OrbDOF) {
-            case ORBDOF_FIXED:
-               FixedOrbitPosition(orb, frm, S);
-               break;
-            case ORBDOF_EULER_HILL:
-               EulHillRK4(orb, S);
-               break;
-            case ORBDOF_COWELL:
-               CowellRK4(orb, S);
-               break;
-            default:
-               EnckeRK4(orb, S);
-         }
-         break;
-      case ORB_N_BODY:
-         switch (S->OrbDOF) {
-            case ORBDOF_COWELL:
-               CowellRK4Mrk2(worlds, orb, S);
-               break;
-            default:
-               printf("ERROR: MUST USE COWELLS METHOD!!! \n");
-               exit(1);
-         }
-         break;
-      case ORB_THREE_BODY:
-         switch (S->OrbDOF) {
-            case ORBDOF_FIXED:
-               FixedOrbitPosition(orb, frm, S);
-               break;
-            case ORBDOF_EULER_HILL:
-               EulHillRK4(orb, S);
-               break;
-            case ORBDOF_COWELL:
-               CowellRK4(orb, S);
-               break;
-            default:
-               ThreeBodyEnckeRK4(worlds, orb, S);
-         }
-         break;
-      default:
-         fprintf(stderr, "Unknown Orbit Regime in Dynamics.  Bailing out.\n");
-         exit(EXIT_FAILURE);
-   }
 }
 
 /* #ifdef __cplusplus

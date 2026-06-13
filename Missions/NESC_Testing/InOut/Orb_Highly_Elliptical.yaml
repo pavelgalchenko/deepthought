@@ -1,0 +1,21 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Highly Elliptical
+  Description: Highly Elliptical orbit
+Orbit:
+  Type: CENTRAL
+  World: EARTH
+  J2 Secular Drift: false
+  Init:
+    Method: RV
+    Frame: Inertial
+    Position: [-4315.96774, 960.3562, 5167.26953] #[km]
+    Velocity: [.129091037, -7.491513855, 1.452515654] #[km/sec]
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

@@ -645,7 +645,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
 /*********************************************************************/
 void InitOrbit(struct OrbitType *O, const JDType jd)
 {
-   long i, j;
+   long i;
 
    JDType jd_tt_j2000    = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    const double j2000_tt = JDToDynTime(jd_tt_j2000);
@@ -826,14 +826,28 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
 
             } break;
             case INP_POSVEL: {
+               vec3_t Pos, Vel;
+               char dummy[50] = {'\0'};
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Position"), O->PosN.v);
+                   3, fy_node_by_path_def(node, "/Position"), Pos.v);
                assignYAMLToDoubleArray(
-                   3, fy_node_by_path_def(node, "/Velocity"), O->VelN.v);
-               for (j = 0; j < 3; j++) {
-                  O->PosN.v[j] *= 1.0E3;
-                  O->VelN.v[j] *= 1.0E3;
+                   3, fy_node_by_path_def(node, "/Velocity"), Vel.v);
+
+               if (fy_node_scanf(node, "/Frame %49s", dummy) != 1)
+                  strcpy(dummy, "Inertial");
+               CapitalizeFirst(49, dummy);
+               if (!strcmp(dummy, "Inertial")) {
+                  // do nothing
                }
+               else if (!strcmp(dummy, "Fixed")) {
+                  // rotate from planet fixed to inertial frame;
+                  struct WorldType *W = &World[O->World];
+                  Vel = VAddV_Elem(Vel, VxV(GetWorldWln(jd, W), Pos));
+                  Pos = MTxV(W->CWN, Pos);
+                  Vel = MTxV(W->CWN, Vel);
+               }
+               O->PosN = SxV(1.0e3, Pos);
+               O->VelN = SxV(1.0e3, Vel);
                RV2Eph(O->Epoch, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc,
                       &O->inc, &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR,
                       &O->alpha, &O->rmin, &O->MeanMotion, &O->Period);
@@ -3645,7 +3659,7 @@ void InitSpacecraft(struct SCType *S)
    S->rk_state          = calloc(S->rkparams.base.dim, sizeof(double));
    // TODO: merge into one integrator??? ESPECIALLY with spice
    S->RKIntegrator =
-       GetRungeKutta(S->RKIntegrator.type, 0, 0, S->rkparams.base.dim, 1.0e-11,
+       GetRungeKutta(S->RKIntegrator.type, 0, 0, S->rkparams.base.dim, 1.0e-14,
                      DTSIM, (RKParams *)&S->rkparams, SCOde, NULL);
 #endif
 }
@@ -3776,10 +3790,9 @@ void LoadSun(const ephemType ephem, const JDType jd,
          break;
       case EPH_GMAT421:
       case EPH_GMAT424:
+      case EPH_SPICE:
          W->mu  = 1.3271244001799E20;
          W->rad = 6.95990E8;
-         break;
-      case EPH_SPICE:
          break;
       default:
          // handle the DE lookup cases here
@@ -3927,12 +3940,11 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          break;
       case EPH_GMAT421:
       case EPH_GMAT424:
+      case EPH_SPICE: // spice does not necessarily have mu in it
          for (int i = 0; i < N_PLANETS; ++i) {
             Mu[i]  = Mu_GMAT[i];
             Rad[i] = Rad_GMAT[i];
          }
-         break;
-      case EPH_SPICE:
          break;
       default: {
          // handle the DE lookup cases here
@@ -3945,8 +3957,9 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                sprintf(gm_str, "GM%u", Iw);
 
             Mu[i] = getDEHeader1041Data(jpl_hdr, gm_str) * AUd2ms;
+            if (Iw == EARTH)
+               Mu[i] /= 1.0 + 1.0 / EMRAT;
          }
-         Mu[EARTH] /= 1.0 + 1.0 / EMRAT;
          switch (ephem) {
             case EPH_DE421:
                for (i = 0; i < N_PLANETS; i++)
@@ -4094,23 +4107,6 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
 
          // If we found nothing from spice, go to default
          // If we found *something*, zero out everything else
-
-         for (int j = 0; j < 3; j++) {
-            if (W->ang_data->ang_char == '\0') {
-               W->ang_data[j] = (AngDataType){0};
-               switch (j) {
-                  case 0:
-                     W->ang_data[j].ang_char = 'P';
-                     break;
-                  case 1:
-                     W->ang_data[j].ang_char = 'R';
-                     break;
-                  case 2:
-                     W->ang_data[j].ang_char = 'D';
-                     break;
-               }
-            }
-         }
       }
 
       double grav_r_ref = 0.0;
@@ -4705,37 +4701,9 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                if (SpiceCheckAndGetDbl(m_id, "RADII", 0, dim, &rad))
                   rad *= 1e3;
 
-               WorldID chk_id = m_id;
-               // check if particular moon has at least the core orientation
-               // angles, else use its parent
-               //    (if that doesn't either, use *its* parent and so on)
-               int found = TRUE;
-               do {
-                  M->ang_data[0]  = SpiceGetAngData(chk_id, "PM");
-                  M->ang_data[1]  = SpiceGetAngData(chk_id, "RA");
-                  M->ang_data[2]  = SpiceGetAngData(chk_id, "DEC");
-                  chk_id          = worlds[chk_id].Parent;
-                  found           = TRUE;
-                  found          &= M->ang_data[0].ang_char == 'P';
-                  found          &= M->ang_data[1].ang_char == 'R';
-                  found          &= M->ang_data[2].ang_char == 'D';
-               } while (!found && chk_id >= 0);
-               for (int j = 0; j < 3; j++) {
-                  if (M->ang_data[j].ang_char == '\0') {
-                     M->ang_data[j] = (AngDataType){0};
-                     switch (j) {
-                        case 0:
-                           M->ang_data[j].ang_char = 'P';
-                           break;
-                        case 1:
-                           M->ang_data[j].ang_char = 'R';
-                           break;
-                        case 2:
-                           M->ang_data[j].ang_char = 'D';
-                           break;
-                     }
-                  }
-               }
+               M->ang_data[0] = SpiceGetAngData(m_id, "PM");
+               M->ang_data[1] = SpiceGetAngData(m_id, "RA");
+               M->ang_data[2] = SpiceGetAngData(m_id, "DEC");
             }
 
             M->PriMerAng = 0.0;
@@ -5793,7 +5761,7 @@ void InitSim(int argc, char **argv)
    {
       if (fy_node_scanf(iterNode,
                         "/Name %49s "
-                        "/Orbit %19s",
+                        "/Orbit %119s",
                         SC[Isc].FileName, response) != 2) {
          fprintf(stderr,
                  "Could not find SC's name and/or its orbit. Exiting...\n");
@@ -5810,7 +5778,7 @@ void InitSim(int argc, char **argv)
       }
       if (SC[Isc].RefOrb == -1) {
          fprintf(stderr,
-                 "SC[%ld] named %49s is assigned to invalid orbit %19s. "
+                 "SC[%ld] named %s is assigned to invalid orbit %s. "
                  "Exiting...\n",
                  Isc, SC[Isc].FileName, response);
          exit(EXIT_FAILURE);

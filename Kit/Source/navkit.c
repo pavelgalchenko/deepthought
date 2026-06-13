@@ -250,7 +250,7 @@ mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
    switch (orbCenter) {
       case EARTH: {
          if (EphemOption == EPH_SPICE)
-            SpiceGetCWJ(jd, EARTH, &CWN);
+            CWN = SpiceGetCWJ(jd, EARTH);
          else {
             /* .. Earth rotation is a special case */
             mat3x3_t C_TETE_J2000, C_W_TETE;
@@ -1450,8 +1450,8 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 9; i++)
                      tmpM.flat[i] -= tmpM3.flat[i];
 
-                  MINVxM3(DSM->MOI, 3, tmpM.mat, tmpM2.mat);
-                  tmpM = Adjoint(CRB, tmpM2);
+                  MINVxM3(DSM->MOI, 3, MT(tmpM).rows, tmpM2.rows);
+                  tmpM = Adjoint(CRB, MT(tmpM2));
                   // use tmpM = dwbn_dot/dwbn to calc a few derivs
                   if (Nav->refFrame != FRAME_N) {
                      tmpM2 = V2CrossM(Nav->refOmega);
@@ -1842,17 +1842,16 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   tmpM = V2CrossM(tmpV2);
                   for (i = 0; i < 9; i++)
                      tmpM.flat[i] -= tmpM3.flat[i];
-                  MINVxM3(DSM->MOI, 3, tmpM.mat, tmpM2.mat);
+                  MINVxM3(DSM->MOI, 3, MT(tmpM).rows, tmpM2.rows);
                   // use tmpM2=dwbn_dot/dwbn to calc a few derivs
                   tmpV  = MTxV(CRB, Nav->refOmega);
                   tmpM  = V2CrossM(tmpV);
-                  tmpM3 = MxM(tmpM2, tmpM);
+                  tmpM3 = MTxM(tmpM2, tmpM);
                   CopyVG(tmpAssign[0], tmpM3.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[ROTMAT_STATE], 3, 3);
 
-                  for (i = 0; i < 9; i++)
-                     tmpM3.flat[i] = tmpM2.flat[i] - tmpM.flat[i];
+                  tmpM3 = MSubM_Elem(MT(tmpM2), tmpM);
                   CopyVG(tmpAssign[0], tmpM3.flat, 9);
                   subMatAdd(jacobian, tmpAssign, rowInd,
                             Nav->navInd[OMEGA_STATE], 3, 3);
@@ -2139,7 +2138,8 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   for (i = 0; i < 9; i++)
                      tmpM.flat[i] -= tmpM3.flat[i];
 
-                  MINVxM3(DSM->MOI, 3, tmpM.mat, tmpM2.mat);
+                  MINVxM3(DSM->MOI, 3, MT(tmpM).rows, tmpM2.rows);
+                  tmpM2 = MT(tmpM2);
                   // MINV3(DSM->MOI, tmpM3);
                   // MxM(tmpM3, tmpM, tmpM2);
                   CopyVG(tmpAssign[0], tmpM2.flat, 9);
@@ -2805,7 +2805,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
 
             if (EphemOption == 3) {
                JDType jd = ccsds2jd(*cur_ccsds);
-               SpiceGetCWJ(jd, EARTH, &CWN);
+               CWN       = SpiceGetCWJ(jd, EARTH);
             }
             else
                CWN = NavGetWorldCWN(orbCenter, Nav->Date);
@@ -3029,9 +3029,7 @@ void CalcInnovation(const enum SensorType type,
                                 .z = meas_est[2],
                                 .s = meas_est[3]};
          vec3_t inn_v        = Q2AngleVec(QxQT(q_data, q_est));
-         innovation[0]       = inn_v.x;
-         innovation[1]       = inn_v.y;
-         innovation[2]       = inn_v.z;
+         VEC3_TO_DBL(innovation, inn_v);
       } break;
       default:
          for (int i = 0; i < meas->errDim; i++)

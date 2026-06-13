@@ -45,7 +45,7 @@ void AccelerometerModel(struct OrbitType *orb, struct SCType *S)
       A = &S->Accel[Ia];
 
       for (int i = 0; i < 3; i++)
-         A->AccumAccN.v[i] += S->AccN.v[i] * DTSIM;
+         A->AccumAccN.v[i] += (S->AccN.v[i] - S->gravPertAccN.v[i]) * DTSIM;
       A->SampleCounter++;
       if (A->SampleCounter >= A->MaxCounter) {
          A->SampleCounter = 0;
@@ -437,11 +437,12 @@ void GpsModel(struct WorldType *const worlds, struct OrbitType *const orb,
             GPS->VelW.v[0] -= -W_w * PosW.v[1];
             GPS->VelW.v[1] -= W_w * PosW.v[0];
 
-            MagPosW  = MAGV(GPS->PosW);
-            GPS->Lng = atan2(GPS->PosW.y, GPS->PosW.x);
-            GPS->Lat = asin(GPS->PosW.z / MagPosW);
-            GPS->Alt = MagPosW - worlds[EARTH].rad;
-            ECEFToWGS84(GPS->PosW, &GPS->WgsLat, &GPS->WgsLng, &GPS->WgsAlt);
+            MagPosW    = MAGV(GPS->PosW);
+            GPS->Lng   = atan2(GPS->PosW.y, GPS->PosW.x);
+            GPS->Lat   = asin(GPS->PosW.z / MagPosW);
+            GPS->Alt   = MagPosW - worlds[EARTH].rad;
+            vec3_t lla = ECEFToWGS84(GPS->PosW);
+            DEAL_VEC3(lla, GPS->WgsLat, GPS->WgsLng, GPS->WgsAlt);
 
             S->AC.GPS[Ig].Rollover = GPS->Rollover;
             S->AC.GPS[Ig].Week     = GPS->Week;

@@ -201,16 +201,12 @@ void RKStateToS(struct OrbitType *const orb, double *x_rk, struct SCType *S);
 void SToRKState(const struct OrbitType *const orb, struct SCType *S,
                 double *x_rk);
 
-void GravPertForceRK4(struct WorldType *const worlds,
-                      struct OrbitType *const orbs, struct SCType *S,
-                      double u[6], vec3_t *FrcN, double RKFdt);
 __attribute__((const)) vec3_t ThirdBodyGravForce(vec3_t p, vec3_t s, double mu,
-                                               double mass);
+                                                 double mass);
 void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
                   vec3_t *trgtPosN, vec3_t *trgtPosH, double *trgtPriMerAng,
                   mat3x3_t *trgtCNH);
-long SimStep_New(void);
-__attribute__((deprecated)) long SimStep_Old(void);
+long SimStep(void);
 void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);
 __attribute__((pure)) ephemType GetEphemType(const char *s);
@@ -250,11 +246,13 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
 void BodyStatesToNodeStates(struct SCType *S);
 void AddSCContactFrcTrq(struct SCType *S);
 void PartitionForces(struct SCType *S);
+__attribute__((pure)) vec3_t GetPrimaryGravAccel(const long OrbDOF, vec3_t rvec,
+                                                 vec3_t vvec,
+                                                 struct WorldType *world,
+                                                 struct OrbitType *orb);
 void SCOde(RKIndType t, double *x, RKParams *const params, double *xdot);
 void FixedOrbitPosition(struct OrbitType *orb, struct FormationType *const frm,
                         struct SCType *S);
-void Dynamics(struct WorldType *const worlds, struct OrbitType *const orbs,
-              struct FormationType *const frm, struct SCType *S);
 void Cleanup(void);
 void FindInterBodyDCMs(struct SCType *S);
 void FindPathVectors(struct SCType *S);
@@ -313,7 +311,8 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                       struct WorldType *const worlds);
 /* Updates minor body locations using two-body methods */
 long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
-                       struct WorldType *const worlds, const mat3x3_t earth_CNH);
+                       struct WorldType *const worlds,
+                       const mat3x3_t earth_CNH);
 /* Updates all (non Earth) planertary moon locations using two-body methods */
 long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                          struct WorldType *const worlds,

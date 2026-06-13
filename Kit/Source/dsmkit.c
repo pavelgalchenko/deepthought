@@ -214,9 +214,6 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
       }
    }
    else if (Nav->NavigationActive == FALSE && AC->Ncss != 0) {
-
-      magvec3_t usvb;
-
       mat3x3_t AtA = MAT3X3_ZERO;
       vec3_t Atb;
       mat3x3_t AtAi;
@@ -248,21 +245,18 @@ struct DSMMeasListType *DSM_CssProcessing(struct AcType *const AC,
          AC->SunValid = TRUE;
          AtAi         = MINV3(AtA);
          AC->svb      = MxV(AtAi, Atb);
-         usvb         = UNITV(AC->svb);
-         AC->svb      = usvb.v;
+         AC->svb      = UNITV(AC->svb).v;
       }
       else if (Nvalid == 2) {
          AC->SunValid = TRUE;
          for (i = 0; i < 3; i++)
             AC->svb.v[i] = b[0] * A[0][i] + b[1] * A[1][i];
-         usvb    = UNITV(AC->svb);
-         AC->svb = usvb.v;
+         AC->svb = UNITV(AC->svb).v;
       }
       else if (Nvalid == 1) {
          AC->SunValid = TRUE;
          AC->svb      = Atb;
-         usvb         = UNITV(AC->svb);
-         AC->svb      = usvb.v;
+         AC->svb      = UNITV(AC->svb).v;
       }
       else {
          AC->SunValid = FALSE;

@@ -12,6 +12,7 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "spicekit.h"
+#include "42constants.h"
 #include "dcmkit.h"
 #include "defineskit.h"
 #include "iokit.h"
@@ -52,9 +53,10 @@ SpiceInt WorldID2NAIFID(WorldID w_id)
 }
 /**********************************************************************/
 static once_flag iau_frame_init = ONCE_FLAG_INIT;
-static char iau_frame_list[NMAJORWORLD][SPICE_FRM_STR_BUFF_SIZE] = {{'\0'}};
-void init_iau_frame()
+static char fixed_frame_list[NMAJORWORLD][SPICE_FRM_STR_BUFF_SIZE] = {{'\0'}};
+void init_fixed_frames()
 {
+   long usingITRF93 = SPICEFALSE;
    for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
       char frame_name[32] = {'\0'};
       WorldID id          = Iw;
@@ -62,10 +64,22 @@ void init_iau_frame()
       while (!found) {
          if (id == -1) {
             fprintf(stderr,
-                    "Unable to find IAU_frame for WorldID %i or any of its "
+                    "Unable to find a fixed frame for WorldID %i or any of its "
                     "parents. Exiting...\n",
                     Iw);
             exit(EXIT_FAILURE);
+         }
+         // Check if we have ITRF93, use it if we do
+         if (id == EARTH) {
+            strcpy(frame_name, "ITRF93");
+            namfrm_c(frame_name, &found);
+            if (found) {
+               if (usingITRF93 == SPICEFALSE)
+                  usingITRF93 = SPICETRUE;
+               fprintf(stdout, "In Spice, using ITRF93 frame for Earth "
+                               "instead of IAU_EARTH.\n");
+               break;
+            }
          }
          strcpy(frame_name, "IAU_");
          const char *world_name = WorldID2String(id);
@@ -73,18 +87,19 @@ void init_iau_frame()
          namfrm_c(frame_name, &found);
          id = GetWorldParent(id);
       }
-      strcpy(iau_frame_list[Iw], frame_name);
+      strcpy(fixed_frame_list[Iw], frame_name);
    }
 }
-void WorldID2IAUFrame(WorldID w_id, char iau_frame[SPICE_FRM_STR_BUFF_SIZE])
+void WorldID2FixedFrame(WorldID w_id, char iau_frame[SPICE_FRM_STR_BUFF_SIZE])
 {
    if (w_id >= NMAJORWORLD) {
-      fprintf(stderr, "WorldID2IAUFrame() is not configured to handle the user "
-                      "configured minor bodies. Exiting...\n");
+      fprintf(stderr,
+              "WorldID2FixedFrame() is not configured to handle the user "
+              "configured minor bodies. Exiting...\n");
       exit(EXIT_FAILURE);
    }
-   call_once(&iau_frame_init, init_iau_frame);
-   strcpy(iau_frame, iau_frame_list[w_id]);
+   call_once(&iau_frame_init, init_fixed_frames);
+   strcpy(iau_frame, fixed_frame_list[w_id]);
 }
 /**********************************************************************/
 /* Does not modify vals if it is not foudn                            */
@@ -126,71 +141,44 @@ int SpiceCheckAndGetDbl(const WorldID Iw, ConstSpiceChar *item, SpiceInt start,
 /**********************************************************************/
 /* Compute the fixed frame orientaion of 'world' relative to the      */
 /* Ecliptic J2000 frame as CWJ                                        */
-static SpiceBoolean _frame_found(WorldID world) __attribute__((const));
-static SpiceBoolean _frame_found(WorldID world)
+mat3x3_t SpiceGetCWH(const JDType jd_epoch, const WorldID world)
 {
-   static int frm_found[NMAJORWORLD] = {-1};
-   if (frm_found[0] == -1) {
-      SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
-      for (WorldID i = SOL; i < NMAJORWORLD; i++) {
-         WorldID2IAUFrame(i, frm_name);
-         int found = 0;
-         namfrm_c(frm_name, &found);
-         frm_found[i] = (found != 0) ? SPICETRUE : SPICEFALSE;
-      }
-   }
-   return frm_found[world];
-}
+   mat3x3_t CWH;
+   SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
+   WorldID2FixedFrame(world, frm_name);
 
-int SpiceGetCWH(const JDType jd_epoch, const WorldID world, mat3x3_t *CWH)
-{
-   const SpiceBoolean found = _frame_found(world);
-   if (found) {
-      SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
-      WorldID2IAUFrame(world, frm_name);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_epoch);
+   pxform_c("ECLIPJ2000", frm_name, JDToSeconds(jd_tdb_j2000), CWH.mat);
 
-      JDType jd_tdb_j2000 =
-          JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
-      pxform_c("ECLIPJ2000", frm_name, JDToSeconds(jd_tdb_j2000), CWH->mat);
-   }
-
-   return found;
+   return CWH;
 }
 /**********************************************************************/
 /* Compute the fixed frame orientaion of 'world' relative to the      */
 /* J2000 frame as CWN                                                 */
-int SpiceGetCWJ(const JDType jd_epoch, const WorldID world, mat3x3_t *CWJ)
+mat3x3_t SpiceGetCWJ(const JDType jd_epoch, const WorldID world)
 {
-   const SpiceBoolean found = _frame_found(world);
-   if (found) {
-      SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
-      WorldID2IAUFrame(world, frm_name);
+   mat3x3_t CWJ;
+   SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
+   WorldID2FixedFrame(world, frm_name);
 
-      JDType jd_tdb_j2000 =
-          JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
-      pxform_c("J2000", frm_name, JDToSeconds(jd_tdb_j2000), CWJ->mat);
-   }
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_epoch);
+   pxform_c("J2000", frm_name, JDToSeconds(jd_tdb_j2000), CWJ.mat);
 
-   return found;
+   return CWJ;
 }
 /**********************************************************************/
-int SpiceGetCWorld(const WorldID from, const WorldID to, const JDType jd_epoch,
-                   mat3x3_t *C)
+mat3x3_t SpiceGetCWorld(const WorldID from, const WorldID to,
+                        const JDType jd_epoch)
 {
-   const SpiceBoolean found_v[2] = {_frame_found(from), _frame_found(to)};
-   const SpiceBoolean found      = all_int(2, found_v);
+   mat3x3_t C;
+   SpiceChar from_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'},
+             to_name[SPICE_FRM_STR_BUFF_SIZE]   = {'\0'};
+   WorldID2FixedFrame(from, from_name);
+   WorldID2FixedFrame(to, to_name);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_epoch);
+   pxform_c(from_name, to_name, JDToSeconds(jd_tdb_j2000), C.mat);
 
-   if (found) {
-      SpiceChar from_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'},
-                to_name[SPICE_FRM_STR_BUFF_SIZE]   = {'\0'};
-      WorldID2IAUFrame(from, from_name);
-      WorldID2IAUFrame(to, to_name);
-      JDType jd_tdb_j2000 =
-          JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
-      pxform_c(from_name, to_name, JDToSeconds(jd_tdb_j2000), C->mat);
-   }
-
-   return found;
+   return C;
 }
 /**********************************************************************/
 AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
@@ -204,6 +192,7 @@ AngDataType SpiceGetAngData(const WorldID world, ConstSpiceChar *item)
               item);
       exit(EXIT_FAILURE);
    }
+
    ang_data.ang_char = item[0];
 
    SpiceChar chk_str[64] = {'\0'};
@@ -273,22 +262,20 @@ int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
 {
    if (!W->OrientWorld)
       return 1;
-   mat3x3_t CWJ;
+   const mat3x3_t CWJ = SpiceGetCWJ(jd, Iw);
 
-   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   jd = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    if (Iw == EARTH) {
       /* .. Earth rotation is a special case */
-      SpiceGetCWJ(jd, Iw, &W->CWN);
+      W->CWN = CWJ;
       pxform_c("ECLIPJ2000", "J2000", JDToTime(jd), W->CNH.mat);
-      W->qnj = QUAT_EYE;
       W->CNJ = MAT3X3_EYE;
+      W->qnj = QUAT_EYE;
    }
    else {
       W->CNJ = GetWorldCNJ(jd, W->ang_data);
       W->CNH = MxM(W->CNJ, earth_CNH);
-      SpiceGetCWJ(jd, Iw, &CWJ);
       W->CWN = MxMT(CWJ, W->CNJ);
-
       W->qnj = C2Q(W->CNJ);
    }
    W->PriMerAng = GetWorldAng(jd, &W->ang_data[0]);
@@ -320,7 +307,7 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 {
    WorldID Iw, Ip, Im;
 
-   JDType jd_tdb_j2000   = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   JDType jd_tdb_j2000   = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    const double JS       = JDToSeconds(jd_tdb_j2000);
    const double j2000sec = JDToDynTime(jd_tdb_j2000);
 
@@ -335,8 +322,8 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 
    // Read all planets
    for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (worlds[Iw].Exists) {
-         W   = &worlds[Iw];
+      W = &worlds[Iw];
+      if (W->Exists) {
          Eph = &W->eph;
 
          // State of major bodies in Ecliptic J2000 wrt Planet center
@@ -361,11 +348,13 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
    /*   (THIS SHOULD NOT BE NEEDED DUE TO FRAMES IN ABOVE LOOP)   */
    for (Iw = PLUTO; Iw >= SOL && Iw <= PLUTO; Iw--) {
       // WorldID is typically unsigned, so (((0)--) >= SOL) can be true
-      W           = &worlds[Iw];
-      W->eph.PosN = VSubV_Elem(W->eph.PosN, sol->eph.PosN);
-      W->eph.VelN = VSubV_Elem(W->eph.VelN, sol->eph.VelN);
-      W->PosH     = W->eph.PosN;
-      W->VelH     = W->eph.VelN;
+      W = &worlds[Iw];
+      if (W->Exists) {
+         W->eph.PosN = VSubV_Elem(W->eph.PosN, sol->eph.PosN);
+         W->eph.VelN = VSubV_Elem(W->eph.VelN, sol->eph.VelN);
+         W->PosH     = W->eph.PosN;
+         W->VelH     = W->eph.VelN;
+      }
    }
 
    // Read all moons
@@ -373,26 +362,28 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
       struct WorldType *P = &worlds[Ip];
       if (P->Exists) {
          for (Im = 0; Im < P->Nsat; Im++) {
-            Iw  = P->Sat[Im];
-            W   = &worlds[Iw];
-            Eph = &W->eph;
+            Iw = P->Sat[Im];
+            W  = &worlds[Iw];
+            if (W->Exists) {
+               Eph = &W->eph;
 
-            if (Iw == LUNA) {
-               // State of major bodies in J2000 wrt Planet center
-               spkez_c(WorldID2NAIFID(Iw), JS, "J2000", "NONE",
-                       WorldID2NAIFID(Ip), Nstate, &light_time);
-            }
-            else {
-               // State of major bodies in Ecliptic J2000 wrt Planet center
-               spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
-                       WorldID2NAIFID(Ip), Nstate, &light_time);
-            }
-            Eph->PosN = SxV(1.0e3, DBL_TO_VEC3(Nstate));
-            Eph->VelN = SxV(1.0e3, DBL_TO_VEC3(&Nstate[3]));
+               if (Iw == LUNA) {
+                  // State of major bodies in J2000 wrt Planet center
+                  spkez_c(WorldID2NAIFID(Iw), JS, "J2000", "NONE",
+                          WorldID2NAIFID(Ip), Nstate, &light_time);
+               }
+               else {
+                  // State of major bodies in Ecliptic J2000 wrt Planet center
+                  spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
+                          WorldID2NAIFID(Ip), Nstate, &light_time);
+               }
+               Eph->PosN = SxV(1.0e3, DBL_TO_VEC3(Nstate));
+               Eph->VelN = SxV(1.0e3, DBL_TO_VEC3(&Nstate[3]));
 
-            // Heliocentric pos & vel = inertial pos & vel (m & m/s)
-            W->PosH = VAddV_Elem(Eph->PosN, P->PosH);
-            W->VelH = VAddV_Elem(Eph->VelN, P->VelH);
+               // Heliocentric pos & vel = inertial pos & vel (m & m/s)
+               W->PosH = VAddV_Elem(Eph->PosN, P->PosH);
+               W->VelH = VAddV_Elem(Eph->VelN, P->VelH);
+            }
          }
       }
    }
@@ -404,51 +395,18 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
    }
 
    for (Iw = MERCURY; Iw <= LUNA; Iw++) {
-      Eph = &worlds[Iw].eph;
-      RV2Eph(j2000sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
-             &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp, &Eph->SLR,
-             &Eph->alpha, &Eph->rmin, &Eph->MeanMotion, &Eph->Period);
+      W = &worlds[Iw];
+      if (W->Exists) {
+         Eph = &W->eph;
+         RV2Eph(j2000sec, Eph->mu, Eph->PosN, Eph->VelN, &Eph->SMA, &Eph->ecc,
+                &Eph->inc, &Eph->RAAN, &Eph->ArgP, &Eph->anom, &Eph->tp,
+                &Eph->SLR, &Eph->alpha, &Eph->rmin, &Eph->MeanMotion,
+                &Eph->Period);
+      }
    }
    return (0);
 }
 /**********************************************************************/
-void Rk4SpiceEphems(JDType jd, WorldID trgtWORLD,
-                    struct WorldType *const worlds __attribute__((unused)),
-                    vec3_t *trgtPosN, vec3_t *trgtPosH,
-                    double *trgtPriMerAng __attribute__((unused)),
-                    mat3x3_t *trgtCNH)
-{
-   double Nstate[6], Hstate[6];
-   double light_time;
-   char trgtCNH_STRING[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
-   int i;
-
-   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
-   const double jd_tdb_j2000_sec = JDToTime(jd);
-
-   SpiceInt tgt_world_naif = WorldID2NAIFID(trgtWORLD);
-   WorldID2IAUFrame(trgtWORLD, trgtCNH_STRING);
-
-   if (trgtWORLD == LUNA) {
-      spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "ECLIPJ2000", "NONE",
-              WorldID2NAIFID(SOL), Hstate, &light_time);
-      spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "J2000", "NONE",
-              WorldID2NAIFID(EARTH), Nstate, &light_time);
-      for (i = 0; i < 3; i++) {
-         trgtPosH->v[i] = Hstate[i] * 1e3;
-         trgtPosN->v[i] = Nstate[i] * 1e3;
-      }
-   }
-   else {
-      spkez_c(tgt_world_naif, jd_tdb_j2000_sec, "ECLIPJ2000", "NONE",
-              WorldID2NAIFID(SOL), Nstate, &light_time);
-      for (i = 0; i < 3; i++) {
-         trgtPosH->v[i] = Nstate[i] * 1e3;
-         trgtPosN->v[i] = Nstate[i] * 1e3;
-      }
-   }
-   pxform_c("J2000", trgtCNH_STRING, jd_tdb_j2000_sec, trgtCNH->mat);
-}
 
 #ifndef _ENABLE_SPICE_
 #pragma GCC diagnostic pop

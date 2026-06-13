@@ -215,7 +215,6 @@ DateType DateChangeSystem(const TimeSystem new_system, DateType date)
 /**********************************************************************/
 /*  Year, Month, Day assumed in Gregorian calendar. (Not true < 1582) */
 /*  Ref. Jean Meeus, 'Astronomical Algorithms', QB51.3.E43M42, 1991.  */
-
 double DateToTime(const DateType date)
 {
    long A, B;
@@ -422,6 +421,53 @@ double JD2GMST(JDType jd)
    if (GMST < 0)
       GMST += 1.0;
    return (GMST);
+}
+/**********************************************************************/
+/* Mean longitutde of the ascending node of the Moon's orbit (deg)    */
+__attribute__((const, unused)) static double _earth_nut_Omega(JDType jd);
+static double _earth_nut_Omega(JDType jd)
+{
+   const JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const double TTDB         = JDToDays(jd_tdb_j2000) / JDDAY_PER_CENTURY;
+
+   const double Omega =
+       125.04455501 +
+       TTDB *
+           (-6962890.2665 +
+            TTDB * (7.4722 + TTDB * (0.007702 - 0.00005939 * TTDB))) /
+           3600;
+   return Omega;
+}
+/**********************************************************************/
+/* Obliquity of the ecliptic at J2000 epoch (deg)                     */
+__attribute__((const, unused)) static double _earth_nut_eps(JDType jd);
+static double _earth_nut_eps(JDType jd)
+{
+   const JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const double TTDB         = JDToDays(jd_tdb_j2000) / JDDAY_PER_CENTURY;
+
+   /* .. Mean obliquity of the ecliptic */
+   // TODO: units????
+   const double epsbar =
+       84381.448 + TTDB * (-46.8150 + TTDB * (-0.00059 + 0.001813 * TTDB));
+
+   return epsbar;
+}
+/**********************************************************************/
+double GMAT_JD2GMST(JDType jd)
+{
+   __attribute__((unused)) const JDType jdThresh = JD_RAW(
+       UTC_TIME, J2000_EPOCH, -1095, RATIONAL_RAW(SEC_PER_DAY / 2, 0, 1));
+   const JDType jd_utc_j2000 = JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, jd);
+   const double TUT1         = JDToDays(jd_utc_j2000) / JDDAY_PER_CENTURY;
+
+   /* .. GMST at UT=0H, in degrees */
+   const double th_deg =
+       (1.00965822615e6 +
+        TUT1 * (4.746600277219299e10 + TUT1 * (1.396560 + 9.3e-5 * TUT1))) /
+       3600.0;
+
+   return th_deg;
 }
 /**********************************************************************/
 /* GPS Epoch is 6 Jan 1980 00:00:00.0 UTC                             */

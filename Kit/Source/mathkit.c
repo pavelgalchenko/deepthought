@@ -314,6 +314,103 @@ vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim)
    return x;
 }
 /**********************************************************************/
+mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B)
+{
+   mat3x3_t out  = A;
+   out.flat[0]  += B.flat[0];
+   out.flat[1]  += B.flat[1];
+   out.flat[2]  += B.flat[2];
+   out.flat[3]  += B.flat[3];
+   out.flat[4]  += B.flat[4];
+   out.flat[5]  += B.flat[5];
+   out.flat[6]  += B.flat[6];
+   out.flat[7]  += B.flat[7];
+   out.flat[8]  += B.flat[8];
+   return out;
+}
+/**********************************************************************/
+mat3x3_t MSubM_Elem(const mat3x3_t A, const mat3x3_t B)
+{
+   mat3x3_t out  = A;
+   out.flat[0]  -= B.flat[0];
+   out.flat[1]  -= B.flat[1];
+   out.flat[2]  -= B.flat[2];
+   out.flat[3]  -= B.flat[3];
+   out.flat[4]  -= B.flat[4];
+   out.flat[5]  -= B.flat[5];
+   out.flat[6]  -= B.flat[6];
+   out.flat[7]  -= B.flat[7];
+   out.flat[8]  -= B.flat[8];
+   return out;
+}
+/**********************************************************************/
+mat3x3_t MMulM_Elem(const mat3x3_t A, const mat3x3_t B)
+{
+   mat3x3_t out  = A;
+   out.flat[0]  *= B.flat[0];
+   out.flat[1]  *= B.flat[1];
+   out.flat[2]  *= B.flat[2];
+   out.flat[3]  *= B.flat[3];
+   out.flat[4]  *= B.flat[4];
+   out.flat[5]  *= B.flat[5];
+   out.flat[6]  *= B.flat[6];
+   out.flat[7]  *= B.flat[7];
+   out.flat[8]  *= B.flat[8];
+   return out;
+}
+/**********************************************************************/
+mat3x3_t MDivM_Elem(const mat3x3_t A, const mat3x3_t B)
+{
+   mat3x3_t out  = A;
+   out.flat[0]  /= B.flat[0];
+   out.flat[1]  /= B.flat[1];
+   out.flat[2]  /= B.flat[2];
+   out.flat[3]  /= B.flat[3];
+   out.flat[4]  /= B.flat[4];
+   out.flat[5]  /= B.flat[5];
+   out.flat[6]  /= B.flat[6];
+   out.flat[7]  /= B.flat[7];
+   out.flat[8]  /= B.flat[8];
+   return out;
+}
+/**********************************************************************/
+double MTrace(const mat3x3_t A)
+{
+   return A.mat[0][0] + A.mat[1][1] + A.mat[2][2];
+}
+/**********************************************************************/
+/*              Cofactor of 3x3 matrix                                */
+mat3x3_t cof3x3(const mat3x3_t A)
+{
+   mat3x3_t B;
+   B.mat[0][0] = (A.mat[1][1] * A.mat[2][2] - A.mat[2][1] * A.mat[1][2]);
+   B.mat[0][1] = (A.mat[2][0] * A.mat[1][2] - A.mat[1][0] * A.mat[2][2]);
+   B.mat[0][2] = (A.mat[1][0] * A.mat[2][1] - A.mat[2][0] * A.mat[1][1]);
+   B.mat[1][0] = (A.mat[2][1] * A.mat[0][2] - A.mat[0][1] * A.mat[2][2]);
+   B.mat[1][1] = (A.mat[0][0] * A.mat[2][2] - A.mat[2][0] * A.mat[0][2]);
+   B.mat[1][2] = (A.mat[2][0] * A.mat[0][1] - A.mat[0][0] * A.mat[2][1]);
+   B.mat[2][0] = (A.mat[0][1] * A.mat[1][2] - A.mat[1][1] * A.mat[0][2]);
+   B.mat[2][1] = (A.mat[1][0] * A.mat[0][2] - A.mat[0][0] * A.mat[1][2]);
+   B.mat[2][2] = (A.mat[0][0] * A.mat[1][1] - A.mat[1][0] * A.mat[0][1]);
+   return B;
+}
+/**********************************************************************/
+/* Transpose of Cofactor of 3x3 matrix                                */
+mat3x3_t cofT3x3(const mat3x3_t A)
+{
+   mat3x3_t B;
+   B.mat[0][0] = (A.mat[1][1] * A.mat[2][2] - A.mat[2][1] * A.mat[1][2]);
+   B.mat[0][1] = (A.mat[2][1] * A.mat[0][2] - A.mat[0][1] * A.mat[2][2]);
+   B.mat[0][2] = (A.mat[0][1] * A.mat[1][2] - A.mat[1][1] * A.mat[0][2]);
+   B.mat[1][0] = (A.mat[2][0] * A.mat[1][2] - A.mat[1][0] * A.mat[2][2]);
+   B.mat[1][1] = (A.mat[0][0] * A.mat[2][2] - A.mat[2][0] * A.mat[0][2]);
+   B.mat[1][2] = (A.mat[1][0] * A.mat[0][2] - A.mat[0][0] * A.mat[1][2]);
+   B.mat[2][0] = (A.mat[1][0] * A.mat[2][1] - A.mat[2][0] * A.mat[1][1]);
+   B.mat[2][1] = (A.mat[2][0] * A.mat[0][1] - A.mat[0][0] * A.mat[2][1]);
+   B.mat[2][2] = (A.mat[0][0] * A.mat[1][1] - A.mat[1][0] * A.mat[0][1]);
+   return B;
+}
+/**********************************************************************/
 /*  Scalar times 3x3 Matrix                                           */
 mat3x3_t SxM(const double S, const mat3x3_t A)
 {
@@ -392,26 +489,9 @@ mat3x3_t MINV3(const mat3x3_t A)
           "Attempted inversion of singular matrix in MINV3.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
-   else {
-      B.mat[0][0] =
-          (A.mat[1][1] * A.mat[2][2] - A.mat[2][1] * A.mat[1][2]) / DET;
-      B.mat[0][1] =
-          (A.mat[2][1] * A.mat[0][2] - A.mat[0][1] * A.mat[2][2]) / DET;
-      B.mat[0][2] =
-          (A.mat[0][1] * A.mat[1][2] - A.mat[1][1] * A.mat[0][2]) / DET;
-      B.mat[1][0] =
-          (A.mat[2][0] * A.mat[1][2] - A.mat[1][0] * A.mat[2][2]) / DET;
-      B.mat[1][1] =
-          (A.mat[0][0] * A.mat[2][2] - A.mat[2][0] * A.mat[0][2]) / DET;
-      B.mat[1][2] =
-          (A.mat[1][0] * A.mat[0][2] - A.mat[0][0] * A.mat[1][2]) / DET;
-      B.mat[2][0] =
-          (A.mat[1][0] * A.mat[2][1] - A.mat[2][0] * A.mat[1][1]) / DET;
-      B.mat[2][1] =
-          (A.mat[2][0] * A.mat[0][1] - A.mat[0][0] * A.mat[2][1]) / DET;
-      B.mat[2][2] =
-          (A.mat[0][0] * A.mat[1][1] - A.mat[1][0] * A.mat[0][1]) / DET;
-   }
+   else
+      B = SxM(1.0 / DET, cofT3x3(A));
+
    return B;
 }
 /******************************************************************************/
@@ -508,6 +588,21 @@ mat3x3_t MT(const mat3x3_t A)
 double VoV(const vec3_t A, const vec3_t B)
 {
    return (A.v[0] * B.v[0] + A.v[1] * B.v[1] + A.v[2] * B.v[2]);
+}
+/**********************************************************************/
+mat3x3_t VOuterV(const vec3_t A, const vec3_t B)
+{
+   mat3x3_t out;
+   out.mat[0][0] = A.x * B.x;
+   out.mat[0][1] = A.x * B.y;
+   out.mat[0][2] = A.x * B.z;
+   out.mat[1][0] = A.y * B.x;
+   out.mat[1][1] = A.y * B.y;
+   out.mat[1][2] = A.y * B.z;
+   out.mat[2][0] = A.z * B.x;
+   out.mat[2][1] = A.z * B.y;
+   out.mat[2][2] = A.z * B.z;
+   return out;
 }
 /**********************************************************************/
 /*  Vector Cross Product                                              */
@@ -1930,17 +2025,15 @@ long ProjectPointOntoPoly(vec3_t Point, vec3_t DirVec, vec3_t *Vtx, long Nvtx,
    COEF[1][1] = 0.0;
    COEF[1][2] = 0.0;
    COEF[1][3] = -Axis.x;
-   RHS[1]     = Point.x;
    COEF[2][0] = 0.0;
    COEF[2][1] = 1.0;
    COEF[2][2] = 0.0;
    COEF[2][3] = -Axis.y;
-   RHS[2]     = Point.y;
    COEF[3][0] = 0.0;
    COEF[3][1] = 0.0;
    COEF[3][2] = 1.0;
    COEF[3][3] = -Axis.z;
-   RHS[3]     = Point.z;
+   VEC3_TO_DBL(RHS, Point);
    LINSOLVE(COEF, x, RHS, 4);
    for (i = 0; i < 3; i++)
       ProjPoint->v[i] = x[i];
@@ -2375,9 +2468,11 @@ mat3x3_t AdjointT(const mat3x3_t C, const mat3x3_t A)
    return CTAC;
 }
 /******************************************************************************/
-// Invert 3x3 matrix A and right multiply by 3xm matrix B, returning 3xm matrix
-// C
-void MINVxM3(mat3x3_t A, long m, double B[3][m], double C[3][m])
+/* Invert 3x3 matrix A and right multiply by 3xm matrix B, returning 3xm      */
+/* matrix C.                                                                  */
+/*    Note that the aguments `BT` and `BT` are the transpose of the           */
+/*    relevant matricies.                                                     */
+void MINVxM3(mat3x3_t A, long m, vec3_t BT[m], vec3_t CT[m])
 {
    long I, J, ROW;
    long IPIVOT = 0;
@@ -2385,10 +2480,8 @@ void MINVxM3(mat3x3_t A, long m, double B[3][m], double C[3][m])
    double PIVOT, K;
 
    M = A;
-   for (I = 0; I < 3; I++)
-      for (J = 0; J < 3; J++)
-         for (J = 0; J < m; J++)
-            C[I][J] = B[I][J];
+   for (J = 0; J < m; J++)
+      CT[J] = BT[J];
 
    for (ROW = 0; ROW < 3; ROW++) {
       PIVOT  = M.mat[ROW][ROW];
@@ -2408,16 +2501,16 @@ void MINVxM3(mat3x3_t A, long m, double B[3][m], double C[3][m])
       M.rows[IPIVOT] = M.rows[ROW];
       M.rows[ROW]    = SxV(1.0 / PIVOT, tv);
       for (J = 0; J < m; J++) {
-         double t     = C[IPIVOT][J];
-         C[IPIVOT][J] = C[ROW][J];
-         C[ROW][J]    = t / PIVOT;
+         double t        = CT[J].v[IPIVOT];
+         CT[J].v[IPIVOT] = CT[J].v[ROW];
+         CT[J].v[ROW]    = t / PIVOT;
       }
       for (I = ROW + 1; I < 3; I++) {
          K = M.mat[I][ROW];
          for (J = 3 - 1; J >= ROW; J--)
             M.mat[I][J] -= K * M.mat[ROW][J];
          for (J = 0; J < m; J++)
-            C[I][J] -= K * C[ROW][J];
+            CT[J].v[I] -= K * CT[J].v[ROW];
       }
    }
 
@@ -2428,7 +2521,7 @@ void MINVxM3(mat3x3_t A, long m, double B[3][m], double C[3][m])
          for (J = 0; J < 3; J++)
             M.mat[I][J] -= K * M.mat[ROW][J];
          for (J = 0; J < m; J++)
-            C[I][J] -= K * C[ROW][J];
+            CT[J].v[I] -= K * CT[J].v[ROW];
       }
    }
 }

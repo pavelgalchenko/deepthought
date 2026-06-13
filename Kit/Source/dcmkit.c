@@ -757,9 +757,7 @@ void JointPartials(long Init, long IsSpherical, long RotSeq, long TrnSeq,
    i2--;
    i3--;
 
-   Ds->v[i1] = s.x;
-   Ds->v[i2] = s.y;
-   Ds->v[i3] = s.z;
+   DEAL_VEC3(s, Ds->v[i1], Ds->v[i2], Ds->v[i3]);
 }
 /**********************************************************************/
 vec3_t ADOT2W(long IsSpherical, long Seq, vec3_t ang, vec3_t u)

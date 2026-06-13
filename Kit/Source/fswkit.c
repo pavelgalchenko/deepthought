@@ -104,50 +104,34 @@ void FindSpinnerGains(double J, double It, double Tc, double OrbPer,
 /*  in B frame, find the direction cosine matrix CBA.                 */
 mat3x3_t TRIAD(vec3_t Va, vec3_t Wa, vec3_t Vb, vec3_t Wb)
 {
-   magvec3_t uu, uv, uq, ur, us;
-   vec3_t *const u = &uu.v;
-   vec3_t *const v = &uv.v;
-   vec3_t *const q = &uq.v;
-   vec3_t *const r = &ur.v;
-   vec3_t *const s = &us.v;
-   mat3x3_t Ma, Mb;
-   long i;
+   vec3_t u, v, r, s;
+   mat3x3_t MaT, MbT;
 
-   *u = Va;
-   *v = Wa;
-   *q = *u;
+   u           = Va;
+   v           = Wa;
+   u           = UNITV(u).v;
+   v           = UNITV(v).v;
+   r           = VxV(u, v);
+   r           = UNITV(r).v;
+   s           = VxV(u, r);
+   s           = UNITV(s).v;
+   MaT.rows[0] = u;
+   MaT.rows[1] = r;
+   MaT.rows[2] = s;
 
-   uu = UNITV(*u);
-   uv = UNITV(*v);
-   uq = UNITV(*q);
-   *r = VxV(*u, *v);
-   ur = UNITV(*r);
-   *s = VxV(*q, *r);
-   us = UNITV(*s);
-   for (i = 0; i < 3; i++) {
-      Ma.mat[i][0] = q->v[i];
-      Ma.mat[i][1] = r->v[i];
-      Ma.mat[i][2] = s->v[i];
-   }
+   u           = Vb;
+   v           = Wb;
+   u           = UNITV(u).v;
+   v           = UNITV(v).v;
+   r           = VxV(u, v);
+   r           = UNITV(r).v;
+   s           = VxV(u, r);
+   s           = UNITV(s).v;
+   MbT.rows[0] = u;
+   MbT.rows[1] = r;
+   MbT.rows[2] = s;
 
-   *u = Vb;
-   *v = Wb;
-   *q = *u;
-
-   uu = UNITV(*u);
-   uv = UNITV(*v);
-   uq = UNITV(*q);
-   *r = VxV(*u, *v);
-   ur = UNITV(*r);
-   *s = VxV(*q, *r);
-   us = UNITV(*s);
-   for (i = 0; i < 3; i++) {
-      Mb.mat[i][0] = q->v[i];
-      Mb.mat[i][1] = r->v[i];
-      Mb.mat[i][2] = s->v[i];
-   }
-
-   return MxMT(Mb, Ma);
+   return MTxM(MbT, MaT);
 }
 /**********************************************************************/
 /*                                                                    */
@@ -158,21 +142,28 @@ mat3x3_t TRIAD(vec3_t Va, vec3_t Wa, vec3_t Vb, vec3_t Wb)
 /* routine finds the optimal estimate of q, the quaternion expressing */
 /* the rotation from the reference frame (where Ref's are given) to   */
 /* the body frame (where Meas's are given).                           */
+__attribute__((const)) static double _questfdf(const double lam,
+                                               double pars[3]);
+static double _questfdf(const double lam, double pars[3])
+{
+   const double lam2 = lam * lam;
+   const double f    = pars[0] + pars[1] * lam + pars[2] * lam2 + lam2 * lam2;
+   const double fp   = pars[1] + 2.0 * pars[2] * lam + 4.0 * lam2 * lam;
+   return f / fp;
+}
+/**********************/
 quat_t Quest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas)
 {
-   long i, j, k;
-
-   mat3x3_t B = MAT3X3_ZERO, XX = MAT3X3_ZERO, S, SS;
+   long i;
+   mat3x3_t B = MAT3X3_ZERO, XX = MAT3X3_ZERO, S, SS, wWoutV;
    vec3_t Z = VEC3_ZERO;
    double sigma, kappa, delta;
    double aa, bb, cc, dd;
-   double lam, f0, f1, f2, f, fp, lam2;
-   double mag, alpha, beta, gamma;
-   vec3_t WxV, SZ, X, SSZ;
+   double mag, alpha, beta, gamma, lam;
+   double pars[3], weight[n];
+   vec3_t SZ, X, SSZ, ref[n], meas[n];
 
    /* .. Normalize weights and measurements */
-   double weight[n];
-
    mag = 0.0;
    for (i = 0; i < n; i++) {
       weight[i]  = Weight[i];
@@ -181,48 +172,30 @@ quat_t Quest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas)
    for (i = 0; i < n; i++)
       weight[i] /= mag;
 
-   magvec3_t uref[n], umeas[n];
-
    for (i = 0; i < n; i++) {
-      uref[i].v  = Ref[i];
-      umeas[i].v = Meas[i];
-      uref[i]    = UNITV(uref[i].v);
-      umeas[i]   = UNITV(umeas[i].v);
+      ref[i]  = UNITV(Ref[i]).v;
+      meas[i] = UNITV(Meas[i]).v;
    }
 
-   for (j = 0; j < 3; j++)
-      for (k = 0; k < 3; k++)
-         for (i = 0; i < n; i++)
-            B.mat[j][k] += weight[i] * umeas[i].v.v[j] * uref[i].v.v[k];
-
-   S = B;
-   for (j = 0; j < 3; j++)
-      for (k = 0; k < 3; k++)
-         S.mat[j][k] += B.mat[k][j];
-
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         SS.mat[j][k] = S.mat[j][0] * S.mat[0][k] + S.mat[j][1] * S.mat[1][k] +
-                        S.mat[j][2] * S.mat[2][k];
-      }
-   }
-
+   /* .. Update B with measurements */
    for (i = 0; i < n; i++) {
-      WxV = VxV(umeas[i].v, uref[i].v);
-      for (j = 0; j < 3; j++)
-         Z.v[j] += weight[i] * WxV.v[j];
+      wWoutV = VOuterV(SxV(weight[i], meas[i]), ref[i]);
+      B      = MAddM_Elem(B, wWoutV);
    }
 
-   sigma = B.mat[0][0] + B.mat[1][1] + B.mat[2][2];
+   /* .. Find quaternion */
+   S  = MAddM_Elem(B, MT(B));
+   SS = MxM(S, S);
+
+   Z.x = B.mat[1][2] - B.mat[2][1];
+   Z.y = B.mat[2][0] - B.mat[0][2];
+   Z.z = B.mat[0][1] - B.mat[1][0];
+
+   sigma = MTrace(B); // (1/2)*tr(S)
    kappa = S.mat[1][1] * S.mat[2][2] - S.mat[1][2] * S.mat[2][1] +
            S.mat[0][0] * S.mat[2][2] - S.mat[0][2] * S.mat[2][0] +
            S.mat[0][0] * S.mat[1][1] - S.mat[0][1] * S.mat[1][0];
-   delta = S.mat[0][0] * S.mat[1][1] * S.mat[2][2] +
-           S.mat[0][1] * S.mat[1][2] * S.mat[2][0] +
-           S.mat[1][0] * S.mat[2][1] * S.mat[0][2] -
-           S.mat[0][0] * S.mat[2][1] * S.mat[1][2] -
-           S.mat[0][1] * S.mat[1][0] * S.mat[2][2] -
-           S.mat[0][2] * S.mat[1][1] * S.mat[2][0];
+   delta = det3x3(S);
 
    aa = sigma * sigma - kappa;
 
@@ -235,35 +208,28 @@ quat_t Quest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas)
 
    dd = VoV(Z, SSZ);
 
-   f0 = aa * bb + cc * sigma - dd;
-   f1 = -cc;
-   f2 = -(aa + bb);
+   pars[0] = aa * bb + cc * sigma - dd;
+   pars[1] = -cc;
+   pars[2] = -(aa + bb);
 
-   lam = 1.0;
-   for (i = 0; i < 4;
-        i++) { /* Assumes 4 iterations sufficient for convergence */
-      lam2  = lam * lam;
-      f     = f0 + f1 * lam + f2 * lam2 + lam2 * lam2;
-      fp    = f1 + 2.0 * f2 * lam + 4.0 * lam2 * lam;
-      lam  -= f / fp;
-   }
+   lam = NewtonRaphson(1.0, 1.0e-12, 10, D2R, FALSE, _questfdf, pars);
 
    alpha = lam * lam - sigma * sigma + kappa;
    beta  = lam - sigma;
    gamma = (lam + sigma) * alpha - delta;
 
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         XX.mat[j][k] = beta * S.mat[j][k] + SS.mat[j][k];
-      }
-      XX.mat[j][j] += alpha;
-   }
-
-   X = MxV(XX, Z);
+   XX = SxM(alpha, MAT3X3_EYE);
+   XX = MAddM_Elem(XX, MAddM_Elem(SS, SxM(beta, S)));
+   X  = MxV(XX, Z);
 
    mag = sqrt(VoV(X, X) + gamma * gamma);
 
    quat_t qmr = QUAT_ZERO;
+   for (i = 0; i < 3; i++)
+      qmr.qv.v[i] += X.v[i] / mag;
+   qmr.qs = gamma / mag;
+   qmr    = RECTIFYQ(UNITQ(qmr));
+
    return qmr;
 }
 /**********************************************************************/
@@ -284,36 +250,37 @@ quat_t Quest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas)
 quat_t FilterQuest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas,
                    double dt __attribute__((unused)), double memory, vec3_t wbn)
 {
-   double a[n], rho;
-   long i, j, k;
+   double weight[n], rho;
+   long i;
 
-   mat3x3_t B, S, phi, aVW, phiB;
+   mat3x3_t BT, S, phi, wWoutV, aVW = MAT3X3_ZERO;
    vec3_t U, Z;
-   vec3_t W[n], V[n];
-   double th, sigma, kappa, delta;
+   vec3_t meas[n], ref[n];
+   double th, sigma, kappa, delta, pars[3];
    double aa, bb, cc, dd;
-   double lam, f0, f1, f2, f, fp, lam2;
-   double alpha, beta, gamma, mag;
+   double alpha, beta, gamma, mag, lam;
    vec3_t SZ, X, SSZ;
    mat3x3_t XX, SS;
 
    /*.. Normalize weights and measurements */
    mag = 0.0;
+   for (i = 0; i < n; i++) {
+      weight[i]  = Weight[i];
+      mag       += weight[i];
+   }
    for (i = 0; i < n; i++)
-      mag += Weight[i];
-   for (i = 0; i < n; i++)
-      a[i] = Weight[i] / mag;
+      weight[i] /= mag;
 
    mag = memory;
    for (i = 0; i < n; i++)
-      mag += (1.0 - memory) * a[i];
+      mag += (1.0 - memory) * weight[i];
    rho = memory / mag;
    for (i = 0; i < n; i++)
-      a[i] *= (1.0 - memory) / mag;
+      weight[i] *= (1.0 - memory) / mag;
 
    for (i = 0; i < n; i++) {
-      V[i] = UNITV(Ref[i]).v;
-      W[i] = UNITV(Meas[i]).v;
+      ref[i]  = UNITV(Ref[i]).v;
+      meas[i] = UNITV(Meas[i]).v;
    }
 
    /* .. Build transition matrix, phi */
@@ -322,48 +289,33 @@ quat_t FilterQuest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas,
    U            = uv.v;
    phi          = SimpRot(U, th);
 
-   /* .. Debug this.  Where does B come from? */
-   phiB = MxM(phi, B);
-
    /* .. Update B with measurements */
-   aVW = MAT3X3_ZERO;
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         aVW.mat[j][k] = 0.0;
-         for (i = 0; i < n; i++)
-            aVW.mat[j][k] += a[i] * V[i].v[k] * W[i].v[j];
-      }
+   for (i = 0; i < n; i++) {
+      wWoutV = VOuterV(SxV(weight[i], meas[i]), ref[i]);
+      aVW    = MAddM_Elem(aVW, wWoutV);
    }
 
-   for (j = 0; j < 3; j++)
-      for (k = 0; k < 3; k++)
-         B.mat[j][k] = rho * phiB.mat[j][k] + aVW.mat[j][k];
+   mat3x3_t eyemrhophi;
+   for (i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++)
+         eyemrhophi.mat[i][j] = -rho * phi.mat[i][j];
+      eyemrhophi.mat[i][i] += 1.0;
+   }
+   MINVxM3(eyemrhophi, 3, MT(aVW).rows, BT.rows);
 
-   S = B;
    /* .. Find quaternion */
-   for (j = 0; j < 3; j++)
-      for (k = 0; k < 3; k++)
-         S.mat[j][k] += B.mat[k][j];
+   S  = MAddM_Elem(BT, MT(BT));
+   SS = MxM(S, S);
 
-   for (j = 0; j < 3; j++)
-      for (k = 0; k < 3; k++)
-         SS.mat[j][k] = S.mat[j][0] * S.mat[0][k] + S.mat[j][1] * S.mat[1][k] +
-                        S.mat[j][2] * S.mat[2][k];
+   Z.x = BT.mat[2][1] - BT.mat[1][2];
+   Z.y = BT.mat[0][2] - BT.mat[2][0];
+   Z.z = BT.mat[1][0] - BT.mat[0][1];
 
-   Z.x = B.mat[1][2] - B.mat[2][1];
-   Z.y = B.mat[2][0] - B.mat[0][2];
-   Z.z = B.mat[0][1] - B.mat[1][0];
-
-   sigma = B.mat[0][0] + B.mat[1][1] + B.mat[2][2];
+   sigma = MTrace(BT); // (1/2)*tr(S)
    kappa = S.mat[1][1] * S.mat[2][2] - S.mat[1][2] * S.mat[2][1] +
            S.mat[0][0] * S.mat[2][2] - S.mat[0][2] * S.mat[2][0] +
            S.mat[0][0] * S.mat[1][1] - S.mat[0][1] * S.mat[1][0];
-   delta = S.mat[0][0] * S.mat[1][1] * S.mat[2][2] +
-           S.mat[0][1] * S.mat[1][2] * S.mat[2][0] +
-           S.mat[1][0] * S.mat[2][1] * S.mat[0][2] -
-           S.mat[0][0] * S.mat[2][1] * S.mat[1][2] -
-           S.mat[0][1] * S.mat[1][0] * S.mat[2][2] -
-           S.mat[0][2] * S.mat[1][1] * S.mat[2][0];
+   delta = det3x3(S);
 
    aa = sigma * sigma - kappa;
 
@@ -376,29 +328,19 @@ quat_t FilterQuest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas,
 
    dd = VoV(Z, SSZ);
 
-   f0 = aa * bb + cc * sigma - dd;
-   f1 = -cc;
-   f2 = -(aa + bb);
+   pars[0] = aa * bb + cc * sigma - dd;
+   pars[1] = -cc;
+   pars[2] = -(aa + bb);
 
-   lam = 1.0;
-   for (i = 0; i < 4;
-        i++) { /* Assumes 4 iterations sufficient for convergence */
-      lam2  = lam * lam;
-      f     = f0 + f1 * lam + f2 * lam2 + lam2 * lam2;
-      fp    = f1 + 2.0 * f2 * lam + 4.0 * lam2 * lam;
-      lam  -= f / fp;
-   }
+   lam = NewtonRaphson(1.0, 1.0e-12, 10, D2R, FALSE, _questfdf, pars);
 
    alpha = lam * lam - sigma * sigma + kappa;
    beta  = lam - sigma;
    gamma = (lam + sigma) * alpha - delta;
 
-   for (j = 0; j < 3; j++) {
-      for (k = 0; k < 3; k++) {
-         XX.mat[j][k] = beta * S.mat[j][k] + SS.mat[j][k];
-      }
-      XX.mat[j][j] += alpha;
-   }
+   XX = SxM(alpha, MAT3X3_EYE);
+   XX = MAddM_Elem(XX, MAddM_Elem(SS, SxM(beta, S)));
+   X  = MxV(XX, Z);
 
    X = MxV(XX, Z);
 
@@ -408,6 +350,7 @@ quat_t FilterQuest(long n, double *Weight, vec3_t *Ref, vec3_t *Meas,
    for (i = 0; i < 3; i++)
       qmr.qv.v[i] += X.v[i] / mag;
    qmr.qs = gamma / mag;
+   qmr    = RECTIFYQ(UNITQ(qmr));
 
    return qmr;
 }
@@ -522,9 +465,8 @@ vec3_t CollisionAvoidanceLaw(vec3_t x, vec3_t v, vec3_t xg, vec3_t xa,
 {
    vec3_t a;
    double Kx, Kv, cosa, sina, dox, magvcmd, maga;
-   vec3_t yhat, xga, lam1, lam2, vcmd;
-   magvec3_t ud, uxhat, uzhat;
-   vec3_t *const d    = &ud.v;
+   vec3_t d, yhat, xga, lam1, lam2, vcmd;
+   magvec3_t uxhat, uzhat;
    vec3_t *const xhat = &uxhat.v;
    double *const magx = &uxhat.m;
    vec3_t *const zhat = &uzhat.v;
@@ -535,13 +477,13 @@ vec3_t CollisionAvoidanceLaw(vec3_t x, vec3_t v, vec3_t xg, vec3_t xa,
    Kv = 2.0 * zc * wc;
 
    for (i = 0; i < 3; i++) {
-      d->v[i]    = xg.v[i] - x.v[i];
+      d.v[i]     = xg.v[i] - x.v[i];
       xhat->v[i] = x.v[i] - xa.v[i];
       xga.v[i]   = xg.v[i] - xa.v[i];
    }
-   ud    = UNITV(*d);
+   d     = UNITV(d).v;
    uxhat = UNITV(*xhat);
-   dox   = VoV(*d, *xhat);
+   dox   = VoV(d, *xhat);
    *zhat = VxV(xga, *xhat);
    uzhat = UNITV(*zhat);
    if (*magz < 1.0E-3) {
@@ -736,10 +678,10 @@ vec3_t VectorRampCoastGlide(vec3_t Xvec, vec3_t Vvec, double w0, double amax,
 /* It is positive toward the positive orbit normal.                   */
 double SolarBeta(vec3_t svn, vec3_t psn, vec3_t vsn)
 {
-   magvec3_t h;
-   h.v = VxV(psn, vsn);
-   h   = UNITV(h.v);
-   return (asin(VoV(svn, h.v)));
+   vec3_t h;
+   h = VxV(psn, vsn);
+   h = UNITV(h).v;
+   return (asin(VoV(svn, h)));
 }
 /**********************************************************************/
 /* These functions implement linear programming for thruster          */

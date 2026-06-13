@@ -85,11 +85,7 @@ void Idle(void)
       if (TimerHasExpired) {
          TimerHasExpired = 0;
          glutTimerFunc(TimerDuration, TimerHandler, 0);
-#ifdef OLD_INTEGRATOR
-         Done = SimStep_Old();
-#else
-         Done = SimStep_New();
-#endif
+         Done = SimStep();
          if (GLOutFlag) {
             glutSetWindow(CamWindow);
             CamRenderExec();
@@ -712,11 +708,9 @@ void OrreryMouseButtonHandler(int Button, int State, int x, int y)
                   Iw = LagSys[Is].Body1;
                   W  = &World[Iw];
                   for (Ip = 0; Ip < 5; Ip++) {
-                     LP      = &LagSys[Is].LP[Ip];
-                     LPrh    = MTxV(W->CNH, LP->PosN);
-                     LPrh.x += W->PosH.x;
-                     LPrh.y += W->PosH.y;
-                     LPrh.z += W->PosH.z;
+                     LP   = &LagSys[Is].LP[Ip];
+                     LPrh = MTxV(W->CNH, LP->PosN);
+                     LPrh = VAddV_Elem(LPrh, W->PosH);
                      for (i = 0; i < 3; i++)
                         rwh.v[i] = LPrh.v[i] - World[O->World].PosH.v[i];
                      rwn = MxV(O->CNH, rwh);

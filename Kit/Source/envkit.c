@@ -810,13 +810,15 @@ pair_mat3x3_t HiFiEarthPrecNute(JDType jd_tt_j2000)
 /**********************************************************************/
 /* http://en.wikipedia.org/wiki/Geodetic_system#Geodetic_versus_geocentric_latitude
  */
-vec3_t WGS84ToECEF(double glat, double glong, double alt)
+vec3_t WGS84ToECEF(const vec3_t lla)
 {
+   double glat, glong, alt;
+   DEAL_VEC3(lla, glat, glong, alt);
+
    double a  = 6378137.0;
    double f  = 1.0 / 298.257222101;
    double e2 = f * (2.0 - f);
-   double X;
-   double CosLat, SinLat, CosLng, SinLng;
+   double X, CosLat, SinLat, CosLng, SinLng;
 
    CosLat = cos(glat);
    SinLat = sin(glat);
@@ -831,13 +833,15 @@ vec3_t WGS84ToECEF(double glat, double glong, double alt)
    return p;
 }
 /**********************************************************************/
-void ECEFToWGS84(vec3_t p, double *glat, double *glong, double *alt)
+/* Returns a vec3_t in the order glat, glong, alt                     */
+vec3_t ECEFToWGS84(const vec3_t p)
 {
-   double a   = 6378137.0;
-   double f   = 1.0 / 298.257222101;
-   double b   = a * (1.0 - f);
-   double e2  = f * (2.0 - f);
-   double ep2 = f * (2.0 - f) / (1.0 - f) / (1.0 - f);
+   double glat, glong, alt;
+   const double a   = 6378137.0;
+   const double f   = 1.0 / 298.257222101;
+   const double b   = a * (1.0 - f);
+   const double e2  = f * (2.0 - f);
+   const double ep2 = f * (2.0 - f) / (1.0 - f) / (1.0 - f);
    double r, E2, F, G, C, S, P, Q, r0, U, V, Z0;
 
    double OneMinusE2, Z1, SpolyG, Qpoly;
@@ -852,7 +856,7 @@ void ECEFToWGS84(vec3_t p, double *glat, double *glong, double *alt)
 
    F = 54.0 * Z1 * Z1;
 
-   double zz = p.z * p.z;
+   const double zz = p.z * p.z;
 
    G = r * r + OneMinusE2 * zz - e2 * E2;
 
@@ -881,14 +885,15 @@ void ECEFToWGS84(vec3_t p, double *glat, double *glong, double *alt)
    Z1 = b * b / a / V;
    Z0 = Z1 * p.z;
 
-   *alt   = U * (1.0 - Z1);
-   *glat  = atan((p.z + ep2 * Z0) / r);
-   *glong = atan2(p.y, p.x);
+   alt   = U * (1.0 - Z1);
+   glat  = atan((p.z + ep2 * Z0) / r);
+   glong = atan2(p.y, p.x);
+   return (vec3_t){.x = glat, .y = glong, .z = alt};
 }
 /**********************************************************************/
 /* Ref Werner and Scheeres, "Exterior Gravitation of a Polyhedron ..." */
 /* Returns 1 if PosN is outside polyhedron, 0 if inside */
-long PolyhedronGravAcc(struct GeomType *G, double Density, vec3_t PosN,
+long PolyhedronGravAcc(struct GeomType *G, double Density, const vec3_t PosN,
                        mat3x3_t CWN, vec3_t *const GravAccN)
 {
    struct EdgeType *E;
@@ -952,7 +957,7 @@ long PolyhedronGravAcc(struct GeomType *G, double Density, vec3_t PosN,
    *GravAccN = MTxV(CWN, GravAccW);
 
    /* SumWf should be zero if Pos Is Outside, or -4*pi if Pos is Inside */
-   PosIsOutside = (SumWf > -6.28 ? 1 : 0);
+   PosIsOutside = (SumWf > -TWOPI ? 1 : 0);
 
    return (PosIsOutside);
 }
@@ -1031,7 +1036,7 @@ long PolyhedronGravGrad(struct GeomType *G, double Density, vec3_t PosN,
    return (PosIsOutside);
 }
 /**********************************************************************/
-vec3_t GravGradTimesInertia(mat3x3_t g, mat3x3_t I)
+vec3_t GravGradTimesInertia(const mat3x3_t g, const mat3x3_t I)
 {
    vec3_t GGxI;
    GGxI.v[0] = (I.mat[2][2] - I.mat[1][1]) * g.mat[1][2] +

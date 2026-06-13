@@ -141,8 +141,10 @@ struct BodyType {
    vec3_t SCContactTrq;  /* expressed in B */
    vec3_t FrcN;          /* expressed in N */
    vec3_t SCContactFrcN; /* expressed in N */
-   vec3_t alpha;         /* Angular acceleration of B wrt N, expressed in B */
-   vec3_t accel;         /* Linear acceleration of B wrt N, expressed in N */
+   vec3_t gravPriAccN;  /* Acceleration from primary 1/r2 gravitational force */
+   vec3_t gravPertAccN; /* Acceleration from other primary grav forces */
+   vec3_t alpha;        /* Angular acceleration of B wrt N, expressed in B */
+   vec3_t accel;        /* Linear acceleration of B wrt N, expressed in N */
    char GeomFileName[40];
    char NodeFileName[40];
    char FlexFileName[40];
@@ -855,13 +857,15 @@ struct SCType {
    vec3_t FrcN;  /* Force, N, expressed in N */
    vec3_t AccN;  /* Acceleration due to external force, for accelerometer
                        model */
-   vec3_t svn;   /* Sun-pointing unit vector, expressed in N */
-   vec3_t svb;   /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
-   vec3_t bvn;   /* Magfield, Tesla, expressed in N */
-   vec3_t bvb;   /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
-   vec3_t Hvn;   /* Total SC angular momentum, Nms, expressed in N */
-   vec3_t Hvb;   /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
-                       [~=~] */
+   vec3_t gravPriAccN;  /* Acceleration from primary 1/r2 gravitational force */
+   vec3_t gravPertAccN; /* Acceleration from other primary grav forces */
+   vec3_t svn;          /* Sun-pointing unit vector, expressed in N */
+   vec3_t svb; /* Sun-pointing unit vector, expressed in SC.B[0] [~=~] */
+   vec3_t bvn; /* Magfield, Tesla, expressed in N */
+   vec3_t bvb; /* Magfield [[Tesla]], expressed in SC.B[0] [~=~] */
+   vec3_t Hvn; /* Total SC angular momentum, Nms, expressed in N */
+   vec3_t Hvb; /* Total SC angular momentum [[Nms]], expressed in SC.B[0]
+                     [~=~] */
    long Eclipse;
    double AtmoDensity;
    double DragCoef;

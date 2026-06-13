@@ -7,7 +7,7 @@
 leapsecond_kernels="naif0012.tls"
 planet_kernels="a_old_versions/de421.bsp"
 satellite_kernels="a_old_versions/mar097.bsp a_old_versions/jup344.bsp jup365.bsp sat415.bsp sat441.bsp a_old_versions/ura111l.bsp nep097.bsp a_old_versions/nep101.bsp plu060.bsp"
-planetary_constants_kernels="pck00011.tpc Gravity.tpc"
+planetary_constants_kernels="earth_1962_250826_2125_combined.bpc pck00011.tpc"
 ###############################################################################
 ####################### END SET DESIRED GENERIC KERNELS #######################
 ###############################################################################

@@ -28,7 +28,6 @@ void Environment(JDType jd, struct WorldType *const worlds,
                  struct OrbitType *const orb, struct SCType *S)
 {
    struct WorldType *P;
-   double Alt;
    vec3_t PosW;
 #ifdef _RADBELT_
    int NumEnergies         = 5;
@@ -79,9 +78,9 @@ void Environment(JDType jd, struct WorldType *const worlds,
       }
       /* else USER_ATMO: Flux10p7, GeomagIndex read from Inp_Sim.txt */
 
-      PosW = MxV(worlds[EARTH].CWN, S->PosN);
-      Alt  = MAGV(PosW) - worlds[EARTH].rad;
-      if (Alt < 1000.0E3) { /* What is max alt of MSISE00 validity? */
+      PosW       = MxV(worlds[EARTH].CWN, S->PosN);
+      vec3_t lla = ECEFToWGS84(PosW);
+      if (lla.z < 1000.0E3) { /* What is max alt of MSISE00 validity? */
          S->AtmoDensity = NRLMSISE00(date_tt, PosW, Flux10p7, GeomagIndex);
       }
       else

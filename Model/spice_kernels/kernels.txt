@@ -10,7 +10,7 @@ PATH_SYMBOLS = ( 'LSK', 'SPK_PLANETS', 'SPK_SATS', 'PCK' )
 
 KERNELS_TO_LOAD = (
                     '$LSK/naif0012.tls',
-                    '$SPK_PLANETS/a_old_versions/de421.bsp',
+                    '$SPK_PLANETS/de440.bsp',
                     '$SPK_SATS/a_old_versions/mar097.bsp',
                     '$SPK_SATS/a_old_versions/jup344.bsp',
                     '$SPK_SATS/jup365.bsp',
@@ -20,8 +20,9 @@ KERNELS_TO_LOAD = (
                     '$SPK_SATS/nep097.bsp',
                     '$SPK_SATS/a_old_versions/nep101.bsp',
                     '$SPK_SATS/plu060.bsp',
+                    '$PCK/earth_1962_250826_2125_combined.bpc',
                     '$PCK/pck00011.tpc',
-                    '$PCK/Gravity.tpc',
+                    '$PCK/gm_de440.tpc',
                   )
 
 \begintext

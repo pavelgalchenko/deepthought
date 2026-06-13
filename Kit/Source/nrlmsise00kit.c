@@ -2660,7 +2660,8 @@ double NRLMSISE00(DateType date, vec3_t PosW, double F10p7, double AP)
    }
 
    /* Find Lng, Lat, Alt from PosW */
-   ECEFToWGS84(PosW, &Lat, &Lng, &Alt);
+   vec3_t lla = ECEFToWGS84(PosW);
+   DEAL_VEC3(lla, Lat, Lng, Alt);
 
    /* Populate input structure */
    Input.year = (int)date.Year;

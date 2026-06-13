@@ -29,11 +29,10 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
 {
    char response[80];
    long NewCmdProcessed = FALSE;
-   long Isc, Ig, Idof;
+   long Isc, Ig, Idof, Iorb, i;
    double Val;
-   long Iorb, i;
    char DvFrame;
-   vec3_t Vec, DVN;
+   vec3_t Vec;
    struct OrbitType *O;
    struct SCType *S;
 
@@ -71,21 +70,13 @@ long SimCmdInterpreter(char CmdLine[512], double *CmdTime)
               CmdTime, &Vec.x, &Vec.y, &Vec.z, &DvFrame, &Iorb) == 6) {
       NewCmdProcessed = TRUE;
       O               = &Orb[Iorb];
-      if (DvFrame == 'L') {
-         DVN        = MTxV(O->CLN, Vec);
-         O->VelN.x += DVN.x;
-         O->VelN.y += DVN.y;
-         O->VelN.z += DVN.z;
-      }
-      else if (DvFrame == 'N') {
-         O->VelN.x += Vec.x;
-         O->VelN.y += Vec.y;
-         O->VelN.z += Vec.z;
-      }
-      else {
+      if (DvFrame == 'L')
+         Vec = MTxV(O->CLN, Vec);
+      else if (DvFrame != 'N') {
          fprintf(stderr, "Bogus DvFrame %c in SimCmdInterpreter\n", DvFrame);
          exit(EXIT_FAILURE);
       }
+      O->VelN = VAddV_Elem(O->VelN, Vec);
       RV2Eph(DynTime, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc, &O->inc,
              &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR, &O->alpha, &O->rmin,
              &O->MeanMotion, &O->Period);

@@ -342,6 +342,8 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
             FrcN    = SxV(B->mass, GGxpn);
             FrcB    = MxV(B->CN, FrcN);
             B->FrcN = VAddV_Elem(B->FrcN, FrcN);
+            B->gravPertAccN =
+                VAddV_Elem(B->gravPertAccN, SxV(1.0 / B->mass, FrcN));
             B->FrcB = VAddV_Elem(B->FrcB, FrcB);
          }
       }
@@ -357,11 +359,11 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
          /* GG torque */
          rb    = MxV(B->CN, rhat);
          axIoa = vxMov(rb, B->I);
-         for (int i = 0; i < 3; i++)
-            Tb.v[i] += 3.0 * Coef * axIoa.v[i];
-         Tn = MTxV(B->CN, Tb);
-         for (int i = 0; i < 3; i++)
+         for (int i = 0; i < 3; i++) {
+            Tb.v[i]     += 3.0 * Coef * axIoa.v[i];
             B->Trq.v[i] += 3.0 * Coef * axIoa.v[i];
+         }
+         Tn          = MTxV(B->CN, Tb);
          S->gravTrqN = VAddV_Elem(S->gravTrqN, Tn);
          S->gravTrqB = VAddV_Elem(S->gravTrqB, Tb);
       }
@@ -382,6 +384,8 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
                FrcN.v[i] = -Coef * (c.v[i] - 3.0 * rhat.v[i] * rhatoc);
             FrcB    = MxV(B->CN, FrcN);
             B->FrcN = VAddV_Elem(B->FrcN, FrcN);
+            B->gravPertAccN =
+                VAddV_Elem(B->gravPertAccN, SxV(1.0 / B->mass, FrcN));
             B->FrcB = VAddV_Elem(B->FrcB, FrcB);
          }
       }
@@ -429,6 +433,8 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
          s       = VSubV_Elem(p, S->PosN);
          FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
          S->FrcN = VAddV_Elem(S->FrcN, FrcN);
+         S->gravPertAccN =
+             VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
       }
    }
    /* Moons of OrbCenter (but not SecCenter) */
@@ -440,6 +446,8 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
             s       = VSubV_Elem(p, S->PosN);
             FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
             S->FrcN = VAddV_Elem(S->FrcN, FrcN);
+            S->gravPertAccN =
+                VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
          }
       }
    }
@@ -454,103 +462,16 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
          s       = VSubV_Elem(p, S->PosN);
          FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
          S->FrcN = VAddV_Elem(S->FrcN, FrcN);
+         S->gravPertAccN =
+             VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
       }
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   FrcN    = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                                    WCenter->CWN, S->mass, S->PosN);
-   S->FrcN = VAddV_Elem(S->FrcN, FrcN);
-   /* else if O->CenterType == MINORBODY, use provided gravity model */
-}
-/**********************************************************************/
-void GravPertForceRK4(struct WorldType *const worlds,
-                      struct OrbitType *const orb, struct SCType *S,
-                      double u[6], vec3_t *FrcN, double RKFdt)
-{
-   vec3_t ph, p, s, SCPosN, FrcNtemp;
-   vec3_t FrcN_harm, SCPosN_harm;
-   long Iw, Im;
-   long OrbCenter, SecCenter;
-   vec3_t trgtPosN, trgtPosH;
-   vec3_t cntrPosN, cntrPosH;
-   mat3x3_t trgtCNH, cntrCNH;
-   double trgtPriMerAng = 0, cntrPriMerAng = 0;
-   long revertCHEB = 0;
-
-   SCPosN      = DBL_TO_VEC3(&u[0]);
-   SCPosN_harm = DBL_TO_VEC3(&u[3]);
-
-   JDType jd_tdb_mjd = JDAddSeconds(JD_TDB_MJD, RKFdt);
-   if (EphemOption != EPH_SPICE) {
-      if (isgreater_jd(jd_tdb_mjd, worlds[SOL].eph.Cheb[1].JD2)) {
-         revertCHEB = 1;
-         LoadJplEphems(EphemOption, ModelPath, &JplHeader, jd_tdb_mjd, worlds);
-      }
-   }
-
-   OrbCenter = orb->World;
-   SecCenter = -1; /* Nonsense value */
-
-   struct WorldType *WCenter = &worlds[OrbCenter];
-   if (EphemOption == EPH_SPICE) {
-      Rk4SpiceEphems(jd_tdb_mjd, OrbCenter, worlds, &cntrPosN, &cntrPosH,
-                     &cntrPriMerAng, &cntrCNH);
-   }
-   else
-      Rk4JplEphems(jd_tdb_mjd, OrbCenter, worlds, &cntrPosN, &cntrPosH,
-                   &cntrPriMerAng, &cntrCNH);
-
-   /* Sun and all existing planets */
-   for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-         if (EphemOption == EPH_SPICE) {
-            Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
-                           &trgtPriMerAng, &trgtCNH);
-         }
-         else
-            Rk4JplEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
-                         &trgtPriMerAng, &trgtCNH);
-
-         ph       = VSubV_Elem(trgtPosH, cntrPosH);
-         p        = MxV(cntrCNH, ph);
-         s        = VSubV_Elem(p, SCPosN);
-         FrcNtemp = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-         *FrcN    = VAddV_Elem(*FrcN, FrcNtemp);
-      }
-   }
-
-   /* Moons of OrbCenter (but not SecCenter) */
-   if (OrbCenter != SOL) {
-      for (Im = 0; Im < WCenter->Nsat; Im++) {
-         Iw = WCenter->Sat[Im];
-         if (Iw != SecCenter) {
-            if (EphemOption == EPH_SPICE) {
-               Rk4SpiceEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
-                              &trgtPriMerAng, &trgtCNH);
-            }
-            else
-               Rk4JplEphems(jd_tdb_mjd, Iw, worlds, &trgtPosN, &trgtPosH,
-                            &trgtPriMerAng, &trgtCNH);
-
-            p        = trgtPosN;
-            s        = VSubV_Elem(p, SCPosN);
-            FrcNtemp = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-            *FrcN    = VAddV_Elem(*FrcN, FrcNtemp);
-         }
-      }
-   }
-
-   struct SphereHarmType *gravModel = &WCenter->GravModel;
-   FrcN_harm = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                                      WCenter->CWN, S->mass, SCPosN_harm);
-   *FrcN     = VAddV_Elem(*FrcN, FrcN_harm);
-
-   if (EphemOption != EPH_SPICE) {
-      if (revertCHEB)
-         LoadJplEphems(EphemOption, ModelPath, &JplHeader, JD_TDB_MJD, worlds);
-   }
-
+   FrcN            = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                                            WCenter->CWN, S->mass, S->PosN);
+   S->gravPertAccN = VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
+   S->FrcN         = VAddV_Elem(S->FrcN, FrcN);
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/

@@ -1,0 +1,21 @@
+%YAML 1.2
+---
+Configuration:
+  Name: Nearly Circular
+  Description: Nearly Circular orbit
+Orbit:
+  Type: CENTRAL
+  World: EARTH
+  J2 Secular Drift: false
+  Init:
+    Method: RV
+    Frame: Inertial
+    Position: [-4292.65341, 955.16847, 5139.35657] #[km]
+    Velocity: [.109649663, -7.527726490, 1.484521489] #[km/sec]
+Formation:
+  Fixed Frame: N
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 123
+  Expression Frame: L
+  Position: [0.0, 0.0, 0.0]

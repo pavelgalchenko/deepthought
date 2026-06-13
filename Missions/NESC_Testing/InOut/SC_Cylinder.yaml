@@ -1,0 +1,57 @@
+%YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
+---
+Name: SC_Cylinder
+Configuration:
+  Description: Simple generic S/C
+  Label: S/C
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: PASSIVE_FSW
+  FSW Sample Time: 60.0
+Orbit:
+  Prop Type: COWELL
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 0.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: L
+  Ang Vel: [0.0, -0.0542892513561263, 0.0]
+  Quaternion: [0.0, 0.0, 0.0, 1.0]
+  Euler Angles:
+    Angles: [0.0, 85.0, 1.0]
+    Sequence: 123
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 2.0
+  Integration Method: RK89
+Bodies:
+  - Body:
+      Index: 0
+      Mass: 1000.0
+      MOI: [500.0, 12250.0, 12250.0]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [6.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Geometry File Name: Cubesat_3U.obj # TODO: cylinder.obj
+      Node File Name: Nodes_Simple.txt
+      Flex File Name: NONE
+Joints: []
+Wheel Params: { Drag: false, Jitter: false }
+Wheels: []
+MTBs: []
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+Accelerometers: []

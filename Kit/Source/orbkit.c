@@ -255,7 +255,7 @@ WorldID GetWorldParent(const WorldID w_id)
    }
 }
 /**********************************************************************/
-static double _eccFDF(const double E, double params[2]) __attribute__((pure));
+__attribute__((pure)) static double _eccFDF(const double E, double params[2]);
 static double _eccFDF(const double E, double params[2])
 {
    const double f  = E - params[0] * sin(E) - params[1];
@@ -272,8 +272,8 @@ double MeanAnomToTrueAnom(double MeanAnom, double ecc)
 #undef EPS
 }
 /**********************************************************************/
-static double _parabolFDF(const double x, double params[1])
-    __attribute__((pure));
+__attribute__((pure)) static double _parabolFDF(const double x,
+                                                double params[1]);
 static double _parabolFDF(const double x, double params[1])
 {
    const double f  = x * (x * x + 3.0) - 2.0 * params[0];
@@ -442,13 +442,13 @@ void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
    cth = cos(th);
    R   = p / (1.0 + e * cth);
 
-   c2      = sqrt(mu / p);
-   pr.v[0] = R * cth;
-   pr.v[1] = R * sth;
-   pr.v[2] = 0.0;
-   pv.v[0] = -c2 * sth;
-   pv.v[1] = c2 * (e + cth);
-   pv.v[2] = 0.0;
+   c2   = sqrt(mu / p);
+   pr.x = R * cth;
+   pr.y = R * sth;
+   pr.z = 0.0;
+   pv.x = -c2 * sth;
+   pv.y = c2 * (e + cth);
+   pv.z = 0.0;
 
    C1 = cos(RAAN);
    S1 = sin(RAAN);
@@ -467,14 +467,8 @@ void Eph2RV(double mu, double p, double e, double i, double RAAN, double ArgP,
    CPN.mat[1][2] = S2 * C3;
    CPN.mat[2][2] = C2;
 
-   r->v[0] = pr.v[0] * CPN.mat[0][0] + pr.v[1] * CPN.mat[1][0];
-   r->v[1] = pr.v[0] * CPN.mat[0][1] + pr.v[1] * CPN.mat[1][1];
-   r->v[2] = pr.v[0] * CPN.mat[0][2] + pr.v[1] * CPN.mat[1][2];
-
-   v->v[0] = pv.v[0] * CPN.mat[0][0] + pv.v[1] * CPN.mat[1][0];
-   v->v[1] = pv.v[0] * CPN.mat[0][1] + pv.v[1] * CPN.mat[1][1];
-   v->v[2] = pv.v[0] * CPN.mat[0][2] + pv.v[1] * CPN.mat[1][2];
-
+   *r    = MTxV(CPN, pr);
+   *v    = MTxV(CPN, pv);
    *anom = th;
 }
 /**********************************************************************/
@@ -487,14 +481,17 @@ void RV2Eph(double time, double mu, vec3_t xr, vec3_t xv, double *SMA,
 {
 #define EPS (1.0E-12)
 
-   double r, v, cth, cosw, sinw;
+   double v, cth, cosw, sinw;
    double rohxe, h, dt;
-   vec3_t xn, hxn, xh, xe, rhat, vxh, hxe;
+   vec3_t xn, hxn, xh, xe, vxh, hxe;
+   magvec3_t ur;
+   vec3_t *const rhat = &ur.v;
+   double *const r    = &ur.m;
 
-   r = MAGV(xr);
-   v = MAGV(xv);
+   ur = UNITV(xr);
+   v  = MAGV(xv);
 
-   *alpha = 2.0 * (mu / r - 0.5 * v * v) / mu;
+   *alpha = 2.0 / *r - v * v / mu;
    *SMA   = 1.0 / (*alpha);
    if (*alpha > 0.0) {
       /* Elliptic orbit */
@@ -513,17 +510,11 @@ void RV2Eph(double time, double mu, vec3_t xr, vec3_t xv, double *SMA,
    /* Semi-Latus Rectum */
    *SLR = VoV(xh, xh) / mu;
 
-   rhat.x = xr.x / r;
-   rhat.y = xr.x / r;
-   rhat.z = xr.z / r;
+   vxh = VxV(xv, xh);
 
-   vxh.x = xv.v[1] * xh.v[2] - xv.v[2] * xh.v[1];
-   vxh.y = xv.v[2] * xh.v[0] - xv.v[0] * xh.v[2];
-   vxh.z = xv.v[0] * xh.v[1] - xv.v[1] * xh.v[0];
-
-   xe.x = vxh.x / mu - rhat.x;
-   xe.y = vxh.y / mu - rhat.y;
-   xe.z = vxh.z / mu - rhat.z;
+   xe.x = vxh.x / mu - rhat->x;
+   xe.y = vxh.y / mu - rhat->y;
+   xe.z = vxh.z / mu - rhat->z;
    *e   = MAGV(xe);
 
    *rmin = *SLR / (1.0 + *e);
@@ -585,11 +576,11 @@ void RV2Eph(double time, double mu, vec3_t xr, vec3_t xv, double *SMA,
       }
    }
 
-   cth = VoV(rhat, xe);
+   cth = VoV(*rhat, xe);
    *th = acos(cth);
 
    hxe   = VxV(xh, xe);
-   rohxe = VoV(rhat, hxe);
+   rohxe = VoV(*rhat, hxe);
 
    if (rohxe < 0.0)
       *th = TWOPI - *th;
@@ -1582,25 +1573,17 @@ double LunaPriMerAng(const JDType jd)
 void FindCLN(vec3_t r, vec3_t v, mat3x3_t *CLN, vec3_t *wln)
 {
    vec3_t L1, L2, L3, h;
-   double m, rr, hh;
-   long i;
+   double rr, hh;
 
-   h.v[0] = r.v[1] * v.v[2] - r.v[2] * v.v[1];
-   h.v[1] = r.v[2] * v.v[0] - r.v[0] * v.v[2];
-   h.v[2] = r.v[0] * v.v[1] - r.v[1] * v.v[0];
-   rr     = r.v[0] * r.v[0] + r.v[1] * r.v[1] + r.v[2] * r.v[2];
-   hh     = h.v[0] * h.v[0] + h.v[1] * h.v[1] + h.v[2] * h.v[2];
+   h  = VxV(r, v);
+   rr = VoV(r, r);
+   hh = VoV(h, h);
 
-   for (i = 0; i < 3; i++) {
-      wln->v[i] = h.v[i] / rr;
-      L3.v[i]   = -r.v[i];
-      L2.v[i]   = -h.v[i];
-   }
+   *wln = SxV(1.0 / rr, h);
+   L3   = NegV_Elem(r);
+   L2   = NegV_Elem(h);
 
-   m     = sqrt(rr);
-   L3.x /= m;
-   L3.y /= m;
-   L3.z /= m;
+   L3 = SxV(1.0 / sqrt(rr), L3);
 
    if (hh == 0.0) { /* Rectlinear Motion */
       pair_vec3_t pair = PerpBasis(L3);
@@ -1608,19 +1591,13 @@ void FindCLN(vec3_t r, vec3_t v, mat3x3_t *CLN, vec3_t *wln)
       L2               = pair.second;
    }
    else {
-      m     = MAGV(L2);
-      L2.x /= m;
-      L2.y /= m;
-      L2.z /= m;
+      magvec3_t mv = UNITV(L2);
+      L2           = mv.v;
 
-      L1.x = L2.v[1] * L3.v[2] - L2.v[2] * L3.v[1];
-      L1.y = L2.v[2] * L3.v[0] - L2.v[0] * L3.v[2];
-      L1.z = L2.v[0] * L3.v[1] - L2.v[1] * L3.v[0];
+      L1 = VxV(L2, L3);
 
-      m     = MAGV(L1);
-      L1.x /= m;
-      L1.y /= m;
-      L1.z /= m;
+      mv = UNITV(L1);
+      L1 = mv.v;
    }
 
    CLN->rows[0] = L1;
@@ -2067,12 +2044,8 @@ void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
    vl.z = LP->wz * (-O->Az * swzt + O->Bz * cwzt);
 
    /* Do we need to keep x,y,z,xdot,ydot,zdot? */
-   O->x    = rl.x;
-   O->y    = rl.y;
-   O->z    = rl.z;
-   O->xdot = vl.x;
-   O->ydot = vl.y;
-   O->zdot = vl.z;
+   DEAL_VEC3(rl, O->x, O->y, O->z);
+   DEAL_VEC3(vl, O->xdot, O->ydot, O->zdot);
 
    *r = VxM(rl, LS->CLN);
    *v = VxM(vl, LS->CLN);

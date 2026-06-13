@@ -127,6 +127,7 @@ __attribute__((const)) DateType TimeToDate(double Time, TimeSystem system);
 __attribute__((const)) long MD2DOY(long Year, long Month, long Day);
 void DOY2MD(long Year, long DayOfYear, long *Month, long *Day);
 __attribute__((const)) double JD2GMST(JDType JD);
+__attribute__((const)) double GMAT_JD2GMST(JDType jd);
 void GpsTimeToGpsDate(double GpsTime, long *GpsRollover, long *GpsWeek,
                       double *GpsSecond);
 __attribute__((const)) double GpsDateToGpsTime(long GpsRollover, long GpsWeek,

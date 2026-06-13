@@ -42,7 +42,6 @@ static void _allocrk(RungeKutta *const rk)
       free(rk->stateDot);
       free(rk->stageState);
       free(rk->candidateState);
-      // free(rk->errorEsts);
    }
 
    rk->ci             = calloc(rk->stages, sizeof(double));
@@ -51,7 +50,6 @@ static void _allocrk(RungeKutta *const rk)
    rk->stateDot       = calloc(rk->dim, sizeof(double));
    rk->stageState     = calloc(rk->dim, sizeof(double));
    rk->candidateState = calloc(rk->dim, sizeof(double));
-   // rk->errorEsts      = calloc(rk->dim, sizeof(double));
    if (rk->ci == NULL || rk->bj == NULL || rk->ee == NULL ||
        rk->stateDot == NULL || rk->stageState == NULL ||
        rk->candidateState == NULL) {
@@ -550,6 +548,11 @@ RungeKutta GetRungeKutta(
 
 // TODO: a structure describing the allocation of RungeKutta::inState, etc, to
 // do vector-wise, quaternion-wise, or other error calculations
+__attribute__((pure)) double RKErrorCalc(const double *const errEst,
+                                         const double *const candidateState,
+                                         const double *cur_state,
+                                         const double relErrThreshold,
+                                         const long dim);
 double RKErrorCalc(const double *const errEst,
                    const double *const candidateState, const double *cur_state,
                    const double relErrThreshold, const long dim)

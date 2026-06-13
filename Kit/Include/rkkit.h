@@ -90,7 +90,7 @@ typedef struct RungeKutta {
    double sigma;
 } RungeKutta;
 
-RungeKutta GetRungeKutta(
+__attribute__((pure)) RungeKutta GetRungeKutta(
     RKType type, const double tol, const double relErrThresh,
     const int dimension, const double minStep, const double maxStep,
     RKParams *params,

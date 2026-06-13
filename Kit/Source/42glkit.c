@@ -363,11 +363,9 @@ void GeomToDisplayLists(struct GeomType *G)
                            glTexCoord2dv(G->Vt[P->Vt[Iv]].v);
                         }
                         else {
-                           V.x = G->V[P->V[Iv]].x;
-                           V.y = G->V[P->V[Iv]].y;
-                           V.z = G->V[P->V[Iv]].z;
-                           u   = VoV(V, P->Uhat);
-                           v   = VoV(V, P->Vhat);
+                           V = G->V[P->V[Iv]];
+                           u = VoV(V, P->Uhat);
+                           v = VoV(V, P->Vhat);
                            glTexCoord2d(u, v);
                         }
                      }
@@ -391,11 +389,9 @@ void GeomToDisplayLists(struct GeomType *G)
                            glTexCoord2dv(G->Vt[P->Vt[Iv]].v);
                         }
                         else {
-                           V.x = G->V[P->V[Iv]].x;
-                           V.y = G->V[P->V[Iv]].y;
-                           V.z = G->V[P->V[Iv]].z;
-                           u   = VoV(V, P->Uhat);
-                           v   = VoV(V, P->Vhat);
+                           V = G->V[P->V[Iv]];
+                           u = VoV(V, P->Uhat);
+                           v = VoV(V, P->Vhat);
                            glTexCoord2d(u, v);
                         }
                      }
@@ -419,11 +415,9 @@ void GeomToDisplayLists(struct GeomType *G)
                            glTexCoord2dv(G->Vt[P->Vt[Iv]].v);
                         }
                         else {
-                           V.x = G->V[P->V[Iv]].x;
-                           V.y = G->V[P->V[Iv]].y;
-                           V.z = G->V[P->V[Iv]].z;
-                           u   = VoV(V, P->Uhat);
-                           v   = VoV(V, P->Vhat);
+                           V = G->V[P->V[Iv]];
+                           u = VoV(V, P->Uhat);
+                           v = VoV(V, P->Vhat);
                            glTexCoord2d(u, v);
                         }
                      }
@@ -639,8 +633,7 @@ void SetDestination(long Dest)
 void DrawPlanetLabels(GLfloat length)
 {
    GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
-   magvec3_t uVec;
-   vec3_t *const Vec = &uVec.v;
+   vec3_t Vec;
    long i, j;
    struct OrbitType *O;
 
@@ -653,14 +646,14 @@ void DrawPlanetLabels(GLfloat length)
       if (World[i].Exists) {
          glColor4fv(World[i].Color);
          for (j = 0; j < 3; j++)
-            Vec->v[j] = World[i].PosH.v[j] - SC[POV.Host.SC].PosH.v[j];
-         uVec = UNITV(*Vec);
+            Vec.v[j] = World[i].PosH.v[j] - SC[POV.Host.SC].PosH.v[j];
+         Vec = UNITV(Vec).v;
          glBegin(GL_LINES);
          glVertex3f(0.0, 0.0, 0.0);
-         glVertex3f(length * Vec->x, length * Vec->y, length * Vec->z);
+         glVertex3f(length * Vec.x, length * Vec.y, length * Vec.z);
          glEnd();
-         glRasterPos3f((length + 0.2) * Vec->x, (length + 0.2) * Vec->y,
-                       (length + 0.2) * Vec->z);
+         glRasterPos3f((length + 0.2) * Vec.x, (length + 0.2) * Vec.y,
+                       (length + 0.2) * Vec.z);
          glBitmap(8, 14, 0.0, 0.0, 0.0, 0.0, World[i].Glyph);
       }
    }
@@ -1150,9 +1143,8 @@ void DrawFarScene(void)
    struct WorldType *W;
    struct SCType *S;
    double VisCoef, PixRad, magr;
-   magvec3_t uSvh, uPosN;
-   vec3_t *const svh  = &uSvh.v;
-   vec3_t *const PosN = &uPosN.v;
+   vec3_t svh;
+   vec3_t PosN;
    vec3_t PosR, PosH, svn, r;
    GLfloat Black[4]       = {0.0, 0.0, 0.0, 1.0};
    GLubyte TdrsGlyph[32]  = {0x01, 0x80, 0x02, 0x40, 0x04, 0x20, 0x08, 0x10,
@@ -1281,12 +1273,12 @@ void DrawFarScene(void)
       }
       else if (W->Visibility == WORLD_SHOWS_DISK) {
          for (j = 0; j < 3; j++)
-            svh->v[j] = -W->PosH.v[j];
-         uSvh = UNITV(*svh);
+            svh.v[j] = -W->PosH.v[j];
+         svh = UNITV(svh).v;
          if (W->GeomTag == 0) { /* World is sphere */
-            *PosN = MxV(World[POV.Host.World].CNH, rh[Iw]);
-            svn   = MxV(World[POV.Host.World].CNH, *svh);
-            DrawWorldAsBackdrop(W, *PosN, svn);
+            PosN = MxV(World[POV.Host.World].CNH, rh[Iw]);
+            svn  = MxV(World[POV.Host.World].CNH, svh);
+            DrawWorldAsBackdrop(W, PosN, svn);
          }
          else {
             glClear(GL_DEPTH_BUFFER_BIT);
@@ -1370,11 +1362,11 @@ void DrawFarScene(void)
       for (i = 0; i < 10; i++) {
          if (Tdrs[i].Exists) {
             for (j = 0; j < 3; j++)
-               PosN->v[j] = Tdrs[i].PosN.v[j] - POV.PosN.v[j];
-            uPosN = UNITV(*PosN);
+               PosN.v[j] = Tdrs[i].PosN.v[j] - POV.PosN.v[j];
+            PosN = UNITV(PosN).v;
             for (j = 0; j < 3; j++)
-               PosN->v[j] *= SkyDistance;
-            glRasterPos3d(PosN->x, PosN->y, PosN->z);
+               PosN.v[j] *= SkyDistance;
+            glRasterPos3d(PosN.x, PosN.y, PosN.z);
             glBitmap(16, 16, 8.0, 8.0, 10, -8, TdrsGlyph);
             DrawString8x11(Tdrs[i].Designation);
          }
@@ -1391,11 +1383,11 @@ void DrawFarScene(void)
          glColor4fv(ScColor);
          for (i = 0; i < 3; i++)
             PosH.v[i] = S->PosH.v[i] - POV.PosH.v[i];
-         *PosN = MxV(World[POV.Host.World].CNH, PosH);
-         uPosN = UNITV(*PosN);
+         PosN = MxV(World[POV.Host.World].CNH, PosH);
+         PosN = UNITV(PosN).v;
          for (i = 0; i < 3; i++)
-            PosN->v[i] *= SkyDistance;
-         glRasterPos3d(PosN->x, PosN->y, PosN->z);
+            PosN.v[i] *= SkyDistance;
+         glRasterPos3d(PosN.x, PosN.y, PosN.z);
          glBitmap(16, 16, 8.0, 8.0, 10, -8, ScGlyph);
          DrawString8x11(S->Label);
       }
@@ -1861,9 +1853,7 @@ void DepthPass(void)
 
    for (i = 0; i < 3; i++)
       CLN.mat[2][i] = LightPosN[i];
-   magvec3_t urow;
-   urow             = UNITV(CLN.rows[2]);
-   CLN.rows[2]      = urow.v;
+   CLN.rows[2]      = UNITV(CLN.rows[2]).v;
    pair_vec3_t pair = PerpBasis(CLN.rows[2]);
    CLN.rows[0]      = pair.first;
    CLN.rows[1]      = pair.second;
@@ -2228,19 +2218,18 @@ void SeeThruPass(void)
 void DrawBodies(void)
 {
    mat3x3_t CNH;
-   magvec3_t uPosN;
-   vec3_t *const PosN = &uPosN.v;
-   GLfloat Black[4]   = {0.0, 0.0, 0.0, 1.0};
+   vec3_t PosN;
+   GLfloat Black[4] = {0.0, 0.0, 0.0, 1.0};
 
    /* .. Light Source */
    /* Sun */
-   CNH   = MTxM(POV.CN, POV.CH);
-   *PosN = MxV(CNH, POV.PosH);
+   CNH  = MTxM(POV.CN, POV.CH);
+   PosN = MxV(CNH, POV.PosH);
 
-   uPosN        = UNITV(*PosN);
-   LightPosN[0] = (GLfloat)-PosN->x;
-   LightPosN[1] = (GLfloat)-PosN->y;
-   LightPosN[2] = (GLfloat)-PosN->z;
+   PosN         = UNITV(PosN).v;
+   LightPosN[0] = (GLfloat)-PosN.x;
+   LightPosN[1] = (GLfloat)-PosN.y;
+   LightPosN[2] = (GLfloat)-PosN.z;
    LightPosN[3] = 0.0;
    glLightfv(GL_LIGHT0, GL_POSITION, LightPosN);
    glLightfv(GL_LIGHT0, GL_DIFFUSE, LocalDiffuseLightColor);
@@ -2414,8 +2403,7 @@ void PovTrackHostMode(void)
 void PovTrackTargetMode(void)
 {
    struct TargetType *Host, *Trg;
-   magvec3_t uLoS;
-   vec3_t *const LoS = &uLoS.v;
+   vec3_t LoS;
    vec3_t LoSN, LoSH, pn;
    double CosAz, SinAz, CosEl, SinEl;
    mat3x3_t CTH, CTN;
@@ -2567,8 +2555,8 @@ void PovTrackTargetMode(void)
          LoSH.v[j] = Trg->PosH.v[j] - POV.PosH.v[j];
       LoSN = MxV(World[Host->World].CNH, LoSH);
    }
-   *LoS = MxV(Host->CN, LoSN);
-   if (MAGV(*LoS) < 1.0E-2) {
+   LoS = MxV(Host->CN, LoSN);
+   if (MAGV(LoS) < 1.0E-2) {
       printf("Target suspiciously close to POV.  POV Mode reverting to TRACK "
              "HOST\n");
       POV.Mode                   = TRACK_HOST;
@@ -2576,26 +2564,26 @@ void PovTrackTargetMode(void)
       PovWidget.Spot[1].Selected = 0;
    }
    else {
-      uLoS = UNITV(*LoS);
+      LoS = UNITV(LoS).v;
 
       /* .. Find POV orientation */
-      if (LoS->z > Cos1deg) {
+      if (LoS.z > Cos1deg) {
          CosAz = 1.0;
          SinAz = 0.0;
          CosEl = 0.0;
          SinEl = -1.0;
       }
-      else if (LoS->z < -Cos1deg) {
+      else if (LoS.z < -Cos1deg) {
          CosAz = 1.0;
          SinAz = 0.0;
          CosEl = 0.0;
          SinEl = 1.0;
       }
       else {
-         SinEl = -LoS->z;
-         CosEl = sqrt(LoS->x * LoS->x + LoS->y * LoS->y);
-         SinAz = LoS->y / CosEl;
-         CosAz = LoS->x / CosEl;
+         SinEl = -LoS.z;
+         CosEl = sqrt(LoS.x * LoS.x + LoS.y * LoS.y);
+         SinAz = LoS.y / CosEl;
+         CosAz = LoS.x / CosEl;
       }
       CTH.mat[0][0] = CosAz * CosEl;
       CTH.mat[0][1] = SinAz * CosEl;
@@ -2936,19 +2924,18 @@ void DrawTdrsMap(void)
 long OccultedByEarth(vec3_t pge, vec3_t pte) __attribute__((pure));
 long OccultedByEarth(vec3_t pge, vec3_t pte)
 {
-   magvec3_t udp;
-   vec3_t *const dp = &udp.v;
+   vec3_t dp;
    vec3_t phat;
    double magpg, CosVec, CosOcc, SinOcc;
    long i, Occulted;
 
    for (i = 0; i < 3; i++)
-      dp->v[i] = pte.v[i] - pge.v[i];
+      dp.v[i] = pte.v[i] - pge.v[i];
    magpg = MAGV(pge);
    for (i = 0; i < 3; i++)
       phat.v[i] = pge.v[i] / magpg;
-   udp    = UNITV(*dp);
-   CosVec = VoV(*dp, phat);
+   dp     = UNITV(dp).v;
+   CosVec = VoV(dp, phat);
 
    SinOcc = World[EARTH].rad / magpg;
    CosOcc = -sqrt(1.0 - SinOcc * SinOcc);
@@ -2980,12 +2967,7 @@ void DrawMap(void)
    float OldLng, OldLat;
    long i, k, Im, Isc;
    vec3_t rn, vn, re, rmh, svw;
-   magvec3_t usvh, urmw, urmn, up, uaxis;
-   vec3_t *const svh  = &usvh.v;
-   vec3_t *const rmw  = &urmw.v;
-   vec3_t *const rmn  = &urmn.v;
-   vec3_t *const p    = &up.v;
-   vec3_t *const axis = &uaxis.v;
+   vec3_t svh, rmw, rmn, p, axis;
 
    glClear(GL_COLOR_BUFFER_BIT);
    glMaterialfv(GL_FRONT, GL_DIFFUSE, Black);
@@ -2995,10 +2977,10 @@ void DrawMap(void)
       W = &World[Orb[S->RefOrb].World];
 
       for (i = 0; i < 3; i++)
-         svh->v[i] = -W->PosH.v[i];
-      usvh       = UNITV(*svh);
+         svh.v[i] = -W->PosH.v[i];
+      svh        = UNITV(svh).v;
       CWH        = MxM(W->CWN, W->CNH);
-      svw        = MxV(CWH, *svh);
+      svw        = MxV(CWH, svh);
       magr       = MAGV(S->PosN);
       CosEclipse = -sqrt(1.0 - (W->rad * W->rad / magr / magr));
 
@@ -3103,12 +3085,12 @@ void DrawMap(void)
          glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
          glBindTexture(GL_TEXTURE_2D, MoonSpriteTexTag);
          for (Im = 0; Im < W->Nsat; Im++) {
-            *rmw = MxV(W->CWN, World[W->Sat[Im]].eph.PosN);
-            urmw = UNITV(*rmw);
-            Lng  = atan2(rmw->y, rmw->x) * R2D;
-            Lat  = asin(rmw->z) * R2D;
-            x    = 4.0;
-            y    = x;
+            rmw = MxV(W->CWN, World[W->Sat[Im]].eph.PosN);
+            rmw = UNITV(rmw).v;
+            Lng = atan2(rmw.y, rmw.x) * R2D;
+            Lat = asin(rmw.z) * R2D;
+            x   = 4.0;
+            y   = x;
             glBegin(GL_QUADS);
             glTexCoord2f(0.0, 1.0);
             glVertex2f(Lng - x, Lat - y);
@@ -3127,15 +3109,15 @@ void DrawMap(void)
          glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
          glBindTexture(GL_TEXTURE_2D, MoonSpriteTexTag);
          for (i = 0; i < 3; i++)
-            rmn->v[i] = -W->eph.PosN.v[i];
-         urmn = UNITV(*rmn);
-         rmh  = MTxV(World[W->Parent].CNH, *rmn);
-         *rmn = MxV(W->CNH, rmh);
-         *rmw = MxV(W->CWN, *rmn);
-         Lng  = atan2(rmw->y, rmw->x) * R2D;
-         Lat  = asin(rmw->z) * R2D;
-         x    = 4.0;
-         y    = x;
+            rmn.v[i] = -W->eph.PosN.v[i];
+         rmn = UNITV(rmn).v;
+         rmh = MTxV(World[W->Parent].CNH, rmn);
+         rmn = MxV(W->CNH, rmh);
+         rmw = MxV(W->CWN, rmn);
+         Lng = atan2(rmw.y, rmw.x) * R2D;
+         Lat = asin(rmw.z) * R2D;
+         x   = 4.0;
+         y   = x;
          glBegin(GL_QUADS);
          glTexCoord2f(0.0, 1.0);
          glVertex2f(Lng - x, Lat - y);
@@ -3172,10 +3154,10 @@ void DrawMap(void)
              Isc != S->ID) {
 
             /* SC Sprite */
-            *p  = MxV(W->CWN, SC[Isc].PosN);
-            up  = UNITV(*p);
-            Lng = atan2(p->y, p->x) * R2D;
-            Lat = asin(p->z) * R2D;
+            p   = MxV(W->CWN, SC[Isc].PosN);
+            p   = UNITV(p).v;
+            Lng = atan2(p.y, p.x) * R2D;
+            Lat = asin(p.z) * R2D;
             glEnable(GL_TEXTURE_2D);
             glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
             glBindTexture(GL_TEXTURE_2D, SC[Isc].SpriteTexTag);
@@ -3197,11 +3179,11 @@ void DrawMap(void)
 
             /* Horizon Circle */
             glLineWidth(1.5);
-            *axis = MxV(W->CWN, SC[Isc].PosN);
-            uaxis = UNITV(*axis);
-            lngc  = atan2(axis->y, axis->x);
-            latc  = asin(axis->z);
-            rad   = acos(W->rad / magr);
+            axis = MxV(W->CWN, SC[Isc].PosN);
+            axis = UNITV(axis).v;
+            lngc = atan2(axis.y, axis.x);
+            latc = asin(axis.z);
+            rad  = acos(W->rad / magr);
             glColor4fv(NonHostColor);
             DrawSmallCircle(lngc, latc, rad);
 
@@ -3256,10 +3238,10 @@ void DrawMap(void)
 
       /* .. POV Host SC */
       /* SC Sprite */
-      *p  = MxV(W->CWN, S->PosN);
-      up  = UNITV(*p);
-      Lng = atan2(p->y, p->x) * R2D;
-      Lat = asin(p->z) * R2D;
+      p   = MxV(W->CWN, S->PosN);
+      p   = UNITV(p).v;
+      Lng = atan2(p.y, p.x) * R2D;
+      Lat = asin(p.z) * R2D;
       glEnable(GL_TEXTURE_2D);
       glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
       glBindTexture(GL_TEXTURE_2D, S->SpriteTexTag);
@@ -3281,11 +3263,11 @@ void DrawMap(void)
 
       /* Horizon Circle */
       glLineWidth(1.5);
-      *axis = MxV(W->CWN, S->PosN);
-      uaxis = UNITV(*axis);
-      lngc  = atan2(axis->y, axis->x) * R2D;
-      latc  = asin(axis->z) * R2D;
-      rad   = acos(W->rad / magr);
+      axis = MxV(W->CWN, S->PosN);
+      axis = UNITV(axis).v;
+      lngc = atan2(axis.y, axis.x) * R2D;
+      latc = asin(axis.z) * R2D;
+      rad  = acos(W->rad / magr);
       glColor4fv(GroundStationColor);
       DrawSmallCircle(lngc, latc, rad);
 
