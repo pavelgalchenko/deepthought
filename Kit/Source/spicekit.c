@@ -147,7 +147,7 @@ mat3x3_t SpiceGetCWH(const JDType jd_epoch, const WorldID world)
    SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
    WorldID2FixedFrame(world, frm_name);
 
-   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_epoch);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
    pxform_c("ECLIPJ2000", frm_name, JDToSeconds(jd_tdb_j2000), CWH.mat);
 
    return CWH;
@@ -161,7 +161,7 @@ mat3x3_t SpiceGetCWJ(const JDType jd_epoch, const WorldID world)
    SpiceChar frm_name[SPICE_FRM_STR_BUFF_SIZE] = {'\0'};
    WorldID2FixedFrame(world, frm_name);
 
-   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_epoch);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
    pxform_c("J2000", frm_name, JDToSeconds(jd_tdb_j2000), CWJ.mat);
 
    return CWJ;
@@ -175,7 +175,7 @@ mat3x3_t SpiceGetCWorld(const WorldID from, const WorldID to,
              to_name[SPICE_FRM_STR_BUFF_SIZE]   = {'\0'};
    WorldID2FixedFrame(from, from_name);
    WorldID2FixedFrame(to, to_name);
-   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_epoch);
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd_epoch);
    pxform_c(from_name, to_name, JDToSeconds(jd_tdb_j2000), C.mat);
 
    return C;
@@ -264,7 +264,7 @@ int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
       return 1;
    const mat3x3_t CWJ = SpiceGetCWJ(jd, Iw);
 
-   jd = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
+   jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    if (Iw == EARTH) {
       /* .. Earth rotation is a special case */
       W->CWN = CWJ;
@@ -307,7 +307,7 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
 {
    WorldID Iw, Ip, Im;
 
-   JDType jd_tdb_j2000   = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
+   JDType jd_tdb_j2000   = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    const double JS       = JDToSeconds(jd_tdb_j2000);
    const double j2000sec = JDToDynTime(jd_tdb_j2000);
 

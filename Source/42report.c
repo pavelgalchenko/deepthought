@@ -1287,9 +1287,9 @@ void NESC_Report()
 
    vec3_t PosW, PosN, VelN, ang_ei, ang_lvlh;
 
-   PosW = MxV(W->CWN, S->PosN);
-   VelN = S->VelN;
    PosN = S->PosN;
+   VelN = S->VelN;
+   PosW = MxV(W->CWN, PosN);
 
    vec3_t wln;
    mat3x3_t CLN;
@@ -1586,7 +1586,7 @@ void Report(void)
             // DSM_PosHReport();
             DSM_Rot3BodyReport();
          }
-         // NESC_Report();
+         NESC_Report();
       }
    }
 

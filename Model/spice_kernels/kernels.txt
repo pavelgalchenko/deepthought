@@ -22,7 +22,6 @@ KERNELS_TO_LOAD = (
                     '$SPK_SATS/plu060.bsp',
                     '$PCK/earth_1962_250826_2125_combined.bpc',
                     '$PCK/pck00011.tpc',
-                    '$PCK/gm_de440.tpc',
                   )
 
 \begintext

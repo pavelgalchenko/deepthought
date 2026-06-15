@@ -693,7 +693,6 @@ void load_leapsec_file()
 // returns the number of leap seconds for specified JD
 double GetLeapSec(const JDType jd)
 {
-
    // TODO: this and other functions do not handle the time being *during* a
    // leap second
 

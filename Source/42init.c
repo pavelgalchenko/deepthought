@@ -5789,7 +5789,7 @@ void InitSim(int argc, char **argv)
       Iw                               = GetWorldID(response);
       struct SphereHarmType *gravModel = &World[Iw].GravModel;
 
-      if (fy_node_scanf(iterNode, "/Degree %ld /Order %ld", &N, &M) == 3) {
+      if (fy_node_scanf(iterNode, "/Degree %ld /Order %ld", &N, &M) == 2) {
          gravModel->N = N;
          gravModel->M = M;
       }
