@@ -846,8 +846,16 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                   Pos = MTxV(W->CWN, Pos);
                   Vel = MTxV(W->CWN, Vel);
                }
-               O->PosN = SxV(1.0e3, Pos);
-               O->VelN = SxV(1.0e3, Vel);
+               double scale = 1.0e3;
+               // optional units field
+               if (fy_node_scanf(node, "/Units %49s", dummy)) {
+                  if (!strcmp(dummy, "m"))
+                     scale = 1.0;
+                  else if (!strcmp(dummy, "km"))
+                     scale = 1.0e3;
+               }
+               O->PosN = SxV(scale, Pos);
+               O->VelN = SxV(scale, Vel);
                RV2Eph(O->Epoch, O->mu, O->PosN, O->VelN, &O->SMA, &O->ecc,
                       &O->inc, &O->RAAN, &O->ArgP, &O->anom, &O->tp, &O->SLR,
                       &O->alpha, &O->rmin, &O->MeanMotion, &O->Period);
@@ -1192,7 +1200,6 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
    if (F->FixedInFrame == 'L') {
       /* Adjust CFN */
       F->CL = F->CN;
-
       F->CN = MxM(F->CL, O->CLN);
    }
    assignYAMLToDoubleArray(3, fy_node_by_path_def(node, "/Position"),
@@ -2025,9 +2032,9 @@ void InitNodes(struct BodyType *B)
    }
    else {
       /* Default to one node at B.cm */
-      B->NumNodes     = 1;
-      B->Node         = (struct NodeType *)calloc(1, sizeof(struct NodeType));
-      B->Node[0].PosB = B->cm;
+      B->NumNodes = 1;
+      B->Node     = (struct NodeType *)calloc(1, sizeof(struct NodeType));
+      B->Node[0].NomPosB = B->cm;
       strcpy(B->Node[0].comment, "Mass Center");
    }
 }
@@ -2625,6 +2632,13 @@ void InitSpacecraft(struct SCType *S)
          B->c = SxV(B->mass, B->cm);
       else
          B->c = VEC3_ZERO;
+
+      // check for optional Drag Reference Area field
+      // Drag Reference Area is in [m^2]
+      if (fy_node_scanf(seqNode, "/Drag Reference Area %lf", &B->DragRefArea) !=
+          1)
+         B->DragRefArea = -1.0;
+
       InitNodes(B);
    }
 
@@ -3646,7 +3660,6 @@ void InitSpacecraft(struct SCType *S)
    }
    fy_document_destroy(fyd);
 
-#ifndef OLD_INTEGRATOR
    /* Set up the propagator */
    S->rkparams.worlds   = World;
    S->rkparams.rgn      = Rgn;
@@ -3661,7 +3674,6 @@ void InitSpacecraft(struct SCType *S)
    S->RKIntegrator =
        GetRungeKutta(S->RKIntegrator.type, 0, 0, S->rkparams.base.dim, 1.0e-14,
                      DTSIM, (RKParams *)&S->rkparams, SCOde, NULL);
-#endif
 }
 /*********************************************************************/
 void LoadTdrs(void)
@@ -3782,22 +3794,22 @@ void LoadSun(const ephemType ephem, const JDType jd,
    WORLD_CONFIGURE_SATELLITES(worlds, SOL, W->Nsat, W->Sat);
 
    /* Physical Properties */
-   double GM;
+   double mu = 0;
    switch (ephem) {
       case EPH_MEAN:
-         W->mu  = 1.32715E20;
+         mu     = 1.32715E20;
          W->rad = 6.98E8;
          break;
       case EPH_GMAT421:
       case EPH_GMAT424:
       case EPH_SPICE:
-         W->mu  = 1.3271244001799E20;
+         mu     = 1.3271244001799E20;
          W->rad = 6.95990E8;
          break;
       default:
          // handle the DE lookup cases here
-         GM    = getDEHeader1041Data(jpl_hdr, "GMS");
-         W->mu = GM * AUd2ms; // 1.3271244004193938E20;
+         mu  = getDEHeader1041Data(jpl_hdr, "GMS");
+         mu *= AUd2ms; // 1.3271244004193938E20;
          if (ephem == EPH_DE440)
             W->rad = 6.95700E8;
          else
@@ -3832,8 +3844,8 @@ void LoadSun(const ephemType ephem, const JDType jd,
    if (ephem == EPH_SPICE) { // If we are using SPICE, replace the
                              // hardcoded values with SPICE values
       int dim = 1;
-      if (SpiceCheckAndGetDbl(SOL, "GM", 0, dim, &W->mu))
-         W->mu *= 1E9;
+      if (SpiceCheckAndGetDbl(SOL, "GM", 0, dim, &mu))
+         mu *= 1E9;
       if (SpiceCheckAndGetDbl(SOL, "RADII", 0, dim, &W->rad))
          W->rad *= 1e3;
 
@@ -3841,6 +3853,9 @@ void LoadSun(const ephemType ephem, const JDType jd,
       W->ang_data[1] = SpiceGetAngData(SOL, "RA");
       W->ang_data[2] = SpiceGetAngData(SOL, "DEC");
    }
+   // reassign if not overriden from Inp_Sim
+   if (W->mu == 0)
+      W->mu = mu;
 
    /* Ephemeris */
    W->eph.World      = 0;
@@ -5191,156 +5206,6 @@ void UpdateLagrangePoints(void)
    }
 }
 /**********************************************************************/
-void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
-                  vec3_t *trgtPosN, vec3_t *trgtPosH, double *trgtPriMerAng,
-                  mat3x3_t *trgtCNH)
-{
-   long i, j, Ic, Iw;
-   struct Cheb3DType *Cheb;
-   struct OrbitType *Eph;
-   struct WorldType *W;
-   double u, dudJD, T[20], U[20], P, dPdu;
-   vec3_t rh, PosJ, PosN, systemBC;
-   vec3_t earthPosN, lunaPosN, otherPosN;
-   vec3_t earthPosH, lunaPosH, otherPosH;
-   mat3x3_t CNJ, CNH;
-   long WRLD[2] = {EARTH, LUNA}, otherJPL;
-   double GMST;
-
-   // TODO: premake some of the other jd types that are needed
-   jd = JDChangeSystemEpoch(TDB_TIME, GMAT_MJD_EPOCH, jd);
-
-   /* .. Initialize position of system barycenter */
-   W   = &worlds[SOL];
-   Eph = &W->eph;
-   /* Determine segment */
-   Ic = 0;
-   while (isgreater_jd(jd, Eph->Cheb[Ic].JD2))
-      Ic++;
-   /* Apply Chebyshev polynomials */
-   Cheb  = &Eph->Cheb[Ic];
-   dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
-   u     = JDSubToDays(jd, Cheb->JD1) * dudJD - 1.0;
-   ChebyPolys(u, Cheb->N, T, U);
-   for (i = 0; i < 3; i++) {
-      ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-      PosJ.v[i] = 1000.0 * P;
-   }
-   systemBC = QTxV(worlds[EARTH].qnh, PosJ);
-
-   /* Determine which ephemerides math needed */
-   otherJPL = (trgtWORLD != SOL && trgtWORLD != EARTH && trgtWORLD != LUNA &&
-               trgtWORLD <= PLUTO);
-
-   /* Must compute both Earth/Luna if either selected (how JPL defines ephem
-    * measurements) */
-   if (trgtWORLD == EARTH || trgtWORLD == LUNA) {
-      /* .. Initialize Planetary Pos for EARTH/LUNA */
-      for (j = 0; j < 2; ++j) {
-         Iw  = WRLD[j];
-         W   = &worlds[Iw];
-         Eph = &W->eph;
-         /* Determine segment */
-         Ic = 0;
-         while (isgreater_jd(jd, Eph->Cheb[Ic].JD2))
-            Ic++;
-         /* Apply Chebyshev polynomials */
-         Cheb  = &Eph->Cheb[Ic];
-         dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
-         u     = JDSubToDays(jd, Cheb->JD1) * dudJD - 1.0;
-         ChebyPolys(u, Cheb->N, T, U);
-         for (i = 0; i < 3; i++) {
-            ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-            PosJ.v[i] = 1000.0 * P;
-         }
-         PosN = QTxV(worlds[EARTH].qnh, PosJ);
-         if (Iw == EARTH)
-            earthPosN = PosN;
-         else if (Iw == LUNA)
-            lunaPosN = PosN;
-      }
-      /* Move Earth from barycentric to Sun-centered */
-      earthPosN = VSubV_Elem(earthPosN, systemBC);
-
-      /* Adjust Earth from Earth-Moon barycenter */
-      /* (Moon PosVel is geocentric, not from barycenter) */
-      for (i = 0; i < 3; i++)
-         earthPosN.v[i] -= lunaPosN.v[i] / (1.0 + EMRAT);
-      earthPosH = earthPosN;
-      rh        = lunaPosN;
-      lunaPosH  = VAddV_Elem(earthPosH, lunaPosN);
-      /* Rotate Moon into ECI */
-      lunaPosN = QxV(worlds[EARTH].qnh, rh);
-   }
-   else if (otherJPL) {
-      /* .. Initialize Pos for other planet in JPL ephemerides */
-      W   = &worlds[trgtWORLD];
-      Eph = &W->eph;
-      /* Determine segment */
-      Ic = 0;
-      while (isgreater_jd(jd, Eph->Cheb[Ic].JD2))
-         Ic++;
-      /* Apply Chebyshev polynomials */
-      Cheb  = &Eph->Cheb[Ic];
-      dudJD = 2.0 / JDSubToDays(Cheb->JD2, Cheb->JD1);
-      u     = JDSubToDays(jd, Cheb->JD1) * dudJD - 1.0;
-      ChebyPolys(u, Cheb->N, T, U);
-      for (i = 0; i < 3; i++) {
-         ChebyInterp(T, U, Cheb->Coef[i], Cheb->N, &P, &dPdu);
-         PosJ.v[i] = 1000.0 * P;
-      }
-      PosN = QTxV(worlds[EARTH].qnh, PosJ);
-      /* Move planet from barycentric to Sun-centered */
-      otherPosN = PosN;
-      otherPosN = VSubV_Elem(otherPosN, systemBC);
-      otherPosH = otherPosN;
-   }
-
-   /* Now perform calculation on Target World */
-   if (trgtWORLD == SOL) {
-      *trgtPosN = VEC3_ZERO;
-      *trgtPosH = VEC3_ZERO;
-      /* Calculate PriMerAng for Sun */
-      *trgtPriMerAng = GetWorldAng(jd, &worlds[SOL].ang_data[0]);
-   }
-   else if (trgtWORLD == EARTH) {
-      *trgtPosN = earthPosN;
-      *trgtPosH = earthPosH;
-
-      /* Calculate PriMerAng for Earth */
-      GMST           = JD2GMST(jd);
-      *trgtPriMerAng = TwoPi * GMST;
-   }
-   else if (trgtWORLD == LUNA) {
-      *trgtPosN = lunaPosN;
-      *trgtPosH = lunaPosH;
-      /* Calculate PriMerAng for LUNA */
-      // *trgtPriMerAng = LunaPriMerAng(jd);
-   }
-   else if (otherJPL) {
-      /* Move target from barycentric to Sun-centered */
-      *trgtPosN = otherPosN;
-      *trgtPosH = otherPosH;
-      /* Calculate PriMerAng for Sun */
-      *trgtPriMerAng = GetWorldAng(jd, &worlds[trgtWORLD].ang_data[0]);
-   }
-   else {
-      /* Use original position for non JPL epemerides bodies */
-      W              = &worlds[trgtWORLD];
-      *trgtPosN      = W->eph.PosN;
-      *trgtPosH      = W->PosH;
-      *trgtPriMerAng = W->PriMerAng;
-   }
-
-   if (trgtWORLD == LUNA) {
-      CNJ      = LunaInertialFrame(jd);
-      CNH      = worlds[EARTH].CNH;
-      *trgtCNH = MxM(CNJ, CNH);
-   }
-   else
-      *trgtCNH = worlds[trgtWORLD].CNH;
-}
-/**********************************************************************/
 void LoadConstellations(void)
 {
 
@@ -5916,19 +5781,18 @@ void InitSim(int argc, char **argv)
    WHILE_FY_ITER(grav_model_list, iterNode)
    {
       long N = 0, M = 0;
-      if (fy_node_scanf(iterNode,
-                        "/World %119s "
-                        "/Degree %ld "
-                        "/Order %ld",
-                        response, &N, &M) != 3) {
-         fprintf(stderr, "Could not find World, Degree, and/or Order for "
-                         "Gravitational Model. Exiting...\n");
+      if (fy_node_scanf(iterNode, "/World %119s", response) != 1) {
+         fprintf(stderr,
+                 "Could not find World for Gravitational Model. Exiting...\n");
          exit(EXIT_FAILURE);
       }
       Iw                               = GetWorldID(response);
       struct SphereHarmType *gravModel = &World[Iw].GravModel;
-      gravModel->N                     = N;
-      gravModel->M                     = M;
+
+      if (fy_node_scanf(iterNode, "/Degree %ld /Order %ld", &N, &M) == 3) {
+         gravModel->N = N;
+         gravModel->M = M;
+      }
 
       // Load model file name from Inp_Sim if it is there, otherwise leave blank
       // to use default later
@@ -5986,14 +5850,6 @@ void InitSim(int argc, char **argv)
    node = fy_node_by_path_def(root, "/Celestial Bodies");
 
    ReadWorldExists(World, node);
-   if ((World[EARTH].Exists ^ World[LUNA].Exists) &&
-       !(EphemOption == EPH_SPICE || EphemOption == EPH_MEAN)) {
-      fprintf(stdout, "Due to the way their states are defined for DE ephems, "
-                      "if one of Earth or Luna is enabled, they both must be; "
-                      "Enabling them both...\n");
-      World[EARTH].Exists = TRUE;
-      World[LUNA].Exists  = TRUE;
-   }
 
    MinorBodiesExist =
        getYAMLBool(fy_node_by_path_def(node, "/Asteroids and Comets"));
@@ -6162,17 +6018,20 @@ void InitSim(int argc, char **argv)
    */
 
    InitLagrangePoints();
-   for (Iorb = 0; Iorb < Norb; Iorb++) {
+   for (Iorb = 0; Iorb < Norb; Iorb++)
       if (Orb[Iorb].Exists)
          InitOrbit(&Orb[Iorb], JD_TDB_MJD);
+
+   for (Iorb = 0; Iorb < Norb; Iorb++) {
+      struct OrbitType *orb = &Orb[Iorb];
+      OrbitOrientation(JD_TDB_MJD, &World[orb->World], orb, &Frm[Iorb],
+                       &orb->CLN, &orb->wln);
    }
-   for (Iorb = 0; Iorb < Norb; Iorb++)
-      OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
-   for (Isc = 0; Isc < Nsc; Isc++) {
-      if (SC[Isc].Exists) {
+
+   for (Isc = 0; Isc < Nsc; Isc++)
+      if (SC[Isc].Exists)
          InitSpacecraft(&SC[Isc]);
-      }
-   }
+
    long nonDSMFSW = FALSE, DSMFSW = FALSE;
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists) {

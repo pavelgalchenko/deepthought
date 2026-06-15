@@ -643,8 +643,9 @@ long SimStep(void)
       RealRunTime(&TotalRunTime);
       ManageFlags(&nout, &GLnout, &set_nout);
 
-      for (long Iorb = 0; Iorb < Norb; Iorb++)
-         OrbitMotion(World, Rgn, LagSys, &Orb[Iorb], &Frm[Iorb], JD_TDB_MJD);
+      // is this necessary???
+      // for (long Iorb = 0; Iorb < Norb; Iorb++)
+      //    OrbitMotion(JD_TDB_MJD, World, &Orb[Iorb], Rgn, LagSys, &Frm[Iorb]);
 
       /* Sun, Moon, Planets, Useful Auxiliary Frames */
       WorldEphemerides(JD_TDB_MJD, JD_TT_MJD, EphemOption, World, Rgn, LagSys);

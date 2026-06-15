@@ -18,7 +18,6 @@ Attitude:
   Att Representation: A
   Att Frame: L
   Ang Vel: [0.0, -0.0542892513561263, 0.0]
-  Quaternion: [0.0, 0.0, 0.0, 1.0]
   Euler Angles:
     Angles: [0.0, 85.0, 1.0]
     Sequence: 123
@@ -29,10 +28,10 @@ Dynamics Flags:
   Flex Active: false
   2nd Order Flex: false
   Shaker File Name: NONE
-  Drag Coefficient: 2.0
+  Drag Coefficient: 0.0
   Integration Method: RK89
 Bodies:
-  - Body:
+  - Body: &Body_0
       Index: 0
       Mass: 1000.0
       MOI: [500.0, 12250.0, 12250.0]
@@ -41,7 +40,7 @@ Bodies:
       Constant Momentum: [0.0, 0.0, 0.0]
       Constant Dipole: [0.0, 0.0, 0.0]
       Geometry File Name: Cubesat_3U.obj # TODO: cylinder.obj
-      Node File Name: Nodes_Simple.txt
+      Node File Name: NONE
       Flex File Name: NONE
 Joints: []
 Wheel Params: { Drag: false, Jitter: false }

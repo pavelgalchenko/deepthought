@@ -34,16 +34,18 @@ enum CtrlState {
 
 // Manuever Type Definitions
 enum ManeuverType {
-   INACTIVE = -1,
-   CONSTANT,
-   SMOOTHED,
+   MAN_INACTIVE = -1,
+   MAN_CONSTANT,
+   MAN_SMOOTHED,
 };
 
 // Actuator Type Definitions
 enum ActuatorType {
-   WHL_TYPE = 0,
-   THR_TYPE,
-   MTB_TYPE,
+   ACT_WHL = 0,
+   ACT_THR,
+   ACT_MTB,
+   ACT_IDEALFRC,
+   ACT_IDEALTRQ,
 };
 
 // Sensor Type Definitions
@@ -209,7 +211,10 @@ struct DSMCmdType {
    enum ActuatorType ActTypes[100];
    int ActInds[100];
    int ActNumCmds;
-   double ActDuties[100];
+   double ActDuties[100]; // Duty Cycle for non-ideal actuators, newtons for
+                          // ideal force, newton-meters for ideal torque
+   char ActIdealFrame[100][20]; // frame for ideal actuator
+   vec3_t ActIdealDirs[100]; // unit vector of ideal actuator action direction
 
    long NewAttGainsProcessed;
    long NewTrnGainsProcessed;

@@ -593,15 +593,15 @@ double VoV(const vec3_t A, const vec3_t B)
 mat3x3_t VOuterV(const vec3_t A, const vec3_t B)
 {
    mat3x3_t out;
-   out.mat[0][0] = A.x * B.x;
-   out.mat[0][1] = A.x * B.y;
-   out.mat[0][2] = A.x * B.z;
-   out.mat[1][0] = A.y * B.x;
-   out.mat[1][1] = A.y * B.y;
-   out.mat[1][2] = A.y * B.z;
-   out.mat[2][0] = A.z * B.x;
-   out.mat[2][1] = A.z * B.y;
-   out.mat[2][2] = A.z * B.z;
+   out.x.x = A.x * B.x;
+   out.x.y = A.x * B.y;
+   out.x.z = A.x * B.z;
+   out.y.x = A.y * B.x;
+   out.y.y = A.y * B.y;
+   out.y.z = A.y * B.z;
+   out.z.x = A.z * B.x;
+   out.z.y = A.z * B.y;
+   out.z.z = A.z * B.z;
    return out;
 }
 /**********************************************************************/
@@ -618,19 +618,8 @@ vec3_t VxV(const vec3_t A, const vec3_t B)
 /*  Vector cross Matrix dot Vector                                    */
 vec3_t vxMov(const vec3_t w, const mat3x3_t M)
 {
-   vec3_t wxMow, Mow;
-
-   Mow.v[0] =
-       M.mat[0][0] * w.v[0] + M.mat[0][1] * w.v[1] + M.mat[0][2] * w.v[2];
-   Mow.v[1] =
-       M.mat[1][0] * w.v[0] + M.mat[1][1] * w.v[1] + M.mat[1][2] * w.v[2];
-   Mow.v[2] =
-       M.mat[2][0] * w.v[0] + M.mat[2][1] * w.v[1] + M.mat[2][2] * w.v[2];
-
-   wxMow.v[0] = w.v[1] * Mow.v[2] - w.v[2] * Mow.v[1];
-   wxMow.v[1] = w.v[2] * Mow.v[0] - w.v[0] * Mow.v[2];
-   wxMow.v[2] = w.v[0] * Mow.v[1] - w.v[1] * Mow.v[0];
-   return wxMow;
+   vec3_t Mow = MxV(M, w);
+   return VxV(w, Mow);
 }
 /**********************************************************************/
 /*  Magnitude of a 3-vector                                           */

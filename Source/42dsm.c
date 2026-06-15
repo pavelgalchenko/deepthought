@@ -653,7 +653,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       if (isGood) {
          TranslationCmdProcessed = TRUE;
-         Cmd->ManeuverMode       = INACTIVE;
+         Cmd->ManeuverMode       = MAN_INACTIVE;
       }
 
       if (TranslationCmdProcessed == FALSE) {
@@ -691,7 +691,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
 
       if (isGood) {
          TranslationCmdProcessed = TRUE;
-         Cmd->ManeuverMode       = INACTIVE;
+         Cmd->ManeuverMode       = MAN_INACTIVE;
       }
    }
    else if (!strcmp(subType, "Maneuver")) {
@@ -711,9 +711,9 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
          TranslationCmdProcessed = TRUE;
          Cmd->BurnStopTime       = DsmCmdTime + Cmd->BurnTime;
          if (!strcmp(manType, "CONSTANT"))
-            Cmd->ManeuverMode = CONSTANT;
+            Cmd->ManeuverMode = MAN_CONSTANT;
          else if (!strcmp(manType, "SMOOTHED"))
-            Cmd->ManeuverMode = SMOOTHED;
+            Cmd->ManeuverMode = MAN_SMOOTHED;
          else {
             fprintf(
                 stderr,
@@ -731,7 +731,7 @@ long GetTranslationCmd(struct AcType *const AC, struct DSMType *const DSM,
    }
 
    if (TranslationCmdProcessed == TRUE && Cmd->TranslationCtrlActive == TRUE) {
-      if (Cmd->ManeuverMode == INACTIVE) {
+      if (Cmd->ManeuverMode == MAN_INACTIVE) {
          if (GetController(DSM, ctrlNode, TRN_STATE) == FALSE) {
             fprintf(stderr,
                     "For %s command %s, could not find Controller alias %s or "
@@ -1164,23 +1164,57 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
    iterNode        = NULL;
    WHILE_FY_ITER(actSeqNode, iterNode)
    {
-      const char *searchStr =
-          "/Type %" STR(FIELDWIDTH) "s /Index %ld /Duty Cycle %lf";
       char type[FIELDWIDTH + 1] = {};
-      if (fy_node_scanf(iterNode, searchStr, type, &Cmd->ActInds[i],
-                        &Cmd->ActDuties[i]) == 3) {
+      if (fy_node_scanf(iterNode, "/Type %" STR(FIELDWIDTH) "s", type) == 1) {
          if (!strcmp(type, "WHL"))
-            Cmd->ActTypes[i] = WHL_TYPE;
+            Cmd->ActTypes[i] = ACT_WHL;
          else if (!strcmp(type, "THR"))
-            Cmd->ActTypes[i] = THR_TYPE;
+            Cmd->ActTypes[i] = ACT_THR;
          else if (!strcmp(type, "MTB"))
-            Cmd->ActTypes[i] = MTB_TYPE;
+            Cmd->ActTypes[i] = ACT_MTB;
+         else if (!strcmp(type, "IDEALFRC"))
+            Cmd->ActTypes[i] = ACT_IDEALFRC;
+         else if (!strcmp(type, "IDEALTRQ"))
+            Cmd->ActTypes[i] = ACT_IDEALTRQ;
          else {
             fprintf(stderr,
                     "Actuator Command index %s has improper actuator type %s. "
                     "Exiting...",
                     cmdName, type);
             exit(EXIT_FAILURE);
+         }
+         switch (Cmd->ActTypes[i]) {
+            case ACT_WHL:
+            case ACT_THR:
+            case ACT_MTB:
+               if (fy_node_scanf(iterNode, "/Index %d /Duty Cycle %lf",
+                                 &Cmd->ActInds[i], &Cmd->ActDuties[i]) != 2) {
+                  fprintf(stderr,
+                          "Actuator Command index %s for non-ideal actuator is "
+                          "impropertly formatted. Exiting...",
+                          cmdName);
+                  exit(EXIT_FAILURE);
+               }
+               break;
+            case ACT_IDEALFRC:
+            case ACT_IDEALTRQ: {
+               long isgood  = fy_node_scanf(iterNode, "/Action %lf /Frame %19s",
+                                            &Cmd->ActDuties[i],
+                                            Cmd->ActIdealFrame[i]) == 2;
+               isgood      &= assignYAMLToDoubleArray(
+                                  3, fy_node_by_path_def(iterNode, "/Direction"),
+                                  Cmd->ActIdealDirs[i].v) == 3;
+               if (!isgood) {
+                  fprintf(stderr,
+                          "Actuator Command index %s for ideal actuator is "
+                          "impropertly formatted. Exiting...",
+                          cmdName);
+                  exit(EXIT_FAILURE);
+               }
+               Cmd->ActIdealDirs[i] = UNITV(Cmd->ActIdealDirs[i]).v;
+            } break;
+            default:
+               break;
          }
       }
       else {
@@ -1190,7 +1224,7 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
              cmdName);
          exit(EXIT_FAILURE);
       }
-      if (Cmd->ActTypes[i] == WHL_TYPE && Cmd->ActInds[i] > AC->Nwhl) {
+      if (Cmd->ActTypes[i] == ACT_WHL && Cmd->ActInds[i] > AC->Nwhl) {
          fprintf(
              stderr,
              "SC[%ld] only has %ld wheels, but an actuator command was sent "
@@ -1198,14 +1232,14 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
              AC->ID, AC->Nwhl, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
-      if (Cmd->ActTypes[i] == THR_TYPE && Cmd->ActInds[i] > AC->Nthr) {
+      if (Cmd->ActTypes[i] == ACT_THR && Cmd->ActInds[i] > AC->Nthr) {
          fprintf(stderr,
                  "SC[%ld] only has %ld thrusters, but an actuator command was "
                  "sent to thruster %d. Exiting...\n",
                  AC->ID, AC->Nthr, Cmd->ActInds[i]);
          exit(EXIT_FAILURE);
       }
-      if (Cmd->ActTypes[i] == MTB_TYPE && Cmd->ActInds[i] > AC->Nmtb) {
+      if (Cmd->ActTypes[i] == ACT_MTB && Cmd->ActInds[i] > AC->Nmtb) {
          fprintf(stderr,
                  "SC[%ld] only has %ld MTBs, but an actuator command was sent "
                  "to MTB %d. Exiting...\n",
@@ -2332,21 +2366,63 @@ void ActuatorModule(struct AcType *const AC, struct DSMType *const DSM)
 
    // Process ActuatorCmd
    // loops through stored Actuator commands
+   // Do it last to override other commands
    for (i = 0; i < Cmd->ActNumCmds; i++) {
-      if (Cmd->ActTypes[i] == WHL_TYPE) {
-         AC->Whl[Cmd->ActInds[i]].Tcmd =
-             AC->Whl[i].Tmax * Cmd->ActDuties[i] / 100;
+      switch (Cmd->ActTypes[i]) {
+         case ACT_WHL:
+         case ACT_THR:
+         case ACT_MTB:
+            break;
+         case ACT_IDEALFRC:
+            AC->IdealFrc = VEC3_ZERO;
+            break;
+         case ACT_IDEALTRQ:
+            AC->IdealTrq = VEC3_ZERO;
+            break;
+         default:
+            break;
       }
-      else if (Cmd->ActTypes[i] == THR_TYPE) {
-         AC->Thr[Cmd->ActInds[i]].PulseWidthCmd =
-             Cmd->ActDuties[i] / 100 * AC->DT;
-         AC->Thr[Cmd->ActInds[i]].PulseWidthFinTimeStamp =
-             JDAddSeconds(JD_TT_MJD, AC->Thr[Cmd->ActInds[i]].PulseWidthCmd);
-         AC->Thr[Cmd->ActInds[i]].ThrustLevelCmd = Cmd->ActDuties[i] / 100;
-      }
-      else if (Cmd->ActTypes[i] == MTB_TYPE) {
-         AC->MTB[Cmd->ActInds[i]].Mcmd =
-             AC->MTB[i].Mmax * Cmd->ActDuties[i] / 100;
+   }
+   for (i = 0; i < Cmd->ActNumCmds; i++) {
+      switch (Cmd->ActTypes[i]) {
+         case ACT_WHL:
+            AC->Whl[Cmd->ActInds[i]].Tcmd =
+                AC->Whl[i].Tmax * Cmd->ActDuties[i] / 100.0;
+            break;
+         case ACT_THR: {
+            AC->Thr[Cmd->ActInds[i]].PulseWidthCmd =
+                Cmd->ActDuties[i] / 100.0 * AC->DT;
+            AC->Thr[Cmd->ActInds[i]].PulseWidthFinTimeStamp =
+                JDAddSeconds(JD_TT_MJD, AC->Thr[Cmd->ActInds[i]].PulseWidthCmd);
+            AC->Thr[Cmd->ActInds[i]].ThrustLevelCmd = Cmd->ActDuties[i] / 100.0;
+         } break;
+         case ACT_MTB:
+            AC->MTB[Cmd->ActInds[i]].Mcmd =
+                AC->MTB[i].Mmax * Cmd->ActDuties[i] / 100.0;
+            break;
+         case ACT_IDEALFRC: {
+            vec3_t act_frc = SxV(Cmd->ActDuties[i], Cmd->ActIdealDirs[i]);
+            switch (Cmd->ActIdealFrame[i][0]) {
+               case 'L':
+               case 'l':
+                  act_frc = MTxV(AC->CLN, act_frc);
+                  [[fallthrough]];
+               case 'N':
+               case 'n':
+                  act_frc = MxV(AC->CBN, act_frc);
+                  break;
+               default:
+                  break;
+            }
+            AC->IdealFrc = VAddV_Elem(
+                AC->IdealFrc, SxV(Cmd->ActDuties[i], Cmd->ActIdealDirs[i]));
+         } break;
+         case ACT_IDEALTRQ: {
+            AC->IdealTrq = VAddV_Elem(
+                AC->IdealTrq, SxV(Cmd->ActDuties[i], Cmd->ActIdealDirs[i]));
+         } break;
+         default:
+            break;
       }
    }
 }
@@ -2543,7 +2619,7 @@ void FindDsmCmdVecN(struct DSMType *DSM, struct DSMCmdVecType *CV)
 void TranslationGuidance(struct DSMType *DSM, struct FormationType *F)
 {
    struct DSMCmdType *Cmd = &DSM->Cmd;
-   if (Cmd->TranslationCtrlActive == FALSE || Cmd->ManeuverMode != INACTIVE)
+   if (Cmd->TranslationCtrlActive == FALSE || Cmd->ManeuverMode != MAN_INACTIVE)
       return;
 
    long Isc_Ref, goodOriginFrame = FALSE;
@@ -3422,7 +3498,8 @@ void TranslationCtrl(struct DSMType *DSM)
    struct DSMCmdType *Cmd     = &DSM->Cmd;
    struct DSMStateType *state = &DSM->state;
 
-   if (Cmd->TranslationCtrlActive == TRUE && Cmd->ManeuverMode == INACTIVE) {
+   if (Cmd->TranslationCtrlActive == TRUE &&
+       Cmd->ManeuverMode == MAN_INACTIVE) {
       switch (Cmd->trn_controller) {
          case PID_CNTRL: {
             // PID Controller
@@ -3499,10 +3576,10 @@ void TranslationCtrl(struct DSMType *DSM)
       DSM->Oldperr = DSM->perr;
    }
    else if (Cmd->TranslationCtrlActive == TRUE &&
-            Cmd->ManeuverMode != INACTIVE) {
+            Cmd->ManeuverMode != MAN_INACTIVE) {
       if (SimTime < Cmd->BurnStopTime) {
          switch (Cmd->ManeuverMode) {
-            case CONSTANT: {
+            case MAN_CONSTANT: {
                if (!strcmp(Cmd->RefFrame, "N")) {
                   CTRL->FcmdN = SxV(DSM->mass / Cmd->BurnTime, Cmd->DeltaV);
                   // Converting from Inertial to body frame for Report
@@ -3517,7 +3594,7 @@ void TranslationCtrl(struct DSMType *DSM)
                // Converting back to Inertial from body frame
                CTRL->FcmdN = QTxV(state->qbn, CTRL->FcmdB);
             } break;
-            case SMOOTHED: {
+            case MAN_SMOOTHED: {
                // .99998 corresponds to capturing 99.999% of the burn since tanh
                // has an asymptote
                const double coef = -2 * atanh(-0.99998);
@@ -3550,7 +3627,7 @@ void TranslationCtrl(struct DSMType *DSM)
          }
       }
       else {
-         Cmd->ManeuverMode          = INACTIVE;
+         Cmd->ManeuverMode          = MAN_INACTIVE;
          Cmd->TranslationCtrlActive = FALSE;
          CTRL->FcmdN                = VEC3_ZERO;
          CTRL->FcmdB                = VEC3_ZERO;

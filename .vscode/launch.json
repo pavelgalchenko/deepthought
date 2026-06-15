@@ -13,7 +13,6 @@
             "DSM_DEMO",
             "DSM_NAV_DEMO",
             "NESC_Testing",
-            "PLANETS_TEST",
          ],
          "default": "DSM_DEMO"
       },

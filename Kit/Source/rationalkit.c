@@ -663,16 +663,6 @@ static void _decomp_dbl(double x, int *sign, Rat_Long *mantissa, int *exponent)
 /*  whole + num/den                                                   */
 
 #define _double2rational_body(val, out)                                        \
-   if (fabs(val) > _RATLONG_MAX_) {                                            \
-      /* TODO: clean up the condition, also maybe just throw a warning for the \
-         caller to deal with?*/                                                \
-      fprintf(stderr,                                                          \
-              "In double2rational() input double %le is larger than the "      \
-              "largest whole part of Rational. Exiting...\n",                  \
-              val);                                                            \
-      exit(EXIT_FAILURE);                                                      \
-   }                                                                           \
-                                                                               \
    double integer = 0;                                                         \
    val            = modf(val, &integer);                                       \
    Rat_Long whole = (Rat_Long)integer;                                         \
@@ -743,12 +733,30 @@ static void _decomp_dbl(double x, int *sign, Rat_Long *mantissa, int *exponent)
 
 Rational double2rational(double val)
 {
+   if (fabs(val) > _RATLONG_MAX_) {
+      /* TODO: clean up the condition, also maybe just throw a warning for the
+       * \ caller to deal with?*/
+      fprintf(stderr,
+              "In double2rational() input double %le is larger than the "
+              "largest whole part of Rational. Exiting...\n",
+              val);
+      exit(EXIT_FAILURE);
+   }
    Rational out = RATIONAL_ZERO;
    _double2rational_body(val, out);
    return out;
 }
 RationalLL double2rationalll(double val)
 {
+   if (fabs(val) > _RATLONG_MAX_) {
+      /* TODO: clean up the condition, also maybe just throw a warning for the
+       * \ caller to deal with?*/
+      fprintf(stderr,
+              "In double2rationalll() input double %le is larger than the "
+              "largest whole part of Rational. Exiting...\n",
+              val);
+      exit(EXIT_FAILURE);
+   }
    RationalLL out = (RationalLL){.whole = 0, .num = 0, .den = 1};
    _double2rational_body(val, out);
    return out;

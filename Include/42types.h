@@ -150,6 +150,8 @@ struct BodyType {
    char FlexFileName[40];
    float ModelMatrix[16]; /* For OpenGL */
    long GeomTag;
+   double DragRefArea; /* For simplified drag model, used if nonzero */
+
    /* For KaneNBody Dynamics */
    long Gin;      /* Joint that B is Bout of */
    vec3_t beta;   /* Vector from B ref pt to B[0] ref pt, expressed in N */

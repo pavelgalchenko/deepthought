@@ -446,12 +446,52 @@ void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
    }
 }
 /**********************************************************************/
-void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
-                 struct LagrangeSystemType *lagsys, struct OrbitType *const orb,
-                 struct FormationType *const frm, JDType jd)
+void OrbitOrientation(const JDType jd, const struct WorldType *const world,
+                      const struct OrbitType *orb,
+                      struct FormationType *const frm, mat3x3_t *const CLN,
+                      vec3_t *const wln)
 {
-   struct RegionType *R;
+   if (!orb->Exists)
+      return;
 
+   /* Update CLN and wln */
+   switch (orb->Regime) {
+      case ORB_ZERO:
+         /* L is aligned with N, wln is zero */
+         *CLN = MAT3X3_EYE;
+         *wln = VEC3_ZERO;
+         break;
+      case ORB_FLIGHT: {
+         /* L is East-North-Up */
+         FindENU(orb->PosN, GetWorldW(jd, world), CLN, wln);
+      } break;
+      case ORB_N_BODY:
+      case ORB_CENTRAL:
+         /* L is LVLH */
+         FindCLN(orb->PosN, orb->VelN, CLN, wln);
+         break;
+      case ORB_THREE_BODY:
+         /* L is Rotating Frame XYZ? */
+         FindCLN(orb->PosN, orb->VelN, CLN, wln);
+         break;
+      default:
+         fprintf(stderr,
+                 "Unknown Orbit Regime in OrbitOrientation.  Bailing out.\n");
+         exit(EXIT_FAILURE);
+   }
+
+   /* Update Formation Frame */
+   if (frm->FixedInFrame == 'L')
+      frm->CN = MxM(frm->CL, *CLN);
+   else
+      frm->CL = MxMT(frm->CN, *CLN);
+}
+/**********************************************************************/
+void OrbitMotion(JDType jd, struct WorldType *const worlds,
+                 struct OrbitType *const orb, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys,
+                 struct FormationType *const frm)
+{
 #if 0
       static long RectCtr = 0;
       RectCtr++;
@@ -467,69 +507,44 @@ void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
 #endif
    const double dyntime = JDToDynTime(jd);
 
-   if (orb->Exists) {
-      if (orb->Regime == ORB_THREE_BODY) {
-         if (orb->LagDOF == LAGDOF_MODES) {
+   if (!orb->Exists)
+      return;
+   switch (orb->Regime) {
+      case ORB_FLIGHT:
+         orb->PosN = rgn->PosN;
+         orb->VelN = rgn->VelN;
+         break;
+      case ORB_ZERO:
+         break;
+      case ORB_N_BODY:
+      case ORB_CENTRAL:
+         if (orb->SplineActive)
+            SplineToPosVel(lagsys, orb, dyntime);
+         else if (orb->J2DriftEnabled)
+            MeanEph2RV(orb, dyntime);
+         else
+            Eph2RV(orb->mu, orb->SLR, orb->ecc, orb->inc, orb->RAAN, orb->ArgP,
+                   dyntime - orb->tp, &orb->PosN, &orb->VelN, &orb->anom);
+         break;
+      case ORB_THREE_BODY:
+         if (orb->LagDOF == LAGDOF_MODES)
             LagModes2RV(dyntime, &lagsys[orb->Sys], orb, &orb->PosN,
                         &orb->VelN);
-         }
          else if (orb->LagDOF == LAGDOF_COWELL) {
             ThreeBodyOrbitRK4(worlds, orb);
             RV2LagModes(dyntime, &lagsys[orb->Sys], orb);
             orb->Epoch = dyntime;
          }
-         else if (orb->LagDOF == LAGDOF_SPLINE) {
+         else if (orb->LagDOF == LAGDOF_SPLINE)
             SplineToPosVel(lagsys, orb, dyntime);
-         }
-      }
-      else if (orb->Regime == ORB_CENTRAL || orb->Regime == ORB_N_BODY) {
-         if (orb->SplineActive)
-            SplineToPosVel(lagsys, orb, dyntime);
-         else if (orb->J2DriftEnabled)
-            MeanEph2RV(orb, dyntime);
-         else {
-            Eph2RV(orb->mu, orb->SLR, orb->ecc, orb->inc, orb->RAAN, orb->ArgP,
-                   dyntime - orb->tp, &orb->PosN, &orb->VelN, &orb->anom);
-         }
-      }
-      /* Else is ORB_ZERO or ORB_FLIGHT, and no action required */
-
-      /* Update CLN */
-      switch (orb->Regime) {
-         case ORB_ZERO:
-            /* L is aligned with N, wln is zero */
-            orb->CLN = MAT3X3_EYE;
-            orb->wln = VEC3_ZERO;
-            break;
-         case ORB_FLIGHT:
-            /* L is East-North-Up */
-            R         = &rgn[orb->Region];
-            orb->PosN = R->PosN;
-            orb->VelN = R->VelN;
-            FindENU(orb->PosN, GetWorldW(jd, &worlds[orb->World]), &orb->CLN,
-                    &orb->wln);
-            break;
-         case ORB_N_BODY:
-         case ORB_CENTRAL:
-            /* L is LVLH */
-            FindCLN(orb->PosN, orb->VelN, &orb->CLN, &orb->wln);
-            break;
-         case ORB_THREE_BODY:
-            /* L is Rotating Frame XYZ? */
-            FindCLN(orb->PosN, orb->VelN, &orb->CLN, &orb->wln);
-            break;
-         default:
-            fprintf(stderr,
-                    "Unknown Orbit Regime in Ephemerides.  Bailing out.\n");
-            exit(EXIT_FAILURE);
-      }
-
-      /* Update Formation Frame */
-      if (frm->FixedInFrame == 'L')
-         frm->CN = MxM(frm->CL, orb->CLN);
-      else
-         frm->CL = MxMT(frm->CN, orb->CLN);
+         break;
+      default:
+         fprintf(stderr,
+                 "Unknown Orbit Regime in OrbitMotion.  Bailing out.\n");
+         exit(EXIT_FAILURE);
    }
+
+   OrbitOrientation(jd, &worlds[orb->World], orb, frm, &orb->CLN, &orb->wln);
 }
 /**********************************************************************/
 ephemType GetEphemType(const char *s)
@@ -924,7 +939,8 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
 long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                      struct WorldType *const worlds)
 {
-   long i, Iw;
+   long i;
+   WorldID Iw;
    struct Cheb3DType *Cheb;
    struct OrbitType *Eph;
    struct WorldType *W;
@@ -950,7 +966,8 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    /* .. Initialize Planetary Pos/Vel */
    for (Iw = SOL; Iw <= LUNA; Iw++) {
       W = &worlds[Iw];
-      if (!W->Exists)
+      // need Luna position to figure out Earth Position
+      if (!W->Exists && (Iw == LUNA && worlds[EARTH].Exists))
          continue;
       Eph = &W->eph;
       /* Determine segment */
@@ -979,7 +996,7 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    /* Move planets from barycentric to Sun-centered */
    for (Iw = PLUTO; Iw >= SOL && Iw <= PLUTO; Iw--) {
       W = &worlds[Iw];
-      if (!W->Exists)
+      if (!W->Exists && !(Iw == LUNA && worlds[EARTH].Exists))
          continue;
       W->eph.PosN = VSubV_Elem(W->eph.PosN, sol->eph.PosN);
       W->eph.VelN = VSubV_Elem(W->eph.VelN, sol->eph.VelN);

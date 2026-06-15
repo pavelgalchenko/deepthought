@@ -203,9 +203,6 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
 
 __attribute__((const)) vec3_t ThirdBodyGravForce(vec3_t p, vec3_t s, double mu,
                                                  double mass);
-void Rk4JplEphems(JDType jd, long trgtWORLD, struct WorldType *worlds,
-                  vec3_t *trgtPosN, vec3_t *trgtPosH, double *trgtPriMerAng,
-                  mat3x3_t *trgtCNH);
 long SimStep(void);
 void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);
@@ -219,9 +216,14 @@ void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
                  struct WorldType *const worlds, struct RegionType *rgn,
                  struct LagrangeSystemType *lagsys,
                  struct OrbitType *const orbs);
-void OrbitMotion(struct WorldType *const worlds, struct RegionType *rgn,
-                 struct LagrangeSystemType *lagsys, struct OrbitType *const O,
-                 struct FormationType *const frm, JDType jd);
+void OrbitOrientation(const JDType jd, const struct WorldType *worlds,
+                      const struct OrbitType *orb,
+                      struct FormationType *const frm, mat3x3_t *const CLN,
+                      vec3_t *const wln);
+void OrbitMotion(JDType jd, struct WorldType *const worlds,
+                 struct OrbitType *const orb, struct RegionType *rgn,
+                 struct LagrangeSystemType *lagsys,
+                 struct FormationType *const frm);
 void Environment(JDType jd, struct WorldType *const worlds,
                  struct OrbitType *const orbs, struct SCType *S);
 void Perturbations(JDType jd, struct WorldType *const worlds,

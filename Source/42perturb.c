@@ -359,10 +359,10 @@ void GravGradFrcTrq(struct WorldType *const worlds, struct OrbitType *const orb,
          /* GG torque */
          rb    = MxV(B->CN, rhat);
          axIoa = vxMov(rb, B->I);
-         for (int i = 0; i < 3; i++) {
-            Tb.v[i]     += 3.0 * Coef * axIoa.v[i];
-            B->Trq.v[i] += 3.0 * Coef * axIoa.v[i];
-         }
+         for (int i = 0; i < 3; i++)
+            Tb.v[i] += 3.0 * Coef * axIoa.v[i];
+
+         B->Trq      = VAddV_Elem(B->Trq, Tb);
          Tn          = MTxV(B->CN, Tb);
          S->gravTrqN = VAddV_Elem(S->gravTrqN, Tn);
          S->gravTrqB = VAddV_Elem(S->gravTrqB, Tb);
@@ -478,9 +478,11 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
 void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
                 struct OrbitType *const orb, struct SCType *S)
 {
+   if (S->DragCoef <= 0)
+      return;
 
    vec3_t VrelN, VrelB, cp, Fb, Fn, Trq, Tn;
-   double WoN, Coef, Area, PolyArea, WindSpeed;
+   double WoN, Coef, PolyArea, WindSpeed, Area;
    long Ib;
    long Ipoly;
    long OrbCenter;
@@ -505,9 +507,13 @@ void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
    WindSpeed    = uv.m;
    VrelN        = uv.v;
 
+   const double drag_coef =
+       -0.5 * S->AtmoDensity * S->DragCoef * WindSpeed * WindSpeed;
+
    if (AeroShadowsActive) {
       FindUnshadedAreas(S, VrelN);
    }
+   S->aeroProjectedArea = 0;
 
    /* .. Find Force and Torque on each Body, in that body's frame */
    for (Ib = 0; Ib < S->Nb; Ib++) {
@@ -519,29 +525,33 @@ void AeroFrcTrq(JDType jd, struct WorldType *const worlds,
       /* Find total projected area and cp for Body */
       Area = 0.0;
       cp   = VEC3_ZERO;
-      G    = &Geom[B->GeomTag];
-      for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
-         P = &G->Poly[Ipoly];
-         if (strncmp(Matl[P->Matl].Label, "SHADED",
-                     6)) { /* Aero doesn't see shaded polys */
-            WoN = VoV(VrelB, P->Norm);
-            if (WoN > 0.0) {
-               PolyArea  = WoN * P->UnshadedArea;
-               Area     += PolyArea;
-               for (int i = 0; i < 3; i++)
-                  cp.v[i] += PolyArea * (P->UnshadedCtr.v[i] - B->cm.v[i]);
+
+      if (B->DragRefArea > DBL_EPSILON)
+         Area = B->DragRefArea;
+      else {
+         G = &Geom[B->GeomTag];
+         for (Ipoly = 0; Ipoly < G->Npoly; Ipoly++) {
+            P = &G->Poly[Ipoly];
+            /* Aero doesn't see shaded polys */
+            if (strncmp(Matl[P->Matl].Label, "SHADED", 6)) {
+               WoN = VoV(VrelB, P->Norm);
+               if (WoN > 0.0) {
+                  PolyArea  = WoN * P->UnshadedArea;
+                  Area     += PolyArea;
+                  for (int i = 0; i < 3; i++)
+                     cp.v[i] += PolyArea * (P->UnshadedCtr.v[i] - B->cm.v[i]);
+               }
             }
          }
+         if (Area > 0.0)
+            cp = SxV(1.0 / Area, cp);
       }
-      if (Area > 0.0)
-         cp = SxV(1.0 / Area, cp);
-
-      S->aeroProjectedArea = Area;
+      S->aeroProjectedArea += Area;
 
       /* Compute force and torque exerted on B */
-      Coef = -0.5 * S->AtmoDensity * S->DragCoef * WindSpeed * WindSpeed * Area;
-      Fb   = SxV(Coef, VrelB);
-      Fn   = MTxV(B->CN, Fb);
+      Coef        = drag_coef * Area;
+      Fb          = SxV(Coef, VrelB);
+      Fn          = MTxV(B->CN, Fb);
       B->FrcN     = VAddV_Elem(B->FrcN, Fn);
       B->FrcB     = VAddV_Elem(B->FrcB, Fb);
       S->aeroFrcN = VAddV_Elem(S->aeroFrcN, Fn);

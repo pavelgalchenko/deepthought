@@ -28,10 +28,10 @@ Dynamics Flags:
   Flex Active: false
   2nd Order Flex: false
   Shaker File Name: NONE
-  Drag Coefficient: 2.0
+  Drag Coefficient: 0.0
   Integration Method: RK89
 Bodies:
-  - Body: &Body_0
+  - Body:
       Index: 0
       Mass: 400000.0
       MOI: [102000000, 91000000, 164000000]
@@ -39,8 +39,9 @@ Bodies:
       Pos of CM: [-3.0, -1.5, 4.0]
       Constant Momentum: [0.0, 0.0, 0.0]
       Constant Dipole: [0.0, 0.0, 0.0]
+      Drag Reference Area: 1400.0
       Geometry File Name: Cubesat_3U.obj # TODO: sphere.obj
-      Node File Name: Nodes_Simple.txt
+      Node File Name: NONE
       Flex File Name: NONE
 Joints: []
 Wheel Params: { Drag: false, Jitter: false }

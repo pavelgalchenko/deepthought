@@ -10,8 +10,9 @@ Orbit:
   Init:
     Method: RV
     Frame: Inertial
-    Position: [-4315.96774, 960.3562, 5167.26953] #[km]
-    Velocity: [.129091037, -7.491513855, 1.452515654] #[km/sec]
+    Units: m
+    Position: [-4315967.74, 960356.2, 5167269.53] #[m]
+    Velocity: [129.091037, -7491.513855, 1452.515654] #[m/sec]
 Formation:
   Fixed Frame: N
   Euler Angles:

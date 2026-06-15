@@ -360,7 +360,7 @@ void BodyStatesToNodeStates(struct SCType *S)
             N->qb.qs   = sqrt(1.0 - VoV(N->qb.qv, N->qb.qv));
          }
          vb       = MxV(B->CN, B->vn);
-         N->PosCm = VAddV_Elem(N->PosB, B->cm);
+         N->PosCm = VSubV_Elem(N->PosB, B->cm);
          wxr      = VxV(N->AngVelB, N->PosCm);
          for (i = 0; i < 3; i++)
             N->VelB.v[i] += vb.v[i] + wxr.v[i];
@@ -3425,7 +3425,7 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    // TODO: three body orbit is integrated sometimes, so add its states to the
    // integration
    WorldEphemerides(jd_tdb_j2000, jd_tt_j2000, ephem, world, rgn, lagsys);
-   OrbitMotion(world, rgn, lagsys, orb, frm, jd_tt_mjd);
+   OrbitMotion(jd_tt_mjd, world, orb, rgn, lagsys, frm);
    RKStateToS(orb, x, S);
    if (S->OrbDOF == ORBDOF_EULER_HILL) {
       vec3_t pv = DBL_TO_VEC3(x_trn);

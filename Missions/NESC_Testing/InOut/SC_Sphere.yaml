@@ -31,7 +31,7 @@ Dynamics Flags:
   Drag Coefficient: 0.02
   Integration Method: RK89
 Bodies:
-  - Body: &Body_0
+  - Body:
       Index: 0
       Mass: 1.0
       MOI: [1.2566370614359172, 1.2566370614359172, 1.2566370614359172]
@@ -39,8 +39,9 @@ Bodies:
       Pos of CM: [0.0, 0.0, 0.0]
       Constant Momentum: [0.0, 0.0, 0.0]
       Constant Dipole: [0.0, 0.0, 0.0]
+      Drag Reference Area: 1.0
       Geometry File Name: Cubesat_3U.obj # TODO: sphere.obj
-      Node File Name: Nodes_Simple.txt
+      Node File Name: NONE
       Flex File Name: NONE
 Joints: []
 Wheel Params: { Drag: false, Jitter: false }

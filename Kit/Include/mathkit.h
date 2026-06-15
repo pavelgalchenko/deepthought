@@ -57,6 +57,11 @@ typedef struct pair_vec3 {
 
 // Row-Major 3x3 Matrix
 typedef union mat3x3 {
+   struct {
+      vec3_t x;
+      vec3_t y;
+      vec3_t z;
+   };
    vec3_t rows[3];
    double flat[9];
    double mat[3][3];
