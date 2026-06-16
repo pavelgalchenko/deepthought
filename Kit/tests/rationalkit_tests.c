@@ -20,9 +20,8 @@
 
 #define SUITE_NAME rationalkit
 
-#define ULP_THRESH     (4) // acceptable Units in Last Place variation
-#define DBL_THRESH     (ULP_THRESH * __DBL_EPSILON__)
-#define COND_STR(cond) (cond) ? ("TRUE") : ("FALSE")
+#define ULP_THRESH (4) // acceptable Units in Last Place variation
+#define DBL_THRESH (ULP_THRESH * __DBL_EPSILON__)
 
 #define RATIONAL_DATAPOINTS                                                    \
    DataPoints(                                                                 \

@@ -314,6 +314,11 @@ vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim)
    return x;
 }
 /**********************************************************************/
+int _isequal_vec3(const vec3_t a, const vec3_t b)
+{
+   return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+/**********************************************************************/
 mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B)
 {
    mat3x3_t out  = A;
@@ -377,6 +382,13 @@ mat3x3_t MDivM_Elem(const mat3x3_t A, const mat3x3_t B)
 double MTrace(const mat3x3_t A)
 {
    return A.mat[0][0] + A.mat[1][1] + A.mat[2][2];
+}
+/**********************************************************************/
+int _isequal_mat3x3(const mat3x3_t a, const mat3x3_t b)
+{
+   return _isequal_vec3(a.rows[0], b.rows[0]) &&
+          _isequal_vec3(a.rows[1], b.rows[1]) &&
+          _isequal_vec3(a.rows[2], b.rows[2]);
 }
 /**********************************************************************/
 /*              Cofactor of 3x3 matrix                                */
@@ -587,7 +599,7 @@ mat3x3_t MT(const mat3x3_t A)
 /*  Vector Dot Product                                                */
 double VoV(const vec3_t A, const vec3_t B)
 {
-   return (A.v[0] * B.v[0] + A.v[1] * B.v[1] + A.v[2] * B.v[2]);
+   return (A.x * B.x + A.y * B.y + A.z * B.z);
 }
 /**********************************************************************/
 mat3x3_t VOuterV(const vec3_t A, const vec3_t B)
@@ -871,6 +883,11 @@ quat_t RECTIFYQ(quat_t Q)
       Q.q[3] = -Q.q[3];
    }
    return Q;
+}
+/*********************************************************************/
+int _isequal_vec4(const vec4_t a, const vec4_t b)
+{
+   return _isequal_vec3(a.qv, b.qv) && a.qs == b.qs;
 }
 /*********************************************************************/
 /* Given vector A, find vectors B, C to form orthogonal basis        */
@@ -2265,9 +2282,9 @@ void VecToLngLat(vec3_t A, double *lng, double *lat)
       if (fabs(B.v[2]) < 1.0)
          *lat = asin(B.v[2]);
       else if (B.v[2] > 0.0)
-         *lat = 2.0 * atan(1.0);
+         *lat = HALFPI;
       else
-         *lat = -2.0 * atan(1.0);
+         *lat = -HALFPI;
    }
    else {
       *lng = 0.0;

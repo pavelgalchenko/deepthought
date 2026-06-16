@@ -158,12 +158,14 @@ __attribute__((const)) vec3_t VSubV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t VMulV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t VDivV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim);
+__attribute__((const)) int _isequal_vec3(const vec3_t a, const vec3_t b);
 
 __attribute__((const)) mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MSubM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MMulM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MDivM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) double MTrace(const mat3x3_t A);
+__attribute__((const)) int _isequal_mat3x3(const mat3x3_t a, const mat3x3_t b);
 
 __attribute__((const)) mat3x3_t SxM(const double S, const mat3x3_t A);
 __attribute__((const)) double det3x3(const mat3x3_t M);
@@ -191,6 +193,8 @@ __attribute__((const)) vec3_t QxV(const quat_t QAB, const vec3_t Vb);
 __attribute__((const)) vec3_t QTxV(const quat_t QAB, const vec3_t Va);
 __attribute__((const)) quat_t UNITQ(quat_t Q);
 __attribute__((const)) quat_t RECTIFYQ(quat_t Q);
+__attribute__((const)) int _isequal_vec4(const vec4_t a, const vec4_t b);
+
 __attribute__((const)) pair_vec3_t PerpBasis(const vec3_t A);
 __attribute__((const)) double fact(long const n);
 __attribute__((const)) double oddfact(long const n);
