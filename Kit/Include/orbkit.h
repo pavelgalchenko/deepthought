@@ -498,7 +498,7 @@ __attribute__((pure)) vec3_t GetWorldWln(JDType jd,
 __attribute__((const)) AngDataType CopyAngData(const AngDataType src);
 __attribute__((pure)) double GetWorldAng(JDType jd,
                                          const AngDataType *const ang_data);
-__attribute__((pure)) dbl_mat3x3_t
+__attribute__((pure)) pair_dbl_mat3x3_t
 GetWorldCWN(JDType jd, const AngDataType *const ang_data);
 __attribute__((pure)) mat3x3_t GetWorldCNJ(JDType jd,
                                            const AngDataType *const ang_data);

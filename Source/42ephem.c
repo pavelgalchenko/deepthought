@@ -1003,10 +1003,10 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
       W->PosH     = W->eph.PosN;
       W->VelH     = W->eph.VelN;
       /* Calculate PriMerAng for Planets */
-      dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-      W->PriMerAng         = dbl_mat.dbl;
-      W->CWN               = dbl_mat.mat;
-      W->qwn               = C2Q(W->CWN);
+      pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+      W->PriMerAng              = dbl_mat.dbl;
+      W->CWN                    = dbl_mat.mat;
+      W->qwn                    = C2Q(W->CWN);
    }
 
    /* Adjust Earth from Earth-Moon barycenter */
@@ -1042,12 +1042,12 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
          W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
       }
       else {
-         dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-         W->PriMerAng         = dbl_mat.dbl;
-         W->CWN               = dbl_mat.mat;
-         W->CNJ               = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
-         W->CNH               = MxM(W->CNJ, worlds[EARTH].CNH);
-         W->qnj               = C2Q(W->CNJ);
+         pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+         W->PriMerAng              = dbl_mat.dbl;
+         W->CWN                    = dbl_mat.mat;
+         W->CNJ                    = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
+         W->CNH                    = MxM(W->CNJ, worlds[EARTH].CNH);
+         W->qnj                    = C2Q(W->CNJ);
       }
       W->qwn = C2Q(W->CWN);
       W->qnh = C2Q(W->CNH);
@@ -1123,9 +1123,9 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
             W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
          }
          else {
-            dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-            W->PriMerAng         = dbl_mat.dbl;
-            W->CWN               = dbl_mat.mat;
+            pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+            W->PriMerAng              = dbl_mat.dbl;
+            W->CWN                    = dbl_mat.mat;
          }
          W->qwn = C2Q(W->CWN);
       }
@@ -1156,14 +1156,14 @@ long UpdateMinorBodies(JDType jd_tdb_j2000, const JDType jd_tt_j2000,
          W->PosH = Eph->PosN;
          W->VelH = Eph->VelN;
 
-         dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-         W->PriMerAng         = dbl_mat.dbl;
-         W->CWN               = dbl_mat.mat;
-         W->CNJ               = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
-         W->CNH               = MxM(W->CNJ, earth_CNH);
-         W->qnj               = C2Q(W->CNJ);
-         W->qwn               = C2Q(W->CWN);
-         W->qnh               = C2Q(W->CNH);
+         pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
+         W->PriMerAng              = dbl_mat.dbl;
+         W->CWN                    = dbl_mat.mat;
+         W->CNJ                    = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
+         W->CNH                    = MxM(W->CNJ, earth_CNH);
+         W->qnj                    = C2Q(W->CNJ);
+         W->qwn                    = C2Q(W->CWN);
+         W->qnh                    = C2Q(W->CNH);
       }
    }
    return (0);
@@ -1202,12 +1202,12 @@ long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
             M->PosH = VAddV_Elem(rh, W->PosH);
             M->VelH = VAddV_Elem(vh, W->VelH);
 
-            dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, M->ang_data);
-            M->PriMerAng         = dbl_mat.dbl;
-            M->CWN               = dbl_mat.mat;
-            M->qnj               = C2Q(M->CNJ);
-            M->qwn               = C2Q(M->CWN);
-            M->qnh               = C2Q(M->CNH);
+            pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, M->ang_data);
+            M->PriMerAng              = dbl_mat.dbl;
+            M->CWN                    = dbl_mat.mat;
+            M->qnj                    = C2Q(M->CNJ);
+            M->qwn                    = C2Q(M->CWN);
+            M->qnh                    = C2Q(M->CNH);
          }
       }
    }

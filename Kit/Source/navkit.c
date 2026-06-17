@@ -265,10 +265,9 @@ mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
             CWN                      = MxM(C_W_TETE, C_TETE_J2000);
          }
       } break;
-      default: {
-         dbl_mat3x3_t dbl_mat = GetWorldCWN(jd, W->ang_data);
-         CWN                  = dbl_mat.mat;
-      } break;
+      default:
+         CWN = GetWorldCWN(jd, W->ang_data).mat;
+         break;
    }
    return CWN;
 }

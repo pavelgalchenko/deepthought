@@ -123,9 +123,11 @@ double GetWorldAng(JDType jd, const AngDataType *const ang_data)
    return angle * D2R;
 }
 /**********************************************************************/
-dbl_mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
+/* Return both the Prime Meridian angle of a world and the            */
+/* corresponding CWN                                                  */
+pair_dbl_mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
 {
-   dbl_mat3x3_t pri_cwn;
+   pair_dbl_mat3x3_t pri_cwn;
    const vec3_t z_axis = VEC3_PZAXIS;
 
    const AngDataType *pm_data = NULL;

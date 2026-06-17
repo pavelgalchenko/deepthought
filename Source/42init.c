@@ -3891,10 +3891,10 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->eph.PosN = VEC3_ZERO;
    W->eph.VelN = VEC3_ZERO;
 
-   dbl_mat3x3_t dbl_mat = GetWorldCWN(jd, W->ang_data);
-   W->PriMerAng         = dbl_mat.dbl;
-   W->CWN               = dbl_mat.mat;
-   W->qwn               = C2Q(W->CWN);
+   pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd, W->ang_data);
+   W->PriMerAng              = dbl_mat.dbl;
+   W->CWN                    = dbl_mat.mat;
+   W->qwn                    = C2Q(W->CWN);
 
    W->CNJ = GetWorldCNJ(jd, W->ang_data);
    W->qnj = C2Q(W->CNJ);
@@ -4228,12 +4228,13 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
             }
             else {
-               dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
-               W->PriMerAng         = dbl_mat.dbl;
-               W->CWN               = dbl_mat.mat;
-               W->CNJ               = GetWorldCNJ(jd, W->ang_data);
-               W->CNH               = MxM(W->CNJ, worlds[EARTH].CNH);
-               W->qnj               = C2Q(W->CNJ);
+               pair_dbl_mat3x3_t dbl_mat =
+                   GetWorldCWN(jd_tdb_j2000, W->ang_data);
+               W->PriMerAng = dbl_mat.dbl;
+               W->CWN       = dbl_mat.mat;
+               W->CNJ       = GetWorldCNJ(jd, W->ang_data);
+               W->CNH       = MxM(W->CNJ, worlds[EARTH].CNH);
+               W->qnj       = C2Q(W->CNJ);
             }
             W->qwn = C2Q(W->CWN);
             W->qnh = C2Q(W->CNH);
@@ -4826,9 +4827,10 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             M->RadOfInfluence = RadiusOfInfluence(P->mu, M->mu, E->SMA);
 
             if (ephem != EPH_SPICE) {
-               dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, M->ang_data);
-               M->PriMerAng         = dbl_mat.dbl;
-               M->CWN               = dbl_mat.mat;
+               pair_dbl_mat3x3_t dbl_mat =
+                   GetWorldCWN(jd_tdb_j2000, M->ang_data);
+               M->PriMerAng = dbl_mat.dbl;
+               M->CWN       = dbl_mat.mat;
                // TODO: double check that CNH tends to reflect the parent body
                M->CNJ = GetWorldCNJ(jd, M->ang_data);
                M->CNH = MxM(M->CNJ, worlds[EARTH].CNH);
@@ -5008,10 +5010,10 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
       W->PosH = E->PosN;
       W->VelH = E->VelN;
 
-      dbl_mat3x3_t dbl_mat = GetWorldCWN(JD_TDB_MJD, W->ang_data);
-      W->PriMerAng         = dbl_mat.dbl;
-      W->CWN               = dbl_mat.mat;
-      W->qwn               = C2Q(W->CWN);
+      pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(JD_TDB_MJD, W->ang_data);
+      W->PriMerAng              = dbl_mat.dbl;
+      W->CWN                    = dbl_mat.mat;
+      W->qwn                    = C2Q(W->CWN);
 
       /* Gravitation Model */
       if (GravPertActive) {

@@ -248,25 +248,6 @@ vec3_t VxMT(const vec3_t V, const mat3x3_t M)
    return MxV(M, V);
 }
 /**********************************************************************/
-/*  Scalar times 3x1 Vector                                           */
-vec3_t SxV(const double S, const vec3_t V)
-{
-   vec3_t W;
-   W.x = S * V.x;
-   W.y = S * V.y;
-   W.z = S * V.z;
-   return W;
-}
-/**********************************************************************/
-vec3_t NegV_Elem(const vec3_t A)
-{
-   vec3_t out;
-   out.x = -A.x;
-   out.y = -A.y;
-   out.z = -A.z;
-   return out;
-}
-/**********************************************************************/
 vec3_t VAddV_Elem(const vec3_t A, const vec3_t B)
 {
    vec3_t out  = A;
@@ -317,30 +298,6 @@ vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim)
 int _isequal_vec3(const vec3_t a, const vec3_t b)
 {
    return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-/**********************************************************************/
-mat3x3_t RodriguesRotation(const vec3_t A, const vec3_t B)
-{
-   const vec3_t a       = UNITV(A).v;
-   const vec3_t b       = UNITV(B).v;
-   const double onemeps = nextafter(1.0, -INFINITY);
-
-   if (VoV(a, b) > onemeps)
-      return MAT3X3_EYE;
-   else if (VoV(a, NegV_Elem(b)) > onemeps)
-      return MAT3X3_SETROWS(VEC3_NXAXIS, VEC3_NYAXIS, VEC3_NZAXIS);
-
-   vec3_t k         = VxV(a, b);
-   k                = UNITV(k).v;
-   const double cth = VoV(a, b);
-   const double sth = sqrt(1.0 - cth * cth);
-
-   const mat3x3_t kx  = V2CrossM(k);
-   const mat3x3_t kxx = V2DoubleCrossM(k);
-
-   const mat3x3_t skx     = SxM(sth, kx);
-   const mat3x3_t omcskxx = SxM(1.0 - cth, kxx);
-   return MAddM_Elem(MAddM_Elem(MAT3X3_EYE, skx), omcskxx);
 }
 /**********************************************************************/
 mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B)
@@ -405,7 +362,7 @@ mat3x3_t MDivM_Elem(const mat3x3_t A, const mat3x3_t B)
 /**********************************************************************/
 double MTrace(const mat3x3_t A)
 {
-   return A.mat[0][0] + A.mat[1][1] + A.mat[2][2];
+   return A.x.x + A.y.y + A.z.z;
 }
 /**********************************************************************/
 int _isequal_mat3x3(const mat3x3_t a, const mat3x3_t b)
@@ -470,6 +427,20 @@ double det3x3(const mat3x3_t M)
           M.mat[0][1] *
               (M.mat[1][0] * M.mat[2][2] - M.mat[1][2] * M.mat[2][0]) +
           M.mat[0][2] * (M.mat[1][0] * M.mat[2][1] - M.mat[1][1] * M.mat[2][0]);
+}
+/******************************************************************************/
+pair_vec3_mat3x3_t EValEVec3x3(const mat3x3_t A)
+{
+   pair_vec3_mat3x3_t eval_evec = {.vec = VEC3_ZERO, .mat = MAT3X3_EYE};
+
+   const double trA  = MTrace(A);
+   const double detA = det3x3(A);
+   const double c1   = (A.y.y * A.z.z - A.y.z * A.z.y) +
+                       (A.x.x * A.z.z - A.x.z * A.z.x) +
+                       (A.x.x * A.y.y - A.x.y * A.y.x);
+   __attribute__((unused)) const double charpoly[4] = {-1.0, +trA, -c1, +detA};
+
+   return eval_evec;
 }
 /******************************************************************************/
 /* Inverse of a 4x4 Matrix                                                    */
@@ -683,14 +654,6 @@ magvec3_t UNITV(vec3_t V)
    }
    return (A);
 }
-/**********************************************************************/
-/*  Copy and normalize a 3-vector.  Return its magnitude              */
-// double CopyUnitV(const vec3_t V, vec3_t *W)
-// {
-//    *W       = V;
-//    double A = UNITV(W);
-//    return (A);
-// }
 /**********************************************************************/
 /*  Form a skew-symmetric matrix M from a vector V such that the      */
 /*  product MxA equals the cross product VxA for any vector A.        */
@@ -2299,12 +2262,20 @@ void VecToLngLat(vec3_t A, double *lng, double *lat)
    }
 }
 /******************************************************************************/
-double WrapTo2Pi(double n)
+double WrapTo2Pi(const double n)
 {
    double OrbVar = fmod(n, TWOPI);
    if (OrbVar < 0.0)
       OrbVar += TWOPI;
    return (OrbVar);
+}
+/******************************************************************************/
+double WrapToPMPi(const double n)
+{
+   double OrbVar = fmod(n + PI, TWOPI);
+   if (OrbVar < 0.0)
+      OrbVar += TWOPI;
+   return (OrbVar - PI);
 }
 /******************************************************************************/
 /* Simple Newton-Raphson method for function given by f/dfdx = fdf            */
@@ -2632,47 +2603,88 @@ void MxMINVG(double **A, double **B, double **C, long N, long m)
    DestroyMatrix(BT);
    DestroyMatrix(CT);
 }
+/**********************************************************************/
+__attribute__((const)) static inline mat3x3_t
+_rodrigues_formula(const vec3_t khat, const double cth, const double sth);
+static inline mat3x3_t _rodrigues_formula(const vec3_t k, const double cthm1,
+                                          const double sth)
+{
+   const vec3_t khat     = UNITV(k).v;
+   const mat3x3_t khatx  = V2CrossM(khat);
+   const mat3x3_t khatxx = V2DoubleCrossM(khat);
+
+   mat3x3_t R = MAT3X3_EYE;
+
+   for (int i = 0; i < 3; i++)
+      for (int j = 0; j < 3; j++)
+         R.mat[i][j] += sth * khatx.mat[i][j] - cthm1 * khatxx.mat[i][j];
+   return R;
+}
+/**********************************************************************/
+mat3x3_t RodriguesRotation(const vec3_t A, const vec3_t B)
+{
+   const vec3_t a       = UNITV(A).v;
+   const vec3_t b       = UNITV(B).v;
+   const double onemeps = nextafter(1.0, -INFINITY);
+
+   if (VoV(a, b) > onemeps)
+      return MAT3X3_EYE;
+   else if (VoV(a, NegV_Elem(b)) > onemeps)
+      return MAT3X3_SETROWS(VEC3_NXAXIS, VEC3_NYAXIS, VEC3_NZAXIS);
+
+   vec3_t k         = VxV(a, b);
+   k                = UNITV(k).v;
+   const double cth = VoV(a, b);
+   const double sth = sqrt(1.0 - cth * cth);
+   return _rodrigues_formula(k, cth - 1.0, sth);
+}
 /******************************************************************************/
 // Matrix Exponential for Special Orthogonal Group of dimension 3 (SO(3))
-mat3x3_t expmso3(vec3_t theta)
+mat3x3_t expmso3(const vec3_t theta)
 {
    double tMag, sTMag, cTMagM1;
-   mat3x3_t R = MAT3X3_EYE, tCross, tCrossCross;
-   long i, j;
 
    tMag = MAGV(theta);
    if (tMag >= __DBL_EPSILON__) {
       vec3_t thetaHat;
-      for (i = 0; i < 3; i++)
+      for (int i = 0; i < 3; i++)
          thetaHat.v[i] = theta.v[i] / tMag;
       sTMag   = sin(tMag);
       cTMagM1 = cos(tMag) - 1.0;
 
-      tCross      = V2CrossM(thetaHat);
-      tCrossCross = V2DoubleCrossM(thetaHat);
-
-      for (i = 0; i < 3; i++)
-         for (j = 0; j < 3; j++)
-            R.mat[i][j] +=
-                sTMag * tCross.mat[i][j] - cTMagM1 * tCrossCross.mat[i][j];
+      return _rodrigues_formula(thetaHat, cTMagM1, sTMag);
    }
-   return R;
+   return MAT3X3_EYE;
 }
 /******************************************************************************/
 // Matrix Logarithm for SO(3)
-vec3_t logso3(mat3x3_t const R)
+vec3_t logso3(const mat3x3_t R)
 {
-   double tMag, dSincTMag;
+   vec3_t theta = VEC3_ZERO;
 
-   tMag      = acos((R.mat[0][0] + R.mat[1][1] + R.mat[2][2] - 1) / 2.0);
-   dSincTMag = 2.0;
-   if (tMag > __DBL_EPSILON__)
-      dSincTMag *= sinc(tMag);
-   vec3_t theta;
-   theta.v[0] = (R.mat[2][1] - R.mat[1][2]) / dSincTMag;
-   theta.v[1] = (R.mat[0][2] - R.mat[2][0]) / dSincTMag;
-   theta.v[2] = (R.mat[1][0] - R.mat[0][1]) / dSincTMag;
-   return theta;
+   const double trR = MTrace(R);
+   // if trR ~ -1, then ~180 degree rotation
+   if ((trR + 1.0) > __DBL_EPSILON__) {
+      double tMag     = acos((trR - 1.0) / 2.0);
+      double dSinTMag = 2.0;
+      if (tMag > __DBL_EPSILON__)
+         dSinTMag *= sin(tMag);
+      theta.x = (R.z.y - R.y.z) / dSinTMag;
+      theta.y = (R.x.z - R.z.x) / dSinTMag;
+      theta.z = (R.y.x - R.x.y) / dSinTMag;
+
+      // get the short-path rotation vector
+      if (tMag > (TWOPI - tMag))
+         tMag = TWOPI - tMag;
+
+      return SxV(tMag, theta);
+   }
+   else {
+      // TODO
+      //  assuming full rank
+
+      return theta;
+   }
 }
 /******************************************************************************/
 // Calculate matrix exponential on two-frames-group (SO(3)xR^((n+m)x3))

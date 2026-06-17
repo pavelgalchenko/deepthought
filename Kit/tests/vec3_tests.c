@@ -12,11 +12,22 @@
 /*    All Other Rights Reserved.                                      */
 
 #include "mathkit.h"
+
+#include "42constants.h"
 #include <criterion/criterion.h>
 #include <criterion/new/assert.h>
 #include <criterion/parameterized.h>
 #include <criterion/theories.h>
 #include <stdio.h>
+
+__attribute__((const)) static inline double dbl_max(const double a,
+                                                    const double b);
+static inline double dbl_max(const double a, const double b)
+{
+   if (a > b)
+      return a;
+   return b;
+}
 
 #define ULP_THRESH (4) // acceptable Units in Last Place variation
 #define DBL_THRESH (ULP_THRESH * __DBL_EPSILON__)
@@ -28,41 +39,106 @@ static inline void vec32str(vec3_t a, char str[VEC3STRLEN])
 }
 
 #define vec3_ieee_ulp_eq(a, b, thres)                                          \
-   all(ieee_ulp_eq(dbl, (a).x, (b).x, thres),                                  \
-       ieee_ulp_eq(dbl, (a).y, (b).y, thres),                                  \
-       ieee_ulp_eq(dbl, (a).z, (b).z, thres))
+   all(ieee_ulp_eq(dbl, (a).x, (b).x, (thres)),                                \
+       ieee_ulp_eq(dbl, (a).y, (b).y, (thres)),                                \
+       ieee_ulp_eq(dbl, (a).z, (b).z, (thres)))
 
-#define vec3_epsilon_eq(a, b, thres)                                           \
-   all(epsilon_eq(dbl, (a).x, (b).x, thres),                                   \
-       epsilon_eq(dbl, (a).y, (b).y, thres),                                   \
-       epsilon_eq(dbl, (a).z, (b).z, thres))
+#define vec3_eps_vec_eq(a, b, thres)                                           \
+   all(epsilon_eq(dbl, (a).x, (b).x, (thres).x),                               \
+       epsilon_eq(dbl, (a).y, (b).y, (thres).y),                               \
+       epsilon_eq(dbl, (a).z, (b).z, (thres).z))
+
+#define vec3_x_z_eq(a, b, ulpthres)                                            \
+   all(epsilon_eq(dbl, (a).x, (b).x, (ulpthres) * __DBL_EPSILON__),            \
+       ieee_ulp_eq(dbl, (a).y, (b).y, (ulpthres)),                             \
+       ieee_ulp_eq(dbl, (a).z, (b).z, (ulpthres)))
+#define vec3_y_z_eq(a, b, ulpthres)                                            \
+   all(ieee_ulp_eq(dbl, (a).x, (b).x, (ulpthres)),                             \
+       epsilon_eq(dbl, (a).y, (b).y, (ulpthres) * __DBL_EPSILON__),            \
+       ieee_ulp_eq(dbl, (a).z, (b).z, (ulpthres)))
+#define vec3_z_z_eq(a, b, ulpthres)                                            \
+   all(ieee_ulp_eq(dbl, (a).x, (b).x, (ulpthres)),                             \
+       ieee_ulp_eq(dbl, (a).y, (b).y, (ulpthres)),                             \
+       epsilon_eq(dbl, (a).z, (b).z, (ulpthres) * __DBL_EPSILON__))
+#define vec3_xy_z_eq(a, b, ulpthres)                                           \
+   all(epsilon_eq(dbl, (a).x, (b).x, (ulpthres) * __DBL_EPSILON__),            \
+       epsilon_eq(dbl, (a).y, (b).y, (ulpthres) * __DBL_EPSILON__),            \
+       ieee_ulp_eq(dbl, (a).z, (b).z, (ulpthres)))
+#define vec3_xz_z_eq(a, b, ulpthres)                                           \
+   all(epsilon_eq(dbl, (a).x, (b).x, (ulpthres) * __DBL_EPSILON__),            \
+       ieee_ulp_eq(dbl, (a).y, (b).y, (ulpthres)),                             \
+       epsilon_eq(dbl, (a).y, (b).y, (ulpthres) * __DBL_EPSILON__))
+#define vec3_yz_z_eq(a, b, ulpthres)                                           \
+   all(ieee_ulp_eq(dbl, (a).x, (b).x, (ulpthres)),                             \
+       epsilon_eq(dbl, (a).y, (b).y, (ulpthres) * __DBL_EPSILON__),            \
+       epsilon_eq(dbl, (a).y, (b).y, (ulpthres) * __DBL_EPSILON__))
+
+#define vec3_eps_eq(a, b, thres)                                               \
+   all(epsilon_eq(dbl, (a).x, (b).x, (thres)),                                 \
+       epsilon_eq(dbl, (a).y, (b).y, (thres)),                                 \
+       epsilon_eq(dbl, (a).z, (b).z, (thres)))
+
+#define VEC3_ZERO_EQ(a, b, ulpthresh, str, ...)                                \
+   do {                                                                        \
+      if (_isequal_vec3((b), VEC3_ZEROS))                                      \
+         cr_expect(vec3_eps_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if (_isequal_vec3((a), VEC3_ZEROS))                                 \
+         cr_expect(vec3_eps_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if ((b).x == 0 && (b).y == 0)                                       \
+         cr_expect(vec3_xy_z_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);   \
+      else if ((b).x == 0 && (b).z == 0)                                       \
+         cr_expect(vec3_xz_z_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);   \
+      else if ((b).y == 0 && (b).z == 0)                                       \
+         cr_expect(vec3_yz_z_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);   \
+      else if ((a).x == 0 && (a).y == 0)                                       \
+         cr_expect(vec3_xy_z_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);   \
+      else if ((a).x == 0 && (a).z == 0)                                       \
+         cr_expect(vec3_xz_z_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);   \
+      else if ((a).y == 0 && (a).z == 0)                                       \
+         cr_expect(vec3_yz_z_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);   \
+      else if ((b).x == 0)                                                     \
+         cr_expect(vec3_x_z_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if ((b).y == 0)                                                     \
+         cr_expect(vec3_y_z_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if ((b).z == 0)                                                     \
+         cr_expect(vec3_z_z_eq((a), (b), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if ((a).x == 0)                                                     \
+         cr_expect(vec3_x_z_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if ((a).y == 0)                                                     \
+         cr_expect(vec3_y_z_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);    \
+      else if ((a).z == 0)                                                     \
+         cr_expect(vec3_z_z_eq((b), (a), (ulpthresh)), (str), __VA_ARGS__);    \
+   } while (0)
 
 #define VEC3_DATAPOINTS                                                        \
    DataPoints(vec3_t *, &VEC3_ZERO, &VEC3_PXAXIS, &VEC3_PYAXIS, &VEC3_PZAXIS,  \
               &VEC3_NXAXIS, &VEC3_NYAXIS, &VEC3_NZAXIS, &VEC3_ONES,            \
-              &VEC3_INIT(1234567.89, 0, 0), &VEC3_INIT(0, 1234567.89, 0),      \
-              &VEC3_INIT(0, 0, 1234567.89), &VEC3_INIT(-1234567.89, 0, 0),     \
-              &VEC3_INIT(0, -1234567.89, 0), &VEC3_INIT(0, 0, -1234567.89),    \
-              &VEC3_INIT(0, 1234567.89, 1234567.89),                           \
-              &VEC3_INIT(1234567.89, 0, 1234567.89),                           \
-              &VEC3_INIT(1234567.89, 1234567.89, 0),                           \
-              &VEC3_INIT(0, 1234567.89, -1234567.89),                          \
-              &VEC3_INIT(1234567.89, 0, -1234567.89),                          \
-              &VEC3_INIT(1234567.89, -1234567.89, 0),                          \
-              &VEC3_INIT(0, -1234567.89, 1234567.89),                          \
-              &VEC3_INIT(-1234567.89, 0, 1234567.89),                          \
-              &VEC3_INIT(-1234567.89, 1234567.89, 0),                          \
-              &VEC3_INIT(0, -1234567.89, -1234567.89),                         \
-              &VEC3_INIT(-1234567.89, 0, -1234567.89),                         \
-              &VEC3_INIT(-1234567.89, -1234567.89, 0),                         \
-              &VEC3_INIT(1234567.89, 1234567.89, 1234567.89),                  \
-              &VEC3_INIT(1234567.89, 1234567.89, -1234567.89),                 \
-              &VEC3_INIT(1234567.89, -1234567.89, 1234567.89),                 \
-              &VEC3_INIT(-1234567.89, 1234567.89, 1234567.89),                 \
-              &VEC3_INIT(1234567.89, -1234567.89, -1234567.89),                \
-              &VEC3_INIT(-1234567.89, 1234567.89, -1234567.89),                \
-              &VEC3_INIT(-1234567.89, -1234567.89, 1234567.89),                \
-              &VEC3_INIT(-1234567.89, -1234567.89, -1234567.89))
+              &VEC3_SET(1234567.89, 0, 0), &VEC3_SET(0, 1234567.89, 0),        \
+              &VEC3_SET(0, 0, 1234567.89), &VEC3_SET(-1234567.89, 0, 0),       \
+              &VEC3_SET(0, -1234567.89, 0), &VEC3_SET(0, 0, -1234567.89),      \
+              &VEC3_SET(0, 1234567.89, 1234567.89),                            \
+              &VEC3_SET(1234567.89, 0, 1234567.89),                            \
+              &VEC3_SET(1234567.89, 1234567.89, 0),                            \
+              &VEC3_SET(0, 1234567.89, -1234567.89),                           \
+              &VEC3_SET(1234567.89, 0, -1234567.89),                           \
+              &VEC3_SET(1234567.89, -1234567.89, 0),                           \
+              &VEC3_SET(0, -1234567.89, 1234567.89),                           \
+              &VEC3_SET(-1234567.89, 0, 1234567.89),                           \
+              &VEC3_SET(-1234567.89, 1234567.89, 0),                           \
+              &VEC3_SET(0, -1234567.89, -1234567.89),                          \
+              &VEC3_SET(-1234567.89, 0, -1234567.89),                          \
+              &VEC3_SET(-1234567.89, -1234567.89, 0),                          \
+              &VEC3_SET(1234567.89, 1234567.89, 1234567.89),                   \
+              &VEC3_SET(1234567.89, 1234567.89, -1234567.89),                  \
+              &VEC3_SET(1234567.89, -1234567.89, 1234567.89),                  \
+              &VEC3_SET(-1234567.89, 1234567.89, 1234567.89),                  \
+              &VEC3_SET(1234567.89, -1234567.89, -1234567.89),                 \
+              &VEC3_SET(-1234567.89, 1234567.89, -1234567.89),                 \
+              &VEC3_SET(-1234567.89, -1234567.89, 1234567.89),                 \
+              &VEC3_SET(-1234567.89, -1234567.89, -1234567.89),                \
+              &VEC3_SET(PI, 0, 0), &VEC3_SET(0, PI, 0), &VEC3_SET(0, 0, PI),   \
+              &VEC3_SET(-PI, 0, 0), &VEC3_SET(0, -PI, 0),                      \
+              &VEC3_SET(0, 0, -PI))
 
 /**********************************************************************/
 #define SUITE_NAME mathkit_vec3
@@ -124,9 +200,9 @@ Theory((vec3_t * vp), SUITE_NAME, negation)
              "NegV_Elem is not its own inverse with param:\n\ta = %s", vstr);
 
    // adding the negative results in the additive identity
-   cr_expect(
-       vec3_epsilon_eq(VAddV_Elem(v, NegV_Elem(v)), VEC3_ZERO, DBL_THRESH),
-       "Zero 3-Vector is not additive identity with param:\n\ta = %s", vstr);
+   cr_expect(vec3_eps_eq(VAddV_Elem(v, NegV_Elem(v)), VEC3_ZERO, DBL_THRESH),
+             "Zero 3-Vector is not additive identity with param:\n\ta = %s",
+             vstr);
 }
 
 // Zero is additative identity
@@ -148,7 +224,7 @@ Theory((vec3_t * vp), SUITE_NAME, addsubzero)
              vstr);
 
    // subtracting self results in the additive identity
-   cr_expect(vec3_epsilon_eq(VSubV_Elem(v, v), VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(VSubV_Elem(v, v), VEC3_ZERO, DBL_THRESH),
              "3-Vector self subtraction does not result in the additive "
              "identity with param:\n\ta = %s",
              vstr);
@@ -227,7 +303,7 @@ Theory((vec3_t * vp), SUITE_NAME, zeroproduct)
    // check cross product with zero
    vec3_t other = VxV(v, VEC3_ZERO);
    vec32str(other, otherstr);
-   cr_expect(vec3_epsilon_eq(other, VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(other, VEC3_ZERO, DBL_THRESH),
              "Cross product with zero is not zero with params:\n\tv   = "
              "%s\n\tvxz = %s",
              v, other);
@@ -235,7 +311,7 @@ Theory((vec3_t * vp), SUITE_NAME, zeroproduct)
    // check elementwise product with zero
    other = VMulV_Elem(v, VEC3_ZERO);
    vec32str(other, otherstr);
-   cr_expect(vec3_epsilon_eq(other, VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(other, VEC3_ZERO, DBL_THRESH),
              "ELement-wise product with zero is not zero with params:\n\tv   = "
              "%s\n\tvxz = %s",
              v, other);
@@ -261,14 +337,14 @@ Theory((vec3_t * vp), SUITE_NAME, selfdotxprod)
    // check self cross product
    vec3_t other = VxV(v, v);
    vec32str(other, otherstr);
-   cr_expect(vec3_epsilon_eq(other, VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(other, VEC3_ZERO, DBL_THRESH),
              "Cross product with self is not zero with params:\n\tv   = "
              "%s\n\tvxz = %s",
              v, other);
    mat3x3_t vx = V2CrossM(v);
    other       = MxV(vx, v);
    vec32str(other, otherstr);
-   cr_expect(vec3_epsilon_eq(other, VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(other, VEC3_ZERO, DBL_THRESH),
              "product between cross product matrix and self is not zero with "
              "params:\n\tv   = %s\n\tvxz = %s",
              v, other);
@@ -320,7 +396,7 @@ Theory((vec3_t * vp), SUITE_NAME, perpbasis)
    other.x = VoV(vpair.first, v);
    other.y = VoV(vpair.second, v);
    other.z = VoV(vpair.first, vpair.second);
-   cr_expect(vec3_epsilon_eq(other, VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(other, VEC3_ZERO, DBL_THRESH),
              "Generated PerpBasis is not perpendicular with params:\n\tv       "
              "     = %s\n\tfirst        = %s\n\tsecond       = %s\n\tfirst*v   "
              "   = %le\n\tsecond*v     = %le\n\tfirst*second = %le",
@@ -370,10 +446,10 @@ Theory((vec3_t * vp), SUITE_NAME, lnglat)
    magvec3_t vm = UNITV(v);
    double lat, lng;
    VecToLngLat(v, &lng, &lat);
-   other = VEC3_INIT(cos(lat) * cos(lng), cos(lat) * sin(lng), sin(lat));
+   other = VEC3_SET(cos(lat) * cos(lng), cos(lat) * sin(lng), sin(lat));
    vec32str(other, otherstr);
    vec32str(vm.v, other2str);
-   cr_expect(vec3_epsilon_eq(VSubV_Elem(vm.v, other), VEC3_ZERO, DBL_THRESH),
+   cr_expect(vec3_eps_eq(VSubV_Elem(vm.v, other), VEC3_ZERO, DBL_THRESH),
              "Longitude/Lattitude calculations did not return original unit "
              "vector with params:\n\tv     = %s\n\tvhat  = %s\n\tlng   = "
              "%le\n\tlat   = %le\n\tother = %s",
@@ -393,21 +469,35 @@ TheoryDataPoints(SUITE_NAME, addsub) = {VEC3_DATAPOINTS, VEC3_DATAPOINTS};
 Theory((vec3_t * ap, vec3_t *bp), SUITE_NAME, addsub)
 {
    const vec3_t a = *ap, b = *bp;
-   char astr[VEC3STRLEN] = {'\0'}, bstr[VEC3STRLEN] = {'\0'};
+   char astr[VEC3STRLEN] = {'\0'}, bstr[VEC3STRLEN] = {'\0'},
+        abstr[VEC3STRLEN] = {'\0'}, bastr[VEC3STRLEN] = {'\0'},
+        abbstr[VEC3STRLEN] = {'\0'};
    vec32str(a, astr);
    vec32str(b, bstr);
 
-   // commutative addition
-   cr_expect(
-       vec3_ieee_ulp_eq(VAddV_Elem(a, b), VAddV_Elem(b, a), ULP_THRESH),
-       "3-Vector addition is not commutative with params:\n\ta = %s\n\tb = %s",
-       astr, bstr);
+   vec3_t threshhld;
+   for (int i = 0; i < 3; i++) {
+      double max     = dbl_max(fabs(a.v[i]), fabs(b.v[i]));
+      threshhld.v[i] = nextafter(max, INFINITY) - max;
+   }
 
+   const vec3_t ab = VAddV_Elem(a, b);
+   const vec3_t ba = VAddV_Elem(a, b);
+   vec32str(ab, abstr);
+   vec32str(ba, bastr);
+   // commutative addition
+   cr_expect(vec3_ieee_ulp_eq(ab, ba, 1),
+             "3-Vector addition is not commutative with params:\n\ta   = "
+             "%s\n\tb   = %s\n\ta+b = %s\n\tb+a = %s",
+             astr, bstr, abstr, bastr);
+
+   const vec3_t abb = VSubV_Elem(ab, b);
+   vec32str(abb, abbstr);
    // addition inversion
-   cr_expect(vec3_ieee_ulp_eq(a, VSubV_Elem(VAddV_Elem(a, b), b), ULP_THRESH),
-             "3-Vector subtraction does not invert addition with params:\n\ta "
-             "= %s\n\tb = %s",
-             astr, bstr);
+   cr_expect(vec3_eps_vec_eq(a, abb, threshhld),
+             "3-Vector subtraction does not invert addition with params:\n\ta  "
+             "     = %s\n\tb       = %s\n\ta+b     = %s\n\t(a+b)-b = %s",
+             astr, bstr, abstr, abbstr);
 }
 
 // multiplication/division
@@ -605,7 +695,7 @@ Theory((vec3_t * ap, vec3_t *bp, vec3_t *cp), SUITE_NAME, vectortripleprod)
    vec3_t rhs             = VSubV_Elem(SxV(aoc, b), SxV(aob, c));
    vec32str(rhs, other3str);
    cr_expect(
-       vec3_epsilon_eq(ax_bxc, rhs, threshhld),
+       vec3_eps_eq(ax_bxc, rhs, threshhld),
        "Vector triple product is not true with params:\n\ta               = "
        "%s\n\tb               = %s\n\tc               = %s\n\tVxV(b,c)        "
        "= %s\n\tVxV(a,VxV(b,c)) = %s\n\trhs             = %s\n\tVoV(a,c)       "

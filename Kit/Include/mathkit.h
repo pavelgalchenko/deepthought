@@ -39,15 +39,15 @@ typedef struct pair_vec3 {
    vec3_t second;
 } pair_vec3_t;
 
-#define VEC3_ZERO          ((vec3_t){.x = 0, .y = 0, .z = 0})
-#define VEC3_PXAXIS        ((vec3_t){.x = 1, .y = 0, .z = 0})
-#define VEC3_PYAXIS        ((vec3_t){.x = 0, .y = 1, .z = 0})
-#define VEC3_PZAXIS        ((vec3_t){.x = 0, .y = 0, .z = 1})
-#define VEC3_NXAXIS        ((vec3_t){.x = -1, .y = 0, .z = 0})
-#define VEC3_NYAXIS        ((vec3_t){.x = 0, .y = -1, .z = 0})
-#define VEC3_NZAXIS        ((vec3_t){.x = 0, .y = 0, .z = -1})
-#define VEC3_ONES          ((vec3_t){.x = 1, .y = 1, .z = 1})
-#define VEC3_INIT(a, b, c) ((vec3_t){.x = (a), .y = (b), .z = (c)})
+#define VEC3_ZERO         ((vec3_t){.x = 0, .y = 0, .z = 0})
+#define VEC3_PXAXIS       ((vec3_t){.x = 1, .y = 0, .z = 0})
+#define VEC3_PYAXIS       ((vec3_t){.x = 0, .y = 1, .z = 0})
+#define VEC3_PZAXIS       ((vec3_t){.x = 0, .y = 0, .z = 1})
+#define VEC3_NXAXIS       ((vec3_t){.x = -1, .y = 0, .z = 0})
+#define VEC3_NYAXIS       ((vec3_t){.x = 0, .y = -1, .z = 0})
+#define VEC3_NZAXIS       ((vec3_t){.x = 0, .y = 0, .z = -1})
+#define VEC3_ONES         ((vec3_t){.x = 1, .y = 1, .z = 1})
+#define VEC3_SET(a, b, c) ((vec3_t){.x = (a), .y = (b), .z = (c)})
 #define DBL_TO_VEC3(dbl) ((vec3_t){.x = (dbl)[0], .y = (dbl)[1], .z = (dbl)[2]})
 #define VEC3_TO_DBL(dbl, vec)                                                  \
    do {                                                                        \
@@ -94,7 +94,12 @@ typedef struct pair_mat3x3 {
 typedef struct dbl_mat3x3 {
    double dbl;
    mat3x3_t mat;
-} dbl_mat3x3_t;
+} pair_dbl_mat3x3_t;
+
+typedef struct pair_vec3_mat3x3 {
+   vec3_t vec;
+   mat3x3_t mat;
+} pair_vec3_mat3x3_t;
 
 // Vector first Quaternion
 typedef union quat {
@@ -163,9 +168,21 @@ __attribute__((const)) vec3_t VxM(const vec3_t V, const mat3x3_t M);
 __attribute__((const)) vec3_t MTxV(const mat3x3_t M, const vec3_t V);
 __attribute__((const)) vec3_t MxV(const mat3x3_t M, const vec3_t V);
 __attribute__((const)) vec3_t VxMT(const vec3_t V, const mat3x3_t M);
-__attribute__((const)) vec3_t SxV(const double S, const vec3_t V);
+/**********************************************************************/
+/*  Scalar times 3x1 Vector                                           */
+__attribute__((const)) inline vec3_t SxV(const double S, const vec3_t V);
+inline vec3_t SxV(const double S, const vec3_t V)
+{
+   return VEC3_SET(S * V.x, S * V.y, S * V.z);
+}
+/**********************************************************************/
+__attribute__((const)) inline vec3_t NegV_Elem(const vec3_t A);
+inline vec3_t NegV_Elem(const vec3_t A)
+{
+   return VEC3_SET(-A.x, -A.y, -A.z);
+}
+/**********************************************************************/
 
-__attribute__((const)) vec3_t NegV_Elem(const vec3_t A);
 __attribute__((const)) vec3_t VAddV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t VSubV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t VMulV_Elem(const vec3_t A, const vec3_t B);
@@ -173,8 +190,6 @@ __attribute__((const)) vec3_t VDivV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim);
 __attribute__((const)) int _isequal_vec3(const vec3_t a, const vec3_t b);
 
-__attribute__((const)) mat3x3_t RodriguesRotation(const vec3_t a,
-                                                  const vec3_t b);
 __attribute__((const)) mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MSubM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MMulM_Elem(const mat3x3_t A, const mat3x3_t B);
@@ -184,6 +199,7 @@ __attribute__((const)) int _isequal_mat3x3(const mat3x3_t a, const mat3x3_t b);
 
 __attribute__((const)) mat3x3_t SxM(const double S, const mat3x3_t A);
 __attribute__((const)) double det3x3(const mat3x3_t M);
+__attribute__((const)) pair_vec3_mat3x3_t EValEVec3x3(const mat3x3_t A);
 void MINV4(const double A[4][4], double B[4][4]);
 __attribute__((const)) mat3x3_t MINV3(const mat3x3_t A);
 void MINV2(const double A[2][2], double B[2][2]);
@@ -271,7 +287,8 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
                  double *dPdu);
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(vec3_t A, double *lng, double *lat);
-__attribute__((const)) double WrapTo2Pi(double OrbVar);
+__attribute__((const)) double WrapTo2Pi(const double OrbVar);
+__attribute__((const)) double WrapToPMPi(const double OrbVar);
 __attribute__((pure)) double BrentsMethod(double a, double b, const double tol,
                                           double (*f)(const double, double *),
                                           double *params);
@@ -286,8 +303,12 @@ __attribute__((const)) mat3x3_t AdjointT(const mat3x3_t C, const mat3x3_t A);
 void MINVxM3(mat3x3_t A, long m, const vec3_t BT[m], vec3_t CT[m]);
 void MINVxMG(double **A, double **B, double **C, long N, long m);
 void MxMINVG(double **A, double **B, double **C, long N, long m);
-__attribute__((const)) mat3x3_t expmso3(vec3_t const theta);
-__attribute__((const)) vec3_t logso3(mat3x3_t const R);
+
+__attribute__((const)) mat3x3_t RodriguesRotation(const vec3_t a,
+                                                  const vec3_t b);
+__attribute__((const)) mat3x3_t expmso3(const vec3_t theta);
+__attribute__((const)) vec3_t logso3(const mat3x3_t R);
+
 void expmTFG(vec3_t const theta, long const n, long const m, vec3_t x[n],
              vec3_t xbar[m], mat3x3_t *R);
 __attribute__((pure)) double M1NormG(double **A, long const n, long const m);

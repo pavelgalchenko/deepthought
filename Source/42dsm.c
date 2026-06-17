@@ -3151,6 +3151,14 @@ void AttitudeGuidance(struct DSMType *DSM, struct FormationType *F)
          /* Approximation of log map from SO(3) to so(3) to calculate Cmd->wrn*/
          dC       = MTxM(C_tn, Cmd->OldCRN);
          Cmd->wrn = logso3(dC);
+         // get the short path rotation axis
+         double mag = MAGV(Cmd->wrn);
+         if (mag > __DBL_EPSILON__) {
+            const magvec3_t wrnu = UNITV(Cmd->wrn);
+            mag                  = WrapToPMPi(wrnu.m);
+            if (mag > (TWOPI - mag))
+               Cmd->wrn = SxV(TWOPI - mag, wrnu.v);
+         }
          Cmd->wrn = SxV(1.0 / DSM->DT, Cmd->wrn);
          memcpy(Cmd->OldCRN.flat, C_tn.flat, sizeof(Cmd->OldCRN));
 
