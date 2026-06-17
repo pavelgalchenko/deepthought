@@ -319,6 +319,30 @@ int _isequal_vec3(const vec3_t a, const vec3_t b)
    return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 /**********************************************************************/
+mat3x3_t RodriguesRotation(const vec3_t A, const vec3_t B)
+{
+   const vec3_t a       = UNITV(A).v;
+   const vec3_t b       = UNITV(B).v;
+   const double onemeps = nextafter(1.0, -INFINITY);
+
+   if (VoV(a, b) > onemeps)
+      return MAT3X3_EYE;
+   else if (VoV(a, NegV_Elem(b)) > onemeps)
+      return MAT3X3_SETROWS(VEC3_NXAXIS, VEC3_NYAXIS, VEC3_NZAXIS);
+
+   vec3_t k         = VxV(a, b);
+   k                = UNITV(k).v;
+   const double cth = VoV(a, b);
+   const double sth = sqrt(1.0 - cth * cth);
+
+   const mat3x3_t kx  = V2CrossM(k);
+   const mat3x3_t kxx = V2DoubleCrossM(k);
+
+   const mat3x3_t skx     = SxM(sth, kx);
+   const mat3x3_t omcskxx = SxM(1.0 - cth, kxx);
+   return MAddM_Elem(MAddM_Elem(MAT3X3_EYE, skx), omcskxx);
+}
+/**********************************************************************/
 mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B)
 {
    mat3x3_t out  = A;
@@ -501,9 +525,7 @@ mat3x3_t MINV3(const mat3x3_t A)
           "Attempted inversion of singular matrix in MINV3.  Bailing out.\n");
       exit(EXIT_FAILURE);
    }
-   else
-      B = SxM(1.0 / DET, cofT3x3(A));
-
+   B = SxM(1.0 / DET, cofT3x3(A));
    return B;
 }
 /******************************************************************************/
@@ -621,9 +643,9 @@ mat3x3_t VOuterV(const vec3_t A, const vec3_t B)
 vec3_t VxV(const vec3_t A, const vec3_t B)
 {
    vec3_t C;
-   C.v[0] = A.v[1] * B.v[2] - A.v[2] * B.v[1];
-   C.v[1] = A.v[2] * B.v[0] - A.v[0] * B.v[2];
-   C.v[2] = A.v[0] * B.v[1] - A.v[1] * B.v[0];
+   C.x = A.y * B.z - A.z * B.y;
+   C.y = A.z * B.x - A.x * B.z;
+   C.z = A.x * B.y - A.y * B.x;
    return C;
 }
 /**********************************************************************/
@@ -678,12 +700,12 @@ mat3x3_t V2CrossM(const vec3_t V)
    M.mat[0][0] = 0.0;
    M.mat[1][1] = 0.0;
    M.mat[2][2] = 0.0;
-   M.mat[2][1] = V.v[0];
-   M.mat[0][2] = V.v[1];
-   M.mat[1][0] = V.v[2];
-   M.mat[1][2] = -V.v[0];
-   M.mat[2][0] = -V.v[1];
-   M.mat[0][1] = -V.v[2];
+   M.mat[2][1] = V.x;
+   M.mat[0][2] = V.y;
+   M.mat[1][0] = V.z;
+   M.mat[1][2] = -V.x;
+   M.mat[2][0] = -V.y;
+   M.mat[0][1] = -V.z;
    return M;
 }
 /**********************************************************************/
@@ -740,14 +762,10 @@ mat3x3_t VcrossMT(const vec3_t V, const mat3x3_t M)
 quat_t QxQ(const quat_t A, const quat_t B)
 {
    quat_t C;
-   C.q[0] =
-       A.q[3] * B.q[0] + A.q[2] * B.q[1] - A.q[1] * B.q[2] + A.q[0] * B.q[3];
-   C.q[1] =
-       -A.q[2] * B.q[0] + A.q[3] * B.q[1] + A.q[0] * B.q[2] + A.q[1] * B.q[3];
-   C.q[2] =
-       A.q[1] * B.q[0] - A.q[0] * B.q[1] + A.q[3] * B.q[2] + A.q[2] * B.q[3];
-   C.q[3] =
-       -A.q[0] * B.q[0] - A.q[1] * B.q[1] - A.q[2] * B.q[2] + A.q[3] * B.q[3];
+   C.x = +A.s * B.x + A.z * B.y - A.y * B.z + A.x * B.s;
+   C.y = -A.z * B.x + A.s * B.y + A.x * B.z + A.y * B.s;
+   C.z = +A.y * B.x - A.x * B.y + A.s * B.z + A.z * B.s;
+   C.s = -A.x * B.x - A.y * B.y - A.z * B.z + A.s * B.s;
    return C;
 }
 /**********************************************************************/
@@ -755,14 +773,10 @@ quat_t QxQ(const quat_t A, const quat_t B)
 quat_t QTxQ(const quat_t A, const quat_t B)
 {
    quat_t C;
-   C.q[0] =
-       A.q[3] * B.q[0] - A.q[2] * B.q[1] + A.q[1] * B.q[2] - A.q[0] * B.q[3];
-   C.q[1] =
-       A.q[2] * B.q[0] + A.q[3] * B.q[1] - A.q[0] * B.q[2] - A.q[1] * B.q[3];
-   C.q[2] =
-       -A.q[1] * B.q[0] + A.q[0] * B.q[1] + A.q[3] * B.q[2] - A.q[2] * B.q[3];
-   C.q[3] =
-       A.q[0] * B.q[0] + A.q[1] * B.q[1] + A.q[2] * B.q[2] + A.q[3] * B.q[3];
+   C.x = +A.s * B.x - A.z * B.y + A.y * B.z - A.x * B.s;
+   C.y = +A.z * B.x + A.s * B.y - A.x * B.z - A.y * B.s;
+   C.z = -A.y * B.x + A.x * B.y + A.s * B.z - A.z * B.s;
+   C.s = +A.x * B.x + A.y * B.y + A.z * B.z + A.s * B.s;
    return C;
 }
 /**********************************************************************/
@@ -770,14 +784,10 @@ quat_t QTxQ(const quat_t A, const quat_t B)
 quat_t QxQT(const quat_t A, const quat_t B)
 {
    quat_t C;
-   C.q[0] =
-       -A.q[3] * B.q[0] - A.q[2] * B.q[1] + A.q[1] * B.q[2] + A.q[0] * B.q[3];
-   C.q[1] =
-       A.q[2] * B.q[0] - A.q[3] * B.q[1] - A.q[0] * B.q[2] + A.q[1] * B.q[3];
-   C.q[2] =
-       -A.q[1] * B.q[0] + A.q[0] * B.q[1] - A.q[3] * B.q[2] + A.q[2] * B.q[3];
-   C.q[3] =
-       A.q[0] * B.q[0] + A.q[1] * B.q[1] + A.q[2] * B.q[2] + A.q[3] * B.q[3];
+   C.x = -A.s * B.x - A.z * B.y + A.y * B.z + A.x * B.s;
+   C.y = +A.z * B.x - A.s * B.y - A.x * B.z + A.y * B.s;
+   C.z = -A.y * B.x + A.x * B.y - A.s * B.z + A.z * B.s;
+   C.s = +A.x * B.x + A.y * B.y + A.z * B.z + A.s * B.s;
    return C;
 }
 /**********************************************************************/
@@ -865,10 +875,10 @@ quat_t UNITQ(quat_t Q)
       exit(EXIT_FAILURE);
    }
    else {
-      Q.q[0] /= A;
-      Q.q[1] /= A;
-      Q.q[2] /= A;
-      Q.q[3] /= A;
+      Q.x /= A;
+      Q.y /= A;
+      Q.z /= A;
+      Q.s /= A;
    }
    return Q;
 }
@@ -877,10 +887,10 @@ quat_t UNITQ(quat_t Q)
 quat_t RECTIFYQ(quat_t Q)
 {
    if (Q.q[3] < 0.0) {
-      Q.q[0] = -Q.q[0];
-      Q.q[1] = -Q.q[1];
-      Q.q[2] = -Q.q[2];
-      Q.q[3] = -Q.q[3];
+      Q.x = -Q.x;
+      Q.y = -Q.y;
+      Q.z = -Q.z;
+      Q.s = -Q.s;
    }
    return Q;
 }
@@ -894,7 +904,6 @@ int _isequal_vec4(const vec4_t a, const vec4_t b)
 pair_vec3_t PerpBasis(const vec3_t A)
 {
    long i;
-   magvec3_t uv;
    pair_vec3_t V = {.first = VEC3_ZERO, .second = VEC3_ZERO};
    double Amin;
 
@@ -910,11 +919,9 @@ pair_vec3_t PerpBasis(const vec3_t A)
 
    V.first.v[i] = 1.0;
    V.first      = VxV(A, V.first);
-   uv           = UNITV(V.first);
-   V.first      = uv.v;
+   V.first      = UNITV(V.first).v;
    V.second     = VxV(A, V.first);
-   uv           = UNITV(V.second);
-   V.second     = uv.v;
+   V.second     = UNITV(V.second).v;
    return V;
 }
 /**********************************************************************/
@@ -2478,7 +2485,7 @@ mat3x3_t AdjointT(const mat3x3_t C, const mat3x3_t A)
 /* matrix C.                                                                  */
 /*    Note that the aguments `BT` and `BT` are the transpose of the           */
 /*    relevant matricies.                                                     */
-void MINVxM3(mat3x3_t A, long m, vec3_t BT[m], vec3_t CT[m])
+void MINVxM3(mat3x3_t A, long m, const vec3_t BT[m], vec3_t CT[m])
 {
    long I, J, ROW;
    long IPIVOT = 0;

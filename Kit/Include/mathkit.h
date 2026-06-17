@@ -46,6 +46,7 @@ typedef struct pair_vec3 {
 #define VEC3_NXAXIS        ((vec3_t){.x = -1, .y = 0, .z = 0})
 #define VEC3_NYAXIS        ((vec3_t){.x = 0, .y = -1, .z = 0})
 #define VEC3_NZAXIS        ((vec3_t){.x = 0, .y = 0, .z = -1})
+#define VEC3_ONES          ((vec3_t){.x = 1, .y = 1, .z = 1})
 #define VEC3_INIT(a, b, c) ((vec3_t){.x = (a), .y = (b), .z = (c)})
 #define DBL_TO_VEC3(dbl) ((vec3_t){.x = (dbl)[0], .y = (dbl)[1], .z = (dbl)[2]})
 #define VEC3_TO_DBL(dbl, vec)                                                  \
@@ -67,11 +68,23 @@ typedef union mat3x3 {
    double mat[3][3];
 } mat3x3_t;
 
-#define MAT3X3_ZERO                                                            \
-   ((mat3x3_t){.rows = {(vec3_t){.x = 0, .y = 0, .z = 0},                      \
-                        (vec3_t){.x = 0, .y = 0, .z = 0},                      \
-                        (vec3_t){.x = 0, .y = 0, .z = 0}}})
-#define MAT3X3_EYE ((mat3x3_t){.rows = {VEC3_PXAXIS, VEC3_PYAXIS, VEC3_PZAXIS}})
+#define MAT3X3_ZERO ((mat3x3_t){.flat = {0, 0, 0, 0, 0, 0, 0, 0, 0}})
+#define MAT3X3_EYE                                                             \
+   ((mat3x3_t){.x = VEC3_PXAXIS, .y = VEC3_PYAXIS, .z = VEC3_PZAXIS})
+#define MAT3X3_DIAG(a, b, c)                                                   \
+   ((mat3x3_t){.x = {(a), 0, 0}, .y = {0, (b), 0}, .z = {0, 0, (c)}})
+#define MAT3X3_ONES ((mat3x3_t){.x = VEC3_ONES, .y = VEC3_ONES, .z = VEC3_ONES})
+#define MAT3X3_SETROWS(a, b, c) ((mat3x3_t){.x = (a), .y = (b), .z = (c)})
+#define MAT3X3_SET(aa, ab, ac, ba, bb, bc, ca, cb, cc)                         \
+   ((mat3x3_t){.x.x = (aa),                                                    \
+               .x.y = (ab),                                                    \
+               .x.z = (ac),                                                    \
+               .y.x = (ba),                                                    \
+               .y.y = (bb),                                                    \
+               .y.z = (bc),                                                    \
+               .z.x = (ca),                                                    \
+               .z.y = (cb),                                                    \
+               .z.z = (cc)})
 
 typedef struct pair_mat3x3 {
    mat3x3_t first;
@@ -160,6 +173,8 @@ __attribute__((const)) vec3_t VDivV_Elem(const vec3_t A, const vec3_t B);
 __attribute__((const)) vec3_t LimitElem_bidir(vec3_t x, const vec3_t lim);
 __attribute__((const)) int _isequal_vec3(const vec3_t a, const vec3_t b);
 
+__attribute__((const)) mat3x3_t RodriguesRotation(const vec3_t a,
+                                                  const vec3_t b);
 __attribute__((const)) mat3x3_t MAddM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MSubM_Elem(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MMulM_Elem(const mat3x3_t A, const mat3x3_t B);
@@ -268,7 +283,7 @@ double NewtonRaphson(double x0, double tol, long nMax, double maxStep,
 __attribute__((const)) sphere_coord_t getTrigSphericalCoords(const vec3_t pbe);
 __attribute__((const)) mat3x3_t Adjoint(const mat3x3_t C, const mat3x3_t A);
 __attribute__((const)) mat3x3_t AdjointT(const mat3x3_t C, const mat3x3_t A);
-void MINVxM3(mat3x3_t A, long m, vec3_t BT[m], vec3_t CT[m]);
+void MINVxM3(mat3x3_t A, long m, const vec3_t BT[m], vec3_t CT[m]);
 void MINVxMG(double **A, double **B, double **C, long N, long m);
 void MxMINVG(double **A, double **B, double **C, long N, long m);
 __attribute__((const)) mat3x3_t expmso3(vec3_t const theta);
