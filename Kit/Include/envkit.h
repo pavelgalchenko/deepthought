@@ -46,8 +46,6 @@ __attribute__((const)) double SimpleMSIS(vec3_t pbn, long Col);
 __attribute__((const)) double NRLMSISE00(DateType date, vec3_t PosW,
                                          double F10p7, double AP);
 __attribute__((const)) double MarsAtmosphereModel(vec3_t r);
-__attribute__((const)) pair_mat3x3_t SimpleEarthPrecNute(const JDType JD);
-__attribute__((const)) pair_mat3x3_t HiFiEarthPrecNute(const JDType JD);
 __attribute__((const)) vec3_t WGS84ToECEF(const vec3_t lla);
 __attribute__((const)) vec3_t ECEFToWGS84(vec3_t p);
 long PolyhedronGravAcc(struct GeomType *G, double Density, vec3_t PosN,

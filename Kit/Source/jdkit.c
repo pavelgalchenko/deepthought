@@ -644,15 +644,16 @@ static struct LeapSecFileTbl {
 } leapSecTbl = {.n_entries = 0, .entries = NULL};
 
 static __once_flag leapsec_flag = __ONCE_FLAG_INIT;
-void load_leapsec_file()
+static void load_leapsec_file()
 {
    extern char ModelPath[1000];
    char f_path[1064] = {'\0'};
    strcpy(f_path, ModelPath);
-   strcat(f_path, "/tai-utc.dat");
+   strcat(f_path, "/data_files/tai-utc.dat");
    FILE *file = fopen(f_path, "rt");
    if (file == NULL) {
-      fprintf(stderr, "Error opening tai-utc file '%s'. Exiting...\n", f_path);
+      fprintf(stderr, "Error opening tai-utc.dat file '%s'. Exiting...\n",
+              f_path);
       exit(EXIT_FAILURE);
    }
 
@@ -660,7 +661,7 @@ void load_leapsec_file()
 
    // loop over file to find the number of nonempty lines
    char line[512] = {'\0'};
-   while (fgets(line, 512, file))
+   while (fgets(line, 512, file) != NULL)
       if (!isLineBlank(line))
          leapSecTbl.n_entries++;
 
@@ -671,7 +672,7 @@ void load_leapsec_file()
    // rewind file and start parsing for the actual data
    rewind(file);
    int i = 0;
-   while (fgets(line, 512, file)) {
+   while (fgets(line, 512, file) != NULL) {
       struct LeapSecFileEntry *const entry = &leapSecTbl.entries[i];
       int y, d;
       char mon[16]           = {'\0'};

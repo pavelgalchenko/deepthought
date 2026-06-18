@@ -56,6 +56,7 @@ set(KIT_SOURCES
     ${KIT}/rkkit.c
     ${KIT}/utilkit.c
     ${KIT}/spicekit.c
+    ${KIT}/earthorikit.c
     )
 
 add_library(42kit STATIC ${KIT_SOURCES})

@@ -28,7 +28,7 @@
 // Do some preconfiguration to interact with spice easier
 static once_flag naif_id_init_flag        = ONCE_FLAG_INIT;
 static SpiceInt naif_id_list[NMAJORWORLD] = {0};
-void init_naif_id()
+static void init_naif_id()
 {
    for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
       const char *world_name = WorldID2String(Iw);
@@ -54,7 +54,7 @@ SpiceInt WorldID2NAIFID(WorldID w_id)
 /**********************************************************************/
 static once_flag iau_frame_init = ONCE_FLAG_INIT;
 static char fixed_frame_list[NMAJORWORLD][SPICE_FRM_STR_BUFF_SIZE] = {{'\0'}};
-void init_fixed_frames()
+static void init_fixed_frames()
 {
    long usingITRF93 = SPICEFALSE;
    for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {

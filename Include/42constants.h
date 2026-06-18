@@ -14,27 +14,20 @@
 #ifndef __42CONSTANTS_H__
 #define __42CONSTANTS_H__
 
-#include <math.h>
-
-#ifndef M_PI /* define various constants if they don't exist */
-#define M_PI      (3.14159265358979323846) /* pi */
-#define M_PI_2    (1.57079632679489661923) /* pi/2 */
-#define M_SQRT2   (1.41421356237309504880) /* sqrt(2) */
-#define M_SQRT1_2 (0.70710678118654752440) /* 1/sqrt(2) */
-#define M_PI_4    (0.78539816339744830962) /* pi/4 */
-#define M_1_PI    (0.31830988618379067154) /* 1/pi */
-#define M_E       (2.7182818284590452354)  /* e */
-#endif
-
-#define PI             M_PI
-#define TWOPI          (2.0 * PI)
-#define HALFPI         M_PI_2
-#define D2R            ((PI) / (180.0))
-#define R2D            ((180.0) / (PI))
-#define SQRTTWO        M_SQRT2
-#define SQRTTHREE      (1.7320508075688772935)
-#define SQRTHALF       M_SQRT1_2
-#define GOLDENRATIO    (1.6180339887498948482)
-#define SPEED_OF_LIGHT (299792458.0)
+#define PI             (3.14159265358979323846)     /* pi */
+#define TWOPI          (6.28318530717958647693)     /* 2*pi */
+#define HALFPI         (1.57079632679489661923)     /* pi/2 */
+#define QUARTPI        (7.85398163397448309616e-01) /* pi/4 */
+#define ONEPI          (3.18309886183790671538e-01) /* 1/pi */
+#define EULER          (2.71828182845904523536)     /* e */
+#define D2R            (1.74532925199432957692e-02) /* pi/180 */
+#define R2D            (5.72957795130823208768e+01) /* 180/pi */
+#define A2R            (4.84813681109535993590e-06) /* pi/(180*3600) */
+#define R2A            (2.06264806247096355156e+05) /* (180*3600)/pi */
+#define SQRTTWO        (1.41421356237309504880)     /* sqrt(2) */
+#define SQRTTHREE      (1.73205080756887729353)     /* sqrt(3) */
+#define SQRTHALF       (7.07106781186547524401e-01) /* 1/sqrt(2) */
+#define GOLDENRATIO    (1.61803398874989484820)     /* (1 + sqrt(5))/2 */
+#define SPEED_OF_LIGHT (299792458.0)                /* c */
 
 #endif /* __42CONSTANTS_H__ */

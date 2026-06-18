@@ -13,6 +13,7 @@
 
 #include "navkit.h"
 #include "42.h"
+#include "earthorikit.h"
 #include "spicekit.h"
 
 /* REQUIRED GLOBALS                                                   */
@@ -257,12 +258,13 @@ mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
             const vec3_t ZAxis = VEC3_PZAXIS;
             JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
-            double PriMerAng         = TwoPi * JD2GMST(jd_tt_j2000);
-            const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
-            CWN                      = pair.first;
-            C_TETE_J2000             = pair.second;
-            C_W_TETE                 = SimpRot(ZAxis, PriMerAng);
-            CWN                      = MxM(C_W_TETE, C_TETE_J2000);
+            // double PriMerAng         = TwoPi * JD2GMST(jd_tt_j2000);
+            // const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+            // CWN                      = pair.first;
+            // C_TETE_J2000             = pair.second;
+            // C_W_TETE                 = SimpRot(ZAxis, PriMerAng);
+            // CWN                      = MxM(C_W_TETE, C_TETE_J2000);
+            CWN = GMAT_HiFiEarthCWN(jd_tt_j2000).mat;
          }
       } break;
       default:

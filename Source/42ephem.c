@@ -638,7 +638,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
 
    long grp_num        = 0;
    char line[buf_size] = {"\0"};
-   while (fgets(line, buf_size, hdr_file)) {
+   while (fgets(line, buf_size, hdr_file) != NULL) {
       if (sscanf(line, "KSIZE=%ld NCOEFF=%ld", &grp_num, &hdr_data->n_coeff) ==
           2) {
          grp_found[0] = 1;
@@ -654,7 +654,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
       const int sscanf_check = sscanf(line, "GROUP %ld", &grp_num) == 1;
       switch ((sscanf_check) ? grp_num : -1) {
          case 1030: {
-            while (fgets(line, buf_size, hdr_file)) {
+            while (fgets(line, buf_size, hdr_file) != NULL) {
                double jd_days[2] = {0};
                if (sscanf(line, "%lf %lf %lf", &jd_days[0], &jd_days[1],
                           &hdr_data->n_days) == 3) {
@@ -671,7 +671,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
          } break;
          case 1040: {
             grp_found[2] = 1;
-            while (fgets(line, buf_size, hdr_file)) {
+            while (fgets(line, buf_size, hdr_file) != NULL) {
                if (sscanf(line, "%ld", &hdr_data->n_data) == 1) {
                   break;
                }
@@ -681,7 +681,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
 
             // Assuming data names in group 1040 start immediately after
             // n_data
-            while (fgets(line, buf_size, hdr_file)) {
+            while (fgets(line, buf_size, hdr_file) != NULL) {
                const char *tok = strtok(line, tok_check);
                if (!tok)
                   break;
@@ -695,7 +695,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
          } break;
          case 1041: {
             grp_found[3] = 1;
-            while (fgets(line, buf_size, hdr_file)) {
+            while (fgets(line, buf_size, hdr_file) != NULL) {
                long n_group_1041 = 0;
                if (sscanf(line, "%ld", &n_group_1041) == 1) {
                   // assuming group 1041 is AFTER group 1040
@@ -716,7 +716,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
             double *const group_1041_start = hdr_data->group_1041;
 
             // assuming  group 1041 data is immediately after
-            while (fgets(line, buf_size, hdr_file)) {
+            while (fgets(line, buf_size, hdr_file) != NULL) {
                replace_char(line, 'D', 'E');
                const char *tok = strtok(line, tok_check);
                if (!tok)
@@ -731,7 +731,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
          } break;
          case 1050: {
             grp_found[4] = 1;
-            while (fgets(line, buf_size, hdr_file)) {
+            while (fgets(line, buf_size, hdr_file) != NULL) {
                if (is_line_empty(line))
                   continue;
 
@@ -815,7 +815,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
          double dummy[2] = {0.0};
 
          infile = FileOpen("", f_names[i], "rt");
-         while (fgets(line, 512, infile)) {
+         while (fgets(line, 512, infile) != NULL) {
             if (sscanf(line, "%ld %ld", &BlockNum, &NumEntries) == 2) {
                fgets(line, 512, infile);
                if (sscanf(line, "%lf %lf %lf", &dummy[0], &jd_rng_days[1],
@@ -957,7 +957,6 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd_tt_j2000);
 
    const double j2000_sec = JDToDynTime(jd_tt_j2000);
-   const double GMST      = JD2GMST(jd_tt_j2000);
 
    struct WorldType *const sol = &worlds[SOL];
    JDType jd_sol_cheb          = JDChangeSystemEpoch(
@@ -1035,11 +1034,15 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
          continue;
       if (Iw == EARTH) {
          /* .. Earth rotation is a special case */
-         W->PriMerAng             = TwoPi * GMST;
-         const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
-         C_TETE_J2000             = pair.second;
-         C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
-         W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
+         // W->PriMerAng             = TwoPi * JD2GMST(jd_tt_j2000);
+         // const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+         // C_TETE_J2000             = pair.second;
+         // C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
+         // W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
+
+         pair_dbl_mat3x3_t out = GMAT_HiFiEarthCWN(jd_tdb_j2000);
+         W->PriMerAng          = out.dbl;
+         W->CWN                = out.mat;
       }
       else {
          pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
@@ -1116,11 +1119,14 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
       if (W->Exists) {
          if (Ip == EARTH) {
             /* .. Earth rotation is a special case */
-            W->PriMerAng             = TwoPi * GMST;
-            const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
-            C_TETE_J2000             = pair.second;
-            C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
-            W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
+            // W->PriMerAng             = TwoPi * GMST;
+            // const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+            // C_TETE_J2000             = pair.second;
+            // C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
+            // W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
+            pair_dbl_mat3x3_t out = GMAT_HiFiEarthCWN(jd_tdb_j2000);
+            W->PriMerAng          = out.dbl;
+            W->CWN                = out.mat;
          }
          else {
             pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);

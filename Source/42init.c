@@ -3432,8 +3432,8 @@ void InitSpacecraft(struct SCType *S)
          FGS->SampleCounter  = FGS->MaxCounter;
          FGS->H_Axis         = (FGS->BoreAxis + 1) % 3;
          FGS->V_Axis         = (FGS->BoreAxis + 2) % 3;
-         FGS->NEA           *= A2R;
-         FGS->Scl           *= A2R;
+         FGS->NEA           *= a2r;
+         FGS->Scl           *= a2r;
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/Mounting Angles"),
                             ang.v, &seq);
@@ -3442,7 +3442,7 @@ void InitSpacecraft(struct SCType *S)
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/FOV Size"),
                                  FGS->FovHalfAng);
          for (i = 0; i < 2; i++)
-            FGS->FovHalfAng[i] *= 0.5 * A2R;
+            FGS->FovHalfAng[i] *= 0.5 * a2r;
 
          getYAMLEulerAngles(fy_node_by_path_def(seqNode, "/FOV Frame Angles"),
                             ang.v, &seq);
@@ -3450,8 +3450,8 @@ void InitSpacecraft(struct SCType *S)
          FGS->qr = C2Q(FGS->CR);
          assignYAMLToDoubleArray(2, fy_node_by_path_def(seqNode, "/Guide Star"),
                                  ang.v);
-         FGS->Hr = ang.v[0] * A2R;
-         FGS->Vr = ang.v[1] * A2R;
+         FGS->Hr = ang.v[0] * a2r;
+         FGS->Vr = ang.v[1] * a2r;
          InitOptics(FGS);
          if (strcmp(FGS->PsfFileName, "NONE")) {
             struct PsfType *PSF = &FGS->PSF;
@@ -4220,12 +4220,15 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          if (ephem != EPH_SPICE) {
             if (Iw == EARTH) {
                /* .. Earth rotation is a special case */
-               GMST                     = JD2GMST(jd_tt_j2000);
-               W->PriMerAng             = TwoPi * GMST;
-               const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
-               C_TETE_J2000             = pair.second;
-               C_W_TETE                 = SimpRot(Zaxis, W->PriMerAng);
-               W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
+               // GMST                     = JD2GMST(jd_tt_j2000);
+               // W->PriMerAng             = TwoPi * GMST;
+               // const pair_mat3x3_t pair = HiFiEarthPrecNute(jd_tt_j2000);
+               // C_TETE_J2000             = pair.second;
+               // C_W_TETE                 = SimpRot(Zaxis, W->PriMerAng);
+               // W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
+               pair_dbl_mat3x3_t out = GMAT_HiFiEarthCWN(jd_tdb_j2000);
+               W->PriMerAng          = out.dbl;
+               W->CWN                = out.mat;
             }
             else {
                pair_dbl_mat3x3_t dbl_mat =
@@ -5410,8 +5413,8 @@ void InitSim(int argc, char **argv)
    SqrtTwo     = SQRTTWO;
    SqrtHalf    = SQRTHALF;
    GoldenRatio = GOLDENRATIO;
-   A2R         = D2R / 3600.0;
-   R2A         = R2D * 3600.0;
+   a2r         = A2R;
+   r2a         = R2A;
 
    // Exact Values from GMAT, gives agreement to 0.5 meters for all bodies
    World[EARTH].CNH.mat[0][0] = 1.0;

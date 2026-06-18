@@ -28,6 +28,7 @@
 #include "dcmkit.h"
 #include "docoptkit.h"
 #include "dsmkit.h"
+#include "earthorikit.h"
 #include "envkit.h"
 #include "fswkit.h"
 #include "geomkit.h"
@@ -75,7 +76,7 @@ EXTERN char CmdFileName[BUFSIZE];
 EXTERN struct DocoptArgs CLI_ARGS;
 
 /* Math Basics */
-EXTERN double Pi, TwoPi, HalfPi, SqrtTwo, SqrtHalf, A2R, R2A, GoldenRatio;
+EXTERN double Pi, TwoPi, HalfPi, SqrtTwo, SqrtHalf, a2r, r2a, GoldenRatio;
 
 /* Simulation Control */
 EXTERN long TimeMode; /* FAST_TIME, REAL_TIME, EXTERNAL_SYNCH, NOS3_TIME */
