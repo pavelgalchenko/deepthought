@@ -216,7 +216,7 @@ void InitDSM(struct SCType *S)
    Nav->Date.doy          = 0;
    Nav->Date.Hour         = 0;
    Nav->Date.Minute       = 0;
-   Nav->Date.Second       = RATIONAL_ZERO;
+   Nav->Date.Second       = JDSECOND_ZERO;
 
    FOR_STATES(i)
    {
@@ -1650,9 +1650,9 @@ long GetNavigationData(struct DSMNavType *const Nav, struct fy_node *datNode,
                startInd = Nav->stateInd[state];
                switch (state) {
                   case TIME_STATE: {
-                     Nav->jd_tt_mjd_0 = JDFromDays(dataDest[startInd], TT_TIME,
-                                                   GMAT_MJD_EPOCH);
-                     Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
+                     Nav->jd_tt_mjd_0 =
+                         DaysToJD(dataDest[startInd], TT_TIME, GMAT_MJD_EPOCH);
+                     Nav->jd_tt_mjd = Nav->jd_tt_mjd_0;
                   } break;
                   case ROTMAT_STATE:
                   case QUAT_STATE: {
@@ -1748,7 +1748,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       Nav->jd_tt_mjd_0 = JDFromSeconds(t0, TT_TIME, J2000_EPOCH);
       Nav->jd_tt_mjd_0 =
           JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, Nav->jd_tt_mjd_0);
-      Nav->jd_tt_mjd_0 = JDSubRationalSeconds(Nav->jd_tt_mjd_0, Nav->DT_RAT);
+      Nav->jd_tt_mjd_0 = JDSubSeconds(Nav->jd_tt_mjd_0, Nav->DT_RAT);
       Nav->jd_tt_mjd   = Nav->jd_tt_mjd_0;
       Nav->ccsds_time  = jd2ccsds(Nav->jd_tt_mjd_0);
 

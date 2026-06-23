@@ -141,7 +141,7 @@ long AdvanceTime(const Rational dtsim_rat, JDType *jd_tt_mjd,
          const Rational tick_time = NOS3Time(dtsim_rat);
          *simtime                 = rational2double(tick_time);
 
-         *jd_tt_mjd = JDAddRationalSeconds(JD_TT_MJD_0, tick_time);
+         *jd_tt_mjd = JDAddSeconds(JD_TT_MJD_0, tick_time);
          *utc       = JDToDate(*jd_tt_mjd, UTC_TIME);
       } break;
    }

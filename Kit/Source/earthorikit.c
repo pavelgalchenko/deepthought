@@ -21,17 +21,227 @@
 #include <string.h>
 #include <threads.h>
 
+/**********************************************************************/
+/* Load Earth Orientation Parameter data                              */
+
+// Loading into memory like in GMAT
+// TODO: the file is >23000 rows, do we want to do this?
+//    loading all rows and just the data show is > 1.2 GB!!!!!!!!
+//    each row corresponds to a single day
+//    lets try storing ~once/wk (~175 MB now)
+//    file is from Jan 1, 1962 to Sep 14, 2026, could cutoff before ~2000?
+
+#define EOP_STEPOVER (1)
+struct Ut1MUtcEntry {};
+struct Ut1MUtcInfo {
+   int n_entries;
+   double *jday_tai_mjd; // TAI days since MJD
+   int *jday_utc_mjd;    // UTC days since MJD (unused??)
+   double *ut1_m_utc;    // UT1 - UTC (sec)
+} Ut1MUtcInfo;
+
+struct PolarMotionEntry {};
+static struct PolarMotionInfo {
+   int n_entries;
+   double *jday_utc_mjd; // UTC days since MJD
+   double *x;
+   double *y;
+   double *lod; // (unused??)
+} PM_Info;
+
+// TODO: Meeus AStronomical Algorithms pp 79 has a TT(?)-UT(1?) limited table
+// for times before eopc04_08.62-now; could use to fill in values
+static __once_flag eop_file_flag = __ONCE_FLAG_INIT;
+static void init_eop_file()
+{
+   extern char ModelPath[1000];
+   char f_path[1064] = {'\0'};
+   strcpy(f_path, ModelPath);
+   strcat(f_path, "/data_files/eopc04_08.62-now");
+
+   FILE *file = fopen(f_path, "rt");
+   if (file == NULL) {
+      fprintf(stderr, "Error opening eopc04_08.62-now file '%s'. Exiting...\n",
+              f_path);
+      exit(EXIT_FAILURE);
+   }
+
+   char line[512] = {'\0'};
+   // loop over file to find last line of header
+   int startfound = FALSE;
+   while (!startfound && fgets(line, 512, file) != NULL) {
+      // NOTE: this line being unchanged is assumed
+      if (strstr(line, "(0h UTC)")) {
+         startfound = TRUE;
+         if (fgets(line, 512, file) == NULL) {
+            fprintf(stderr, "No Data in '%s' file. Exiting...\n", f_path);
+            exit(EXIT_FAILURE);
+         }
+      }
+   }
+   if (!startfound) {
+      fprintf(stderr, "Unable to read '%s' file. Exiting...\n", f_path);
+      exit(EXIT_FAILURE);
+   }
+
+   Ut1MUtcInfo.n_entries    = 0;
+   Ut1MUtcInfo.ut1_m_utc    = NULL;
+   Ut1MUtcInfo.jday_utc_mjd = NULL;
+   PM_Info.n_entries        = 0;
+   PM_Info.x                = NULL;
+   PM_Info.y                = NULL;
+   PM_Info.lod              = NULL;
+   while (fgets(line, 512, file) != NULL) {
+      int year, month, day, jday_utc_mjd;
+      double x, y, ut1_m_utc, lod;
+
+      if (sscanf(line, "%i %i %i %i %lf %lf %lf %lf", &year, &month, &day,
+                 &jday_utc_mjd, &x, &y, &ut1_m_utc, &lod) != 8) {
+         fprintf(stderr,
+                 "Could not find required eop data in data line '%i' of file "
+                 "'%s'. Exiting...\n",
+                 Ut1MUtcInfo.n_entries, f_path);
+         exit(EXIT_FAILURE);
+      }
+
+      if ((jday_utc_mjd % EOP_STEPOVER) == 0) {
+         Ut1MUtcInfo.jday_tai_mjd =
+             realloc(Ut1MUtcInfo.jday_tai_mjd,
+                     (Ut1MUtcInfo.n_entries + 1) * sizeof(double));
+         Ut1MUtcInfo.ut1_m_utc =
+             realloc(Ut1MUtcInfo.ut1_m_utc,
+                     (Ut1MUtcInfo.n_entries + 1) * sizeof(double));
+         Ut1MUtcInfo.jday_utc_mjd =
+             realloc(Ut1MUtcInfo.jday_utc_mjd,
+                     (Ut1MUtcInfo.n_entries + 1) * sizeof(int));
+
+         PM_Info.jday_utc_mjd = realloc(
+             PM_Info.jday_utc_mjd, (PM_Info.n_entries + 1) * sizeof(double));
+         PM_Info.x =
+             realloc(PM_Info.x, (PM_Info.n_entries + 1) * sizeof(double));
+         PM_Info.y =
+             realloc(PM_Info.y, (PM_Info.n_entries + 1) * sizeof(double));
+         PM_Info.lod =
+             realloc(PM_Info.lod, (PM_Info.n_entries + 1) * sizeof(double));
+
+         Ut1MUtcInfo.jday_utc_mjd[Ut1MUtcInfo.n_entries] = jday_utc_mjd;
+         const JDType jd_utc_mjd = DaysToJD(jday_utc_mjd, UTC_TIME, MJD_EPOCH);
+
+         Ut1MUtcInfo.jday_tai_mjd[Ut1MUtcInfo.n_entries] =
+             JDToDays(JDChangeSystem(TAI_TIME, jd_utc_mjd));
+         Ut1MUtcInfo.jday_utc_mjd[Ut1MUtcInfo.n_entries] = jday_utc_mjd;
+         Ut1MUtcInfo.ut1_m_utc[Ut1MUtcInfo.n_entries]    = ut1_m_utc;
+
+         PM_Info.jday_utc_mjd[PM_Info.n_entries] = jday_utc_mjd;
+         PM_Info.x[PM_Info.n_entries]            = x;
+         PM_Info.y[PM_Info.n_entries]            = y;
+         PM_Info.lod[PM_Info.n_entries]          = lod;
+
+         Ut1MUtcInfo.n_entries++;
+         PM_Info.n_entries++;
+      }
+   }
+}
+/**********************************************************************/
+/* Read ut1 - utc data and clampled cubic spline interpolation        */
+/* between stored data points                                         */
+double GetUt1UtcOffset(const double jday_tai_mjd)
+{
+   call_once(&eop_file_flag, init_eop_file);
+   static int ind = 0;
+
+   const int n_entries              = Ut1MUtcInfo.n_entries;
+   const double *const tbl_jday_tai = Ut1MUtcInfo.jday_tai_mjd;
+
+   // if 'jday_tai_mjd' is outside the table, return the nearest extent
+   if (tbl_jday_tai[0] >= jday_tai_mjd)
+      return Ut1MUtcInfo.ut1_m_utc[0];
+   else if (jday_tai_mjd >= tbl_jday_tai[n_entries - 1])
+      return Ut1MUtcInfo.ut1_m_utc[n_entries - 1];
+
+   // From the above, 'jday_tai_mjd' will be in the open interval
+   //    (tbl_jday[0], tbl_jday[n_entries - 1])
+   // thus, 'ind' will be on the closed interval
+   //    [0, n_entries - 2]
+   ind = FindIndex(jday_tai_mjd, tbl_jday_tai, Ut1MUtcInfo.n_entries, ind);
+
+   double yp[2];
+
+   yp[0] =
+       CentralDifference(ind, n_entries, tbl_jday_tai, Ut1MUtcInfo.ut1_m_utc);
+   yp[1] = CentralDifference(ind + 1, n_entries, tbl_jday_tai,
+                             Ut1MUtcInfo.ut1_m_utc);
+
+   const double *const dut1 = &Ut1MUtcInfo.ut1_m_utc[ind];
+   const double *const X    = &tbl_jday_tai[ind];
+
+   return ClampedCubicSpline(jday_tai_mjd, X[0], X[1], dut1[0], dut1[1], yp[0],
+                             yp[1]);
+}
+/**********************************************************************/
+/* Yields x and y in arcseconds                                       */
+void GetPolarMotionData(const double jday_utc_mjd, double *const xp,
+                        double *const yp, double *const lodp)
+{
+   call_once(&eop_file_flag, init_eop_file);
+   static int ind = 0;
+
+   const int n_entries              = PM_Info.n_entries;
+   const double *const tbl_jday_utc = PM_Info.jday_utc_mjd;
+   ind = FindIndex(jday_utc_mjd, tbl_jday_utc, n_entries, ind);
+
+   const double *const x   = &PM_Info.x[ind];
+   const double *const y   = &PM_Info.y[ind];
+   const double *const lod = &PM_Info.lod[ind];
+   const double Yi2[3]     = {x[1], y[1], lod[1]};
+   const double Yi1[3]     = {x[0], y[0], lod[0]};
+   double vals[3]          = {0};
+   lerpV(tbl_jday_utc[ind + 1], tbl_jday_utc[ind], Yi2, Yi1, jday_utc_mjd, 3,
+         vals);
+   *xp   = vals[0];
+   *yp   = vals[1];
+   *lodp = vals[2];
+
+   // const double *const T = &tbl_jday_utc[ind];
+
+   // double yprime[2];
+   // yprime[0] = CentralDifference(ind, n_entries, tbl_jday_utc, PM_Info.x);
+   // yprime[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
+   // PM_Info.x); *xp       = ClampedCubicSpline(jday_utc_mjd, T[0], T[1],
+   // PM_Info.x[ind],
+   //                                PM_Info.x[ind + 1], yp[0], yp[1]);
+   // yprime[0] = CentralDifference(ind, n_entries, tbl_jday_utc, PM_Info.y);
+   // yprime[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
+   // PM_Info.y); *yp       = ClampedCubicSpline(jday_utc_mjd, T[0], T[1],
+   // PM_Info.y[ind],
+   //                                PM_Info.y[ind + 1], yp[0], yp[1]);
+   // yprime[0] = CentralDifference(ind, n_entries, tbl_jday_utc, PM_Info.lod);
+   // yprime[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
+   // PM_Info.lod); *lodp     = ClampedCubicSpline(jday_utc_mjd, T[0], T[1],
+   // PM_Info.lod[ind],
+   //                                PM_Info.lod[ind + 1], yp[0], yp[1]);
+}
+/**********************************************************************/
+/* IAU Nutation data                                                  */
+
 // using IAU 1980 or IAU 1996
 // default to IAU 1980
 #define N_NUT_MAX (263)
 
-#define N_NUT_1996            (263)
-#define MULT_NUT_1980         (1.0e-04) // arcseconds
-#define FIRST_PHRASE_NUT_1980 ("1980 IAU")
+#define NUT_N_1950            (69)
+#define NUT_ORDER_1950        (3)
+#define NUT_MULT_1950         (1.0e-04) // arcseconds
+#define NUT_FIRST_PHRASE_1950 ("1950 IAU")
 
-#define N_NUT_1980            (180)
-#define MULT_NUT_1996         (1.0e-04) // arcseconds
-#define FIRST_PHRASE_NUT_1996 ("1996 IAU")
+#define NUT_N_1980            (106)
+#define NUT_ORDER_1980        (3)
+#define NUT_MULT_1980         (1.0e-04) // arcseconds
+#define NUT_FIRST_PHRASE_1980 ("1980 IAU")
+
+#define NUT_N_1996            (263)
+#define NUT_ORDER_1996        (4)
+#define NUT_MULT_1996         (1.0e-07) // arcseconds
+#define NUT_FIRST_PHRASE_1996 ("1996 IAU")
 
 struct NutEntry {
    int a[5];
@@ -41,19 +251,23 @@ struct NutEntry {
    double D;
    double E;
    double F;
+   int index;
 };
 
 static struct NutInfo {
    long n_entries;
    double mult;
    char first_phrase[10];
+   int order;
    struct NutEntry entries[N_NUT_MAX];
 } Nut_Info;
 
 // Default to using ITRF 1980 data
+// static const enum NutEnum NutSelection = NUT_ITRF_1950;
 static const enum NutEnum NutSelection = NUT_ITRF_1980;
+// static const enum NutEnum NutSelection = NUT_ITRF_1996;
 
-static __once_flag iau_flag = __ONCE_FLAG_INIT;
+static __once_flag iau_file_flag = __ONCE_FLAG_INIT;
 static void init_iau_file()
 {
    extern char ModelPath[1000];
@@ -62,15 +276,23 @@ static void init_iau_file()
    strcat(f_path, "/data_files/NUTATION.DAT");
 
    switch (NutSelection) {
+      case NUT_ITRF_1950:
+         Nut_Info.n_entries = NUT_N_1950;
+         Nut_Info.mult      = NUT_MULT_1950;
+         Nut_Info.order     = NUT_ORDER_1950;
+         strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_1950);
+         break;
       case NUT_ITRF_1980:
-         Nut_Info.n_entries = N_NUT_1980;
-         Nut_Info.mult      = MULT_NUT_1980;
-         strcpy(Nut_Info.first_phrase, FIRST_PHRASE_NUT_1980);
+         Nut_Info.n_entries = NUT_N_1980;
+         Nut_Info.mult      = NUT_MULT_1980;
+         Nut_Info.order     = NUT_ORDER_1980;
+         strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_1980);
          break;
       case NUT_ITRF_1996:
-         Nut_Info.n_entries = N_NUT_1996;
-         Nut_Info.mult      = MULT_NUT_1996;
-         strcpy(Nut_Info.first_phrase, FIRST_PHRASE_NUT_1996);
+         Nut_Info.n_entries = NUT_N_1996;
+         Nut_Info.mult      = NUT_MULT_1996;
+         Nut_Info.order     = NUT_ORDER_1996;
+         strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_1996);
          break;
       default:
          break;
@@ -83,7 +305,7 @@ static void init_iau_file()
       exit(EXIT_FAILURE);
    }
 
-   // loop over file to find start of 1996 IAU section
+   // loop over file to find start of desired IAU section
    char line[512] = {'\0'};
    int foundline  = FALSE;
    while (fgets(line, 512, file) != NULL) {
@@ -117,283 +339,289 @@ static void init_iau_file()
       }
       struct NutEntry *entry = &Nut_Info.entries[i];
       switch (NutSelection) {
+         case NUT_ITRF_1950: // no E or F terms
          case NUT_ITRF_1980: // no E or F terms
-            sscanf(line, "%i %i %i %i %i %lf %lf %lf %lf", &entry->a[0],
+            sscanf(line, "%i %i %i %i %i %lf %lf %lf %lf %i", &entry->a[0],
                    &entry->a[1], &entry->a[2], &entry->a[3], &entry->a[4],
-                   &entry->A, &entry->B, &entry->C, &entry->D);
+                   &entry->A, &entry->B, &entry->C, &entry->D, &entry->index);
             entry->E = 0;
             entry->F = 0;
             break;
          default:
-            sscanf(line, "%i %i %i %i %i %lf %lf %lf %lf %lf %lf", &entry->a[0],
-                   &entry->a[1], &entry->a[2], &entry->a[3], &entry->a[4],
-                   &entry->A, &entry->B, &entry->C, &entry->D, &entry->E,
-                   &entry->F);
+            sscanf(line, "%i %i %i %i %i %lf %lf %lf %lf %lf %lf %i",
+                   &entry->a[0], &entry->a[1], &entry->a[2], &entry->a[3],
+                   &entry->a[4], &entry->A, &entry->B, &entry->C, &entry->D,
+                   &entry->E, &entry->F, &entry->index);
             break;
       }
-      entry->a[0] *= Nut_Info.mult;
-      entry->a[1] *= Nut_Info.mult;
-      entry->a[2] *= Nut_Info.mult;
-      entry->a[3] *= Nut_Info.mult;
-      entry->a[4] *= Nut_Info.mult;
-      entry->A    *= Nut_Info.mult;
-      entry->B    *= Nut_Info.mult;
-      entry->C    *= Nut_Info.mult;
-      entry->D    *= Nut_Info.mult;
-      entry->E    *= Nut_Info.mult;
-      entry->F    *= Nut_Info.mult;
    }
    fclose(file);
 }
 /**********************************************************************/
-/* Mean longitude of the ascending node of the Moon's orbit (rad)    */
-__attribute__((const)) static inline double
-_earth_nut_Omega(const double TTDB, const double TTDB2, const double TTDB3,
-                 const double TTDB4);
-static inline double _earth_nut_Omega(const double TTDB, const double TTDB2,
-                                      const double TTDB3, const double TTDB4)
+__attribute__((const)) static mat3x3_t EarthPrecessionMatrix(const double TTDB);
+static mat3x3_t EarthPrecessionMatrix(const double TTDB)
 {
-   switch (NutSelection) {
-      case NUT_ITRF_1980:
-         return (125.04452222 * D2R) +
-                (TTDB * -6962890.5390 + TTDB2 * 7.455 + TTDB3 * 0.008) * A2R;
-      case NUT_ITRF_1996:
-         return (125.04455501 * D2R) +
-                (TTDB * -6962890.2665 + TTDB2 * 7.4722 + TTDB3 * 0.007702 +
-                 TTDB4 * -0.00005939) *
-                    A2R;
-   }
-}
-/**********************************************************************/
-/* Mean anomaly of the Moon's orbit (rad)                             */
-__attribute__((const)) static inline double _earth_nut_l(const double TTDB,
-                                                         const double TTDB2,
-                                                         const double TTDB3,
-                                                         const double TTDB4);
-static inline double _earth_nut_l(const double TTDB, const double TTDB2,
-                                  const double TTDB3, const double TTDB4)
-{
-   switch (NutSelection) {
-      case NUT_ITRF_1980:
-         return (134.96298139 * D2R) +
-                (TTDB * 1717915922.6330 + TTDB2 * 31.310 + TTDB3 * 0.064) * A2R;
-      case NUT_ITRF_1996:
-         return (134.96340251 * D2R) +
-                (TTDB * 1717915923.2178 + TTDB2 * 31.8792 + TTDB3 * 0.051635 +
-                 TTDB4 * -0.00024470) *
-                    A2R;
-   }
-}
-/**********************************************************************/
-/* Mean anomaly of the Sun's orbit (rad)                              */
-__attribute__((const)) static inline double _earth_nut_lp(const double TTDB,
-                                                          const double TTDB2,
-                                                          const double TTDB3,
-                                                          const double TTDB4);
-static inline double _earth_nut_lp(const double TTDB, const double TTDB2,
-                                   const double TTDB3, const double TTDB4)
-{
-   switch (NutSelection) {
-      case NUT_ITRF_1980:
-         return (357.52772333 * D2R) +
-                (TTDB * 129596581.2240 + TTDB2 * -0.577 + TTDB3 * -0.012) * A2R;
-      case NUT_ITRF_1996:
-         return (357.52910918 * D2R) +
-                (TTDB * 129596581.0481 + TTDB2 * -0.5532 + TTDB3 * -0.000136 +
-                 TTDB4 * -0.00001149) *
-                    A2R;
-   }
-}
-/**********************************************************************/
-/* Mean argument of latitude of the Moon's orbit (rad)                */
-__attribute__((const)) static inline double _earth_nut_F(const double TTDB,
-                                                         const double TTDB2,
-                                                         const double TTDB3,
-                                                         const double TTDB4);
-static inline double _earth_nut_F(const double TTDB, const double TTDB2,
-                                  const double TTDB3, const double TTDB4)
-{
-   switch (NutSelection) {
-      case NUT_ITRF_1980:
-         return (93.27191028 * D2R) +
-                (TTDB * 1739527263.1370 + TTDB2 * -13.257 + TTDB3 * 0.011) *
-                    A2R;
-      case NUT_ITRF_1996:
-         return (93.27209062 * D2R) +
-                (TTDB * 1739527262.8478 + TTDB2 * -12.7512 + TTDB3 * 0.001037 +
-                 TTDB4 * 0.00000417) *
-                    A2R;
-   }
-}
-/**********************************************************************/
-/* Difference between the mean longitude of the Sun and Moon (rad)    */
-__attribute__((const)) static inline double _earth_nut_D(const double TTDB,
-                                                         const double TTDB2,
-                                                         const double TTDB3,
-                                                         const double TTDB4);
-static inline double _earth_nut_D(const double TTDB, const double TTDB2,
-                                  const double TTDB3, const double TTDB4)
-{
-   switch (NutSelection) {
-      case NUT_ITRF_1980:
-         return (297.85036306 * D2R) +
-                (TTDB * 1602961601.3280 + TTDB2 * -6.891 + TTDB3 * 0.019) * A2R;
-      case NUT_ITRF_1996:
-         return (297.85019547 * D2R) +
-                (TTDB * 1602961601.2090 + TTDB2 * -6.3706 + TTDB3 * 0.006593 +
-                 TTDB4 * -0.00003169) *
-                    A2R;
-   }
-}
-/**********************************************************************/
-/* Mean Obliquity of the ecliptic at J2000 epoch (deg)                */
-__attribute__((const)) static inline double
-_earth_nut_eps(const double TTDB, const double TTDB2, const double TTDB3);
-static inline double _earth_nut_eps(const double TTDB, const double TTDB2,
-                                    const double TTDB3)
-{
-   return (84381.448 + TTDB * -46.8150 + TTDB2 * -0.00059 + TTDB3 * 0.001813) *
-          A2R;
-}
-/**********************************************************************/
-/* Greenwich Mean Sidereal Time (rad)                                 */
-double GMAT_JD2GMST(const JDType jd)
-{
-   const JDType jd_utc_j2000 = JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, jd);
-   const double TUT1         = JDToDays(jd_utc_j2000) / JDDAY_PER_CENTURY;
-   const double TUT12        = TUT1 * TUT1;
-   const double TUT13        = TUT12 * TUT1;
-   return (1.00965822615e6 + 4.746600277219299e10 * TUT1 + 1.3956560 * TUT12 +
-           9.3e-5 * TUT13) *
-          A2R;
-}
-/**********************************************************************/
-__attribute__((const)) static pair_dbl_mat3x3_t
-EarthNutationSTMatricies(const JDType jd);
-pair_dbl_mat3x3_t EarthNutationSTMatricies(const JDType jd)
-{
-   call_once(&iau_flag, init_iau_file);
+   const double zeta  = (2306.2181 + (0.30188 + 0.017998 * TTDB) * TTDB) * TTDB;
+   const double Theta = (2004.3109 - (0.42665 + 0.041833 * TTDB) * TTDB) * TTDB;
+   const double z     = zeta + (0.7928 + 0.000205 * TTDB) * TTDB * TTDB;
 
-   pair_dbl_mat3x3_t out;
+   mat3x3_t PREC = A2C(323, -z * A2R, Theta * A2R, -zeta * A2R);
+   PREC = MxM(ROT3(-z * A2R), MxM(ROT2(Theta * A2R), ROT3(-zeta * A2R)));
 
-   const JDType jdEQThresh = JD_RAW(UTC_TIME, J2000_EPOCH, -1095,
-                                    RATIONAL_RAW(SEC_PER_DAY / 2, 0, 1));
-
-   JDType jd_tdb_j2000       = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
-   const JDType jd_utc_j2000 = JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, jd);
-
-   const double TTDB = JDToDays(jd_tdb_j2000) / JDDAY_PER_CENTURY;
-
-   const double TTDB2 = TTDB * TTDB;
-   const double TTDB3 = TTDB2 * TTDB;
-   double TTDB4       = 0;
-   if (NutSelection != NUT_ITRF_1980)
-      TTDB4 = TTDB2 * TTDB2;
-
-   const double longAscNodeLunar =
-       WrapTo2Pi(_earth_nut_Omega(TTDB, TTDB2, TTDB3, TTDB4));
-   const double meanAnomLuna =
-       WrapTo2Pi(_earth_nut_l(TTDB, TTDB2, TTDB3, TTDB4));
-   const double meanAnomSol =
-       WrapTo2Pi(_earth_nut_lp(TTDB, TTDB2, TTDB3, TTDB4));
-   const double argLatLuna = WrapTo2Pi(_earth_nut_F(TTDB, TTDB2, TTDB3, TTDB4));
-   const double meanElonSol =
-       WrapTo2Pi(_earth_nut_D(TTDB, TTDB2, TTDB3, TTDB4));
-
-   const double Epsbar    = _earth_nut_eps(TTDB, TTDB2, TTDB3);
-   const double cosEpsbar = cos(Epsbar);
-
-   double dPsi = 0, dEps = 0;
-   for (int i = Nut_Info.n_entries - 1; i >= 0; i--) {
-      const struct NutEntry *entry = &Nut_Info.entries[i];
-      const double apNut =
-          entry->a[0] * meanAnomLuna + entry->a[1] * meanAnomSol +
-          entry->a[2] * argLatLuna + entry->a[3] * meanElonSol +
-          entry->a[4] * longAscNodeLunar;
-      const double cosAp = cos(apNut);
-      const double sinAp = sin(apNut);
-
-      if (NutSelection == NUT_ITRF_1980) {
-         dPsi += (entry->A + entry->B * TTDB) * sinAp;
-         dEps += (entry->C + entry->D * TTDB) * cosAp;
-      }
-      else {
-         dPsi += (entry->A + entry->B * TTDB) * sinAp + entry->E * cosAp;
-         dEps += (entry->C + entry->D * TTDB) * cosAp + entry->F * sinAp;
-      }
-   }
-   dPsi *= A2R;
-   dEps *= A2R;
-
-   const double Eps = Epsbar + dEps;
-
-   // Compute useful trigonometric quantities
-   const double cosdPsi   = cos(dPsi);
-   const double cosEps    = cos(Eps);
-   const double sindPsi   = sin(dPsi);
-   const double sinEpsbar = sin(Epsbar);
-   const double sinEps    = sin(Eps);
-
-   const mat3x3_t NUT = MAT3X3_SET(
-       cosdPsi, -sindPsi * cosEpsbar, -sindPsi * sinEpsbar, sindPsi * cosEps,
-       cosEps * cosdPsi * cosEpsbar + sinEps * sinEpsbar,
-       sinEpsbar * cosEps * cosdPsi - sinEps * cosEpsbar, sinEps * sindPsi,
-       sinEps * cosdPsi * cosEpsbar - sinEpsbar * cosEps,
-       sinEps * sinEpsbar * cosdPsi + cosEps * cosEpsbar);
-
-   double eq_equinox = dPsi * cosEps;
-   if (isgreater_jd(jd_utc_j2000, jdEQThresh))
-      eq_equinox += (0.00264 * sin(longAscNodeLunar) +
-                     0.000063 * sin(2.0 * longAscNodeLunar)) *
-                    A2R;
-
-   out.dbl           = GMAT_JD2GMST(jd_utc_j2000) + eq_equinox;
-   const mat3x3_t ST = SimpRot(VEC3_PZAXIS, out.dbl);
-   out.mat           = MxM(ST, NUT);
-   return out;
-}
-/**********************************************************************/
-__attribute__((const)) static mat3x3_t EarthPrecessionMatrix(const JDType jd);
-mat3x3_t EarthPrecessionMatrix(const JDType jd)
-{
-   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
-   const double TTDB   = JDToDays(jd_tdb_j2000) / JDDAY_PER_CENTURY;
-
-   const double TTDB2 = TTDB * TTDB;
-   const double TTDB3 = TTDB2 * TTDB;
-
-   const double zeta =
-       (2306.2181 * TTDB + 0.30188 * TTDB2 + 0.017998 * TTDB3) * A2R;
-   const double Theta =
-       (2004.3109 * TTDB - 0.42665 * TTDB2 - 0.041833 * TTDB3) * A2R;
-   const double z =
-       (2306.2181 * TTDB + 1.09468 * TTDB2 + 0.018203 * TTDB3) * A2R;
-
-   // Compute trigonometric quantities
-   const double cosTheta = cos(Theta);
-   const double cosz     = cos(z);
-   const double coszeta  = cos(zeta);
-   const double sinTheta = sin(Theta);
-   const double sinz     = sin(z);
-   const double sinzeta  = sin(zeta);
-
-   const mat3x3_t PREC =
-       MAT3X3_SET(cosTheta * cosz * coszeta - sinz * sinzeta,
-                  -sinzeta * cosTheta * cosz - sinz * coszeta, -sinTheta * cosz,
-                  sinz * cosTheta * coszeta + sinzeta * cosz,
-                  -sinz * sinzeta * cosTheta + cosz * coszeta, -sinTheta * sinz,
-                  sinTheta * coszeta, -sinTheta * sinzeta, cosTheta);
    return PREC;
 }
 /**********************************************************************/
-/* returns Greenwich Apparent Sidereal Time and Earth CWN             */
-pair_dbl_mat3x3_t GMAT_HiFiEarthCWN(const JDType jd)
+/* The coefficients in each row are in the order:                     */
+/*    meanAnomLuna                                                    */
+/*    meanAnomSol                                                     */
+/*    argLatLuna                                                      */
+/*    meanElongSol                                                    */
+/*    longAscNodeLuna                                                 */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+__attribute__((const)) static inline const double *const
+NutSolarLunarPosition_R_Rot(const enum NutEnum selection)
 {
+   static double zero_rs[5] = {0, 0, 0, 0, 0};
+   switch (selection) {
+      case NUT_ITRF_1950:
+      case NUT_ITRF_1980: {
+         static double r_rot[5] = {1325, 99, 1342, 1236, -5};
+         return r_rot;
+      } break;
+      case NUT_ITRF_1996: {
+         static double r_rot[5] = {1325, 99, 1342, 1236, -5};
+         return r_rot;
+      } break;
+      default:
+         break;
+   }
+   return zero_rs;
+}
+__attribute__((const)) static inline const double *const
+NutSolarLunarPosition_ArcSec(const enum NutEnum selection, const int order_i)
+{
+   static double zero_coeffs[5] = {0, 0, 0, 0, 0};
+   switch (selection) {
+      case NUT_ITRF_1950:
+      case NUT_ITRF_1980: {
+         static double coeffs_asec[NUT_ORDER_1980 + 1][5] = {
+             {485866.733, 1287099.804, 335778.877, 1072261.307, 450160.280},
+             {715922.633, 1292581.224, 295263.137, 1105601.328, -482890.539},
+             {31.310, -0.577, -13.257, -6.891, 7.455},
+             {0.064, -0.012, 0.011, 0.019, 0.008}};
+         if (order_i >= NUT_ORDER_1980 + 1)
+            return zero_coeffs;
+         return coeffs_asec[order_i];
+      } break;
+      case NUT_ITRF_1996: {
+         static double coeffs_asec[NUT_ORDER_1996 + 1][5] = {
+             {485868.249036, 1287104.793048, 335779.526232, 1072260.703692,
+              450160.398036},
+             {715923.2178, 1292581.0481, 295262.8478, 1105601.2090,
+              -482890.2665},
+             {31.8792, -0.5532, -12.7512, -6.3706, 7.4722},
+             {0.051635, -0.000136, 0.001037, 0.006593, 0.007702},
+             {-0.00024470, -0.00001149, 0.00000417, -0.00003169, -0.00005939}};
+         if (order_i >= NUT_ORDER_1996 + 1)
+            return zero_coeffs;
+         return coeffs_asec[order_i];
+      } break;
+      default:
+         break;
+   }
+   return zero_coeffs;
+}
+#pragma GCC diagnostic pop
+//**********************
+static mat3x3_t EarthNutationMatrix(const double TTDB, double *const dPsi,
+                                    double *const longAscNodeLuna_ret,
+                                    double *const cosEps)
+{
+   call_once(&iau_file_flag, init_iau_file);
+
+   double nut_angles[5] = {0};
+
+   /* Mean anomaly of the Moon's orbit (rad)                            */
+   double *const meanAnomLuna = &nut_angles[0];
+   /* Mean anomaly of the Sun's orbit (rad)                             */
+   double *const meanAnomSol = &nut_angles[1];
+   /* Mean argument of latitude of the Moon's orbit (rad)                */
+   double *const argLatLuna = &nut_angles[2];
+   /* Difference between the mean longitude of the Sun and Moon (rad)    */
+   double *const meanElongSol = &nut_angles[3];
+   /* Mean longitude of the ascending node of the Moon's orbit (rad)    */
+   double *const longAscNodeLuna = &nut_angles[4];
+
+   // .. Accumulate the various Sun & Moon position angles
+   double x = 1;
+   for (int order_i = 0; order_i < Nut_Info.order + 1; order_i++) {
+      const double *const coeffs_asec =
+          NutSolarLunarPosition_ArcSec(NutSelection, order_i);
+
+      for (int j = 0; j < 5; j++)
+         nut_angles[j] += fmod(x * coeffs_asec[j], 360 * D2A);
+      x *= TTDB;
+   }
+
+   // .. Accumulate the constant and complete rotation terms, then map to 2 pi
+   const double *const r_rot = NutSolarLunarPosition_R_Rot(NutSelection);
+   for (int j = 0; j < 5; j++) {
+      nut_angles[j] += fmod(r_rot[j] * TTDB, 1.0) * 360 * D2A;
+      nut_angles[j]  = fmod(nut_angles[j], 360 * D2A);
+   }
+
+   *longAscNodeLuna_ret = *longAscNodeLuna * A2R;
+
+   /* Mean Obliquity of the ecliptic at J2000 epoch (arcsec)                */
+   const double Epsbar =
+       (84381.448 + (-46.8150 + (-0.00059 + 0.001813 * TTDB) * TTDB) * TTDB) *
+       A2R;
+
+   *dPsi       = 0;
+   double dEps = 0;
+   // start at end since list is sorted with descending A coefficients
+   struct NutEntry *entry = &Nut_Info.entries[Nut_Info.n_entries - 1];
+   for (; entry >= Nut_Info.entries; entry--) {
+      const double apNut =
+          (entry->a[0] * (*meanAnomLuna) + entry->a[1] * (*meanAnomSol) +
+           entry->a[2] * (*argLatLuna) + entry->a[3] * (*meanElongSol) +
+           entry->a[4] * (*longAscNodeLuna)) *
+          A2R;
+      const double cosAp = cos(apNut);
+      const double sinAp = sin(apNut);
+
+      if (NutSelection != NUT_ITRF_1980) {
+         *dPsi += (entry->A + entry->B * TTDB) * sinAp + entry->E * cosAp;
+         dEps  += (entry->C + entry->D * TTDB) * cosAp + entry->F * sinAp;
+      }
+      else {
+         *dPsi += (entry->A + entry->B * TTDB) * sinAp;
+         dEps  += (entry->C + entry->D * TTDB) * cosAp;
+      }
+   }
+   *dPsi *= A2R * Nut_Info.mult;
+   dEps  *= A2R * Nut_Info.mult;
+
+   const double Eps = Epsbar + dEps;
+   *cosEps          = cos(Epsbar);
+   mat3x3_t NUT     = A2C(131, -Eps, -*dPsi, Epsbar);
+
+   NUT = MxM(ROT1(-Eps), MxM(ROT3(-*dPsi), ROT1(Epsbar)));
+   return NUT;
+}
+/**********************************************************************/
+/* Greenwich Mean Sidereal Time at UT=0 (sec)                         */
+double GMAT_JD2GMST0(const JDType jd)
+{
+   const JDType jd_ut1_j2000 = JDChangeSystemEpoch(UT1_TIME, J2000_EPOCH, jd);
+
+   const double T0UT1 =
+       (floor(JDToDays(jd_ut1_j2000)) + 0.5) / JDDAY_PER_CENTURY;
+
+   // NOTE: 1 sec = 15"; 1 hour (= 15 deg) = 54000"
+   const double hr2deg  = 15.0;
+   const double sec2deg = hr2deg / (SEC_PER_HOUR);
+
+   const double out =
+       (24110.54841 +
+        (8640184.812866 + (0.093104 - 0.0000062 * T0UT1) * T0UT1) * T0UT1) *
+       sec2deg;
+   return fmod(out, 360);
+}
+/**********************************************************************/
+/* Greenwich Mean Sidereal Time (sec)                                 */
+double GMAT_JD2GMST(const JDType jd)
+{
+   const JDType jd_ut1_j2000 = JDChangeSystemEpoch(UT1_TIME, J2000_EPOCH, jd);
+
+   // TODO: should be ut1
+   const JDType t0_jd_ut1_j2000 =
+       JD_RAW(UT1_TIME, J2000_EPOCH, jd_ut1_j2000.whole_days,
+              JDSECOND_RAW(SEC_PER_DAY / 2, 0, 1));
+
+   const double T0UT1      = JDToDays(t0_jd_ut1_j2000) / JDDAY_PER_CENTURY;
+   const double TUT1       = JDToDays(jd_ut1_j2000) / JDDAY_PER_CENTURY;
+   const double sec_ut1day = JDSubToSeconds(jd_ut1_j2000, t0_jd_ut1_j2000);
+
+   // NOTE: 1 sec = 15"; 1 hour (= 15 deg) = 54000"
+   const double secperdeg = 240.0;
+
+   // 'Satellite Orbits: Models, Methods, Applications' by Montenbruck and Gill,
+   // Eq (5.19)
+   // const double sec_GMST = (24110.54841 + 1.002737909350795 * sec_ut1day +
+   //                          (fmod(8640184.812866 * T0UT1, SEC_PER_DAY) +
+   //                           (9.3104e-02 - 6.2e-06 * TUT1) * TUT1 * TUT1));
+   const double sec_GMST =
+       (67310.548 + (fmod((3155760000.0 + 8640184.812866) * TUT1, 86400) +
+                     (9.3104e-02 - 6.2e-06 * TUT1) * TUT1 * TUT1));
+   const double rad_GMST = WrapTo2Pi((sec_GMST / secperdeg) * D2R);
+
+   // 'Astronomical Algorithms' by Meeus, Eq (12.4)
+   // const double deg_GMST =
+   //     (280.4661837 + (360.98564736629 * JDToDays(jd_ut1_j2000) +
+   //                     TUT1 * TUT1 * (3.87933E-4 - TUT1 / 3.871E7)));
+   // const double rad_GMST = WrapTo2Pi(deg_GMST * D2R);
+   return rad_GMST;
+}
+/**********************************************************************/
+__attribute__((const)) static double JD2GAST(const JDType jd, const double dPsi,
+                                             const double longAscNodeLuna,
+                                             const double cosEps);
+static double JD2GAST(const JDType jd, const double dPsi,
+                      const double longAscNodeLuna, const double cosEps)
+{
+   // jdEQThresh is Jan 1, 1997 UTC
+   const JDType jdEQThresh   = JD_RAW(UT1_TIME, J2000_EPOCH, -1095,
+                                      JDSECOND_RAW(SEC_PER_DAY / 2, 0, 1));
+   const JDType jd_utc_j2000 = JDChangeSystemEpoch(UT1_TIME, J2000_EPOCH, jd);
+
+   double eq_equinox = dPsi * cosEps;
+   if (isgreater_jd(jd_utc_j2000, jdEQThresh))
+      eq_equinox +=
+          (2.64 * sin(longAscNodeLuna) + 6.3e-02 * sin(2.0 * longAscNodeLuna)) *
+          1.0e-3 * A2R;
+
+   const double GMST = GMAT_JD2GMST(jd);
+   return GMST + eq_equinox; //- 1.18 * A2R;
+   // return GMST - 1.16 * A2R;
+}
+/**********************************************************************/
+__attribute__((const)) mat3x3_t EarthPolarMotion(const JDType jd);
+mat3x3_t EarthPolarMotion(const JDType jd)
+{
+   JDType jd_utc_mjd = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
+   double x, y, lod = 0;
+   GetPolarMotionData(JDToDays(jd_utc_mjd), &x, &y, &lod);
+
+   mat3x3_t PM = A2C(21, -x * A2R, -y * A2R, 0);
+   PM          = MxM(ROT2(-x * A2R), ROT1(-y * A2R));
+
+   return PM;
+}
+/**********************************************************************/
+/* returns Apparent Sidereal Time and Earth CWN                       */
+pair_dbl_mat3x3_t HiFiEarthCWN(const JDType jd)
+{
+   double dPsi, longAscNodeLuna, cosEps;
    pair_dbl_mat3x3_t out;
-   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
-   mat3x3_t P          = EarthPrecessionMatrix(jd_tdb_j2000);
-   out                 = EarthNutationSTMatricies(jd_tdb_j2000);
-   out.mat             = MxM(out.mat, P);
+   double *const GAST  = &out.dbl;
+   mat3x3_t *const CWN = &out.mat;
+
+   const JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   const JDType jd_utc_j2000 = JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, jd);
+   const double TTDB         = JDToDays(jd_tdb_j2000) / JDDAY_PER_CENTURY;
+
+   const mat3x3_t PREC = EarthPrecessionMatrix(TTDB);
+   const mat3x3_t NUT =
+       EarthNutationMatrix(TTDB, &dPsi, &longAscNodeLuna, &cosEps);
+   *GAST = JD2GAST(jd_utc_j2000, dPsi, longAscNodeLuna, cosEps);
+
+   mat3x3_t ST       = ROT3(*GAST);
+   const mat3x3_t PM = EarthPolarMotion(jd_utc_j2000);
+
+   // *CWN = MxM(PM, MxM(ST, MxM(NUT, PREC)));
+   *CWN = MxM(ST, MxM(NUT, PREC));
    return out;
 }
 /**********************************************************************/

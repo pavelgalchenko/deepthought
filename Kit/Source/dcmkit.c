@@ -100,7 +100,6 @@ mat3x3_t Q2C(const quat_t Q)
 }
 /**********************************************************************/
 /*   Convert Euler angle sequence to direction cosine matrix          */
-
 mat3x3_t A2C(long SEQ, double TH1, double TH2, double TH3)
 {
    double S1, C1;

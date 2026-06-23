@@ -15,6 +15,7 @@
 #include "42constants.h"
 #include "dcmkit.h"
 #include "defineskit.h"
+#include "earthorikit.h"
 #include "iokit.h"
 #include <threads.h>
 
@@ -269,16 +270,17 @@ int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
       /* .. Earth rotation is a special case */
       W->CWN = CWJ;
       pxform_c("ECLIPJ2000", "J2000", JDToTime(jd), W->CNH.mat);
-      W->CNJ = MAT3X3_EYE;
-      W->qnj = QUAT_EYE;
+      W->CNJ       = MAT3X3_EYE;
+      W->qnj       = QUAT_EYE;
+      W->PriMerAng = SpiceGAST(jd);
    }
    else {
-      W->CNJ = GetWorldCNJ(jd, W->ang_data);
-      W->CNH = MxM(W->CNJ, earth_CNH);
-      W->CWN = MxMT(CWJ, W->CNJ);
-      W->qnj = C2Q(W->CNJ);
+      W->CNJ       = GetWorldCNJ(jd, W->ang_data);
+      W->CNH       = MxM(W->CNJ, earth_CNH);
+      W->CWN       = MxMT(CWJ, W->CNJ);
+      W->qnj       = C2Q(W->CNJ);
+      W->PriMerAng = GetWorldAng(jd, &W->ang_data[0]);
    }
-   W->PriMerAng = GetWorldAng(jd, &W->ang_data[0]);
 
    W->qwn = C2Q(W->CWN);
    W->qnh = C2Q(W->CNH);
@@ -405,6 +407,27 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
       }
    }
    return (0);
+}
+/**********************************************************************/
+JDType SpiceTDB2UTC(const JDType jd)
+{
+   JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
+   double tdbmutc_seconds;
+
+   deltet_c(JDToSeconds(jd_tdb_j2000), "ET", &tdbmutc_seconds);
+   JDType jd_utc_j2000 = JDAddSeconds(jd_tdb_j2000, -tdbmutc_seconds);
+   jd_utc_j2000.system = UTC_TIME;
+   return jd_utc_j2000;
+}
+/**********************************************************************/
+double SpiceGAST(const JDType jd)
+{
+   JDType jd_utc = SpiceTDB2UTC(jd);
+   double dut1 =
+       GetUt1UtcOffset(JDToDays(JDChangeSystemEpoch(TAI_TIME, MJD_EPOCH, jd)));
+
+   JDType jd_ut1 = JDAddSeconds(jd_utc, dut1);
+   return HiFiEarthCWN(jd_ut1).dbl;
 }
 /**********************************************************************/
 

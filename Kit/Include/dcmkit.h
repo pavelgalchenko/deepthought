@@ -22,6 +22,10 @@
 ** #endif
 */
 
+#define ROT1(x) SimpRot(VEC3_PXAXIS, (x))
+#define ROT2(x) SimpRot(VEC3_PYAXIS, (x))
+#define ROT3(x) SimpRot(VEC3_PZAXIS, (x))
+
 __attribute__((const)) quat_t C2Q(const mat3x3_t C);
 __attribute__((const)) mat3x3_t Q2C(const quat_t Q);
 __attribute__((const)) mat3x3_t A2C(long SEQ, double TH1, double TH2,

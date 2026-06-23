@@ -17,7 +17,6 @@
 #include <criterion/new/assert.h>
 #include <criterion/parameterized.h>
 #include <criterion/theories.h>
-#include <stdarg.h>
 #include <stdio.h>
 
 #define ULP_THRESH (4) // acceptable Units in Last Place variation

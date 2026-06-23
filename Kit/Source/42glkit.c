@@ -825,7 +825,7 @@ void DrawCamHUD(void)
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
 
    sprintf(s, "UTC %03ld-%02ld:%02ld:%05.2lf", UTC.doy, UTC.Hour, UTC.Minute,
-           rational2double(UTC.Second));
+           jdsecond2double(UTC.Second));
    glRasterPos2i(10, 50);
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
 
@@ -2834,11 +2834,11 @@ void DrawClock(void)
 
    if (MapShow[MAP_TLM_CLOCK]) {
       sprintf(s, "%s %04ld-%03ld-%02ld:%02ld:%02ld", TlmLabel, UTC.Year,
-              UTC.doy, UTC.Hour, UTC.Minute, (long)rational2double(UTC.Second));
+              UTC.doy, UTC.Hour, UTC.Minute, (long)jdsecond2double(UTC.Second));
    }
    else {
       sprintf(s, "%s %04ld-%03ld-%02ld:%02ld:%02ld", SysLabel, UTC.Year,
-              UTC.doy, UTC.Hour, UTC.Minute, (long)rational2double(UTC.Second));
+              UTC.doy, UTC.Hour, UTC.Minute, (long)jdsecond2double(UTC.Second));
    }
    glRasterPos2i(MapWidth - 8 * strlen(s), 15);
    DrawBitmapString(GLUT_BITMAP_8_BY_13, s);
@@ -2962,7 +2962,6 @@ void DrawMap(void)
    struct OrbitType *Eph;
    struct SCType *S;
    struct WorldType *W;
-   vec3_t Zaxis = VEC3_PZAXIS;
    mat3x3_t CEW, CEN, CWH;
    float OldLng, OldLat;
    long i, k, Im, Isc;
@@ -3193,7 +3192,7 @@ void DrawMap(void)
             Eph = &Orb[SC[Isc].RefOrb];
             Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                    DynTime - 3600.0 - Eph->tp, &rn, &vn, &anom);
-            CEW    = SimpRot(Zaxis, -3600.0 * GetWorldW(JD_TDB_MJD, W));
+            CEW    = ROT3(-3600.0 * GetWorldW(JD_TDB_MJD, W));
             CEN    = MxM(CEW, W->CWN);
             re     = MxV(CEN, rn);
             magr   = MAGV(re);
@@ -3203,7 +3202,7 @@ void DrawMap(void)
                dt = ((double)k) * 60.0;
                Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN,
                       Eph->ArgP, DynTime + dt - Eph->tp, &rn, &vn, &anom);
-               CEW  = SimpRot(Zaxis, GetWorldW(JD_TDB_MJD, W) * dt);
+               CEW  = ROT3(GetWorldW(JD_TDB_MJD, W) * dt);
                CEN  = MxM(CEW, W->CWN);
                re   = MxV(CEN, rn);
                magr = MAGV(re);
@@ -3277,7 +3276,7 @@ void DrawMap(void)
       Eph = &Orb[POV.Host.RefOrb];
       Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
              DynTime - 3600.0 - Eph->tp, &rn, &vn, &anom);
-      CEW    = SimpRot(Zaxis, -3600.0 * GetWorldW(JD_TDB_MJD, W));
+      CEW    = ROT3(-3600.0 * GetWorldW(JD_TDB_MJD, W));
       CEN    = MxM(CEW, W->CWN);
       re     = MxV(CEN, rn);
       magr   = MAGV(re);
@@ -3287,7 +3286,7 @@ void DrawMap(void)
          dt = ((double)k) * 60.0;
          Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                 DynTime + dt - Eph->tp, &rn, &vn, &anom);
-         CEW  = SimpRot(Zaxis, GetWorldW(JD_TDB_MJD, W) * dt);
+         CEW  = ROT3(GetWorldW(JD_TDB_MJD, W) * dt);
          CEN  = MxM(CEW, W->CWN);
          re   = MxV(CEN, rn);
          magr = MAGV(re);
@@ -5035,11 +5034,11 @@ GLuint LoadSpectrum(const char *SpectrumName)
    Tex = (GLubyte *)calloc(256 * 4, sizeof(GLubyte));
    for (i = 0; i < 256; i++) {
       f              = ((double)i) / 255.0;
-      r              = (GLubyte)(LinInterp(F, R, f, N) + 0.5);
+      r              = (GLubyte)(LinInterpTbl(F, R, f, N) + 0.5);
       Tex[4 * i]     = r;
-      g              = (GLubyte)(LinInterp(F, G, f, N) + 0.5);
+      g              = (GLubyte)(LinInterpTbl(F, G, f, N) + 0.5);
       Tex[4 * i + 1] = g;
-      b              = (GLubyte)(LinInterp(F, B, f, N) + 0.5);
+      b              = (GLubyte)(LinInterpTbl(F, B, f, N) + 0.5);
       Tex[4 * i + 2] = b;
       a              = (GLubyte)255;
       Tex[4 * i + 3] = a;

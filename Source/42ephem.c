@@ -401,7 +401,7 @@ void SplineToPosVel(struct LagrangeSystemType *lagsys, struct OrbitType *O,
              &NodeDate.Minute, &sec, &O->NodePos[3].v[0], &O->NodePos[3].v[1],
              &O->NodePos[3].v[2], &O->NodeVel[3].v[0], &O->NodeVel[3].v[1],
              &O->NodeVel[3].v[2], &newline);
-      NodeDate.Second   = double2rational(sec);
+      NodeDate.Second   = sec_double2JDSecond(sec);
       O->NodeDynTime[3] = Date2TimeSystem(NodeDate, TT_TIME);
       O->NodePos[3]     = SxV(1000.0, O->NodePos[3]);
       O->NodeVel[3]     = SxV(1000.0, O->NodeVel[3]);
@@ -661,7 +661,7 @@ long InitJplHeader(const ephemType ephem, const char eph_path[128],
                   grp_found[1] = 1;
                   for (int i = 0; i < 2; i++) {
                      hdr_data->jd_range[i] =
-                         JDFromDays(jd_days[i], cheb_system, ZERO_EPOCH);
+                         DaysToJD(jd_days[i], cheb_system, ZERO_EPOCH);
                      hdr_data->jd_range[i] =
                          JDChangeEpoch(cheb_epoch, hdr_data->jd_range[i]);
                   }
@@ -828,8 +828,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
          }
          // convert to desired Epoch
          for (int j = 0; j < 2; j++) {
-            jd_ranges[i][j] =
-                JDFromDays(jd_rng_days[j], cheb_system, ZERO_EPOCH);
+            jd_ranges[i][j] = DaysToJD(jd_rng_days[j], cheb_system, ZERO_EPOCH);
             jd_ranges[i][j] = JDChangeEpoch(cheb_epoch, jd_ranges[i][j]);
          }
          fclose(infile);
@@ -849,7 +848,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
    // Figure out which jd range desired JD is in
    int cur_file = -1;
    for (i = 0; i < n_match; i++) {
-      if (isgreaterequal_jd(jd_cheb, jd_ranges[i][0]) &&
+      if (isgreaterequal_jd(jd_cheb, jd_ranges[i][0], __DBL_EPSILON__) &&
           isless_jd(jd_cheb, jd_ranges[i][1])) {
          cur_file = i;
          break;
@@ -875,9 +874,9 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
          fgets(line, 512, infile);
          if (sscanf(line, "%lf %lf %lf", &Block[0], &Block[1], &Block[2]) ==
              3) {
-            jd_block[0] = JDFromDays(Block[0], cheb_system, ZERO_EPOCH);
-            jd_block[1] = JDFromDays(Block[1], cheb_system, ZERO_EPOCH);
-            if (isgreaterequal_jd(jd_cheb_z, jd_block[0]) &&
+            jd_block[0] = DaysToJD(Block[0], cheb_system, ZERO_EPOCH);
+            jd_block[1] = DaysToJD(Block[1], cheb_system, ZERO_EPOCH);
+            if (isgreaterequal_jd(jd_cheb_z, jd_block[0], __DBL_EPSILON__) &&
                 isless_jd(jd_cheb_z, jd_block[1])) {
                FoundBlock = 1;
 
@@ -912,7 +911,7 @@ long LoadJplEphems(ephemType ephem, char EphemPath[128],
       worlds[Iw].eph.Ncheb = Nseg;
       worlds[Iw].eph.Cheb  = (struct Cheb3DType *)realloc(
           worlds[Iw].eph.Cheb, Nseg * sizeof(struct Cheb3DType));
-      JDType jd_blk_diff_days = JDSub(jd_block[1], jd_block[0]);
+      JDType jd_blk_diff_days = JDSubDays(jd_block[1], jd_block[0]);
       for (Ic = 0; Ic < Nseg; Ic++) {
          Cheb           = &worlds[Iw].eph.Cheb[Ic];
          Rational mul_1 = InitRational(0, Ic, Nseg);
@@ -1040,7 +1039,7 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
          // C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
          // W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
 
-         pair_dbl_mat3x3_t out = GMAT_HiFiEarthCWN(jd_tdb_j2000);
+         pair_dbl_mat3x3_t out = HiFiEarthCWN(jd_tdb_j2000);
          W->PriMerAng          = out.dbl;
          W->CWN                = out.mat;
       }
@@ -1124,7 +1123,7 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
             // C_TETE_J2000             = pair.second;
             // C_W_TETE                 = SimpRot(ZAxis, W->PriMerAng);
             // W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
-            pair_dbl_mat3x3_t out = GMAT_HiFiEarthCWN(jd_tdb_j2000);
+            pair_dbl_mat3x3_t out = HiFiEarthCWN(jd_tdb_j2000);
             W->PriMerAng          = out.dbl;
             W->CWN                = out.mat;
          }
@@ -1243,7 +1242,8 @@ long UpdateEphems(const ephemType ephem, const JDType jd_tdb_j2000,
          JDType jd_cheb =
              JDChangeSystemEpoch(worlds[SOL].eph.Cheb[0].JD1.system,
                                  worlds[SOL].eph.Cheb[0].JD1.epoch, jd_tdb_mjd);
-         if (isgreaterequal_jd(jd_cheb, worlds[SOL].eph.Cheb[1].JD2) ||
+         if (isgreaterequal_jd(jd_cheb, worlds[SOL].eph.Cheb[1].JD2,
+                               __DBL_EPSILON__) ||
              isless_jd(jd_cheb, worlds[SOL].eph.Cheb[0].JD1))
             LoadJplEphems(ephem, ModelPath, &JplHeader, jd_cheb, worlds);
          /* Load Planetary/Luna ephems */

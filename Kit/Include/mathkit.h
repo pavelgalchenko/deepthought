@@ -151,6 +151,8 @@ typedef struct sphere_coord {
    double r, cth, sth, cph, sph;
 } sphere_coord_t;
 
+#define Limit(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
+
 __attribute__((pure)) int any_int(const long n, const int *const vec);
 __attribute__((pure)) int all_int(const long n, const int *const vec);
 __attribute__((pure)) int any_isnan(const long n, const double *const v);
@@ -159,7 +161,6 @@ __attribute__((const)) double sin_deg(double x);
 __attribute__((const)) double cos_deg(double x);
 __attribute__((const)) double sinc(const double x);
 __attribute__((const)) double smootherstep(const double x);
-__attribute__((const)) double Limit(double x, double min, double max);
 __attribute__((const)) mat3x3_t MxM(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MxMT(const mat3x3_t A, const mat3x3_t B);
 __attribute__((const)) mat3x3_t MTxM(const mat3x3_t A, const mat3x3_t B);
@@ -170,14 +171,14 @@ __attribute__((const)) vec3_t MxV(const mat3x3_t M, const vec3_t V);
 __attribute__((const)) vec3_t VxMT(const vec3_t V, const mat3x3_t M);
 /**********************************************************************/
 /*  Scalar times 3x1 Vector                                           */
-__attribute__((const)) inline vec3_t SxV(const double S, const vec3_t V);
-inline vec3_t SxV(const double S, const vec3_t V)
+__attribute__((const)) static inline vec3_t SxV(const double S, const vec3_t V);
+static inline vec3_t SxV(const double S, const vec3_t V)
 {
    return VEC3_SET(S * V.x, S * V.y, S * V.z);
 }
 /**********************************************************************/
-__attribute__((const)) inline vec3_t NegV_Elem(const vec3_t A);
-inline vec3_t NegV_Elem(const vec3_t A)
+__attribute__((const)) static inline vec3_t NegV_Elem(const vec3_t A);
+static inline vec3_t NegV_Elem(const vec3_t A)
 {
    return VEC3_SET(-A.x, -A.y, -A.z);
 }
@@ -263,8 +264,16 @@ double Amoeba(const long N, double *P,
               const double scale, const double Tol);
 __attribute__((const)) vec3_t FindNormal(const vec3_t V1, const vec3_t V2,
                                          const vec3_t V3);
-__attribute__((pure)) double LinInterp(const double *X, const double *Y,
-                                       const double x, const long n);
+__attribute__((pure)) int FindIndex(const double x, const double *X,
+                                    const int n, const int lastIndex);
+void lerpV(const double Xi2, const double Xi1, const double *const Yi2,
+           const double *const Yi1, const double x, const int n,
+           double *const y);
+__attribute__((const)) double lerp(const double Xi2, const double Xi1,
+                                   const double Yi2, const double Yi1,
+                                   const double x);
+__attribute__((pure)) double LinInterpTbl(const double *X, const double *Y,
+                                          const double x, const long n);
 __attribute__((const)) quat_t SphereInterp(quat_t q1, quat_t q2,
                                            const double u);
 __attribute__((const)) double CubicInterp1D(double f0, double f1, double x);
@@ -281,7 +290,12 @@ long ProjectPointOntoPoly(vec3_t Point, vec3_t DirVec, vec3_t *Vtx, long Nvtx,
                           vec3_t *ProjPoint, double *Distance);
 long ProjectPointOntoTriangle(vec3_t A, vec3_t B, vec3_t C, vec3_t DirVec,
                               vec3_t Pt, vec3_t *ProjPt, vec4_t *Bary);
-__attribute__((pure)) double CubicSpline(double x, double X[4], double Y[4]);
+__attribute__((const)) double
+ClampedCubicSpline(const double x, const double X1, const double X2,
+                   const double Y1, const double Y2, const double Yp1,
+                   const double Yp2);
+__attribute__((pure)) double CubicSpline(const double x, const double X[4],
+                                         const double Y[4]);
 void ChebyPolys(double u, long n, double T[20], double U[20]);
 void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
                  double *dPdu);
@@ -330,6 +344,10 @@ __attribute__((malloc)) double **matPow(const long n, double **A,
                                         const unsigned long p);
 void QuickMatPow(const long n, double **A, double **As, const long s,
                  double **Ap, const long p);
+
+__attribute__((const)) double CentralDifference(const int ind, const int n,
+                                                const double *const X,
+                                                const double *const Y);
 
 /*
 ** #ifdef __cplusplus

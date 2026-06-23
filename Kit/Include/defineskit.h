@@ -18,8 +18,6 @@
 #define __attribute__(x) /*NOTHING*/
 #endif
 
-#define SEC_PER_DAY (86400)
-
 #define STR2(x) #x
 #define STR(X)  STR2(X)
 

@@ -71,7 +71,7 @@ static void _initcommonrk(RungeKutta *const rk)
    rk->maxStepAttempts = 1000;
    rk->stepAttempts    = 0;
    rk->smallestTime    = InitJD(JD_ZERO.system, JD_ZERO.epoch, 0,
-                                RATIONAL_NGCD(0, 1, 1000000000000));
+                                JDSECOND_NRED(0, 1, 1000000000000));
    rk->incPower        = 1.0 / rk->order;
    rk->decPower        = 1.0 / (rk->order - 1);
    _allocrk(rk);
@@ -476,18 +476,18 @@ void RungeKuttaStep(RungeKutta *const rk, const int use_last_step, RKIndType t0,
          exit(EXIT_FAILURE);
       }
 
-      if (!use_last_step || isequal_jd(rk->stepSize, JD_ZERO))
+      if (!use_last_step || isequal_jd(rk->stepSize, JD_ZERO, __DBL_EPSILON__))
          rk->stepSize = timeLeft;
       else
          rk->stepSize =
              (isless_jd(rk->stepSize, timeLeft)) ? rk->stepSize : timeLeft;
 
       _step(rk);
-      JDType time_diff_abs = JDAbs(JDSub(timeLeft, rk->StepTaken));
-      if (islessequal_jd(time_diff_abs, rk->smallestTime))
+      JDType time_diff_abs = JDAbs(JDSubDays(timeLeft, rk->StepTaken));
+      if (islessequal_jd(time_diff_abs, rk->smallestTime, __DBL_EPSILON__))
          stepFinished = 1;
 
-      timeLeft = JDSub(timeLeft, rk->StepTaken);
+      timeLeft = JDSubDays(timeLeft, rk->StepTaken);
       attemptsTaken++;
    } while (!stepFinished);
 }

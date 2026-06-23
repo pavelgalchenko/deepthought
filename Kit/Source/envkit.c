@@ -190,7 +190,6 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
 
    double Br, Bth, Bph;
    vec3_t pbe, gradV, BVE;
-   const vec3_t AXIS = VEC3_PZAXIS;
    mat3x3_t CEN;
    const double Re = 6371200.0;
 
@@ -228,7 +227,7 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
 
    const double doy  = (UTC.doy - 1) + (UTC.Hour - 1) / 24.0 +
                        UTC.Minute / 1440.0 +
-                       (rational2double(UTC.Second)) / 86400.0;
+                       (jdsecond2double(UTC.Second)) / 86400.0;
    const double year = UTC.Year + doy / (UTC.Year % 4 ? 365.0 : 366.0);
    if (year > 2020) {
       if (!IGRF_warned && year > t[nYears - 1] + 5) {
@@ -255,15 +254,15 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
             double Y[nYears] = {0.0};
             for (int k = 0; k < nYears; k++)
                Y[k] = IGRF_Cdat[k][n][m];
-            IGRF_C[n][m] = LinInterp(t, Y, year, nYears);
+            IGRF_C[n][m] = LinInterpTbl(t, Y, year, nYears);
             for (int k = 0; k < nYears; k++)
                Y[k] = IGRF_Sdat[k][n][m];
-            IGRF_S[n][m] = LinInterp(t, Y, year, nYears);
+            IGRF_S[n][m] = LinInterpTbl(t, Y, year, nYears);
          }
       }
    }
 
-   CEN = SimpRot(AXIS, PriMerAng);
+   CEN = ROT3(PriMerAng);
 
    /*    Transform p to spherical coords in Earth frame */
    pbe                  = MxV(CEN, pbn);
@@ -308,13 +307,12 @@ vec3_t DipoleMagField(double DipoleMoment, vec3_t DipoleAxis,
 {
    double MoR;
    vec3_t PCN, MN;
-   vec3_t AXIS = VEC3_PZAXIS;
    magvec3_t uR;
    vec3_t *const R  = &uR.v;
    double *const R3 = &uR.m;
    long i;
 
-   mat3x3_t CEN = SimpRot(AXIS, PriMerAng);
+   mat3x3_t CEN = ROT3(PriMerAng);
 
    PCN = MTxV(CEN, DipoleOffset);
    for (i = 0; i < 3; i++)

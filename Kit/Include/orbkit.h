@@ -468,13 +468,14 @@ struct WorldType {
    /*    order: Prime Meridian, Right Ascension, Declination         */
    AngDataType ang_data[3];
 
-   vec3_t PosH;      /* Position in H frame [~=~] */
-   vec3_t VelH;      /* Velocity in H frame */
-   double PriMerAng; /* Angle from N1 to prime meridian */
-   mat3x3_t CWN;     /* DCM from world-centric inertial frame
-                            to world-centric rotating frame */
-   quat_t qwn;       /* ~*/
-   long Visibility;  /* Too small to see, point-sized, or shows disk */
+   vec3_t PosH; /* Position in H frame [~=~] */
+   vec3_t VelH; /* Velocity in H frame */
+   /* Angle from N1 to prime meridian (AST angled for Earth) */
+   double PriMerAng;
+   mat3x3_t CWN;    /* DCM from world-centric inertial frame
+                           to world-centric rotating frame */
+   quat_t qwn;      /* ~*/
+   long Visibility; /* Too small to see, point-sized, or shows disk */
    float ModelMatrix[16];
 
    /*~ Structures ~*/

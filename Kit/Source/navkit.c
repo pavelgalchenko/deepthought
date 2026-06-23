@@ -264,7 +264,7 @@ mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
             // C_TETE_J2000             = pair.second;
             // C_W_TETE                 = SimpRot(ZAxis, PriMerAng);
             // CWN                      = MxM(C_W_TETE, C_TETE_J2000);
-            CWN = GMAT_HiFiEarthCWN(jd_tt_j2000).mat;
+            CWN = HiFiEarthCWN(jd_tt_j2000).mat;
          }
       } break;
       default:
@@ -1354,16 +1354,16 @@ void getEarthAtmoParams(const JDType jd, double *NavFlux10p7,
    JDType jd_tt_mjd      = JDChangeSystemEpoch(TT_TIME, GMAT_MJD_EPOCH, jd);
    double jd_tt_mjd_days = JDToDays(jd_tt_mjd);
    if (AtmoOption == TWOSIGMA_ATMO) {
-      *NavFlux10p7 =
-          LinInterp(SchattenTable[0], SchattenTable[1], jd_tt_mjd_days, 1009);
-      *NavGeomagIndex =
-          LinInterp(SchattenTable[0], SchattenTable[3], jd_tt_mjd_days, 1009);
+      *NavFlux10p7    = LinInterpTbl(SchattenTable[0], SchattenTable[1],
+                                     jd_tt_mjd_days, 1009);
+      *NavGeomagIndex = LinInterpTbl(SchattenTable[0], SchattenTable[3],
+                                     jd_tt_mjd_days, 1009);
    }
    else if (AtmoOption == NOMINAL_ATMO) {
-      *NavFlux10p7 =
-          LinInterp(SchattenTable[0], SchattenTable[2], jd_tt_mjd_days, 1009);
-      *NavGeomagIndex =
-          LinInterp(SchattenTable[0], SchattenTable[4], jd_tt_mjd_days, 1009);
+      *NavFlux10p7    = LinInterpTbl(SchattenTable[0], SchattenTable[2],
+                                     jd_tt_mjd_days, 1009);
+      *NavGeomagIndex = LinInterpTbl(SchattenTable[0], SchattenTable[4],
+                                     jd_tt_mjd_days, 1009);
    }
    else {
       // Pull from user-defined values in Inp_Sim.txt
@@ -3484,6 +3484,6 @@ double chi2InvLookup(double const pGate, long const dim)
               probGate[0], probGate[nPGate - 1]);
       exit(EXIT_FAILURE);
    }
-   double out = LinInterp(probGate, tbl[dim - 1], pGate, nPGate);
+   double out = LinInterpTbl(probGate, tbl[dim - 1], pGate, nPGate);
    return (out);
 }

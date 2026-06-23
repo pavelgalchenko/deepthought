@@ -80,6 +80,8 @@ void SpicePosN2RLngLat(const mat3x3_t cwn, const vec3_t posn, double *r,
 long SpiceLoadKernels(char SpicePath[80]);
 /* Update celestial body locations at TT.JulDay using SPICE*/
 long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds);
+__attribute__((const)) JDType SpiceTDB2UTC(const JDType jd);
+__attribute__((const)) double SpiceGAST(const JDType jd);
 
 /*
 ** #ifdef __cplusplus

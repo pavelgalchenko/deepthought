@@ -101,11 +101,6 @@ double smootherstep(const double x)
    return x * x * x * (x * (6.0 * x - 15.0) + 10.0);
 }
 /**********************************************************************/
-double Limit(double x, double min, double max)
-{
-   return (x < min ? min : (x > max ? max : x));
-}
-/**********************************************************************/
 /*   3x3 Matrix Product                                               */
 mat3x3_t MxM(const mat3x3_t A, const mat3x3_t B)
 {
@@ -1862,34 +1857,102 @@ vec3_t FindNormal(const vec3_t V1, const vec3_t V2, const vec3_t V3)
    return N.v;
 }
 /**********************************************************************/
+/* Search for index in ascending list X corresponding to first value  */
+/* _below_ x                                                          */
+int FindIndex(const double x, const double *X, const int n, int lastIndex)
+{
+   if (x <= X[0])
+      /* Is input before first entry? */
+      return 0;
+   else if (x >= X[n - 1])
+      /* Is input past the last entry? */
+      return n - 1;
+
+   /* Ensure lastIndex is in the table */
+   if (lastIndex < 0)
+      lastIndex = 0;
+   else if (lastIndex > n - 1)
+      lastIndex = n - 1;
+
+   int low, high;
+   /* Set search interval */
+   if (X[lastIndex] < x) {
+      low  = lastIndex;
+      high = n - 1;
+   }
+   else if (X[lastIndex] > x) {
+      low  = 0;
+      high = lastIndex - 1;
+   }
+   else
+      return lastIndex;
+
+   int out = 0;
+   /* Binary Search */
+   while (low <= high) {
+      int mid = low + ((high - low) / 2);
+      if (X[mid] < x) {
+         out = mid;
+         low = mid + 1;
+      }
+      else
+         high = mid - 1;
+   }
+   return out;
+}
+/**********************************************************************/
+/* Linearly interpolate n values simultaneously                       */
+void lerpV(const double Xi2, const double Xi1, const double *const Yi2,
+           const double *const Yi1, const double x, const int n,
+           double *const y)
+{
+   if (x < Xi1)
+      for (int j = 0; j < n; j++)
+         y[j] = Yi1[j];
+   else if (x > Xi2)
+      for (int j = 0; j < n; j++)
+         y[j] = Yi2[j];
+   else {
+      const double ratio = (x - Xi1) / (Xi2 - Xi1);
+      for (int j = 0; j < n; j++) {
+         const double diffYi = Yi2[j] - Yi1[j];
+         y[j]                = Yi1[j] + ratio * diffYi;
+      }
+   }
+}
+/**********************************************************************/
+/* Linearly interpolate a single value                                */
+double lerp(const double Xi2, const double Xi1, const double Yi2,
+            const double Yi1, const double x)
+{
+   if (x < Xi1)
+      return Yi1;
+   else if (x > Xi2)
+      return Yi2;
+   else
+      return (Yi2 - Yi1) / (Xi2 - Xi1) * (x - Xi1) + Yi1;
+}
+/**********************************************************************/
 /*  Output clamped at ends of interval                                */
-double LinInterp(const double *X, const double *Y, const double x, const long n)
+double LinInterpTbl(const double *X, const double *Y, const double x,
+                    const long n)
 {
    double dx, dxn, y;
-   long i, i1, i2;
+   long i;
 
    dx  = x - X[0];
    dxn = X[n - 1] - X[0];
    if (fabs(dxn) < fabs(dx)) {
-      printf("LinInterp clamped to 'right' end of interval\n");
+      printf("LinInterpTbl clamped to 'right' end of interval\n");
       y = Y[n - 1];
    }
    else if (dx * dxn < 0.0) {
-      printf("LinInterp clamped to 'left' end of interval\n");
+      printf("LinInterpTbl clamped to 'left' end of interval\n");
       y = Y[0];
    }
    else {
-      /* Binary Search */
-      i1 = 0;
-      i2 = n - 1;
-      while (i1 + 1 < i2) {
-         i = (i1 + i2) / 2;
-         if (fabs(X[i] - X[0]) < fabs(dx))
-            i1 = i;
-         else
-            i2 = i;
-      }
-      y = (Y[i2] - Y[i1]) / (X[i2] - X[i1]) * (x - X[i1]) + Y[i1];
+      i = FindIndex(x, X, n, 0);
+      y = lerp(X[i + 1], X[i], Y[i + 1], Y[i], x);
    }
    return (y);
 }
@@ -2117,7 +2180,22 @@ long ProjectPointOntoTriangle(vec3_t A, vec3_t B, vec3_t C, vec3_t DirVec,
    return (InPoly);
 }
 /**********************************************************************/
-double CubicSpline(double x, double X[4], double Y[4])
+/* Clamped Cubic Spline                                               */
+double ClampedCubicSpline(const double x, const double X1, const double X2,
+                          const double Y1, const double Y2, const double Yp1,
+                          const double Yp2)
+{
+   const double t     = (x - X1) / (X2 - X1);
+   const double onemt = 1.0 - t;
+
+   // Normalized Clamped Cubic Spline
+   const double a = Yp1 * (X2 - X1) - (Y2 - Y1);
+   const double b = -Yp2 * (X2 - X1) + (Y2 - Y1);
+   return onemt * Y1 + t * Y2 + t * onemt * (onemt * a + t * b);
+}
+/**********************************************************************/
+/* Four-Point Cubic Spline                                            */
+double CubicSpline(const double x, const double X[4], const double Y[4])
 {
    double DY0, DY2, DY3;
    double Det, u0, u3, u;
@@ -2326,9 +2404,9 @@ double BrentsMethod(double a, double b, const double tol,
       // fa and fb are same sign (or zero)
       //    return the value associated with the smaller one
       if (fa == 0)
-         return fa;
+         return a;
       if (fb == 0)
-         return fb;
+         return b;
       const double mag_fa = fabs(fa);
       const double mag_fb = fabs(fb);
       if (mag_fa < mag_fb)
@@ -2400,8 +2478,6 @@ double BrentsMethod(double a, double b, const double tol,
       }
 
       err = fabs(b - a);
-      if (fabs(a) > __DBL_EPSILON__)
-         err /= a;
    }
    return b;
 }
@@ -3414,6 +3490,28 @@ void QuickMatPow(const long n, double **A, double **As, const long s,
    MxMG(Asq, Ar, Ap, n, n, n);
    DestroyMatrix(Ar);
    DestroyMatrix(Asq);
+}
+/******************************************************************************/
+/* .. Calculate Derivatives                                                   */
+/* Derivative at a point is:                                                  */
+/*    ind == 0:       slope between first and second points                   */
+/*    ind == end - 1: slope between next-to-last and final points             */
+/*    otherwise:      average slope between surrounding points                */
+double CentralDifference(const int ind, const int n, const double *const X_list,
+                         const double *const Y_list)
+{
+   if (!(0 <= ind && ind <= n - 1))
+      return 0;
+
+   const double *const X = &X_list[ind];
+   const double *const Y = &Y_list[ind];
+
+   // +0 if ind == 0, -1 otherwise
+   const int lower = MAX(-1, -ind);
+   // +0 if ind == n-1, +1 otherwise
+   const int upper = MIN(+1, n - 1 - ind);
+
+   return (Y[upper] - Y[lower]) / (X[upper] - X[lower]);
 }
 
 /* #ifdef __cplusplus

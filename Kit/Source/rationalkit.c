@@ -444,7 +444,7 @@ Rational ReduceRational(Rational rat)
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
 /*  Rational fractional part                                          */
-Rational _int_rat_mult(const Rat_LongLong mul, RationalLL rat)
+RationalLL _int_rat_mult(const Rat_LongLong mul, RationalLL rat)
 {
    _reduce(rat);
    RationalLL out_ll;
@@ -454,15 +454,15 @@ Rational _int_rat_mult(const Rat_LongLong mul, RationalLL rat)
    out_ll.num   = product % rat.den;
    out_ll.den   = rat.den;
    out_ll       = _cleanup(out_ll);
-   return ToRational(out_ll);
+   return out_ll;
 }
 /**********************************************************************/
 /*  Multiply integer by rational, returning integer whole part and    */
 /*  Rational fractional part                                          */
 /*  This version sets:  '*carry = out.whole / mod'                    */
 /*                and:  'out.whole %= mod'                            */
-Rational _int_rat_mult_mod(const Rat_LongLong mul, RationalLL rat, Rat_Long mod,
-                           Rat_Long *const carry)
+RationalLL _int_rat_mult_mod(const Rat_LongLong mul, RationalLL rat,
+                             Rat_Long mod, Rat_Long *const carry)
 {
    _reduce(rat);
    if (!mod)
@@ -479,7 +479,7 @@ Rational _int_rat_mult_mod(const Rat_LongLong mul, RationalLL rat, Rat_Long mod,
    out_ll.num            = product % rat.den;
    out_ll.den            = rat.den;
    out_ll                = _cleanup(out_ll);
-   return ToRational(out_ll);
+   return ToRationalLL(out_ll);
 }
 /**********************************************************************/
 /*  Compute a * b where a and b are both Rationals                    */
@@ -844,8 +844,15 @@ int isgreater_rational(Rational a, Rational b)
 /* Stringify Rational WITHOUT REDUCING                                */
 void rat2str(Rational rat, char str[RATIONAL_STR_LEN])
 {
-   const char *rat_str_fmt = "%ld + (%ld/%ld)";
-   snprintf(str, RATIONAL_STR_LEN, rat_str_fmt, rat.whole, rat.num, rat.den);
+   snprintf(str, RATIONAL_STR_LEN, RATIONAL_STR_FMT, rat.whole, rat.num,
+            rat.den);
+}
+/**********************************************************************/
+Rational str2rat(const char *str)
+{
+   Rational rat;
+   sscanf(str, RATIONAL_STR_FMT, &rat.whole, &rat.num, &rat.den);
+   return rat;
 }
 /**********************************************************************/
 Rational _rat_to_rational(const RationalLL rat_ll)

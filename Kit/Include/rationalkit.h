@@ -21,7 +21,7 @@ typedef signed long int Rat_Long;
 #define _RATLONG_MAX_    (__LONG_MAX__)
 #define _RATLONG_MIN_    (-_RATLONG_MAX_ - 1)
 #define RATIONAL_STR_LEN (64)
-#define RATIONAL_STR_FMT "%64s"
+#define RATIONAL_STR_FMT "%ld + (%ld/%ld)"
 
 // Use 'long long int' if its larger than 'long int'. If not use int128 if we
 // have it
@@ -71,20 +71,41 @@ static inline Rational _iden_rational(Rational x)
 {
    return x;
 }
+static inline Rational int2rational(int x)
+{
+   return RATIONAL_RAW(x, 0, 1);
+}
+static inline Rational long2rational(long x)
+{
+   return RATIONAL_RAW(x, 0, 1);
+}
 static inline RationalLL _iden_rationalll(RationalLL x)
 {
    return x;
 }
+static inline RationalLL int2rationalll(int x)
+{
+   return RATIONALLL_RAW(x, 0, 1);
+}
+static inline RationalLL long2rationalll(long x)
+{
+   return RATIONALLL_RAW(x, 0, 1);
+}
+
 #define ToRational(a)                                                          \
    _Generic((a),                                                               \
        Rational: _iden_rational,                                               \
        RationalLL: _rat_to_rational,                                           \
-       double: double2rational)(a)
+       double: double2rational,                                                \
+       int: int2rational,                                                      \
+       long: long2rational)(a)
 #define ToRationalLL(a)                                                        \
    _Generic((a),                                                               \
        Rational: _rat_to_rationalll,                                           \
        RationalLL: _iden_rationalll,                                           \
-       double: double2rationalll)(a)
+       double: double2rationalll,                                              \
+       int: int2rationalll,                                                    \
+       long: long2rationalll)(a)
 #define IntegerRationalMult(mul, rat)                                          \
    _int_rat_mult((Rat_LongLong)(mul), ToRationalLL(rat))
 #define IntegerRationalMultMod(mul, rat, mod, carry)                           \
@@ -111,11 +132,11 @@ __attribute__((pure)) Rat_Long _rat_int_mod_rat(Rational *const rat,
                                                 const Rat_Long mod);
 __attribute__((pure)) Rat_LongLong _rat_int_mod_ratll(RationalLL *const rat,
                                                       const Rat_LongLong mod);
-__attribute__((const)) Rational _int_rat_mult(const Rat_LongLong mul,
-                                              RationalLL rat);
-__attribute__((pure)) Rational _int_rat_mult_mod(const Rat_LongLong mul,
-                                                 RationalLL rat, Rat_Long mod,
-                                                 Rat_Long *const carry);
+__attribute__((const)) RationalLL _int_rat_mult(const Rat_LongLong mul,
+                                                RationalLL rat);
+__attribute__((pure)) RationalLL _int_rat_mult_mod(const Rat_LongLong mul,
+                                                   RationalLL rat, Rat_Long mod,
+                                                   Rat_Long *const carry);
 
 __attribute__((const)) RationalLL _rat_mult(RationalLL a, RationalLL b);
 __attribute__((const)) RationalLL _rat_divide(RationalLL a, RationalLL b);
@@ -144,5 +165,6 @@ __attribute__((const)) int isless_rational(const Rational a, const Rational b);
 __attribute__((const)) int isgreater_rational(const Rational a,
                                               const Rational b);
 void rat2str(Rational rat, char str[RATIONAL_STR_LEN]);
+__attribute__((pure)) Rational str2rat(const char *str);
 
 #endif /* __RATIONALKIT_H__ */

@@ -104,15 +104,12 @@ JDType ccsds2jd(const CCSDSTime ccsds_time)
    out.system     = TAI_TIME;
    out.epoch      = CCSDS_EPOCH;
    out.whole_days = ccsds_time.coarse / int_sec_per_day;
-   out.seconds    = RATIONAL_RAW(ccsds_time.coarse % int_sec_per_day, 0, 1);
+   out.seconds    = JDSECOND_RAW(ccsds_time.coarse % int_sec_per_day, 0, 1);
    if (ccsds_time.fine) {
       // CCSDS_FINE_MAX is a power of two, reduce num and den by largest power
       // of two dividing both
-      out.seconds.num   = ccsds_time.fine;
-      out.seconds.den   = CCSDS_FINE_MAX;
-      const int shift   = _ctz(out.seconds.num | out.seconds.den);
-      out.seconds.num >>= shift;
-      out.seconds.den >>= shift;
+      out.seconds = ToJDSecond(JDSecondAdd(
+          out.seconds, JDSECOND_NRED(0, ccsds_time.fine, CCSDS_FINE_MAX)));
    }
    return out;
 }
@@ -123,7 +120,7 @@ CCSDSTime jd2ccsds(JDType jd)
    jd               = JDChangeSystemEpoch(TAI_TIME, CCSDS_EPOCH, jd);
    out.coarse       = jd.whole_days * SEC_PER_DAY + jd.seconds.whole;
    jd.seconds.whole = 0;
-   out.fine         = rational2double(jd.seconds) * CCSDS_FINE_MAX + 0.5;
+   out.fine         = jdsecond2double(jd.seconds) * CCSDS_FINE_MAX + 0.5;
    return out;
 }
 /**********************************************************************/
@@ -140,17 +137,17 @@ int isless_ccsds(const CCSDSTime a_ccsds, const CCSDSTime b_ccsds)
 /**********************************************************************/
 DateType DateTypeInit(const TimeSystem system, const long Year,
                       const long Month, const long Day, const long Hour,
-                      const long Minute, const Rational Second)
+                      const long Minute, const JDSecond Second)
 {
    DateType date = {.Year   = Year,
                     .Month  = Month,
                     .Day    = Day,
                     .Hour   = Hour,
                     .Minute = Minute,
-                    .Second = Second,
+                    .Second = ToJDSecond(Second),
                     .system = system};
-   if (!date.Second.den)
-      date.Second.den = 1;
+   date.Second   = ReduceJDSecond(date.Second);
+
    date.doy = MD2DOY(date.Year, date.Month, date.Day);
    return date;
 }
@@ -167,17 +164,17 @@ JDType Date2JD(const DateType date, const EpochTT epoch)
    const long D = date.Day;
    const long H = date.Hour;
    const long m = date.Minute;
-   Rational s   = date.Second;
+   JDSecond s   = date.Second;
 
    const long c = (M + 9.0) / 12.0;
    const long b = (275.0 * M / 9.0);
    const long a = (7.0 * (Y + c)) / 4.0;
 
    const long day  = 367 * Y - a + b + D;
-   JDType jd       = JDFromDays(day, date.system, GD_CONV_EPOCH);
+   JDType jd       = DaysToJD(day, date.system, GD_CONV_EPOCH);
    jd              = JDChangeEpoch(epoch, jd);
    s.whole        += 60 * (m + 60 * H);
-   jd              = JDAddRationalSeconds(jd, s);
+   jd              = JDAddSeconds(jd, s);
 
    return jd;
 }
@@ -236,7 +233,7 @@ double DateToTime(const DateType date)
 
    /* Add fractional day */
    return (SEC_PER_DAY * Days + 3600.0 * ((double)date.Hour) +
-           60.0 * ((double)date.Minute) + rational2double(date.Second));
+           60.0 * ((double)date.Minute) + jdsecond2double(date.Second));
 }
 /**********************************************************************/
 /*  Convert Year, Month, Day, Hour, Minute and Second to Julian Day   */
@@ -263,10 +260,10 @@ JDType DateToJD(const DateType date, const TimeSystem system,
    const double day = floor(365.25 * (Year + 4716)) +
                       floor(30.6001 * (Month + 1)) + date.Day + B - 1524.5;
 
-   JDType jd   = JDFromDays(day, date.system, ZERO_EPOCH);
-   Rational s  = date.Second;
+   JDType jd   = DaysToJD(day, date.system, ZERO_EPOCH);
+   JDSecond s  = date.Second;
    s.whole    += 60 * (date.Minute + 60 * date.Hour);
-   jd          = JDAddRationalSeconds(jd, s);
+   jd          = JDAddSeconds(jd, s);
 
    return JDChangeSystemEpoch(system, epoch, jd);
 }
@@ -280,7 +277,7 @@ CCSDSTime date2ccsds(const DateType date)
    DateType date_tai     = DateChangeSystem(TAI_TIME, date);
    ccsds_time.coarse     = Date2Time(date_tai);
    date_tai.Second.whole = 0;
-   ccsds_time.fine = (rational2double(date_tai.Second) * CCSDS_FINE_MAX) + 0.5;
+   ccsds_time.fine = (jdsecond2double(date_tai.Second) * CCSDS_FINE_MAX) + 0.5;
    return ccsds_time;
 }
 /**********************************************************************/
@@ -339,8 +336,8 @@ DateType JDToDate(const JDType jd, const TimeSystem system)
    tmp            = (days - date.doy) * 24;
    date.Hour      = trunc(tmp);
    date.Minute    = trunc((tmp - date.Hour) * 60);
-   Rational hours = double2rational(tmp - date.Hour - (double)date.Minute / 60);
-   date.Second    = IntegerRationalMult(3600, hours);
+   JDSecond hours = ToJDSecond(tmp - date.Hour - (double)date.Minute / 60);
+   date.Second    = ToJDSecond(JDSecMult(3600, hours));
    return date;
 }
 /**********************************************************************/
@@ -533,10 +530,10 @@ DateType updateTime(DateType Time, const double dSeconds)
    JDType jd = Date2JD(Time, GMAT_MJD_EPOCH);
 
    if (fabs(dSeconds) > 0.0) {
-      Rational rat_dseconds = double2rational(dSeconds);
+      JDSecond dseconds = ToJDSecond(dSeconds);
 
-      Time.Second   = ToRational(RationalAdd(Time.Second, rat_dseconds));
-      long quotient = RationalIntMod(&Time.Second, 60);
+      Time.Second   = ToJDSecond(JDSecondAdd(Time.Second, dseconds));
+      long quotient = JDSecondIntMod(&Time.Second, 60);
       if (Time.Second.whole < 0) {
          Time.Second.whole += 60;
          quotient--;

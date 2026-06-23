@@ -18,7 +18,7 @@ void WriteToSocket(SOCKET Socket, char **Prefix, long Nprefix, long EchoEnabled)
    char line[512];
 
    sprintf(line, "TIME %ld-%03ld-%02ld:%02ld:%012.9lf\n", UTC.Year, UTC.doy,
-           UTC.Hour, UTC.Minute, rational2double(UTC.Second));
+           UTC.Hour, UTC.Minute, jdsecond2double(UTC.Second));
    LineLen = strlen(line);
    memcpy(&Msg[MsgLen], line, LineLen);
    MsgLen += LineLen;

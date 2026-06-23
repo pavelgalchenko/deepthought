@@ -2667,7 +2667,7 @@ double NRLMSISE00(DateType date, vec3_t PosW, double F10p7, double AP)
    Input.year = (int)date.Year;
    Input.doy  = (int)date.doy;
    Input.sec =
-       3600.0 * date.Hour + 60.0 * date.Minute + rational2double(date.Second);
+       3600.0 * date.Hour + 60.0 * date.Minute + jdsecond2double(date.Second);
    Input.alt    = 1.0E-3 * Alt;
    Input.g_lat  = Lat * R2D;
    Input.g_long = Lng * R2D;

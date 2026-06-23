@@ -48,7 +48,7 @@ static inline void
 _fprintf_jdtype(FILE *file, const char *c __attribute__((unused)), JDType jd)
 {
    char jdstr[JD_STR_LEN] = {'\0'};
-   jddays2str(jd, jdstr);
+   jdays2str(jd, jdstr);
    fprintf(file, "%s%s", jdstr, c);
 }
 static inline void _fprintf_datetype(FILE *file,
@@ -56,7 +56,7 @@ static inline void _fprintf_datetype(FILE *file,
                                      DateType date)
 {
    fprintf(file, "%ld:%02ld:%02ld:%02ld:%02ld:%09.6lf%s", date.Year, date.Month,
-           date.Day, date.Hour, date.Minute, rational2double(date.Second), c);
+           date.Day, date.Hour, date.Minute, jdsecond2double(date.Second), c);
 }
 static inline void newline_fflush(FILE *file)
 {
@@ -544,7 +544,7 @@ void DSM_Rot3BodyReport(void)
    static long First = 1;
    long Isc;
    char s[50];
-   vec3_t posRel, posRot, velRel, velRot, z_axis = VEC3_PZAXIS;
+   vec3_t posRel, posRot, velRel, velRot;
    mat3x3_t DCM;
    struct LagrangeSystemType *LS;
    double ang_rot = M_PI;
@@ -580,7 +580,7 @@ void DSM_Rot3BodyReport(void)
             }
             posRot = MxV(LS->CLN, posRel);
             velRot = MxV(LS->CLN, velRel);
-            DCM    = SimpRot(z_axis, ang_rot);
+            DCM    = ROT3(ang_rot);
             posRot = MxV(DCM, posRot);
             velRot = MxV(DCM, velRot);
             file_print(rotfile[Isc], posRot);
@@ -1287,6 +1287,8 @@ void NESC_Report()
 
    vec3_t PosW, PosN, VelN, ang_ei, ang_lvlh;
 
+   const double GAST = HiFiEarthCWN(JD_TDB_MJD).dbl;
+
    PosN = S->PosN;
    VelN = S->VelN;
    PosW = MxV(W->CWN, PosN);
@@ -1304,8 +1306,7 @@ void NESC_Report()
    vec3_t rpy_ei   = {.x = ang_ei.z, .y = ang_ei.y, .z = ang_ei.x};
 
    vec3_t gravAccN = VAddV_Elem(S->gravPriAccN, S->gravPertAccN);
-   // vec3_t gravAccN = S->gravPriAccN;
-   vec3_t accN = VAddV_Elem(S->gravPriAccN, SxV(1.0 / S->mass, S->FrcN));
+   vec3_t accN     = VAddV_Elem(S->gravPriAccN, SxV(1.0 / S->mass, S->FrcN));
 
    double SMA, ecc, inc, RAAN, ArgP, anom, tp, SLR, alpha, rmin, MeanMotion,
        Period;
@@ -1317,15 +1318,15 @@ void NESC_Report()
    vec3_t lla     = ECEFToWGS84(PosW);
    double density = NRLMSISE00(date_tt, PosW, Flux10p7, GeomagIndex);
 
-   csv_print(nescfile, SimTime);                    // time
-   csv_print(nescfile, PosW);                       // gePosition_m
-   csv_print(nescfile, PosN);                       // eiPosition_m
-   csv_print(nescfile, VelN);                       // eiVelocity_m_s
-   csv_print(nescfile, accN);                       // eiAccel_m_s2
-   csv_print(nescfile, SMA);                        // semiMajorAxis__m
-   csv_print(nescfile, JD2GMST(JD_TT_MJD) * TWOPI); // gast_rad (????????????)
-   csv_print(nescfile, rpy_lvlh);                   // eulerAngle_rad
-   csv_print(nescfile, rpy_ei);                     // eulerAngleWrtEi_rad
+   csv_print(nescfile, SimTime);    // time
+   csv_print(nescfile, PosW);       // gePosition_m
+   csv_print(nescfile, PosN);       // eiPosition_m
+   csv_print(nescfile, VelN);       // eiVelocity_m_s
+   csv_print(nescfile, accN);       // eiAccel_m_s2
+   csv_print(nescfile, SMA);        // semiMajorAxis__m
+   csv_print(nescfile, GAST);       // gast_rad
+   csv_print(nescfile, rpy_lvlh);   // eulerAngle_rad
+   csv_print(nescfile, rpy_ei);     // eulerAngleWrtEi_rad
    csv_print(nescfile, S->B[0].wn); // bodyAngularRateWrtEi_rad_s (??)
    csv_print(nescfile, lla.z);      // altitudeMsl_m
    csv_print(nescfile, density);    // airDensity_kg_m3

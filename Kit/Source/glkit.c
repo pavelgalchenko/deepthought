@@ -337,8 +337,8 @@ void FindSunColor(double T, GLfloat LightColor[3], GLfloat DiskColor[3])
                    0.955139, 0.962898, 0.969981, 0.973814, 0.980860, 0.985602,
                    0.992215, 0.995340, 0.997967, 0.998953, 0.999713, 0.999905};
 
-   F1    = LinInterp(LT, F, lam1 * T, N);
-   F2    = LinInterp(LT, F, lam2 * T, N);
+   F1    = LinInterpTbl(LT, F, lam1 * T, N);
+   F2    = LinInterpTbl(LT, F, lam2 * T, N);
    rgb.z = F1;
    rgb.y = F2 - F1;
    rgb.x = 1.0 - F2;
@@ -2916,8 +2916,6 @@ void DrawMercatorGrid(mat3x3_t CVA)
    long maj = 90; /* Degrees between each major gridline */
 
    vec3_t norm;
-   vec3_t x = VEC3_PXAXIS;
-   vec3_t z = VEC3_PZAXIS;
 
    long ang; /* Tracked in degrees */
    double lng, lat;
@@ -2925,7 +2923,7 @@ void DrawMercatorGrid(mat3x3_t CVA)
    mat3x3_t CNV; /* DCM from normal vector to viewing frame */
 
    /* Latitude lines */
-   norm = MxV(CVA, z);
+   norm = MxV(CVA, VEC3_PZAXIS);
 
    VecToLngLat(norm, &lng, &lat);
 
@@ -2941,9 +2939,9 @@ void DrawMercatorGrid(mat3x3_t CVA)
 
    /* Longitude lines */
    for (ang = 0; ang < 179; ang = ang + min) {
-      CNA  = SimpRot(z, ang * D2R);
+      CNA  = ROT3(ang * D2R);
       CNV  = MxMT(CNA, CVA);
-      norm = MTxV(CNV, x);
+      norm = MTxV(CNV, VEC3_PXAXIS);
 
       VecToLngLat(norm, &lng, &lat);
 
@@ -2952,9 +2950,9 @@ void DrawMercatorGrid(mat3x3_t CVA)
    }
 
    for (ang = 0; ang < 179; ang = ang + maj) {
-      CNA  = SimpRot(z, ang * D2R);
+      CNA  = ROT3(ang * D2R);
       CNV  = MxMT(CNA, CVA);
-      norm = MTxV(CNV, x);
+      norm = MTxV(CNV, VEC3_PXAXIS);
 
       VecToLngLat(norm, &lng, &lat);
 

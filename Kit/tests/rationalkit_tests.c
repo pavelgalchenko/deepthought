@@ -69,12 +69,10 @@ Theory((Rational * a), SUITE_NAME, rat2str)
 {
    char a_str[RATIONAL_STR_LEN];
    rat2str(*a, a_str);
-   long whl, n, d;
-   sscanf(a_str, "%ld + (%ld/%ld)", &whl, &n, &d);
+   Rational rat = str2rat(a_str);
 
-   cr_expect(all(a->whole == whl, a->num == n, a->den == d),
-             "rat2str(%ld + (%ld/%ld)) returns " RATIONAL_STR_FMT
-             "; this is not correct",
+   cr_expect(isequal_rational(*a, rat),
+             "rat2str(" RATIONAL_STR_FMT ") returns %64s; this is not correct",
              a->whole, a->num, a->den, a_str);
 }
 

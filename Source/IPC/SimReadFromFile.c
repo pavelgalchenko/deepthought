@@ -910,7 +910,7 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled)
       UTC.doy    = doy;
       UTC.Hour   = Hour;
       UTC.Minute = Minute;
-      UTC.Second = double2rational(Second);
+      UTC.Second = sec_double2JDSecond(Second);
       DOY2MD(UTC.Year, UTC.doy, &UTC.Month, &UTC.Day);
       CivilTime  = Date2Time(UTC);
       AtomicTime = CivilTime + LeapSec;
@@ -924,7 +924,7 @@ void ReadFromFile(FILE *StateFile, long EchoEnabled)
       TDB        = JDToDate(JD_TDB_MJD, TDB_TIME);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-      SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
+      SimTime = JDToSeconds(JDSubDays(JD_TT_MJD, JD_TT_MJD_0));
 
       for (Isc = 0; Isc < Nsc; Isc++)
          for (i = 0; i < SC[Isc].Nthr; i++)

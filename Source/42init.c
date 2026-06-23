@@ -376,8 +376,8 @@ DateType ReadDateFromYaml(struct fy_node *node, const char *f_name)
               f_name);
       exit(EXIT_FAILURE);
    }
-   date.Second = double2rational(sec);
-   date.Second = ToRational(RationalAdd(date.Second, millisec));
+   date.Second = sec_double2JDSecond(sec);
+   date.Second = ToJDSecond(JDSecondAdd(date.Second, millisec));
 
    date.doy = MD2DOY(date.Year, date.Month, date.doy);
 
@@ -591,7 +591,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
    fclose(infile);
 
    if (Success) {
-      EpochDate.Second = double2rational(sec);
+      EpochDate.Second = sec_double2JDSecond(sec);
       Epoch_JD         = Date2JD(EpochDate, J2000_EPOCH);
       Epoch_JD         = JDChangeSystem(TT_TIME, Epoch_JD);
       O->Epoch         = JDToDynTime(Epoch_JD);
@@ -935,7 +935,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i].v[0], &O->NodePos[i].v[1],
                             &O->NodePos[i].v[2], &O->NodeVel[i].v[0],
                             &O->NodeVel[i].v[1], &O->NodeVel[i].v[2], &newline);
-                        NodeDate.Second = double2rational(sec);
+                        NodeDate.Second = sec_double2JDSecond(sec);
                         JDType node_jd  = Date2JD(NodeDate, J2000_EPOCH);
                         // TODO: do we transform the timestamps to tt to use
                         // uniformly, or do we convert the current time to
@@ -1136,7 +1136,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
                             &O->NodePos[i].v[0], &O->NodePos[i].v[1],
                             &O->NodePos[i].v[2], &O->NodeVel[i].v[0],
                             &O->NodeVel[i].v[1], &O->NodeVel[i].v[2], &newline);
-                        NodeDate.Second   = double2rational(sec);
+                        NodeDate.Second   = sec_double2JDSecond(sec);
                         JDType node_jd    = Date2JD(NodeDate, J2000_EPOCH);
                         node_jd           = JDChangeSystem(TT_TIME, node_jd);
                         O->NodeDynTime[i] = JDToDynTime(node_jd);
@@ -4226,7 +4226,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                // C_TETE_J2000             = pair.second;
                // C_W_TETE                 = SimpRot(Zaxis, W->PriMerAng);
                // W->CWN                   = MxM(C_W_TETE, C_TETE_J2000);
-               pair_dbl_mat3x3_t out = GMAT_HiFiEarthCWN(jd_tdb_j2000);
+               pair_dbl_mat3x3_t out = HiFiEarthCWN(jd_tdb_j2000);
                W->PriMerAng          = out.dbl;
                W->CWN                = out.mat;
             }
@@ -4359,7 +4359,7 @@ void NMoon(const WorldID planet, long *const n_moon, WorldID *const first_moon)
       *mean_anom = MeanAnoms[Im];                                              \
       *epoch_date =                                                            \
           DateTypeInit(TT_TIME, EpochYears[Im], EpochMons[Im], EpochDays[Im],  \
-                       EpochHours[Im], 0, RATIONAL_ZERO);                      \
+                       EpochHours[Im], 0, JDSECOND_ZERO);                      \
    } while (0);
 
 void MoonDefaultData(const WorldID planet, const long Im, char name[40],
@@ -5264,7 +5264,7 @@ void LoadSchatten(void)
    fscanf(infile, "%[^\n] %[\n]", junk, &newline);
 
    DateType date = {0};
-   date.Second   = RATIONAL_ZERO;
+   date.Second   = JDSECOND_ZERO;
    date.system   = TT_TIME;
    for (i = 0; i < 1009; i++) {
       fscanf(infile, "%ld %ld %lf %lf %lf %lf,%[^\n] %[\n]", &date.Year,

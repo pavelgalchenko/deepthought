@@ -128,7 +128,6 @@ double GetWorldAng(JDType jd, const AngDataType *const ang_data)
 pair_dbl_mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
 {
    pair_dbl_mat3x3_t pri_cwn;
-   const vec3_t z_axis = VEC3_PZAXIS;
 
    const AngDataType *pm_data = NULL;
    for (int i = 0; i < 3; i++) {
@@ -147,7 +146,7 @@ pair_dbl_mat3x3_t GetWorldCWN(JDType jd, const AngDataType *const ang_data)
    jd = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
 
    pri_cwn.dbl = GetWorldAng(jd, pm_data);
-   pri_cwn.mat = SimpRot(z_axis, pri_cwn.dbl);
+   pri_cwn.mat = ROT3(pri_cwn.dbl);
    return pri_cwn;
 }
 /**********************************************************************/

@@ -934,7 +934,7 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
       UTC.doy    = doy;
       UTC.Hour   = Hour;
       UTC.Minute = Minute;
-      UTC.Second = double2rational(Second);
+      UTC.Second = sec_double2JDSecond(Second);
       DOY2MD(UTC.Year, UTC.doy, &UTC.Month, &UTC.Day);
       CivilTime  = Date2Time(UTC);
       AtomicTime = CivilTime + LeapSec;
@@ -948,7 +948,7 @@ void ReadFromSocket(SOCKET Socket, long EchoEnabled)
       TDB        = JDToDate(JD_TDB_MJD, TDB_TIME);
       // UTC.JulDay = TimeToJD(CivilTime);
       GpsTimeToGpsDate(GpsTime, &GpsRollover, &GpsWeek, &GpsSecond);
-      SimTime = JDToSeconds(JDSub(JD_TT_MJD, JD_TT_MJD_0));
+      SimTime = JDToSeconds(JDSubDays(JD_TT_MJD, JD_TT_MJD_0));
    }
 
    /* .. Refresh SC states that depend on inputs */

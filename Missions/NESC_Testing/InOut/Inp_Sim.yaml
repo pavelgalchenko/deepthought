@@ -75,7 +75,7 @@ Perturbation Models:
   CFD Slosh: false
   Albedo on CSS: false
   Output Env Torques to File: false
-Ephem Type: SPICE
+Ephem Type: DE424
 Celestial Bodies:
   Earth:
     Exists: true

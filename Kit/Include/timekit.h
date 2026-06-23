@@ -89,7 +89,7 @@ typedef struct {
    long doy;
    long Hour;
    long Minute;
-   Rational Second;
+   JDSecond Second;
 } DateType;
 
 // double TDB_JDtoTT(double TDB_JD);
@@ -104,7 +104,7 @@ __attribute__((const)) DateType DateTypeInit(const TimeSystem system,
                                              const long Year, const long Month,
                                              const long Day, const long Hour,
                                              const long Minute,
-                                             const Rational Second);
+                                             const JDSecond Second);
 
 __attribute__((const)) CCSDSTime date2ccsds(const DateType date);
 __attribute__((const)) DateType ccsds2date(const CCSDSTime ccsds_time,
