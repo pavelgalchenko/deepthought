@@ -39,8 +39,7 @@ _epoch_diff_tt(const TimeSystem system, const EpochTT a, const EpochTT b);
 __attribute__((const)) static JDType _jdtt(JDType);
 __attribute__((const)) static JDType _jd_tdb2tcb(JDType tdb_jd);
 __attribute__((const)) static inline double
-_sec_dbl_d_tt_tdb(double secs_tt_j2000);
-__attribute__((const)) static inline double _d_tt_tdb(JDType jd);
+_sec_dbl_d_tt_tdb(double secs_tt_j2000, double secs_tdb_j2000);
 __attribute__((const)) static JDType _jd_tt2tdb(JDType tt_jd);
 __attribute__((pure)) static double _tdb2ttF(const double secs_tt_j2000,
                                              double params[1]);
@@ -49,8 +48,8 @@ __attribute__((const)) static inline JDType _jd_tt2tai(const JDType jd_tt);
 __attribute__((const)) static inline JDType _jd_tai2tt(const JDType jd_tai);
 __attribute__((const)) static JDType _jd_utc2tai(JDType utc_jd);
 __attribute__((const)) static JDType _jd_tai2utc(JDType tai_jd);
-__attribute__((const)) static JDType _jd_tai2ut1(JDType tai_jd);
-__attribute__((const)) static JDType _jd_ut12tai(JDType ut1_jd);
+__attribute__((const)) static JDType _jd_utc2ut1(JDType tai_jd);
+__attribute__((const)) static JDType _jd_ut12utc(JDType ut1_jd);
 __attribute__((const)) static JDType _reduce_jd_no_seconds(JDType jd);
 __attribute__((const)) static JDType _reduce_jd(JDType jd);
 __attribute__((const)) static double _d_tcb_tdb(const double jd);
@@ -503,7 +502,9 @@ static void _error_epoch_system(const JDType a, const JDType b,
 /**********************************************************************/
 TimeSystem GetTimeSystem(const char *s)
 {
-   if (!strncmp(s, "UTC", 3))
+   if (!strncmp(s, "UT1", 3))
+      return UTC_TIME;
+   else if (!strncmp(s, "UTC", 3))
       return UTC_TIME;
    else if (!strncmp(s, "TAI", 3))
       return TAI_TIME;
@@ -517,26 +518,6 @@ TimeSystem GetTimeSystem(const char *s)
            __LINE__);
    exit(EXIT_FAILURE);
 }
-/**********************************************************************/
-// static Rational _epoch_pod_seconds(const EpochTT epoch)
-// {
-//    // either zero or 43200 seconds
-//    switch (epoch) {
-//       case ZERO_EPOCH:
-//       case GMAT_MJD_EPOCH:
-//       case J2000_EPOCH:
-//       case N_EPOCH:
-//       default:
-//          break;
-//       case GD_CONV_EPOCH:
-//       case TCB_TDB_CONV_EPOCH:
-//       case MJD_EPOCH:
-//       case J1900_EPOCH:
-//       case CCSDS_EPOCH:
-//          return RATIONAL_RAW(SEC_PER_DAY / 2, 0, 1);
-//    }
-//    return RATIONAL_ZERO;
-// }
 /**********************************************************************/
 static double epoch_tbl[N_TIME][N_EPOCH];
 
@@ -567,9 +548,10 @@ static void fill_epoch_base_tbl()
 
       const double jdday_tt_j2000 =
           epoch_tbl[TT_TIME][epo] - epoch_tbl[TT_TIME][J2000_EPOCH];
-      const double sec_ttmtdb = _sec_dbl_d_tt_tdb(jdday_tt_j2000 * SEC_PER_DAY);
-      epoch_tbl[TDB_TIME][epo] =
-          epoch_tbl[TT_TIME][epo] + sec_ttmtdb / SEC_PER_DAY;
+      // const double sec_ttmtdb = _sec_dbl_d_tt_tdb(jdday_tt_j2000 *
+      // SEC_PER_DAY);
+      // epoch_tbl[TDB_TIME][epo] =
+      //     epoch_tbl[TT_TIME][epo] + sec_ttmtdb / SEC_PER_DAY;
    }
 }
 
@@ -688,40 +670,56 @@ static JDType _jd_tdb2tcb(JDType tdb_jd)
    return JDAddSeconds(tdb_jd, d_tcb_tdb);
 }
 /**********************************************************************/
-#define TDB_COEFF1             (0.00165)
-#define TDB_COEFF2             (0.00001385)
-#define M_E_OFFSET             (357.5277233)
-#define M_E_COEFF1             (35999.05034)
-#define DAY_PER_JULIAN_CENTURY (36525.0)
-static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000)
+#define TDB_COEFF1 (0.00165)
+#define TDB_COEFF2 (2.2e-05)
+#define M_E_OFFSET (357.5277233)
+#define M_E_COEFF1 (35999.05034)
+// Astronomical Almanac, 2012 // TODO: lookup, current citation is Vallado
+// Includes Jovian effects through dlambda_mean
+static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000,
+                                       double secs_tdb_j2000)
 {
-   const double T_TT = secs_tt_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
-   const double m_E  = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TT)), 360.0);
-   return (TDB_COEFF1 * sin_deg(m_E) + TDB_COEFF2 * sin_deg(2.0 * m_E));
+   const double T_TDB = secs_tdb_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
+   const double m_E   = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TDB)), 360.0);
+
+   const double dlambda_mean =
+       (246.11 + 0.90251792 * secs_tt_j2000 / SEC_PER_DAY) * D2R;
+
+   return TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(dlambda_mean);
 }
 #undef M_E_OFFSET
 #undef M_E_COEFF1
-#undef DAY_PER_JULIAN_CENTURY
 /**********************************************************************/
-static inline double _d_tt_tdb(JDType jd)
+static double _tt2tdbF(const double secs_tdb_j2000, double params[1])
 {
-   // TODO: use spice instead if available?
-   // Approximation from GMAT 2026 Mathematical Specification, p10
-   // assuming input jd is tt already
-   jd = JDChangeEpoch(J2000_EPOCH, jd);
-   return _sec_dbl_d_tt_tdb(JDToSeconds(jd));
+   const double secs_tt_j2000 = params[0];
+   return secs_tdb_j2000 -
+          (secs_tt_j2000 + _sec_dbl_d_tt_tdb(secs_tt_j2000, secs_tdb_j2000));
 }
+
 /**********************************************************************/
 static inline JDType _jd_tt2tdb(JDType tt_jd)
 {
-   tt_jd.system = TDB_TIME;
-   return JDAddSeconds(tt_jd, _d_tt_tdb(tt_jd));
+   JDType jd_tt_j2000         = JDChangeEpoch(J2000_EPOCH, tt_jd);
+   const double secs_tt_j2000 = JDToSeconds(jd_tt_j2000);
+   double params[1]           = {secs_tt_j2000};
+
+   const double max_width      = fabs(TDB_COEFF1 + TDB_COEFF2);
+   const double secs_tdb_j2000 = BrentsMethod(
+       secs_tt_j2000 - 2.0 * max_width, secs_tt_j2000 + 2.0 * max_width,
+       __DBL_EPSILON__, &_tt2tdbF, params);
+   JDType jd_tdb_out = JDFromSeconds(secs_tdb_j2000, TDB_TIME, J2000_EPOCH);
+   jd_tdb_out        = JDChangeEpoch(tt_jd.epoch, jd_tdb_out);
+
+   jd_tdb_out.system = TDB_TIME;
+   return jd_tdb_out;
 }
 /**********************************************************************/
 static double _tdb2ttF(const double secs_tt_j2000, double params[1])
 {
    const double secs_tdb_j2000 = params[0];
-   return secs_tt_j2000 + _sec_dbl_d_tt_tdb(secs_tt_j2000) - secs_tdb_j2000;
+   return secs_tt_j2000 + _sec_dbl_d_tt_tdb(secs_tt_j2000, secs_tdb_j2000) -
+          secs_tdb_j2000;
 }
 // *******************
 static JDType _jd_tdb2tt(JDType tdb_jd)
@@ -793,19 +791,19 @@ static JDType _jd_tai2utc(JDType jd_tai)
    return jd_utc;
 }
 /**********************************************************************/
-static JDType _jd_tai2ut1(JDType tai_jd)
+static JDType _jd_utc2ut1(JDType utc_jd)
 {
-   const JDType jd_tai_mjd = JDChangeSystemEpoch(TAI_TIME, MJD_EPOCH, tai_jd);
-   const double dut1       = GetUt1UtcOffset(JDToDays(jd_tai_mjd));
-   JDType jd_ut1 = JDAddSeconds(JDChangeSystem(UTC_TIME, tai_jd), dut1);
-   jd_ut1.system = UT1_TIME;
+   const JDType jd_utc_mjd = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, utc_jd);
+   const double dut1       = GetUt1UtcOffset(JDToDays(jd_utc_mjd));
+   JDType jd_ut1           = JDAddSeconds(utc_jd, dut1);
+   jd_ut1.system           = UT1_TIME;
    return jd_ut1;
 }
 /**********************************************************************/
-static double _jd_ut12taiF(const JDType jd_tai_mjd, JDType params[1])
+static double _jd_ut12utcF(const JDType jd_utc, JDType params[1])
 {
-   const JDType jd_utc_mjd = JDChangeSystem(UTC_TIME, jd_tai_mjd);
-   const double dut1       = GetUt1UtcOffset(JDToDays(jd_tai_mjd));
+   const JDType jd_utc_mjd = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd_utc);
+   const double dut1       = GetUt1UtcOffset(JDToDays(jd_utc_mjd));
    JDType jd_ut1_mjd       = params[0];
    jd_ut1_mjd.system       = UTC_TIME;
    return JDSubToSeconds(JDAddSeconds(jd_utc_mjd, dut1), jd_ut1_mjd);
@@ -920,19 +918,18 @@ static JDType JDBrentsMethod(JDType a, JDType b, const JDType tol,
    return b;
 }
 /**********************************************************************/
-static JDType _jd_ut12tai(JDType ut1_jd)
+static JDType _jd_ut12utc(JDType ut1_jd)
 {
    JDType jd_ut1_mjd = JDChangeEpoch(MJD_EPOCH, ut1_jd);
-   jd_ut1_mjd.system = TAI_TIME;
+   jd_ut1_mjd.system = UTC_TIME;
 
    JDType jd_utc_mjd = jd_ut1_mjd;
-   jd_utc_mjd.system = UTC_TIME;
    // Use Brent's Method to approximate inverse of _jd_tai2ut1
 
    // currently looking for correct tai around ut1, should be looking around
    // tai. take off leap seconds and look there
-   JDType guess_jd_tai = JDChangeSystem(TAI_TIME, jd_utc_mjd);
-   const double dut1   = fabs(GetUt1UtcOffset(JDToDays(guess_jd_tai)));
+   // JDType guess_jd_tai = JDChangeSystem(TAI_TIME, jd_utc_mjd);
+   const double dut1 = GetUt1UtcOffset(JDToDays(jd_utc_mjd));
 
    JDType params[1] = {jd_ut1_mjd};
    // get interval
@@ -941,21 +938,21 @@ static JDType _jd_ut12tai(JDType ut1_jd)
    int i = 1;
    do {
       double half_width  = i * dut1 / 2.0;
-      lower              = JDSubSeconds(guess_jd_tai, half_width);
-      upper              = JDAddSeconds(guess_jd_tai, half_width);
-      lowertest          = _jd_ut12taiF(lower, params);
-      uppertest          = _jd_ut12taiF(upper, params);
+      lower              = JDSubSeconds(jd_utc_mjd, half_width);
+      upper              = JDAddSeconds(jd_utc_mjd, half_width);
+      lowertest          = _jd_ut12utcF(lower, params);
+      uppertest          = _jd_ut12utcF(upper, params);
       i                 *= 2;
    } while ((lowertest * uppertest >= 0) && i < 512);
 
-   const JDType jd_tai_mjd = JDBrentsMethod(
+   jd_utc_mjd = JDBrentsMethod(
        lower, upper, JD_RAW_LIKE(lower, 0, JDSECOND_RAW(0, __DBL_EPSILON__, 1)),
-       &_jd_ut12taiF, params);
+       &_jd_ut12utcF, params);
 
-   JDType jd_tai_out = JDChangeEpoch(ut1_jd.epoch, jd_tai_mjd);
+   JDType jd_utc_out = JDChangeEpoch(ut1_jd.epoch, jd_utc_mjd);
 
-   jd_tai_out.system = TAI_TIME; // just to make sure
-   return jd_tai_out;
+   jd_utc_out.system = TAI_TIME; // just to make sure
+   return jd_utc_out;
 }
 /**********************************************************************/
 //  end time system low level conversion helpers
@@ -968,9 +965,6 @@ static JDType _jdutc(const JDType jd)
 {
    JDType jd_out = jd;
    switch (jd.system) {
-      case UT1_TIME:
-         jd_out = _jd_ut12tai(jd_out);
-         goto tai2utc2utc; // JUMP DOWN TO TAI CASE
       case TCB_TIME:
          jd_out = _jd_tcb2tdb(jd_out);
          [[fallthrough]];
@@ -981,8 +975,10 @@ static JDType _jdutc(const JDType jd)
          jd_out = _jd_tt2tai(jd_out);
          [[fallthrough]];
       case TAI_TIME:
-      tai2utc2utc:
          jd_out = _jd_tai2utc(jd_out);
+         break;
+      case UT1_TIME:
+         jd_out = _jd_ut12utc(jd_out);
          break;
       case UTC_TIME:
          break;
@@ -997,10 +993,6 @@ static JDType _jdut1(const JDType jd)
 {
    JDType jd_out = jd;
    switch (jd.system) {
-      case UTC_TIME:
-         jd_out = _jd_utc2tai(jd_out);
-         goto tai2ut12ut1; // JUMP DOWN TO TAI CASE
-         break;
       case TCB_TIME:
          jd_out = _jd_tcb2tdb(jd_out);
          [[fallthrough]];
@@ -1011,8 +1003,10 @@ static JDType _jdut1(const JDType jd)
          jd_out = _jd_tt2tai(jd_out);
          [[fallthrough]];
       case TAI_TIME:
-      tai2ut12ut1:
-         jd_out = _jd_tai2ut1(jd_out);
+         jd_out = _jd_tai2utc(jd_out);
+         [[fallthrough]];
+      case UTC_TIME:
+         jd_out = _jd_utc2ut1(jd_out);
          break;
       case UT1_TIME:
          break;
@@ -1027,6 +1021,9 @@ static JDType _jdtai(const JDType jd)
 {
    JDType jd_out = jd;
    switch (jd.system) {
+      case UT1_TIME:
+         jd_out = _jd_ut12utc(jd_out);
+         [[fallthrough]];
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
          break;
@@ -1038,9 +1035,6 @@ static JDType _jdtai(const JDType jd)
          [[fallthrough]];
       case TT_TIME:
          jd_out = _jd_tt2tai(jd_out);
-         break;
-      case UT1_TIME:
-         jd_out = _jd_ut12tai(jd_out);
          break;
       case TAI_TIME:
          break;
@@ -1056,13 +1050,12 @@ static JDType _jdtcb(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UT1_TIME:
-         jd_out = _jd_ut12tai(jd_out);
-         goto tai2tt2tcb; // JUMP DOWN TO TAI CASE
+         jd_out = _jd_ut12utc(jd_out);
+         [[fallthrough]];
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
          [[fallthrough]];
       case TAI_TIME:
-      tai2tt2tcb:
          jd_out = _jd_tai2tt(jd_out);
          [[fallthrough]];
       case TT_TIME:
@@ -1085,13 +1078,12 @@ static JDType _jdtdb(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UT1_TIME:
-         jd_out = _jd_ut12tai(jd_out);
-         goto tai2tt2tdb; // JUMP DOWN TO TAI CASE
+         jd_out = _jd_ut12utc(jd_out);
+         [[fallthrough]];
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
          [[fallthrough]];
       case TAI_TIME:
-      tai2tt2tdb:
          jd_out = _jd_tai2tt(jd_out);
          [[fallthrough]];
       case TT_TIME:
@@ -1113,13 +1105,12 @@ static JDType _jdtt(const JDType jd)
    JDType jd_out = jd;
    switch (jd.system) {
       case UT1_TIME:
-         jd_out = _jd_ut12tai(jd_out);
-         goto tai2tt2tt; // JUMP DOWN TO TAI CASE
+         jd_out = _jd_ut12utc(jd_out);
+         [[fallthrough]];
       case UTC_TIME:
          jd_out = _jd_utc2tai(jd_out);
          [[fallthrough]];
       case TAI_TIME:
-      tai2tt2tt:
          jd_out = _jd_tai2tt(jd_out);
          break;
       case TCB_TIME:

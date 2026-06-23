@@ -19,9 +19,9 @@
 
 enum NutEnum { NUT_ITRF_1950, NUT_ITRF_1980, NUT_ITRF_1996 };
 
-__attribute__((const)) double GetUt1UtcOffset(const double jday_tai_mjd);
+__attribute__((const)) double GetUt1UtcOffset(const double jday_utc_mjd);
 __attribute__((const)) double JD2GMST(JDType JD);
-__attribute__((const)) double GMAT_JD2GMST(const JDType jd);
+__attribute__((const)) double HiFiJD2GMST(const JDType jd);
 __attribute__((const)) pair_mat3x3_t SimpleEarthPrecNute(const JDType JD);
 __attribute__((const)) pair_mat3x3_t HiFiEarthPrecNute(const JDType JD);
 __attribute__((const)) pair_dbl_mat3x3_t HiFiEarthCWN(const JDType jd);

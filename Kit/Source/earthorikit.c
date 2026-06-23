@@ -26,21 +26,18 @@
 
 // Loading into memory like in GMAT
 // TODO: the file is >23000 rows, do we want to do this?
-//    loading all rows and just the data show is > 1.2 GB!!!!!!!!
+//    loading all rows of just the data desireed is > 1.1 GB!!!!!!!!
 //    each row corresponds to a single day
-//    lets try storing ~once/wk (~175 MB now)
+//    lets try storing ~once/wk (~162 MB now)
 //    file is from Jan 1, 1962 to Sep 14, 2026, could cutoff before ~2000?
 
-#define EOP_STEPOVER (1)
-struct Ut1MUtcEntry {};
+#define EOP_STEPOVER (7)
 struct Ut1MUtcInfo {
    int n_entries;
-   double *jday_tai_mjd; // TAI days since MJD
-   int *jday_utc_mjd;    // UTC days since MJD (unused??)
+   double *jday_utc_mjd; // UTC days since MJD
    double *ut1_m_utc;    // UT1 - UTC (sec)
 } Ut1MUtcInfo;
 
-struct PolarMotionEntry {};
 static struct PolarMotionInfo {
    int n_entries;
    double *jday_utc_mjd; // UTC days since MJD
@@ -105,15 +102,12 @@ static void init_eop_file()
       }
 
       if ((jday_utc_mjd % EOP_STEPOVER) == 0) {
-         Ut1MUtcInfo.jday_tai_mjd =
-             realloc(Ut1MUtcInfo.jday_tai_mjd,
-                     (Ut1MUtcInfo.n_entries + 1) * sizeof(double));
          Ut1MUtcInfo.ut1_m_utc =
              realloc(Ut1MUtcInfo.ut1_m_utc,
                      (Ut1MUtcInfo.n_entries + 1) * sizeof(double));
          Ut1MUtcInfo.jday_utc_mjd =
              realloc(Ut1MUtcInfo.jday_utc_mjd,
-                     (Ut1MUtcInfo.n_entries + 1) * sizeof(int));
+                     (Ut1MUtcInfo.n_entries + 1) * sizeof(double));
 
          PM_Info.jday_utc_mjd = realloc(
              PM_Info.jday_utc_mjd, (PM_Info.n_entries + 1) * sizeof(double));
@@ -124,11 +118,6 @@ static void init_eop_file()
          PM_Info.lod =
              realloc(PM_Info.lod, (PM_Info.n_entries + 1) * sizeof(double));
 
-         Ut1MUtcInfo.jday_utc_mjd[Ut1MUtcInfo.n_entries] = jday_utc_mjd;
-         const JDType jd_utc_mjd = DaysToJD(jday_utc_mjd, UTC_TIME, MJD_EPOCH);
-
-         Ut1MUtcInfo.jday_tai_mjd[Ut1MUtcInfo.n_entries] =
-             JDToDays(JDChangeSystem(TAI_TIME, jd_utc_mjd));
          Ut1MUtcInfo.jday_utc_mjd[Ut1MUtcInfo.n_entries] = jday_utc_mjd;
          Ut1MUtcInfo.ut1_m_utc[Ut1MUtcInfo.n_entries]    = ut1_m_utc;
 
@@ -145,37 +134,37 @@ static void init_eop_file()
 /**********************************************************************/
 /* Read ut1 - utc data and clampled cubic spline interpolation        */
 /* between stored data points                                         */
-double GetUt1UtcOffset(const double jday_tai_mjd)
+double GetUt1UtcOffset(const double jday_utc_mjd)
 {
    call_once(&eop_file_flag, init_eop_file);
    static int ind = 0;
 
    const int n_entries              = Ut1MUtcInfo.n_entries;
-   const double *const tbl_jday_tai = Ut1MUtcInfo.jday_tai_mjd;
+   const double *const tbl_jday_utc = Ut1MUtcInfo.jday_utc_mjd;
 
-   // if 'jday_tai_mjd' is outside the table, return the nearest extent
-   if (tbl_jday_tai[0] >= jday_tai_mjd)
+   // if 'jday_utc_mjd' is outside the table, return the nearest extent
+   if (tbl_jday_utc[0] >= jday_utc_mjd)
       return Ut1MUtcInfo.ut1_m_utc[0];
-   else if (jday_tai_mjd >= tbl_jday_tai[n_entries - 1])
+   else if (jday_utc_mjd >= tbl_jday_utc[n_entries - 1])
       return Ut1MUtcInfo.ut1_m_utc[n_entries - 1];
 
-   // From the above, 'jday_tai_mjd' will be in the open interval
+   // From the above, 'jday_utc_mjd' will be in the open interval
    //    (tbl_jday[0], tbl_jday[n_entries - 1])
    // thus, 'ind' will be on the closed interval
    //    [0, n_entries - 2]
-   ind = FindIndex(jday_tai_mjd, tbl_jday_tai, Ut1MUtcInfo.n_entries, ind);
+   ind = FindIndex(jday_utc_mjd, tbl_jday_utc, Ut1MUtcInfo.n_entries, ind);
 
    double yp[2];
 
    yp[0] =
-       CentralDifference(ind, n_entries, tbl_jday_tai, Ut1MUtcInfo.ut1_m_utc);
-   yp[1] = CentralDifference(ind + 1, n_entries, tbl_jday_tai,
+       CentralDifference(ind, n_entries, tbl_jday_utc, Ut1MUtcInfo.ut1_m_utc);
+   yp[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
                              Ut1MUtcInfo.ut1_m_utc);
 
    const double *const dut1 = &Ut1MUtcInfo.ut1_m_utc[ind];
-   const double *const X    = &tbl_jday_tai[ind];
+   const double *const X    = &tbl_jday_utc[ind];
 
-   return ClampedCubicSpline(jday_tai_mjd, X[0], X[1], dut1[0], dut1[1], yp[0],
+   return ClampedCubicSpline(jday_utc_mjd, X[0], X[1], dut1[0], dut1[1], yp[0],
                              yp[1]);
 }
 /**********************************************************************/
@@ -201,30 +190,11 @@ void GetPolarMotionData(const double jday_utc_mjd, double *const xp,
    *xp   = vals[0];
    *yp   = vals[1];
    *lodp = vals[2];
-
-   // const double *const T = &tbl_jday_utc[ind];
-
-   // double yprime[2];
-   // yprime[0] = CentralDifference(ind, n_entries, tbl_jday_utc, PM_Info.x);
-   // yprime[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
-   // PM_Info.x); *xp       = ClampedCubicSpline(jday_utc_mjd, T[0], T[1],
-   // PM_Info.x[ind],
-   //                                PM_Info.x[ind + 1], yp[0], yp[1]);
-   // yprime[0] = CentralDifference(ind, n_entries, tbl_jday_utc, PM_Info.y);
-   // yprime[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
-   // PM_Info.y); *yp       = ClampedCubicSpline(jday_utc_mjd, T[0], T[1],
-   // PM_Info.y[ind],
-   //                                PM_Info.y[ind + 1], yp[0], yp[1]);
-   // yprime[0] = CentralDifference(ind, n_entries, tbl_jday_utc, PM_Info.lod);
-   // yprime[1] = CentralDifference(ind + 1, n_entries, tbl_jday_utc,
-   // PM_Info.lod); *lodp     = ClampedCubicSpline(jday_utc_mjd, T[0], T[1],
-   // PM_Info.lod[ind],
-   //                                PM_Info.lod[ind + 1], yp[0], yp[1]);
 }
 /**********************************************************************/
 /* IAU Nutation data                                                  */
 
-// using IAU 1980 or IAU 1996
+// using IAU 1950, IAU 1980, or IAU 1996
 // default to IAU 1980
 #define N_NUT_MAX (263)
 
@@ -404,24 +374,25 @@ NutSolarLunarPosition_ArcSec(const enum NutEnum selection, const int order_i)
    static double zero_coeffs[5] = {0, 0, 0, 0, 0};
    switch (selection) {
       case NUT_ITRF_1950:
-      case NUT_ITRF_1980: {
-         static double coeffs_asec[NUT_ORDER_1980 + 1][5] = {
-             {485866.733, 1287099.804, 335778.877, 1072261.307, 450160.280},
-             {715922.633, 1292581.224, 295263.137, 1105601.328, -482890.539},
-             {31.310, -0.577, -13.257, -6.891, 7.455},
-             {0.064, -0.012, 0.011, 0.019, 0.008}};
-         if (order_i >= NUT_ORDER_1980 + 1)
-            return zero_coeffs;
-         return coeffs_asec[order_i];
-      } break;
+      case NUT_ITRF_1980:
+      // {
+      //    static double coeffs_asec[NUT_ORDER_1980 + 1][5] = {
+      //        {485866.733, 1287099.804, 335778.877, 1072261.307, 450160.280},
+      //        {715922.633, 1292581.224, 295263.137, 1105601.328, -482890.539},
+      //        {31.310, -0.577, -13.257, -6.891, 7.455},
+      //        {0.064, -0.012, 0.011, 0.019, 0.008}};
+      //    if (order_i >= NUT_ORDER_1980 + 1)
+      //       return zero_coeffs;
+      //    return coeffs_asec[order_i];
+      // } break;
       case NUT_ITRF_1996: {
          static double coeffs_asec[NUT_ORDER_1996 + 1][5] = {
              {485868.249036, 1287104.793048, 335779.526232, 1072260.703692,
               450160.398036},
              {715923.2178, 1292581.0481, 295262.8478, 1105601.2090,
-              -482890.2665},
+              -482890.5431},
              {31.8792, -0.5532, -12.7512, -6.3706, 7.4722},
-             {0.051635, -0.000136, 0.001037, 0.006593, 0.007702},
+             {0.051635, +0.000136, -0.001037, 0.006593, 0.007702},
              {-0.00024470, -0.00001149, 0.00000417, -0.00003169, -0.00005939}};
          if (order_i >= NUT_ORDER_1996 + 1)
             return zero_coeffs;
@@ -511,6 +482,18 @@ static mat3x3_t EarthNutationMatrix(const double TTDB, double *const dPsi,
    return NUT;
 }
 /**********************************************************************/
+double EarthERA(JDType jd)
+{
+   const double sidereal_add = 2.73781191135448e-03;
+   JDType jd_ut1_j2000       = JDChangeSystemEpoch(UT1_TIME, J2000_EPOCH, jd);
+   const double jd_frac_day =
+       jdsecond2double(jd_ut1_j2000.seconds) / SEC_PER_DAY;
+   return (0.7790572732640 + jd_ut1_j2000.whole_days +
+           sidereal_add * jd_ut1_j2000.whole_days + jd_frac_day +
+           sidereal_add * jd_frac_day) *
+          TWOPI;
+}
+/**********************************************************************/
 /* Greenwich Mean Sidereal Time at UT=0 (sec)                         */
 double GMAT_JD2GMST0(const JDType jd)
 {
@@ -531,11 +514,10 @@ double GMAT_JD2GMST0(const JDType jd)
 }
 /**********************************************************************/
 /* Greenwich Mean Sidereal Time (sec)                                 */
-double GMAT_JD2GMST(const JDType jd)
+double HiFiJD2GMST(const JDType jd)
 {
    const JDType jd_ut1_j2000 = JDChangeSystemEpoch(UT1_TIME, J2000_EPOCH, jd);
 
-   // TODO: should be ut1
    const JDType t0_jd_ut1_j2000 =
        JD_RAW(UT1_TIME, J2000_EPOCH, jd_ut1_j2000.whole_days,
               JDSECOND_RAW(SEC_PER_DAY / 2, 0, 1));
@@ -549,19 +531,10 @@ double GMAT_JD2GMST(const JDType jd)
 
    // 'Satellite Orbits: Models, Methods, Applications' by Montenbruck and Gill,
    // Eq (5.19)
-   // const double sec_GMST = (24110.54841 + 1.002737909350795 * sec_ut1day +
-   //                          (fmod(8640184.812866 * T0UT1, SEC_PER_DAY) +
-   //                           (9.3104e-02 - 6.2e-06 * TUT1) * TUT1 * TUT1));
-   const double sec_GMST =
-       (67310.548 + (fmod((3155760000.0 + 8640184.812866) * TUT1, 86400) +
-                     (9.3104e-02 - 6.2e-06 * TUT1) * TUT1 * TUT1));
+   const double sec_GMST = (24110.54841 + 1.002737909350795 * sec_ut1day +
+                            (fmod(8640184.812866 * T0UT1, SEC_PER_DAY) +
+                             (9.3104e-02 - 6.2e-06 * TUT1) * TUT1 * TUT1));
    const double rad_GMST = WrapTo2Pi((sec_GMST / secperdeg) * D2R);
-
-   // 'Astronomical Algorithms' by Meeus, Eq (12.4)
-   // const double deg_GMST =
-   //     (280.4661837 + (360.98564736629 * JDToDays(jd_ut1_j2000) +
-   //                     TUT1 * TUT1 * (3.87933E-4 - TUT1 / 3.871E7)));
-   // const double rad_GMST = WrapTo2Pi(deg_GMST * D2R);
    return rad_GMST;
 }
 /**********************************************************************/
@@ -582,7 +555,7 @@ static double JD2GAST(const JDType jd, const double dPsi,
           (2.64 * sin(longAscNodeLuna) + 6.3e-02 * sin(2.0 * longAscNodeLuna)) *
           1.0e-3 * A2R;
 
-   const double GMST = GMAT_JD2GMST(jd);
+   const double GMST = HiFiJD2GMST(jd);
    return GMST + eq_equinox; //- 1.18 * A2R;
    // return GMST - 1.16 * A2R;
 }
@@ -590,12 +563,21 @@ static double JD2GAST(const JDType jd, const double dPsi,
 __attribute__((const)) mat3x3_t EarthPolarMotion(const JDType jd);
 mat3x3_t EarthPolarMotion(const JDType jd)
 {
-   JDType jd_utc_mjd = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
+   JDType jd_utc_mjd  = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
+   JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    double x, y, lod = 0;
    GetPolarMotionData(JDToDays(jd_utc_mjd), &x, &y, &lod);
 
-   mat3x3_t PM = A2C(21, -x * A2R, -y * A2R, 0);
-   PM          = MxM(ROT2(-x * A2R), ROT1(-y * A2R));
+   double wobble_Chandler = 0.26; // arcseconds
+   double wobble_annual   = 0.12; // arcseconds
+   double sp_coeff =
+       wobble_Chandler * wobble_Chandler / 1.2 + wobble_annual * wobble_annual;
+
+   double sp =
+       -1.5e-03 * sp_coeff * (JDToDays(jd_tt_j2000) / JDDAY_PER_CENTURY);
+
+   //   PM = A2C(21, -x * A2R, -y * A2R, 0);
+   mat3x3_t PM = MxM(ROT3(sp * A2R), MxM(ROT2(-x * A2R), ROT1(-y * A2R)));
 
    return PM;
 }
@@ -620,7 +602,7 @@ pair_dbl_mat3x3_t HiFiEarthCWN(const JDType jd)
    mat3x3_t ST       = ROT3(*GAST);
    const mat3x3_t PM = EarthPolarMotion(jd_utc_j2000);
 
-   // *CWN = MxM(PM, MxM(ST, MxM(NUT, PREC)));
+   *CWN = MxM(PM, MxM(ST, MxM(NUT, PREC)));
    *CWN = MxM(ST, MxM(NUT, PREC));
    return out;
 }

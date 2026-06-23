@@ -32,10 +32,11 @@
 #define GOLDENRATIO    (1.61803398874989484820)     /* (1 + sqrt(5))/2 */
 #define SPEED_OF_LIGHT (299792458.0)                /* c */
 
-#define SEC_PER_SIDEREAL_DAY (86164.0905)
-#define SEC_PER_DAY          (86400)
-#define SEC_PER_HOUR         (3600)
-#define HOUR_PER_DAY         (24)
-#define SEC_PER_MINUTE       (60)
+#define DAY_PER_JULIAN_CENTURY (36525.0)
+#define SEC_PER_SIDEREAL_DAY   (86164.0905)
+#define SEC_PER_DAY            (86400)
+#define SEC_PER_HOUR           (3600)
+#define HOUR_PER_DAY           (24)
+#define SEC_PER_MINUTE         (60)
 
 #endif /* __42CONSTANTS_H__ */
