@@ -559,6 +559,11 @@ NutSolarLunarPosition_ArcSec(const enum NutEnum selection, const int order_i)
          return coeffs_asec[order_i];
       } break;
       case NUT_IAU_2000R06: {
+
+         // From United States Naval Observatory Circular No. 179 'The IAU
+         // Resolutions on Astronomical Reference Systems, Time Scales, and
+         // Earth Rotation Models: Explanation and Implementation'
+         // by George H. Kaplan, 2005, Oct 20
          static double
              coeffs_asec[NUT_ORDER_2000R06 + 1][NUT_N_PLANETS_2000R06] = {
                  {485868.249036, 1287104.79305, 335779.526232, 1072260.70369,

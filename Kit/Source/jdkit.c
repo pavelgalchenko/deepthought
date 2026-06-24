@@ -52,6 +52,8 @@ __attribute__((const)) static JDType _jd_utc2ut1(JDType tai_jd);
 __attribute__((const)) static JDType _jd_ut12utc(JDType ut1_jd);
 __attribute__((const)) static JDType _reduce_jd_no_seconds(JDType jd);
 __attribute__((const)) static JDType _reduce_jd(JDType jd);
+__attribute__((const)) static inline JDType
+_jd_inv_quad_int(JDType a, double fa, double fb, double fc);
 __attribute__((const)) static double _d_tcb_tdb(const double jd);
 
 #ifdef _USE_RATIONAL_
@@ -670,25 +672,30 @@ static JDType _jd_tdb2tcb(JDType tdb_jd)
    return JDAddSeconds(tdb_jd, d_tcb_tdb);
 }
 /**********************************************************************/
-#define TDB_COEFF1 (0.00165)
-#define TDB_COEFF2 (2.2e-05)
-#define M_E_OFFSET (357.5277233)
-#define M_E_COEFF1 (35999.05034)
 // Astronomical Almanac, 2012 // TODO: lookup, current reference is Vallado
 // Includes Jovian effects through dlambda_mean
-static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000,
-                                       double secs_tdb_j2000)
+static inline double _other_sec_dbl_d_tt_tdb(double secs_tt_j2000,
+                                             double secs_tdb_j2000)
 {
    const double T_TDB = secs_tdb_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
-   const double m_E   = fmod((M_E_OFFSET + (M_E_COEFF1 * T_TDB)), 360.0);
+   const double m_E   = fmod((357.5277233 + (35999.05034 * T_TDB)), 360.0);
 
    const double dlambda_mean =
        (246.11 + 0.90251792 * secs_tt_j2000 / SEC_PER_DAY) * D2R;
 
-   return TDB_COEFF1 * sin(m_E) + TDB_COEFF2 * sin(dlambda_mean);
+   return 1.65e-03 * sin(m_E) + 2.2e-05 * sin(dlambda_mean);
 }
-#undef M_E_OFFSET
-#undef M_E_COEFF1
+/**********************************************************************/
+// From GMAT mathspec
+static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000,
+                                       double secs_tdb_j2000
+                                       __attribute__((unused)))
+{
+   const double T_TT = secs_tt_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
+   const double m_E  = fmod((357.5277233 + (35999.05034 * T_TT)), 360.0);
+
+   return 1.658e-03 * sin(m_E) + 1.385e-05 * sin(2.0 * m_E);
+}
 /**********************************************************************/
 static double _tt2tdbF(const double secs_tdb_j2000, double params[1])
 {
@@ -704,9 +711,9 @@ static inline JDType _jd_tt2tdb(JDType tt_jd)
    const double secs_tt_j2000 = JDToSeconds(jd_tt_j2000);
    double params[1]           = {secs_tt_j2000};
 
-   const double max_width      = fabs(TDB_COEFF1 + TDB_COEFF2);
+   const double max_width      = 2.0e-03;
    const double secs_tdb_j2000 = BrentsMethod(
-       secs_tt_j2000 - 2.0 * max_width, secs_tt_j2000 + 2.0 * max_width,
+       secs_tt_j2000 - 1.2 * max_width, secs_tt_j2000 + 1.2 * max_width,
        __DBL_EPSILON__, &_tt2tdbF, params);
    JDType jd_tdb_out = JDFromSeconds(secs_tdb_j2000, TDB_TIME, J2000_EPOCH);
    jd_tdb_out        = JDChangeEpoch(tt_jd.epoch, jd_tdb_out);
@@ -730,9 +737,9 @@ static JDType _jd_tdb2tt(JDType tdb_jd)
    const double secs_tdb_j2000 = JDToSeconds(jd_tdb_j2000);
    double params[1]            = {secs_tdb_j2000};
 
-   const double max_width     = fabs(TDB_COEFF1 + TDB_COEFF2);
+   const double max_width     = 2.0e-03; // approximate
    const double secs_tt_j2000 = BrentsMethod(
-       secs_tdb_j2000 - 2.0 * max_width, secs_tdb_j2000 + 2.0 * max_width,
+       secs_tdb_j2000 - 1.2 * max_width, secs_tdb_j2000 + 1.2 * max_width,
        __DBL_EPSILON__, &_tdb2ttF, params);
    JDType jd_tt_out = JDFromSeconds(secs_tt_j2000, TT_TIME, J2000_EPOCH);
 
@@ -741,8 +748,6 @@ static JDType _jd_tdb2tt(JDType tdb_jd)
    jd_tt_out.system = TT_TIME; // just to make sure
    return jd_tt_out;
 }
-#undef TDB_COEFF1
-#undef TDB_COEFF2
 /**********************************************************************/
 static inline JDType _jd_tt2tai(const JDType jd_tt)
 {
@@ -809,7 +814,7 @@ static double _jd_ut12utcF(const JDType jd_utc, JDType params[1])
    return JDSubToSeconds(JDAddSeconds(jd_utc_mjd, dut1), jd_ut1_mjd);
 }
 // *******************
-static JDType _jd_inv_quad_int(JDType a, double fa, double fb, double fc)
+static inline JDType _jd_inv_quad_int(JDType a, double fa, double fb, double fc)
 {
    return JDMultDbl(a, fb * fc / ((fa - fb) * (fa - fc)));
 }
@@ -918,20 +923,23 @@ static JDType JDBrentsMethod(JDType a, JDType b, const JDType tol,
    return b;
 }
 /**********************************************************************/
+/* Convert JDType in UT1 to UTC                                       */
+/*    Using JDBrentsMethod to keep floating point error confined to   */
+/*    the fractional second term                                      */
 static JDType _jd_ut12utc(JDType ut1_jd)
 {
    JDType jd_ut1_mjd = JDChangeEpoch(MJD_EPOCH, ut1_jd);
    jd_ut1_mjd.system = UTC_TIME;
 
    JDType jd_utc_mjd = jd_ut1_mjd;
-   // Use Brent's Method to approximate inverse of _jd_tai2ut1
+   // Use Brent's Method to approximate inverse of _jd_utc2ut1
 
    // currently looking for correct tai around ut1, should be looking around
    // tai. take off leap seconds and look there
-   // JDType guess_jd_tai = JDChangeSystem(TAI_TIME, jd_utc_mjd);
    const double dut1 = GetUt1UtcOffset(JDToDays(jd_utc_mjd));
 
    JDType params[1] = {jd_ut1_mjd};
+
    // get interval
    double lowertest, uppertest;
    JDType lower, upper;
@@ -951,7 +959,7 @@ static JDType _jd_ut12utc(JDType ut1_jd)
 
    JDType jd_utc_out = JDChangeEpoch(ut1_jd.epoch, jd_utc_mjd);
 
-   jd_utc_out.system = TAI_TIME; // just to make sure
+   jd_utc_out.system = UTC_TIME; // just to make sure
    return jd_utc_out;
 }
 /**********************************************************************/

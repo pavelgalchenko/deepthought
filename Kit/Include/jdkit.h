@@ -116,6 +116,7 @@ typedef RationalLL JDSecondLL;
 #define JDSecMult RationalMult
 #else
 typedef struct JDSecond_s {
+   // this approach caps the error at __DBL_EPSILON__ = 2^(-52)
    Rat_Long whole;
    double frac_sec;
 } JDSecond;

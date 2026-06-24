@@ -12,7 +12,7 @@ Orbit:
     Frame: Inertial
     Units: m
     Position: [-4292653.41, 955168.47, 5139356.57] #[m]
-    Velocity: [109.649663, -7527.726490, 1484.521489] #[m/sec]
+    Velocity: [] #[m/sec]
 Formation:
   Fixed Frame: N
   Euler Angles:
