@@ -127,13 +127,13 @@ typedef struct JDSecondLL_s {
    ((JDSecond){.whole    = (whl),                                              \
                .frac_sec = (((double)(frac)) / ((double)(den)))})
 #define JDSECOND_NRED(whl, frac, den)                                          \
-   JDSECOND_RAW((whl) + ((long)(frac)) * (den), ((frac) - ((long)(frac))),     \
+   JDSECOND_RAW((whl) + ((long)(frac)) / (den), ((frac) - ((long)(frac))),     \
                 (den))
 #define JDSECONDLL_RAW(whl, frac, den)                                         \
    ((JDSecondLL){.whole    = (whl),                                            \
                  .frac_sec = (((double)(frac)) / ((double)(den)))})
 #define JDSECONDLL_NRED(whl, frac, den)                                        \
-   JDSECONDLL_RAW((whl) + ((long)(frac)) * (den), ((frac) - ((long)(frac))),   \
+   JDSECONDLL_RAW((whl) + ((long)(frac)) / (den), ((frac) - ((long)(frac))),   \
                   (den))
 
 #define JDSECOND_STR_LEN        (64)

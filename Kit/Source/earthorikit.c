@@ -15,11 +15,12 @@
 #include "42constants.h"
 #include "dcmkit.h"
 #include "defineskit.h"
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#define _GNU_SOURCE
+#include <math.h>
 
 /**********************************************************************/
 /* Load Earth Orientation Parameter data                              */
@@ -196,32 +197,53 @@ void GetPolarMotionData(const double jday_utc_mjd, double *const xp,
 
 // using IAU 1950, IAU 1980, or IAU 1996
 // default to IAU 1980
-#define N_NUT_MAX (263)
+#define N_NUT_MAX (1320)
 
 #define NUT_N_1950            (69)
 #define NUT_ORDER_1950        (3)
+#define NUT_N_PLANETS_1950    (5)
 #define NUT_MULT_1950         (1.0e-04) // arcseconds
 #define NUT_FIRST_PHRASE_1950 ("1950 IAU")
 
 #define NUT_N_1980            (106)
 #define NUT_ORDER_1980        (3)
+#define NUT_N_PLANETS_1980    (5)
 #define NUT_MULT_1980         (1.0e-04) // arcseconds
 #define NUT_FIRST_PHRASE_1980 ("1980 IAU")
 
 #define NUT_N_1996            (263)
 #define NUT_ORDER_1996        (4)
+#define NUT_N_PLANETS_1996    (5)
 #define NUT_MULT_1996         (1.0e-07) // arcseconds
 #define NUT_FIRST_PHRASE_1996 ("1996 IAU")
 
+#define NUT_N_2000            (106)
+#define NUT_ORDER_2000        (4)
+#define NUT_N_PLANETS_2000    (5)
+#define NUT_MULT_2000         (1.0e-04) // arcseconds
+#define NUT_FIRST_PHRASE_2000 ("2000 IAU")
+
+// IAU2000_R06 adapted from United States Naval Observatory Circular No. 179
+// 'The IAU Resolutions on Astronomical Reference Systems, Time Scales, and
+// Earth Rotation Models: Explanation and Implementation' by George H. Kaplan,
+// 2005, Oct 20
+#define NUT_N_2000R06            (1320)
+#define NUT_ORDER_2000R06        (4)
+#define NUT_N_PLANETS_2000R06    (14)
+#define NUT_MULT_2000R06         (1.0e-06) // arcseconds
+#define NUT_FIRST_PHRASE_2000R06 ("2000R06 IAU")
+
 struct NutEntry {
-   int a[5];
+   char a[NUT_N_PLANETS_2000R06];
    double A;
    double B;
    double C;
    double D;
    double E;
    double F;
-   int index;
+   double G;
+   double H;
+   char index;
 };
 
 static struct NutInfo {
@@ -229,13 +251,16 @@ static struct NutInfo {
    double mult;
    char first_phrase[10];
    int order;
-   struct NutEntry entries[N_NUT_MAX];
+   int n_planets;
+   struct NutEntry *entries;
 } Nut_Info;
 
 // Default to using ITRF 1980 data
 // static const enum NutEnum NutSelection = NUT_ITRF_1950;
 static const enum NutEnum NutSelection = NUT_ITRF_1980;
 // static const enum NutEnum NutSelection = NUT_ITRF_1996;
+// static const enum NutEnum NutSelection = NUT_ITRF_2000;
+// static const enum NutEnum NutSelection = NUT_IAU_2000R06;
 
 static __once_flag iau_file_flag = __ONCE_FLAG_INIT;
 static void init_iau_file()
@@ -250,23 +275,41 @@ static void init_iau_file()
          Nut_Info.n_entries = NUT_N_1950;
          Nut_Info.mult      = NUT_MULT_1950;
          Nut_Info.order     = NUT_ORDER_1950;
+         Nut_Info.n_planets = NUT_N_PLANETS_1950;
          strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_1950);
          break;
       case NUT_ITRF_1980:
          Nut_Info.n_entries = NUT_N_1980;
          Nut_Info.mult      = NUT_MULT_1980;
          Nut_Info.order     = NUT_ORDER_1980;
+         Nut_Info.n_planets = NUT_N_PLANETS_1980;
          strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_1980);
          break;
       case NUT_ITRF_1996:
          Nut_Info.n_entries = NUT_N_1996;
          Nut_Info.mult      = NUT_MULT_1996;
          Nut_Info.order     = NUT_ORDER_1996;
+         Nut_Info.n_planets = NUT_N_PLANETS_1996;
          strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_1996);
+         break;
+      case NUT_ITRF_2000:
+         Nut_Info.n_entries = NUT_N_2000;
+         Nut_Info.mult      = NUT_MULT_2000;
+         Nut_Info.order     = NUT_ORDER_2000;
+         Nut_Info.n_planets = NUT_N_PLANETS_2000;
+         strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_2000);
+         break;
+      case NUT_IAU_2000R06:
+         Nut_Info.n_entries = NUT_N_2000R06;
+         Nut_Info.mult      = NUT_MULT_2000R06;
+         Nut_Info.order     = NUT_ORDER_2000R06;
+         Nut_Info.n_planets = NUT_N_PLANETS_2000R06;
+         strcpy(Nut_Info.first_phrase, NUT_FIRST_PHRASE_2000R06);
          break;
       default:
          break;
    }
+   Nut_Info.entries = calloc(Nut_Info.n_entries, sizeof(struct NutEntry));
 
    FILE *file = fopen(f_path, "rt");
    if (file == NULL) {
@@ -299,7 +342,10 @@ static void init_iau_file()
               f_path);
       exit(EXIT_FAILURE);
    }
-   for (int i = 0; i < Nut_Info.n_entries; i++) {
+   // start at end since list is sorted with descending A coefficients
+   // forward iteration later will sum from smallest coeffs to largest
+   struct NutEntry *entry = &Nut_Info.entries[Nut_Info.n_entries - 1];
+   for (; entry >= Nut_Info.entries; entry--) {
       if (fgets(line, 512, file) == NULL) {
          fprintf(stderr,
                  "ITRF nutation file '%s' ended before reading all expected "
@@ -307,60 +353,167 @@ static void init_iau_file()
                  f_path);
          exit(EXIT_FAILURE);
       }
-      struct NutEntry *entry = &Nut_Info.entries[i];
       switch (NutSelection) {
-         case NUT_ITRF_1950: // no E or F terms
-         case NUT_ITRF_1980: // no E or F terms
-            sscanf(line, "%i %i %i %i %i %lf %lf %lf %lf %i", &entry->a[0],
-                   &entry->a[1], &entry->a[2], &entry->a[3], &entry->a[4],
-                   &entry->A, &entry->B, &entry->C, &entry->D, &entry->index);
+         case NUT_ITRF_1950: // no E, F, G, or H terms
+         case NUT_ITRF_1980: // no E, F, G, or H terms
+         default:
+            sscanf(line, "%hhi %hhi %hhi %hhi %hhi %lf %lf %lf %lf %hhi",
+                   &entry->a[0], &entry->a[1], &entry->a[2], &entry->a[3],
+                   &entry->a[4], &entry->A, &entry->B, &entry->C, &entry->D,
+                   &entry->index);
             entry->E = 0;
             entry->F = 0;
+            entry->G = 0;
+            entry->H = 0;
             break;
-         default:
-            sscanf(line, "%i %i %i %i %i %lf %lf %lf %lf %lf %lf %i",
+         case NUT_ITRF_1996: // no G or H terms
+         case NUT_ITRF_2000: // no G or H terms
+            sscanf(line,
+                   "%hhi %hhi %hhi %hhi %hhi %lf %lf %lf %lf %lf %lf %hhi",
                    &entry->a[0], &entry->a[1], &entry->a[2], &entry->a[3],
                    &entry->a[4], &entry->A, &entry->B, &entry->C, &entry->D,
                    &entry->E, &entry->F, &entry->index);
+            entry->G = 0;
+            entry->H = 0;
+            break;
+         case NUT_IAU_2000R06:
+            sscanf(line,
+                   "%hhi %hhi %hhi %hhi %hhi %hhi %hhi %hhi %hhi %hhi %hhi "
+                   "%hhi %hhi %hhi %lf %lf %lf %lf %lf %lf %lf %lf %hhi",
+                   &entry->a[0], &entry->a[1], &entry->a[2], &entry->a[3],
+                   &entry->a[4], &entry->a[5], &entry->a[6], &entry->a[7],
+                   &entry->a[8], &entry->a[9], &entry->a[10], &entry->a[11],
+                   &entry->a[12], &entry->a[13], &entry->A, &entry->B,
+                   &entry->C, &entry->D, &entry->E, &entry->F, &entry->G,
+                   &entry->H, &entry->index);
             break;
       }
    }
    fclose(file);
 }
 /**********************************************************************/
+__attribute__((const)) static inline mat3x3_t EarthJ2000ICRSBiasMatrix()
+{
+   const double da0 = (-14.6 * 1e-03 / D2A) * D2R;
+   const double e0  = (-16.6170 * 1e-03 / D2A) * D2R;
+   const double n0  = (-6.8192 * 1e-03 / D2A) * D2R;
+
+   const double da02 = da0 * da0;
+   const double e02  = e0 * e0;
+   const double n02  = n0 * n0;
+
+   // approximation of MxM(MxM(ROT1(-n0), ROT2(e0)), ROT3(da0))
+   return (mat3x3_t){
+       .mat = {{1.0 - 0.5 * (da02 + e02), da0, -e0},
+               {-da0 - n0 * e0, 1.0 - 0.5 * (da02 + n02), -n0},
+               {e0 - n0 * da0, n0 + e0 * da0, 1.0 - 0.5 * (n02 + e02)}}};
+}
+/**********************************************************************/
 __attribute__((const)) static mat3x3_t EarthPrecessionMatrix(const double TTDB);
 static mat3x3_t EarthPrecessionMatrix(const double TTDB)
 {
-   const double zeta  = (2306.2181 + (0.30188 + 0.017998 * TTDB) * TTDB) * TTDB;
-   const double Theta = (2004.3109 - (0.42665 + 0.041833 * TTDB) * TTDB) * TTDB;
-   const double z     = zeta + (0.7928 + 0.000205 * TTDB) * TTDB * TTDB;
+   mat3x3_t PREC = MAT3X3_EYE;
+   switch (NutSelection) {
+      case NUT_ITRF_1950:
+      case NUT_ITRF_1980:
+      case NUT_ITRF_1996: {
+         const double zeta =
+             (2306.2181 + (0.30188 + 0.017998 * TTDB) * TTDB) * TTDB;
+         const double Theta =
+             (2004.3109 - (0.42665 + 0.041833 * TTDB) * TTDB) * TTDB;
+         const double z = zeta + (0.7928 + 0.000205 * TTDB) * TTDB * TTDB;
 
-   mat3x3_t PREC = A2C(323, -z * A2R, Theta * A2R, -zeta * A2R);
-   PREC = MxM(ROT3(-z * A2R), MxM(ROT2(Theta * A2R), ROT3(-zeta * A2R)));
+         const double S1 = sin(-zeta * A2R), C1 = cos(-zeta * A2R);
+         const double S2 = sin(Theta * A2R), C2 = cos(Theta * A2R);
+         const double S3 = sin(-z * A2R), C3 = cos(-z * A2R);
+
+         //  PREC = A2C(323, -z * A2R, Theta * A2R, -zeta * A2R);
+         PREC.x = (vec3_t){.x = C1 * C2 * C3 - S1 * S3,
+                           .y = C1 * S3 + C2 * C3 * S1,
+                           .z = -C3 * S2};
+         PREC.y = (vec3_t){.x = -C1 * C2 * S3 - C3 * S1,
+                           .y = C1 * C3 - C2 * S1 * S3,
+                           .z = S2 * S3};
+         PREC.z = (vec3_t){.x = C1 * S2, .y = S1 * S2, .z = C2};
+      } break;
+      case NUT_ITRF_2000:
+      case NUT_IAU_2000R06: {
+         const double eps0 = 84381.406 * A2R;
+         const double psia =
+             ((((-0.0000000951 * TTDB + 0.000132851) * TTDB - 0.00114045) *
+                   TTDB -
+               1.0790069) *
+                  TTDB +
+              5038.481507) *
+             TTDB * A2R;
+         const double omga =
+             ((((0.0000003337 * TTDB - 0.000000467) * TTDB - 0.00772503) *
+                   TTDB +
+               0.0512623) *
+                  TTDB -
+              0.025754) *
+                 TTDB * A2R +
+             eps0;
+         const double chia =
+             ((((-0.0000000560 * TTDB + 0.000170663) * TTDB - 0.00121197) *
+                   TTDB -
+               2.3814292) *
+                  TTDB +
+              10.556403) *
+             TTDB * A2R;
+         const double S1 = sin(eps0), C1 = cos(eps0);
+         const double S2 = sin(-psia), C2 = cos(-psia);
+         const double S3 = sin(-omga), C3 = cos(-omga);
+         const double S4 = sin(chia), C4 = cos(chia);
+
+         PREC.x = (vec3_t){.x = C2 * C4 - C3 * S2 * S4,
+                           .y = C1 * (C2 * C3 * S4 + C4 * S2) - S1 * S3 * S4,
+                           .z = C1 * S3 * S4 + S1 * (C2 * C3 * S4 + C4 * S2)};
+         PREC.y = (vec3_t){.x = -C2 * S4 - C3 * C4 * S2,
+                           .y = C1 * (C2 * C3 * C4 - S2 * S4) - C4 * S1 * S3,
+                           .z = C1 * C4 * S3 + S1 * (C2 * C3 * C4 - S2 * S4)};
+         PREC.z = (vec3_t){.x = S2 * S3,
+                           .y = -C1 * C2 * S3 - C3 * S1,
+                           .z = C1 * C3 - C2 * S1 * S3};
+      } break;
+      default:
+         break;
+   }
 
    return PREC;
 }
 /**********************************************************************/
 /* The coefficients in each row are in the order:                     */
-/*    meanAnomLuna                                                    */
-/*    meanAnomSol                                                     */
-/*    argLatLuna                                                      */
-/*    meanElongSol                                                    */
-/*    longAscNodeLuna                                                 */
+/*    1 - meanAnomLuna                                                */
+/*    2 - meanAnomSol                                                 */
+/*    3 - argLatLuna                                                  */
+/*    4 - meanElongSol                                                */
+/*    5 - longAscNodeLuna                                             */
+/*    6 - meanEclipLongMercury                                        */
+/*    7 - meanEclipLongVenus                                          */
+/*    8 - meanEclipLongEarth                                          */
+/*    9 - meanEclipLongMars                                           */
+/*   10 - meanEclipLongJupiter                                        */
+/*   11 - meanEclipLongSaturn                                         */
+/*   12 - meanEclipLongUranus                                         */
+/*   13 - meanEclipLongNeptune                                        */
+/*   14 - generalPrecLong                                             */
+/* NOTE: elements 6-14 are used (non-zero) only for NUT_IAU_2000R06    */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"
 __attribute__((const)) static inline const double *const
 NutSolarLunarPosition_R_Rot(const enum NutEnum selection)
 {
-   static double zero_rs[5] = {0, 0, 0, 0, 0};
+   static double zero_rs[NUT_N_PLANETS_2000R06] = {0, 0, 0, 0, 0, 0, 0,
+                                                   0, 0, 0, 0, 0, 0, 0};
    switch (selection) {
       case NUT_ITRF_1950:
-      case NUT_ITRF_1980: {
-         static double r_rot[5] = {1325, 99, 1342, 1236, -5};
-         return r_rot;
-      } break;
-      case NUT_ITRF_1996: {
-         static double r_rot[5] = {1325, 99, 1342, 1236, -5};
+      case NUT_ITRF_1980:
+      case NUT_ITRF_1996:
+      case NUT_ITRF_2000:
+      case NUT_IAU_2000R06: {
+         static double r_rot[NUT_N_PLANETS_2000R06] = {
+             1325, 99, 1342, 1236, -5, 0, 0, 0, 0, 0, 0, 0, 0, 0};
          return r_rot;
       } break;
       default:
@@ -371,30 +524,58 @@ NutSolarLunarPosition_R_Rot(const enum NutEnum selection)
 __attribute__((const)) static inline const double *const
 NutSolarLunarPosition_ArcSec(const enum NutEnum selection, const int order_i)
 {
-   static double zero_coeffs[5] = {0, 0, 0, 0, 0};
+   static double zero_coeffs[NUT_N_PLANETS_2000R06] = {0, 0, 0, 0, 0, 0, 0,
+                                                       0, 0, 0, 0, 0, 0, 0};
    switch (selection) {
       case NUT_ITRF_1950:
-      case NUT_ITRF_1980:
-      // {
-      //    static double coeffs_asec[NUT_ORDER_1980 + 1][5] = {
-      //        {485866.733, 1287099.804, 335778.877, 1072261.307, 450160.280},
-      //        {715922.633, 1292581.224, 295263.137, 1105601.328, -482890.539},
-      //        {31.310, -0.577, -13.257, -6.891, 7.455},
-      //        {0.064, -0.012, 0.011, 0.019, 0.008}};
-      //    if (order_i >= NUT_ORDER_1980 + 1)
-      //       return zero_coeffs;
-      //    return coeffs_asec[order_i];
-      // } break;
-      case NUT_ITRF_1996: {
-         static double coeffs_asec[NUT_ORDER_1996 + 1][5] = {
-             {485868.249036, 1287104.793048, 335779.526232, 1072260.703692,
-              450160.398036},
-             {715923.2178, 1292581.0481, 295262.8478, 1105601.2090,
-              -482890.5431},
-             {31.8792, -0.5532, -12.7512, -6.3706, 7.4722},
-             {0.051635, +0.000136, -0.001037, 0.006593, 0.007702},
-             {-0.00024470, -0.00001149, 0.00000417, -0.00003169, -0.00005939}};
+      case NUT_ITRF_1980: {
+         static double coeffs_asec[NUT_ORDER_1980 + 1][NUT_N_PLANETS_2000R06] =
+             {{485866.733, 1287099.804, 335778.877, 1072261.307, 450160.280, 0,
+               0, 0, 0, 0, 0, 0, 0, 0},
+              {715922.633, 1292581.224, 295263.137, 1105601.328, -482890.539, 0,
+               0, 0, 0, 0, 0, 0, 0, 0},
+              {31.310, -0.577, -13.257, -6.891, 7.455, 0, 0, 0, 0, 0, 0, 0, 0,
+               0},
+              {0.064, -0.012, 0.011, 0.019, 0.008, 0, 0, 0, 0, 0, 0, 0, 0, 0}};
+         if (order_i >= NUT_ORDER_1980 + 1)
+            return zero_coeffs;
+         return coeffs_asec[order_i];
+      } break;
+      case NUT_ITRF_1996:
+      case NUT_ITRF_2000: {
+         static double coeffs_asec[NUT_ORDER_1996 + 1][NUT_N_PLANETS_2000R06] =
+             {{485868.249036, 1287104.793048, 335779.526232, 1072260.703692,
+               450160.398036, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+              {715923.2178, 1292581.0481, 295262.8478, 1105601.2090,
+               -482890.5431, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+              {31.8792, -0.5532, -12.7512, -6.3706, 7.4722, 0, 0, 0, 0, 0, 0, 0,
+               0, 0},
+              {0.051635, 0.000136, -0.001037, 0.006593, 0.007702, 0, 0, 0, 0, 0,
+               0, 0, 0, 0},
+              {-0.00024470, -0.00001149, 0.00000417, -0.00003169, -0.00005939,
+               0, 0, 0, 0, 0, 0, 0, 0, 0}};
          if (order_i >= NUT_ORDER_1996 + 1)
+            return zero_coeffs;
+         return coeffs_asec[order_i];
+      } break;
+      case NUT_IAU_2000R06: {
+         static double
+             coeffs_asec[NUT_ORDER_2000R06 + 1][NUT_N_PLANETS_2000R06] = {
+                 {485868.249036, 1287104.79305, 335779.526232, 1072260.70369,
+                  450160.398036, 908103.259872, 655127.283060, 361679.244588,
+                  1279558.798488, 123665.467464, 180278.799480, 1130598.018396,
+                  1095655.195728, 0},
+                 {715923.2178, 1292581.0481, 295262.8478, 1105601.209,
+                  -482890.5431, 538101628.688982, 210664136.433548,
+                  129597742.283429, 68905077.493988, 10925660.377991,
+                  4399609.855732, 1542481.193933, 786550.320744, 5028.82},
+                 {31.8792, -0.5532, -12.7512, -6.3706, 7.4722, 0, 0, 0, 0, 0, 0,
+                  0, 0, 1.112022},
+                 {51635e-02, 1.36e-04, -1.037e-03, 6.593e-03, 7.702e-03, 0, 0,
+                  0, 0, 0, 0, 0, 0, 0},
+                 {-2.4470e-04, -1.149e-05, 4.17e-06, -3.169e-05, -5.939e-05, 0,
+                  0, 0, 0, 0, 0, 0, 0, 0}};
+         if (order_i >= NUT_ORDER_2000R06 + 1)
             return zero_coeffs;
          return coeffs_asec[order_i];
       } break;
@@ -411,17 +592,40 @@ static mat3x3_t EarthNutationMatrix(const double TTDB, double *const dPsi,
 {
    call_once(&iau_file_flag, init_iau_file);
 
-   double nut_angles[5] = {0};
+   double nut_angles[NUT_N_PLANETS_2000R06] = {0};
 
-   /* Mean anomaly of the Moon's orbit (rad)                            */
+   /* // Descriptions of each index
+   // .. Mean anomaly of the Moon's orbit (rad)
    double *const meanAnomLuna = &nut_angles[0];
-   /* Mean anomaly of the Sun's orbit (rad)                             */
+   // .. Mean anomaly of the Sun's orbit (rad)
    double *const meanAnomSol = &nut_angles[1];
-   /* Mean argument of latitude of the Moon's orbit (rad)                */
+   // .. Mean argument of latitude of the Moon's orbit (rad)
    double *const argLatLuna = &nut_angles[2];
-   /* Difference between the mean longitude of the Sun and Moon (rad)    */
+   // .. Difference between the mean longitude of the Sun and Moon (rad)
    double *const meanElongSol = &nut_angles[3];
-   /* Mean longitude of the ascending node of the Moon's orbit (rad)    */
+
+   // .. Mean Heliocentric Ecliptic Longitude of Mercury (rad)
+   double *const meanEclipLongMercury = &nut_angles[5];
+   // .. Mean Heliocentric Ecliptic Longitude of Venus (rad)
+   double *const meanEclipLongVenus = &nut_angles[6];
+   // .. Mean Heliocentric Ecliptic Longitude of Earth (rad)
+   double *const meanEclipLongEarth = &nut_angles[7];
+   // .. Mean Heliocentric Ecliptic Longitude of Mars (rad)
+   double *const meanEclipLongMars = &nut_angles[8];
+   // .. Mean Heliocentric Ecliptic Longitude of Jupiter (rad)
+   double *const meanEclipLongJupiter = &nut_angles[9];
+   // .. Mean Heliocentric Ecliptic Longitude of Saturn (rad)
+   double *const meanEclipLongSaturn = &nut_angles[10];
+   // .. Mean Heliocentric Ecliptic Longitude of Uranus (rad)
+   double *const meanEclipLongUranus = &nut_angles[11];
+   // .. Mean Heliocentric Ecliptic Longitude of Neptune (rad)
+   double *const meanEclipLongNeptune = &nut_angles[12];
+
+   // .. Approximation to the General Precession in Longitude (rad)
+   double *const generalPrecLong = &nut_angles[13];
+   */
+
+   // .. Mean longitude of the ascending node of the Moon's orbit (rad)
    double *const longAscNodeLuna = &nut_angles[4];
 
    // .. Accumulate the various Sun & Moon position angles
@@ -430,14 +634,14 @@ static mat3x3_t EarthNutationMatrix(const double TTDB, double *const dPsi,
       const double *const coeffs_asec =
           NutSolarLunarPosition_ArcSec(NutSelection, order_i);
 
-      for (int j = 0; j < 5; j++)
+      for (int j = 0; j < Nut_Info.n_planets; j++)
          nut_angles[j] += fmod(x * coeffs_asec[j], 360 * D2A);
       x *= TTDB;
    }
 
-   // .. Accumulate the constant and complete rotation terms, then map to 2 pi
+   // .. Accumulate the complete rotation terms, then map to 360 deg
    const double *const r_rot = NutSolarLunarPosition_R_Rot(NutSelection);
-   for (int j = 0; j < 5; j++) {
+   for (int j = 0; j < Nut_Info.n_planets; j++) {
       nut_angles[j] += fmod(r_rot[j] * TTDB, 1.0) * 360 * D2A;
       nut_angles[j]  = fmod(nut_angles[j], 360 * D2A);
    }
@@ -445,41 +649,103 @@ static mat3x3_t EarthNutationMatrix(const double TTDB, double *const dPsi,
    *longAscNodeLuna_ret = *longAscNodeLuna * A2R;
 
    /* Mean Obliquity of the ecliptic at J2000 epoch (arcsec)                */
-   const double Epsbar =
-       (84381.448 + (-46.8150 + (-0.00059 + 0.001813 * TTDB) * TTDB) * TTDB) *
-       A2R;
+   double Epsbar = 0;
 
-   *dPsi       = 0;
-   double dEps = 0;
-   // start at end since list is sorted with descending A coefficients
-   struct NutEntry *entry = &Nut_Info.entries[Nut_Info.n_entries - 1];
-   for (; entry >= Nut_Info.entries; entry--) {
-      const double apNut =
-          (entry->a[0] * (*meanAnomLuna) + entry->a[1] * (*meanAnomSol) +
-           entry->a[2] * (*argLatLuna) + entry->a[3] * (*meanElongSol) +
-           entry->a[4] * (*longAscNodeLuna)) *
-          A2R;
-      const double cosAp = cos(apNut);
-      const double sinAp = sin(apNut);
+   switch (NutSelection) {
+      case NUT_ITRF_1950:
+      case NUT_ITRF_1980:
+      case NUT_ITRF_1996: {
+         Epsbar = (84381.448 +
+                   (-46.8150 + (-0.00059 + 0.001813 * TTDB) * TTDB) * TTDB) *
+                  A2R;
+      } break;
+      case NUT_ITRF_2000:
+      case NUT_IAU_2000R06: {
+         const double eps0 = 84381.406;
+         Epsbar =
+             (((((4.34e-08 * TTDB + 5.76e-7) * TTDB + 2.00340e-03) * TTDB) -
+               1.831e-4) *
+                  TTDB -
+              46.836769) *
+                 TTDB +
+             eps0;
+         Epsbar *= A2R;
+      } break;
+      default:
+         break;
+   }
 
-      if (NutSelection != NUT_ITRF_1980) {
-         *dPsi += (entry->A + entry->B * TTDB) * sinAp + entry->E * cosAp;
-         dEps  += (entry->C + entry->D * TTDB) * cosAp + entry->F * sinAp;
-      }
-      else {
-         *dPsi += (entry->A + entry->B * TTDB) * sinAp;
-         dEps  += (entry->C + entry->D * TTDB) * cosAp;
+   *dPsi          = 0;
+   double dPsidot = 0;
+
+   double dEps    = 0;
+   double dEpsdot = 0;
+
+   struct NutEntry *entry = Nut_Info.entries;
+   for (; entry <= &Nut_Info.entries[Nut_Info.n_entries - 1]; entry++) {
+      double apNut = 0;
+      for (int i = 0; i < Nut_Info.n_planets; i++)
+         apNut += entry->a[i] * nut_angles[i];
+      apNut            *= A2R;
+      const double CAp  = cos(apNut);
+      const double SAp  = sin(apNut);
+
+      switch (NutSelection) {
+         case NUT_ITRF_1950: // no E, F, G, or H terms
+         case NUT_ITRF_1980: // no E, F, G, or H terms
+         default:
+            *dPsi   += entry->A * SAp;
+            dPsidot += entry->B * SAp;
+            dEps    += entry->C * CAp;
+            dEpsdot += entry->D * CAp;
+            break;
+         case NUT_ITRF_1996: // no G or H terms
+         case NUT_ITRF_2000: // no G or H terms
+            *dPsi   += entry->A * SAp + entry->E * CAp;
+            dPsidot += entry->B * SAp;
+            dEps    += entry->C * CAp + entry->F * SAp;
+            dEpsdot += entry->D * CAp;
+            break;
+         case NUT_IAU_2000R06:
+            *dPsi   += entry->A * SAp + entry->E * CAp;
+            dPsidot += entry->B * SAp + entry->G * CAp;
+            dEps    += entry->C * CAp + entry->F * SAp;
+            dEpsdot += entry->D * CAp + entry->H * SAp;
+            break;
       }
    }
+   *dPsi += dPsidot * TTDB;
+   dEps  += dEpsdot * TTDB;
    *dPsi *= A2R * Nut_Info.mult;
    dEps  *= A2R * Nut_Info.mult;
 
    const double Eps = Epsbar + dEps;
    *cosEps          = cos(Epsbar);
-   mat3x3_t NUT     = A2C(131, -Eps, -*dPsi, Epsbar);
 
-   NUT = MxM(ROT1(-Eps), MxM(ROT3(-*dPsi), ROT1(Epsbar)));
+   const double S1 = sin(Epsbar), C1 = cos(Epsbar);
+   const double S2 = sin(-*dPsi), C2 = cos(-*dPsi);
+   const double S3 = sin(-Eps), C3 = cos(-Eps);
+
+   mat3x3_t NUT = MAT3X3_EYE;
+
+   NUT.x = (vec3_t){.x = C2, .y = C1 * S2, .z = S1 * S2};
+   NUT.y = (vec3_t){
+       .x = -C3 * S2, .y = C1 * C2 * C3 - S1 * S3, .z = C1 * S3 + C2 * C3 * S1};
+   NUT.z = (vec3_t){
+       .x = S2 * S3, .y = -C1 * C2 * S3 - C3 * S1, .z = C1 * C3 - C2 * S1 * S3};
    return NUT;
+}
+/**********************************************************************/
+static mat3x3_t EarthNutPrecMatrix(const double TTDB, double *const dPsi,
+                                   double *const longAscNodeLuna,
+                                   double *const cosEps)
+{
+   const mat3x3_t PREC = EarthPrecessionMatrix(TTDB);
+   const mat3x3_t NUT =
+       EarthNutationMatrix(TTDB, dPsi, longAscNodeLuna, cosEps);
+   const mat3x3_t B = EarthJ2000ICRSBiasMatrix();
+
+   return MxM(MxM(NUT, PREC), B);
 }
 /**********************************************************************/
 double EarthERA(JDType jd)
@@ -492,25 +758,6 @@ double EarthERA(JDType jd)
            sidereal_add * jd_ut1_j2000.whole_days + jd_frac_day +
            sidereal_add * jd_frac_day) *
           TWOPI;
-}
-/**********************************************************************/
-/* Greenwich Mean Sidereal Time at UT=0 (sec)                         */
-double GMAT_JD2GMST0(const JDType jd)
-{
-   const JDType jd_ut1_j2000 = JDChangeSystemEpoch(UT1_TIME, J2000_EPOCH, jd);
-
-   const double T0UT1 =
-       (floor(JDToDays(jd_ut1_j2000)) + 0.5) / JDDAY_PER_CENTURY;
-
-   // NOTE: 1 sec = 15"; 1 hour (= 15 deg) = 54000"
-   const double hr2deg  = 15.0;
-   const double sec2deg = hr2deg / (SEC_PER_HOUR);
-
-   const double out =
-       (24110.54841 +
-        (8640184.812866 + (0.093104 - 0.0000062 * T0UT1) * T0UT1) * T0UT1) *
-       sec2deg;
-   return fmod(out, 360);
 }
 /**********************************************************************/
 /* Greenwich Mean Sidereal Time (sec)                                 */
@@ -556,30 +803,25 @@ static double JD2GAST(const JDType jd, const double dPsi,
           1.0e-3 * A2R;
 
    const double GMST = HiFiJD2GMST(jd);
-   return GMST + eq_equinox; //- 1.18 * A2R;
-   // return GMST - 1.16 * A2R;
+   return GMST + eq_equinox;
 }
 /**********************************************************************/
 __attribute__((const)) mat3x3_t EarthPolarMotion(const JDType jd);
 mat3x3_t EarthPolarMotion(const JDType jd)
 {
-   JDType jd_utc_mjd  = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
-   JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
+   JDType jd_utc_mjd = JDChangeSystemEpoch(UTC_TIME, MJD_EPOCH, jd);
    double x, y, lod = 0;
    GetPolarMotionData(JDToDays(jd_utc_mjd), &x, &y, &lod);
 
-   double wobble_Chandler = 0.26; // arcseconds
-   double wobble_annual   = 0.12; // arcseconds
-   double sp_coeff =
-       wobble_Chandler * wobble_Chandler / 1.2 + wobble_annual * wobble_annual;
+   const double S2 = sin(y * A2R), C2 = cos(y * A2R);
+   const double S1 = sin(x * A2R), C1 = cos(x * A2R);
 
-   double sp =
-       -1.5e-03 * sp_coeff * (JDToDays(jd_tt_j2000) / JDDAY_PER_CENTURY);
+   mat3x3_t PM = MAT3X3_EYE;
+   PM.x        = (vec3_t){.x = C1, .y = 0, .z = -S1};
+   PM.y        = (vec3_t){.x = S1 * S2, .y = C2, .z = C1 * S2};
+   PM.z        = (vec3_t){.x = S1 * C2, .y = -S2, .z = C1 * C2};
 
-   //   PM = A2C(21, -x * A2R, -y * A2R, 0);
-   mat3x3_t PM = MxM(ROT3(sp * A2R), MxM(ROT2(-x * A2R), ROT1(-y * A2R)));
-
-   return PM;
+   return MT(PM);
 }
 /**********************************************************************/
 /* returns Apparent Sidereal Time and Earth CWN                       */
@@ -594,16 +836,14 @@ pair_dbl_mat3x3_t HiFiEarthCWN(const JDType jd)
    const JDType jd_utc_j2000 = JDChangeSystemEpoch(UTC_TIME, J2000_EPOCH, jd);
    const double TTDB         = JDToDays(jd_tdb_j2000) / JDDAY_PER_CENTURY;
 
-   const mat3x3_t PREC = EarthPrecessionMatrix(TTDB);
-   const mat3x3_t NUT =
-       EarthNutationMatrix(TTDB, &dPsi, &longAscNodeLuna, &cosEps);
+   const mat3x3_t NPB =
+       EarthNutPrecMatrix(TTDB, &dPsi, &longAscNodeLuna, &cosEps);
    *GAST = JD2GAST(jd_utc_j2000, dPsi, longAscNodeLuna, cosEps);
 
    mat3x3_t ST       = ROT3(*GAST);
    const mat3x3_t PM = EarthPolarMotion(jd_utc_j2000);
 
-   *CWN = MxM(PM, MxM(ST, MxM(NUT, PREC)));
-   *CWN = MxM(ST, MxM(NUT, PREC));
+   *CWN = MxM(PM, MxM(ST, NPB));
    return out;
 }
 /**********************************************************************/

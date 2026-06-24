@@ -546,8 +546,8 @@ static void fill_epoch_base_tbl()
       epoch_tbl[UTC_TIME][epo] =
           epoch_tbl[TAI_TIME][epo] - leap_secs[epo] / SEC_PER_DAY;
 
-      const double jdday_tt_j2000 =
-          epoch_tbl[TT_TIME][epo] - epoch_tbl[TT_TIME][J2000_EPOCH];
+      // const double jdday_tt_j2000 =
+      //     epoch_tbl[TT_TIME][epo] - epoch_tbl[TT_TIME][J2000_EPOCH];
       // const double sec_ttmtdb = _sec_dbl_d_tt_tdb(jdday_tt_j2000 *
       // SEC_PER_DAY);
       // epoch_tbl[TDB_TIME][epo] =
@@ -674,7 +674,7 @@ static JDType _jd_tdb2tcb(JDType tdb_jd)
 #define TDB_COEFF2 (2.2e-05)
 #define M_E_OFFSET (357.5277233)
 #define M_E_COEFF1 (35999.05034)
-// Astronomical Almanac, 2012 // TODO: lookup, current citation is Vallado
+// Astronomical Almanac, 2012 // TODO: lookup, current reference is Vallado
 // Includes Jovian effects through dlambda_mean
 static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000,
                                        double secs_tdb_j2000)

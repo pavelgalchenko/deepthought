@@ -17,7 +17,13 @@
 #include "jdkit.h"
 #include "mathkit.h"
 
-enum NutEnum { NUT_ITRF_1950, NUT_ITRF_1980, NUT_ITRF_1996 };
+enum NutEnum {
+   NUT_ITRF_1950,
+   NUT_ITRF_1980,
+   NUT_ITRF_1996,
+   NUT_ITRF_2000,
+   NUT_IAU_2000R06
+};
 
 __attribute__((const)) double GetUt1UtcOffset(const double jday_utc_mjd);
 __attribute__((const)) double JD2GMST(JDType JD);
