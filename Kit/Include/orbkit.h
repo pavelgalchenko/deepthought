@@ -367,10 +367,22 @@ struct SphereHarmType {
    long Type;
    long N;
    long M;
+   double r_ref;
+   double factor; // -mu for gravity
    double **Norm;
+   double **Norm1;
+   double **Norm2;
+   double **A;
    double **C;
    double **S;
-   double r_ref;
+   double *Re;
+   double *Im;
+
+   double **VR01;
+   double **VR11;
+   double **VR02;
+   double **VR12;
+   double **VR22;
 };
 
 struct AtmoType {

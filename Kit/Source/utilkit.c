@@ -110,11 +110,6 @@ void remove_alpha_chars(char *str)
 
    // Loop until the end of the string
    while (str[i] != '\0') {
-
-      // is the character a digit?
-      const int cond1 = isdigit((unsigned char)str[i]);
-      // is the character 'e', 'E'
-
       // If the character is NOT alphabetic, keep it
       if (!isalpha((unsigned char)str[i])) {
          str[j] = str[i];

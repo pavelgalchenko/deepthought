@@ -63,6 +63,8 @@ Perturbation Models:
     Models:
       - World: EARTH
         Gravitational Parameter: 398600436000000.0
+        Degree: 4
+        Order: 4
       - World: SOL
         Gravitational Parameter: 1.3271244e+20
       - World: LUNA

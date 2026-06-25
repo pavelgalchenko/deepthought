@@ -468,10 +468,10 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
    }
 
    struct SphereHarmType *gravModel = &WCenter->GravModel;
-   FrcN            = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                                            WCenter->CWN, S->mass, S->PosN);
-   S->gravPertAccN = VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
-   S->FrcN         = VAddV_Elem(S->FrcN, FrcN);
+   vec3_t accN     = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                                            WCenter->CWN, 1.0, S->PosN);
+   S->gravPertAccN = VAddV_Elem(S->gravPertAccN, accN);
+   S->FrcN         = VAddV_Elem(S->FrcN, SxV(S->mass, accN));
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/

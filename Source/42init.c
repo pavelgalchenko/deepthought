@@ -598,7 +598,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
       O->Regime        = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
          O->World = GetWorldID(response2);
-         O->mu    = World[O->World].mu;
+         O->mu    = -World[O->World].GravModel.factor;
          // TODO: Following assumes a Lunar N_Body orbit is given in ECI,
          //       consider other options for initialization.
          // double CNJ[3][3] = {0}, R_temp[3], V_temp[3];
@@ -627,8 +627,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
          O->Sys   = DecodeString(response2);
          O->Body1 = LagSys[O->Sys].Body1;
          O->Body2 = LagSys[O->Sys].Body2;
-         O->mu1   = World[O->Body1].mu;
-         O->mu2   = World[O->Body2].mu;
+         O->mu1   = -World[O->Body1].GravModel.factor;
+         O->mu2   = -World[O->Body2].GravModel.factor;
          O->World = O->Body1;
          O->mu    = O->mu1;
          O->PosN  = R;
@@ -688,7 +688,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
             exit(EXIT_FAILURE);
          }
 
-         O->mu   = World[O->World].mu;
+         O->mu   = -World[O->World].GravModel.factor;
          O->CLN  = MAT3X3_EYE;
          O->PosN = VEC3_ZERO;
          O->VelN = VEC3_ZERO;
@@ -713,7 +713,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
          O->Region            = Ir;
          struct RegionType *R = &Rgn[Ir];
          O->World             = R->World;
-         O->mu                = World[O->World].mu;
+         O->mu                = -World[O->World].GravModel.factor;
          O->PosN              = R->PosN;
          O->VelN              = R->VelN;
          O->CLN               = R->CN;
@@ -736,7 +736,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
          }
          O->J2DriftEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/J2 Secular Drift"));
-         O->mu      = World[O->World].mu;
+         O->mu      = -World[O->World].GravModel.factor;
          double rad = World[O->World].rad;
          double J2  = World[O->World].J2;
          node       = fy_node_by_path_def(node, "/Init");
@@ -3724,10 +3724,24 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
       GravModel->M    = 0;
    }
    else {
-      FILE *gravFile  = FileOpen(modelPath, GravModel->modelFile, "r");
-      GravModel->C    = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
-      GravModel->S    = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
-      GravModel->Norm = CreateMatrix(GravModel->N + 3, GravModel->M + 3);
+      FILE *gravFile = FileOpen(modelPath, GravModel->modelFile, "r");
+
+      GravModel->C = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->S = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+
+      GravModel->A    = CreateMatrix(GravModel->N + 4, GravModel->M + 4);
+      GravModel->Norm = CreateMatrix(GravModel->N + 4, GravModel->M + 4);
+
+      GravModel->Re    = calloc(GravModel->N + 4, sizeof(double));
+      GravModel->Im    = calloc(GravModel->N + 4, sizeof(double));
+      GravModel->Norm1 = CreateMatrix(GravModel->N + 4, GravModel->M + 4);
+      GravModel->Norm2 = CreateMatrix(GravModel->N + 4, GravModel->M + 4);
+
+      GravModel->VR01 = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->VR11 = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->VR02 = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->VR12 = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
+      GravModel->VR22 = CreateMatrix(GravModel->N + 1, GravModel->M + 1);
 
       rewind(gravFile);
       long succesful      = FALSE;
@@ -3759,6 +3773,14 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
                  GravModel->modelFile, n_max, m_max);
          exit(EXIT_FAILURE);
       }
+
+      // Initialize diagonal elements
+      GravModel->A[0][0] = 1.0;
+      for (n = 1; n <= GravModel->N + 2; n++) {
+         GravModel->A[n][n] =
+             sqrt(((double)(2 * n + 1)) / (2 * n)) * GravModel->A[n - 1][n - 1];
+      }
+
       /* Transform from EGM normalization to Neumann normalization */
       // From GMAT Source, Harmonic.cpp, line 289-297
       // for the moment, not sure why up to n+2, m+2
@@ -3770,6 +3792,43 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
                 GravModel->Norm[n][m - 1] / sqrt((n + m) * (n - m + 1));
          }
          GravModel->Norm[n][0] = sqrt(2 * n + 1);
+      }
+
+      for (n = 0; n <= GravModel->N; n++) {
+         for (m = 0; m <= GravModel->M; m++) {
+            const long nn = n;
+
+            GravModel->VR01[n][m] = sqrt((nn - m) * (nn + m + 1));
+            GravModel->VR11[n][m] =
+                sqrt(((2 * nn + 1) * (nn + m + 2) * (nn + m + 1)) /
+                     ((double)(2 * nn + 3)));
+            GravModel->VR02[n][m] =
+                sqrt(((nn - m) * (nn - m - 1) * (nn + m + 1) * (nn + m + 2)));
+            GravModel->VR12[n][m] =
+                sqrt(((double)(2 * nn + 1)) / (2 * nn + 3) *
+                     ((nn - m) * (nn + m + 1) * (nn + m + 2) * (nn + m + 3)));
+            GravModel->VR22[n][m] = sqrt(
+                ((double)(2 * nn + 1)) / (2 * nn + 5) *
+                ((nn + m + 1) * (nn + m + 2) * (nn + m + 3) * (nn + m + 4)));
+
+            if (m == 0) {
+               GravModel->VR01[n][m] /= SQRTTWO;
+               GravModel->VR11[n][m] /= SQRTTWO;
+               GravModel->VR02[n][m] /= SQRTTWO;
+               GravModel->VR12[n][m] /= SQRTTWO;
+               GravModel->VR22[n][m] /= SQRTTWO;
+            }
+         }
+      }
+
+      for (m = 0; m <= GravModel->M + 2; ++m) {
+         for (n = m + 2; n <= GravModel->N + 2; ++n) {
+            GravModel->Norm1[n][m] = sqrt(
+                ((double)((2 * n + 1) * (2 * n - 1))) / ((n - m) * (n + m)));
+            GravModel->Norm2[n][m] =
+                sqrt(((double)((2 * n + 1) * (n - m - 1) * (n + m - 1))) /
+                     ((2 * n - 3) * (n + m) * (n - m)));
+         }
       }
    }
 }
@@ -3904,6 +3963,12 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->qnj = C2Q(W->CNJ);
    W->qnh = QxQ(W->qnj, worlds[EARTH].qnh);
    W->CNH = Q2C(W->qnh);
+
+   struct SphereHarmType *gravModel = &W->GravModel;
+   if (gravModel->factor == 0)
+      gravModel->factor = -W->mu;
+   if (gravModel->r_ref == 0)
+      gravModel->r_ref = W->rad;
 }
 /*********************************************************************/
 void LoadPlanets(const ephemType ephem, const JDType jd,
@@ -4142,9 +4207,13 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       if (W->mu == 0)
          W->mu = Mu[i];
 
+      /* Gravitation Model */
+      struct SphereHarmType *gravModel = &W->GravModel;
+      if (gravModel->factor == 0)
+         gravModel->factor = -W->mu;
+      if (gravModel->r_ref == 0)
+         gravModel->r_ref = grav_r_ref;
       if (GravPertActive) {
-         /* Gravitation Model */
-         struct SphereHarmType *gravModel = &W->GravModel;
          if (!strcmp(gravModel->modelFile, "")) {
             if (!strcmp(GravFileName[i], "") && gravModel->N > 1) {
                fprintf(stderr,
@@ -4160,11 +4229,8 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
             strcpy(gravModel->modelFile, GravFileName[i]);
          }
          LoadGravModel(DataFilePath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = grav_r_ref;
+         if (gravModel->C != NULL)
             W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
       }
    }
 
@@ -4855,8 +4921,12 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             M->Type = MOON;
 
             /* Gravitation Model */
+            struct SphereHarmType *gravModel = &M->GravModel;
+            if (gravModel->factor == 0)
+               gravModel->factor = -M->mu;
+            if (gravModel->r_ref == 0)
+               gravModel->r_ref = rad;
             if (GravPertActive) {
-               struct SphereHarmType *gravModel = &M->GravModel;
                if (!strcmp(gravModel->modelFile, "")) {
                   if (!strcmp(grav_file_name, "") && gravModel->N > 1) {
                      fprintf(
@@ -4873,11 +4943,8 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                   strcpy(gravModel->modelFile, grav_file_name);
                }
                LoadGravModel(DataFilePath, gravModel);
-               if (im != LUNA && gravModel->C != NULL) {
-                  if (gravModel->r_ref == 0)
-                     gravModel->r_ref = rad;
+               if (im != LUNA && gravModel->C != NULL)
                   M->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-               }
             }
 
             strcpy(M->GeomFileName, geom_file_name);
@@ -4974,7 +5041,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
       E->EphemSystem = TT_TIME;
       E->Regime      = ORB_CENTRAL;
       E->World       = SOL;
-      E->mu          = worlds[SOL].mu;
+      E->mu          = worlds[SOL].GravModel.factor;
       fscanf(infile, "%lf %[^\n] %[\n]", &E->SMA, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->ecc, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->inc, junk, &newline);
@@ -5023,10 +5090,14 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
       W->qwn                    = C2Q(W->CWN);
 
       /* Gravitation Model */
+      struct SphereHarmType *gravModel = &W->GravModel;
+      if (gravModel->factor == 0)
+         gravModel->factor = -W->mu;
+      if (gravModel->r_ref == 0)
+         gravModel->r_ref = W->rad;
       if (GravPertActive) {
          if (strcmp(GravFileName, "NONE") == 0)
             strcpy(GravFileName, "");
-         struct SphereHarmType *gravModel = &W->GravModel;
          if (!strcmp(gravModel->modelFile, "")) {
             if (!strcmp(GravFileName, "") && gravModel->N > 1) {
                fprintf(stderr,
@@ -5042,11 +5113,8 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
             strcpy(gravModel->modelFile, GravFileName);
          }
          LoadGravModel(DataFilePath, gravModel);
-         if (gravModel->C != NULL) {
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = W->rad;
+         if (gravModel->C != NULL)
             W->J2 = -gravModel->C[2][0] / gravModel->Norm[2][0];
-         }
       }
    }
    fclose(infile);
@@ -5162,8 +5230,8 @@ void InitLagrangePoints(void)
                     LS->Name);
             exit(EXIT_FAILURE);
          }
-         LS->mu1      = W1->mu;
-         LS->mu2      = W2->mu;
+         LS->mu1      = -W1->GravModel.factor;
+         LS->mu2      = -W2->GravModel.factor;
          LS->rho      = LS->mu2 / (LS->mu1 + LS->mu2);
          LS->SLR      = W2->eph.SLR;
          LS->SMA      = W2->eph.SMA;
@@ -5197,8 +5265,8 @@ void UpdateLagrangePoints(void)
       W1 = &World[LS->Body1];
       W2 = &World[LS->Body2];
       if (LS->Exists) {
-         LS->mu1      = W1->mu;
-         LS->mu2      = W2->mu;
+         LS->mu1      = -W1->GravModel.factor;
+         LS->mu2      = -W2->GravModel.factor;
          LS->rho      = LS->mu2 / (LS->mu1 + LS->mu2);
          LS->SLR      = W2->eph.SLR;
          LS->SMA      = W2->eph.SMA;
@@ -5783,9 +5851,10 @@ void InitSim(int argc, char **argv)
    for (Iw = 0; Iw < NWORLD; Iw++) {
       struct SphereHarmType *gravModel = &World[Iw].GravModel;
       strcpy(gravModel->modelFile, "");
-      gravModel->N     = 0;
-      gravModel->r_ref = 0;
-      World[Iw].mu     = 0;
+      gravModel->N      = 0;
+      gravModel->r_ref  = 0;
+      gravModel->factor = 0;
+      World[Iw].mu      = 0;
    }
    iterNode = NULL;
    struct fy_node *grav_model_list =
@@ -5827,8 +5896,10 @@ void InitSim(int argc, char **argv)
       // overrides the gravitational parameter in the minor body file
       struct fy_node *gm_node =
           fy_node_by_path_def(iterNode, "/Gravitational Parameter");
-      if (gm_node != NULL)
+      if (gm_node != NULL) {
          fy_node_scanf(gm_node, "/ %lf", &World[Iw].mu);
+         gravModel->factor = -World[Iw].mu;
+      }
    }
 
    /* .. Toggle on/off various environmental effects */

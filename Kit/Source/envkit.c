@@ -31,11 +31,111 @@
 */
 
 /**********************************************************************/
+// Lundberg, J.B., and Schutz, B.E., "Recursion Formulas of Legendre
+//     Functions for Use with Nonsingular Geopotential Models", Journal
+//     of Guidance, Dynamics, and Control, Vol. 11, No.1, Jan.-Feb. 1988.
+//  adapted from GMAT
+vec3_t EvalHarmonicField(const long N, const long M, const vec3_t rvec,
+                         const struct SphereHarmType *HF)
+{
+   magvec3_t urvec = UNITV(rvec);
+   double r        = urvec.m;
+
+   const int XS = 1;
+
+   double s = urvec.v.x;
+   double t = urvec.v.y;
+   double u = urvec.v.z; // sin(phi), phi = geocentric latitude
+
+   HF->A[1][0] = u * sqrt(3.0);
+   for (int n = 1; n <= N + XS && n <= HF->N + XS; n++)
+      HF->A[n + 1][n] = u * sqrt(2 * n + 3) * HF->A[n][n];
+
+   for (int m = 0; m <= M + XS && m <= HF->M + XS; m++) {
+      for (int n = m + 2; n <= N + XS && n <= HF->N + XS; n++)
+         HF->A[n][m] = u * HF->Norm1[n][m] * HF->A[n - 1][m] -
+                       HF->Norm2[n][m] * HF->A[n - 2][m];
+
+      HF->Re[m] = m == 0 ? 1 : s * HF->Re[m - 1] - t * HF->Im[m - 1];
+      HF->Im[m] = m == 0 ? 0 : s * HF->Im[m - 1] + t * HF->Re[m - 1];
+   }
+
+   const double rho = HF->r_ref / r;
+   double rho_np1   = -HF->factor / r * rho;
+   double rho_np2   = rho_np1 * rho;
+   double a1        = 0;
+   double a2        = 0;
+   double a3        = 0;
+   double a4        = 0;
+   // double a11         = 0;
+   // double a12         = 0;
+   // double a13         = 0;
+   // double a14         = 0;
+   // double a23         = 0;
+   // double a24         = 0;
+   // double a33         = 0;
+   // double a34         = 0;
+   // double a44         = 0;
+
+   for (int n = 1; n <= N && n <= HF->N; n++) {
+      rho_np1      = rho_np2;
+      rho_np2     *= rho;
+      double sum1  = 0;
+      double sum2  = 0;
+      double sum3  = 0;
+      double sum4  = 0;
+      // double sum11  = 0;
+      // double sum12  = 0;
+      // double sum13  = 0;
+      // double sum14  = 0;
+      // double sum23  = 0;
+      // double sum24  = 0;
+      // double sum33  = 0;
+      // double sum34  = 0;
+      // double sum44  = 0;
+
+      for (int m = 0; m <= n && m <= M && m <= HF->M; m++) {
+         const double Cval = HF->C[n][m];
+         const double Sval = HF->S[n][m];
+
+         const double D = (Cval * HF->Re[m] + Sval * HF->Im[m]) * SQRTTWO;
+         const double E =
+             m == 0 ? 0
+                    : (Cval * HF->Re[m - 1] + Sval * HF->Im[m - 1]) * SQRTTWO;
+         const double F =
+             m == 0 ? 0
+                    : (Sval * HF->Re[m - 1] - Cval * HF->Im[m - 1]) * SQRTTWO;
+
+         const double Avv00 = HF->A[n][m];
+         const double Avv01 = HF->VR01[n][m] * HF->A[n][m + 1];
+         const double Avv11 = HF->VR11[n][m] * HF->A[n + 1][m + 1];
+
+         sum1 += m * Avv00 * E;
+         sum2 += m * Avv00 * F;
+         sum3 += Avv01 * D;
+         sum4 += Avv11 * D;
+      }
+
+      double rr  = rho_np1 / HF->r_ref;
+      a1        += rr * sum1;
+      a2        += rr * sum2;
+      a3        += rr * sum3;
+      a4        -= rr * sum4;
+   }
+
+   vec3_t acc = VEC3_ZERO;
+
+   acc.x = a1 + a4 * s;
+   acc.y = a2 + a4 * t;
+   acc.z = a3 + a4 * u;
+   return acc;
+}
+/**********************************************************************/
 vec3_t SphericalHarmGravForce(const long N, const long M,
                               const struct WorldType *W, mat3x3_t CWN,
                               const double mass, const vec3_t pbn)
 {
-   double Fr, Fth, Fph;
+   // double Fr, Fth, Fph;
    vec3_t pbw, Fe, gradV = VEC3_ZERO;
    const struct SphereHarmType *GravModel = &W->GravModel;
 
@@ -72,19 +172,12 @@ vec3_t SphericalHarmGravForce(const long N, const long M,
 
    if (GravModel->C != NULL && GravModel->N >= 2) {
       /*    Transform p to spherical coords in World frame */
-      pbw                  = MxV(CWN, pbn);
-      sphere_coord_t coord = getTrigSphericalCoords(pbw);
-      const double cth     = coord.cth;
-      const double sth     = coord.sth;
-      const double cph     = coord.cph;
-      const double sph     = coord.sph;
+      pbw = MxV(CWN, pbn);
 
-      gradV = SphericalHarmonics(N, M, coord, GravModel->r_ref,
-                                 W->mu / GravModel->r_ref, GravModel->C,
-                                 GravModel->S, GravModel->Norm);
-      Fr    = mass * gradV.v[0];
-      Fth   = mass * gradV.v[1];
-      Fph   = mass * gradV.v[2];
+      gradV   = EvalHarmonicField(N, M, pbw, GravModel);
+      Fe.v[0] = mass * gradV.v[0];
+      Fe.v[1] = mass * gradV.v[1];
+      Fe.v[2] = mass * gradV.v[2];
 
 #ifdef _DEBUG_GRAV_
       if (reporting) {
@@ -95,11 +188,6 @@ vec3_t SphericalHarmGravForce(const long N, const long M,
                  phi, r, gradV[0], gradV[1], gradV[2]);
       }
 #endif
-
-      /*    Transform back to cartesian coords in Newtonian frame */
-      Fe.v[0] = (Fr * sth + Fth * cth) * cph - Fph * sph;
-      Fe.v[1] = (Fr * sth + Fth * cth) * sph + Fph * cph;
-      Fe.v[2] = Fr * cth - Fth * sth;
 
       gradV = MTxV(CWN, Fe);
    }
