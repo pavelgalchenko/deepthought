@@ -1063,9 +1063,9 @@ vec3_t SphericalHarmonics(const long N, const long M,
          double Pbar  = P[n][m] * Norm[n][m];
          CcSs         = C[n][m] * cphi[m] + S[n][m] * sphi[m];
          ScCs         = S[n][m] * cphi[m] - C[n][m] * sphi[m];
-         dVdr        -= (CcSs * Rern1[n]) * ((n + 1) * Pbar);
-         dVdphi      += (ScCs * Rern1[n]) * (m * Pbar);
-         dVdtheta    -= (CcSs * Rern1[n]) * (sdP[n][m] * Norm[n][m]);
+         dVdr        -= CcSs * ((n + 1) * Pbar) * Rern1[n];
+         dVdphi      += ScCs * (m * Pbar) * Rern1[n];
+         dVdtheta    -= CcSs * (sdP[n][m] * Norm[n][m]) * Rern1[n];
       }
    }
    dVdr     *= K / r;
@@ -2355,6 +2355,32 @@ double WrapToPMPi(const double n)
       OrbVar += TWOPI;
    return (OrbVar - PI);
 }
+/******************************************************************************/
+#define DO_WHOLE_WRAP(ang, wrapval)                                            \
+   do {                                                                        \
+      double whole;                                                            \
+      double out  = modf((ang), &whole);                                       \
+      out        += ((long)whole) % (wrapval);                                 \
+      if (out < (0.0))                                                         \
+         out += (wrapval);                                                     \
+      return out;                                                              \
+   } while (0)
+/******************************************************************************/
+double WrapDaySec(const double sec)
+{
+   DO_WHOLE_WRAP(sec, SEC_PER_DAY);
+}
+/******************************************************************************/
+double WrapDeg(const double angle)
+{
+   DO_WHOLE_WRAP(angle, 360);
+}
+/******************************************************************************/
+double WrapArcSec(const double angle)
+{
+   DO_WHOLE_WRAP(angle, 1296000);
+}
+#undef DO_WHOLE_WRAP
 /******************************************************************************/
 /* Simple Newton-Raphson method for function given by f/dfdx = fdf            */
 /* Iterates until tolerance or max iterations are reached; maximum stepsize   */

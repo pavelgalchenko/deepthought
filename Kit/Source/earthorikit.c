@@ -52,10 +52,10 @@ static struct PolarMotionInfo {
 static __once_flag eop_file_flag = __ONCE_FLAG_INIT;
 static void init_eop_file()
 {
-   extern char ModelPath[1000];
+   extern char DataFilePath[1000];
    char f_path[1064] = {'\0'};
-   strcpy(f_path, ModelPath);
-   strcat(f_path, "/data_files/eopc04_08.62-now");
+   strcpy(f_path, DataFilePath);
+   strcat(f_path, "/eopc04_08.62-now");
 
    FILE *file = fopen(f_path, "rt");
    if (file == NULL) {
@@ -265,10 +265,10 @@ static const enum NutEnum NutSelection = NUT_ITRF_1980;
 static __once_flag iau_file_flag = __ONCE_FLAG_INIT;
 static void init_iau_file()
 {
-   extern char ModelPath[1000];
+   extern char DataFilePath[1000];
    char f_path[1064] = {'\0'};
-   strcpy(f_path, ModelPath);
-   strcat(f_path, "/data_files/NUTATION.DAT");
+   strcpy(f_path, DataFilePath);
+   strcat(f_path, "/NUTATION.DAT");
 
    switch (NutSelection) {
       case NUT_ITRF_1950:
@@ -417,11 +417,13 @@ static mat3x3_t EarthPrecessionMatrix(const double TTDB)
       case NUT_ITRF_1950:
       case NUT_ITRF_1980:
       case NUT_ITRF_1996: {
-         const double zeta =
-             (2306.2181 + (0.30188 + 0.017998 * TTDB) * TTDB) * TTDB;
-         const double Theta =
-             (2004.3109 - (0.42665 + 0.041833 * TTDB) * TTDB) * TTDB;
-         const double z = zeta + (0.7928 + 0.000205 * TTDB) * TTDB * TTDB;
+         double zeta  = (2306.2181 + (0.30188 + 0.017998 * TTDB) * TTDB) * TTDB;
+         double Theta = (2004.3109 - (0.42665 + 0.041833 * TTDB) * TTDB) * TTDB;
+         double z     = zeta + (0.7928 + 0.000205 * TTDB) * TTDB * TTDB;
+
+         zeta  = WrapArcSec(zeta);
+         Theta = WrapArcSec(Theta);
+         z     = WrapArcSec(z);
 
          const double S1 = sin(-zeta * A2R), C1 = cos(-zeta * A2R);
          const double S2 = sin(Theta * A2R), C2 = cos(Theta * A2R);
@@ -640,15 +642,16 @@ static mat3x3_t EarthNutationMatrix(const double TTDB, double *const dPsi,
           NutSolarLunarPosition_ArcSec(NutSelection, order_i);
 
       for (int j = 0; j < Nut_Info.n_planets; j++)
-         nut_angles[j] += fmod(x * coeffs_asec[j], 360 * D2A);
+         nut_angles[j] += WrapArcSec(x * coeffs_asec[j]);
       x *= TTDB;
    }
 
    // .. Accumulate the complete rotation terms, then map to 360 deg
    const double *const r_rot = NutSolarLunarPosition_R_Rot(NutSelection);
+   double dummy;
    for (int j = 0; j < Nut_Info.n_planets; j++) {
-      nut_angles[j] += fmod(r_rot[j] * TTDB, 1.0) * 360 * D2A;
-      nut_angles[j]  = fmod(nut_angles[j], 360 * D2A);
+      nut_angles[j] += modf(r_rot[j] * TTDB, &dummy) * (360 * D2A);
+      nut_angles[j]  = WrapArcSec(nut_angles[j]);
    }
 
    *longAscNodeLuna_ret = *longAscNodeLuna * A2R;
@@ -784,12 +787,14 @@ double HiFiJD2GMST(const JDType jd)
    // 'Satellite Orbits: Models, Methods, Applications' by Montenbruck and Gill,
    // Eq (5.19)
    const double sec_GMST = (24110.54841 + 1.002737909350795 * sec_ut1day +
-                            (fmod(8640184.812866 * T0UT1, SEC_PER_DAY) +
+                            (WrapDaySec(8640184.812866 * T0UT1) +
                              (9.3104e-02 - 6.2e-06 * TUT1) * TUT1 * TUT1));
    const double rad_GMST = WrapTo2Pi((sec_GMST / secperdeg) * D2R);
    return rad_GMST;
 }
 /**********************************************************************/
+// Astromical Almanac 2017, pg B10
+// if dPsi and cosEps are good, then this is accurate to < 2e-6 seconds
 __attribute__((const)) static double JD2GAST(const JDType jd, const double dPsi,
                                              const double longAscNodeLuna,
                                              const double cosEps);
@@ -804,7 +809,7 @@ static double JD2GAST(const JDType jd, const double dPsi,
    double eq_equinox = dPsi * cosEps;
    if (isgreater_jd(jd_utc_j2000, jdEQThresh))
       eq_equinox +=
-          (2.64 * sin(longAscNodeLuna) + 6.3e-02 * sin(2.0 * longAscNodeLuna)) *
+          (2.64 * sin(longAscNodeLuna) + 6.0e-02 * sin(2.0 * longAscNodeLuna)) *
           1.0e-3 * A2R;
 
    const double GMST = HiFiJD2GMST(jd);
@@ -874,7 +879,7 @@ double JD2GMST(JDType jd)
    GMST0 /= 360.0;
 
    GMST = GMST0 + 1.00273790935 * (JD - JD0);
-   GMST = fmod(GMST, 1.0);
+   GMST = modf(GMST, &GMST0);
    if (GMST < 0)
       GMST += 1.0;
    return (GMST);

@@ -68,6 +68,7 @@ EXTERN char InOutPath[BUFSIZE];
 EXTERN char ExeDir[BUFSIZE];
 EXTERN char OutPath[BUFSIZE];
 EXTERN char ModelPath[BUFSIZE];
+EXTERN char DataFilePath[BUFSIZE];
 EXTERN char SCModelPath[BUFSIZE];
 EXTERN char CmdFileName[BUFSIZE];
 

@@ -267,13 +267,13 @@ static int InUT1Interval(const double jday, const char *fmt_str, ...)
 /* Configure Suite                                                    */
 // define needed globals
 //      path of model directory relative to executable
-char ModelPath[1000] = {'\0'};
+char DataFilePath[1000] = {'\0'};
 static void modelpath_init(void)
 {
    // configure ModelPath
-   GetExecDir(ModelPath);
-   const char *rel_model_path = "/../../Model/\0";
-   strcat(ModelPath, rel_model_path);
+   GetExecDir(DataFilePath);
+   const char *rel_model_path = "/../../Model/data_files/\0";
+   strcat(DataFilePath, rel_model_path);
 }
 
 TestSuite(SUITE_NAME, .init = modelpath_init);

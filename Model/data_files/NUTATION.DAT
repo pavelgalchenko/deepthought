@@ -1,4 +1,4 @@
-xx 2000R06 IAU Theory of Nutation (1320 term) (Sorted for largest A terms, then for largest F terms)
+xx 2000R06 IAU Theory of Nutation (1320 term) (Sorted for largest A terms, then for largest F terms) (from ftp://tai.bipm.org/iers/conv2010/chapter5/tab5.3a.txt and tab5.3b.txt)
 xx  a1  a2  a3  a4  a5  a6  a7  a8  a9 a10 a11 a12 a13            A         B          C       D        E          F         G         H     #  all are 1e-06"
   0   0   0   0   1   0   0   0   0   0   0   0   0   0 -17206424.18 -17418.82  9205233.1  883.03   3338.6     1537.7      2.89       0.2     1
   0   0   2  -2   2   0   0   0   0   0   0   0   0   0  -1317091.22   -163.84   573033.6 -303.09  -1369.6     -458.7       1.2      -0.3     2

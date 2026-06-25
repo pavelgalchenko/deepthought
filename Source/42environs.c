@@ -55,7 +55,7 @@ void Environment(JDType jd, struct WorldType *const worlds,
    }
    else if (MagModel.Type == IGRF && orb->World == EARTH) {
       DateType utc_date = JDToDate(jd, UTC_TIME);
-      S->bvn = IGRFMagField(ModelPath, utc_date, MagModel.N, MagModel.M,
+      S->bvn = IGRFMagField(DataFilePath, utc_date, MagModel.N, MagModel.M,
                             S->PosN, P->PriMerAng);
    }
    else

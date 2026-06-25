@@ -58,7 +58,7 @@ Perturbation Models:
       - World: EARTH
         Method: Dipole
   Gravitation:
-    Enabled: false
+    Enabled: true
     Gravity Gradient: false
     Models:
       - World: EARTH
@@ -75,7 +75,7 @@ Perturbation Models:
   CFD Slosh: false
   Albedo on CSS: false
   Output Env Torques to File: false
-Ephem Type: DE424
+Ephem Type: SPICE
 Celestial Bodies:
   Earth:
     Exists: true

@@ -303,6 +303,10 @@ void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(vec3_t A, double *lng, double *lat);
 __attribute__((const)) double WrapTo2Pi(const double OrbVar);
 __attribute__((const)) double WrapToPMPi(const double OrbVar);
+__attribute__((const)) double WrapDaySec(const double sec);
+__attribute__((const)) double WrapDeg(const double angle);
+__attribute__((const)) double WrapArcSec(const double angle);
+
 __attribute__((pure)) double BrentsMethod(double a, double b, const double tol,
                                           double (*f)(const double, double *),
                                           double *params);

@@ -3733,7 +3733,12 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
       long succesful      = FALSE;
       char buffer[BUFSIZ] = {0};
       while (fgets(buffer, sizeof(buffer), gravFile) != NULL) {
-         sscanf(buffer, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2);
+         if (sscanf(buffer, "%ld %ld %lf %lf", &n, &m, &dum1, &dum2) != 4) {
+            // may sometimes omit S coeff to indicate is zero
+            if (sscanf(buffer, "%ld %ld %lf", &n, &m, &dum1) != 3)
+               continue;
+            dum2 = 0;
+         }
          if (n > n_max)
             n_max = n;
          if (m > m_max)
@@ -3741,9 +3746,8 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
          if (n <= GravModel->N && m <= GravModel->M) {
             GravModel->C[n][m] = dum1;
             GravModel->S[n][m] = dum2;
-            if (n == GravModel->N && m == GravModel->M) {
+            if (n == GravModel->N && m == GravModel->M)
                succesful = TRUE;
-            }
          }
       }
       fclose(gravFile);
@@ -3917,8 +3921,8 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
    char MapFileName[N_PLANETS][25] = {"Rockball",   "Venus.ppm",   "Earth.ppm",
                                       "Mars.ppm",   "Jupiter.ppm", "Saturn.ppm",
                                       "Uranus.ppm", "Neptune.ppm", "Iceball"};
-   const char GravFileName[N_PLANETS][20] = {
-       "", "", "EGM08.txt", "GMM2B.txt", "", "", "", "", ""};
+   const char GravFileName[N_PLANETS][50] = {
+       "", "", "/EGM08.txt", "/GMM2B.txt", "", "", "", "", ""};
    double Mu_mean[N_PLANETS]  = {2.18E13,  3.2485E14, 3.986004E14,
                                  4.293E13, 1.2761E17, 3.792E16,
                                  5.788E15, 6.8E15,    3.2E14};
@@ -4155,7 +4159,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
             }
             strcpy(gravModel->modelFile, GravFileName[i]);
          }
-         LoadGravModel(ModelPath, gravModel);
+         LoadGravModel(DataFilePath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
                gravModel->r_ref = grav_r_ref;
@@ -4868,7 +4872,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                   }
                   strcpy(gravModel->modelFile, grav_file_name);
                }
-               LoadGravModel(ModelPath, gravModel);
+               LoadGravModel(DataFilePath, gravModel);
                if (im != LUNA && gravModel->C != NULL) {
                   if (gravModel->r_ref == 0)
                      gravModel->r_ref = rad;
@@ -5037,7 +5041,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
             }
             strcpy(gravModel->modelFile, GravFileName);
          }
-         LoadGravModel(ModelPath, gravModel);
+         LoadGravModel(DataFilePath, gravModel);
          if (gravModel->C != NULL) {
             if (gravModel->r_ref == 0)
                gravModel->r_ref = W->rad;
@@ -5442,6 +5446,8 @@ void InitSim(int argc, char **argv)
 
    sprintf(InOutPath, "./InOut/");
    sprintf(ModelPath, "./Model/");
+   strcpy(DataFilePath, ModelPath);
+   strcat(DataFilePath, "data_files/");
    if (argc > 1)
       sprintf(InOutPath, "./%s/", argv[1]);
    if (argc > 2)
@@ -5454,6 +5460,8 @@ void InitSim(int argc, char **argv)
 
    strcpy(ModelPath, ExeDir);
    strcat(ModelPath, "/Model/");
+   strcpy(DataFilePath, ModelPath);
+   strcat(DataFilePath, "data_files/");
 
    CLI_ARGS = docopt(argc, argv, /* help */ 1);
 
@@ -5482,9 +5490,8 @@ void InitSim(int argc, char **argv)
          strcpy(SCModelPath, CLI_ARGS.defaultdir);
          strcat(SCModelPath, "/Model/");
          ModelDir = opendir(SCModelPath);
-         if (ModelDir) {
+         if (ModelDir)
             closedir(ModelDir);
-         }
          else if (ENOENT == errno) {
             strcpy(SCModelPath, ModelPath);
          }
@@ -5803,9 +5810,9 @@ void InitSim(int argc, char **argv)
       // to use default later
       struct fy_node *file_node = fy_node_by_path_def(iterNode, "/Model File");
       if (file_node != NULL) {
-         size_t len            = 0;
-         const char *modelFile = fy_node_get_scalar(file_node, &len);
-         strncpy(gravModel->modelFile, modelFile, 39);
+         char modelFile[40] = {'\0'};
+         fy_node_scanf(file_node, "/ %s", modelFile);
+         strncpy(gravModel->modelFile, modelFile, 40);
          gravModel->modelFile[39] = 0; // ensure null termination
       }
 

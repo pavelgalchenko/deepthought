@@ -106,20 +106,14 @@ double GetWorldAng(JDType jd, const AngDataType *const ang_data)
       for (int i = 0; i < ang_data->n_E; i++) {
          E[i] = ang_data->nut_prec_E[i][0] +
                 ang_data->nut_prec_E[i][1] * cen_tdb_j2000;
-         E[i] = fmod(E[i], 360.0);
-         if (E[i] < 0)
-            E[i] += 360.0;
-         E[i] *= D2R;
+         E[i] = WrapDeg(E[i]) * D2R;
       }
 
       for (int i = 0; i < ang_data->n_ang; i++)
          angle += ang_data->nut_prec_ang[i] * s_func(E[i]);
    }
 
-   angle = fmod(angle, 360.0);
-   if (angle < 0)
-      angle += 360.0;
-
+   angle = WrapDeg(angle);
    return angle * D2R;
 }
 /**********************************************************************/
@@ -1444,15 +1438,15 @@ mat3x3_t LunaInertialFrame(const JDType jd)
    D = JDToDays(jd_tdb_j2000);
    T = D / 36525.0;
 
-   E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
-   E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;
-   E3  = fmod(260.008 + 13.0120009 * D, 360.0) * D2R;
-   E4  = fmod(176.625 + 13.3407154 * D, 360.0) * D2R;
-   E6  = fmod(311.589 + 26.4057084 * D, 360.0) * D2R;
-   E7  = fmod(134.963 + 13.0649930 * D, 360.0) * D2R;
-   E10 = fmod(15.134 - 0.1589763 * D, 360.0) * D2R;
-   /* E12 = fmod(239.961 + 0.1643573*D,360.0)*D2R; */
-   E13 = fmod(25.053 + 12.9590088 * D, 360.0) * D2R;
+   E1  = WrapDeg(125.045 - 0.0529921 * D) * D2R;
+   E2  = WrapDeg(250.089 - 0.1059842 * D) * D2R;
+   E3  = WrapDeg(260.008 + 13.0120009 * D) * D2R;
+   E4  = WrapDeg(176.625 + 13.3407154 * D) * D2R;
+   E6  = WrapDeg(311.589 + 26.4057084 * D) * D2R;
+   E7  = WrapDeg(134.963 + 13.0649930 * D) * D2R;
+   E10 = WrapDeg(15.134 - 0.1589763 * D) * D2R;
+   /* E12 = WrapDeg(239.961 + 0.1643573*D)*D2R; */
+   E13 = WrapDeg(25.053 + 12.9590088 * D) * D2R;
 
    SinE1  = sin(E1);
    SinE2  = sin(E2);
@@ -1534,19 +1528,19 @@ double LunaPriMerAng(const JDType jd)
 
    D = JDToDays(jd_tdb_j2000);
 
-   E1  = fmod(125.045 - 0.0529921 * D, 360.0) * D2R;
-   E2  = fmod(250.089 - 0.1059842 * D, 360.0) * D2R;
-   E3  = fmod(260.008 + 13.0120009 * D, 360.0) * D2R;
-   E4  = fmod(176.625 + 13.3407154 * D, 360.0) * D2R;
-   E5  = fmod(357.529 + 0.9856003 * D, 360.0) * D2R;
-   E6  = fmod(311.589 + 26.4057084 * D, 360.0) * D2R;
-   E7  = fmod(134.963 + 13.0649930 * D, 360.0) * D2R;
-   E8  = fmod(276.617 + 0.3287146 * D, 360.0) * D2R;
-   E9  = fmod(34.226 + 1.7484877 * D, 360.0) * D2R;
-   E10 = fmod(15.134 - 0.1589763 * D, 360.0) * D2R;
-   E11 = fmod(119.743 + 0.0036096 * D, 360.0) * D2R;
-   E12 = fmod(239.961 + 0.1643573 * D, 360.0) * D2R;
-   E13 = fmod(25.053 + 12.9590088 * D, 360.0) * D2R;
+   E1  = WrapDeg(125.045 - 0.0529921 * D) * D2R;
+   E2  = WrapDeg(250.089 - 0.1059842 * D) * D2R;
+   E3  = WrapDeg(260.008 + 13.0120009 * D) * D2R;
+   E4  = WrapDeg(176.625 + 13.3407154 * D) * D2R;
+   E5  = WrapDeg(357.529 + 0.9856003 * D) * D2R;
+   E6  = WrapDeg(311.589 + 26.4057084 * D) * D2R;
+   E7  = WrapDeg(134.963 + 13.0649930 * D) * D2R;
+   E8  = WrapDeg(276.617 + 0.3287146 * D) * D2R;
+   E9  = WrapDeg(34.226 + 1.7484877 * D) * D2R;
+   E10 = WrapDeg(15.134 - 0.1589763 * D) * D2R;
+   E11 = WrapDeg(119.743 + 0.0036096 * D) * D2R;
+   E12 = WrapDeg(239.961 + 0.1643573 * D) * D2R;
+   E13 = WrapDeg(25.053 + 12.9590088 * D) * D2R;
 
    SinE1  = sin(E1);
    SinE2  = sin(E2);

@@ -132,7 +132,7 @@ static void load_igrf_file()
    }
 
    /* Get data from IGRF20.txt */
-   const char *file_name = "igrf14coeffs.txt";
+   const char *file_name = "/igrf14coeffs.txt";
    FILE *IGRFfile        = FileOpen(IGRF_ModelPath, file_name, "r");
    // skip first 4 lines
 
@@ -176,11 +176,11 @@ static void load_igrf_file()
    }
 }
 
-vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
+vec3_t IGRFMagField(const char *DataFilePath, const DateType UTC, const long N,
                     const long M, const vec3_t pbn, const double PriMerAng)
 {
    if (IGRF_ModelPath[0] == '\0')
-      strncpy(IGRF_ModelPath, ModelPath, 999);
+      strncpy(IGRF_ModelPath, DataFilePath, 999);
    call_once(&igrf_flag, load_igrf_file);
 
    static const double t[nYears] = {
@@ -217,7 +217,7 @@ vec3_t IGRFMagField(const char *ModelPath, const DateType UTC, const long N,
             rvec.v[0]  = r * sth * cph;
             rvec.v[1]  = r * sth * sph;
             rvec.v[2]  = r * cth;
-            vec3_t out = IGRFMagField(ModelPath, UTC, N, M, rvec, 0);
+            vec3_t out = IGRFMagField(DataFilePath, UTC, N, M, rvec, 0);
          }
       }
       reporting = 0;

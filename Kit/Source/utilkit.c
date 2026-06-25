@@ -83,17 +83,16 @@ void CapitalizeFirst(size_t n, char *str)
    tolower_str(n, str);
    str[0] = toupper(str[0]);
 }
-/******************************************************************************/
-char *replace_char(char *str, const char find, const char replace)
+/**********************************************************************/
+void replace_char(char *str, const char find, const char replace)
 {
    char *current_pos = strchr(str, find);
    while (current_pos) {
       *current_pos = replace;
       current_pos  = strchr(current_pos, find);
    }
-   return str;
 }
-/******************************************************************************/
+/**********************************************************************/
 long is_line_empty(const char *s)
 {
    while (*s) {
@@ -102,6 +101,30 @@ long is_line_empty(const char *s)
       s++;
    }
    return 1;
+}
+/**********************************************************************/
+void remove_alpha_chars(char *str)
+{
+   int i = 0; // Read pointer
+   int j = 0; // Write pointer
+
+   // Loop until the end of the string
+   while (str[i] != '\0') {
+
+      // is the character a digit?
+      const int cond1 = isdigit((unsigned char)str[i]);
+      // is the character 'e', 'E'
+
+      // If the character is NOT alphabetic, keep it
+      if (!isalpha((unsigned char)str[i])) {
+         str[j] = str[i];
+         j++;
+      }
+      i++;
+   }
+
+   // Null-terminate the newly shortened string
+   str[j] = '\0';
 }
 /**********************************************************************/
 

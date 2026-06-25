@@ -12,7 +12,7 @@
             "Demo",
             "DSM_DEMO",
             "DSM_NAV_DEMO",
-            "NESC_Testing",
+            "NESC_Testing/EarthOrbit",
          ],
          "default": "DSM_DEMO"
       },

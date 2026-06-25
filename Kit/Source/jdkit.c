@@ -29,7 +29,7 @@
 ** #endif
 */
 
-// NOTE: Uses the global 'ModelPath'
+// NOTE: Uses the global 'DataFilePath'
 // __attribute__((const, unused)) static JDSecond
 // _epoch_pod_seconds(const EpochTT epoch);
 __attribute__((const)) static JDType _epoch_lookup(const TimeSystem system,
@@ -39,7 +39,9 @@ _epoch_diff_tt(const TimeSystem system, const EpochTT a, const EpochTT b);
 __attribute__((const)) static JDType _jdtt(JDType);
 __attribute__((const)) static JDType _jd_tdb2tcb(JDType tdb_jd);
 __attribute__((const)) static inline double
-_sec_dbl_d_tt_tdb(double secs_tt_j2000, double secs_tdb_j2000);
+_sec_dbl_d_tt_tdb(double secs_tt_j2000);
+__attribute__((const, unused)) static inline double
+_gmat_sec_dbl_d_tt_tdb(double secs_tt_j2000, double secs_tdb_j2000);
 __attribute__((const)) static JDType _jd_tt2tdb(JDType tt_jd);
 __attribute__((pure)) static double _tdb2ttF(const double secs_tt_j2000,
                                              double params[1]);
@@ -304,7 +306,7 @@ JDType JDAddJDSecondSeconds(const JDType a, const JDSecond b)
 
    jdb.seconds.frac_sec = modf(b.frac_sec, &integral);
 
-   jdb.seconds.whole  = fmod(integral, SEC_PER_DAY);
+   jdb.seconds.whole  = ((long)integral) % SEC_PER_DAY;
    jdb.seconds.whole += b.whole % SEC_PER_DAY;
 
    jdb.whole_days     = integral / SEC_PER_DAY;
@@ -321,7 +323,7 @@ JDType JDSubJDSecondSeconds(const JDType a, const JDSecond b)
 
    jdb.seconds.frac_sec = modf(b.frac_sec, &integral);
 
-   jdb.seconds.whole = fmod(integral, SEC_PER_DAY);
+   jdb.seconds.whole = ((long)integral) % SEC_PER_DAY;
    jdb.seconds.whole = b.whole % SEC_PER_DAY;
 
    jdb.whole_days     = integral / SEC_PER_DAY;
@@ -672,51 +674,54 @@ static JDType _jd_tdb2tcb(JDType tdb_jd)
    return JDAddSeconds(tdb_jd, d_tcb_tdb);
 }
 /**********************************************************************/
-// Astronomical Almanac, 2012 // TODO: lookup, current reference is Vallado
+// Astronomical Alamanac (2017)
 // Includes Jovian effects through dlambda_mean
-static inline double _other_sec_dbl_d_tt_tdb(double secs_tt_j2000,
-                                             double secs_tdb_j2000)
+// accurate to +-30 microsec from 1980 to 2050
+// -> actually using Fairhead and Bretagnon (1990) (first two terms)
+//  - Astronomical Almanac states that the time parameters should be
+//    TT; Vallado (4th ed) indicates, that m_E should be TDB and
+//    dlambda_mean should be TT.
+//  - Astronomical Almanac 2017 notes that interchanging TDB and TT
+//    here is neglible to the microarcsec level in m_E and dlambda_mean
+// -> These are the leading two terms of the series given by
+//    Fairhead and Bretagnon in 'An Analytical Formula for the Time
+//    Transformation TB-TT' (1990). There, the arguments are explicitly
+//    stated to be TT. Also using the coefficients from that paper
+static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000)
 {
-   const double T_TDB = secs_tdb_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
-   const double m_E   = fmod((357.5277233 + (35999.05034 * T_TDB)), 360.0);
+   const double yr_TT = secs_tt_j2000 / (SEC_PER_DAY * 365.25);
 
+   double dummy;
+   const double fracyr_TT = modf(yr_TT, &dummy);
+
+   // Mean anomaly of Earth's orbit about the Sun
+   const double m_E = fmod(6.240054195 + 6.283075943033 * fracyr_TT, TWOPI);
+
+   // Difference in the mean ecliptic longitudes of the Sun and Jupiter
    const double dlambda_mean =
-       (246.11 + 0.90251792 * secs_tt_j2000 / SEC_PER_DAY) * D2R;
+       fmod(4.296977442 + 5.753384970095 * fracyr_TT, TWOPI);
 
-   return 1.65e-03 * sin(m_E) + 2.2e-05 * sin(dlambda_mean);
+   return 1.656674564e-03 * sin(m_E) + 2.22417471e-05 * sin(dlambda_mean);
 }
 /**********************************************************************/
 // From GMAT mathspec
-static inline double _sec_dbl_d_tt_tdb(double secs_tt_j2000,
-                                       double secs_tdb_j2000
-                                       __attribute__((unused)))
+static inline double _gmat_sec_dbl_d_tt_tdb(double secs_tt_j2000,
+                                            double secs_tdb_j2000
+                                            __attribute__((unused)))
 {
    const double T_TT = secs_tt_j2000 / (DAY_PER_JULIAN_CENTURY * SEC_PER_DAY);
-   const double m_E  = fmod((357.5277233 + (35999.05034 * T_TT)), 360.0);
+   const double m_E  = WrapDeg((357.5277233 + (35999.05034 * T_TT))) * D2R;
 
    return 1.658e-03 * sin(m_E) + 1.385e-05 * sin(2.0 * m_E);
 }
 /**********************************************************************/
-static double _tt2tdbF(const double secs_tdb_j2000, double params[1])
-{
-   const double secs_tt_j2000 = params[0];
-   return secs_tdb_j2000 -
-          (secs_tt_j2000 + _sec_dbl_d_tt_tdb(secs_tt_j2000, secs_tdb_j2000));
-}
-
-/**********************************************************************/
 static inline JDType _jd_tt2tdb(JDType tt_jd)
 {
-   JDType jd_tt_j2000         = JDChangeEpoch(J2000_EPOCH, tt_jd);
-   const double secs_tt_j2000 = JDToSeconds(jd_tt_j2000);
-   double params[1]           = {secs_tt_j2000};
+   JDType jd_tt_j2000 = JDChangeEpoch(J2000_EPOCH, tt_jd);
 
-   const double max_width      = 2.0e-03;
-   const double secs_tdb_j2000 = BrentsMethod(
-       secs_tt_j2000 - 1.2 * max_width, secs_tt_j2000 + 1.2 * max_width,
-       __DBL_EPSILON__, &_tt2tdbF, params);
-   JDType jd_tdb_out = JDFromSeconds(secs_tdb_j2000, TDB_TIME, J2000_EPOCH);
-   jd_tdb_out        = JDChangeEpoch(tt_jd.epoch, jd_tdb_out);
+   const double dtdbtt = _sec_dbl_d_tt_tdb(JDToSeconds(jd_tt_j2000));
+   JDType jd_tdb_out   = JDAddSeconds(jd_tt_j2000, dtdbtt);
+   jd_tdb_out          = JDChangeEpoch(tt_jd.epoch, jd_tdb_out);
 
    jd_tdb_out.system = TDB_TIME;
    return jd_tdb_out;
@@ -725,8 +730,7 @@ static inline JDType _jd_tt2tdb(JDType tt_jd)
 static double _tdb2ttF(const double secs_tt_j2000, double params[1])
 {
    const double secs_tdb_j2000 = params[0];
-   return secs_tt_j2000 + _sec_dbl_d_tt_tdb(secs_tt_j2000, secs_tdb_j2000) -
-          secs_tdb_j2000;
+   return (secs_tt_j2000 + _sec_dbl_d_tt_tdb(secs_tt_j2000)) - secs_tdb_j2000;
 }
 // *******************
 static JDType _jd_tdb2tt(JDType tdb_jd)
@@ -737,9 +741,9 @@ static JDType _jd_tdb2tt(JDType tdb_jd)
    const double secs_tdb_j2000 = JDToSeconds(jd_tdb_j2000);
    double params[1]            = {secs_tdb_j2000};
 
-   const double max_width     = 2.0e-03; // approximate
+   const double max_width     = 1.8e-03; // approximate
    const double secs_tt_j2000 = BrentsMethod(
-       secs_tdb_j2000 - 1.2 * max_width, secs_tdb_j2000 + 1.2 * max_width,
+       secs_tdb_j2000 - 1.1 * max_width, secs_tdb_j2000 + 1.1 * max_width,
        __DBL_EPSILON__, &_tdb2ttF, params);
    JDType jd_tt_out = JDFromSeconds(secs_tt_j2000, TT_TIME, J2000_EPOCH);
 
@@ -1195,10 +1199,10 @@ static struct LeapSecFileTbl {
 static __once_flag leapsec_flag = __ONCE_FLAG_INIT;
 static void load_leapsec_file()
 {
-   extern char ModelPath[1000];
+   extern char DataFilePath[1000];
    char f_path[1064] = {'\0'};
-   strcpy(f_path, ModelPath);
-   strcat(f_path, "/data_files/tai-utc.dat");
+   strcpy(f_path, DataFilePath);
+   strcat(f_path, "/tai-utc.dat");
    FILE *file = fopen(f_path, "rt");
    if (file == NULL) {
       fprintf(stderr, "Error opening tai-utc.dat file '%s'. Exiting...\n",
@@ -1401,11 +1405,14 @@ JDType JDFromRationalSeconds(const Rational seconds, const TimeSystem system,
 JDType JDFromSeconds(const double seconds, const TimeSystem system,
                      const EpochTT epoch)
 {
-   JDType jd     = {0};
-   jd.epoch      = epoch;
-   jd.system     = system;
-   jd.whole_days = seconds / SEC_PER_DAY;
-   jd.seconds    = sec_double2JDSecond(fmod(seconds, SEC_PER_DAY));
+   JDType jd = {0};
+   jd.epoch  = epoch;
+   jd.system = system;
+   double whole_sec_dbl;
+   jd.seconds.frac_sec  = modf(seconds, &whole_sec_dbl);
+   const long whole_sec = whole_sec_dbl;
+   jd.whole_days        = whole_sec / SEC_PER_DAY;
+   jd.seconds.whole     = whole_sec % SEC_PER_DAY;
    return jd;
 }
 /**********************************************************************/

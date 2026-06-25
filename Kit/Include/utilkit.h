@@ -31,8 +31,9 @@ void GetExecDir(char exec_dir[1000]);
 void tolower_str(size_t n, char *str);
 void toupper_str(size_t n, char *str);
 void CapitalizeFirst(size_t n, char *str);
-char *replace_char(char *str, const char find, const char replace);
+void replace_char(char *str, const char find, const char replace);
 __attribute__((pure)) long is_line_empty(const char *s);
+void remove_alpha_chars(char *str);
 
 /*
 ** #ifdef __cplusplus
