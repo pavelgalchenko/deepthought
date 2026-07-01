@@ -2041,18 +2041,11 @@ void DrawNavEllipsoids(struct SCType *S, struct DSMType *DSM)
    struct DSMNavType *Nav         = &DSM->DsmNav;
    const long navDim              = Nav->navDim;
 
-   mat3x3_t BCN = MAT3X3_ZERO;
-   for (int i = 0; i < 3; i++) {
-      for (int j = 0; j < 3; j++) {
-         BCN.mat[i][j] = dsm_state->CBN.mat[i][j];
-      }
-   }
    vec3_t pbn;
    for (int i = 0; i < 3; i++)
       pbn.v[i] = dsm_state->PosR.v[i] + B->pn.v[i];
    if (S->RefPt == REFPT_CM) {
-      vec3_t pcmn;
-      pcmn = MTxV(BCN, B->cm);
+      vec3_t pcmn = MTxV(dsm_state->CBN, B->cm);
       for (int i = 0; i < 3; i++)
          pbn.v[i] -= pcmn.v[i];
    }

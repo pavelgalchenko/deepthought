@@ -1951,8 +1951,9 @@ double LinInterpTbl(const double *X, const double *Y, const double x,
       y = Y[0];
    }
    else {
-      i = FindIndex(x, X, n, 0);
-      y = lerp(X[i + 1], X[i], Y[i + 1], Y[i], x);
+      i      = FindIndex(x, X, n, 0);
+      int i2 = MIN(i + 1, n - 1);
+      y      = lerp(X[i2], X[i], Y[i2], Y[i], x);
    }
    return (y);
 }
@@ -2956,7 +2957,7 @@ void hqrd(double **A, double **U, double **R, long const n, long const m)
 
    for (k = 0; k < ((n < m) ? n : m); k++) {
       long size = n - k;
-      double x[size], u[size], v[m - k - 1];
+      double x[size], u[size], v[MAX(m - k - 1, 1)];
       for (i = 0; i < size; i++) {
          x[i] = X[k + i][k];
          u[i] = 0.0;
@@ -2975,15 +2976,12 @@ void hqrd(double **A, double **U, double **R, long const n, long const m)
             X[k + i][j] -= u[i] * v[j - k - 1];
          }
       }
-      for (j = k + 1; j < m; j++) {
+      for (j = k + 1; j < m; j++)
          R[k][j] = X[k][j];
-      }
    }
-   for (i = 0; i < n; i++) {
-      for (j = 0; j < m; j++) {
+   for (i = 0; i < n; i++)
+      for (j = 0; j < m; j++)
          A[i][j] = X[i][j];
-      }
-   }
 }
 /******************************************************************************/
 // Helper function for bhqrd

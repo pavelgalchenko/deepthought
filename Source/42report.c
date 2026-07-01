@@ -14,49 +14,94 @@
 #include "42.h"
 #include "navkit.h"
 
+#include <errno.h>
+#include <stdarg.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #define PRNT_DBL "%18.24le"
 
-static inline void
-_fprintf_vec3(FILE *file, const char *c __attribute__((unused)), vec3_t v)
+// used to not print a leading ',' in csv mode
+static inline int _print_first_delim(FILE *file)
 {
-   fprintf(file, PRNT_DBL "%s", v.x, c);
-   fprintf(file, PRNT_DBL "%s", v.y, c);
-   fprintf(file, PRNT_DBL "%s", v.z, c);
+   long current_pos = ftell(file);
+   fflush(file);
+
+   int fseekval = fseek(file, -1, SEEK_CUR);
+
+   if (fseekval != 0 && errno == 22)
+      return FALSE;
+   int prev_char = fgetc(file);
+
+   fseek(file, current_pos, SEEK_SET);
+
+   if (prev_char == '\n')
+      return FALSE;
+   return TRUE;
 }
-static inline void
-_fprintf_quat(FILE *file, const char *c __attribute__((unused)), quat_t q)
+
+static inline void _fprintf_vec3(FILE *file, const char *, const char *c,
+                                 vec3_t v)
 {
-   fprintf(file, PRNT_DBL "%s", q.x, c);
-   fprintf(file, PRNT_DBL "%s", q.y, c);
-   fprintf(file, PRNT_DBL "%s", q.z, c);
-   fprintf(file, PRNT_DBL "%s", q.s, c);
+   if (_print_first_delim(file))
+      fprintf(file, "%s", c);
+   fprintf(file, PRNT_DBL, v.x);
+   fprintf(file, "%s" PRNT_DBL, c, v.y);
+   fprintf(file, "%s" PRNT_DBL, c, v.z);
 }
-static inline void
-_fprintf_mat3x3(FILE *file, const char *c __attribute__((unused)), mat3x3_t m)
+static inline void _fprintf_quat(FILE *file, const char *, const char *c,
+                                 quat_t q)
 {
+   if (_print_first_delim(file))
+      fprintf(file, "%s", c);
+   fprintf(file, PRNT_DBL, q.x);
+   fprintf(file, "%s" PRNT_DBL, c, q.y);
+   fprintf(file, "%s" PRNT_DBL, c, q.z);
+   fprintf(file, "%s" PRNT_DBL, c, q.s);
+}
+static inline void _fprintf_mat3x3(FILE *file, const char *, const char *c,
+                                   mat3x3_t m)
+{
+
    for (int i = 0; i < 3; i++) {
       vec3_t *v = &m.rows[i];
-      fprintf(file, PRNT_DBL "%s", v->x, c);
-      fprintf(file, PRNT_DBL "%s", v->y, c);
-      fprintf(file, PRNT_DBL "%s", v->z, c);
+
+      if (i != 0 || !_print_first_delim(file))
+         fprintf(file, "%s", c);
+      fprintf(file, PRNT_DBL, v->x);
+      fprintf(file, "%s" PRNT_DBL, c, v->y);
+      fprintf(file, "%s" PRNT_DBL, c, v->z);
    }
 }
-static inline void
-_fprintf_jdtype(FILE *file, const char *c __attribute__((unused)), JDType jd)
+static inline void _fprintf_jdtype(FILE *file, const char *, const char *c,
+                                   JDType jd)
 {
    char jdstr[JD_STR_LEN] = {'\0'};
    jdays2str(jd, jdstr);
-   fprintf(file, "%s%s", jdstr, c);
+
+   if (_print_first_delim(file))
+      fprintf(file, "%s", c);
+   fprintf(file, "%s", jdstr);
 }
-static inline void _fprintf_datetype(FILE *file,
-                                     const char *c __attribute__((unused)),
+static inline void _fprintf_datetype(FILE *file, const char *, const char *c,
                                      DateType date)
 {
-   fprintf(file, "%ld:%02ld:%02ld:%02ld:%02ld:%09.6lf%s", date.Year, date.Month,
-           date.Day, date.Hour, date.Minute, jdsecond2double(date.Second), c);
+   if (_print_first_delim(file))
+      fprintf(file, "%s", c);
+   fprintf(file, "%ld:%02ld:%02ld:%02ld:%02ld:%09.6lf", date.Year, date.Month,
+           date.Day, date.Hour, date.Minute, jdsecond2double(date.Second));
+}
+static inline void _fprintf_normal(FILE *file, const char *fmt, const char *c,
+                                   ...)
+{
+   va_list args;
+
+   if (_print_first_delim(file))
+      fprintf(file, "%s", c);
+
+   va_start(args, c);
+   vfprintf(file, fmt, args);
+   va_end(args);
 }
 static inline void newline_fflush(FILE *file)
 {
@@ -66,20 +111,20 @@ static inline void newline_fflush(FILE *file)
 
 #define def_prnt_fmt(x, delim)                                                 \
    _Generic((x),                                                               \
-       int: "%d" delim,                                                        \
-       long: "%ld" delim,                                                      \
-       long long: "%lld" delim,                                                \
-       unsigned int: "%u" delim,                                               \
-       unsigned long: "%lu" delim,                                             \
-       unsigned long long: "%llu" delim,                                       \
-       float: PRNT_DBL delim,                                                  \
-       double: PRNT_DBL delim,                                                 \
-       signed char: "%c" delim,                                                \
-       unsigned char: "%c" delim,                                              \
-       char: "%c" delim,                                                       \
-       char *: "%s" delim,                                                     \
-       const char *: "%s" delim,                                               \
-       default: "" delim)
+       int: "%d",                                                              \
+       long: "%ld",                                                            \
+       long long: "%lld",                                                      \
+       unsigned int: "%u",                                                     \
+       unsigned long: "%lu",                                                   \
+       unsigned long long: "%llu",                                             \
+       float: PRNT_DBL,                                                        \
+       double: PRNT_DBL,                                                       \
+       signed char: "%c",                                                      \
+       unsigned char: "%c",                                                    \
+       char: "%c",                                                             \
+       char *: "%s",                                                           \
+       const char *: "%s",                                                     \
+       default: "")
 
 #define _print_fnc(file, x, delim)                                             \
    _Generic((x),                                                               \
@@ -88,7 +133,8 @@ static inline void newline_fflush(FILE *file)
        mat3x3_t: _fprintf_mat3x3,                                              \
        DateType: _fprintf_datetype,                                            \
        JDType: _fprintf_jdtype,                                                \
-       default: fprintf)((file), def_prnt_fmt(x, delim), (x))
+       default: _fprintf_normal)((file), def_prnt_fmt((x), (delim)), (delim),  \
+                                 (x))
 
 #define file_print(file, x) _print_fnc(file, x, " ")
 #define csv_print(file, x)  _print_fnc(file, x, ",")
@@ -161,7 +207,7 @@ void MagReport(void)
 
    if (First) {
       First   = 0;
-      magfile = FileOpen(OutPath, "MagBVB.42", "wt");
+      magfile = FileOpen(OutPath, "MagBVB.42", "w+t");
    }
 
    file_print(magfile, SC[0].bvb);
@@ -178,7 +224,7 @@ void GyroReport(void)
 
    if (First) {
       First    = 0;
-      gyrofile = FileOpen(OutPath, "Gyro.42", "wt");
+      gyrofile = FileOpen(OutPath, "Gyro.42", "w+t");
    }
 
    file_print(gyrofile, SC[0].B[0].wn);
@@ -206,7 +252,7 @@ void DSM_AttitudeReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_attitude_%02li.42", Isc);
-            attitudefile[Isc] = FileOpen(OutPath, s, "wt");
+            attitudefile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(attitudefile[Isc], "qbn_0 qbn_1 qbn_2 qbn_3 ");
             file_print(attitudefile[Isc], "wbn_X wbn_Y wbn_Z ");
             newline_fflush(attitudefile[Isc]);
@@ -236,7 +282,7 @@ void DSM_AC_AttitudeReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_AC_attitude_%02li.42", Isc);
-            attitudefile[Isc] = FileOpen(OutPath, s, "wt");
+            attitudefile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(attitudefile[Isc], "qbn_0 qbn_1 qbn_2 qbn_3 ");
             file_print(attitudefile[Isc], "wbn_X wbn_Y wbn_Z ");
             newline_fflush(attitudefile[Isc]);
@@ -267,7 +313,7 @@ void DSM_InertialReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_inertial_%02li.42", Isc);
-            inertialfile[Isc] = FileOpen(OutPath, s, "wt");
+            inertialfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(inertialfile[Isc], "PosN_X PosN_Y PosN_Z ");
             file_print(inertialfile[Isc], "VelN_X VelN_Y VelN_Z ");
             file_print(inertialfile[Isc], "PosL_X PosL_Y PosL_Z ");
@@ -300,7 +346,7 @@ void DSM_RelativeReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_relative_L_%02li.42", Isc);
-            relativefile[Isc] = FileOpen(OutPath, s, "wt");
+            relativefile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(relativefile[Isc], "PosR_X PosR_Y PosR_Z ");
             file_print(relativefile[Isc], "VelR_X VelR_Y VelR_Z ");
             newline_fflush(relativefile[Isc]);
@@ -346,13 +392,13 @@ void DSM_PlanetEphemReport(void)
       for (Iw = 0; Iw < NWORLD; Iw++) {
          if (World[Iw].Exists) {
             sprintf(s, "ephem/DSM_ephem_%s.42", World[Iw].Name);
-            ephemfile[Iw] = FileOpen(OutPath, s, "wt");
+            ephemfile[Iw] = FileOpen(OutPath, s, "w+t");
             file_print(ephemfile[Iw], "PosH_X PosH_Y PosH_Z ");
             file_print(ephemfile[Iw], "VelH_X VelH_Y VelH_Z ");
             newline_fflush(ephemfile[Iw]);
 
             sprintf(s, "ephem/DSM_suntrack_%s.42", World[Iw].Name);
-            suntrackfile[Iw] = FileOpen(OutPath, s, "wt");
+            suntrackfile[Iw] = FileOpen(OutPath, s, "w+t");
             file_print(suntrackfile[Iw], "Lat Lon ");
             newline_fflush(suntrackfile[Iw]);
          }
@@ -398,7 +444,7 @@ void DSM_AC_InertialReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_AC_inertial_%02li.42", Isc);
-            inertialfile[Isc] = FileOpen(OutPath, s, "wt");
+            inertialfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(inertialfile[Isc], "PosN_X PosN_Y PosN_Z ");
             file_print(inertialfile[Isc], "VelN_X VelN_Y VelN_Z ");
             newline_fflush(inertialfile[Isc]);
@@ -432,7 +478,7 @@ void DSM_StateRot3BodyReport(void)
             LS = &LagSys[Orb[SC[Isc].RefOrb].Sys];
             if (LS->Exists) {
                sprintf(s, "DSM_StateRot3Body_%02li.42", Isc);
-               staterotfile[Isc] = FileOpen(OutPath, s, "wt");
+               staterotfile[Isc] = FileOpen(OutPath, s, "w+t");
                file_print(staterotfile[Isc], "PosR_X PosR_Y PosR_Z ");
                file_print(staterotfile[Isc], "VelR_X VelR_Y VelR_Z ");
                newline_fflush(staterotfile[Isc]);
@@ -472,7 +518,7 @@ void DSM_PosHReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "PosH_%02li.42", Isc);
-            poshfile[Isc] = FileOpen(OutPath, s, "wt");
+            poshfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(poshfile[Isc], "TDB_TIME TT_TIME ");
             file_print(poshfile[Isc], "TDB_JD TT_JD ");
             file_print(poshfile[Isc], "Venus_HC_X Venus_HC_Y Venus_HC_Z ");
@@ -556,7 +602,7 @@ void DSM_Rot3BodyReport(void)
             LS = &LagSys[EARTHMOON];
             if (LS->Exists) {
                sprintf(s, "DSM_Rot3Body_%02li.42", Isc);
-               rotfile[Isc] = FileOpen(OutPath, s, "wt");
+               rotfile[Isc] = FileOpen(OutPath, s, "w+t");
                file_print(rotfile[Isc], "PosR_X PosR_Y PosR_Z ");
                file_print(rotfile[Isc], "VelR_X VelR_Y VelR_Z ");
                newline_fflush(rotfile[Isc]);
@@ -611,11 +657,11 @@ void DSM_NAV_StateReport(void)
       if (SC[Isc].Exists && Nav->NavigationActive == TRUE &&
           Nav->reportConfigured == FALSE) {
          sprintf(s, "DSM_navstate_%02li.42", Isc);
-         stateFile[Isc] = FileOpen(OutPath, s, "wt");
+         stateFile[Isc] = FileOpen(OutPath, s, "w+t");
          sprintf(s, "DSM_navtime_%02li.42", Isc);
-         timeFile[Isc] = FileOpen(OutPath, s, "wt");
+         timeFile[Isc] = FileOpen(OutPath, s, "w+t");
          sprintf(s, "DSM_navcov_%02li.42", Isc);
-         covFile[Isc] = FileOpen(OutPath, s, "wt");
+         covFile[Isc] = FileOpen(OutPath, s, "w+t");
          Nav          = &SC[Isc].DSM.DsmNav;
          FOR_STATES(state)
          {
@@ -759,7 +805,7 @@ void DSM_NAV_ResidualsReport(const double time, const long Isc, long *First,
 
    if (*First) {
       sprintf(s, "DSM_residuals_%02li.42", Isc);
-      residualFile[Isc] = FileOpen(OutPath, s, "wt");
+      residualFile[Isc] = FileOpen(OutPath, s, "w+t");
       Nav               = &SC[Isc].DSM.DsmNav;
       FILE *file        = residualFile[Isc];
       fprintf(file, "CCSDS_Time ; ");
@@ -904,7 +950,7 @@ void DSM_ATT_ControlReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_attcontrol_%02li.42", Isc);
-            attcontrolfile[Isc] = FileOpen(OutPath, s, "wt");
+            attcontrolfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(attcontrolfile[Isc], "therr_X therr_Y therr_Z ");
             file_print(attcontrolfile[Isc], "werr_X werr_Y werr_Z ");
             file_print(attcontrolfile[Isc], "Trq_X Trq_Y Trq_Z ");
@@ -941,7 +987,7 @@ void DSM_POS_ControlReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_poscontrol_%02li.42", Isc);
-            poscontrolfile[Isc] = FileOpen(OutPath, s, "wt");
+            poscontrolfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(poscontrolfile[Isc], "perr_X perr_Y perr_Z ");
             file_print(poscontrolfile[Isc], "verr_X verr_Y verr_Z ");
             file_print(poscontrolfile[Isc], "FcmdN_X FcmdN_Y FcmdN_Z ");
@@ -977,7 +1023,7 @@ void DSM_EphemReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_ephem_%02li.42", Isc);
-            ephemfile[Isc] = FileOpen(OutPath, s, "wt");
+            ephemfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(ephemfile[Isc], "Beta_(rad) ");
             file_print(ephemfile[Isc], "INC_(rad) ");
             file_print(ephemfile[Isc], "AOP_(rad) ");
@@ -1027,7 +1073,7 @@ void DSM_WHLReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_WHL_H_%02li.42", Isc);
-            WHLFile[Isc] = FileOpen(OutPath, s, "wt");
+            WHLFile[Isc] = FileOpen(OutPath, s, "w+t");
             if (SC[Isc].Nw > 0) {
                for (i = 0; i < SC[Isc].Nw; i++) {
                   char whl_str[50] = {'\0'};
@@ -1065,7 +1111,7 @@ void DSM_THRReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_THR_%02li.42", Isc);
-            THRFile[Isc] = FileOpen(OutPath, s, "wt");
+            THRFile[Isc] = FileOpen(OutPath, s, "w+t");
             if (SC[Isc].Nthr > 0) {
                for (i = 0; i < SC[Isc].Nthr; i++) {
                   char whl_str[50] = {'\0'};
@@ -1102,7 +1148,7 @@ void DSM_SVBReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_SVB_%02li.42", Isc);
-            SVBFile[Isc] = FileOpen(OutPath, s, "wt");
+            SVBFile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(SVBFile[Isc], "SVB_X SVB_Y SVB_Z ");
             newline_fflush(SVBFile[Isc]);
          }
@@ -1133,7 +1179,7 @@ void DSM_GroundTrackReport(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "DSM_groundtrack_%02li.42", Isc);
-            gtrackfile[Isc] = FileOpen(OutPath, s, "wt");
+            gtrackfile[Isc] = FileOpen(OutPath, s, "w+t");
             file_print(gtrackfile[Isc], "Lat Lon ");
             newline_fflush(gtrackfile[Isc]);
          }
@@ -1164,10 +1210,10 @@ void OrbPropReport(void)
 
    if (First) {
       First       = 0;
-      FixedFile   = FileOpen(OutPath, "PosVelNfixed.42", "w");
-      EnckeFile   = FileOpen(OutPath, "PosVelNencke.42", "w");
-      CowellFile  = FileOpen(OutPath, "PosVelNcowell.42", "w");
-      EulHillFile = FileOpen(OutPath, "PosVelNeulhill.42", "w");
+      FixedFile   = FileOpen(OutPath, "PosVelNfixed.42", "w+t");
+      EnckeFile   = FileOpen(OutPath, "PosVelNencke.42", "w+t");
+      CowellFile  = FileOpen(OutPath, "PosVelNcowell.42", "w+t");
+      EulHillFile = FileOpen(OutPath, "PosVelNeulhill.42", "w+t");
    }
 
    if (OutFlag) {
@@ -1194,7 +1240,7 @@ void GmatReport(void)
 
    if (First) {
       First   = 0;
-      outfile = FileOpen(OutPath, "PosN9sc.42", "w");
+      outfile = FileOpen(OutPath, "PosN9sc.42", "w+t");
    }
 
    if (OutFlag) {
@@ -1210,7 +1256,7 @@ void PerturbReport(void)
    static long First = 1;
 
    if (First) {
-      perturbfile = FileOpen(OutPath, "perturb.42", "wt");
+      perturbfile = FileOpen(OutPath, "perturb.42", "w+t");
       file_print(perturbfile, "gravTrqB_X gravTrqB_Y gravTrqB_Z ");
       file_print(perturbfile, "gravTrqN_X gravTrqN_Y gravTrqN_Z ");
       file_print(perturbfile, "srpTrqB_X srpTrqB_Y srpTrqB_Z ");
@@ -1245,7 +1291,7 @@ void NESC_Report()
    static long First = 1;
    if (First) {
       First                   = 0;
-      nescfile                = FileOpen(OutPath, "NESC_data.csv", "wt");
+      nescfile                = FileOpen(OutPath, "NESC_data.csv", "w+t");
       const char *headers[30] = {"time",
                                  "gePosition_m_X",
                                  "gePosition_m_Y",
@@ -1371,9 +1417,9 @@ void Report(void)
 
    if (First) {
       First       = FALSE;
-      timefile    = FileOpen(OutPath, "time.42", "w");
-      DynTimeFile = FileOpen(OutPath, "DynTime.42", "w");
-      UtcDateFile = FileOpen(OutPath, "UTC.42", "w");
+      timefile    = FileOpen(OutPath, "time.42", "w+t");
+      DynTimeFile = FileOpen(OutPath, "DynTime.42", "w+t");
+      UtcDateFile = FileOpen(OutPath, "UTC.42", "w+t");
 
       ufile          = (FILE **)calloc(Nsc, sizeof(FILE *));
       xfile          = (FILE **)calloc(Nsc, sizeof(FILE *));
@@ -1383,60 +1429,56 @@ void Report(void)
       for (Isc = 0; Isc < Nsc; Isc++) {
          if (SC[Isc].Exists) {
             sprintf(s, "u%02ld.42", Isc);
-            ufile[Isc] = FileOpen(OutPath, s, "w");
+            ufile[Isc] = FileOpen(OutPath, s, "w+t");
             sprintf(s, "x%02ld.42", Isc);
-            xfile[Isc] = FileOpen(OutPath, s, "w");
+            xfile[Isc] = FileOpen(OutPath, s, "w+t");
             if (SC[Isc].FlexActive) {
                sprintf(s, "uf%02ld.42", Isc);
-               uffile[Isc] = FileOpen(OutPath, s, "w");
+               uffile[Isc] = FileOpen(OutPath, s, "w+t");
                sprintf(s, "xf%02ld.42", Isc);
-               xffile[Isc] = FileOpen(OutPath, s, "w");
+               xffile[Isc] = FileOpen(OutPath, s, "w+t");
             }
             if (SC[Isc].ConstraintsRequested) {
                sprintf(s, "Constraint%02ld.42", Isc);
-               ConstraintFile[Isc] = FileOpen(OutPath, s, "w");
+               ConstraintFile[Isc] = FileOpen(OutPath, s, "w+t");
             }
          }
       }
 
-      PosNfile = FileOpen(OutPath, "PosN.42", "w");
-      VelNfile = FileOpen(OutPath, "VelN.42", "w");
-      PosWfile = FileOpen(OutPath, "PosW.42", "w");
-      VelWfile = FileOpen(OutPath, "VelW.42", "w");
-      PosRfile = FileOpen(OutPath, "PosR.42", "w");
-      VelRfile = FileOpen(OutPath, "VelR.42", "w");
-      qbnfile  = FileOpen(OutPath, "qbn.42", "w");
-      wbnfile  = FileOpen(OutPath, "wbn.42", "w");
-      bvnfile  = FileOpen(OutPath, "bvn.42", "w");
-      bvbfile  = FileOpen(OutPath, "bvb.42", "w");
-      Hvnfile  = FileOpen(OutPath, "Hvn.42", "w");
-      Hvbfile  = FileOpen(OutPath, "Hvb.42", "w");
-      svnfile  = FileOpen(OutPath, "svn.42", "w");
-      svbfile  = FileOpen(OutPath, "svb.42", "w");
-      KEfile   = FileOpen(OutPath, "KE.42", "w");
+      PosNfile = FileOpen(OutPath, "PosN.42", "w+t");
+      VelNfile = FileOpen(OutPath, "VelN.42", "w+t");
+      PosWfile = FileOpen(OutPath, "PosW.42", "w+t");
+      VelWfile = FileOpen(OutPath, "VelW.42", "w+t");
+      PosRfile = FileOpen(OutPath, "PosR.42", "w+t");
+      VelRfile = FileOpen(OutPath, "VelR.42", "w+t");
+      qbnfile  = FileOpen(OutPath, "qbn.42", "w+t");
+      wbnfile  = FileOpen(OutPath, "wbn.42", "w+t");
+      bvnfile  = FileOpen(OutPath, "bvn.42", "w+t");
+      bvbfile  = FileOpen(OutPath, "bvb.42", "w+t");
+      Hvnfile  = FileOpen(OutPath, "Hvn.42", "w+t");
+      Hvbfile  = FileOpen(OutPath, "Hvb.42", "w+t");
+      svnfile  = FileOpen(OutPath, "svn.42", "w+t");
+      svbfile  = FileOpen(OutPath, "svb.42", "w+t");
+      KEfile   = FileOpen(OutPath, "KE.42", "w+t");
       // ProjAreaFile = FileOpen(OutPath,"ProjArea.42","w");
-      RPYfile  = FileOpen(OutPath, "RPY.42", "w");
-      Hwhlfile = FileOpen(OutPath, "Hwhl.42", "w");
+      RPYfile  = FileOpen(OutPath, "RPY.42", "w+t");
+      Hwhlfile = FileOpen(OutPath, "Hwhl.42", "w+t");
 
-      if (SC[0].Nmtb > 0) {
-         MTBfile = FileOpen(OutPath, "MTB.42", "w");
-      }
+      if (SC[0].Nmtb > 0)
+         MTBfile = FileOpen(OutPath, "MTB.42", "w+t");
 
-      if (SC[0].Nthr > 0) {
-         Thrfile = FileOpen(OutPath, "Thr.42", "w");
-      }
+      if (SC[0].Nthr > 0)
+         Thrfile = FileOpen(OutPath, "Thr.42", "w+t");
 
-      if (SC[0].Nacc > 0) {
-         AccFile = FileOpen(OutPath, "Acc.42", "w");
-      }
+      if (SC[0].Nacc > 0)
+         AccFile = FileOpen(OutPath, "Acc.42", "w+t");
 
       if (SC[0].Ncss > 0) {
-         AlbedoFile = FileOpen(OutPath, "Albedo.42", "w");
-         IllumFile  = FileOpen(OutPath, "Illum.42", "w");
+         AlbedoFile = FileOpen(OutPath, "Albedo.42", "w+t");
+         IllumFile  = FileOpen(OutPath, "Illum.42", "w+t");
       }
-      if (SC[0].Ngps > 0) {
-         GpsFile = FileOpen(OutPath, "Gps.42", "w");
-      }
+      if (SC[0].Ngps > 0)
+         GpsFile = FileOpen(OutPath, "Gps.42", "w+t");
    }
 
    if (OutFlag) {

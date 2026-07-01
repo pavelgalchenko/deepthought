@@ -509,9 +509,7 @@ vec3_t NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
       for (Im = 0; Im < WCenter->Nsat; Im++) {
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
-            for (j = 0; j < 3; j++)
-               pn.v[j] = World[Iw].eph.PosN.v[j];
-            pr = MxV(Nav->refCRN, pn);
+            pr = MxV(Nav->refCRN, World[Iw].eph.PosN);
             for (j = 0; j < 3; j++)
                s.v[j] = pr.v[j] - PosR.v[j];
             accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
@@ -524,8 +522,7 @@ vec3_t NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
    if (O->Regime == ORB_THREE_BODY) {
       for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
          Iw = World[SecCenter].Sat[Im];
-         pn = World[Iw].eph.PosN;
-         ph = MTxV(World[SecCenter].CNH, pn);
+         ph = MTxV(World[SecCenter].CNH, World[Iw].eph.PosN);
          pn = MxV(WCenter->CNH, ph);
          for (j = 0; j < 3; j++)
             pn.v[j] += World[SecCenter].eph.PosN.v[j];
@@ -592,8 +589,7 @@ mat3x3_t NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
       for (Im = 0; Im < WCenter->Nsat; Im++) {
          Iw = WCenter->Sat[Im];
          if (Iw != SecCenter) {
-            pn = World[Iw].eph.PosN;
-            pr = MxV(Nav->refCRN, pn);
+            pr = MxV(Nav->refCRN, World[Iw].eph.PosN);
             for (j = 0; j < 3; j++)
                s.v[j] = pr.v[j] - PosR.v[j];
             dGdR = getDGravFrcDPos(World[Iw].mu, s);
@@ -607,9 +603,7 @@ mat3x3_t NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    if (O->Regime == ORB_THREE_BODY) {
       for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
          Iw = World[SecCenter].Sat[Im];
-         pn = World[Iw].eph.PosN;
-         for (j = 0; j < 3; j++)
-            ph = MTxV(World[SecCenter].CNH, pn);
+         ph = MTxV(World[SecCenter].CNH, World[Iw].eph.PosN);
          pn = MxV(WCenter->CNH, ph);
          for (j = 0; j < 3; j++)
             pn.v[j] += World[SecCenter].eph.PosN.v[j];
@@ -1403,7 +1397,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          break;
    }
 
-   memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
+   memset(jacobian[0], 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    if (Nav->stateActive[ROTMAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE]) {
@@ -1758,7 +1752,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
       case FRAME_F:
          break;
    }
-   memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
+   memset(jacobian[0], 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    vec3_t aeroTrq, aeroFrc;
    if (AeroActive) {
@@ -2095,7 +2089,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
          break;
    }
 
-   memset(jacobian, 0, sizeof(double) * Nav->navDim * Nav->navDim);
+   memset(jacobian[0], 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    if (Nav->stateActive[QUAT_STATE] && Nav->stateActive[POS_STATE] &&
        Nav->stateActive[VEL_STATE] && Nav->stateActive[OMEGA_STATE]) {
@@ -2491,7 +2485,7 @@ void GetM(struct AcType *const AC, struct DSMNavType *const Nav,
    mat3x3_t tmp3x3, MOIInv;
    long i, j;
 
-   memset(M, 0, sizeof(double) * Nav->navDim * Nav->navDim);
+   memset(M[0], 0, sizeof(double) * Nav->navDim * Nav->navDim);
 
    switch (Nav->type) {
       case LIEKF_NAV: {
@@ -2631,7 +2625,7 @@ void NavSkDot(const long nav_dim, double **sk, double **F, double **M_sqrtQ,
    MxMG(sk, sk_dot, F, nav_dim, nav_dim, nav_dim);
 
    // transfer F to sk_dot, ensuring lower triangular
-   memset(sk_dot, 0, sizeof(double) * nav_dim * nav_dim);
+   memset(sk_dot[0], 0, sizeof(double) * nav_dim * nav_dim);
    for (long i = 0; i < nav_dim; i++) {
       for (long j = i + 1; j < nav_dim; j++)
          sk_dot[j][i] = F[j][i];
@@ -2872,8 +2866,7 @@ void PropagateNav(struct AcType *const AC, struct DSMType *const DSM,
          whlH[i] = Nav->whlH[i];
 
       if (k > 0) {
-         for (i = 0; i < Nav->navDim * Nav->navDim; i++)
-            Sk[0][i] += DTk[k] * Skk[k - 1][0][i];
+         axpy(DTk[k], Skk[k - 1][0], Sk[0], Nav->navDim * Nav->navDim);
 
          FOR_STATES(Istate)
          {
@@ -3021,14 +3014,8 @@ void CalcInnovation(const enum SensorType type,
 {
    switch (type) {
       case STARTRACK_SENSOR: {
-         const quat_t q_data = {.x = meas->data[0],
-                                .y = meas->data[1],
-                                .z = meas->data[2],
-                                .s = meas->data[3]};
-         const quat_t q_est  = {.x = meas_est[0],
-                                .y = meas_est[1],
-                                .z = meas_est[2],
-                                .s = meas_est[3]};
+         const quat_t q_data = DBL_TO_QUAT(meas->data);
+         const quat_t q_est  = DBL_TO_QUAT(meas_est);
          vec3_t inn_v        = Q2AngleVec(QxQT(q_data, q_est));
          VEC3_TO_DBL(innovation, inn_v);
       } break;
