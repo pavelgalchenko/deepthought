@@ -386,7 +386,7 @@ void DSM_PlanetEphemReport(void)
       static char ephem_dir[BUFSIZE] = {'\0'};
       strcat(ephem_dir, OutPath);
       strcat(ephem_dir, "/ephem/");
-      mkdir(ephem_dir, 0777);
+      MakeDir(ephem_dir);
       ephemfile    = (FILE **)calloc(NWORLD, sizeof(FILE *));
       suntrackfile = (FILE **)calloc(NWORLD, sizeof(FILE *));
       for (Iw = 0; Iw < NWORLD; Iw++) {

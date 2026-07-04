@@ -13,6 +13,7 @@
 
 #include "iokit.h"
 #include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -20,6 +21,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 #ifndef __unix__
 #include <unistd.h>
 #endif
@@ -204,21 +206,39 @@ void FilesMatchingFmt(const char path[128], const char fmt[10],
 #endif
 }
 /**********************************************************************/
+/* Returns 0 if exists, errno otherwise                               */
 int FileExists(const char *Path, const char *File)
 {
    FILE *FilePtr;
    char FileName[1024];
-   int exists = 0;
+   int out = 0;
 
    strcpy(FileName, Path);
    strcat(FileName, File);
 
+   errno   = 0; // ensure errno is cleared
    FilePtr = fopen(FileName, "r");
-   if (FilePtr != NULL)
-      exists = 1;
+   // redundant compared to setting from errno
+   out = (FilePtr == NULL) ? errno : 0;
    fclose(FilePtr);
+   errno = 0; // cleanup after ourselves
 
-   return exists;
+   return out;
+}
+/**********************************************************************/
+/* Returns 0 if exists, errno otherwise                               */
+int DirExists(const char *Path)
+{
+   DIR *DirPtr;
+   int out = 0;
+
+   errno  = 0; // ensure errno is cleared
+   DirPtr = opendir(Path);
+   // redundant compared to setting from errno
+   out = (DirPtr == NULL) ? errno : 0;
+   closedir(DirPtr); // cleanup after ourselves
+
+   return out;
 }
 /**********************************************************************/
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
@@ -234,6 +254,23 @@ FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode)
       exit(EXIT_FAILURE);
    }
    return (FilePtr);
+}
+/**********************************************************************/
+void MakeDir(const char *Path)
+{
+#if defined __MINGW32__
+   _mkdir(Path);
+#elif defined _WIN32
+   _mkdir(Path);
+#elif defined _WIN64
+   _mkdir(Path);
+#elif defined __APPLE__
+   mkdir(Path, 0777);
+#elif defined __linux__
+   mkdir(Path, 0777);
+#else
+#error "Computing platform not detected!"
+#endif
 }
 /**********************************************************************/
 void ByteSwapDouble(double *A)
@@ -372,7 +409,8 @@ SOCKET InitSocketServer(int Port, int AllowBlocking)
    }
 
    /* Allow TCP to send small packets (look up Nagle's algorithm) */
-   /* Depending on your message sizes, this may or may not improve performance
+   /* Depending on your message sizes, this may or may not improve
+    * performance
     */
    // setsockopt(sockfd,IPPROTO_TCP,TCP_NODELAY,&DisableNagle,sizeof(DisableNagle));
 
@@ -426,7 +464,8 @@ SOCKET InitSocketServer(int Port, int AllowBlocking)
    }
 
    /* Allow TCP to send small packets (look up Nagle's algorithm) */
-   /* Depending on your message sizes, this may or may not improve performance
+   /* Depending on your message sizes, this may or may not improve
+    * performance
     */
    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &DisableNagle,
               sizeof(DisableNagle));
@@ -517,7 +556,8 @@ SOCKET InitSocketClient(const char *hostname, int Port, int AllowBlocking)
    }
 
    /* Allow TCP to send small packets (look up Nagle's algorithm) */
-   /* Depending on your message sizes, this may or may not improve performance
+   /* Depending on your message sizes, this may or may not improve
+    * performance
     */
    setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, &DisableNagle,
               sizeof(DisableNagle));

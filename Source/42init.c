@@ -4986,7 +4986,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
    const char *f_name    = "MinorBodies.txt";
 
    // Prefer a MinorBodies.txt in the InOut path
-   if (FileExists(InOutPath, f_name))
+   if (FileExists(InOutPath, f_name) == 0)
       infile = FileOpen(InOutPath, f_name, "r");
    else
       infile = FileOpen(ModelPath, f_name, "r");
@@ -5383,6 +5383,7 @@ void ReadWorldExists(struct WorldType *const worlds,
          if (strstr(key_str, world_name) != NULL) {
             switch (val_type) {
                case FYNT_SCALAR: {
+                  // supports the old all-or-nothing method
                   found = TRUE;
 
                   const int is_enabled = getYAMLBool(val_node);
@@ -5391,6 +5392,7 @@ void ReadWorldExists(struct WorldType *const worlds,
                      worlds[Im].Exists = is_enabled;
                } break;
                case FYNT_MAPPING: {
+                  // supports the new method
                   found = TRUE;
                   worlds[Iw].Exists =
                       getYAMLBool(fy_node_by_path_def(val_node, "/Exists"));
@@ -5521,9 +5523,6 @@ void InitSim(int argc, char **argv)
    if (argc > 2)
       sprintf(ModelPath, "./%s/", argv[2]);
 
-   DIR *OutDir;
-   DIR *ModelDir;
-
    GetExecDir(ExeDir);
 
    strcpy(ModelPath, ExeDir);
@@ -5534,14 +5533,20 @@ void InitSim(int argc, char **argv)
    CLI_ARGS = docopt(argc, argv, /* help */ 1);
 
    if (CLI_ARGS.indir != NULL) {
-      sprintf(InOutPath, "%s", CLI_ARGS.indir);
+      strcpy(InOutPath, CLI_ARGS.indir);
       strcat(InOutPath, "/");
    }
 
    if (CLI_ARGS.outdir != NULL) {
       strcpy(OutPath, CLI_ARGS.outdir);
-      printf("%s", OutPath);
       strcat(OutPath, "/");
+   }
+
+   if (CLI_ARGS.modeldir != NULL) {
+      strcpy(SCModelPath, CLI_ARGS.modeldir);
+      strcat(SCModelPath, "/");
+      if (ENOENT == DirExists(SCModelPath))
+         strcpy(SCModelPath, ModelPath);
    }
 
    if (CLI_ARGS.defaultdir != NULL) {
@@ -5557,12 +5562,8 @@ void InitSim(int argc, char **argv)
       if (CLI_ARGS.modeldir == NULL) {
          strcpy(SCModelPath, CLI_ARGS.defaultdir);
          strcat(SCModelPath, "/Model/");
-         ModelDir = opendir(SCModelPath);
-         if (ModelDir)
-            closedir(ModelDir);
-         else if (ENOENT == errno) {
+         if (ENOENT == DirExists(SCModelPath))
             strcpy(SCModelPath, ModelPath);
-         }
       }
    }
    else { /* Default Directories */
@@ -5580,25 +5581,8 @@ void InitSim(int argc, char **argv)
       if (CLI_ARGS.modeldir == NULL)
          strcpy(SCModelPath, ModelPath);
    }
-   OutDir = opendir(OutPath);
-   if (OutDir) {
-      closedir(OutDir);
-   }
-   else if (ENOENT == errno) {
-#if defined __MINGW32__
-      mkdir(OutPath);
-#elif defined _WIN32
-      mkdir(OutPath);
-#elif defined _WIN64
-      mkdir(OutPath);
-#elif defined __APPLE__
-      mkdir(OutPath, 0777);
-#elif defined __linux__
-      mkdir(OutPath, 0777);
-#else
-#error "Computing platform not detected!"
-#endif
-   }
+   if (ENOENT == DirExists(OutPath))
+      MakeDir(OutPath);
 
    printf("\nExeDir: %s \n", ExeDir);
    printf("\nInput Path: %s \n", InOutPath);

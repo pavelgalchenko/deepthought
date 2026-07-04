@@ -58,8 +58,10 @@ long getYAMLEulerAngles(struct fy_node *yamlEuler, double angles[3], long *seq);
 
 void FilesMatchingFmt(const char path[128], const char fmt[10],
                       char (**f_names)[256], long *const n_match);
-int FileExists(const char *Path, const char *File);
+__attribute__((pure)) int FileExists(const char *Path, const char *File);
+__attribute__((pure)) int DirExists(const char *Path);
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode);
+void MakeDir(const char *Path);
 void ByteSwapDouble(double *A);
 int FileToString(const char *file_name, char **result_string,
                  size_t *string_len);
