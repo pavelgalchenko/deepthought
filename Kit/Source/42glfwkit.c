@@ -1088,12 +1088,12 @@ void InitMapWindow(void)
    for (Isc = 0; Isc < Nsc; Isc++) {
       if (SC[Isc].Exists)
          SC[Isc].SpriteTexTag =
-             PpmToTexTag("./Model/", SC[Isc].SpriteFileName, 4, GL_CLAMP);
+             PpmToTexTag(ModelPath, SC[Isc].SpriteFileName, 4, GL_CLAMP);
    }
 
-   RockballMapTexTag = PpmToTexTag("./World/", "Rockball.ppm", 3, GL_REPEAT);
-   IceballMapTexTag  = PpmToTexTag("./World/", "Iceball.ppm", 3, GL_REPEAT);
-   Iceball2MapTexTag = PpmToTexTag("./World/", "Iceball2.ppm", 3, GL_REPEAT);
+   RockballMapTexTag = PpmToTexTag(WorldPath, "Rockball.ppm", 3, GL_REPEAT);
+   IceballMapTexTag  = PpmToTexTag(WorldPath, "Iceball.ppm", 3, GL_REPEAT);
+   Iceball2MapTexTag = PpmToTexTag(WorldPath, "Iceball2.ppm", 3, GL_REPEAT);
    for (Iw = MERCURY; Iw < NWORLD; Iw++) {
       if (World[Iw].Exists) {
          if (!strcmp(World[Iw].MapFileName, "Rockball"))
@@ -1104,22 +1104,22 @@ void InitMapWindow(void)
             World[Iw].MapTexTag = Iceball2MapTexTag;
          else if (strcmp(World[Iw].MapFileName, "NONE"))
             World[Iw].MapTexTag =
-                PpmToTexTag("./World/", World[Iw].MapFileName, 3, GL_CLAMP);
+                PpmToTexTag(WorldPath, World[Iw].MapFileName, 3, GL_CLAMP);
       }
    }
    World[EARTH].MapTexTag =
-       PpmToTexTag("./World/", "BlueMarble2.ppm", 3, GL_CLAMP);
+       PpmToTexTag(WorldPath, "BlueMarble2.ppm", 3, GL_CLAMP);
    World[LUNA].ColTexTag =
-       PpmToTexTag("./World/", World[LUNA].ColTexFileName, 3, GL_REPEAT);
+       PpmToTexTag(WorldPath, World[LUNA].ColTexFileName, 3, GL_REPEAT);
    World[LUNA].BumpTexTag =
-       PpmToTexTag("./World/", World[LUNA].BumpTexFileName, 3, GL_REPEAT);
+       PpmToTexTag(WorldPath, World[LUNA].BumpTexFileName, 3, GL_REPEAT);
 
-   LogoTexTag      = PpmToTexTag("./Model/", "GlastLogo.ppm", 3, GL_CLAMP);
-   SunSpriteTexTag = PpmToTexTag("./Model/", "SunSpriteAlpha.ppm", 4, GL_CLAMP);
+   LogoTexTag      = PpmToTexTag(ModelPath, "GlastLogo.ppm", 3, GL_CLAMP);
+   SunSpriteTexTag = PpmToTexTag(ModelPath, "SunSpriteAlpha.ppm", 4, GL_CLAMP);
    AntiSunSpriteTexTag =
-       PpmToTexTag("./Model/", "AntiSunSpriteAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "AntiSunSpriteAlpha.ppm", 4, GL_CLAMP);
    MoonSpriteTexTag =
-       PpmToTexTag("./Model/", "MoonSpriteAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "MoonSpriteAlpha.ppm", 4, GL_CLAMP);
    glGenTextures(1, &DayNightTexTag);
 
 #ifdef _USE_SHADERS_
@@ -1258,9 +1258,9 @@ void InitSphereWindow(void)
    glDisable(GL_LIGHTING);
 
    SphereSunSpriteTexTag =
-       PpmToTexTag("./Model/", "SunSpriteAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "SunSpriteAlpha.ppm", 4, GL_CLAMP);
    SphereMoonSpriteTexTag =
-       PpmToTexTag("./Model/", "MoonSpriteAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "MoonSpriteAlpha.ppm", 4, GL_CLAMP);
 
    InitSphereWidgets();
 }

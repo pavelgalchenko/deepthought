@@ -20,15 +20,19 @@
 #include "defineskit.h"
 #include "iokit.h"
 #include "sigkit.h"
+#include "utilkit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <threads.h>
 
 /* #ifdef __cplusplus
 ** namespace Kit {
 ** #endif
 */
+
+extern char ModelPath[1000];
 
 /**********************************************************************/
 /*  Available fonts:                                                  */
@@ -1353,12 +1357,12 @@ void LoadStars(const char *StarFileName, vec3_t BuckyPf[32],
    GLuint StarTexTag;
 
    LoadBucky(BuckyPf, BuckyNeighbor);
-   StarTexTag = PpmToTexTag("./Model/", "StarTexture.ppm", 4, GL_REPEAT);
+   StarTexTag = PpmToTexTag(ModelPath, "StarTexture.ppm", 4, GL_REPEAT);
 
    for (k = 0; k < 32; k++)
       N[k] = 0;
 
-   StarFile = FileOpen("./Model/", StarFileName, "r");
+   StarFile = FileOpen(ModelPath, StarFileName, "r");
    fscanf(StarFile, "%ld", &Nstar);
    ID = (long **)calloc(32, sizeof(long *));
    if (ID == NULL) {
@@ -1720,7 +1724,7 @@ void LoadEgretCatalog(const char *EgretFileName, vec3_t BuckyPf[32],
    for (k = 0; k < 32; k++)
       N[k] = 0;
 
-   SourceFile = FileOpen("./Model/", EgretFileName, "r");
+   SourceFile = FileOpen(ModelPath, EgretFileName, "r");
    for (i = 0; i < Nsource; i++) {
       fscanf(SourceFile, "%lf %lf %c %[^\n]\n", &RA, &Dec, &GammaSource[i].Type,
              GammaSource[i].Label);
@@ -1950,7 +1954,7 @@ void Load1FGL(const char *FileName, vec3_t BuckyPf[32],
    for (k = 0; k < 32; k++)
       N[k] = 0;
 
-   infile = FileOpen("./Model/", FileName, "rt");
+   infile = FileOpen(ModelPath, FileName, "rt");
    i      = 0;
    while (i < Nsource) {
       fgets(line, 512, infile);
@@ -2091,7 +2095,7 @@ void LoadPulsars(const char *FileName, vec3_t BuckyPf[32],
    for (k = 0; k < 32; k++)
       N[k] = 0;
 
-   infile = FileOpen("./Model/", FileName, "rt");
+   infile = FileOpen(ModelPath, FileName, "rt");
    i      = 0;
    while (!feof(infile)) {
       fgets(line, 512, infile);
@@ -3353,8 +3357,54 @@ double SphereTex(double lng, double lat, double Xunit, double Yunit,
        ProcTex3D(x + 1.0, y + 1.0, z + 1.0, Xunit, Yunit, Zunit, Noct, Persist);
    return (f);
 }
-/**********************************************************************/
 #ifdef _USE_SHADERS_
+/**********************************************************************/
+#define DEF_BUFSIZE (1000)
+static __once_flag shader_path_init_flag = __ONCE_FLAG_INIT;
+static char *ShaderPath                  = NULL;
+static size_t ShaderPathLen              = 0;
+
+// Path of "Shaders" directory relative to this file
+const char *SHADER_REL_PATH = "/../Shaders/";
+
+static void getShaderPath()
+{
+   ShaderPath    = malloc(DEF_BUFSIZE * sizeof(char));
+   ShaderPathLen = DEF_BUFSIZE;
+
+   const size_t shader_rel_path_len = strlen(SHADER_REL_PATH);
+
+   strcpy(ShaderPath, __FILE__);
+   GetParentDirectory(ShaderPath, DEF_BUFSIZE);
+   // currently the path of `Kit/Source`
+
+   size_t path_len = strlen(ShaderPath);
+   if (path_len + shader_rel_path_len >= DEF_BUFSIZE) {
+      // overallocate for the moment, until we're done with the path
+      ShaderPathLen = path_len + shader_rel_path_len + 32;
+      ShaderPath    = realloc(ShaderPath, ShaderPathLen);
+   }
+   strcat(ShaderPath, SHADER_REL_PATH);
+   ResolvePath(ShaderPath, ShaderPathLen);
+   ShaderPathLen = strlen(ShaderPath) + 1;
+   ShaderPath    = realloc(ShaderPath, ShaderPathLen * sizeof(char));
+}
+/**********************************************************************/
+GLuint GetShader(const char *file_name, GLuint shader_type,
+                 const char *shader_name)
+{
+   call_once(&shader_path_init_flag, getShaderPath);
+   char *result_string;
+   size_t string_len;
+
+   GLuint shader;
+
+   FileToString(ShaderPath, file_name, &result_string, &string_len);
+   shader = TextToShader(result_string, shader_type, shader_name);
+   free(result_string);
+   return shader;
+}
+/**********************************************************************/
 GLuint TextToShader(GLchar *Text, GLuint Type, const char *Name)
 {
    GLchar **SourcePtr;

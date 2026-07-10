@@ -31,8 +31,6 @@ void NullDisplay(void) {}
 /**********************************************************************/
 void InitAlbedo(void)
 {
-   size_t StrLen;
-   char *ShaderText;
    GLint UniLoc;
    GLenum Status;
    GLfloat Eye3x3[9] = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
@@ -83,18 +81,14 @@ void InitAlbedo(void)
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
    /* .. Load Albedo Textures */
-   EarthAlbedoCubeTag   = PpmToCubeTag("./World/", "TOMS_Albedo", 3);
-   GenericAlbedoCubeTag = PpmToCubeTag("./World/", "WhiteBall", 3);
+   EarthAlbedoCubeTag   = PpmToCubeTag(WorldPath, "TOMS_Albedo", 3);
+   GenericAlbedoCubeTag = PpmToCubeTag(WorldPath, "WhiteBall", 3);
 
    /* .. Load Shaders */
-   FileToString("./Kit/Shaders/AlbedoVtx.glsl", &ShaderText, &StrLen);
-   AlbedoVtxShader = TextToShader(ShaderText, GL_VERTEX_SHADER, "AlbedoVtx");
-   free(ShaderText);
-
-   FileToString("./Kit/Shaders/AlbedoFrag.glsl", &ShaderText, &StrLen);
+   AlbedoVtxShader =
+       GetShader("/AlbedoVtx.glsl", GL_VERTEX_SHADER, "AlbedoVtx");
    AlbedoFragShader =
-       TextToShader(ShaderText, GL_FRAGMENT_SHADER, "AlbedoFrag");
-   free(ShaderText);
+       GetShader("/AlbedoFrag.glsl", GL_FRAGMENT_SHADER, "AlbedoFrag");
 
    AlbedoShaderProgram =
        BuildShaderProgram(AlbedoVtxShader, AlbedoFragShader, "Albedo");

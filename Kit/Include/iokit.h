@@ -63,8 +63,8 @@ __attribute__((pure)) int DirExists(const char *Path);
 FILE *FileOpen(const char *Path, const char *File, const char *CtrlCode);
 void MakeDir(const char *Path);
 void ByteSwapDouble(double *A);
-int FileToString(const char *file_name, char **result_string,
-                 size_t *string_len);
+int FileToString(const char *dir_name, const char *file_name,
+                 char **result_string, size_t *string_len);
 double *PpmToPsf(const char *path, const char *filename, long *width,
                  long *height, long *BytesPerPixel);
 

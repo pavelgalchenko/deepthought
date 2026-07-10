@@ -5516,6 +5516,7 @@ void InitSim(int argc, char **argv)
 
    sprintf(InOutPath, "./InOut/");
    sprintf(ModelPath, "./Model/");
+   sprintf(WorldPath, "./World/");
    strcpy(DataFilePath, ModelPath);
    strcat(DataFilePath, "data_files/");
    if (argc > 1)
@@ -5529,6 +5530,8 @@ void InitSim(int argc, char **argv)
    strcat(ModelPath, "/Model/");
    strcpy(DataFilePath, ModelPath);
    strcat(DataFilePath, "data_files/");
+   strcpy(WorldPath, ExeDir);
+   strcat(WorldPath, "/World/");
 
    CLI_ARGS = docopt(argc, argv, /* help */ 1);
 

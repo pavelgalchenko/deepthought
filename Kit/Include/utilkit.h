@@ -26,7 +26,8 @@
 ** namespace Kit {
 ** #endif
 */
-
+void ResolvePath(char *path, const size_t path_len);
+void GetParentDirectory(char *path, const size_t path_len);
 void GetExecDir(char exec_dir[1000]);
 void tolower_str(size_t n, char *str);
 void toupper_str(size_t n, char *str);

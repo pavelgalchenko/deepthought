@@ -200,6 +200,8 @@ double SphereTex(double lng, double lat, double Xunit, double Yunit,
                  double Zunit, long Noct, double Persist);
 
 #ifdef _USE_SHADERS_
+GLuint GetShader(const char *file_name, GLuint shader_type,
+                 const char *shader_name);
 GLuint TextToShader(GLchar *Text, GLuint Type, const char *Name);
 GLuint BuildShaderProgram(GLuint VtxShader, GLuint FragShader,
                           const char *Name);

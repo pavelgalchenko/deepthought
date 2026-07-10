@@ -13,6 +13,8 @@
 
 #include "utilkit.h"
 #include <ctype.h>
+#include <libgen.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 /* #ifdef __cplusplus
@@ -21,6 +23,40 @@
 */
 #define BUFSIZE 1000
 
+/**********************************************************************/
+void ResolvePath(char *path, const size_t path_len)
+{
+   // TODO: THIS IS FOR POSIX ONLY
+   char *output = realpath(path, NULL);
+   if (strlen(output) >= path_len) {
+      fprintf(stderr,
+              "Insufficient memory to store ResolvePath output (%s) in return "
+              "value. Exiting...\n",
+              output);
+      exit(EXIT_FAILURE);
+   }
+   strcpy(path, output);
+   free(output);
+}
+/**********************************************************************/
+void GetParentDirectory(char *path, const size_t path_len)
+{
+   // TODO: not dealing with null pointers
+
+   // outside of path==NULL or empty string, dirname return is always shorter
+   // than path
+
+   // TODO: THIS IS FOR POSIX ONLY
+   char *dir = dirname(path);
+   if (strlen(dir) >= path_len) {
+      fprintf(stderr,
+              "Insufficient memory to store GetParentDirectory output (%s) in "
+              "return value. Exiting...\n",
+              dir);
+      exit(EXIT_FAILURE);
+   }
+   strcpy(path, dir);
+}
 /**********************************************************************/
 void GetExecDir(char exec_dir[BUFSIZE])
 {

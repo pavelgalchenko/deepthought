@@ -63,11 +63,14 @@ EXTERN long Nmatl;
 /* Number of geometric objects */
 EXTERN long Ngeom;
 
+// TODO: consider changing to hardcoded values to symlink locations that are
+// dynamically set to real paths at program start
 /* Directories */
 EXTERN char InOutPath[BUFSIZE];
 EXTERN char ExeDir[BUFSIZE];
 EXTERN char OutPath[BUFSIZE];
 EXTERN char ModelPath[BUFSIZE];
+EXTERN char WorldPath[BUFSIZE];
 EXTERN char DataFilePath[BUFSIZE];
 EXTERN char SCModelPath[BUFSIZE];
 EXTERN char CmdFileName[BUFSIZE];

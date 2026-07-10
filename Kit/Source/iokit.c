@@ -286,23 +286,28 @@ void ByteSwapDouble(double *A)
 /**********************************************************************/
 /*  This function cribbed from an OpenCL example                      */
 /*  on the Apple developer site                                       */
-int FileToString(const char *file_name, char **result_string,
-                 size_t *string_len)
+int FileToString(const char *dir_name, const char *file_name,
+                 char **result_string, size_t *string_len)
 {
    int fd;
    size_t file_len;
    struct stat file_status;
    int ret;
 
+   const int path_len = strlen(dir_name) + strlen(file_name) + 1;
+   char file_path[path_len];
+   strcpy(file_path, dir_name);
+   strcat(file_path, file_name);
+
    *string_len = 0;
-   fd          = open(file_name, O_RDONLY);
+   fd          = open(file_path, O_RDONLY);
    if (fd == -1) {
-      printf("Error opening file %s\n", file_name);
+      printf("Error opening file %s\n", file_path);
       return -1;
    }
    ret = fstat(fd, &file_status);
    if (ret) {
-      printf("Error reading status for file %s\n", file_name);
+      printf("Error reading status for file %s\n", file_path);
       return -1;
    }
    file_len = file_status.st_size;
@@ -310,13 +315,13 @@ int FileToString(const char *file_name, char **result_string,
    *result_string = (char *)calloc(file_len + 1, sizeof(char));
    ret            = read(fd, *result_string, file_len);
    if (!ret) {
-      printf("Error reading from file %s\n", file_name);
+      printf("Error reading from file %s\n", file_path);
       return -1;
    }
    if (ret > (int)file_len) {
       printf("Error: Number of characters read (%d) exceeds expected file size "
              "(%d) for file %s\n",
-             ret, (int)file_len, file_name);
+             ret, (int)file_len, file_path);
       return -1;
    }
    (*result_string)[ret] = '\0';

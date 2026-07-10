@@ -4926,7 +4926,7 @@ void Load3DNoise(void)
    long N, i;
    GLubyte *Tex;
 
-   infile = FileOpen("./Model/", "Noise3DTex.raw", "rb");
+   infile = FileOpen(ModelPath, "Noise3DTex.raw", "rb");
 
    N   = 256 * 256 * 256 * 4;
    Tex = (GLubyte *)calloc(N, sizeof(GLubyte));
@@ -4972,10 +4972,10 @@ void LoadCamLists(void)
 
    /* .. Load Stars and Worlds */
    MilkyWayList =
-       LoadMilkyWay("./Model/", "MilkyWay.ppm", CGH, 1.0, MwAlphaMask);
+       LoadMilkyWay(ModelPath, "MilkyWay.ppm", CGH, 1.0, MwAlphaMask);
    LoadStars(StarCatFileName, BuckyPf, BuckyNeighbor, StarList, 1.0);
    LoadSkyGrid(30.0, 5.0, 0.1 * SkyDistance, &MajSkyGridList, &MinSkyGridList);
-   FermiSkyList = LoadSkyCube("./Model/", "FermiSky", CGH, 1.0);
+   FermiSkyList = LoadSkyCube(ModelPath, "FermiSky", CGH, 1.0);
    Load1FGL("1FGL Source Catalog.txt", BuckyPf, BuckyNeighbor, FermiSourceList,
             1.0);
    LoadEgretCatalog("Egret Source Catalog.txt", BuckyPf, BuckyNeighbor,
@@ -5003,7 +5003,7 @@ GLuint LoadSpectrum(const char *SpectrumName)
    char line[512];
    long i, N;
 
-   infile = FileOpen("./Model/", "Spectrum.txt", "r");
+   infile = FileOpen(ModelPath, "Spectrum.txt", "r");
 
    while (!feof(infile)) {
       /* Find desired spectrum by name */
@@ -5069,14 +5069,14 @@ void LoadCamTextures(void)
       }
       if (strcmp(M->ColorTexFileName, "NONE")) {
          M->ColorTex =
-             PpmToTexTag("./Model/", M->ColorTexFileName, 3, GL_REPEAT);
+             PpmToTexTag(ModelPath, M->ColorTexFileName, 3, GL_REPEAT);
       }
       if (strcmp(M->BumpTexFileName, "NONE")) {
-         M->BumpTex = PpmToTexTag("./Model/", M->BumpTexFileName, 3, GL_REPEAT);
+         M->BumpTex = PpmToTexTag(ModelPath, M->BumpTexFileName, 3, GL_REPEAT);
       }
    }
 
-   SkyCube = PpmToCubeTag("./World/", "StarryEnvMap", 3);
+   SkyCube = PpmToCubeTag(WorldPath, "StarryEnvMap", 3);
 
    World[SOL].Color[0] = 1.0;
    World[SOL].Color[1] = 1.0;
@@ -5084,18 +5084,18 @@ void LoadCamTextures(void)
    World[SOL].Color[3] = 1.0;
 
    /* .. Load Worlds */
-   RockballTexTag      = PpmToTexTag("./World/", "Rockball.ppm", 3, GL_REPEAT);
-   RockballColCubeTag  = PpmToCubeTag("./World/", "RockballCol", 3);
-   RockballBumpCubeTag = PpmToCubeTag("./World/", "RockballBump", 3);
-   IceballTexTag       = PpmToTexTag("./World/", "Iceball.ppm", 3, GL_REPEAT);
-   IceballColCubeTag   = PpmToCubeTag("./World/", "IceballCol", 3);
-   Iceball2TexTag      = PpmToTexTag("./World/", "Iceball2.ppm", 3, GL_REPEAT);
-   Iceball2ColCubeTag  = PpmToCubeTag("./World/", "Iceball2Col", 3);
-   NullTexTag          = PpmToTexTag("./World/", "NullTex.ppm", 3, GL_REPEAT);
-   NullColCubeTag      = PpmToCubeTag("./World/", "NullCol", 3);
-   NullBumpCubeTag     = PpmToCubeTag("./World/", "NullBump", 3);
-   NullCloudGlossCubeTag = PpmToCubeTag("./World/", "NullCloudGloss", 3);
-   NullRingTexTag        = PpmToRingTexTag("./World/", "NullRing.ppm");
+   RockballTexTag        = PpmToTexTag(WorldPath, "Rockball.ppm", 3, GL_REPEAT);
+   RockballColCubeTag    = PpmToCubeTag(WorldPath, "RockballCol", 3);
+   RockballBumpCubeTag   = PpmToCubeTag(WorldPath, "RockballBump", 3);
+   IceballTexTag         = PpmToTexTag(WorldPath, "Iceball.ppm", 3, GL_REPEAT);
+   IceballColCubeTag     = PpmToCubeTag(WorldPath, "IceballCol", 3);
+   Iceball2TexTag        = PpmToTexTag(WorldPath, "Iceball2.ppm", 3, GL_REPEAT);
+   Iceball2ColCubeTag    = PpmToCubeTag(WorldPath, "Iceball2Col", 3);
+   NullTexTag            = PpmToTexTag(WorldPath, "NullTex.ppm", 3, GL_REPEAT);
+   NullColCubeTag        = PpmToCubeTag(WorldPath, "NullCol", 3);
+   NullBumpCubeTag       = PpmToCubeTag(WorldPath, "NullBump", 3);
+   NullCloudGlossCubeTag = PpmToCubeTag(WorldPath, "NullCloudGloss", 3);
+   NullRingTexTag        = PpmToRingTexTag(WorldPath, "NullRing.ppm");
    for (Ip = MERCURY; Ip <= PLUTO; Ip++) {
       if (World[Ip].Exists) {
          Iw = Ip;
@@ -5119,8 +5119,8 @@ void LoadCamTextures(void)
          else {
             sprintf(s, "%sCol", World[Iw].Name);
             World[Iw].TexTag =
-                PpmToTexTag("./World/", World[Iw].MapFileName, 3, GL_REPEAT);
-            World[Iw].ColCubeTag = PpmToCubeTag("./World/", s, 3);
+                PpmToTexTag(WorldPath, World[Iw].MapFileName, 3, GL_REPEAT);
+            World[Iw].ColCubeTag = PpmToCubeTag(WorldPath, s, 3);
          }
          World[Iw].BumpCubeTag       = NullBumpCubeTag;
          World[Iw].CloudGlossCubeTag = NullCloudGlossCubeTag;
@@ -5148,8 +5148,8 @@ void LoadCamTextures(void)
             else {
                sprintf(s, "%sCol", World[Iw].Name);
                World[Iw].TexTag =
-                   PpmToTexTag("./World/", World[Iw].MapFileName, 3, GL_REPEAT);
-               World[Iw].ColCubeTag = PpmToCubeTag("./World/", s, 3);
+                   PpmToTexTag(WorldPath, World[Iw].MapFileName, 3, GL_REPEAT);
+               World[Iw].ColCubeTag = PpmToCubeTag(WorldPath, s, 3);
             }
             World[Iw].BumpCubeTag       = NullBumpCubeTag;
             World[Iw].CloudGlossCubeTag = NullCloudGlossCubeTag;
@@ -5189,10 +5189,10 @@ void LoadCamTextures(void)
          }
          else {
             sprintf(s, "%sCol", MB->Name);
-            MB->TexTag = PpmToTexTag("./World/", MB->MapFileName, 3, GL_REPEAT);
-            MB->ColCubeTag = PpmToCubeTag("./World/", s, 3);
+            MB->TexTag = PpmToTexTag(WorldPath, MB->MapFileName, 3, GL_REPEAT);
+            MB->ColCubeTag = PpmToCubeTag(WorldPath, s, 3);
             sprintf(s, "%sBump", MB->Name);
-            MB->BumpCubeTag       = PpmToCubeTag("./World/", s, 3);
+            MB->BumpCubeTag       = PpmToCubeTag(WorldPath, s, 3);
             MB->CloudGlossCubeTag = NullCloudGlossCubeTag;
             MB->RingTexTag        = NullRingTexTag;
          }
@@ -5201,13 +5201,13 @@ void LoadCamTextures(void)
          }
          else {
             MB->ColTexTag =
-                PpmToTexTag("./World/", MB->ColTexFileName, 3, GL_REPEAT);
+                PpmToTexTag(WorldPath, MB->ColTexFileName, 3, GL_REPEAT);
             MB->BumpTexTag =
-                PpmToTexTag("./World/", MB->BumpTexFileName, 3, GL_REPEAT);
+                PpmToTexTag(WorldPath, MB->BumpTexFileName, 3, GL_REPEAT);
          }
       }
    }
-   World[SATURN].RingTexTag = PpmToRingTexTag("./World/", "SaturnRing.ppm");
+   World[SATURN].RingTexTag = PpmToRingTexTag(WorldPath, "SaturnRing.ppm");
 
    glGenTextures(1, &ShadowTexTag);
    glActiveTexture(GL_TEXTURE1);
@@ -5224,23 +5224,23 @@ void LoadCamTextures(void)
 
    /* For checkout of particular features */
    /*
-   World[EARTH].ColCubeTag = PpmToCubeTag("./World/","MoonlikeCol",3);
-   World[EARTH].BumpCubeTag = PpmToCubeTag("./World/","MoonlikeBump",3);
+   World[EARTH].ColCubeTag = PpmToCubeTag(WorldPath,"MoonlikeCol",3);
+   World[EARTH].BumpCubeTag = PpmToCubeTag(WorldPath,"MoonlikeBump",3);
    */
-   World[EARTH].BumpCubeTag = PpmToCubeTag("./World/", "EarthBump", 3);
-   World[MARS].BumpCubeTag  = PpmToCubeTag("./World/", "MarsBump", 3);
+   World[EARTH].BumpCubeTag = PpmToCubeTag(WorldPath, "EarthBump", 3);
+   World[MARS].BumpCubeTag  = PpmToCubeTag(WorldPath, "MarsBump", 3);
    World[EARTH].CloudGlossCubeTag =
-       PpmToCubeTag("./World/", "EarthCloudGloss", 3);
+       PpmToCubeTag(WorldPath, "EarthCloudGloss", 3);
 
-   World[LUNA].ColCubeTag  = PpmToCubeTag("./World/", "LunaCol", 3);
-   World[LUNA].BumpCubeTag = PpmToCubeTag("./World/", "LunaBump", 3);
+   World[LUNA].ColCubeTag  = PpmToCubeTag(WorldPath, "LunaCol", 3);
+   World[LUNA].BumpCubeTag = PpmToCubeTag(WorldPath, "LunaBump", 3);
 
    NASAWatermarkTexTag =
-       PpmToTexTag("./Model/", "NASA_WatermarkAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "NASA_WatermarkAlpha.ppm", 4, GL_CLAMP);
    GSFCWatermarkTexTag =
-       PpmToTexTag("./Model/", "GSFC_WatermarkAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "GSFC_WatermarkAlpha.ppm", 4, GL_CLAMP);
    FortyTwoWatermarkTexTag =
-       PpmToTexTag("./Model/", "42_WatermarkAlpha.ppm", 4, GL_CLAMP);
+       PpmToTexTag(ModelPath, "42_WatermarkAlpha.ppm", 4, GL_CLAMP);
 }
 /**********************************************************************/
 void LoadShadowMapFBO(void)
@@ -5368,7 +5368,7 @@ void CreateStarrySkyEnvMap(void)
       sprintf(filename, "StarryEnvMap");
       strcat(filename, face[If]);
       glReadPixels(0, 0, Width, Height, GL_RGB, GL_FLOAT, Tex);
-      TexToPpm("./World/", filename, Height, Width, 3, Tex);
+      TexToPpm(WorldPath, filename, Height, Width, 3, Tex);
    }
 
    glMatrixMode(GL_PROJECTION);
@@ -5392,38 +5392,18 @@ void LoadCamShaders(void)
    GLfloat Eye3x3[9]  = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
    GLfloat Eye4x4[16] = {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
                          0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0};
-   size_t StrLen;
-   char *ShaderText;
 
-   FileToString("./Kit/Shaders/SunVtx.glsl", &ShaderText, &StrLen);
-   SunVtxShader = TextToShader(ShaderText, GL_VERTEX_SHADER, "SunVtx");
-   free(ShaderText);
-
-   FileToString("./Kit/Shaders/SunFrag.glsl", &ShaderText, &StrLen);
-   SunFragShader = TextToShader(ShaderText, GL_FRAGMENT_SHADER, "SunFrag");
-   free(ShaderText);
+   SunVtxShader   = GetShader("/SunVtx.glsl", GL_VERTEX_SHADER, "SunVtx");
+   SunFragShader  = GetShader("/SunFrag.glsl", GL_FRAGMENT_SHADER, "SunFrag");
+   WorldVtxShader = GetShader("/WorldVtx.glsl", GL_VERTEX_SHADER, "WorldVtx");
+   WorldFragShader =
+       GetShader("/WorldFrag.glsl", GL_FRAGMENT_SHADER, "WorldFrag");
+   BodyVtxShader  = GetShader("/BodyVtx.glsl", GL_VERTEX_SHADER, "BodyVtx");
+   BodyFragShader = GetShader("/BodyFrag.glsl", GL_FRAGMENT_SHADER, "BodyFrag");
 
    SunShaderProgram = BuildShaderProgram(SunVtxShader, SunFragShader, "Sun");
-
-   FileToString("./Kit/Shaders/WorldVtx.glsl", &ShaderText, &StrLen);
-   WorldVtxShader = TextToShader(ShaderText, GL_VERTEX_SHADER, "WorldVtx");
-   free(ShaderText);
-
-   FileToString("./Kit/Shaders/WorldFrag.glsl", &ShaderText, &StrLen);
-   WorldFragShader = TextToShader(ShaderText, GL_FRAGMENT_SHADER, "WorldFrag");
-   free(ShaderText);
-
    WorldShaderProgram =
        BuildShaderProgram(WorldVtxShader, WorldFragShader, "World");
-
-   FileToString("./Kit/Shaders/BodyVtx.glsl", &ShaderText, &StrLen);
-   BodyVtxShader = TextToShader(ShaderText, GL_VERTEX_SHADER, "BodyVtx");
-   free(ShaderText);
-
-   FileToString("./Kit/Shaders/BodyFrag.glsl", &ShaderText, &StrLen);
-   BodyFragShader = TextToShader(ShaderText, GL_FRAGMENT_SHADER, "BodyFrag");
-   free(ShaderText);
-
    BodyShaderProgram =
        BuildShaderProgram(BodyVtxShader, BodyFragShader, "Body");
 
@@ -5511,16 +5491,9 @@ void LoadCamShaders(void)
 void LoadMapShaders(void)
 {
    GLint TexLoc;
-   char *ShaderText;
-   size_t StrLen;
 
-   FileToString("./Kit/Shaders/MapVtx.glsl", &ShaderText, &StrLen);
-   MapVtxShader = TextToShader(ShaderText, GL_VERTEX_SHADER, "MapVtx");
-   free(ShaderText);
-
-   FileToString("./Kit/Shaders/MapFrag.glsl", &ShaderText, &StrLen);
-   MapFragShader = TextToShader(ShaderText, GL_FRAGMENT_SHADER, "MapFrag");
-   free(ShaderText);
+   MapVtxShader  = GetShader("/MapVtx.glsl", GL_VERTEX_SHADER, "MapVtx");
+   MapFragShader = GetShader("/MapFrag.glsl", GL_FRAGMENT_SHADER, "MapFrag");
 
    MapShaderProgram = BuildShaderProgram(MapVtxShader, MapFragShader, "Map");
 
@@ -5535,10 +5508,8 @@ void LoadMapShaders(void)
 
    glUseProgram(0);
 
-   FileToString("./Kit/Shaders/MoonMapFrag.glsl", &ShaderText, &StrLen);
    MoonMapFragShader =
-       TextToShader(ShaderText, GL_FRAGMENT_SHADER, "MoonMapFrag");
-   free(ShaderText);
+       GetShader("/MoonMapFrag.glsl", GL_FRAGMENT_SHADER, "MoonMapFrag");
 
    MoonMapShaderProgram =
        BuildShaderProgram(MapVtxShader, MoonMapFragShader, "MoonMap");

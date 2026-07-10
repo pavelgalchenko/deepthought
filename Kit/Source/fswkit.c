@@ -442,13 +442,13 @@ vec3_t PointGimbalToTarget(long Seq, mat3x3_t CGiBi, mat3x3_t CBoGo, vec3_t tvi,
    BoreAng1 = atan2(-b2, b3);
 
    vec3_t GimAngCmd;
-   GimAngCmd.x = WrapTo2Pi(TargAng1 - BoreAng1) - PI;
+   GimAngCmd.x = WrapTo2Pi(TargAng1 - BoreAng1 + PI) - PI;
 
    /* Find rotation about a2 to move BoreVec into TargVec */
    TargAng2 = Cycle * asin(t1);
    BoreAng2 = Cycle * asin(b1);
 
-   GimAngCmd.y = WrapTo2Pi(TargAng2 - BoreAng2) - PI;
+   GimAngCmd.y = WrapTo2Pi(TargAng2 - BoreAng2 + PI) - PI;
 
    /* Always */
    GimAngCmd.z = 0.0;

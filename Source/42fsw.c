@@ -1586,7 +1586,7 @@ void IssFSW(struct SCType *S)
    for (Ig = 0; Ig < AC->Ng; Ig++) {
       for (j = 0; j < AC->G[Ig].RotDOF; j++) {
          AngErr = AC->G[Ig].Ang.v[j] - AC->G[Ig].Cmd.Ang.v[j];
-         AngErr = WrapTo2Pi(AngErr) - Pi;
+         AngErr = WrapTo2Pi(AngErr + Pi) - Pi;
          AC->G[Ig].Cmd.AngRate.v[j] =
              -AC->G[Ig].AngGain.v[j] / AC->G[Ig].AngRateGain.v[j] * AngErr;
          AC->G[Ig].Cmd.AngRate.v[j] =

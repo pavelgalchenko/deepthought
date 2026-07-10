@@ -203,7 +203,7 @@ void MapStateVectorToBodyStates(double *u, double *x, double *h, double *a,
       else {
          for (i = 0; i < G->RotDOF; i++) {
             G->AngRate.v[i] = u[G->Rotu0 + i];
-            x[G->Rotx0 + i] = WrapTo2Pi(x[G->Rotx0 + i]) - Pi;
+            x[G->Rotx0 + i] = WrapTo2Pi(x[G->Rotx0 + i] + Pi) - Pi;
             G->Ang.v[i]     = x[G->Rotx0 + i];
          }
          if (G->RotDOF == 3) {
@@ -613,8 +613,6 @@ void FindPVel(struct SCType *S)
          CNG = MTxMT(S->B[G->Bin].CN, G->CGiBi);
          CD  = MAT3X3_ZERO;
          for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++)
-               CD.mat[i][j] = 0.0;
             for (j = 0; j < G->TrnDOF; j++) {
                for (k = 0; k < 3; k++) {
                   CD.mat[i][j] += CNG.mat[i][k] * G->Delta.mat[k][j];
