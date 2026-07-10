@@ -598,7 +598,7 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
       O->Regime        = DecodeString(response1);
       if (O->Regime == ORB_CENTRAL || O->Regime == ORB_N_BODY) {
          O->World = GetWorldID(response2);
-         O->mu    = -World[O->World].GravModel.factor;
+         O->mu    = World[O->World].mu;
          // TODO: Following assumes a Lunar N_Body orbit is given in ECI,
          //       consider other options for initialization.
          // double CNJ[3][3] = {0}, R_temp[3], V_temp[3];
@@ -627,8 +627,8 @@ long LoadTRVfromFile(const char *Path, const char *TrvFileName,
          O->Sys   = DecodeString(response2);
          O->Body1 = LagSys[O->Sys].Body1;
          O->Body2 = LagSys[O->Sys].Body2;
-         O->mu1   = -World[O->Body1].GravModel.factor;
-         O->mu2   = -World[O->Body2].GravModel.factor;
+         O->mu1   = World[O->Body1].mu;
+         O->mu2   = World[O->Body2].mu;
          O->World = O->Body1;
          O->mu    = O->mu1;
          O->PosN  = R;
@@ -688,7 +688,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
             exit(EXIT_FAILURE);
          }
 
-         O->mu   = -World[O->World].GravModel.factor;
+         O->mu   = World[O->World].mu;
          O->CLN  = MAT3X3_EYE;
          O->PosN = VEC3_ZERO;
          O->VelN = VEC3_ZERO;
@@ -713,7 +713,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
          O->Region            = Ir;
          struct RegionType *R = &Rgn[Ir];
          O->World             = R->World;
-         O->mu                = -World[O->World].GravModel.factor;
+         O->mu                = World[O->World].mu;
          O->PosN              = R->PosN;
          O->VelN              = R->VelN;
          O->CLN               = R->CN;
@@ -736,7 +736,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
          }
          O->J2DriftEnabled =
              getYAMLBool(fy_node_by_path_def(node, "/J2 Secular Drift"));
-         O->mu      = -World[O->World].GravModel.factor;
+         O->mu      = World[O->World].mu;
          double rad = World[O->World].rad;
          double J2  = World[O->World].J2;
          node       = fy_node_by_path_def(node, "/Init");
@@ -5041,7 +5041,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
       E->EphemSystem = TT_TIME;
       E->Regime      = ORB_CENTRAL;
       E->World       = SOL;
-      E->mu          = worlds[SOL].GravModel.factor;
+      E->mu          = worlds[SOL].mu;
       fscanf(infile, "%lf %[^\n] %[\n]", &E->SMA, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->ecc, junk, &newline);
       fscanf(infile, "%lf %[^\n] %[\n]", &E->inc, junk, &newline);
@@ -5230,8 +5230,8 @@ void InitLagrangePoints(void)
                     LS->Name);
             exit(EXIT_FAILURE);
          }
-         LS->mu1      = -W1->GravModel.factor;
-         LS->mu2      = -W2->GravModel.factor;
+         LS->mu1      = W1->mu;
+         LS->mu2      = W2->mu;
          LS->rho      = LS->mu2 / (LS->mu1 + LS->mu2);
          LS->SLR      = W2->eph.SLR;
          LS->SMA      = W2->eph.SMA;
@@ -5265,8 +5265,8 @@ void UpdateLagrangePoints(void)
       W1 = &World[LS->Body1];
       W2 = &World[LS->Body2];
       if (LS->Exists) {
-         LS->mu1      = -W1->GravModel.factor;
-         LS->mu2      = -W2->GravModel.factor;
+         LS->mu1      = W1->mu;
+         LS->mu2      = W2->mu;
          LS->rho      = LS->mu2 / (LS->mu1 + LS->mu2);
          LS->SLR      = W2->eph.SLR;
          LS->SMA      = W2->eph.SMA;
@@ -5876,13 +5876,13 @@ void InitSim(int argc, char **argv)
       if (r_node != NULL)
          fy_node_scanf(r_node, "/ %lf", &gravModel->r_ref);
 
-      // override the hard coded gravitational parameter. For a minor body,
-      // overrides the gravitational parameter in the minor body file
+      // `factor` for a gravitational SphereHarmType is -mu
+      // keep `factor` separate from the world's mu
       struct fy_node *gm_node =
           fy_node_by_path_def(iterNode, "/Gravitational Parameter");
       if (gm_node != NULL) {
-         fy_node_scanf(gm_node, "/ %lf", &World[Iw].mu);
-         gravModel->factor = -World[Iw].mu;
+         fy_node_scanf(gm_node, "/ %lf", &gravModel->factor);
+         gravModel->factor = -gravModel->factor;
       }
    }
 

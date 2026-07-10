@@ -1,0 +1,57 @@
+%YAML 1.2
+# yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
+---
+Name: SC_Sphere
+Configuration:
+  Description: Simple generic S/C
+  Label: S/C
+  Sprite File: GenScSpriteAlpha.ppm
+  FSW Identifier: PASSIVE_FSW
+  FSW Sample Time: 60.0
+Orbit:
+  Prop Type: COWELL
+  Pos Specifier: CM
+  Pos wrt F: [0.0, 0.0, 0.0]
+  Vel wrt F: [0.0, 0.0, 0.0]
+Attitude:
+  Ang Vel Frame: N
+  Att Representation: A
+  Att Frame: L
+  Ang Vel: [0.0, -0.06429904441202, 0.0]
+  Euler Angles:
+    Angles: [0.0, -11.60, 0.0]
+    Sequence: 321
+Dynamics Flags:
+  Method: GAUSS_ELIM
+  Compute Constraints: false
+  Mass Reference Point: REFPT_CM
+  Flex Active: false
+  2nd Order Flex: false
+  Shaker File Name: NONE
+  Drag Coefficient: 0.02
+  Integration Method: RK89
+Bodies:
+  - Body:
+      Index: 0
+      Mass: 1.0
+      MOI: [1.2566370614359172, 1.2566370614359172, 1.2566370614359172]
+      POI: [0.0, 0.0, 0.0]
+      Pos of CM: [0.0, 0.0, 0.0]
+      Constant Momentum: [0.0, 0.0, 0.0]
+      Constant Dipole: [0.0, 0.0, 0.0]
+      Drag Reference Area: 1.0
+      Geometry File Name: Cubesat_3U.obj # TODO: sphere.obj
+      Node File Name: NONE
+      Flex File Name: NONE
+Joints: []
+Wheel Params: { Drag: false, Jitter: false }
+Wheels: []
+MTBs: []
+Thrusters: []
+Gyros: []
+Magnetometers: []
+CSSs: []
+FSSs: []
+STs: []
+GPSs: []
+Accelerometers: []

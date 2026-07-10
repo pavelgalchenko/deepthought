@@ -10,11 +10,17 @@
          "type": "pickString",
          "options": [
             "Demo",
-            "DSM_DEMO",
-            "DSM_NAV_DEMO",
-            "NESC_Testing/EarthOrbit",
+            "Missions/DSM_DEMO",
+            "Missions/DSM_NAV_DEMO",
+            "Missions/NESC_Testing/EarthOrbit",
          ],
          "default": "DSM_DEMO"
+      },
+      {
+         "id": "arbitraryMission",
+         "description": "Choose Mission to run",
+         "type": "promptString",
+         "default": "${workspaceFolder}/Missions/DSM_DEMO"
       },
       {
          "id": "testTarget",
@@ -40,9 +46,9 @@
          "program": "${workspaceFolder}/build/RelWithDebInfo/deepthought",
          "args": [
             "-d",
-            "${workspaceFolder}/Missions/${input:missionName}",
+            "${workspaceFolder}/${input:missionName}",
             "-o",
-            "${workspaceFolder}/Missions/${input:missionName}/blah",
+            "${workspaceFolder}/${input:missionName}/blah",
             "-g",
             "0",
          ],
@@ -72,11 +78,42 @@
          "program": "${workspaceFolder}/build/Debug/deepthought",
          "args": [
             "-d",
-            "${workspaceFolder}/Missions/${input:missionName}/",
+            "${workspaceFolder}/${input:missionName}/",
             "-o",
-            "${workspaceFolder}/Missions/${input:missionName}/blah",
+            "${workspaceFolder}/${input:missionName}/blah",
             "-g",
             "0"
+         ],
+         "stopAtEntry": false,
+         "cwd": "${workspaceFolder}",
+         "environment": [],
+         "MIMode": "gdb",
+         "preLaunchTask": "debug build",
+         "setupCommands": [
+            {
+               "description": "Enable pretty-printing for gdb",
+               "text": "-enable-pretty-printing",
+               "ignoreFailures": true
+            },
+            {
+               "description": "Set Disassembly Flavor to Intel",
+               "text": "-gdb-set disassembly-flavor intel",
+               "ignoreFailures": true
+            }
+         ]
+      },
+      {
+         "name": "(gdb) Debug Deepthought Arbitrary",
+         "type": "cppdbg",
+         "request": "launch",
+         "program": "${workspaceFolder}/build/Debug/deepthought",
+         "args": [
+            "-d",
+            "${input:arbitraryMission}/",
+            "-o",
+            "${input:arbitraryMission}/blah",
+            "-g",
+            "1"
          ],
          "stopAtEntry": false,
          "cwd": "${workspaceFolder}",

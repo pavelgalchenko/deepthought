@@ -614,11 +614,12 @@ void FindPVel(struct SCType *S)
          CD  = MAT3X3_ZERO;
          for (i = 0; i < 3; i++) {
             for (j = 0; j < 3; j++)
-               for (j = 0; j < G->TrnDOF; j++) {
-                  for (k = 0; k < 3; k++) {
-                     CD.mat[i][j] += CNG.mat[i][k] * G->Delta.mat[k][j];
-                  }
+               CD.mat[i][j] = 0.0;
+            for (j = 0; j < G->TrnDOF; j++) {
+               for (k = 0; k < 3; k++) {
+                  CD.mat[i][j] += CNG.mat[i][k] * G->Delta.mat[k][j];
                }
+            }
          }
          for (i = 0; i < 3; i++) {
             for (j = 0; j < G->TrnDOF; j++) {

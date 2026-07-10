@@ -23,8 +23,8 @@
             "type": "pickString",
             "options": [
                 "Demo",
-                "DSM_DEMO",
-                "DSM_NAV_DEMO"
+                "Missions/DSM_DEMO",
+                "Missions/DSM_NAV_DEMO"
             ],
             "default": "DSM_DEMO"
         },
