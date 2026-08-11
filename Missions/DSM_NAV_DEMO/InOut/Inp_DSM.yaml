@@ -428,11 +428,6 @@ Two Vector Configurations:
           Target: SC[4].B[0]
         Axis: [0.0, 0.0, 1.0]
       Secondary Vector: *ST-Point
-      # Secondary Vector: &ST-Point
-      #   Target:
-      #     Type: BODY
-      #     Target: SUN
-      #   Axis: [1.0, 0.0, 0.0]
       Controller: *Controller_1
       Actuator: *Actuator_2
   - Two Vector: &Two-Vector_2

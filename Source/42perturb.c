@@ -425,24 +425,42 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
       SecCenter = O->Body2;
    }
    struct WorldType *WCenter = &worlds[OrbCenter];
-   /* Sun and all existing planets */
-   for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-         ph      = VSubV_Elem(worlds[Iw].PosH, WCenter->PosH);
-         p       = MxV(WCenter->CNH, ph);
-         s       = VSubV_Elem(p, S->PosN);
-         FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-         S->FrcN = VAddV_Elem(S->FrcN, FrcN);
-         S->gravPertAccN =
-             VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
+
+   if (GravPert.ThirdBody) {
+      /* Sun and all existing planets */
+      for (Iw = SOL; Iw <= PLUTO; Iw++) {
+         if (worlds[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+            ph      = VSubV_Elem(worlds[Iw].PosH, WCenter->PosH);
+            p       = MxV(WCenter->CNH, ph);
+            s       = VSubV_Elem(p, S->PosN);
+            FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+            S->FrcN = VAddV_Elem(S->FrcN, FrcN);
+            S->gravPertAccN =
+                VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
+         }
       }
-   }
-   /* Moons of OrbCenter (but not SecCenter) */
-   if (OrbCenter != SOL) {
-      for (Im = 0; Im < WCenter->Nsat; Im++) {
-         Iw = WCenter->Sat[Im];
-         if (Iw != SecCenter) {
+      /* Moons of OrbCenter (but not SecCenter) */
+      if (OrbCenter != SOL) {
+         for (Im = 0; Im < WCenter->Nsat; Im++) {
+            Iw = WCenter->Sat[Im];
+            if (Iw != SecCenter) {
+               p       = worlds[Iw].eph.PosN;
+               s       = VSubV_Elem(p, S->PosN);
+               FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
+               S->FrcN = VAddV_Elem(S->FrcN, FrcN);
+               S->gravPertAccN =
+                   VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
+            }
+         }
+      }
+      /* Moons of SecCenter */
+      if (O->Regime == ORB_THREE_BODY) {
+         for (Im = 0; Im < worlds[SecCenter].Nsat; Im++) {
+            Iw      = worlds[SecCenter].Sat[Im];
             p       = worlds[Iw].eph.PosN;
+            ph      = MTxV(worlds[SecCenter].CNH, p);
+            p       = MxV(WCenter->CNH, ph);
+            p       = VAddV_Elem(p, worlds[SecCenter].eph.PosN);
             s       = VSubV_Elem(p, S->PosN);
             FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
             S->FrcN = VAddV_Elem(S->FrcN, FrcN);
@@ -451,27 +469,14 @@ void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
          }
       }
    }
-   /* Moons of SecCenter */
-   if (O->Regime == ORB_THREE_BODY) {
-      for (Im = 0; Im < worlds[SecCenter].Nsat; Im++) {
-         Iw      = worlds[SecCenter].Sat[Im];
-         p       = worlds[Iw].eph.PosN;
-         ph      = MTxV(worlds[SecCenter].CNH, p);
-         p       = MxV(WCenter->CNH, ph);
-         p       = VAddV_Elem(p, worlds[SecCenter].eph.PosN);
-         s       = VSubV_Elem(p, S->PosN);
-         FrcN    = ThirdBodyGravForce(p, s, worlds[Iw].mu, S->mass);
-         S->FrcN = VAddV_Elem(S->FrcN, FrcN);
-         S->gravPertAccN =
-             VAddV_Elem(S->gravPertAccN, SxV(1.0 / S->mass, FrcN));
-      }
-   }
 
-   struct SphereHarmType *gravModel = &WCenter->GravModel;
-   vec3_t accN     = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
-                                            WCenter->CWN, 1.0, S->PosN);
-   S->gravPertAccN = VAddV_Elem(S->gravPertAccN, accN);
-   S->FrcN         = VAddV_Elem(S->FrcN, SxV(S->mass, accN));
+   if (GravPert.Harmonic) {
+      struct SphereHarmType *gravModel = &WCenter->GravModel;
+      vec3_t accN = SphericalHarmGravForce(gravModel->N, gravModel->M, WCenter,
+                                           WCenter->CWN, 1.0, S->PosN);
+      S->gravPertAccN = VAddV_Elem(S->gravPertAccN, accN);
+      S->FrcN         = VAddV_Elem(S->FrcN, SxV(S->mass, accN));
+   }
    /* else if O->CenterType == MINORBODY, use provided gravity model */
 }
 /**********************************************************************/
@@ -1068,7 +1073,7 @@ void Perturbations(JDType jd, struct WorldType *const worlds,
       GravGradFrcTrq(worlds, O, S);
 
    /* .. Gravity Perturbation Forces */
-   if (GravPertActive && O->Regime != ORB_N_BODY)
+   if (GravPert.Enabled && O->Regime != ORB_N_BODY)
       GravPertForce(worlds, O, S);
 
    /* .. Aerodynamic Forces and Torques */

@@ -11,60 +11,44 @@ Simulation Control:
   Command File: Inp_Cmd.txt
 Time: # 2007/324:00:00:00 = 2007:11:20:00:00:00.000
   Date:
-    Month: 11
-    Day: 20
-    Year: 2007
+    Month: 7
+    Day: 15
+    Year: 2025
   Time:
-    Hour: 0
-    Minute: 0
-    Second: 0
-    Millisecond: 0
+    Hour: 11
+    Minute: 23
+    Second: 27
+    Millisecond: 300
+  System: UTC
 Orbits:
   # - Name: Orb_Highly_Elliptical
   #   Enabled: true
-  - Name: Orb_Nearly_Circular
+  - Name: Orb_Keplarian
+    Enabled: true
+  - Name: Orb_TP1
     Enabled: true
 SCs:
-  # - Name: SC_Sphere
-  #   Orbit: Orb_Highly_Elliptical
-  #   Enabled: true
-  # - Name: SC_Cylinder
-  #   Orbit: Orb_Highly_Elliptical
-  #   Enabled: true
-  # - Name: SC_ISS
-  #   Orbit: Orb_Highly_Elliptical
-  #   Enabled: true
-  # - Name: SC_Sphere
-  #   Orbit: Orb_Nearly_Circular
-  #   Enabled: true
-  # - Name: SC_Cylinder
-  #   Orbit: Orb_Nearly_Circular
-  #   Enabled: true
-  - Name: SC_ISS
-    Orbit: Orb_Nearly_Circular
+  - Name: SC_Cylinder
+    Orbit: Orb_Keplarian
     Enabled: true
+  - Name: SC_TP1
+    Orbit: Orb_TP1
 Perturbation Models:
   Atmosphere:
-    Enabled: true
+    Enabled: false
     Shadows: false
-    Models:
-      - World: EARTH
-        Method: USER
-        F10.7: 128.8
-        Ap: 15.7
+    Models: []
   Magnetic:
     Residual Mag Moment: false
     Models:
       - World: EARTH
         Method: Dipole
   Gravitation:
-    Enabled: true
+    Enabled: false
     Gravity Gradient: false
     Models:
       - World: EARTH
         Gravitational Parameter: 398600436000000.0
-        Degree: 4
-        Order: 4
       - World: SOL
         Gravitational Parameter: 1.3271244e+20
       - World: LUNA
@@ -81,6 +65,7 @@ Ephem Type: SPICE
 Celestial Bodies:
   Earth:
     Exists: true
+    Moons: "All"
 Lagrange Systems:
   Earth-Moon: false
   Sun-Earth: false

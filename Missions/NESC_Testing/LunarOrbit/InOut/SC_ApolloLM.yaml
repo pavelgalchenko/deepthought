@@ -1,7 +1,7 @@
 %YAML 1.2
 # yaml-language-server: $schema=../../../Docs/yaml/schema/sc.schema.json
 ---
-Name: SC_Iss
+Name: SC_ApolloLM
 Configuration:
   Description: Simple generic S/C
   Label: S/C
@@ -33,13 +33,13 @@ Dynamics Flags:
 Bodies:
   - Body:
       Index: 0
-      Mass: 400000.0
-      MOI: [102000000, 91000000, 164000000]
-      POI: [6960000, 5480000, -590000]
-      Pos of CM: [-3.0, -1.5, 4.0]
+      Mass: 16642.0
+      MOI: [36502.7, 38372.4, 36514.9]
+      POI: [-27.1, 233.2, 1152.4]
+      Pos of CM: [4.7, 0.01, -0.0075]
       Constant Momentum: [0.0, 0.0, 0.0]
       Constant Dipole: [0.0, 0.0, 0.0]
-      Drag Reference Area: 1400.0
+      Drag Reference Area: 0.0
       Geometry File Name: Cubesat_3U.obj # TODO: sphere.obj
       Node File Name: NONE
       Flex File Name: NONE

@@ -946,7 +946,6 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    double u, dudJD, T[20], U[20], P, dPdu;
    vec3_t rh, vh;
    vec3_t EarthMoonBaryPosH, EarthMoonBaryVelH;
-   vec3_t ZAxis = VEC3_PZAXIS;
    vec3_t PosJ, VelJ;
    mat3x3_t C_W_TETE, C_TETE_J2000;
 
@@ -1078,7 +1077,6 @@ long UpdateMeanEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
    const double GMST     = JD2GMST(jd_tt_j2000);
 
    vec3_t r1, rh, vh;
-   const vec3_t ZAxis = VEC3_PZAXIS;
    long Ip;
    mat3x3_t C_W_TETE, C_TETE_J2000;
 

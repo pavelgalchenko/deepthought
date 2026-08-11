@@ -255,7 +255,6 @@ mat3x3_t NavGetWorldCWN(const long orbCenter, const DateType date)
          else {
             /* .. Earth rotation is a special case */
             mat3x3_t C_TETE_J2000, C_W_TETE;
-            const vec3_t ZAxis = VEC3_PZAXIS;
             JDType jd_tt_j2000 = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
 
             // double PriMerAng         = TwoPi * JD2GMST(jd_tt_j2000);
@@ -491,25 +490,13 @@ vec3_t NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
 
    struct WorldType *WCenter = &World[OrbCenter];
 
-   for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-         for (j = 0; j < 3; j++)
-            ph.v[j] = World[Iw].PosH.v[j] - WCenter->PosH.v[j];
-         pn = MxV(WCenter->CNH, ph);
-         pr = MxV(Nav->refCRN, pn);
-         for (j = 0; j < 3; j++)
-            s.v[j] = pr.v[j] - PosR.v[j];
-         accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
-         for (j = 0; j < 3; j++)
-            VelRdot.v[j] += accelR.v[j];
-      }
-   }
-   /* Moons of OrbCenter (but not SecCenter) */
-   if (OrbCenter != SOL) {
-      for (Im = 0; Im < WCenter->Nsat; Im++) {
-         Iw = WCenter->Sat[Im];
-         if (Iw != SecCenter) {
-            pr = MxV(Nav->refCRN, World[Iw].eph.PosN);
+   if (GravPert.ThirdBody) {
+      for (Iw = SOL; Iw <= PLUTO; Iw++) {
+         if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
+            for (j = 0; j < 3; j++)
+               ph.v[j] = World[Iw].PosH.v[j] - WCenter->PosH.v[j];
+            pn = MxV(WCenter->CNH, ph);
+            pr = MxV(Nav->refCRN, pn);
             for (j = 0; j < 3; j++)
                s.v[j] = pr.v[j] - PosR.v[j];
             accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
@@ -517,37 +504,53 @@ vec3_t NavGravPertAccel(struct DSMNavType *Nav, const DateType *date,
                VelRdot.v[j] += accelR.v[j];
          }
       }
-   }
-   /* Moons of SecCenter */
-   if (O->Regime == ORB_THREE_BODY) {
-      for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
-         Iw = World[SecCenter].Sat[Im];
-         ph = MTxV(World[SecCenter].CNH, World[Iw].eph.PosN);
-         pn = MxV(WCenter->CNH, ph);
-         for (j = 0; j < 3; j++)
-            pn.v[j] += World[SecCenter].eph.PosN.v[j];
-         pr = MxV(Nav->refCRN, pn);
-         for (j = 0; j < 3; j++)
-            s.v[j] = pr.v[j] - PosR.v[j];
+      /* Moons of OrbCenter (but not SecCenter) */
+      if (OrbCenter != SOL) {
+         for (Im = 0; Im < WCenter->Nsat; Im++) {
+            Iw = WCenter->Sat[Im];
+            if (Iw != SecCenter) {
+               pr = MxV(Nav->refCRN, World[Iw].eph.PosN);
+               for (j = 0; j < 3; j++)
+                  s.v[j] = pr.v[j] - PosR.v[j];
+               accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
+               for (j = 0; j < 3; j++)
+                  VelRdot.v[j] += accelR.v[j];
+            }
+         }
+      }
+      /* Moons of SecCenter */
+      if (O->Regime == ORB_THREE_BODY) {
+         for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
+            Iw = World[SecCenter].Sat[Im];
+            ph = MTxV(World[SecCenter].CNH, World[Iw].eph.PosN);
+            pn = MxV(WCenter->CNH, ph);
+            for (j = 0; j < 3; j++)
+               pn.v[j] += World[SecCenter].eph.PosN.v[j];
+            pr = MxV(Nav->refCRN, pn);
+            for (j = 0; j < 3; j++)
+               s.v[j] = pr.v[j] - PosR.v[j];
 
-         accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
-         for (j = 0; j < 3; j++)
-            VelRdot.v[j] += accelR.v[j];
+            accelR = ThirdBodyGravAccel(pr, s, World[Iw].mu);
+            for (j = 0; j < 3; j++)
+               VelRdot.v[j] += accelR.v[j];
+         }
       }
    }
 
    // TODO: maybe make this just 2/0 if it exists
    /* Perturbations due to non-spherical gravity potential */
-   const struct SphereHarmType *GravModel = &WCenter->GravModel;
-   if (GravModel->N >= 2) {
-      mat3x3_t CWN = NavGetWorldCWN(OrbCenter, *date);
-      vec3_t fGeoN, fGeoR, PosN;
-      PosN  = MTxV(Nav->refCRN, PosR);
-      fGeoN = SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter, CWN,
-                                     mass, PosN);
-      fGeoR = MxV(Nav->refCRN, fGeoN);
-      for (j = 0; j < 3; j++)
-         VelRdot.v[j] += fGeoR.v[j] / mass;
+   if (GravPert.Harmonic) {
+      const struct SphereHarmType *GravModel = &WCenter->GravModel;
+      if (GravModel->N >= 2) {
+         mat3x3_t CWN = NavGetWorldCWN(OrbCenter, *date);
+         vec3_t fGeoN, fGeoR, PosN;
+         PosN  = MTxV(Nav->refCRN, PosR);
+         fGeoN = SphericalHarmGravForce(GravModel->N, GravModel->M, WCenter,
+                                        CWN, mass, PosN);
+         fGeoR = MxV(Nav->refCRN, fGeoN);
+         for (j = 0; j < 3; j++)
+            VelRdot.v[j] += fGeoR.v[j] / mass;
+      }
    }
    return VelRdot;
 }
@@ -570,26 +573,13 @@ mat3x3_t NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
    }
    struct WorldType *WCenter = &World[OrbCenter];
 
-   for (Iw = SOL; Iw <= PLUTO; Iw++) {
-      if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
-         for (j = 0; j < 3; j++)
-            ph.v[j] = World[Iw].PosH.v[j] - WCenter->PosH.v[j];
-         pn = MxV(WCenter->CNH, ph);
-         pr = MxV(Nav->refCRN, pn);
-         for (j = 0; j < 3; j++)
-            s.v[j] = pr.v[j] - PosR.v[j];
-         dGdR = getDGravFrcDPos(World[Iw].mu, s);
-         for (i = 0; i < 3; i++)
+   if (GravPert.ThirdBody) {
+      for (Iw = SOL; Iw <= PLUTO; Iw++) {
+         if (World[Iw].Exists && !(Iw == OrbCenter || Iw == SecCenter)) {
             for (j = 0; j < 3; j++)
-               dGravDPos.mat[i][j] += dGdR.mat[i][j];
-      }
-   }
-   /* Moons of OrbCenter (but not SecCenter) */
-   if (OrbCenter != SOL) {
-      for (Im = 0; Im < WCenter->Nsat; Im++) {
-         Iw = WCenter->Sat[Im];
-         if (Iw != SecCenter) {
-            pr = MxV(Nav->refCRN, World[Iw].eph.PosN);
+               ph.v[j] = World[Iw].PosH.v[j] - WCenter->PosH.v[j];
+            pn = MxV(WCenter->CNH, ph);
+            pr = MxV(Nav->refCRN, pn);
             for (j = 0; j < 3; j++)
                s.v[j] = pr.v[j] - PosR.v[j];
             dGdR = getDGravFrcDPos(World[Iw].mu, s);
@@ -598,46 +588,63 @@ mat3x3_t NavDGravPertAccelDPos(struct DSMNavType *Nav, const DateType *date,
                   dGravDPos.mat[i][j] += dGdR.mat[i][j];
          }
       }
-   }
-   /* Moons of SecCenter */
-   if (O->Regime == ORB_THREE_BODY) {
-      for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
-         Iw = World[SecCenter].Sat[Im];
-         ph = MTxV(World[SecCenter].CNH, World[Iw].eph.PosN);
-         pn = MxV(WCenter->CNH, ph);
-         for (j = 0; j < 3; j++)
-            pn.v[j] += World[SecCenter].eph.PosN.v[j];
-         pr = MxV(Nav->refCRN, pn);
-         for (j = 0; j < 3; j++)
-            s.v[j] = pr.v[j] - PosR.v[j];
-
-         dGdR = getDGravFrcDPos(World[Iw].mu, s);
-         for (i = 0; i < 3; i++)
+      /* Moons of OrbCenter (but not SecCenter) */
+      if (OrbCenter != SOL) {
+         for (Im = 0; Im < WCenter->Nsat; Im++) {
+            Iw = WCenter->Sat[Im];
+            if (Iw != SecCenter) {
+               pr = MxV(Nav->refCRN, World[Iw].eph.PosN);
+               for (j = 0; j < 3; j++)
+                  s.v[j] = pr.v[j] - PosR.v[j];
+               dGdR = getDGravFrcDPos(World[Iw].mu, s);
+               for (i = 0; i < 3; i++)
+                  for (j = 0; j < 3; j++)
+                     dGravDPos.mat[i][j] += dGdR.mat[i][j];
+            }
+         }
+      }
+      /* Moons of SecCenter */
+      if (O->Regime == ORB_THREE_BODY) {
+         for (Im = 0; Im < World[SecCenter].Nsat; Im++) {
+            Iw = World[SecCenter].Sat[Im];
+            ph = MTxV(World[SecCenter].CNH, World[Iw].eph.PosN);
+            pn = MxV(WCenter->CNH, ph);
             for (j = 0; j < 3; j++)
-               dGravDPos.mat[i][j] += dGdR.mat[i][j];
+               pn.v[j] += World[SecCenter].eph.PosN.v[j];
+            pr = MxV(Nav->refCRN, pn);
+            for (j = 0; j < 3; j++)
+               s.v[j] = pr.v[j] - PosR.v[j];
+
+            dGdR = getDGravFrcDPos(World[Iw].mu, s);
+            for (i = 0; i < 3; i++)
+               for (j = 0; j < 3; j++)
+                  dGravDPos.mat[i][j] += dGdR.mat[i][j];
+         }
       }
    }
 
    // TODO: maybe make this just 2/0 if it exists
    /* Perturbations due to non-spherical gravity potential */
-   const struct SphereHarmType *GravModel = &WCenter->GravModel;
-   if (GravModel->N >= 2) {
-      mat3x3_t CWN, HgeoN, HgeoR;
-      vec3_t PosN;
-      CWN   = NavGetWorldCWN(OrbCenter, *date);
-      PosN  = MTxV(Nav->refCRN, PosR);
-      HgeoN = SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter,
-                                        CWN, PosN);
-      if (Nav->refFrame != FRAME_N) {
-         HgeoR = Adjoint(Nav->refCRN, HgeoN);
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               dGravDPos.mat[i][j] += HgeoR.mat[i][j];
-      }
-      else {
-         for (i = 0; i < 3; i++)
-            for (j = 0; j < 3; j++)
-               dGravDPos.mat[i][j] += HgeoN.mat[i][j];
+   if (GravPert.Harmonic) {
+      const struct SphereHarmType *GravModel = &WCenter->GravModel;
+      if (GravModel->N >= 2) {
+         mat3x3_t CWN, HgeoN, HgeoR;
+         vec3_t PosN;
+         CWN   = NavGetWorldCWN(OrbCenter, *date);
+         PosN  = MTxV(Nav->refCRN, PosR);
+         HgeoN = SphericalHarmonicsHessian(GravModel->N, GravModel->M, WCenter,
+                                           CWN, PosN);
+         if (Nav->refFrame != FRAME_N) {
+            HgeoR = Adjoint(Nav->refCRN, HgeoN);
+            for (i = 0; i < 3; i++)
+               for (j = 0; j < 3; j++)
+                  dGravDPos.mat[i][j] += HgeoR.mat[i][j];
+         }
+         else {
+            for (i = 0; i < 3; i++)
+               for (j = 0; j < 3; j++)
+                  dGravDPos.mat[i][j] += HgeoN.mat[i][j];
+         }
       }
    }
    return dGravDPos;
@@ -1548,7 +1555,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   case VEL_STATE:
                      if (Nav->stateActive[ROTMAT_STATE] == TRUE) {
                         vec3_t VelRdot = VEC3_ZERO;
-                        if (GravPertActive) {
+                        if (GravPert.Enabled) {
                            vec3_t accelR = VEC3_ZERO;
                            for (i = 0; i < 3; i++)
                               tmpV.v[i] = PosR.v[i] + Nav->refPos.v[i];
@@ -1577,7 +1584,7 @@ void eomRIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                      for (i = 0; i < 3; i++)
                         tmpV2.v[i] = PosR.v[i] + Nav->refPos.v[i];
                      tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
-                     if (GravPertActive) {
+                     if (GravPert.Enabled) {
                         tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
                                                      DSM->refOrb);
                         for (i = 0; i < 9; i++)
@@ -1932,7 +1939,7 @@ void eomLIEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   case VEL_STATE: {
                      tmpV2 = VAddV_Elem(PosR, Nav->refPos);
                      tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
-                     if (GravPertActive) {
+                     if (GravPert.Enabled) {
                         tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
                                                      DSM->refOrb);
                         for (i = 0; i < 9; i++)
@@ -2202,7 +2209,7 @@ void eomMEKFJacobianFun(struct AcType *const AC, struct DSMType *const DSM,
                   case VEL_STATE: {
                      tmpV2 = VAddV_Elem(PosR, Nav->refPos);
                      tmpM2 = getDGravFrcDPos(World[orbCenter].mu, tmpV2);
-                     if (GravPertActive) {
+                     if (GravPert.Enabled) {
                         tmpM = NavDGravPertAccelDPos(Nav, date, tmpV2,
                                                      DSM->refOrb);
                         for (i = 0; i < 9; i++)
@@ -2722,7 +2729,7 @@ void NavEOMs(struct AcType *const AC, struct DSMType *const DSM,
                   exit(EXIT_FAILURE);
                }
 
-               if (GravPertActive) {
+               if (GravPert.Enabled) {
                   vec3_t accelR;
                   tmpV   = VAddV_Elem(PosR, Nav->refPos);
                   accelR = NavGravPertAccel(Nav, date, tmpV, 1.0, DSM->refOrb);

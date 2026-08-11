@@ -1285,43 +1285,43 @@ void PerturbReport(void)
    newline_fflush(perturbfile);
 }
 /*********************************************************************/
-void NESC_Report()
+void NESC_Report_Earth()
 {
    static FILE *nescfile;
    static long First = 1;
    if (First) {
-      First                   = 0;
-      nescfile                = FileOpen(OutPath, "NESC_data.csv", "w+t");
-      const char *headers[30] = {"time",
-                                 "gePosition_m_X",
-                                 "gePosition_m_Y",
-                                 "gePosition_m_Z",
-                                 "eiPosition_m_X",
-                                 "eiPosition_m_Y",
-                                 "eiPosition_m_Z",
-                                 "eiVelocity_m_s_X",
-                                 "eiVelocity_m_s_Y",
-                                 "eiVelocity_m_s_Z",
-                                 "eiAccel_m_s2_X",
-                                 "eiAccel_m_s2_Y",
-                                 "eiAccel_m_s2_Z",
-                                 "semiMajorAxis_m",
-                                 "gast_rad",
-                                 "eulerAngle_rad_Roll",
-                                 "eulerAngle_rad_Pitch",
-                                 "eulerAngle_rad_Yaw",
-                                 "eulerAngleWrtEi_rad_Roll",
-                                 "eulerAngleWrtEi_rad_Pitch",
-                                 "eulerAngleWrtEi_rad_Yaw",
-                                 "bodyAngularRateWrtEi_rad_s_Roll",
-                                 "bodyAngularRateWrtEi_rad_s_Pitch",
-                                 "bodyAngularRateWrtEi_rad_s_Yaw",
-                                 "altitudeMsl_m",
-                                 "airDensity_kg_m3",
-                                 "ambientTemperature_dgK",
-                                 "eiGravitation_m_s2_X",
-                                 "eiGravitation_m_s2_Y",
-                                 "eiGravitation_m_s2_Z"};
+      First                 = 0;
+      nescfile              = FileOpen(OutPath, "NESC_data.csv", "w+t");
+      const char *headers[] = {"time",
+                               "gePosition_m_X",
+                               "gePosition_m_Y",
+                               "gePosition_m_Z",
+                               "eiPosition_m_X",
+                               "eiPosition_m_Y",
+                               "eiPosition_m_Z",
+                               "eiVelocity_m_s_X",
+                               "eiVelocity_m_s_Y",
+                               "eiVelocity_m_s_Z",
+                               "eiAccel_m_s2_X",
+                               "eiAccel_m_s2_Y",
+                               "eiAccel_m_s2_Z",
+                               "semiMajorAxis_m",
+                               "gast_rad",
+                               "eulerAngle_rad_Roll",
+                               "eulerAngle_rad_Pitch",
+                               "eulerAngle_rad_Yaw",
+                               "eulerAngleWrtEi_rad_Roll",
+                               "eulerAngleWrtEi_rad_Pitch",
+                               "eulerAngleWrtEi_rad_Yaw",
+                               "bodyAngularRateWrtEi_rad_s_Roll",
+                               "bodyAngularRateWrtEi_rad_s_Pitch",
+                               "bodyAngularRateWrtEi_rad_s_Yaw",
+                               "altitudeMsl_m",
+                               "airDensity_kg_m3",
+                               "ambientTemperature_dgK",
+                               "eiGravitation_m_s2_X",
+                               "eiGravitation_m_s2_Y",
+                               "eiGravitation_m_s2_Z"};
       for (int i = 0; i < 30; i++)
          csv_print(nescfile, headers[i]);
       newline_fflush(nescfile);
@@ -1378,6 +1378,246 @@ void NESC_Report()
    csv_print(nescfile, density);    // airDensity_kg_m3
    csv_print(nescfile, 0);          // ambientTemperature_dgK
    csv_print(nescfile, gravAccN);   // eiGravitation_m_s2
+   newline_fflush(nescfile);
+}
+/*********************************************************************/
+void NESC_Report_Luna()
+{
+   // NOTE: DeepThought uses vector-first quaternion notation, NESC documents
+   // use scalar-first. Columns are adjusted as needed here
+
+   // TP2 location data
+#define tp2_lat(t) ((-89.91137 + 2.0 * ((t) / 28800.0)) * D2R)
+#define tp2_lng(t) ((127.26573 + 3.0 * 360.0 * ((t) / 28800.0)) * D2R)
+#define tp2_alt(t) (0)
+
+   static FILE *nescfile;
+   static long First = 1;
+   if (First) {
+      First                 = 0;
+      nescfile              = FileOpen(OutPath, "NESC_data.csv", "w+t");
+      const char *headers[] = {"elapsedTime_s",
+                               "j2000UtcTime_s",
+                               "j2000TtTime_s",
+                               "j2000TdbTime_s",
+                               "miPosition_m_X",
+                               "miPosition_m_Y",
+                               "miPosition_m_Z",
+                               "miVelocity_m_s_X",
+                               "miVelocity_m_s_Y",
+                               "miVelocity_m_s_Z",
+                               "miAccel_m_s2_X",
+                               "miAccel_m_s2_Y",
+                               "miAccel_m_s2_Z",
+                               "quaternionWrtMi_X",
+                               "quaternionWrtMi_Y",
+                               "quaternionWrtMi_Z",
+                               "quaternionWrtMi_W",
+                               "bodyAngularRateWrtMi_deg_s_Roll",
+                               "bodyAngularRateWrtMi_deg_s_Pitch",
+                               "bodyAngularRateWrtMi_deg_s_Yaw",
+                               "bodyAngularAccelWrtMi_deg_s2_Roll",
+                               "bodyAngularAccelWrtMi_deg_s2_Pitch",
+                               "bodyAngularAccelWrtMi_deg_s2_Yaw",
+                               "memPosition_m_X",
+                               "memPosition_m_Y",
+                               "memPosition_m_Z",
+                               "memLatitude_deg",
+                               "memLongitude_deg",
+                               "pamPosition_m_X",
+                               "pamPosition_m_Y",
+                               "pamPosition_m_Z",
+                               "pamLatitude_deg",
+                               "pamLongitude_deg",
+                               "lpsPosition_m_X",
+                               "lpsPosition_m_Y",
+                               "pamLocalGravitation_m_s2_X",
+                               "pamLocalGravitation_m_s2_Y",
+                               "pamLocalGravitation_m_s2_Z",
+                               "quaternionWrtVo_X",
+                               "quaternionWrtVo_Y",
+                               "quaternionWrtVo_Z",
+                               "quaternionWrtVo_W",
+                               "altitudeIau_m",
+                               "periapsisIau_m",
+                               "apoapsisIau_m",
+                               "eccentricity",
+                               "inclinationMi_deg",
+                               "semiMajorAxis_m",
+                               "trueAnomaly_deg",
+                               "rightAscensionMi_deg",
+                               "inclinationPam_deg",
+                               "eulerAngleWrtMi_deg_Roll",
+                               "eulerAngleWrtMi_deg_Pitch",
+                               "eulerAngleWrtMi_deg_Yaw",
+                               "eulerAngleWrtVo_deg_Roll",
+                               "eulerAngleWrtVo_deg_Pitch",
+                               "eulerAngleWrtVo_deg_Yaw",
+                               "miLocalGravitationSun_m_s2_X",
+                               "miLocalGravitationSun_m_s2_Y",
+                               "miLocalGravitationSun_m_s2_Z",
+                               "miLocalGravitationEarth_m_s2_X",
+                               "miLocalGravitationEarth_m_s2_Y",
+                               "miLocalGravitationEarth_m_s2_Z",
+                               "eulerAngleOfSunWrtBody_deg_Pitch",
+                               "eulerAngleOfSunWrtBody_deg_Yaw",
+                               "miSensedPositionOfSensor_m_X",
+                               "miSensedPositionOfSensor_m_Y",
+                               "miSensedPositionOfSensor_m_Z",
+                               "miSensedVelocityOfSensor_m_s_X",
+                               "miSensedVelocityOfSensor_m_s_Y",
+                               "miSensedVelocityOfSensor_m_s_Z",
+                               "miSensedAccelOfSensor_m_s2_X",
+                               "miSensedAccelOfSensor_m_s2_Y",
+                               "miSensedAccelOfSensor_m_s2_Z",
+                               "pamLocalGravitationOfTp1_m_s2_X",
+                               "pamLocalGravitationOfTp1_m_s2_Y",
+                               "pamLocalGravitationOfTp1_m_s2_Z",
+                               "pamLatitudeOfTp1_deg",
+                               "pamLongitudeOfTp1_deg",
+                               "altitudeIauOfTp2_m",
+                               "pamLatitudeOfTp2_deg",
+                               "pamLongitudeOfTp2_deg"};
+      for (int i = 0; i < 82; i++)
+         csv_print(nescfile, headers[i]);
+      newline_fflush(nescfile);
+   }
+
+   const struct SCType *const S        = &SC[0];
+   const struct SCType *const TP1      = &SC[1];
+   const struct OrbitType *const O     = &Orb[S->RefOrb];
+   const struct WorldType *const Sun   = &World[SUN];
+   const struct WorldType *const Earth = &World[EARTH];
+   const struct WorldType *const Luna  = &World[LUNA];
+
+   const double TDBTime = JDToTime(JD_TDB_MJD);
+
+   vec3_t PosN, VelN, accN, wbn, wdotbn;
+   quat_t qbn;
+   PosN = S->PosN;
+   VelN = S->VelN;
+   accN = VAddV_Elem(S->gravPriAccN, SxV(1.0 / S->mass, S->FrcN));
+
+   qbn    = S->B[0].qn;
+   wbn    = S->B[0].wn;
+   wdotbn = VEC3_ZERO; // TODO: will need some work to get this one
+
+   // default Luna-Fixed should be Mean Earth frame
+   vec3_t mem_PosW = MxV(Luna->CWN, PosN);
+   double mem_lat = 0, mem_lng = 0;
+   VecToLngLat(mem_PosW, &mem_lng, &mem_lat);
+
+   // TODO: don't have proper calculations for these
+   // Need Principle Axis frame for Luna
+   vec3_t pam_PosW = MxV(Luna->CWN, PosN);
+   double pam_lat = 0, pam_lng = 0;
+   VecToLngLat(pam_PosW, &pam_lng, &pam_lat);
+
+   // TODO: dont have functions for Lunar-Polar-Stereographic
+   double lps_x = 0, lps_y = 0;
+
+   // TODO: should be PAM frame
+   vec3_t gravAccW = MxV(Luna->CWN, S->gravPriAccN);
+
+   quat_t qbl = QxQT(qbn, C2Q(O->CLN));
+
+   // TODO: DeepThought's Lunar Radius is 1738 km, IAU 2015 radius is 1737.4 km
+   double alt = MAGV(pam_PosW) - Luna->rad;
+
+   double SMA, ecc, inc, RAAN, ArgP, anom, tp, SLR, alpha, rmin, MeanMotion,
+       Period;
+   RV2Eph(DynTime, O->mu, S->PosN, S->VelN, &SMA, &ecc, &inc, &RAAN, &ArgP,
+          &anom, &tp, &SLR, &alpha, &rmin, &MeanMotion, &Period);
+
+   double per_alt = (1.0 - ecc) * SMA - Luna->rad;
+   double apo_alt = (1.0 + ecc) * SMA - Luna->rad;
+   double inc_pam = inc; // TODO: need this still
+
+   vec3_t ang_mi     = C2A(321, Q2C(qbn));
+   vec3_t ang_vo     = C2A(321, Q2C(qbl));
+   vec3_t rpy_mi_deg = {
+       .x = ang_mi.z * R2D, .y = ang_mi.y * R2D, .z = ang_mi.x * R2D};
+   vec3_t rpy_vo_deg = {
+       .x = ang_vo.z * R2D, .y = ang_vo.y * R2D, .z = ang_vo.x * R2D};
+
+   vec3_t posn_sun_luna = MxV(Luna->CNH, VSubV_Elem(Luna->PosH, Sun->PosH));
+   vec3_t sol_grav_mi =
+       ThirdBodyGravForce(posn_sun_luna, VEC3_ZERO, Sun->mu, 1.0);
+
+   vec3_t posn_earth_luna = MxV(Luna->CNH, VSubV_Elem(Luna->PosH, Earth->PosH));
+   vec3_t earth_grav_mi =
+       ThirdBodyGravForce(posn_earth_luna, VEC3_ZERO, Earth->mu, 1.0);
+
+   double svb_yaw_deg   = atan2(S->svb.y, S->svb.x) * R2D;
+   double svb_pitch_deg = asin(S->svb.z / MAGV(S->svb)) * R2D;
+
+   // TODO: need PAM frame
+   vec3_t tp1_grav_pam = MxV(Luna->CWN, TP1->gravPriAccN);
+   vec3_t tp1_pos_pam  = MxV(Luna->CWN, TP1->PosN);
+
+   double tp1_lat_pam = 0, tp1_lng_pam = 0;
+   VecToLngLat(tp1_pos_pam, &tp1_lng_pam, &tp1_lat_pam);
+
+   /* Print to the file */
+   csv_print(nescfile, SimTime);   // time
+   csv_print(nescfile, CivilTime); // j2000UtcTime_s
+   csv_print(nescfile, DynTime);   // j2000TtTime_s
+   csv_print(nescfile, TDBTime);   // j2000TdbTime_s
+   csv_print(nescfile, PosN);      // miPosition_m
+   csv_print(nescfile, VelN);      // miVelocity_m_s
+   csv_print(nescfile, accN);      // miAccel_m_s2
+   csv_print(nescfile, qbn);       // quaternionWrtMi
+   csv_print(nescfile, wbn);       // bodyAngularRateWrtMi_deg_s
+   csv_print(nescfile, wdotbn);    // bodyAngularAccelWrtMi_deg_s2
+
+   csv_print(nescfile, mem_PosW);      // memPosition_m
+   csv_print(nescfile, mem_lat * R2D); // memLatitude_deg
+   csv_print(nescfile, mem_lng * R2D); // memLongitude_deg
+
+   csv_print(nescfile, pam_PosW);      // pamPosition_m
+   csv_print(nescfile, pam_lat * R2D); // pamLatitude_deg
+   csv_print(nescfile, pam_lng * R2D); // pamLongitude_deg
+
+   csv_print(nescfile, lps_x); // lpsPosition_m_X
+   csv_print(nescfile, lps_y); // lpsPosition_m_Y
+
+   csv_print(nescfile, gravAccW); // pamLocalGravitation_m_s2
+
+   csv_print(nescfile, qbl); // quaternionWrtVo
+
+   csv_print(nescfile, alt);           // altitudeIau_m
+   csv_print(nescfile, per_alt);       // periapsisIau_m
+   csv_print(nescfile, apo_alt);       // apoapsisIau_m
+   csv_print(nescfile, ecc);           // eccentricity
+   csv_print(nescfile, inc * R2D);     // inclinationMi_deg
+   csv_print(nescfile, SMA);           // semiMajorAxis_m
+   csv_print(nescfile, anom * R2D);    // trueAnomaly_deg
+   csv_print(nescfile, RAAN * R2D);    // rightAscensionMi_deg
+   csv_print(nescfile, inc_pam * R2D); // inclinationPam_deg
+
+   csv_print(nescfile, rpy_mi_deg); // eulerAngleWrtMi_deg
+   csv_print(nescfile, rpy_vo_deg); // eulerAngleWrtVo_deg
+
+   csv_print(nescfile, sol_grav_mi);   // miLocalGravitationSun_m_s2
+   csv_print(nescfile, earth_grav_mi); // miLocalGravitationEarth_m_s2
+
+   csv_print(nescfile, svb_pitch_deg); // eulerAngleOfSunWrtBody_deg
+   csv_print(nescfile, svb_yaw_deg);   // eulerAngleOfSunWrtBody_deg
+
+   // TODO: sensor stuff
+   csv_print(nescfile, VEC3_ZERO); // miSensedPositionOfSensor_m
+   csv_print(nescfile, VEC3_ZERO); // miSensedVelocityOfSensor_m_s
+   csv_print(nescfile, VEC3_ZERO); // miSensedAccelOfSensor_m_s2
+
+   csv_print(nescfile, tp1_grav_pam);      // pamLocalGravitationOfTp1_m_s2
+   csv_print(nescfile, tp1_lat_pam * R2D); // pamLatitude_deg
+   csv_print(nescfile, tp1_lng_pam * R2D); // pamLongitude_deg
+
+   // TODO: need DEM data
+   csv_print(nescfile, 0.0); // altitudeIauOfTp2_m
+   csv_print(nescfile, 0.0); // pamLatitudeOfTp2_deg
+   csv_print(nescfile, 0.0); // pamLongitudeOfTp2_deg
+
    newline_fflush(nescfile);
 }
 /*********************************************************************/
@@ -1629,7 +1869,8 @@ void Report(void)
             // DSM_PosHReport();
             DSM_Rot3BodyReport();
          }
-         NESC_Report();
+         // NESC_Report_Earth();
+         NESC_Report_Luna();
       }
    }
 

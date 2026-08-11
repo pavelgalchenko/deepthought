@@ -90,7 +90,7 @@ void GetExecDir(char exec_dir[BUFSIZE])
       *ret = '\0';
 }
 /**********************************************************************/
-void tolower_str(size_t n, char *str)
+void tolower_str(char *const str, size_t n)
 {
    if (n == 0)
       n = strlen(str);
@@ -102,7 +102,7 @@ void tolower_str(size_t n, char *str)
    }
 }
 /**********************************************************************/
-void toupper_str(size_t n, char *str)
+void toupper_str(char *const str, size_t n)
 {
    if (n == 0)
       n = strlen(str);
@@ -114,10 +114,15 @@ void toupper_str(size_t n, char *str)
    }
 }
 /**********************************************************************/
-void CapitalizeFirst(size_t n, char *str)
+void totitle_str(char *const str, size_t n)
 {
-   tolower_str(n, str);
-   str[0] = toupper(str[0]);
+   tolower_str(str, n);
+   for (size_t i = 0; i < n; i++) {
+      if (str[i] == '\0')
+         break;
+      if (i == 0 || isspace((unsigned char)str[i - 1]))
+         str[i] = toupper(str[i]);
+   }
 }
 /**********************************************************************/
 void replace_char(char *str, const char find, const char replace)
@@ -131,8 +136,9 @@ void replace_char(char *str, const char find, const char replace)
 /**********************************************************************/
 long is_line_empty(const char *s)
 {
+   // iterate over s until reaching null character
    while (*s) {
-      if (!isspace(*s))
+      if (!isspace((unsigned char)*s))
          return 0;
       s++;
    }

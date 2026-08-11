@@ -301,6 +301,8 @@ void ChebyInterp(double T[20], double U[20], double Coef[20], long n, double *P,
                  double *dPdu);
 void FindChebyCoefs(double *u, double *P, long Nu, long Nc, double Coef[20]);
 void VecToLngLat(vec3_t A, double *lng, double *lat);
+__attribute__((const)) vec3_t LngLatAltToVec(const double lng, const double lat,
+                                             const double alt);
 __attribute__((const)) double WrapTo2Pi(const double OrbVar);
 __attribute__((const)) double WrapToPMPi(const double OrbVar);
 __attribute__((const)) double WrapDaySec(const double sec);

@@ -21,5 +21,4 @@ CTestTestfile.cmake
 **/*42kit*
 AcApp
 build
-Missions/NESC_Testing/**/*.csv
 Missions/**/out.txt

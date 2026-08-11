@@ -18,11 +18,11 @@ planetary_constants_kernels="earth_1962_250826_2125_combined.bpc pck00011.tpc"
 KERNEL_FILE="kernels.txt" # name of metakernal file to create
 
 GENERIC_KERNELS="pub/naif/generic_kernels"
-SPICE_URL="http://naif.jpl.nasa.gov/"
+SPICE_URL="http://naif.jpl.nasa.gov"
 add_kernel(){
     printf "                    '\$${1}/%s',\n" "${3}" >> ${KERNEL_FILE}
     wget -m -nH --cut-dirs=5 -e robots=off --trust-server-names -R 'index.html*'\
-         -I "${GENERIC_KERNELS}/${2}/" -c "${SPICE_URL}${GENERIC_KERNELS}/${2}/${3}"\
+         -I "${GENERIC_KERNELS}/${2}/" -c "${SPICE_URL}/${GENERIC_KERNELS}/${2}/${3}"\
          -P "${2}" -q --show-progress
 }
 

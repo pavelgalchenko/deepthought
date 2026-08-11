@@ -2341,6 +2341,15 @@ void VecToLngLat(vec3_t A, double *lng, double *lat)
    }
 }
 /******************************************************************************/
+vec3_t LngLatAltToVec(const double lng, const double lat, const double alt)
+{
+   vec3_t A;
+   A.x = alt * cos(lat) * cos(lng);
+   A.y = alt * cos(lat) * sin(lng);
+   A.z = alt * sin(lat);
+   return A;
+}
+/******************************************************************************/
 double WrapTo2Pi(const double n)
 {
    double OrbVar = fmod(n, TWOPI);

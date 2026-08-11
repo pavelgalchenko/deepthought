@@ -1,8 +1,8 @@
 %YAML 1.2
 ---
 Configuration:
-  Name: Highly Elliptical
-  Description: Highly Elliptical orbit
+  Name: Nearly Circular
+  Description: Nearly Circular orbit
 Orbit:
   Type: CENTRAL
   World: EARTH
@@ -11,8 +11,8 @@ Orbit:
     Method: RV
     Frame: Inertial
     Units: m
-    Position: [-4315967.74, 960356.2, 5167269.53] #[m]
-    Velocity: [129.091037, -7491.513855, 1452.515654] #[m/sec]
+    Position: [-194338.26150101773, 824894.7002999065, 1653703.391999927] #[m]
+    Velocity: [80.94043359034313, -1447.8938749999684, 731.723312100025] #[m/sec]
 Formation:
   Fixed Frame: N
   Euler Angles:

@@ -16,6 +16,7 @@
 #include "dcmkit.h"
 #include "defineskit.h"
 #include "timekit.h"
+#include "utilkit.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -201,13 +202,13 @@ void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
    }
 }
 /**********************************************************************/
-WorldID GetWorldID(const char *s)
+WorldID GetWorldID(const char *const s)
 {
    unsigned long i;
-   if (!strcmp(s, "SUN"))
+   if (!dt_strcasecmp(s, "SUN"))
       return SOL;
 #define X(world, str_val, naif_str, parent)                                    \
-   if (strcmp(s, str_val) == 0)                                                \
+   if (dt_strcasecmp(s, str_val) == 0)                                         \
       return world;
    X_WORLD_LIST
 #undef X

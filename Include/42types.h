@@ -58,6 +58,16 @@ enum fswType {
    DSM_FSW,
 };
 
+typedef union gravpert_s {
+   // TODO: this union assumes that `Harmonic` and `ThirdBody` fit into
+   // `Enabled`
+   int64_t Enabled;
+   struct {
+      char Harmonic;
+      char ThirdBody;
+   };
+} gravpert_t;
+
 struct FormationType {
    /*~ Internal Variables ~*/
    char FixedInFrame;

@@ -496,7 +496,7 @@ struct WorldType {
 };
 
 /*~ Prototypes ~*/
-__attribute__((pure)) WorldID GetWorldID(const char *s);
+__attribute__((pure)) WorldID GetWorldID(const char *const s);
 __attribute__((pure)) const char *WorldID2String(WorldID w_id);
 __attribute__((const)) WorldID GetWorldParent(const WorldID w_id);
 

@@ -719,7 +719,7 @@ long SimStep(void)
    }
 
    CheckDoWorldOrientation(World, SC, Nsc, Rgn, Nrgn, GroundStation, Ngnd, Orb,
-                           EphemOption, GLEnable, GravPertActive, AeroActive);
+                           EphemOption, GLEnable, GravPert.Enabled, AeroActive);
 
    /* Update Dynamics to next Timestep */
    for (Isc = 0; Isc < Nsc; Isc++) {

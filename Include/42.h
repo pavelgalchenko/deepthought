@@ -102,7 +102,7 @@ EXTERN long AeroShadowsActive;
 EXTERN long GGActive;
 EXTERN long SolPressActive;
 EXTERN long SolPressShadowsActive;
-EXTERN long GravPertActive;
+EXTERN gravpert_t GravPert;
 EXTERN long ThrusterPlumesActive;
 EXTERN long ResidualDipoleActive;
 EXTERN long ContactActive;
@@ -325,7 +325,6 @@ long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
                          struct WorldType *const worlds,
                          const mat3x3_t earth_CNH);
 __attribute__((pure)) long DecodeString(char *s);
-__attribute__((pure)) WorldID GetWorldID(const char *s);
 void InitFSW(struct SCType *S);
 void InitAC(struct SCType *S);
 void InitDSM(struct SCType *S);

@@ -42,7 +42,7 @@
 /**********************************************************************/
 long DecodeString(char *s)
 {
-   toupper_str(0, s);
+   toupper_str(s, 0);
 
    if (!strcmp(s, "FALSE"))
       return FALSE;
@@ -835,7 +835,7 @@ void InitOrbit(struct OrbitType *O, const JDType jd)
 
                if (fy_node_scanf(node, "/Frame %49s", dummy) != 1)
                   strcpy(dummy, "Inertial");
-               CapitalizeFirst(49, dummy);
+               totitle_str(dummy, 49);
                if (!strcmp(dummy, "Inertial")) {
                   // do nothing
                }
@@ -3976,7 +3976,6 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
                  struct WorldType *const worlds)
 {
    struct OrbitType *Eph;
-   const vec3_t Zaxis = VEC3_PZAXIS;
    double GMST;
    mat3x3_t C_W_TETE, C_TETE_J2000;
 
@@ -4213,7 +4212,7 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          gravModel->factor = -W->mu;
       if (gravModel->r_ref == 0)
          gravModel->r_ref = grav_r_ref;
-      if (GravPertActive) {
+      if (GravPert.Harmonic) {
          if (!strcmp(gravModel->modelFile, "")) {
             if (!strcmp(GravFileName[i], "") && gravModel->N > 1) {
                fprintf(stderr,
@@ -4456,7 +4455,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
       case EARTH: {
          const char Names[][40]         = {"Luna"};
          const char MapFileNames[][40]  = {"Luna.ppm"};
-         const char GravFileNames[][20] = {"GLGM2.txt"};
+         const char GravFileNames[][20] = {"GMM2B.txt"};
          const char GeomFileNames[][20] = {""};
          const double mus[]             = {4.902801E12};
          const double rads[]            = {1.738E6};
@@ -4926,7 +4925,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                gravModel->factor = -M->mu;
             if (gravModel->r_ref == 0)
                gravModel->r_ref = rad;
-            if (GravPertActive) {
+            if (GravPert.Harmonic) {
                if (!strcmp(gravModel->modelFile, "")) {
                   if (!strcmp(grav_file_name, "") && gravModel->N > 1) {
                      fprintf(
@@ -5095,7 +5094,7 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
          gravModel->factor = -W->mu;
       if (gravModel->r_ref == 0)
          gravModel->r_ref = W->rad;
-      if (GravPertActive) {
+      if (GravPert.Harmonic) {
          if (strcmp(GravFileName, "NONE") == 0)
             strcpy(GravFileName, "");
          if (!strcmp(gravModel->modelFile, "")) {
@@ -5374,7 +5373,7 @@ void ReadWorldExists(struct WorldType *const worlds,
          char world_name[32]   = {'\0'};
          const char *cnst_name = WorldID2String(Iw);
          strncpy(world_name, cnst_name, 31);
-         CapitalizeFirst(31, world_name);
+         totitle_str(world_name, 31);
 
          long n_moon        = 0;
          WorldID first_moon = LUNA;
@@ -5412,7 +5411,7 @@ void ReadWorldExists(struct WorldType *const worlds,
                            char moon_str[str_len + 1];
                            strncpy(moon_str, moon_str_fy, str_len);
                            moon_str[str_len] = '\0';
-                           toupper_str(str_len, moon_str);
+                           toupper_str(moon_str, str_len);
                            if (!strncmp("ALL", moon_str, MIN(str_len, 3)))
                               for (WorldID Im = first_moon;
                                    Im < n_moon + first_moon; Im++)
@@ -5427,7 +5426,7 @@ void ReadWorldExists(struct WorldType *const worlds,
                                   fy_node_get_scalar(moon_iter_node, &str_len);
                               char moon_name[str_len + 1];
                               strncpy(moon_name, moon_name_fy, str_len);
-                              toupper_str(str_len, moon_name);
+                              toupper_str(moon_name, str_len);
 
                               moon_name[str_len] = '\0';
                               WorldID Im         = GetWorldID(moon_name);
@@ -5900,8 +5899,6 @@ void InitSim(int argc, char **argv)
        getYAMLBool(fy_node_by_path_def(node, "/SRP/Shadows"));
    ResidualDipoleActive =
        getYAMLBool(fy_node_by_path_def(node, "/Magnetic/Residual Mag Moment"));
-   GravPertActive =
-       getYAMLBool(fy_node_by_path_def(node, "/Gravitation/Enabled"));
    ThrusterPlumesActive =
        getYAMLBool(fy_node_by_path_def(node, "/Thruster Plume"));
    ContactActive = getYAMLBool(fy_node_by_path_def(node, "/Contact"));
@@ -5909,6 +5906,26 @@ void InitSim(int argc, char **argv)
    AlbedoActive  = getYAMLBool(fy_node_by_path_def(node, "/Albedo on CSS"));
    ComputeEnvTrq =
        getYAMLBool(fy_node_by_path_def(node, "/Output Env Torques to File"));
+
+   // something special for gravitational perts to handle separating third-body
+   // and harmonic gravitation perturbations
+   GravPert.Enabled = 0;
+   struct fy_node *harmonic_grav =
+       fy_node_by_path_def(node, "/Gravitation/Harmonic");
+   if (harmonic_grav != NULL)
+      GravPert.Harmonic = getYAMLBool(harmonic_grav);
+   struct fy_node *thirdbody_grav =
+       fy_node_by_path_def(node, "/Gravitation/Third Body");
+   if (thirdbody_grav != NULL)
+      GravPert.ThirdBody = getYAMLBool(thirdbody_grav);
+   if (harmonic_grav == NULL && thirdbody_grav == NULL) {
+      long grav_pert_en =
+          getYAMLBool(fy_node_by_path_def(node, "/Gravitation/Enabled"));
+      if (grav_pert_en) {
+         GravPert.Harmonic  = TRUE;
+         GravPert.ThirdBody = TRUE;
+      }
+   }
 
    /* .. Celestial Bodies */
    if (!fy_node_scanf(root, "/Ephem Type %119s", response)) {
