@@ -96,36 +96,6 @@
    /* Pluto's moon */                                                          \
    X(CHARON, "CHARON", "CHARON", PLUTO)
 
-#define WORLD_CONFIGURE_SATELLITES(worlds, w_id, n_sat, sat_list)              \
-   do {                                                                        \
-      (n_sat)    = 0;                                                          \
-      (sat_list) = NULL;                                                       \
-      for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++)                           \
-         if (GetWorldParent(Iw) == w_id &&                                     \
-             (w_id == SOL || (worlds)[Iw].Exists))                             \
-            (n_sat)++;                                                         \
-                                                                               \
-      if ((n_sat) > 0) {                                                       \
-         (sat_list) = calloc((n_sat), sizeof(long));                           \
-         if ((sat_list) == NULL) {                                             \
-            fprintf(                                                           \
-                stderr,                                                        \
-                "World[%i].Sat calloc returned null pointer . Exiting...\n",   \
-                (w_id));                                                       \
-            exit(EXIT_FAILURE);                                                \
-         }                                                                     \
-                                                                               \
-         long i_sat = 0;                                                       \
-         for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {                      \
-            if (GetWorldParent(Iw) == w_id &&                                  \
-                (w_id == SOL || (worlds)[Iw].Exists)) {                        \
-               sat_list[i_sat] = Iw;                                           \
-               i_sat++;                                                        \
-            }                                                                  \
-         }                                                                     \
-      }                                                                        \
-   } while (0)
-
 /* World Tags */
 typedef enum WorldID {
    // TODO: maybe organize the moons to immediately follow the parent planet?
@@ -496,9 +466,11 @@ struct WorldType {
 };
 
 /*~ Prototypes ~*/
+__attribute__((pure)) WorldID GetWorldIDLenient(const char *const s);
 __attribute__((pure)) WorldID GetWorldID(const char *const s);
 __attribute__((pure)) const char *WorldID2String(WorldID w_id);
 __attribute__((const)) WorldID GetWorldParent(const WorldID w_id);
+void WorldConfigureSatellites(WorldID w_id, long *n_sat, WorldID **sat_list);
 
 void CloneWorld(struct WorldType *const destWorld,
                 const struct WorldType srcWorld);

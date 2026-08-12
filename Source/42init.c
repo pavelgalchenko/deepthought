@@ -3833,6 +3833,12 @@ void LoadGravModel(const char *modelPath, struct SphereHarmType *GravModel)
    }
 }
 /*********************************************************************/
+#define SET_IF_ZERO(type, dest, src)                                           \
+   {                                                                           \
+      const type zero = (type){0};                                             \
+      if (!memcmp(&dest, &zero, sizeof(type)))                                 \
+         (dest) = (src);                                                       \
+   }
 void LoadSun(const ephemType ephem, const JDType jd,
              const JPLHeaderType *const jpl_hdr, struct WorldType *const worlds)
 {
@@ -3851,10 +3857,6 @@ void LoadSun(const ephemType ephem, const JDType jd,
    W->Exists = TRUE;
    W->Type   = SUN;
    W->Parent = GetWorldParent(SOL);
-
-   W->Nsat = 0;
-   W->Sat  = NULL;
-   WORLD_CONFIGURE_SATELLITES(worlds, SOL, W->Nsat, W->Sat);
 
    /* Physical Properties */
    double mu = 0;
@@ -4141,12 +4143,10 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       strcpy(W->ColTexFileName, "NONE");
       strcpy(W->BumpTexFileName, "NONE");
       W->J2             = J2[i];
-      W->rad            = Rad[i];
       W->Parent         = GetWorldParent(Iw);
       W->eph.World      = SOL;
       W->eph.mu         = World[SOL].mu;
       W->eph.SplineFile = NULL;
-      W->DipoleMoment   = DipoleMoment[i];
 
       W->DipoleAxis   = DBL_TO_VEC3(DipoleAxis[i]);
       W->DipoleOffset = DBL_TO_VEC3(DipoleOffset[i]);
@@ -4158,19 +4158,6 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
          W->Glyph[j] = Glyph[i][j];
       W->Atmo.Exists = HasAtmo[i];
 
-      W->ang_data[0]          = (AngDataType){0};
-      W->ang_data[0].ang_char = 'P';
-      W->ang_data[0].ang[0]   = PriMerAngJ2000[i];
-      W->ang_data[0].ang[1]   = AngVel[i] * SEC_PER_DAY * R2D;
-
-      W->ang_data[1]          = (AngDataType){0};
-      W->ang_data[1].ang_char = 'R';
-      W->ang_data[1].ang[0]   = PoleRA[i];
-
-      W->ang_data[2]          = (AngDataType){0};
-      W->ang_data[2].ang_char = 'D';
-      W->ang_data[2].ang[0]   = PoleDec[i];
-
       if (ephem == EPH_SPICE) {
          // If we are using SPICE, replace the hardcoded values with SPICE
          // values
@@ -4179,18 +4166,25 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
             Mu[i] *= 1E9;
 
          SpiceCheckAndGetDbl(Iw, "J2", 0, dim, &W->J2);
-         if (SpiceCheckAndGetDbl(Iw, "RADII", 0, dim, &W->rad)) {
-            W->rad *= 1e3;
-            Rad[i]  = W->rad;
-         }
+         if (SpiceCheckAndGetDbl(Iw, "RADII", 0, dim, &Rad[i]))
+            Rad[i] *= 1e3;
 
-         W->ang_data[0] = SpiceGetAngData(Iw, "PM");
-         W->ang_data[1] = SpiceGetAngData(Iw, "RA");
-         W->ang_data[2] = SpiceGetAngData(Iw, "DEC");
+         SET_IF_ZERO(AngDataType, W->ang_data[0], SpiceGetAngData(Iw, "PM"));
+         SET_IF_ZERO(AngDataType, W->ang_data[1], SpiceGetAngData(Iw, "RA"));
+         SET_IF_ZERO(AngDataType, W->ang_data[2], SpiceGetAngData(Iw, "DEC"));
 
          // If we found nothing from spice, go to default
          // If we found *something*, zero out everything else
       }
+
+      const AngDataType def_P = {
+          .ang_char = 'P',
+          .ang      = {PriMerAngJ2000[i], AngVel[i] * SEC_PER_DAY * R2D, 0}};
+      const AngDataType def_R = {.ang_char = 'R', .ang = {PoleRA[i], 0, 0}};
+      const AngDataType def_D = {.ang_char = 'D', .ang = {PoleDec[i], 0, 0}};
+      SET_IF_ZERO(AngDataType, W->ang_data[0], def_P);
+      SET_IF_ZERO(AngDataType, W->ang_data[1], def_R);
+      SET_IF_ZERO(AngDataType, W->ang_data[2], def_D);
 
       double grav_r_ref = 0.0;
       switch (Iw) {
@@ -4203,15 +4197,14 @@ void LoadPlanets(const ephemType ephem, const JDType jd,
       }
 
       // reassign if not overriden from Inp_Sim
-      if (W->mu == 0)
-         W->mu = Mu[i];
+      SET_IF_ZERO(double, W->mu, Mu[i]);
+      SET_IF_ZERO(double, W->rad, Rad[i]);
+      SET_IF_ZERO(double, W->DipoleMoment, DipoleMoment[i]);
 
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &W->GravModel;
-      if (gravModel->factor == 0)
-         gravModel->factor = -W->mu;
-      if (gravModel->r_ref == 0)
-         gravModel->r_ref = grav_r_ref;
+      SET_IF_ZERO(double, gravModel->factor, -W->mu);
+      SET_IF_ZERO(double, gravModel->r_ref, grav_r_ref);
       if (GravPert.Harmonic) {
          if (!strcmp(gravModel->modelFile, "")) {
             if (!strcmp(GravFileName[i], "") && gravModel->N > 1) {
@@ -4734,9 +4727,6 @@ void LoadMoons(const ephemType ephem, const JDType jd,
       long n_moon        = 0;
       WorldID first_moon = LUNA;
       NMoon(p_id, &n_moon, &first_moon);
-      P->Nsat = 0;
-      P->Sat  = NULL;
-      WORLD_CONFIGURE_SATELLITES(worlds, p_id, P->Nsat, P->Sat);
 
       if (P->Exists && P->Nsat > 0) {
          for (long im = 0; im < P->Nsat; im++) {
@@ -4763,19 +4753,6 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 
             M->OrientWorld = TRUE;
 
-            M->ang_data[0]          = (AngDataType){0};
-            M->ang_data[0].ang_char = 'P';
-            M->ang_data[0].ang[0]   = primerang_j2000;
-            M->ang_data[0].ang[1]   = w * SEC_PER_DAY * R2D;
-
-            M->ang_data[1]          = (AngDataType){0};
-            M->ang_data[1].ang_char = 'R';
-            M->ang_data[1].ang[0]   = pole_ra;
-
-            M->ang_data[2]          = (AngDataType){0};
-            M->ang_data[2].ang_char = 'D';
-            M->ang_data[2].ang[0]   = pole_dec;
-
             if (ephem == EPH_SPICE) {
                // If we are using SPICE, replace the hardcoded values with SPICE
                // values
@@ -4789,10 +4766,23 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                if (SpiceCheckAndGetDbl(m_id, "RADII", 0, dim, &rad))
                   rad *= 1e3;
 
-               M->ang_data[0] = SpiceGetAngData(m_id, "PM");
-               M->ang_data[1] = SpiceGetAngData(m_id, "RA");
-               M->ang_data[2] = SpiceGetAngData(m_id, "DEC");
+               SET_IF_ZERO(AngDataType, M->ang_data[0],
+                           SpiceGetAngData(m_id, "PM"));
+               SET_IF_ZERO(AngDataType, M->ang_data[1],
+                           SpiceGetAngData(m_id, "RA"));
+               SET_IF_ZERO(AngDataType, M->ang_data[2],
+                           SpiceGetAngData(m_id, "DEC"));
             }
+
+            const AngDataType def_P = {
+                .ang_char = 'P',
+                .ang      = {primerang_j2000, w * SEC_PER_DAY * R2D, 0}};
+            const AngDataType def_R = {.ang_char = 'R', .ang = {pole_ra, 0, 0}};
+            const AngDataType def_D = {.ang_char = 'D',
+                                       .ang      = {pole_dec, 0, 0}};
+            SET_IF_ZERO(AngDataType, M->ang_data[0], def_P);
+            SET_IF_ZERO(AngDataType, M->ang_data[1], def_R);
+            SET_IF_ZERO(AngDataType, M->ang_data[2], def_D);
 
             M->PriMerAng = 0.0;
             if (m_id == LUNA) {
@@ -4861,11 +4851,10 @@ void LoadMoons(const ephemType ephem, const JDType jd,
             }
 
             // reassign if not overriden from Inp_Sim
-            if (M->mu == 0)
-               M->mu = mu;
+            SET_IF_ZERO(double, M->mu, mu);
+            SET_IF_ZERO(double, M->rad, rad);
 
             M->J2          = j2;
-            M->rad         = rad;
             E->Exists      = TRUE;
             E->EphemSystem = ephem_sys;
             E->Regime      = ORB_CENTRAL;
@@ -4921,10 +4910,8 @@ void LoadMoons(const ephemType ephem, const JDType jd,
 
             /* Gravitation Model */
             struct SphereHarmType *gravModel = &M->GravModel;
-            if (gravModel->factor == 0)
-               gravModel->factor = -M->mu;
-            if (gravModel->r_ref == 0)
-               gravModel->r_ref = rad;
+            SET_IF_ZERO(double, gravModel->factor, -M->mu);
+            SET_IF_ZERO(double, gravModel->r_ref, rad);
             if (GravPert.Harmonic) {
                if (!strcmp(gravModel->modelFile, "")) {
                   if (!strcmp(grav_file_name, "") && gravModel->N > 1) {
@@ -5090,10 +5077,8 @@ void LoadMinorBodies(const ephemType ephem __attribute__((unused)),
 
       /* Gravitation Model */
       struct SphereHarmType *gravModel = &W->GravModel;
-      if (gravModel->factor == 0)
-         gravModel->factor = -W->mu;
-      if (gravModel->r_ref == 0)
-         gravModel->r_ref = W->rad;
+      SET_IF_ZERO(double, gravModel->factor, -W->mu);
+      SET_IF_ZERO(double, gravModel->r_ref, W->rad);
       if (GravPert.Harmonic) {
          if (strcmp(GravFileName, "NONE") == 0)
             strcpy(GravFileName, "");
@@ -5347,13 +5332,19 @@ void LoadSchatten(void)
    fclose(infile);
 }
 /**********************************************************************/
-void ReadWorldExists(struct WorldType *const worlds,
+void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
                      struct fy_node *celestial_node)
 {
-   for (WorldID Iw = MERCURY; Iw < NMAJORWORLD; Iw++)
-      worlds[Iw].Exists = FALSE;
 
-   worlds[SOL].Exists = TRUE; // Sol must exist
+   struct WorldType *const P = &worlds[parent];
+   const char *parent_name   = WorldID2String(parent);
+   if (P->Nsat == 0) {
+      fprintf(stderr,
+              "World %s has no children to configure in "
+              "`ReadWorldExists` (42init.c:%d). Exiting...\n",
+              parent_name, __LINE__);
+      exit(EXIT_FAILURE);
+   }
 
    struct fy_node_pair *iterPairNode = NULL;
    while (fy_node_mapping_iterate(celestial_node, (void **)&iterPairNode) !=
@@ -5367,102 +5358,163 @@ void ReadWorldExists(struct WorldType *const worlds,
       char key_str[key_str_len + 1];
       strncpy(key_str, key_str_fy, key_str_len);
       key_str[key_str_len] = '\0';
+      tolower_str(key_str, key_str_len);
 
-      int found = FALSE;
-      for (WorldID Iw = MERCURY; Iw <= PLUTO; Iw++) {
-         char world_name[32]   = {'\0'};
-         const char *cnst_name = WorldID2String(Iw);
-         strncpy(world_name, cnst_name, 31);
-         totitle_str(world_name, 31);
-
-         long n_moon        = 0;
-         WorldID first_moon = LUNA;
-         NMoon(Iw, &n_moon, &first_moon);
-
-         if (strstr(key_str, world_name) != NULL) {
-            switch (val_type) {
-               case FYNT_SCALAR: {
-                  // supports the old all-or-nothing method
-                  found = TRUE;
-
-                  const int is_enabled = getYAMLBool(val_node);
-                  worlds[Iw].Exists    = is_enabled;
-                  for (WorldID Im = first_moon; Im < n_moon + first_moon; Im++)
-                     worlds[Im].Exists = is_enabled;
-               } break;
-               case FYNT_MAPPING: {
-                  // supports the new method
-                  found = TRUE;
-                  worlds[Iw].Exists =
-                      getYAMLBool(fy_node_by_path_def(val_node, "/Exists"));
-                  if (!worlds[Iw].Exists)
-                     break;
-
-                  struct fy_node *const moon_node =
-                      fy_node_by_path_def(val_node, "/Moons");
-                  if (moon_node != NULL) {
-                     const enum fy_node_type moon_type =
-                         fy_node_get_type(moon_node);
-                     switch (moon_type) {
-                        case FYNT_SCALAR: {
-                           // only caring if "ALL" is here
-                           const char *moon_str_fy =
-                               fy_node_get_scalar(moon_node, &str_len);
-                           char moon_str[str_len + 1];
-                           strncpy(moon_str, moon_str_fy, str_len);
-                           moon_str[str_len] = '\0';
-                           toupper_str(moon_str, str_len);
-                           if (!strncmp("ALL", moon_str, MIN(str_len, 3)))
-                              for (WorldID Im = first_moon;
-                                   Im < n_moon + first_moon; Im++)
-                                 worlds[Im].Exists = TRUE;
-                        } break;
-                        case FYNT_SEQUENCE: {
-                           struct fy_node *moon_iter_node = NULL;
-                           WorldID last_moon = first_moon + n_moon - 1;
-                           WHILE_FY_ITER(moon_node, moon_iter_node)
-                           {
-                              const char *moon_name_fy =
-                                  fy_node_get_scalar(moon_iter_node, &str_len);
-                              char moon_name[str_len + 1];
-                              strncpy(moon_name, moon_name_fy, str_len);
-                              toupper_str(moon_name, str_len);
-
-                              moon_name[str_len] = '\0';
-                              WorldID Im         = GetWorldID(moon_name);
-                              if (first_moon <= Im && Im <= last_moon)
-                                 worlds[Im].Exists = TRUE;
-                              else
-                                 fprintf(stdout,
-                                         "The string '%s' is not a valid name "
-                                         "for a moon of %*s. Ignoring...\n",
-                                         moon_name, (int)key_str_len, key_str);
-                           }
-                        } break;
-                        default:
-                           fprintf(stderr,
-                                   "Invalid moon node type in key %.*s. "
-                                   "Ignoring...\n",
-                                   (int)key_str_len, key_str);
-                     }
-                  }
-               } break;
-               default:
-                  fprintf(stderr,
-                          "Invalid node type in key %.*s. Ignoring...\n",
-                          (int)key_str_len, key_str);
+      WorldID Iw = GetWorldIDLenient(key_str);
+      if (Iw == NULL_WORLD) {
+         for (int i = 0; i < P->Nsat; i++) {
+            char world_name[32]   = {'\0'};
+            const char *cnst_name = WorldID2String(P->Sat[i]);
+            strncpy(world_name, cnst_name, 31);
+            tolower_str(world_name, 31);
+            if (strstr(key_str, world_name) != NULL) {
+               Iw = P->Sat[i];
+               break;
             }
          }
+      }
+      // If Iw is STILL `NULL_WORLD`, error out
+      if (Iw == NULL_WORLD) {
+         fprintf(stderr,
+                 "Invalid world string %s for parent body %s. Skipping...\n",
+                 key_str, WorldID2String(parent));
+         continue;
+      }
+      const char *cnst_name = WorldID2String(Iw);
 
-         if (found)
-            break;
+      // make sure that `Iw` is a valid satellite of `parent`
+      if (!(P->Sat[0] <= Iw && Iw < (P->Sat[0] + P->Nsat))) {
+         fprintf(
+             stderr,
+             "World %s is not a valid child body of parent %s. Exiting...\n",
+             cnst_name, parent_name);
+      }
+
+      long n_moon        = 0;
+      WorldID first_moon = 0;
+      NMoon(Iw, &n_moon, &first_moon);
+      struct WorldType *W = &worlds[Iw];
+
+      switch (val_type) {
+         case FYNT_SCALAR: {
+            // supports the old all-or-nothing method
+            const int is_enabled = getYAMLBool(val_node);
+            W->Exists            = is_enabled;
+            for (WorldID Im = first_moon; Im < n_moon + first_moon; Im++)
+               worlds[Im].Exists = is_enabled;
+         } break;
+         case FYNT_MAPPING: {
+            // supports the new method
+            W->Exists = getYAMLBool(fy_node_by_path_def(val_node, "/Exists"));
+            if (!W->Exists)
+               break;
+
+            struct fy_node *const moons_node =
+                fy_node_by_path_def(val_node, "/Moons");
+            if (moons_node != NULL) {
+               const enum fy_node_type moon_type = fy_node_get_type(moons_node);
+               switch (moon_type) {
+                  case FYNT_SCALAR: {
+                     // only caring if "ALL" is here
+                     const char *moon_str_fy =
+                         fy_node_get_scalar(moons_node, &str_len);
+                     char moon_str[str_len + 1];
+                     strncpy(moon_str, moon_str_fy, str_len);
+                     moon_str[str_len] = '\0';
+                     tolower_str(moon_str, str_len);
+                     if (!strncmp("all", moon_str, MIN(str_len, 3)))
+                        for (WorldID Im = first_moon; Im < n_moon + first_moon;
+                             Im++)
+                           worlds[Im].Exists = TRUE;
+                  } break;
+                  case FYNT_SEQUENCE: {
+                     struct fy_node *moon_iter_node = NULL;
+                     WorldID last_moon              = first_moon + n_moon - 1;
+                     WHILE_FY_ITER(moons_node, moon_iter_node)
+                     {
+                        const char *moon_name_fy =
+                            fy_node_get_scalar(moon_iter_node, &str_len);
+                        char moon_name[str_len + 1];
+                        strncpy(moon_name, moon_name_fy, str_len);
+                        toupper_str(moon_name, str_len);
+
+                        moon_name[str_len] = '\0';
+                        WorldID Im         = GetWorldID(moon_name);
+                        if (first_moon <= Im && Im <= last_moon)
+                           worlds[Im].Exists = TRUE;
+                        else
+                           fprintf(stdout,
+                                   "The string '%s' is not a valid name "
+                                   "for a moon of %*s. Ignoring...\n",
+                                   moon_name, (int)key_str_len, key_str);
+                     }
+                  } break;
+                  case FYNT_MAPPING: {
+                     // recursive
+                     ReadWorldExists(worlds, Iw, moons_node);
+                  } break;
+                  default:
+                     fprintf(stderr,
+                             "Invalid moon node type of %d in key %.*s. "
+                             "Ignoring...\n",
+                             val_type, (int)key_str_len, key_str);
+               }
+            }
+
+            // overridable parameters
+            struct conf_param_s {
+               char *name;
+               char *fmt;
+               void **dest;
+            } params[] = {
+                {.name = "Mu", .fmt = "%lf", .dest = (void **)&W->mu},
+                {.name = "Rad", .fmt = "%lf", .dest = (void **)&W->rad},
+                {.name = "Dipole Moment",
+                 .fmt  = "%lf",
+                 .dest = (void **)&W->DipoleMoment},
+            };
+            size_t n_params = ARRAY_LENGTH(params);
+            for (struct conf_param_s *p = params; p < &params[n_params - 1];
+                 p++) {
+               char node_name[80] = "/\0";
+               strcat(node_name, p->name);
+               struct fy_node *param_node =
+                   fy_node_by_path_def(val_node, node_name);
+               if (param_node != NULL) {
+                  if (fy_node_scanf(param_node, p->fmt, p->dest) != 1) {
+                     fprintf(stderr,
+                             "For world %s, parameter %s, override is of "
+                             "unexpected type; expected matching format "
+                             "'%s'. Exiting...\n",
+                             cnst_name, p->name, p->fmt);
+                     exit(EXIT_FAILURE);
+                  }
+               }
+            }
+
+         } break;
+         default:
+            fprintf(stderr, "Invalid node type in key %.*s. Ignoring...\n",
+                    (int)key_str_len, key_str);
       }
    }
+}
+/**********************************************************************/
+void ReadCelestialBodies(struct WorldType *const worlds,
+                         struct fy_node *celestial_node)
+{
+   for (WorldID Iw = MERCURY; Iw < NMAJORWORLD; Iw++)
+      World[Iw].Exists = FALSE;
 
-   for (WorldID Iw = MERCURY; Iw < NMAJORWORLD; Iw++) {
-      worlds[Iw].eph.Exists  = worlds[Iw].Exists;
-      worlds[Iw].Atmo.Exists = worlds[Iw].Exists;
+   World[SOL].Exists = TRUE; // Sol must exist
+
+   for (WorldID w_id = SOL; w_id < NMAJORWORLD; w_id++) {
+      struct WorldType *W = &worlds[w_id];
+      W->Parent           = GetWorldParent(w_id);
+      WorldConfigureSatellites(w_id, &W->Nsat, &W->Sat);
    }
+
+   ReadWorldExists(World, SOL, celestial_node);
 }
 /**********************************************************************/
 void InitSim(int argc, char **argv)
@@ -5488,6 +5540,10 @@ void InitSim(int argc, char **argv)
    GoldenRatio = GOLDENRATIO;
    a2r         = A2R;
    r2a         = R2A;
+
+   // initialize world to zero
+   for (i = 0; i < NWORLD; i++)
+      World[i] = (struct WorldType){0};
 
    // Exact Values from GMAT, gives agreement to 0.5 meters for all bodies
    World[EARTH].CNH.mat[0][0] = 1.0;
@@ -5935,8 +5991,7 @@ void InitSim(int argc, char **argv)
    EphemOption = GetEphemType(response);
 
    node = fy_node_by_path_def(root, "/Celestial Bodies");
-
-   ReadWorldExists(World, node);
+   ReadCelestialBodies(World, node);
 
    MinorBodiesExist =
        getYAMLBool(fy_node_by_path_def(node, "/Asteroids and Comets"));

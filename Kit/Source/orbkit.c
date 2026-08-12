@@ -202,7 +202,7 @@ void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
    }
 }
 /**********************************************************************/
-WorldID GetWorldID(const char *const s)
+WorldID GetWorldIDLenient(const char *const s)
 {
    unsigned long i;
    if (!dt_strcasecmp(s, "SUN"))
@@ -214,6 +214,14 @@ WorldID GetWorldID(const char *const s)
 #undef X
    if (sscanf(s, "MINORBODY_%lu", &i) == 1)
       return (NMAJORWORLD + i);
+   return NULL_WORLD;
+}
+/**********************************************************************/
+WorldID GetWorldID(const char *const s)
+{
+   WorldID out = GetWorldIDLenient(s);
+   if (out != NULL_WORLD)
+      return out;
    fprintf(stderr, "Bogus input %s in GetWorldID (42init.c:%d)\n", s, __LINE__);
    exit(EXIT_FAILURE);
 }
@@ -247,6 +255,34 @@ WorldID GetWorldParent(const WorldID w_id)
          fprintf(stderr, "WorldID %u has unspecified parent. Exiting...\n",
                  w_id);
          exit(EXIT_FAILURE);
+      }
+   }
+}
+/**********************************************************************/
+void WorldConfigureSatellites(const WorldID w_id, long *const n_sat,
+                              WorldID **const sat_list)
+{
+   *n_sat    = 0;
+   *sat_list = NULL;
+   for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++)
+      if (GetWorldParent(Iw) == w_id)
+         *n_sat += 1;
+
+   if (*n_sat > 0) {
+      *sat_list = calloc(*n_sat, sizeof(WorldID));
+      if (*sat_list == NULL) {
+         fprintf(stderr,
+                 "World[%i].Sat calloc returned null pointer . Exiting...\n",
+                 w_id);
+         exit(EXIT_FAILURE);
+      }
+
+      long i_sat = 0;
+      for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
+         if (GetWorldParent(Iw) == w_id) {
+            (*sat_list)[i_sat] = Iw;
+            i_sat++;
+         }
       }
    }
 }

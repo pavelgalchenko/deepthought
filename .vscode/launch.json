@@ -13,6 +13,7 @@
             "Missions/DSM_DEMO",
             "Missions/DSM_NAV_DEMO",
             "Missions/NESC_Testing/EarthOrbit",
+            "Missions/NESC_Testing/LunarOrbit",
          ],
          "default": "DSM_DEMO"
       },

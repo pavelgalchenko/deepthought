@@ -1,73 +1,65 @@
 %YAML 1.2
 ---
-# <<<<<<<<<<<<<<<<<<  42: The Mostly Harmless Simulator  >>>>>>>>>>>>>>>>>
 Simulation Control:
   Mode: FAST
   Duration: 28800.0
   Step Size: 60.0
   File Interval: 60.0
-  RNG Seed: 0
-  Enable Graphics: false
+  RNG Seed: 42
   Command File: Inp_Cmd.txt
-Time: # 2007/324:00:00:00 = 2007:11:20:00:00:00.000
-  Date:
-    Month: 7
-    Day: 15
-    Year: 2025
-  Time:
-    Hour: 11
-    Minute: 23
-    Second: 27
-    Millisecond: 300
+  Enable Graphics: false
+Time:
+  Date: { Day: 15, Month: 7, Year: 2025 }
+  Time: { Hour: 11, Minute: 23, Second: 27, Millisecond: 300 }
   System: UTC
 Orbits:
-  # - Name: Orb_Highly_Elliptical
-  #   Enabled: true
-  - Name: Orb_Keplarian
-    Enabled: true
-  - Name: Orb_TP1
-    Enabled: true
+  - { Name: Orb_Base_Keplarian, Enabled: true }
+  - { Name: Orb_TP1, Enabled: true }
 SCs:
-  - Name: SC_Cylinder
-    Orbit: Orb_Keplarian
-    Enabled: true
-  - Name: SC_TP1
-    Orbit: Orb_TP1
+  - { Name: SC_Cylinder, Orbit: Orb_Base_Keplarian, Enabled: true }
+  - { Name: SC_TP1, Orbit: Orb_TP1, Enabled: true }
 Perturbation Models:
-  Atmosphere:
-    Enabled: false
-    Shadows: false
-    Models: []
-  Magnetic:
-    Residual Mag Moment: false
-    Models:
-      - World: EARTH
-        Method: Dipole
-  Gravitation:
-    Enabled: false
-    Gravity Gradient: false
-    Models:
-      - World: EARTH
-        Gravitational Parameter: 398600436000000.0
-      - World: SOL
-        Gravitational Parameter: 1.3271244e+20
-      - World: LUNA
-        Gravitational Parameter: 4902660000000.0
-  SRP:
-    Enabled: false
-    Shadows: false
   Thruster Plume: false
   Contact: false
   CFD Slosh: false
   Albedo on CSS: false
   Output Env Torques to File: false
-Ephem Type: SPICE
+  Atmosphere:
+    Models: []
+    Enabled: false
+    Shadows: false
+  Magnetic:
+    Models: []
+    Residual Mag Moment: false
+  Gravitation:
+    Models:
+      - {
+          World: EARTH,
+          Gravitational Parameter: 398600435507022.7,
+          Model File: jggrx_0420a_sha.tab,
+        }
+      - {
+          World: SOL,
+          Gravitational Parameter: 1.3271244004127942e+20,
+          Model File: jggrx_0420a_sha.tab,
+        }
+      - {
+          World: LUNA,
+          Gravitational Parameter: 49028.0012616,
+          Model File: jggrx_0420a_sha.tab,
+          Reference Radius: 1738000.0,
+        }
+    Harmonic: false
+    Third Body: false
+    Gravity Gradient: false
+  SRP: { Enabled: false, Shadows: false }
+Ephem Type: DE440
 Celestial Bodies:
   Earth:
     Exists: true
-    Moons: "All"
-Lagrange Systems:
-  Earth-Moon: false
-  Sun-Earth: false
-  Sun-Jupiter: false
+    Moons:
+      Luna: { Exists: true, Radius: 1737400.0, Mu: 4902800118457.55 }
+    Mu: 398600435507022.7
+  Asteroids and Comets: false
+Lagrange Systems: { Earth-Moon: false, Sun-Earth: false, Sun-Jupiter: false }
 Ground Stations: []

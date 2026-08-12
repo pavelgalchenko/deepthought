@@ -18,6 +18,8 @@
 #define __attribute__(x) /*NOTHING*/
 #endif
 
+#define ARRAY_LENGTH(x) (sizeof(x) / sizeof((x)[0]))
+
 #define STR2(x) #x
 #define STR(X)  STR2(X)
 

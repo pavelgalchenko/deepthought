@@ -1,31 +1,28 @@
 %YAML 1.2
-# yaml-language-server: $schema=../../../Docs/yaml/schema/inp_dsm.schema.json
 ---
 Gains Configurations: []
 Limits Configurations: []
 Actuator Configurations: []
 Controller Configurations: []
-Position Configurations: []
-Translation Configurations: []
 One Vector Configurations: []
+Two Vector Configurations: []
 Quaternion Configurations: []
 Mirror Configurations: []
 Detumble Configurations: []
 Whl H Manage Configurations: []
-Actuator Cmd Configurations: []
+Spin Vector Configurations: []
+Position Configurations: []
+Translation Configurations: []
 Maneuver Configurations: []
-Two Vector Configurations: []
+Actuator Cmd Configurations: []
 Sensor Configurations: []
 Sensor Set Configurations: []
 Navigation Data Configurations: []
 Navigation Configurations: []
-Spin Vector Configurations: []
 DSM Commands:
   - SC: 0
     Command Sequence:
       - Time: 0.0
         Commands:
-          - Type: Attitude
-            Subtype: Passive
-          - Type: Translation
-            Subtype: Passive
+          - {Type: Attitude, Subtype: Passive}
+          - {Type: Translation, Subtype: Passive}

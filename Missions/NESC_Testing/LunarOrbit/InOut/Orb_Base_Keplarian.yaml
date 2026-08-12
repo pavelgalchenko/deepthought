@@ -1,0 +1,20 @@
+%YAML 1.2
+---
+Configuration: {Name: Base_Keplarian, Description: Default Orbit}
+Formation:
+  Euler Angles:
+    Angles: [0.0, 0.0, 0.0]
+    Sequence: 321
+  Fixed Frame: N
+  Expression Frame: N
+  Position: [0.0, 0.0, 0.0]
+Orbit:
+  Type: CENTRAL
+  World: LUNA
+  J2 Secular Drift: false
+  Init:
+    Method: RV
+    Position: [-194338.26150101773, 824894.7002999065, 1653703.391999927]
+    Velocity: [80.94043359034313, -1447.8938749999684, 731.723312100025]
+    Frame: Inertial
+    Units: m

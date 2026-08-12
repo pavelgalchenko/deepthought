@@ -2,7 +2,7 @@
 ---
 Regions:
   - Region:
-      Exists: True
+      Exists: true
       Name: TP1
       World: Luna
       Location:
