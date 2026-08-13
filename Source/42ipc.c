@@ -51,7 +51,7 @@ void InitInterProcessComm(void)
 
    long Iipc                = 0;
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/IPC");
       struct IpcType *I       = &IPC[Iipc];
@@ -82,7 +82,7 @@ void InitInterProcessComm(void)
       I->Prefix                  = (char **)calloc(I->Nprefix, sizeof(char *));
       struct fy_node *prefixIterNode = NULL;
       long Ipx                       = 0;
-      WHILE_FY_ITER(prefixNode, prefixIterNode)
+      WHILE_FY_SEQ_ITER(prefixNode, prefixIterNode)
       {
          size_t prefLen     = 0;
          const char *prefix = fy_node_get_scalar(prefixIterNode, &prefLen);

@@ -2012,7 +2012,7 @@ void InitNodes(struct BodyType *B)
       B->Node = (struct NodeType *)calloc(B->NumNodes, sizeof(struct NodeType));
 
       struct fy_node *iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Node");
          long In                 = 0;
@@ -2587,7 +2587,7 @@ void InitSpacecraft(struct SCType *S)
 
    /* .. Body Ib */
    iterNode = NULL;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       long Ib;
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Body");
@@ -2647,7 +2647,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Ng > 0) {
       node     = fy_node_by_path_def(root, "/Joints");
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ig;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Joint");
@@ -2812,7 +2812,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Nw > 0) {
       S->Whl   = (struct WhlType *)calloc(S->Nw, sizeof(struct WhlType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Iw                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Wheel");
@@ -2860,7 +2860,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Nmtb > 0) {
       S->MTB   = (struct MTBType *)calloc(S->Nmtb, sizeof(struct MTBType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Im                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/MTB");
@@ -2898,7 +2898,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Nthr > 0) {
       S->Thr   = (struct ThrType *)calloc(S->Nthr, sizeof(struct ThrType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long It                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Thruster");
@@ -2941,7 +2941,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Ngyro > 0) {
       S->Gyro  = (struct GyroType *)calloc(S->Ngyro, sizeof(struct GyroType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Gyro");
@@ -3013,7 +3013,7 @@ void InitSpacecraft(struct SCType *S)
       S->MAG = (struct MagnetometerType *)calloc(
           S->Nmag, sizeof(struct MagnetometerType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Im = 0;
          struct fy_node *seqNode =
@@ -3067,7 +3067,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Ncss > 0) {
       S->CSS   = (struct CssType *)calloc(S->Ncss, sizeof(struct CssType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ic                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/CSS");
@@ -3123,7 +3123,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Nfss > 0) {
       S->FSS   = (struct FssType *)calloc(S->Nfss, sizeof(struct FssType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long If                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FSS");
@@ -3189,7 +3189,7 @@ void InitSpacecraft(struct SCType *S)
       S->ST = (struct StarTrackerType *)calloc(S->Nst,
                                                sizeof(struct StarTrackerType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ist                = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/ST");
@@ -3274,7 +3274,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Ngps > 0) {
       S->GPS   = (struct GpsType *)calloc(S->Ngps, sizeof(struct GpsType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ig                 = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/GPS");
@@ -3320,7 +3320,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Nacc > 0) {
       S->Accel = (struct AccelType *)calloc(S->Nacc, sizeof(struct AccelType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ia = 0;
          struct fy_node *seqNode =
@@ -3390,7 +3390,7 @@ void InitSpacecraft(struct SCType *S)
    if (S->Nfgs > 0) {
       S->Fgs   = (struct FgsType *)calloc(S->Nfgs, sizeof(struct FgsType));
       iterNode = NULL;
-      WHILE_FY_ITER(node, iterNode)
+      WHILE_FY_SEQ_ITER(node, iterNode)
       {
          long Ifgs               = 0;
          struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FGS");
@@ -3687,7 +3687,7 @@ void LoadTdrs(void)
    struct fy_node *node = fy_node_by_path_def(root, "/TDRSs");
    /* .. 42 TDRS Configuration File */
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/TDRS");
       long i                  = 0;
@@ -4433,7 +4433,7 @@ void MoonDefaultData(const WorldID planet, const long Im, char name[40],
                      double *const raan, double *const omg,
                      double *const mean_anom, DateType *const epoch_date)
 {
-   const char *p_name = WorldID2String(planet);
+   const char *p_name = WorldID2Name(planet);
    long n_moon;
    WorldID first_moon;
    NMoon(planet, &n_moon, &first_moon);
@@ -5115,7 +5115,7 @@ void LoadRegions(void)
    struct fy_node *iterNode = NULL;
    long Ir                  = 0;
 
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/Region");
       struct RegionType *R    = &Rgn[Ir];
@@ -5337,7 +5337,7 @@ void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
 {
 
    struct WorldType *const P = &worlds[parent];
-   const char *parent_name   = WorldID2String(parent);
+   const char *parent_name   = WorldID2Name(parent);
    if (P->Nsat == 0) {
       fprintf(stderr,
               "World %s has no children to configure in "
@@ -5347,8 +5347,8 @@ void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
    }
 
    struct fy_node_pair *iterPairNode = NULL;
-   while (fy_node_mapping_iterate(celestial_node, (void **)&iterPairNode) !=
-          NULL) {
+   WHILE_FY_MAP_ITER(celestial_node, iterPairNode)
+   {
       struct fy_node *const key_node   = fy_node_pair_key(iterPairNode);
       struct fy_node *const val_node   = fy_node_pair_value(iterPairNode);
       const enum fy_node_type val_type = fy_node_get_type(val_node);
@@ -5360,13 +5360,20 @@ void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
       key_str[key_str_len] = '\0';
       tolower_str(key_str, key_str_len);
 
+      // handle legacy asteroids in top level
+      if (parent == SOL && !strcmp(key_str, "asteroids and comets"))
+         continue;
+
       WorldID Iw = GetWorldIDLenient(key_str);
       if (Iw == NULL_WORLD) {
+         // check if string *contains* the name of a satellite of parent
          for (int i = 0; i < P->Nsat; i++) {
-            char world_name[32]   = {'\0'};
-            const char *cnst_name = WorldID2String(P->Sat[i]);
-            strncpy(world_name, cnst_name, 31);
-            tolower_str(world_name, 31);
+            const char *cnst_name = WorldID2Name(P->Sat[i]);
+            const int name_len    = strlen(cnst_name);
+            char world_name[name_len + 1];
+            strcpy(world_name, cnst_name);
+            world_name[name_len] = '\0';
+            tolower_str(world_name, name_len);
             if (strstr(key_str, world_name) != NULL) {
                Iw = P->Sat[i];
                break;
@@ -5376,11 +5383,11 @@ void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
       // If Iw is STILL `NULL_WORLD`, error out
       if (Iw == NULL_WORLD) {
          fprintf(stderr,
-                 "Invalid world string %s for parent body %s. Skipping...\n",
-                 key_str, WorldID2String(parent));
-         continue;
+                 "Invalid world string %s for parent body %s. Exiting...\n",
+                 key_str, WorldID2Name(parent));
+         exit(EXIT_FAILURE);
       }
-      const char *cnst_name = WorldID2String(Iw);
+      const char *cnst_name = WorldID2Name(Iw);
 
       // make sure that `Iw` is a valid satellite of `parent`
       if (!(P->Sat[0] <= Iw && Iw < (P->Sat[0] + P->Nsat))) {
@@ -5430,7 +5437,7 @@ void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
                   case FYNT_SEQUENCE: {
                      struct fy_node *moon_iter_node = NULL;
                      WorldID last_moon              = first_moon + n_moon - 1;
-                     WHILE_FY_ITER(moons_node, moon_iter_node)
+                     WHILE_FY_SEQ_ITER(moons_node, moon_iter_node)
                      {
                         const char *moon_name_fy =
                             fy_node_get_scalar(moon_iter_node, &str_len);
@@ -5720,7 +5727,7 @@ void InitSim(int argc, char **argv)
 
    struct fy_node *iterNode = NULL;
    Iorb                     = 0;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       if (!fy_node_scanf(iterNode, "/Name %39[^\n]s", Orb[Iorb].FileName)) {
          fprintf(stderr, "Could not find Orbit name. Exiting...\n");
@@ -5744,7 +5751,7 @@ void InitSim(int argc, char **argv)
 
    iterNode = NULL;
    Isc      = 0;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       if (fy_node_scanf(iterNode,
                         "/Name %49s "
@@ -5793,7 +5800,7 @@ void InitSim(int argc, char **argv)
    // configure properties
    node     = fy_node_by_path_def(root, "/Perturbation Models");
    iterNode = NULL;
-   WHILE_FY_ITER(fy_node_by_path_def(node, "/Atmosphere/Models"), iterNode)
+   WHILE_FY_SEQ_ITER(fy_node_by_path_def(node, "/Atmosphere/Models"), iterNode)
    {
       if (fy_node_scanf(iterNode,
                         "/World %119s "
@@ -5837,7 +5844,7 @@ void InitSim(int argc, char **argv)
    // configurable magnetic field
    // TODO: make magfield coefficent files a field for models?
    iterNode = NULL;
-   WHILE_FY_ITER(fy_node_by_path_def(node, "/Magnetic/Models"), iterNode)
+   WHILE_FY_SEQ_ITER(fy_node_by_path_def(node, "/Magnetic/Models"), iterNode)
    {
       if (fy_node_scanf(iterNode,
                         "/World %119s "
@@ -5901,7 +5908,7 @@ void InitSim(int argc, char **argv)
    iterNode = NULL;
    struct fy_node *grav_model_list =
        fy_node_by_path_def(node, "/Gravitation/Models");
-   WHILE_FY_ITER(grav_model_list, iterNode)
+   WHILE_FY_SEQ_ITER(grav_model_list, iterNode)
    {
       long N = 0, M = 0;
       if (fy_node_scanf(iterNode, "/World %119s", response) != 1) {
@@ -5998,35 +6005,35 @@ void InitSim(int argc, char **argv)
 
    /* .. Lagrange Point Systems */
    node = fy_node_by_path_def(root, "/Lagrange Systems");
-   LagSys[EARTHMOON].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Earth-Moon"));
-   LagSys[SUNEARTH].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Sun-Earth"));
-   LagSys[SUNJUPITER].Exists =
-       getYAMLBool(fy_node_by_path_def(node, "/Sun-Jupiter"));
+   struct fy_node_pair *iterNodePair = NULL;
+   WHILE_FY_MAP_ITER(node, iterNodePair)
+   {
+      struct fy_node *key   = fy_node_pair_key(iterNodePair);
+      struct fy_node *value = fy_node_pair_value(iterNodePair);
+      if (key == NULL || value == NULL) {
+         fprintf(stderr, "Error in getting key-value pair in Lagrange Systems. "
+                         "Exiting...\n");
+         exit(EXIT_FAILURE);
+      }
 
-   if (LagSys[EARTHMOON].Exists &&
-       !(World[EARTH].Exists && World[LUNA].Exists)) {
-      fprintf(stdout, "The Earth-Moon 3-Body system was enabled, but one of "
-                      "Earth or Moon was not enabled; Enabling them both...\n");
-      World[EARTH].Exists = TRUE;
-      World[LUNA].Exists  = TRUE;
-   }
-   if (LagSys[SUNEARTH].Exists && !(World[SOL].Exists && World[EARTH].Exists)) {
-      fprintf(stdout, "The Sun-Earth 3-Body system was enabled, but one of Sol "
-                      "or Earth was not enabled; Enabling them both...\n");
-      World[SOL].Exists   = TRUE;
-      World[EARTH].Exists = TRUE;
-      // enable Luna?? probably
-      // World[LUNA].Exists=TRUE;
-   }
-   if (LagSys[SUNJUPITER].Exists &&
-       !(World[SOL].Exists && World[JUPITER].Exists)) {
-      fprintf(stdout,
-              "The Sun-Jupiter 3-Body system was enabled, but one of Sol or "
-              "Jupiter was not enabled; Enabling them both...\n");
-      World[SOL].Exists     = TRUE;
-      World[JUPITER].Exists = TRUE;
+      const char *node_name = fy_node_get_scalar0(key);
+      char body1_name[32] = {'\0'}, body2_name[32] = {'\0'};
+      sscanf(node_name, "%[^-]-%[^-]", body1_name, body2_name);
+
+      const WorldID pair[2] = {GetWorldID(body1_name), GetWorldID(body2_name)};
+      struct LagrangeSystemType *lag_sys = &LagSys[LagSysFromPair(pair)];
+
+      lag_sys->Exists = getYAMLBool(value);
+      if (lag_sys->Exists &&
+          !(World[pair[0]].Exists && World[pair[1]].Exists)) {
+         fprintf(stdout,
+                 "The %s-%s 3-Body system was enabled, but one of %s or %s was "
+                 "not enabled; Enabling them both...\n",
+                 body1_name, body2_name, body1_name, body2_name);
+         World[pair[0]].Exists = TRUE;
+         World[pair[1]].Exists = TRUE;
+         // TODO: Enable Luna for SUNEARTH??
+      }
    }
 
    /* .. Ground Stations */
@@ -6035,7 +6042,7 @@ void InitSim(int argc, char **argv)
    GroundStation = (struct GroundStationType *)calloc(
        Ngnd, sizeof(struct GroundStationType));
    iterNode = NULL;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       struct fy_node *seqNode =
           fy_node_by_path_def(iterNode, "/Ground Station");

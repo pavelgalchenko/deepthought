@@ -3405,7 +3405,7 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    }
 #endif
 
-   struct SCType *S                  = scparams->sc;
+   struct SCType *sc                 = scparams->sc;
    struct OrbitType *orb             = scparams->orb;
    struct WorldType *world           = scparams->worlds;
    struct RegionType *rgn            = scparams->rgn;
@@ -3425,40 +3425,40 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
    // integration
    WorldEphemerides(jd_tdb_j2000, jd_tt_j2000, ephem, world, rgn, lagsys);
    OrbitMotion(jd_tt_mjd, world, orb, rgn, lagsys, frm);
-   RKStateToS(orb, x, S);
-   if (S->OrbDOF == ORBDOF_EULER_HILL) {
+   RKStateToS(orb, x, sc);
+   if (sc->OrbDOF == ORBDOF_EULER_HILL) {
       vec3_t pv = DBL_TO_VEC3(x_trn);
       vec3_t vv = DBL_TO_VEC3(&x_trn[3]);
       pair_vec3_t pair =
           EHRV2RelRV(orb->SMA, orb->MeanMotion, Orb->CLN, pv, vv);
-      S->PosR = pair.first;
-      S->VelR = pair.second;
+      sc->PosR = pair.first;
+      sc->VelR = pair.second;
    }
-   else if (S->OrbDOF == ORBDOF_FIXED)
-      FixedOrbitPosition(orb, frm, S);
-   SCEphemerides(jd_tdb_j2000, S, &world[orb->World], orb);
+   else if (sc->OrbDOF == ORBDOF_FIXED)
+      FixedOrbitPosition(orb, frm, sc);
+   SCEphemerides(jd_tdb_j2000, sc, &world[orb->World], orb);
 
-   ZeroNonSCContactFrcTrq(S);
+   ZeroNonSCContactFrcTrq(sc);
 
    /* Magnetic Field, Atmospheric Density */
-   Environment(jd_tt_mjd, world, orb, S);
-   Perturbations(jd_tdb_j2000, world, orb, S);
-   Actuators(TRUE, S, jd_tt_mjd);
-   PartitionForces(S); /* Orbit-affecting and "internal" */
+   Environment(jd_tt_mjd, world, orb, sc);
+   Perturbations(jd_tdb_j2000, world, orb, sc);
+   Actuators(TRUE, sc, jd_tt_mjd);
+   PartitionForces(sc); /* Orbit-affecting and "internal" */
 
-   switch (S->DynMethod) {
+   switch (sc->DynMethod) {
       case DYN_GAUSS_ELIM:
-         KaneNBodyEOM_RK(S, xdot);
+         KaneNBodyEOM_RK(sc, xdot);
          break;
       case DYN_ORDER_N:
-         OrderNMultiBodyEOM_RK(S, xdot);
+         OrderNMultiBodyEOM_RK(sc, xdot);
          break;
       default:
          fprintf(stderr, "Unknown Dynamics Solution option.  Bailing out.\n");
          exit(EXIT_FAILURE);
    }
 
-   if (S->OrbDOF != ORBDOF_FIXED) {
+   if (sc->OrbDOF != ORBDOF_FIXED) {
       vec3_t rvec, vvec, accel = VEC3_ZERO;
       x_trn    = &x[dim - 6];
       xdot_trn = &xdot[dim - 6];
@@ -3468,12 +3468,12 @@ void SCOde(RKIndType jd_tt_mjd, double *x, RKParams *const params, double *xdot)
       xdot_trn[0] = x_trn[3];
       xdot_trn[1] = x_trn[4];
       xdot_trn[2] = x_trn[5];
-      accel       = SxV(1.0 / S->mass, S->FrcN);
-      if (S->OrbDOF == ORBDOF_EULER_HILL)
+      accel       = SxV(1.0 / sc->mass, sc->FrcN);
+      if (sc->OrbDOF == ORBDOF_EULER_HILL)
          accel = MxV(orb->CLN, accel);
 
-      S->gravPriAccN = GetPrimaryGravAccel(S->OrbDOF, rvec, vvec, world, orb);
-      VEC3_TO_DBL(&xdot_trn[3], VAddV_Elem(S->gravPriAccN, accel));
+      sc->gravPriAccN = GetPrimaryGravAccel(sc->OrbDOF, rvec, vvec, world, orb);
+      VEC3_TO_DBL(&xdot_trn[3], VAddV_Elem(sc->gravPriAccN, accel));
    }
 
 #ifdef DEBUG_MODE

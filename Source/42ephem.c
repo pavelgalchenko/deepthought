@@ -1335,44 +1335,50 @@ void SCEphemerides(const JDType jd, struct SCType *sc,
 
    if (sc->Exists) {
       /* Local-vertical frame tied to SC */
-      if (orb->Regime == ORB_ZERO) {
-         sc->CLN  = MAT3X3_EYE;
-         sc->wln  = VEC3_ZERO;
-         sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
-         sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
-      }
-      else if (orb->Regime == ORB_FLIGHT) {
-         sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
-         sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
-         FindENU(sc->PosN, GetWorldW(jd, world), &sc->CLN, &sc->wln);
-      }
-      else if (orb->Regime == ORB_CENTRAL || orb->Regime == ORB_N_BODY) {
-         if (sc->OrbDOF == ORBDOF_COWELL) {
+      switch (orb->Regime) {
+         case ORB_ZERO: {
+            sc->CLN  = MAT3X3_EYE;
+            sc->wln  = VEC3_ZERO;
             sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
             sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
-         }
-         else {
+         } break;
+         case ORB_FLIGHT: {
+            sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
+            sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
+            FindENU(sc->PosN, GetWorldW(jd, world), &sc->CLN, &sc->wln);
+         } break;
+         case ORB_CENTRAL:
+         case ORB_N_BODY: {
+            if (sc->OrbDOF == ORBDOF_COWELL) {
+               sc->PosR = VSubV_Elem(sc->PosN, orb->PosN);
+               sc->VelR = VSubV_Elem(sc->VelN, orb->VelN);
+            }
+            else {
+               sc->PosN = VAddV_Elem(orb->PosN, sc->PosR);
+               sc->VelN = VAddV_Elem(orb->VelN, sc->VelR);
+            }
+            FindCLN(sc->PosN, sc->VelN, &sc->CLN, &sc->wln);
+            pair_vec3_t pair = RelRV2EHRV(orb->SMA, orb->MeanMotion, orb->CLN,
+                                          sc->PosR, sc->VelR);
+            sc->PosEH        = pair.first;
+            sc->VelEH        = pair.second;
+         } break;
+         case ORB_THREE_BODY: {
             sc->PosN = VAddV_Elem(orb->PosN, sc->PosR);
             sc->VelN = VAddV_Elem(orb->VelN, sc->VelR);
-         }
-         FindCLN(sc->PosN, sc->VelN, &sc->CLN, &sc->wln);
-         pair_vec3_t pair = RelRV2EHRV(orb->SMA, orb->MeanMotion, orb->CLN,
-                                       sc->PosR, sc->VelR);
-         sc->PosEH        = pair.first;
-         sc->VelEH        = pair.second;
-      }
-      else { /* ORB_THREE_BODY */
-         sc->PosN = VAddV_Elem(orb->PosN, sc->PosR);
-         sc->VelN = VAddV_Elem(orb->VelN, sc->VelR);
 
-         MagR1      = MAGV(orb->PosN);
-         MeanMotion = sqrt(orb->mu1 / (MagR1 * MagR1 * MagR1));
-         pair_vec3_t pair =
-             RelRV2EHRV(MagR1, MeanMotion, orb->CLN, sc->PosR, sc->VelR);
-         sc->PosEH = pair.first;
-         sc->VelEH = pair.second;
-         FindCLN(sc->PosN, sc->VelN, &sc->CLN, &sc->wln);
+            MagR1      = MAGV(orb->PosN);
+            MeanMotion = sqrt(orb->mu1 / (MagR1 * MagR1 * MagR1));
+            pair_vec3_t pair =
+                RelRV2EHRV(MagR1, MeanMotion, orb->CLN, sc->PosR, sc->VelR);
+            sc->PosEH = pair.first;
+            sc->VelEH = pair.second;
+            FindCLN(sc->PosN, sc->VelN, &sc->CLN, &sc->wln);
+         } break;
+         default:
+            break;
       }
+
       /* Equatorial Frame: e1 = n3, e2 = East, e3 points to World axis */
       sc->CEN = FindCEN(sc->PosN);
 
@@ -1419,8 +1425,12 @@ void Ephemerides(const JDType jd, ephemType ephem, struct SCType *scs,
    JDType jd_tdb_j2000 = JDChangeSystemEpoch(TDB_TIME, J2000_EPOCH, jd);
    JDType jd_tt_j2000  = JDChangeSystemEpoch(TT_TIME, J2000_EPOCH, jd);
    WorldEphemerides(jd_tdb_j2000, jd_tt_j2000, ephem, worlds, rgn, lagsys);
-   for (int i = 0; i < Nsc; i++)
-      SCEphemerides(jd_tdb_j2000, &scs[i], worlds, &orbs[scs[i].RefOrb]);
+   for (int i = 0; i < Nsc; i++) {
+      struct SCType *sc       = &scs[i];
+      struct OrbitType *orb   = &orbs[sc->RefOrb];
+      struct WorldType *world = &worlds[orb->World];
+      SCEphemerides(jd_tdb_j2000, sc, world, orb);
+   }
 }
 
 /* #ifdef __cplusplus

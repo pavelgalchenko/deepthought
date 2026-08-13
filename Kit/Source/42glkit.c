@@ -5798,7 +5798,7 @@ void LoadFOVs(void)
    FOV = (struct FovType *)calloc(Nfov, sizeof(struct FovType));
    struct fy_node *iterNode = NULL;
    long Ifov                = 0;
-   WHILE_FY_ITER(node, iterNode)
+   WHILE_FY_SEQ_ITER(node, iterNode)
    {
       struct fy_node *seqNode = fy_node_by_path_def(iterNode, "/FOV");
       char response1[120] = {0}, response2[120] = {0};

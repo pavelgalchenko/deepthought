@@ -1162,7 +1162,7 @@ long GetActuatorCmd(struct AcType *const AC, struct DSMType *const DSM,
    actSeqNode      = fy_node_by_path_def(cmdNode, "/Actuators");
    Cmd->ActNumCmds = fy_node_sequence_item_count(actSeqNode);
    iterNode        = NULL;
-   WHILE_FY_ITER(actSeqNode, iterNode)
+   WHILE_FY_SEQ_ITER(actSeqNode, iterNode)
    {
       char type[FIELDWIDTH + 1] = {};
       if (fy_node_scanf(iterNode, "/Type %" STR(FIELDWIDTH) "s", type) == 1) {
@@ -1425,7 +1425,7 @@ long ConfigureNavigationSensors(struct AcType *const AC,
 
    char sensorSetName[1024] = {0};
    fy_node_scanf(senSetNode, "/Description %1023s", sensorSetName);
-   WHILE_FY_ITER(fy_node_by_path_def(senSetNode, "/Sensors"), iterNode)
+   WHILE_FY_SEQ_ITER(fy_node_by_path_def(senSetNode, "/Sensors"), iterNode)
    {
       DataProcessed = TRUE;
       char sensorType[FIELDWIDTH + 1];
@@ -1866,7 +1866,7 @@ long GetNavigationCmd(struct AcType *const AC, struct DSMType *const DSM,
       }
 
       struct fy_node *iterNode = NULL;
-      WHILE_FY_ITER(statesNode, iterNode)
+      WHILE_FY_SEQ_ITER(statesNode, iterNode)
       {
          char p[FIELDWIDTH + 1] = {0};
          fy_node_scanf(iterNode, "/ %" STR(FIELDWIDTH) "s", p);
@@ -2074,7 +2074,7 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
       free(DSM->CmdArray);
       DSM->CmdArray = NULL;
    }
-   WHILE_FY_ITER(dsmCmds, iterNode)
+   WHILE_FY_SEQ_ITER(dsmCmds, iterNode)
    {
       long scInd = 0;
       if (!fy_node_scanf(iterNode, "/SC %ld", &scInd)) {
@@ -2097,7 +2097,7 @@ void DsmCmdInterpreterMrk1(struct DSMType *const DSM, struct fy_node *dsmCmds)
             DSM->CmdArray =
                 realloc(DSM->CmdArray, DSM->CmdCnt * sizeof(struct fy_node *));
             struct fy_node *cmdIterNode = NULL;
-            WHILE_FY_ITER(scCmdsNode, cmdIterNode)
+            WHILE_FY_SEQ_ITER(scCmdsNode, cmdIterNode)
             {
                DSM->CmdArray[i++] = cmdIterNode;
             }
@@ -2124,7 +2124,7 @@ void DsmCmdInterpreterMrk2(struct AcType *const AC, struct DSMType *const DSM)
    }
 
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(cmdsNode, iterNode)
+   WHILE_FY_SEQ_ITER(cmdsNode, iterNode)
    {
       char typeToken[FIELDWIDTH + 1] = {}, subType[FIELDWIDTH + 1] = {};
 

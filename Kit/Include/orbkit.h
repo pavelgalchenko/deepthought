@@ -29,6 +29,7 @@
 /*    Format:                                                         */
 /*    X(                                                              */
 /*       world, ---- Identifier for the enum                          */
+/*       str_val, -- DeepThought string representation                */
 /*       naif_str, - NAIF string representation                       */
 /*       parent, --- Parent of the world                              */
 /*    )                                                               */
@@ -151,12 +152,30 @@ enum orbitInputType {
    INP_SPLINE,
 };
 
+/* Use X-Macros to define the LagrangeSystem List, and some other     */
+/*    associated Parameters.                                          */
+/*    Format:                                                         */
+/*    X(                                                              */
+/*       lagsys, - Identifier for the enum                            */
+/*       body1, -- WorldID of primary body                            */
+/*       body2, -- WorldID of secondary body                          */
+/*    )                                                               */
+#define X_LAGSYS_LIST                                                          \
+   X(EARTHMOON, EARTH, LUNA)                                                   \
+   X(SUNEARTH, SOL, EARTH)                                                     \
+   X(SUNJUPITER, SOL, JUPITER)
 typedef enum LagrangeSystem {
-   EARTHMOON = 0,
-   SUNEARTH,
-   SUNJUPITER,
-   NLAGSYS,
+   NULL_LAGSYS = -1,
+#define X(lagsys, body1, body2) lagsys,
+   X_LAGSYS_LIST
+#undef X
+       NLAGSYS,
 } LagrangeSystem;
+static const WorldID LagSysPairs[NLAGSYS][2] = {
+#define X(lagsys, body1, body2) {body1, body2},
+    X_LAGSYS_LIST
+#undef X
+};
 
 struct LagrangePointType {
    /*~ Internal Variables ~*/
@@ -191,8 +210,8 @@ struct LagrangeSystemType {
    /*~ Internal Variables ~*/
    long Exists;
    char Name[20];
-   long Body1;
-   long Body2;
+   WorldID Body1;
+   WorldID Body2;
    double mu1;
    double mu2;
    double rho;
@@ -468,7 +487,9 @@ struct WorldType {
 /*~ Prototypes ~*/
 __attribute__((pure)) WorldID GetWorldIDLenient(const char *const s);
 __attribute__((pure)) WorldID GetWorldID(const char *const s);
-__attribute__((pure)) const char *WorldID2String(WorldID w_id);
+__attribute__((pure)) const char *WorldID2NAIFString(const WorldID w_id);
+__attribute__((pure)) const char *WorldID2NAIFString_Title(const WorldID w_id);
+__attribute__((pure)) const char *WorldID2Name(const WorldID w_id);
 __attribute__((const)) WorldID GetWorldParent(const WorldID w_id);
 void WorldConfigureSatellites(WorldID w_id, long *n_sat, WorldID **sat_list);
 
@@ -523,6 +544,7 @@ __attribute__((const, deprecated)) double LunaPriMerAng(JDType JulDay);
 void FindCLN(vec3_t r, vec3_t v, mat3x3_t *CLN, vec3_t *wln);
 __attribute__((const)) mat3x3_t FindCEN(vec3_t r);
 void FindENU(vec3_t PosN, double WorldW, mat3x3_t *CLN, vec3_t *wln);
+__attribute__((pure)) LagrangeSystem LagSysFromPair(const WorldID pair[2]);
 void FindLagPtParms(struct LagrangeSystemType *LS);
 void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
                      long Ilp, vec3_t *PosN, vec3_t *VelN, mat3x3_t *CLN);

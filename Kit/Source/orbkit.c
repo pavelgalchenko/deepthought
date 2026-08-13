@@ -204,11 +204,11 @@ void CopyOrbit(struct OrbitType *const destOrb, const struct OrbitType srcOrb)
 /**********************************************************************/
 WorldID GetWorldIDLenient(const char *const s)
 {
+   // check if incoming string `s` is either the `str_val` or the `naif_str` of
+   // a world. case insensitive
    unsigned long i;
-   if (!dt_strcasecmp(s, "SUN"))
-      return SOL;
 #define X(world, str_val, naif_str, parent)                                    \
-   if (dt_strcasecmp(s, str_val) == 0)                                         \
+   if ((dt_strcasecmp(s, str_val) == 0) || dt_strcasecmp(s, naif_str) == 0)    \
       return world;
    X_WORLD_LIST
 #undef X
@@ -219,6 +219,8 @@ WorldID GetWorldIDLenient(const char *const s)
 /**********************************************************************/
 WorldID GetWorldID(const char *const s)
 {
+   // Check if incoming string `s` is either the `str_val` or the `naif_str` of
+   // a world. case insensitive. Errors out if no match is found.
    WorldID out = GetWorldIDLenient(s);
    if (out != NULL_WORLD)
       return out;
@@ -226,9 +228,10 @@ WorldID GetWorldID(const char *const s)
    exit(EXIT_FAILURE);
 }
 /**********************************************************************/
-const char *WorldID2String(WorldID w_id)
+const char *WorldID2NAIFString(const WorldID w_id)
 {
-   // Returns the NAIF names of the celestial bodies
+   // TODO: what about minor bodies??
+   //  Returns the NAIF names of the celestial bodies
    switch (w_id) {
 #define X(world, str_val, naif_str, parent)                                    \
    case world:                                                                 \
@@ -236,11 +239,66 @@ const char *WorldID2String(WorldID w_id)
       X_WORLD_LIST
 #undef X
       default: {
-         fprintf(stderr, "Unknown WorldID %u in WorldID2String. Exiting...\n",
+         fprintf(stderr,
+                 "Unknown WorldID %u in WorldID2NAIFString. Exiting...\n",
                  w_id);
          exit(EXIT_FAILURE);
       }
    }
+}
+/**********************************************************************/
+static __once_flag naif_title_str_flag = __ONCE_FLAG_INIT;
+static char *naif_title_strs[NWORLD]   = {};
+static void init_naif_title()
+{
+   for (WorldID world = SOL; world < NMAJORWORLD; world++) {
+      const char *naif_base  = WorldID2NAIFString(world);
+      const int naif_len     = strlen(naif_base);
+      naif_title_strs[world] = calloc(naif_len + 1, sizeof(char));
+      strcpy(naif_title_strs[world], naif_base);
+      totitle_str(naif_title_strs[world], naif_len);
+   }
+}
+const char *WorldID2NAIFString_Title(const WorldID w_id)
+{
+   call_once(&naif_title_str_flag, init_naif_title);
+
+   if (w_id < SOL || w_id > NMAJORWORLD) {
+      fprintf(stderr,
+              "Unknown WorldID %u in WorldID2NAIFString_Title. Exiting...\n",
+              w_id);
+      exit(EXIT_FAILURE);
+   }
+
+   return naif_title_strs[w_id];
+}
+/**********************************************************************/
+static __once_flag world_name_str_flag = __ONCE_FLAG_INIT;
+static char *world_name_strs[NWORLD]   = {};
+static void init_world_names()
+{
+#define X(world, str_val, naif_str, parent)                                    \
+   {                                                                           \
+      const int name_len     = strlen(str_val);                                \
+      world_name_strs[world] = calloc((name_len) + 1, sizeof(char));           \
+      strncpy(world_name_strs[world], str_val, (name_len) + 1);                \
+      totitle_str(world_name_strs[world], name_len);                           \
+   }
+   X_WORLD_LIST
+#undef X
+}
+const char *WorldID2Name(const WorldID w_id)
+{
+   // TODO: what about minor bodies??
+   //  Returns the names of the celestial bodies
+   call_once(&world_name_str_flag, init_world_names);
+
+   if (w_id < SOL || w_id > NMAJORWORLD) {
+      fprintf(stderr, "Unknown WorldID %u in WorldID2Name. Exiting...\n", w_id);
+      exit(EXIT_FAILURE);
+   }
+
+   return world_name_strs[w_id];
 }
 /**********************************************************************/
 WorldID GetWorldParent(const WorldID w_id)
@@ -1703,6 +1761,30 @@ static double _lagpointFDF(const double x, double params[3])
    }
    return 0;
 }
+/**********************************************************************/
+LagrangeSystem LagSysFromPair(const WorldID pair[2])
+{
+   // returns LagrangeSystem associated with unordered pair of WorldIDs
+#define X(lagsys, body1, body2)                                                \
+   if ((body1 == pair[0] && body2 == pair[1]) ||                               \
+       (body2 == pair[0] && body1 == pair[1]))                                 \
+      return lagsys;
+   X_LAGSYS_LIST
+#undef X
+   fprintf(stderr,
+           "WorldID pair for worlds %s && %s is not associated with "
+           "any known LagrangeSystem. Exiting...\n",
+           WorldID2Name(pair[0]), WorldID2Name(pair[1]));
+   exit(EXIT_FAILURE);
+}
+/**********************************************************************/
+// const WorldID *LagSysPairs(const LagrangeSystem lag_sys)
+// {
+
+// #define X(lagsys, body1, body2) return {body1, body2};
+//    X_LAGSYS_LIST
+// #undef X
+// }
 /**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
 /*  massive bodies (masses m1 and m2, m2 < m1) and a body of          */

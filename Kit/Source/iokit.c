@@ -74,7 +74,7 @@ long assignYAMLToDoubleArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(yamlSequence, iterNode)
+   WHILE_FY_SEQ_ITER(yamlSequence, iterNode)
    {
       if (!fy_node_scanf(iterNode, "/ %lf", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
@@ -96,7 +96,7 @@ long assignYAMLToFloatArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(yamlSequence, iterNode)
+   WHILE_FY_SEQ_ITER(yamlSequence, iterNode)
    {
       if (!fy_node_scanf(iterNode, "/ %f", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
@@ -119,7 +119,7 @@ long assignYAMLToLongArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(yamlSequence, iterNode)
+   WHILE_FY_SEQ_ITER(yamlSequence, iterNode)
    {
       if (!fy_node_scanf(iterNode, "/ %ld", &dest[i])) {
          char *parentAddress = fy_node_get_parent_address(yamlSequence);
@@ -141,7 +141,7 @@ long assignYAMLToBoolArray(const long n, struct fy_node *yamlSequence,
 {
    long i                   = 0;
    struct fy_node *iterNode = NULL;
-   WHILE_FY_ITER(yamlSequence, iterNode)
+   WHILE_FY_SEQ_ITER(yamlSequence, iterNode)
    {
       dest[i] = getYAMLBool(iterNode);
       i++;

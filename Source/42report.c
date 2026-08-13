@@ -1409,10 +1409,10 @@ void NESC_Report_Luna()
                                "miAccel_m_s2_X",
                                "miAccel_m_s2_Y",
                                "miAccel_m_s2_Z",
+                               "quaternionWrtMi_W",
                                "quaternionWrtMi_X",
                                "quaternionWrtMi_Y",
                                "quaternionWrtMi_Z",
-                               "quaternionWrtMi_W",
                                "bodyAngularRateWrtMi_deg_s_Roll",
                                "bodyAngularRateWrtMi_deg_s_Pitch",
                                "bodyAngularRateWrtMi_deg_s_Yaw",
@@ -1434,10 +1434,10 @@ void NESC_Report_Luna()
                                "pamLocalGravitation_m_s2_X",
                                "pamLocalGravitation_m_s2_Y",
                                "pamLocalGravitation_m_s2_Z",
+                               "quaternionWrtVo_W",
                                "quaternionWrtVo_X",
                                "quaternionWrtVo_Y",
                                "quaternionWrtVo_Z",
-                               "quaternionWrtVo_W",
                                "altitudeIau_m",
                                "periapsisIau_m",
                                "apoapsisIau_m",
@@ -1540,13 +1540,15 @@ void NESC_Report_Luna()
    vec3_t rpy_vo_deg = {
        .x = ang_vo.z * R2D, .y = ang_vo.y * R2D, .z = ang_vo.x * R2D};
 
-   vec3_t posn_sun_luna = MxV(Luna->CNH, VSubV_Elem(Luna->PosH, Sun->PosH));
-   vec3_t sol_grav_mi =
-       ThirdBodyGravForce(posn_sun_luna, VEC3_ZERO, Sun->mu, 1.0);
+   vec3_t posh_sun    = VSubV_Elem(S->PosH, Sun->PosH);
+   vec3_t posn_sun    = MxV(Luna->CNH, posh_sun);
+   double mag_s       = MAGV(posn_sun);
+   vec3_t sol_grav_mi = SxV(-Sun->mu / (mag_s * mag_s * mag_s), posn_sun);
 
-   vec3_t posn_earth_luna = MxV(Luna->CNH, VSubV_Elem(Luna->PosH, Earth->PosH));
-   vec3_t earth_grav_mi =
-       ThirdBodyGravForce(posn_earth_luna, VEC3_ZERO, Earth->mu, 1.0);
+   vec3_t posh_earth    = VSubV_Elem(S->PosH, Earth->PosH);
+   vec3_t posn_earth    = MxV(Luna->CNH, posh_earth);
+   double mag_e         = MAGV(posn_earth);
+   vec3_t earth_grav_mi = SxV(-Earth->mu / (mag_e * mag_e * mag_e), posn_earth);
 
    double svb_yaw_deg   = atan2(S->svb.y, S->svb.x) * R2D;
    double svb_pitch_deg = asin(S->svb.z / MAGV(S->svb)) * R2D;
@@ -1559,7 +1561,7 @@ void NESC_Report_Luna()
    VecToLngLat(tp1_pos_pam, &tp1_lng_pam, &tp1_lat_pam);
 
    /* Print to the file */
-   csv_print(nescfile, SimTime);   // time
+   csv_print(nescfile, SimTime);   // elapsedTime_s
    csv_print(nescfile, CivilTime); // j2000UtcTime_s
    csv_print(nescfile, DynTime);   // j2000TtTime_s
    csv_print(nescfile, TDBTime);   // j2000TdbTime_s

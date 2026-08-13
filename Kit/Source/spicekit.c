@@ -32,7 +32,7 @@ static SpiceInt naif_id_list[NMAJORWORLD] = {0};
 static void init_naif_id()
 {
    for (WorldID Iw = SOL; Iw < NMAJORWORLD; Iw++) {
-      const char *world_name = WorldID2String(Iw);
+      const char *world_name = WorldID2NAIFString(Iw);
       SpiceBoolean found     = SPICEFALSE;
       bodn2c_c(world_name, &naif_id_list[Iw], &found);
       if (found == SPICEFALSE) {
@@ -83,8 +83,8 @@ static void init_fixed_frames()
             }
          }
          strcpy(frame_name, "IAU_");
-         const char *world_name = WorldID2String(id);
-         strcpy(&frame_name[4], world_name);
+         const char *world_name = WorldID2NAIFString(id);
+         strcat(frame_name, world_name);
          namfrm_c(frame_name, &found);
          id = GetWorldParent(id);
       }

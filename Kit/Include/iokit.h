@@ -38,8 +38,10 @@
 #define SOCKET int
 #endif
 
-#define WHILE_FY_ITER(node, iterNode)                                          \
+#define WHILE_FY_SEQ_ITER(node, iterNode)                                      \
    while (fy_node_sequence_iterate((node), (void **)&(iterNode)) != NULL)
+#define WHILE_FY_MAP_ITER(node, iterNode)                                      \
+   while (fy_node_mapping_iterate((node), (void **)&(iterNode)) != NULL)
 
 struct fy_document *fy_document_build_and_check(const struct fy_parse_cfg *cfg,
                                                 const char *path,

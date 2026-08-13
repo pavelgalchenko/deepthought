@@ -1,2 +1,7 @@
 **/*.csv
+EarthOrbit_*
+EarthOrbit/orbit_tests
+!EarthOrbit/orbit_tests/get_checkcases.sh
 LunarOrbit_*
+LunarOrbit/orbit_tests
+!LunarOrbit/orbit_tests/get_checkcases.sh
