@@ -159,23 +159,19 @@ enum orbitInputType {
 /*       lagsys, - Identifier for the enum                            */
 /*       body1, -- WorldID of primary body                            */
 /*       body2, -- WorldID of secondary body                          */
+/*       lu, ----- Length Unit of the system, in meters               */
 /*    )                                                               */
 #define X_LAGSYS_LIST                                                          \
-   X(EARTHMOON, EARTH, LUNA)                                                   \
-   X(SUNEARTH, SOL, EARTH)                                                     \
-   X(SUNJUPITER, SOL, JUPITER)
+   X(EARTHMOON, EARTH, LUNA, 385692500.0)                                      \
+   X(SUNEARTH, SOL, EARTH, 149597927000.0)                                     \
+   X(SUNJUPITER, SOL, JUPITER, 778547200000.0)
 typedef enum LagrangeSystem {
    NULL_LAGSYS = -1,
-#define X(lagsys, body1, body2) lagsys,
+#define X(lagsys, body1, body2, lu) lagsys,
    X_LAGSYS_LIST
 #undef X
        NLAGSYS,
 } LagrangeSystem;
-static const WorldID LagSysPairs[NLAGSYS][2] = {
-#define X(lagsys, body1, body2) {body1, body2},
-    X_LAGSYS_LIST
-#undef X
-};
 
 struct LagrangePointType {
    /*~ Internal Variables ~*/
@@ -545,6 +541,8 @@ void FindCLN(vec3_t r, vec3_t v, mat3x3_t *CLN, vec3_t *wln);
 __attribute__((const)) mat3x3_t FindCEN(vec3_t r);
 void FindENU(vec3_t PosN, double WorldW, mat3x3_t *CLN, vec3_t *wln);
 __attribute__((pure)) LagrangeSystem LagSysFromPair(const WorldID pair[2]);
+void ConfigureLagSys(const LagrangeSystem lagsys_id,
+                     struct LagrangeSystemType *lag_sys);
 void FindLagPtParms(struct LagrangeSystemType *LS);
 void FindLagPtPosVel(double SecSinceJ2000, struct LagrangeSystemType *S,
                      long Ilp, vec3_t *PosN, vec3_t *VelN, mat3x3_t *CLN);

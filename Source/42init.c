@@ -5187,33 +5187,17 @@ void LoadRegions(void)
 void InitLagrangePoints(void)
 {
    long i, j;
-   char LagsysName[3][20] = {"Earth-Luna", "Sun-Earth", "Sun-Jupiter"};
    struct LagrangeSystemType *LS;
    struct WorldType *W1, *W2;
-
-   LagSys[EARTHMOON].Body1  = EARTH;
-   LagSys[EARTHMOON].Body2  = LUNA;
-   LagSys[EARTHMOON].LU     = 385692500.0;
-   LagSys[SUNEARTH].Body1   = SOL;
-   LagSys[SUNEARTH].Body2   = EARTH;
-   LagSys[SUNEARTH].LU      = 149597927000.0;
-   LagSys[SUNJUPITER].Body1 = SOL;
-   LagSys[SUNJUPITER].Body2 = JUPITER;
-   LagSys[SUNJUPITER].LU    = 778547200000.0;
-
-   for (i = 0; i < 3; i++) {
-      LS = &LagSys[i];
+   LagrangeSystem lagsys_id;
+   for (lagsys_id = 0; lagsys_id < NLAGSYS; lagsys_id++) {
+      LS = &LagSys[lagsys_id];
+      ConfigureLagSys(lagsys_id, LS);
       W1 = &World[LS->Body1];
       W2 = &World[LS->Body2];
-      strcpy(LS->Name, LagsysName[i]);
+      sprintf(LS->Name, "%s-%s", WorldID2NAIFString(LS->Body1),
+              WorldID2NAIFString(LS->Body2));
       if (LS->Exists) {
-         if (!(W1->Exists && W2->Exists)) {
-            fprintf(stderr,
-                    "Lagrange System %s depends on worlds that don't exist.  "
-                    "Check Inp_Sim.txt\n",
-                    LS->Name);
-            exit(EXIT_FAILURE);
-         }
          LS->mu1      = W1->mu;
          LS->mu2      = W2->mu;
          LS->rho      = LS->mu2 / (LS->mu1 + LS->mu2);

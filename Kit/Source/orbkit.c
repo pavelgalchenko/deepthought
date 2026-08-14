@@ -1765,7 +1765,7 @@ static double _lagpointFDF(const double x, double params[3])
 LagrangeSystem LagSysFromPair(const WorldID pair[2])
 {
    // returns LagrangeSystem associated with unordered pair of WorldIDs
-#define X(lagsys, body1, body2)                                                \
+#define X(lagsys, body1, body2, lu)                                            \
    if ((body1 == pair[0] && body2 == pair[1]) ||                               \
        (body2 == pair[0] && body1 == pair[1]))                                 \
       return lagsys;
@@ -1778,13 +1778,26 @@ LagrangeSystem LagSysFromPair(const WorldID pair[2])
    exit(EXIT_FAILURE);
 }
 /**********************************************************************/
-// const WorldID *LagSysPairs(const LagrangeSystem lag_sys)
-// {
-
-// #define X(lagsys, body1, body2) return {body1, body2};
-//    X_LAGSYS_LIST
-// #undef X
-// }
+void ConfigureLagSys(const LagrangeSystem lagsys_id,
+                     struct LagrangeSystemType *lag_sys)
+{
+   switch (lagsys_id) {
+#define X(lagsys, body1, body2, lu)                                            \
+   case lagsys:                                                                \
+      lag_sys->Body1 = body1;                                                  \
+      lag_sys->Body2 = body2;                                                  \
+      lag_sys->LU    = lu;                                                     \
+      break;
+      X_LAGSYS_LIST
+#undef X
+      default: {
+         fprintf(stderr,
+                 "Unknown LagrangeSystem %u in ConfigureLagSys. Exiting...\n",
+                 lagsys_id);
+         exit(EXIT_FAILURE);
+      }
+   }
+}
 /**********************************************************************/
 /*  Consider the Circular Restricted Three-Body Problem, with two     */
 /*  massive bodies (masses m1 and m2, m2 < m1) and a body of          */
