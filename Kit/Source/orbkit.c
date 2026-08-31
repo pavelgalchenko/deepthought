@@ -2161,9 +2161,9 @@ void LagModes2RV(double SecSinceJ2000, struct LagrangeSystemType *LS,
       rl.x = O->Ax * cw1t + O->Bx * sw1t + O->Cx * cw2t + O->Dx * sw2t;
       rl.y = O->Ay * cw1t + O->By * sw1t + O->Cy * cw2t + O->Dy * sw2t;
       vl.x = LP->w1 * (-O->Ax * sw1t + O->Bx * cw1t) +
-             LP->w2 * (-O->Cx * sw1t + O->Dx * cw1t);
+             LP->w2 * (-O->Cx * sw2t + O->Dx * cw2t);
       vl.y = LP->w1 * (-O->Ay * sw1t + O->By * cw1t) +
-             LP->w2 * (-O->Cy * sw1t + O->Dy * cw1t);
+             LP->w2 * (-O->Cy * sw2t + O->Dy * cw2t);
    }
    cwzt = cos(LP->wz * TimeSinceEpoch);
    swzt = sin(LP->wz * TimeSinceEpoch);
@@ -3266,8 +3266,8 @@ void PlanTwoImpulseRendezvous(double mu, vec3_t r1e, vec3_t v1e, vec3_t r2e,
 /*  Two iterations gives < mm accuracy for GEO-LEO distances.         */
 /*  Will need more iterations for interplanetary-scale applications.  */
 void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
-                         struct OrbitType *Target, vec3_t PastPos,
-                         vec3_t FuturePos __attribute__((unused)))
+                         struct OrbitType *Target, vec3_t *PastPos,
+                         vec3_t *FuturePos)
 {
    vec3_t RelPos, Vel;
    double dt, anom;
@@ -3278,26 +3278,26 @@ void FindLightLagOffsets(double dyntime, struct OrbitType *Observer,
       RelPos.v[i] = Target->PosN.v[i] - Observer->PosN.v[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, dyntime - dt - Target->tp, &PastPos, &Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, &Vel, &anom);
 
    for (i = 0; i < 3; i++)
-      RelPos.v[i] = PastPos.v[i] - Observer->PosN.v[i];
+      RelPos.v[i] = PastPos->v[i] - Observer->PosN.v[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, dyntime - dt - Target->tp, &PastPos, &Vel, &anom);
+          Target->ArgP, dyntime - dt - Target->tp, PastPos, &Vel, &anom);
 
    /* .. Future */
    for (i = 0; i < 3; i++)
       RelPos.v[i] = Target->PosN.v[i] - Observer->PosN.v[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, dyntime + dt - Target->tp, &PastPos, &Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, FuturePos, &Vel, &anom);
 
    for (i = 0; i < 3; i++)
-      RelPos.v[i] = PastPos.v[i] - Observer->PosN.v[i];
+      RelPos.v[i] = FuturePos->v[i] - Observer->PosN.v[i];
    dt = MAGV(RelPos) / SPEED_OF_LIGHT;
    Eph2RV(Target->mu, Target->SLR, Target->ecc, Target->inc, Target->RAAN,
-          Target->ArgP, dyntime + dt - Target->tp, &PastPos, &Vel, &anom);
+          Target->ArgP, dyntime + dt - Target->tp, FuturePos, &Vel, &anom);
 }
 /**********************************************************************/
 /* Ref: Markley and Crassidis, 10.4.3                                 */

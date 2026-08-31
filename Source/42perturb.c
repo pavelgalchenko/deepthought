@@ -407,6 +407,26 @@ vec3_t ThirdBodyGravForce(vec3_t p, vec3_t s, double mu, double mass)
    return Frc;
 }
 /**********************************************************************/
+vec3_t ThirdBodyGravForce_MK2(vec3_t third_body_pos, vec3_t sc_pos, double mu,
+                              double mass)
+{
+   vec3_t Frc;
+   double mag_rel, mag_third, rel3, third3;
+   long j;
+
+   vec3_t rel_pos = VSubV_Elem(third_body_pos, sc_pos);
+
+   mag_rel   = MAGV(rel_pos);
+   mag_third = MAGV(third_body_pos);
+   rel3      = mag_rel * mag_rel * mag_rel;
+   third3    = mag_third * mag_third * mag_third;
+
+   for (j = 0; j < 3; j++)
+      Frc.v[j] =
+          mu * mass * (rel_pos.v[j] / rel3 - third_body_pos.v[j] / third3);
+   return Frc;
+}
+/**********************************************************************/
 void GravPertForce(struct WorldType *const worlds, struct OrbitType *const orbs,
                    struct SCType *S)
 {

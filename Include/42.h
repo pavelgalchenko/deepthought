@@ -208,6 +208,9 @@ void SToRKState(const struct OrbitType *const orb, struct SCType *S,
 
 __attribute__((const)) vec3_t ThirdBodyGravForce(vec3_t p, vec3_t s, double mu,
                                                  double mass);
+__attribute__((const)) vec3_t ThirdBodyGravForce_MK2(vec3_t third_body_pos,
+                                                     vec3_t sc_pos, double mu,
+                                                     double mass);
 long SimStep(void);
 void ZeroNonSCContactFrcTrq(struct SCType *S);
 void ZeroFrcTrq(struct SCType *S);

@@ -4893,7 +4893,7 @@ void LoadMoons(const ephemType ephem, const JDType jd,
                M->PriMerAng = dbl_mat.dbl;
                M->CWN       = dbl_mat.mat;
                // TODO: double check that CNH tends to reflect the parent body
-               M->CNJ = GetWorldCNJ(jd, M->ang_data);
+               M->CNJ = MAT3X3_EYE; // GetWorldCNJ(jd, M->ang_data);
                M->CNH = MxM(M->CNJ, worlds[EARTH].CNH);
                M->qnj = C2Q(M->CNJ);
                M->qwn = C2Q(M->CWN);
@@ -5186,7 +5186,7 @@ void LoadRegions(void)
 /**********************************************************************/
 void InitLagrangePoints(void)
 {
-   long i, j;
+   long j;
    struct LagrangeSystemType *LS;
    struct WorldType *W1, *W2;
    LagrangeSystem lagsys_id;
@@ -5345,7 +5345,7 @@ void ReadWorldExists(struct WorldType *const worlds, const WorldID parent,
       tolower_str(key_str, key_str_len);
 
       // handle legacy asteroids in top level
-      if (parent == SOL && !strcmp(key_str, "asteroids and comets"))
+      if (parent == SOL && strstr(key_str, "asteroids") != NULL)
          continue;
 
       WorldID Iw = GetWorldIDLenient(key_str);
@@ -5515,13 +5515,12 @@ void InitSim(int argc, char **argv)
    WorldID Iw;
    long MinorBodiesExist;
    long JunkTag;
-   const mat3x3_t CGJ_tmp = (mat3x3_t){
+   CGJ = (mat3x3_t){
        .rows = {
            {.v = {-0.054873956175539, -0.873437182224835, -0.483835031431981}},
            {.v = {0.494110775064704, -0.444828614979805, 0.746981957785302}},
            {.v = {-0.867665382947348, -0.198076649977489, 0.455985113757595}}}};
    mat3x3_t CJH;
-   CopyVG(CGJ.flat, CGJ_tmp.flat, 9);
 
    Pi          = PI;
    TwoPi       = TWOPI;
@@ -5537,15 +5536,10 @@ void InitSim(int argc, char **argv)
       World[i] = (struct WorldType){0};
 
    // Exact Values from GMAT, gives agreement to 0.5 meters for all bodies
-   World[EARTH].CNH.mat[0][0] = 1.0;
-   World[EARTH].CNH.mat[0][1] = 0.0;
-   World[EARTH].CNH.mat[0][2] = 0.0;
-   World[EARTH].CNH.mat[1][0] = 0.0;
-   World[EARTH].CNH.mat[1][1] = 0.917482062076895741;
-   World[EARTH].CNH.mat[1][2] = -0.397777155914121383;
-   World[EARTH].CNH.mat[2][0] = 0.0;
-   World[EARTH].CNH.mat[2][1] = 0.397777155914121383;
-   World[EARTH].CNH.mat[2][2] = 0.917482062076895741;
+   World[EARTH].CNH = (mat3x3_t){
+       .rows = {{.v = {1.0, 0.0, 0.0}},
+                {.v = {0.0, 0.917482062076895741, -0.397777155914121383}},
+                {.v = {0.0, 0.397777155914121383, 0.917482062076895741}}}};
 
    World[EARTH].qnh = C2Q(World[EARTH].CNH);
    qjh              = C2Q(World[EARTH].CNH);

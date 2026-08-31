@@ -1046,9 +1046,11 @@ long UpdateJplEphems(JDType jd_tdb_j2000, JDType jd_tt_j2000,
          pair_dbl_mat3x3_t dbl_mat = GetWorldCWN(jd_tdb_j2000, W->ang_data);
          W->PriMerAng              = dbl_mat.dbl;
          W->CWN                    = dbl_mat.mat;
-         W->CNJ                    = GetWorldCNJ(jd_tdb_j2000, W->ang_data);
-         W->CNH                    = MxM(W->CNJ, worlds[EARTH].CNH);
-         W->qnj                    = C2Q(W->CNJ);
+         // TODO: W->CNJ = MAT3X3_EYE means that all 'N' frames are
+         // J2000-aligned
+         W->CNJ = MAT3X3_EYE; // GetWorldCNJ(jd_tdb_j2000, W->ang_data);
+         W->qnj = C2Q(W->CNJ);
+         W->CNH = MxM(W->CNJ, worlds[EARTH].CNH);
       }
       W->qwn = C2Q(W->CWN);
       W->qnh = C2Q(W->CNH);
@@ -1198,7 +1200,9 @@ long UpdateNonEphemMoons(JDType jd_tdb_j2000, JDType jd_tt_j2000,
             Eph = &M->eph;
             Eph2RV(Eph->mu, Eph->SLR, Eph->ecc, Eph->inc, Eph->RAAN, Eph->ArgP,
                    j2000_sec - Eph->tp, &Eph->PosN, &Eph->VelN, &Eph->anom);
-            M->CNJ  = GetWorldCNJ(jd_tdb_mjd, M->ang_data);
+            // TODO: M->CNJ = MAT3X3_EYE means that all 'N' frames are
+            // J2000-aligned
+            M->CNJ  = MAT3X3_EYE; // GetWorldCNJ(jd_tdb_mjd, M->ang_data);
             M->CNH  = MxM(M->CNJ, earth_CNH);
             rh      = MTxV(W->CNH, Eph->PosN);
             vh      = MTxV(W->CNH, Eph->VelN);

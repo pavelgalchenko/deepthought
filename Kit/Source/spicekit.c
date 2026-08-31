@@ -275,7 +275,7 @@ int SpiceSetOrientation(JDType jd, const WorldID Iw, struct WorldType *const W,
       W->PriMerAng = SpiceGAST(jd);
    }
    else {
-      W->CNJ       = GetWorldCNJ(jd, W->ang_data);
+      W->CNJ       = MAT3X3_EYE; // GetWorldCNJ(jd, W->ang_data);
       W->CNH       = MxM(W->CNJ, earth_CNH);
       W->CWN       = MxMT(CWJ, W->CNJ);
       W->qnj       = C2Q(W->CNJ);
@@ -333,10 +333,8 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
                  WorldID2NAIFID(SOL), Nstate, &light_time);
 
          // Inertial pos & vel (m & m/s)
-         for (int i = 0; i < 3; i++) {
-            Eph->PosN.v[i] = 1.0e3 * Nstate[i];
-            Eph->VelN.v[i] = 1.0e3 * Nstate[i + 3];
-         }
+         Eph->PosN = SxV(1.0e3, DBL_TO_VEC3(Nstate));
+         Eph->VelN = SxV(1.0e3, DBL_TO_VEC3(&Nstate[3]));
 
          // Heliocentric pos & vel = inertial pos & vel (m & m/s)
          W->PosH = Eph->PosN;
@@ -369,16 +367,9 @@ long SpiceUpdateEphems(const JDType jd, struct WorldType *const worlds)
             if (W->Exists) {
                Eph = &W->eph;
 
-               if (Iw == LUNA) {
-                  // State of major bodies in J2000 wrt Planet center
-                  spkez_c(WorldID2NAIFID(Iw), JS, "J2000", "NONE",
-                          WorldID2NAIFID(Ip), Nstate, &light_time);
-               }
-               else {
-                  // State of major bodies in Ecliptic J2000 wrt Planet center
-                  spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
-                          WorldID2NAIFID(Ip), Nstate, &light_time);
-               }
+               // State of major bodies in Ecliptic J2000 wrt Planet center
+               spkez_c(WorldID2NAIFID(Iw), JS, "ECLIPJ2000", "NONE",
+                       WorldID2NAIFID(Ip), Nstate, &light_time);
                Eph->PosN = SxV(1.0e3, DBL_TO_VEC3(Nstate));
                Eph->VelN = SxV(1.0e3, DBL_TO_VEC3(&Nstate[3]));
 

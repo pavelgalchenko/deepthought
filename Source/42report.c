@@ -1381,15 +1381,20 @@ void NESC_Report_Earth()
    newline_fflush(nescfile);
 }
 /*********************************************************************/
+#define INVQ(q)                                                                \
+   (quat_t)                                                                    \
+   {                                                                           \
+      .x = -(q).x, .y = -(q).y, .z = -(q).z, .s = (q).s                        \
+   }
+#define tp2_lat(t) ((-89.91137 + 2.0 * ((t) / 28800.0)) * D2R)
+#define tp2_lng(t) ((127.26573 + 3.0 * 360.0 * ((t) / 28800.0)) * D2R)
+#define tp2_alt(t) (0)
 void NESC_Report_Luna()
 {
    // NOTE: DeepThought uses vector-first quaternion notation, NESC documents
    // use scalar-first. Columns are adjusted as needed here
 
    // TP2 location data
-#define tp2_lat(t) ((-89.91137 + 2.0 * ((t) / 28800.0)) * D2R)
-#define tp2_lng(t) ((127.26573 + 3.0 * 360.0 * ((t) / 28800.0)) * D2R)
-#define tp2_alt(t) (0)
 
    static FILE *nescfile;
    static long First = 1;
@@ -1409,10 +1414,10 @@ void NESC_Report_Luna()
                                "miAccel_m_s2_X",
                                "miAccel_m_s2_Y",
                                "miAccel_m_s2_Z",
-                               "quaternionWrtMi_W",
                                "quaternionWrtMi_X",
                                "quaternionWrtMi_Y",
                                "quaternionWrtMi_Z",
+                               "quaternionWrtMi_W",
                                "bodyAngularRateWrtMi_deg_s_Roll",
                                "bodyAngularRateWrtMi_deg_s_Pitch",
                                "bodyAngularRateWrtMi_deg_s_Yaw",
@@ -1434,10 +1439,10 @@ void NESC_Report_Luna()
                                "pamLocalGravitation_m_s2_X",
                                "pamLocalGravitation_m_s2_Y",
                                "pamLocalGravitation_m_s2_Z",
-                               "quaternionWrtVo_W",
                                "quaternionWrtVo_X",
                                "quaternionWrtVo_Y",
                                "quaternionWrtVo_Z",
+                               "quaternionWrtVo_W",
                                "altitudeIau_m",
                                "periapsisIau_m",
                                "apoapsisIau_m",
@@ -1499,8 +1504,8 @@ void NESC_Report_Luna()
    accN = VAddV_Elem(S->gravPriAccN, SxV(1.0 / S->mass, S->FrcN));
 
    qbn    = S->B[0].qn;
-   wbn    = S->B[0].wn;
-   wdotbn = VEC3_ZERO; // TODO: will need some work to get this one
+   wbn    = SxV(R2D, S->B[0].wn);
+   wdotbn = SxV(R2D, VEC3_ZERO); // TODO: will need some work to get this one
 
    // default Luna-Fixed should be Mean Earth frame
    vec3_t mem_PosW = MxV(Luna->CWN, PosN);
@@ -1540,15 +1545,24 @@ void NESC_Report_Luna()
    vec3_t rpy_vo_deg = {
        .x = ang_vo.z * R2D, .y = ang_vo.y * R2D, .z = ang_vo.x * R2D};
 
-   vec3_t posh_sun    = VSubV_Elem(S->PosH, Sun->PosH);
-   vec3_t posn_sun    = MxV(Luna->CNH, posh_sun);
-   double mag_s       = MAGV(posn_sun);
-   vec3_t sol_grav_mi = SxV(-Sun->mu / (mag_s * mag_s * mag_s), posn_sun);
+   // vec3_t posh_sun      = VSubV_Elem(S->PosH, Sun->PosH);
+   // vec3_t posn_sun      = MxV(Luna->CNH, posh_sun);
+   // magvec3_t posn_sun_u = UNITV(posn_sun);
+   // double mag_s         = posn_sun_u.m;
+   // vec3_t sol_grav_mi   = SxV(-Sun->mu / (mag_s * mag_s), posn_sun_u.v);
+   vec3_t sol_grav_mi =
+       ThirdBodyGravForce_MK2(MxV(Luna->CNH, VSubV_Elem(Sun->PosH, Luna->PosH)),
+                              S->PosN, Sun->mu, 1.0);
 
-   vec3_t posh_earth    = VSubV_Elem(S->PosH, Earth->PosH);
-   vec3_t posn_earth    = MxV(Luna->CNH, posh_earth);
-   double mag_e         = MAGV(posn_earth);
-   vec3_t earth_grav_mi = SxV(-Earth->mu / (mag_e * mag_e * mag_e), posn_earth);
+   // vec3_t posh_earth      = VSubV_Elem(S->PosH, Earth->PosH);
+   // vec3_t posn_earth      = MxV(Luna->CNH, posh_earth);
+   // magvec3_t posn_earth_u = UNITV(posn_earth);
+   // double mag_e           = posn_earth_u.m;
+   // vec3_t earth_grav_mi   = SxV(-Earth->mu / (mag_e * mag_e),
+   // posn_earth_u.v);
+   vec3_t earth_grav_mi = ThirdBodyGravForce_MK2(
+       MxV(Luna->CNH, VSubV_Elem(Earth->PosH, Luna->PosH)), S->PosN, Earth->mu,
+       1.0);
 
    double svb_yaw_deg   = atan2(S->svb.y, S->svb.x) * R2D;
    double svb_pitch_deg = asin(S->svb.z / MAGV(S->svb)) * R2D;
@@ -1560,6 +1574,9 @@ void NESC_Report_Luna()
    double tp1_lat_pam = 0, tp1_lng_pam = 0;
    VecToLngLat(tp1_pos_pam, &tp1_lng_pam, &tp1_lat_pam);
 
+   quat_t qbn_inv = INVQ(qbn);
+   quat_t qbl_inv = INVQ(qbl);
+
    /* Print to the file */
    csv_print(nescfile, SimTime);   // elapsedTime_s
    csv_print(nescfile, CivilTime); // j2000UtcTime_s
@@ -1568,7 +1585,7 @@ void NESC_Report_Luna()
    csv_print(nescfile, PosN);      // miPosition_m
    csv_print(nescfile, VelN);      // miVelocity_m_s
    csv_print(nescfile, accN);      // miAccel_m_s2
-   csv_print(nescfile, qbn);       // quaternionWrtMi
+   csv_print(nescfile, qbn_inv);   // quaternionWrtMi
    csv_print(nescfile, wbn);       // bodyAngularRateWrtMi_deg_s
    csv_print(nescfile, wdotbn);    // bodyAngularAccelWrtMi_deg_s2
 
@@ -1585,7 +1602,7 @@ void NESC_Report_Luna()
 
    csv_print(nescfile, gravAccW); // pamLocalGravitation_m_s2
 
-   csv_print(nescfile, qbl); // quaternionWrtVo
+   csv_print(nescfile, qbl_inv); // quaternionWrtVo
 
    csv_print(nescfile, alt);           // altitudeIau_m
    csv_print(nescfile, per_alt);       // periapsisIau_m
@@ -1603,8 +1620,8 @@ void NESC_Report_Luna()
    csv_print(nescfile, sol_grav_mi);   // miLocalGravitationSun_m_s2
    csv_print(nescfile, earth_grav_mi); // miLocalGravitationEarth_m_s2
 
-   csv_print(nescfile, svb_pitch_deg); // eulerAngleOfSunWrtBody_deg
-   csv_print(nescfile, svb_yaw_deg);   // eulerAngleOfSunWrtBody_deg
+   csv_print(nescfile, svb_pitch_deg); // eulerAngleOfSunWrtBody_deg_Pitch
+   csv_print(nescfile, svb_yaw_deg);   // eulerAngleOfSunWrtBody_deg_Yaw
 
    // TODO: sensor stuff
    csv_print(nescfile, VEC3_ZERO); // miSensedPositionOfSensor_m
@@ -1612,8 +1629,8 @@ void NESC_Report_Luna()
    csv_print(nescfile, VEC3_ZERO); // miSensedAccelOfSensor_m_s2
 
    csv_print(nescfile, tp1_grav_pam);      // pamLocalGravitationOfTp1_m_s2
-   csv_print(nescfile, tp1_lat_pam * R2D); // pamLatitude_deg
-   csv_print(nescfile, tp1_lng_pam * R2D); // pamLongitude_deg
+   csv_print(nescfile, tp1_lat_pam * R2D); // pamLatitudeOfTp1_deg
+   csv_print(nescfile, tp1_lng_pam * R2D); // pamLongitudeOfTp1_deg
 
    // TODO: need DEM data
    csv_print(nescfile, 0.0); // altitudeIauOfTp2_m
@@ -1622,6 +1639,7 @@ void NESC_Report_Luna()
 
    newline_fflush(nescfile);
 }
+#undef INVQ
 /*********************************************************************/
 void Report(void)
 {

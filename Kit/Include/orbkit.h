@@ -583,8 +583,8 @@ void PlanTwoImpulseRendezvous(double mu, vec3_t r1e, vec3_t v1e, vec3_t r2e,
                               vec3_t v2e, double *t1, double *t2, vec3_t DV1,
                               vec3_t DV2);
 void FindLightLagOffsets(double DynTime, struct OrbitType *Observer,
-                         struct OrbitType *Target, vec3_t PastPos,
-                         vec3_t FuturePos);
+                         struct OrbitType *Target, vec3_t *PastPos,
+                         vec3_t *FuturePos);
 void OscEphToMeanEph(double mu, double J2, double Rw, JDType jd,
                      struct OrbitType *O);
 void MeanEphToOscEph(struct OrbitType *O, double DynTime);
